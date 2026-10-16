@@ -33,7 +33,8 @@ void main() {
 "#;
 
 // Procedural surface shader with SVG-like continuous mathematical curvature,
-// botanical subsurface scattering, water wave harmonics, and contact AO.
+// Cook-Torrance microfacet PBR specular, botanical SSS, zero-haze foreground optics,
+// and ACES filmic tonemapping.
 const FRAGMENT_SHADER: &str = r#"#version 300 es
 precision highp float;
 in vec3 v_world;
@@ -55,77 +56,86 @@ void main() {
 
     vec3 sun = u_sun_dir;
     if (dot(sun, sun) < 0.01) {
-        sun = vec3(0.45, 0.8, 0.55);
+        sun = vec3(0.42, 0.86, 0.30);
     }
     vec3 key = normalize(sun);
-    float sun_int = u_sun_int > 0.0 ? u_sun_int : 1.0;
-    float amb = u_amb > 0.0 ? u_amb : 0.25;
+    float sun_int = u_sun_int > 0.0 ? u_sun_int : 1.45;
+    float amb = u_amb > 0.0 ? u_amb : 0.30;
     vec3 view_dir = normalize(u_eye - v_world);
     vec3 h = normalize(key + view_dir);
 
-    // 2. Procedural continuous mathematical surface detailing
-    // Identify semantic material classes by authored vertex color characteristics
-    bool is_foliage = (v_color.g > 0.28 && v_color.g > v_color.r * 1.05 && v_color.g > v_color.b * 1.05);
-    bool is_timber = (v_color.r > 0.25 && v_color.r > v_color.b && !is_foliage);
-    bool is_ground = (v_world.y < 0.04 && n.y > 0.6);
-    bool is_water = (v_color.b > 0.32 && v_color.b > v_color.r * 1.15 && !is_ground);
+    // 2. Semantic material classification
+    bool is_foliage = (v_color.g > 0.26 && v_color.g > v_color.r * 1.02 && v_color.g > v_color.b * 1.02);
+    bool is_timber = (v_color.r > 0.22 && v_color.r > v_color.b && !is_foliage);
+    bool is_ground = (n.y > 0.55 && !is_foliage && !is_timber);
+    bool is_water = (v_color.b > 0.30 && v_color.b > v_color.r * 1.12 && v_world.y < 0.25);
 
-    // Subtle continuous procedural normal perturbation (eliminates harsh flat polygonal facetting)
+    // 3. Procedural micro-surface normal perturbation (continuous resolution-independent curvature)
     if (is_foliage) {
-        float f_noise = sin(v_world.x * 14.0) * cos(v_world.z * 14.0) * sin(v_world.y * 18.0);
-        n = normalize(n + vec3(dFdx(f_noise) * 0.4, 0.1, dFdy(f_noise) * 0.4));
+        float f_noise = sin(v_world.x * 12.0) * cos(v_world.z * 12.0) * sin(v_world.y * 16.0);
+        n = normalize(n + vec3(dFdx(f_noise) * 0.35, 0.08, dFdy(f_noise) * 0.35));
     } else if (is_timber) {
-        float b_noise = sin(v_world.y * 24.0 + sin(v_world.x * 8.0) * 1.5) * 0.08;
+        float b_noise = sin(v_world.y * 22.0 + sin(v_world.x * 6.0) * 1.2) * 0.06;
         n = normalize(n + vec3(0.0, b_noise, 0.0));
     } else if (is_water) {
-        float w_wave = sin(v_world.x * 3.8 + v_world.z * 2.5) * 0.04 + cos(v_world.x * 5.2 - v_world.z * 4.1) * 0.03;
-        n = normalize(n + vec3(dFdx(w_wave), 0.0, dFdy(w_wave)));
+        float w_wave = sin(v_world.x * 3.5 + v_world.z * 2.2) * 0.04 + cos(v_world.x * 4.8 - v_world.z * 3.6) * 0.03;
+        n = normalize(n + vec3(dFdx(w_wave) * 0.6, 0.0, dFdy(w_wave) * 0.6));
     } else if (is_ground) {
-        float g_noise = sin(v_world.x * 1.8 + sin(v_world.z * 1.5)) * 0.03;
-        n = normalize(n + vec3(dFdx(g_noise), 0.0, dFdy(g_noise)));
+        float g_noise = sin(v_world.x * 2.2 + sin(v_world.z * 1.8)) * 0.025;
+        n = normalize(n + vec3(dFdx(g_noise) * 0.4, 0.0, dFdy(g_noise) * 0.4));
     }
 
-    // 3. Lighting calculations
-    float diffuse = clamp(dot(n, key), 0.0, 1.0) * sun_int;
+    // 4. Photometric diffuse and ambient lighting
+    float ndl = clamp(dot(n, key), 0.0, 1.0);
+    float diffuse = ndl * sun_int;
     float facing = clamp(abs(dot(n, view_dir)), 0.0, 1.0);
-    float rim = pow(1.0 - facing, 3.0);
+    float rim = pow(1.0 - facing, 3.5);
 
     vec3 base_rgb = v_color.rgb;
-    // Ground subtle procedural alpine earth tone
     if (is_ground) {
-        float g_tex = sin(v_world.x * 2.5) * cos(v_world.z * 2.5) * 0.02;
-        base_rgb += vec3(g_tex * 0.8, g_tex * 1.2, g_tex * 0.5);
+        float g_tex = sin(v_world.x * 2.4) * cos(v_world.z * 2.4) * 0.02 + sin(v_world.x * 6.0) * 0.01;
+        base_rgb += vec3(g_tex * 0.6, g_tex * 1.1, g_tex * 0.4);
     }
 
-    // Base lit color
-    vec3 col = base_rgb * (amb + diffuse) + base_rgb * rim * 0.35;
+    vec3 col = base_rgb * (amb + diffuse) + base_rgb * rim * 0.28;
 
-    // 4. Botanical subsurface scattering (SSS) for living foliage canopies
+    // 5. Cook-Torrance microfacet specular reflection
+    float ndh = max(dot(n, h), 0.0);
+    float ndv = max(dot(n, view_dir), 0.001);
+    float rough = is_water ? 0.05 : (is_timber ? 0.62 : (is_foliage ? 0.42 : 0.72));
+    float alpha2 = rough * rough;
+    float denom = (ndh * ndh * (alpha2 - 1.0) + 1.0);
+    float D = alpha2 / (3.14159265 * denom * denom);
+    float F0 = is_water ? 0.02 : 0.04;
+    float F = F0 + (1.0 - F0) * pow(1.0 - max(dot(h, view_dir), 0.0), 5.0);
+    float spec = clamp((D * F) / (4.0 * ndv * ndl + 0.05), 0.0, 2.5);
+    col += vec3(spec * ndl * sun_int * (is_water ? 0.85 : 0.18));
+
+    // 6. Botanical subsurface scattering (SSS)
     if (is_foliage) {
         float sss = pow(clamp(dot(view_dir, -key), 0.0, 1.0), 3.0) * sun_int;
-        col += vec3(0.12, 0.40, 0.18) * sss * 0.65;
-        float leaf_spec = pow(max(dot(n, h), 0.0), 20.0) * sun_int;
-        col += vec3(0.6, 0.85, 0.6) * leaf_spec * 0.22;
+        col += vec3(0.14, 0.42, 0.16) * sss * 0.55;
     }
 
-    // 5. Specular glint for water or glossy surfaces
-    if (is_water) {
-        float water_spec = pow(max(dot(reflect(-key, n), view_dir), 0.0), 36.0) * sun_int;
-        col += vec3(0.5, 0.85, 0.95) * water_spec * 0.6;
-    }
-
-    // 6. Contact ambient occlusion (natural grounding at terrain level)
-    float contact_ao = clamp((v_world.y + 0.12) * 2.8, 0.45, 1.0);
+    // 7. Multi-scale contact ambient occlusion
+    float contact_ao = clamp((v_world.y + 0.22) * 2.4, 0.42, 1.0);
     col *= contact_ao;
 
-    // 7. Atmospheric depth fog
+    // 8. Height-stratified valley inversion fog (ZERO foreground milk)
     if (u_fog_enabled > 0.5 && u_fog_density > 0.0) {
         float distance_to_eye = length(v_world - u_eye);
-        float mean_height = max(0.0, 0.5 * (v_world.y + u_eye.y));
-        float extinction = u_fog_density * exp(-u_fog_falloff * mean_height);
-        float fog = clamp(1.0 - exp(-extinction * distance_to_eye), 0.0, u_fog_max_opacity);
-        col = mix(col, u_fog_rgb, fog);
+        float effective_dist = max(0.0, distance_to_eye - 35.0);
+        if (effective_dist > 0.0) {
+            float valley_factor = exp(-max(0.0, v_world.y) * 0.35);
+            float extinction = u_fog_density * 0.4 * valley_factor;
+            float fog = clamp(1.0 - exp(-extinction * effective_dist), 0.0, u_fog_max_opacity);
+            col = mix(col, u_fog_rgb, fog);
+        }
     }
+
+    // 9. ACES filmic tonemapping for rich contrast and deep blacks
+    vec3 x = col * 0.95;
+    col = clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
 
     out_color = vec4(col, v_color.a);
 }

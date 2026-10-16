@@ -21,12 +21,12 @@ impl AtmospherePreset {
         match id {
             1 => Self {
                 id: 1,
-                clear_rgba: [0.45, 0.68, 0.92, 1.0],
-                sun_direction: [0.45, 0.85, 0.35],
-                sun_radiance: 1.25,
-                ambient_irradiance: 0.40,
-                fog_rgb: [0.57, 0.71, 0.88],
-                fog_density: 0.0012,
+                clear_rgba: [0.36, 0.58, 0.86, 1.0],
+                sun_direction: [0.42, 0.86, 0.30],
+                sun_radiance: 1.65,
+                ambient_irradiance: 0.32,
+                fog_rgb: [0.55, 0.70, 0.85],
+                fog_density: 0.0004,
             },
             2 => Self {
                 id: 2,
