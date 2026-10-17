@@ -46,6 +46,7 @@ pub enum AuthoringError {
 }
 
 impl core::fmt::Display for AuthoringError {
+    /// Formats the error as a human-readable message naming the failing stage.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::InvalidParameters(msg) => write!(f, "authoring: invalid parameters: {msg}"),
@@ -719,6 +720,7 @@ pub enum BooleanOp {
 }
 
 impl BooleanOp {
+    /// Maps the authoring-layer boolean to the underlying `boolean_3` kernel op.
     fn to_kernel(self) -> super::boolean_3::Boolean3Op {
         match self {
             Self::Union => super::boolean_3::Boolean3Op::Union,
@@ -907,6 +909,8 @@ pub struct DragConsent {
 }
 
 impl Default for DragConsent {
+    /// Returns the default consent record: dragging consented, prior t-slices
+    /// sealed (immutable).
     fn default() -> Self {
         Self {
             consent_granted: true,
@@ -927,6 +931,8 @@ pub enum DragError {
 }
 
 impl core::fmt::Display for DragError {
+    /// Formats the drag failure: governance refusal, out-of-bounds vertex, or
+    /// sealed-slice mutation attempt.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::GovernanceRefused => write!(f, "drag refused: governance/consent violation"),

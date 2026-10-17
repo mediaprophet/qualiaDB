@@ -95,6 +95,7 @@ pub struct StackFormula<'a> {
 }
 
 impl<'a> StackFormula<'a> {
+    /// An empty formula: `MAX_STACK_TRIPLES` zeroed slots, `len` 0.
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -110,6 +111,7 @@ impl<'a> StackFormula<'a> {
 }
 
 impl Default for StackFormula<'_> {
+    /// Equivalent to [`StackFormula::new`].
     fn default() -> Self {
         Self::new()
     }
@@ -166,6 +168,7 @@ pub enum StackEvent<'a> {
 pub struct N3ParserError(pub &'static str);
 
 impl fmt::Display for N3ParserError {
+    /// Renders the static error message.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -173,6 +176,8 @@ impl fmt::Display for N3ParserError {
 
 impl std::error::Error for N3ParserError {}
 
+/// Sentinel triple of three empty-URI terms — fills unused
+/// `StackFormula` slots.
 #[inline]
 fn empty_triple<'a>() -> Triple<'a> {
     Triple {
@@ -245,6 +250,7 @@ struct TripleTokenizer<'a> {
 }
 
 impl<'a> TripleTokenizer<'a> {
+    /// Tokenizer over `s` — iterates zero-copy `&str` tokens.
     fn new(s: &'a str) -> Self {
         Self {
             s,
@@ -257,6 +263,11 @@ impl<'a> TripleTokenizer<'a> {
 impl<'a> Iterator for TripleTokenizer<'a> {
     type Item = &'a str;
 
+    /// Next N3 token: skips whitespace (Unicode-aware) and `#` comments,
+    /// yields `{…}` quoted formulas as one balanced token, `"…"` string
+    /// literals, single-char `;`/`,`/`.` punctuation, or a general token
+    /// (a `.` between digits stays inside decimals). `None` at EOF or
+    /// unbalanced braces.
     fn next(&mut self) -> Option<&'a str> {
         let len = self.b.len();
         // Skip whitespace and `#...\n` comments (a comment is only a comment when
@@ -414,12 +425,18 @@ pub struct N3Parser<'a> {
 }
 
 impl<'a> N3Parser<'a> {
+    /// Parser over borrowed `text` — all emitted terms are zero-copy
+    /// slices of it.
     pub fn new(text: &'a str) -> Self {
         N3Parser { text }
     }
 
     // ── Heap front-end (cold-path convenience) ──────────────────────────────
 
+    /// Heap-backed streaming parse (cold-path convenience): emits
+    /// [`N3Event`]s — `StaticTriple`, `LogicRule`, `AspBlock`,
+    /// `DiffuseBlock` — one per statement/block, in source order.
+    /// Callback errors propagate immediately.
     pub fn parse_all<F>(&mut self, callback: F) -> Result<(), N3ParserError>
     where
         F: FnMut(N3Event<'a>) -> Result<(), N3ParserError>,
@@ -603,6 +620,9 @@ impl<'a> N3Parser<'a> {
 
     // ── Heap helpers (kept for existing consumers) ──────────────────────────
 
+    /// Parse one rule statement into a heap `Rule` — `None` when no
+    /// implication arrow is present (callers only invoke this after
+    /// `looks_like_rule`).
     fn parse_rule(line: &'a str) -> Option<Rule<'a>> {
         let (id, weight, rule_type, premise_str, conclusion_str) = split_rule(line)?;
         Some(Rule {
@@ -618,6 +638,8 @@ impl<'a> N3Parser<'a> {
         })
     }
 
+    /// Tokenize a formula body into a `Vec` of triples via the shared
+    /// `for_each_triple` walker; malformed tails are dropped.
     fn parse_formula_triples(block: &'a str) -> Vec<Triple<'a>> {
         let mut triples = Vec::new();
         let _ = for_each_triple(block, |t| {
@@ -627,6 +649,11 @@ impl<'a> N3Parser<'a> {
         triples
     }
 
+    /// Classify one token: `?…` → `Variable`, `{…}` → `Formula` (braces
+    /// stripped), `"…"` or numeric → `Literal` (quotes stripped for
+    /// numerics), otherwise `Uri`. The N3 `a` keyword stays the bare
+    /// token `a` — expanding it to `rdf:type` would desync rules from
+    /// facts hashed under `q_hash("a")`.
     fn parse_term(s: &'a str) -> Term<'a> {
         let s = s.trim();
         if s.is_empty() {
@@ -703,6 +730,8 @@ fn split_rule(line: &str) -> Option<(Option<&str>, Option<f32>, RuleType, &str, 
     Some((id, weight, rule_type, premise, conclusion))
 }
 
+/// Strip leading whitespace and full-line `#` comments from a
+/// statement slice; returns `""` when only comments remain.
 fn trim_leading_comment_lines(mut s: &str) -> &str {
     loop {
         let trimmed = s.trim_start();
@@ -723,6 +752,8 @@ enum BlockKind {
     Diffuse,
 }
 
+/// Emit an `#asp {}`/`qualia:diffuse {}` block body as the heap-front-end
+/// `N3Event` variant matching `kind`.
 fn emit_block_heap<'a, F>(
     kind: BlockKind,
     body: &'a str,
@@ -737,6 +768,8 @@ where
     }
 }
 
+/// Emit an `#asp {}`/`qualia:diffuse {}` block body as the
+/// zero-heap-front-end `StackEvent` variant matching `kind`.
 fn emit_block_stack<'a, F>(
     kind: BlockKind,
     body: &'a str,
@@ -751,6 +784,9 @@ where
     }
 }
 
+/// Heap-front-end statement dispatch: comment-only statements are
+/// skipped; arrow-bearing statements emit `LogicRule`; everything else
+/// is a `.`-terminated triple block emitted as `StaticTriple` events.
 fn dispatch_statement_heap<'a, F>(stmt: &'a str, callback: &mut F) -> Result<(), N3ParserError>
 where
     F: FnMut(N3Event<'a>) -> Result<(), N3ParserError>,
@@ -771,6 +807,9 @@ where
     Ok(())
 }
 
+/// Zero-heap-front-end statement dispatch — same semantics as
+/// [`dispatch_statement_heap`] but emitting `StackEvent`s via the
+/// stack-formula rule/triple paths; the first callback error wins.
 fn dispatch_statement_stack<'a, F>(stmt: &'a str, callback: &mut F) -> Result<(), N3ParserError>
 where
     F: FnMut(StackEvent<'a>) -> Result<(), N3ParserError>,

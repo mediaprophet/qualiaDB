@@ -60,8 +60,8 @@ pub(super) fn capability_contract_for_button(
         | "meta-deontic-endorse"
         | "arg-evaluate"
         | "arg-visualize" => ("data-capability-id", "LegalLogic.compute"),
-        "value-flow-evaluate"
-        | "value-flow-royalty"
+        "socioeconomics-evaluate"
+        | "socioeconomics-royalty"
         | "interaction-gov-evaluate"
         | "identity-fabric-evaluate"
         | "identity-fabric-survive"

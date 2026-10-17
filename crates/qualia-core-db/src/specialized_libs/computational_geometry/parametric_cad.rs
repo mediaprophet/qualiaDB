@@ -86,6 +86,7 @@ pub enum CadError {
     OutputTooSmall { required: usize },
 }
 
+/// De Casteljau evaluation of a Bézier curve through `control` at `t`.
 pub fn bezier_eval(control: &[Point3], t: f64) -> Result<Point3, CadError> {
     if control.is_empty() || !t.is_finite() {
         return Err(CadError::InvalidInput);
@@ -100,6 +101,8 @@ pub fn bezier_eval(control: &[Point3], t: f64) -> Result<Point3, CadError> {
     Ok(tmp[0])
 }
 
+/// First derivative of a Bézier curve at `t` (degree−1 control
+/// polygon differences scaled by n).
 pub fn bezier_derivative_eval(control: &[Point3], t: f64) -> Result<Point3, CadError> {
     if control.len() < 2 {
         return Err(CadError::InvalidInput);
@@ -112,6 +115,8 @@ pub fn bezier_derivative_eval(control: &[Point3], t: f64) -> Result<Point3, CadE
     bezier_eval(&derived, t)
 }
 
+/// Uniform-knot B-spline evaluation of `control` at `t` (Cox–de Boor
+/// over the clamped-uniform knot vector).
 pub fn bspline_eval(control: &[Point3], degree: usize, t: f64) -> Result<Point3, CadError> {
     if control.is_empty() || degree == 0 || degree >= control.len() || !t.is_finite() {
         return Err(CadError::InvalidInput);
@@ -124,6 +129,8 @@ pub fn bspline_eval(control: &[Point3], degree: usize, t: f64) -> Result<Point3,
     bezier_eval(&control[span..=span + degree], local_t)
 }
 
+/// Knot insertion on the uniform knot vector — returns the refined
+/// control polygon with the curve unchanged.
 pub fn bspline_insert_uniform_knot(
     control: &[Point3],
     degree: usize,
@@ -152,6 +159,8 @@ pub fn bspline_insert_uniform_knot(
     Ok(control.len() + 1)
 }
 
+/// Rational B-spline evaluation: weighted control points in
+/// homogeneous space, then dehomogenized.
 pub fn nurbs_eval(
     control: &[NurbsControlPoint],
     degree: usize,
@@ -173,6 +182,8 @@ pub fn nurbs_eval(
     Ok(scale(p, 1.0 / w))
 }
 
+/// Tensor-product surface evaluation at `(u,v)` — nested curve
+/// evaluation over the control grid.
 pub fn tensor_surface_eval(
     grid: &[Point3],
     u_count: usize,
@@ -196,6 +207,8 @@ pub fn tensor_surface_eval(
     Ok(lerp(lerp(p00, p10, fu), lerp(p01, p11, fu), fv))
 }
 
+/// Regular `(nu × nv)` grid sampling of a tensor-product surface
+/// into caller buffers.
 pub fn tensor_surface_sample(
     grid: &[Point3],
     u_count: usize,
@@ -219,6 +232,8 @@ pub fn tensor_surface_sample(
     })
 }
 
+/// Inside test classifying `point` against a 2D trim loop — `true`
+/// when inside (ray-cast winding test).
 pub fn classify_trim_uv(point: [f64; 2], loop_uv: &[[f64; 2]]) -> Result<bool, CadError> {
     if loop_uv.len() < 3 {
         return Err(CadError::InvalidInput);
@@ -239,6 +254,8 @@ pub fn classify_trim_uv(point: [f64; 2], loop_uv: &[[f64; 2]]) -> Result<bool, C
     Ok(inside)
 }
 
+/// Continuity level (G0/G1/G2) at the join of two curves — endpoint
+/// coincidence, tangent direction, then curvature match.
 pub fn continuity_between_curves(
     a: &[Point3],
     b: &[Point3],
@@ -260,6 +277,8 @@ pub fn continuity_between_curves(
     })
 }
 
+/// Sweep a circular cross-section along `path` into a tube mesh
+/// (parallel-transport frames; caller-buffered output).
 pub fn tube_along_polyline(
     path: &[Point3],
     radius: f64,
@@ -299,6 +318,8 @@ pub fn tube_along_polyline(
     Ok((required_v, required_t))
 }
 
+/// Surface of revolution: rotate `profile` (radius-height pairs)
+/// around the axis into a quad mesh.
 pub fn revolve_profile(
     profile: &[Point3],
     segments: usize,
@@ -338,6 +359,8 @@ pub fn revolve_profile(
     Ok((required_v, required_t))
 }
 
+/// Loft a surface through a sequence of profile curves — linear
+/// skinning between corresponding vertices.
 pub fn loft_profiles(
     a: &[Point3],
     b: &[Point3],
@@ -365,6 +388,8 @@ pub fn loft_profiles(
     Ok((required_v, required_t))
 }
 
+/// Offset a planar polyline by `d` along per-vertex averaged
+/// normals (miter join, bounded by `max_miter`).
 pub fn offset_polyline(
     path: &[Point3],
     distance: f64,
@@ -385,6 +410,7 @@ pub fn offset_polyline(
     Ok(path.len())
 }
 
+/// Signed distance from `p` to `primitive` (sphere/box/capsule/etc.).
 pub fn sdf_eval(p: Point3, primitive: SdfPrimitive) -> f64 {
     match primitive {
         SdfPrimitive::Sphere { center, radius } => distance_sq(p, center).sqrt() - radius,
@@ -404,6 +430,7 @@ pub fn sdf_eval(p: Point3, primitive: SdfPrimitive) -> f64 {
     }
 }
 
+/// CSG combination of two SDF values (`Union`/`Intersect`/`Subtract`).
 pub fn sdf_compose(a: f64, b: f64, op: SdfOp) -> f64 {
     match op {
         SdfOp::Union => a.min(b),
@@ -412,6 +439,8 @@ pub fn sdf_compose(a: f64, b: f64, op: SdfOp) -> f64 {
     }
 }
 
+/// Generate a helical lattice — points on `turns` helices around a
+/// core axis (vascular/strut geometry scaffold).
 pub fn helical_lattice(
     radius: f64,
     pitch: f64,
@@ -434,6 +463,8 @@ pub fn helical_lattice(
     Ok(count)
 }
 
+/// Range/constraint check on design parameters before generation;
+/// errors name the violated bound.
 pub fn validate_parameters(
     values: &[f64],
     constraints: &[ParameterConstraint],
@@ -449,6 +480,8 @@ pub fn validate_parameters(
     Ok(())
 }
 
+/// Latin-hypercube sample set over the parameter ranges — stratified
+/// coverage driven by the seeded splitmix64 stream.
 pub fn latin_hypercube_samples(
     dimensions: usize,
     samples: usize,
@@ -473,6 +506,8 @@ pub fn latin_hypercube_samples(
     Ok(required)
 }
 
+/// Radial-basis-function surrogate prediction at `x` — weighted sum
+/// over training centres (Gaussian kernel).
 pub fn rbf_surrogate_predict(
     samples: &[Point3],
     values: &[f64],
@@ -505,6 +540,9 @@ pub fn rbf_surrogate_predict(
     })
 }
 
+/// Budget-limited argmin scan: evaluate `objective` on at most
+/// `budget` candidates, return the best. (A selection pass, not an
+/// iterative optimizer.)
 pub fn budgeted_evolution_optimize<F>(
     candidates: &[Point3],
     budget: usize,
@@ -533,6 +571,9 @@ where
     })
 }
 
+/// Honest capability notice for the vascular-lattice adapter:
+/// generates structural geometry, requires human attestation, is
+/// **not** clinically validated.
 pub fn vascular_lattice_adapter_notice() -> DomainAdapterNotice {
     DomainAdapterNotice {
         generated_structural_geometry: true,
@@ -541,6 +582,8 @@ pub fn vascular_lattice_adapter_notice() -> DomainAdapterNotice {
     }
 }
 
+/// Chamfer + Hausdorff distances between point sets `a` and `b`
+/// (symmetrized nearest-neighbour means/max).
 pub fn shape_distance(a: &[Point3], b: &[Point3]) -> Result<ShapeDistance, CadError> {
     if a.is_empty() || b.is_empty() {
         return Err(CadError::InvalidInput);
@@ -553,6 +596,7 @@ pub fn shape_distance(a: &[Point3], b: &[Point3]) -> Result<ShapeDistance, CadEr
     Ok(ShapeDistance { chamfer, hausdorff })
 }
 
+/// Distance from `p` to its nearest point in `qs`.
 fn nearest_distance(p: Point3, qs: &[Point3]) -> f64 {
     qs.iter()
         .map(|&q| distance_sq(p, q))
@@ -560,26 +604,32 @@ fn nearest_distance(p: Point3, qs: &[Point3]) -> f64 {
         .sqrt()
 }
 
+/// Linear interpolation `a + t(b−a)`.
 fn lerp(a: Point3, b: Point3, t: f64) -> Point3 {
     add(scale(a, 1.0 - t), scale(b, t))
 }
 
+/// Component-wise vector addition.
 fn add(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
+/// Component-wise vector subtraction (a − b).
 fn sub(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 
+/// Scalar multiplication of a point vector.
 fn scale(a: Point3, s: f64) -> Point3 {
     Point3::new(a.x * s, a.y * s, a.z * s)
 }
 
+/// Dot product of two point vectors.
 fn dot(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
 }
 
+/// Cross product a × b.
 fn cross(a: Point3, b: Point3) -> Point3 {
     Point3::new(
         a.y * b.z - a.z * b.y,
@@ -588,6 +638,7 @@ fn cross(a: Point3, b: Point3) -> Point3 {
     )
 }
 
+/// Unit vector a/‖a‖ (zero vector → zero).
 fn normalize(a: Point3) -> Point3 {
     let n = dot(a, a).sqrt();
     if n > 0.0 {
@@ -597,6 +648,7 @@ fn normalize(a: Point3) -> Point3 {
     }
 }
 
+/// Squared Euclidean distance between two `Point3`s.
 fn distance_sq(a: Point3, b: Point3) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
@@ -604,6 +656,8 @@ fn distance_sq(a: Point3, b: Point3) -> f64 {
     dx * dx + dy * dy + dz * dz
 }
 
+/// Advance the splitmix64 stream and return the next u64 —
+/// deterministic sampling for Latin hypercube.
 fn splitmix64(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
     let mut z = *state;
@@ -612,6 +666,7 @@ fn splitmix64(state: &mut u64) -> u64 {
     z ^ (z >> 31)
 }
 
+/// Next stream value scaled to [0, 1).
 fn splitmix01(state: &mut u64) -> f64 {
     ((splitmix64(state) >> 11) as f64) / ((1u64 << 53) as f64)
 }

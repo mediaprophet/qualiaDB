@@ -281,6 +281,7 @@ pub enum NotificationTemplateType {
 }
 
 impl ComplianceMonitor {
+    /// Construct a `ComplianceMonitor` with default field values.
     pub fn new() -> Self {
         Self {
             compliance_rules: HashMap::new(),
@@ -289,6 +290,7 @@ impl ComplianceMonitor {
         }
     }
 
+    /// Initialize `ComplianceMonitor`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.surveillance_engine.initialize()?;
         self.reporting_engine.initialize()?;
@@ -591,6 +593,7 @@ impl ComplianceMonitor {
 }
 
 impl SurveillanceEngine {
+    /// Construct a `SurveillanceEngine` with default field values.
     pub fn new() -> Self {
         Self {
             surveillance_rules: HashMap::new(),
@@ -599,26 +602,31 @@ impl SurveillanceEngine {
         }
     }
 
+    /// Initialize `SurveillanceEngine`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.anomaly_detector.initialize()?;
         self.alert_manager.initialize()?;
         Ok(())
     }
 
+    /// Add `surveillance_rule` to the `SurveillanceEngine`.
     pub fn add_surveillance_rule(&mut self, rule: SurveillanceRule) {
         self.surveillance_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Look up `surveillance_rule` by id; `None`/`Err` when absent.
     pub fn get_surveillance_rule(&self, rule_id: &str) -> Option<&SurveillanceRule> {
         self.surveillance_rules.get(rule_id)
     }
 
+    /// Ids of every registered `surveillance_rule`.
     pub fn list_surveillance_rules(&self) -> Vec<String> {
         self.surveillance_rules.keys().cloned().collect()
     }
 }
 
 impl AnomalyDetector {
+    /// Construct a `AnomalyDetector` with default field values.
     pub fn new() -> Self {
         Self {
             detection_algorithms: HashMap::new(),
@@ -626,38 +634,46 @@ impl AnomalyDetector {
         }
     }
 
+    /// Initialize `AnomalyDetector`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Add `detection_algorithm` to the `AnomalyDetector`.
     pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
         self.detection_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Look up `detection_algorithm` by id; `None`/`Err` when absent.
     pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
         self.detection_algorithms.get(algorithm_id)
     }
 
+    /// Ids of every registered `detection_algorithm`.
     pub fn list_detection_algorithms(&self) -> Vec<String> {
         self.detection_algorithms.keys().cloned().collect()
     }
 
+    /// Add `anomaly_pattern` to the `AnomalyDetector`.
     pub fn add_anomaly_pattern(&mut self, pattern: AnomalyPattern) {
         self.anomaly_patterns
             .insert(pattern.pattern_id.clone(), pattern);
     }
 
+    /// Look up `anomaly_pattern` by id; `None`/`Err` when absent.
     pub fn get_anomaly_pattern(&self, pattern_id: &str) -> Option<&AnomalyPattern> {
         self.anomaly_patterns.get(pattern_id)
     }
 
+    /// Ids of every registered `anomaly_pattern`.
     pub fn list_anomaly_patterns(&self) -> Vec<String> {
         self.anomaly_patterns.keys().cloned().collect()
     }
 }
 
 impl AlertManager {
+    /// Construct a `AlertManager` with default field values.
     pub fn new() -> Self {
         Self {
             alerts: HashMap::new(),
@@ -666,40 +682,49 @@ impl AlertManager {
         }
     }
 
+    /// Initialize `AlertManager`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Add `alert` to the `AlertManager`.
     pub fn add_alert(&mut self, alert: Alert) {
         self.alerts.insert(alert.alert_id.clone(), alert);
     }
 
+    /// Look up `alert` by id; `None`/`Err` when absent.
     pub fn get_alert(&self, alert_id: &str) -> Option<&Alert> {
         self.alerts.get(alert_id)
     }
 
+    /// Ids of every registered `alert`.
     pub fn list_alerts(&self) -> Vec<String> {
         self.alerts.keys().cloned().collect()
     }
 
+    /// The `alert_escalation` component.
     pub fn alert_escalation(&self) -> &AlertEscalation {
         &self.alert_escalation
     }
 
+    /// The `alert_escalation` component (mutable).
     pub fn alert_escalation_mut(&mut self) -> &mut AlertEscalation {
         &mut self.alert_escalation
     }
 
+    /// The `notification_system` component.
     pub fn notification_system(&self) -> &NotificationSystem {
         &self.notification_system
     }
 
+    /// The `notification_system` component (mutable).
     pub fn notification_system_mut(&mut self) -> &mut NotificationSystem {
         &mut self.notification_system
     }
 }
 
 impl AlertEscalation {
+    /// Construct a `AlertEscalation` with default field values.
     pub fn new() -> Self {
         Self {
             escalation_rules: HashMap::new(),
@@ -707,33 +732,40 @@ impl AlertEscalation {
         }
     }
 
+    /// Add `escalation_rule` to the `AlertEscalation`.
     pub fn add_escalation_rule(&mut self, rule: EscalationRule) {
         self.escalation_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Look up `escalation_rule` by id; `None`/`Err` when absent.
     pub fn get_escalation_rule(&self, rule_id: &str) -> Option<&EscalationRule> {
         self.escalation_rules.get(rule_id)
     }
 
+    /// Ids of every registered `escalation_rule`.
     pub fn list_escalation_rules(&self) -> Vec<String> {
         self.escalation_rules.keys().cloned().collect()
     }
 
+    /// Add `escalation_history` to the `AlertEscalation`.
     pub fn add_escalation_history(&mut self, history: EscalationHistory) {
         self.escalation_history
             .insert(history.history_id.clone(), history);
     }
 
+    /// Look up `escalation_history` by id; `None`/`Err` when absent.
     pub fn get_escalation_history(&self, history_id: &str) -> Option<&EscalationHistory> {
         self.escalation_history.get(history_id)
     }
 
+    /// Ids of every registered `escalation_history`.
     pub fn list_escalation_history(&self) -> Vec<String> {
         self.escalation_history.keys().cloned().collect()
     }
 }
 
 impl NotificationSystem {
+    /// Construct a `NotificationSystem` with default field values.
     pub fn new() -> Self {
         Self {
             notification_channels: HashMap::new(),
@@ -741,28 +773,34 @@ impl NotificationSystem {
         }
     }
 
+    /// Add `channel` to the `NotificationSystem`.
     pub fn add_channel(&mut self, channel: NotificationChannel) {
         self.notification_channels
             .insert(channel.channel_id.clone(), channel);
     }
 
+    /// Look up `channel` by id; `None`/`Err` when absent.
     pub fn get_channel(&self, channel_id: &str) -> Option<&NotificationChannel> {
         self.notification_channels.get(channel_id)
     }
 
+    /// Ids of every registered `channel`.
     pub fn list_channels(&self) -> Vec<String> {
         self.notification_channels.keys().cloned().collect()
     }
 
+    /// Add `template` to the `NotificationSystem`.
     pub fn add_template(&mut self, template: NotificationTemplate) {
         self.notification_templates
             .insert(template.template_id.clone(), template);
     }
 
+    /// Look up `template` by id; `None`/`Err` when absent.
     pub fn get_template(&self, template_id: &str) -> Option<&NotificationTemplate> {
         self.notification_templates.get(template_id)
     }
 
+    /// Ids of every registered `template`.
     pub fn list_templates(&self) -> Vec<String> {
         self.notification_templates.keys().cloned().collect()
     }

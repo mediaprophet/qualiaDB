@@ -305,6 +305,7 @@ pub struct EquilibriumConditions {
 }
 
 impl ReactionAnalyzer {
+    /// Construct a `ReactionAnalyzer` with default field values.
     pub fn new() -> Self {
         Self {
             reaction_network: ReactionNetwork::new(),
@@ -323,12 +324,14 @@ impl ReactionAnalyzer {
         &mut self.reaction_network
     }
 
+    /// Initialize `ReactionAnalyzer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.kinetics_calculator.initialize()?;
         self.thermodynamics_calculator.initialize()?;
         Ok(())
     }
 
+    /// Structural validation: rejects reactions with no reactants or no products.
     pub fn validate_reaction(&self, reaction: &Reaction) -> Result<(), ChemistryError> {
         if reaction.reactants.is_empty() {
             return Err(ChemistryError::ValidationError(
@@ -343,6 +346,9 @@ impl ReactionAnalyzer {
         Ok(())
     }
 
+    /// Real Arrhenius analysis: k = A·exp(−Ea/RT) over the
+    /// rate-determining step (highest Ea); fails `ValidationError` on
+    /// non-positive temperature.
     pub fn analyze_kinetics(
         &mut self,
         reaction: &Reaction,
@@ -425,6 +431,7 @@ impl ReactionAnalyzer {
 }
 
 impl ReactionNetwork {
+    /// Construct a `ReactionNetwork` with default field values.
     pub fn new() -> Self {
         Self {
             reactions: HashMap::new(),
@@ -491,6 +498,7 @@ impl ReactionNetwork {
 }
 
 impl Reaction {
+    /// Construct a `Reaction` with default field values.
     pub fn new() -> Self {
         Self {
             reaction_id: "rxn_1".to_string(),
@@ -504,6 +512,7 @@ impl Reaction {
 }
 
 impl ReactionMechanism {
+    /// Construct a `ReactionMechanism` with default field values.
     pub fn new() -> Self {
         Self {
             mechanism_id: "mech_1".to_string(),
@@ -514,6 +523,7 @@ impl ReactionMechanism {
 }
 
 impl ReactionStep {
+    /// Construct a `ReactionStep` with default field values.
     pub fn new() -> Self {
         Self {
             step_id: "step_1".to_string(),
@@ -526,6 +536,7 @@ impl ReactionStep {
 }
 
 impl Species {
+    /// Construct a `Species` with default field values.
     pub fn new() -> Self {
         Self {
             species_id: "species_1".to_string(),
@@ -538,6 +549,7 @@ impl Species {
 }
 
 impl SpeciesProperties {
+    /// Construct a `SpeciesProperties` with default field values.
     pub fn new() -> Self {
         Self {
             enthalpy: -74.8,
@@ -549,6 +561,7 @@ impl SpeciesProperties {
 }
 
 impl ReactionPathway {
+    /// Construct a `ReactionPathway` with default field values.
     pub fn new() -> Self {
         Self {
             pathway_id: "pathway_1".to_string(),
@@ -560,6 +573,7 @@ impl ReactionPathway {
 }
 
 impl KineticsCalculator {
+    /// Construct a `KineticsCalculator` with default field values.
     pub fn new() -> Self {
         Self {
             rate_laws: HashMap::new(),
@@ -614,12 +628,14 @@ impl KineticsCalculator {
         self.reaction_rates.keys().cloned().collect()
     }
 
+    /// Initialize `KineticsCalculator`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl RateLaw {
+    /// Construct a `RateLaw` with default field values.
     pub fn new() -> Self {
         Self {
             law_id: "law_1".to_string(),
@@ -631,6 +647,7 @@ impl RateLaw {
 }
 
 impl RateLawParameters {
+    /// Construct a `RateLawParameters` with default field values.
     pub fn new() -> Self {
         Self {
             rate_constant: 1.0,
@@ -641,6 +658,7 @@ impl RateLawParameters {
 }
 
 impl RateConstant {
+    /// Construct a `RateConstant` with default field values.
     pub fn new() -> Self {
         Self {
             constant_id: "const_1".to_string(),
@@ -652,6 +670,7 @@ impl RateConstant {
 }
 
 impl TemperatureDependence {
+    /// Construct a `TemperatureDependence` with default field values.
     pub fn new() -> Self {
         Self {
             arrhenius_parameters: ArrheniusParameters::new(),
@@ -661,6 +680,7 @@ impl TemperatureDependence {
 }
 
 impl ArrheniusParameters {
+    /// Construct a `ArrheniusParameters` with default field values.
     pub fn new() -> Self {
         Self {
             pre_exponential: 1.0e13,
@@ -670,6 +690,7 @@ impl ArrheniusParameters {
 }
 
 impl ModifiedArrheniusParameters {
+    /// Construct a `ModifiedArrheniusParameters` with default field values.
     pub fn new() -> Self {
         Self {
             pre_exponential: 1.0e13,
@@ -680,6 +701,7 @@ impl ModifiedArrheniusParameters {
 }
 
 impl PressureDependence {
+    /// Construct a `PressureDependence` with default field values.
     pub fn new() -> Self {
         Self {
             fall_off_parameters: FallOffParameters::new(),
@@ -689,6 +711,7 @@ impl PressureDependence {
 }
 
 impl FallOffParameters {
+    /// Construct a `FallOffParameters` with default field values.
     pub fn new() -> Self {
         Self {
             low_pressure_limit: 1.0,
@@ -699,6 +722,7 @@ impl FallOffParameters {
 }
 
 impl ThermodynamicsCalculator {
+    /// Construct a `ThermodynamicsCalculator` with default field values.
     pub fn new() -> Self {
         Self {
             thermodynamic_data: HashMap::new(),
@@ -727,6 +751,7 @@ impl ThermodynamicsCalculator {
         self.thermodynamic_data.remove(data_id)
     }
 
+    /// Initialize `ThermodynamicsCalculator`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.equilibrium_calculator.initialize()?;
         self.phase_calculator.initialize()?;
@@ -735,6 +760,7 @@ impl ThermodynamicsCalculator {
 }
 
 impl ThermodynamicData {
+    /// Construct a `ThermodynamicData` with default field values.
     pub fn new() -> Self {
         Self {
             data_id: "data_1".to_string(),
@@ -748,6 +774,7 @@ impl ThermodynamicData {
 }
 
 impl EquilibriumCalculator {
+    /// Construct a `EquilibriumCalculator` with default field values.
     pub fn new() -> Self {
         Self {
             equilibrium_constant: EquilibriumConstant::new(),
@@ -786,12 +813,14 @@ impl EquilibriumCalculator {
         &mut self.gibbs_energy
     }
 
+    /// Initialize `EquilibriumCalculator`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl EquilibriumConstant {
+    /// Construct a `EquilibriumConstant` with default field values.
     pub fn new() -> Self {
         Self {
             value: 1.0,
@@ -802,6 +831,7 @@ impl EquilibriumConstant {
 }
 
 impl ReactionQuotient {
+    /// Construct a `ReactionQuotient` with default field values.
     pub fn new() -> Self {
         Self {
             value: 1.0,
@@ -811,6 +841,7 @@ impl ReactionQuotient {
 }
 
 impl GibbsEnergy {
+    /// Construct a `GibbsEnergy` with default field values.
     pub fn new() -> Self {
         Self {
             standard_gibbs: -50.8,
@@ -821,6 +852,7 @@ impl GibbsEnergy {
 }
 
 impl PhaseCalculator {
+    /// Construct a `PhaseCalculator` with default field values.
     pub fn new() -> Self {
         Self {
             phase_diagrams: HashMap::new(),
@@ -877,12 +909,14 @@ impl PhaseCalculator {
         self.phase_equilibria.keys().cloned().collect()
     }
 
+    /// Initialize `PhaseCalculator`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl PhaseDiagram {
+    /// Construct a `PhaseDiagram` with default field values.
     pub fn new() -> Self {
         Self {
             diagram_id: "diagram_1".to_string(),
@@ -893,6 +927,7 @@ impl PhaseDiagram {
 }
 
 impl Phase {
+    /// Construct a `Phase` with default field values.
     pub fn new() -> Self {
         Self {
             phase_id: "phase_1".to_string(),
@@ -904,6 +939,7 @@ impl Phase {
 }
 
 impl PhaseBoundary {
+    /// Construct a `PhaseBoundary` with default field values.
     pub fn new() -> Self {
         Self {
             boundary_id: "boundary_1".to_string(),
@@ -914,6 +950,7 @@ impl PhaseBoundary {
 }
 
 impl BoundaryCondition {
+    /// Construct a `BoundaryCondition` with default field values.
     pub fn new() -> Self {
         Self {
             temperature: 373.15,
@@ -924,6 +961,7 @@ impl BoundaryCondition {
 }
 
 impl PhaseTransition {
+    /// Construct a `PhaseTransition` with default field values.
     pub fn new() -> Self {
         Self {
             transition_id: "transition_1".to_string(),
@@ -935,6 +973,7 @@ impl PhaseTransition {
 }
 
 impl PhaseEquilibrium {
+    /// Construct a `PhaseEquilibrium` with default field values.
     pub fn new() -> Self {
         Self {
             equilibrium_id: "eq_1".to_string(),
@@ -945,6 +984,7 @@ impl PhaseEquilibrium {
 }
 
 impl EquilibriumConditions {
+    /// Construct a `EquilibriumConditions` with default field values.
     pub fn new() -> Self {
         Self {
             temperature: 273.15,

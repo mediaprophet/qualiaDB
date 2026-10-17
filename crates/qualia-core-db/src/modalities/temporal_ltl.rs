@@ -21,6 +21,9 @@ pub enum TemporalError {
     AbortedTimeout,
 }
 
+/// Timeout guard for a lock lease: `Err(AbortedTimeout)` when
+/// `current_time` is past `lock_granted_at + ttl_seconds`, else `Ok`.
+/// The lease boundary itself (`==`) is still valid.
 pub fn evaluate_lock_lease(
     lock_granted_at: u64,
     current_time: u64,
@@ -32,6 +35,11 @@ pub fn evaluate_lock_lease(
     Ok(())
 }
 
+/// Evaluate an `LtlFormula` over a finite quin trace — the
+/// predicate-hash is the proposition at each state. Empty traces
+/// satisfy nothing. `Until`/`Release` scan for the earliest index where
+/// the consequent holds with the antecedent/invariant holding
+/// throughout the prefix.
 pub fn evaluate_ltl_trace(trace: &[NQuin], formula: &LtlFormula) -> bool {
     match formula {
         LtlFormula::Globally(p) => {

@@ -489,6 +489,9 @@ pub fn evaluate_deontic_contract(
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
+/// Resolve an N3 `Term` to its 60-bit URI hash (`Some`) or `None` for
+/// non-IRI terms (literals, variables, formulas). Feature-gated shim over
+/// `n3_parser::term_uri_hash` — unavailable on bare `wasm32` builds.
 pub fn term_uri_hash(term: &Term) -> Option<u64> {
     crate::modalities::logic::n3_parser::term_uri_hash(term)
 }

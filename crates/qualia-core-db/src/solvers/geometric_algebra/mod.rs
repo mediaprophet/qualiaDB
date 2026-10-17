@@ -105,24 +105,25 @@ pub mod qualia_integration {
         let vector_hash = q_hash(&vector_hex);
 
         // Combine hashes for multivector representation
-        let combined_hash = scalar_hash.wrapping_mul(31).wrapping_add(vector_hash);
+        let combined_hash = scalar_hash ^ vector_hash;
+        let scalar_bits = mv.get_scalar().to_bits() as u64;
+        let parity = combined_hash ^ q_hash("q42:multivector") ^ scalar_bits ^ context;
 
         NQuin {
             subject: combined_hash,
             predicate: q_hash("q42:multivector"),
-            object: q_hash("geometric_algebra"),
+            object: scalar_bits,
             context,
             metadata: mv.grade_mask() as u64,
-            parity: 0,
+            parity,
         }
     }
 
     /// Extract multivector from NQuin
     pub fn quin_to_multivector(quin: &NQuin) -> Option<Multivector> {
-        // This is a simplified extraction - full implementation would
-        // reconstruct the multivector from the stored hash
         if quin.predicate == q_hash("q42:multivector") {
-            Some(Multivector::scalar(0.0)) // Placeholder
+            let scalar = f32::from_bits((quin.object & 0xFFFF_FFFF) as u32);
+            Some(Multivector::scalar(scalar))
         } else {
             None
         }

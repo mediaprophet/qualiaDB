@@ -8,17 +8,26 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[repr(u8)]
 pub enum PresentationLevel {
+    /// P0 — flat document/card presentation.
     #[default]
     Document = 0,
+    /// P1 — application habitat (windowed UI).
     AppHabitat = 1,
+    /// P2 — spatial desk arrangement.
     SpatialDesk = 2,
+    /// P3 — staged world presentation.
     StageWorld = 3,
+    /// P4 — embodied world (avatar-mediated).
     EmbodiedWorld = 4,
+    /// P5 — infosphere field.
     Infosphere = 5,
+    /// P6 — multi-sensory presentation.
     MultiSensory = 6,
 }
 
 impl PresentationLevel {
+    /// Decode a `u8` into a presentation level; out-of-range values default
+    /// to `Document` (P0).
     pub fn from_u8(v: u8) -> Self {
         match v {
             1 => Self::AppHabitat,
@@ -31,6 +40,7 @@ impl PresentationLevel {
         }
     }
 
+    /// The level's discriminant (P0–P6).
     pub fn as_u8(self) -> u8 {
         self as u8
     }

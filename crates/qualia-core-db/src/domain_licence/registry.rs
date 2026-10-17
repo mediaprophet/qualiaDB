@@ -93,10 +93,12 @@ impl LicenceRegistry {
         out
     }
 
+    /// Serialise the registry to pretty JSON.
     pub fn to_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
     }
 
+    /// Deserialise a registry from JSON.
     pub fn from_json(text: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(text)
     }

@@ -536,6 +536,7 @@ pub struct Csrk {
 }
 
 impl BleNetwork {
+    /// Create the BLE network facade with uninitialised sub-managers.
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
@@ -546,72 +547,148 @@ impl BleNetwork {
         }
     }
 
+    /// Register a BLE node in the node registry.
+    pub fn register_node(&mut self, node: BleNode) {
+        self.nodes.insert(node.node_id.clone(), node);
+    }
+
+    /// Initialise mesh manager, advertiser, scanner, and connection manager in order.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         // Initialize BLE network components
         self.mesh_manager.initialize()?;
         self.advertiser.initialize()?;
         self.scanner.initialize()?;
         self.connection_manager.initialize()?;
-        Ok(())
-    }
 
-    pub fn discover_nodes(&mut self) -> Result<Vec<BleNode>, MeshError> {
-        let mut discovered_nodes = Vec::new();
-
-        // Simulate BLE node discovery
-        for i in 0..10 {
-            let node = BleNode {
-                node_id: format!("ble_node_{}", i),
+        // Register default local BLE node interface if none registered
+        if self.nodes.is_empty() {
+            let local_node = BleNode {
+                node_id: "ble_local_gateway".to_string(),
                 address: BleAddress {
-                    address: [i as u8, 0, 0, 0, 0, 0],
-                    address_type: BleAddressType::Random,
+                    address: [0x00, 0x1A, 0x7D, 0xDA, 0x71, 0x13],
+                    address_type: BleAddressType::Public,
                 },
                 capabilities: BleCapabilities {
-                    max_connections: 3,
+                    max_connections: 8,
                     data_length: 251,
-                    phy_types: vec![BlePhyType::LE1M, BlePhyType::LE2M],
-                    features: vec![BleFeature::ExtendedAdvertising, BleFeature::LE2MPHY],
+                    phy_types: vec![BlePhyType::LE1M, BlePhyType::LE2M, BlePhyType::LECoded],
+                    features: vec![
+                        BleFeature::ExtendedAdvertising,
+                        BleFeature::LE2MPHY,
+                        BleFeature::LEDataPacketLengthExtension,
+                    ],
                 },
-                role: BleRole::Peripheral,
-                connection_state: ConnectionState::Disconnected,
-                rssi: -60 + (i as i8 * 3),
-                battery_level: 100.0 - (i as f64 * 5.0),
+                role: BleRole::Central,
+                connection_state: ConnectionState::Connected,
+                rssi: -45,
+                battery_level: 100.0,
             };
+            self.nodes.insert(local_node.node_id.clone(), local_node);
+        }
+        Ok(())
+    }
 
-            self.nodes.insert(node.node_id.clone(), node.clone());
-            discovered_nodes.push(node);
+    /// Discover nearby nodes from the active node registry and scan results.
+    pub fn discover_nodes(&mut self) -> Result<Vec<BleNode>, MeshError> {
+        let mut discovered: Vec<BleNode> = self.nodes.values().cloned().collect();
+
+        // Process any scan results from active scans into nodes
+        for scan in &self.scanner.active_scans {
+            for res in &scan.results {
+                let node_id = format!(
+                    "ble_{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+                    res.address.address[0],
+                    res.address.address[1],
+                    res.address.address[2],
+                    res.address.address[3],
+                    res.address.address[4],
+                    res.address.address[5],
+                );
+                if !self.nodes.contains_key(&node_id) {
+                    let node = BleNode {
+                        node_id: node_id.clone(),
+                        address: res.address.clone(),
+                        capabilities: BleCapabilities {
+                            max_connections: 3,
+                            data_length: 251,
+                            phy_types: vec![BlePhyType::LE1M],
+                            features: vec![BleFeature::ExtendedAdvertising],
+                        },
+                        role: BleRole::Peripheral,
+                        connection_state: ConnectionState::Disconnected,
+                        rssi: res.rssi,
+                        battery_level: 100.0,
+                    };
+                    self.nodes.insert(node_id, node.clone());
+                    discovered.push(node);
+                }
+            }
         }
 
-        Ok(discovered_nodes)
+        Ok(discovered)
     }
 
-    pub fn send_message(&mut self, _message: &StoredMessage) -> Result<(), MeshError> {
-        // Send message through BLE network
-        thread::sleep(Duration::from_millis(100)); // Simulate transmission time
+    /// Enqueue a message for BLE mesh delivery via the mesh message handler.
+    pub fn send_message(&mut self, message: &StoredMessage) -> Result<(), MeshError> {
+        let dest_hash = q_hash(&message.destination);
+        let src_hash = q_hash(&message.source);
+        let mesh_msg = MeshMessage {
+            message_id: message.message_id.clone(),
+            source: src_hash as u16,
+            destination: dest_hash as u16,
+            ttl: (message.ttl.as_secs().min(255)) as u8,
+            opcode: 0x01,
+            parameters: message.payload.clone(),
+            app_key_index: 0,
+            net_key_index: 0,
+            sequence_number: self.mesh_manager.mesh_network.seq_num,
+            timestamp: Instant::now(),
+        };
+        self.mesh_manager.mesh_network.seq_num = self.mesh_manager.mesh_network.seq_num.wrapping_add(1);
+        self.mesh_manager.message_handler.enqueue_message(mesh_msg);
         Ok(())
     }
 
+    /// Enqueue a raw payload for transmission to a destination via the BLE mesh message handler.
     pub fn send_payload(
         &mut self,
-        _destination: &str,
-        _payload: &[u8],
+        destination: &str,
+        payload: &[u8],
         _priority: MessagePriority,
     ) -> Result<(), MeshError> {
-        thread::sleep(Duration::from_millis(100));
+        let dest_hash = q_hash(destination);
+        let mesh_msg = MeshMessage {
+            message_id: format!("payload_{}", self.mesh_manager.mesh_network.seq_num),
+            source: 0x0001,
+            destination: dest_hash as u16,
+            ttl: 64,
+            opcode: 0x02,
+            parameters: payload.to_vec(),
+            app_key_index: 0,
+            net_key_index: 0,
+            sequence_number: self.mesh_manager.mesh_network.seq_num,
+            timestamp: Instant::now(),
+        };
+        self.mesh_manager.mesh_network.seq_num = self.mesh_manager.mesh_network.seq_num.wrapping_add(1);
+        self.mesh_manager.message_handler.enqueue_message(mesh_msg);
         Ok(())
     }
 
+    /// Number of nodes currently registered in `self.nodes`.
     pub fn get_node_count(&self) -> u32 {
         self.nodes.len() as u32
     }
 
+    /// Optimize BLE discovery scanning window and interval.
     pub fn optimize_discovery(&mut self) -> Result<(), MeshError> {
-        // Optimize BLE discovery
+        self.scanner.scanning_parameters.interval = 160;
+        self.scanner.scanning_parameters.window = 80;
         Ok(())
     }
 }
 
 impl BleMeshManager {
+    /// Create a default `BleMeshManager`.
     pub fn new() -> Self {
         Self {
             mesh_network: BleMeshNetwork::new(),
@@ -621,34 +698,41 @@ impl BleMeshManager {
         }
     }
 
+    /// Initialise the `BleMeshManager` sub-components; propagates `MeshError`.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         self.provisioning_manager.initialize()?;
         self.configuration_manager.initialize()?;
         Ok(())
     }
 
+    /// Borrow the mesh network state.
     pub fn mesh_network(&self) -> &BleMeshNetwork {
         &self.mesh_network
     }
 
+    /// Mutable borrow of the mesh network state.
     pub fn mesh_network_mut(&mut self) -> &mut BleMeshNetwork {
         &mut self.mesh_network
     }
 
+    /// Borrow the provisioning manager.
     pub fn provisioning_manager(&self) -> &ProvisioningManager {
         &self.provisioning_manager
     }
 
+    /// Borrow the configuration manager.
     pub fn configuration_manager(&self) -> &ConfigurationManager {
         &self.configuration_manager
     }
 
+    /// Borrow the mesh message handler.
     pub fn message_handler(&self) -> &MeshMessageHandler {
         &self.message_handler
     }
 }
 
 impl BleMeshNetwork {
+    /// Create a default `BleMeshNetwork`.
     pub fn new() -> Self {
         Self {
             network_id: "mesh_network_1".to_string(),
@@ -662,6 +746,7 @@ impl BleMeshNetwork {
 }
 
 impl ProvisioningManager {
+    /// Create a default `ProvisioningManager`.
     pub fn new() -> Self {
         Self {
             provisioning_protocol: ProvisioningProtocol::PBADV,
@@ -676,28 +761,34 @@ impl ProvisioningManager {
         }
     }
 
+    /// Initialise the `ProvisioningManager` sub-components; propagates `MeshError`.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// Borrow the provisioning protocol state machine.
     pub fn protocol(&self) -> &ProvisioningProtocol {
         &self.provisioning_protocol
     }
 
+    /// Borrow the accumulated provisioning data.
     pub fn provisioning_data(&self) -> &ProvisioningData {
         &self.provisioning_data
     }
 
+    /// Install out-of-band provisioning data.
     pub fn set_oob_data(&mut self, data: OobData) {
         self.oob_data = Some(data);
     }
 
+    /// The out-of-band provisioning data, if provisioned.
     pub fn oob_data(&self) -> Option<&OobData> {
         self.oob_data.as_ref()
     }
 }
 
 impl ConfigurationManager {
+    /// Create a default `ConfigurationManager`.
     pub fn new() -> Self {
         Self {
             config_database: ConfigDatabase::new(),
@@ -706,32 +797,39 @@ impl ConfigurationManager {
         }
     }
 
+    /// Initialise the `ConfigurationManager` sub-components; propagates `MeshError`.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// Borrow the node configuration database.
     pub fn config_database(&self) -> &ConfigDatabase {
         &self.config_database
     }
 
+    /// Mutable borrow of the node configuration database.
     pub fn config_database_mut(&mut self) -> &mut ConfigDatabase {
         &mut self.config_database
     }
 
+    /// Register a `ConfigModel` in the database.
     pub fn add_config_model(&mut self, model: ConfigModel) {
         self.config_models.push(model);
     }
 
+    /// The registered `ConfigModel`s.
     pub fn config_models(&self) -> &[ConfigModel] {
         &self.config_models
     }
 
+    /// Borrow the configuration access-control list.
     pub fn access_control(&self) -> &AccessControl {
         &self.access_control
     }
 }
 
 impl ConfigDatabase {
+    /// Create a default `ConfigDatabase`.
     pub fn new() -> Self {
         Self {
             app_keys: HashMap::new(),
@@ -742,6 +840,7 @@ impl ConfigDatabase {
 }
 
 impl AccessControl {
+    /// Create a default `AccessControl`.
     pub fn new() -> Self {
         Self {
             access_list: Vec::new(),
@@ -751,6 +850,7 @@ impl AccessControl {
 }
 
 impl MeshMessageHandler {
+    /// Create a default `MeshMessageHandler`.
     pub fn new() -> Self {
         Self {
             message_queue: Vec::new(),
@@ -759,28 +859,34 @@ impl MeshMessageHandler {
         }
     }
 
+    /// Push `message` onto the mesh message queue.
     pub fn enqueue_message(&mut self, message: MeshMessage) {
         self.message_queue.push(message);
     }
 
+    /// Pop the oldest queued `MeshMessage`, or `None` when empty.
     pub fn dequeue_message(&mut self) -> Option<MeshMessage> {
         self.message_queue.pop()
     }
 
+    /// Current message-queue depth.
     pub fn queue_length(&self) -> usize {
         self.message_queue.len()
     }
 
+    /// Borrow the mesh routing table.
     pub fn routing_table(&self) -> &RoutingTable {
         &self.routing_table
     }
 
+    /// Borrow the mesh security manager.
     pub fn security_manager(&self) -> &MeshSecurityManager {
         &self.security_manager
     }
 }
 
 impl MeshSecurityManager {
+    /// Create a default `MeshSecurityManager`.
     pub fn new() -> Self {
         Self {
             network_keys: HashMap::new(),
@@ -792,6 +898,7 @@ impl MeshSecurityManager {
 }
 
 impl BleAdvertiser {
+    /// Create a default `BleAdvertiser`.
     pub fn new() -> Self {
         Self {
             advertising_data: Vec::new(),
@@ -806,44 +913,54 @@ impl BleAdvertiser {
         }
     }
 
+    /// Initialise the `BleAdvertiser` sub-components; propagates `MeshError`.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// Set the advertising payload bytes.
     pub fn set_advertising_data(&mut self, data: Vec<u8>) {
         self.advertising_data = data;
     }
 
+    /// The configured advertising payload bytes.
     pub fn advertising_data(&self) -> &[u8] {
         &self.advertising_data
     }
 
+    /// Set the scan-response payload bytes.
     pub fn set_scan_response_data(&mut self, data: Vec<u8>) {
         self.scan_response_data = data;
     }
 
+    /// The configured scan-response payload bytes.
     pub fn scan_response_data(&self) -> &[u8] {
         &self.scan_response_data
     }
 
+    /// The active advertising parameters.
     pub fn advertising_parameters(&self) -> &AdvertisingParameters {
         &self.advertising_parameters
     }
 
+    /// Borrow the `start_advertising` component.
     pub fn start_advertising(&mut self, adv: ActiveAdvertisement) {
         self.active_advertisements.push(adv);
     }
 
+    /// Borrow the `stop_advertising` component.
     pub fn stop_advertising(&mut self, handle: u8) {
         self.active_advertisements.retain(|a| a.handle != handle);
     }
 
+    /// Number of `active_advertisement` entries currently held.
     pub fn active_advertisement_count(&self) -> usize {
         self.active_advertisements.len()
     }
 }
 
 impl BleScanner {
+    /// Create a default `BleScanner`.
     pub fn new() -> Self {
         Self {
             scanning_parameters: ScanningParameters {
@@ -861,36 +978,44 @@ impl BleScanner {
         }
     }
 
+    /// Initialise the `BleScanner` sub-components; propagates `MeshError`.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// The active scanning parameters.
     pub fn scanning_parameters(&self) -> &ScanningParameters {
         &self.scanning_parameters
     }
 
+    /// The active scan filter.
     pub fn scan_filter(&self) -> &ScanFilter {
         &self.scan_filter
     }
 
+    /// Add a 16-bit service UUID to the scan filter.
     pub fn add_service_uuid_filter(&mut self, uuid: u16) {
         self.scan_filter.service_uuid_filter.push(uuid);
     }
 
+    /// Borrow the `start_scan` component.
     pub fn start_scan(&mut self, scan: ActiveScan) {
         self.active_scans.push(scan);
     }
 
+    /// Borrow the `stop_scan` component.
     pub fn stop_scan(&mut self, handle: u8) {
         self.active_scans.retain(|s| s.handle != handle);
     }
 
+    /// Number of `active_scan` entries currently held.
     pub fn active_scan_count(&self) -> usize {
         self.active_scans.len()
     }
 }
 
 impl BleConnectionManager {
+    /// Create a default `BleConnectionManager`.
     pub fn new() -> Self {
         Self {
             connections: HashMap::new(),
@@ -906,36 +1031,44 @@ impl BleConnectionManager {
         }
     }
 
+    /// Initialise the `BleConnectionManager` sub-components; propagates `MeshError`.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// Track `connection` under `handle`.
     pub fn add_connection(&mut self, handle: u16, connection: BleConnection) {
         self.connections.insert(handle, connection);
     }
 
+    /// Drop the connection tracked under `handle`.
     pub fn remove_connection(&mut self, handle: u16) {
         self.connections.remove(&handle);
     }
 
+    /// Number of `connection` entries currently held.
     pub fn connection_count(&self) -> usize {
         self.connections.len()
     }
 
+    /// Borrow the `connection`.
     pub fn get_connection(&self, handle: u16) -> Option<&BleConnection> {
         self.connections.get(&handle)
     }
 
+    /// The configured connection parameters.
     pub fn connection_parameters(&self) -> &ConnectionParameters {
         &self.connection_parameters
     }
 
+    /// Borrow the mesh security manager.
     pub fn security_manager(&self) -> &BleSecurityManager {
         &self.security_manager
     }
 }
 
 impl BleSecurityManager {
+    /// Create a default `BleSecurityManager`.
     pub fn new() -> Self {
         Self {
             encryption_keys: HashMap::new(),

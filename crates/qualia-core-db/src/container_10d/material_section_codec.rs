@@ -17,6 +17,14 @@ const SAMPLER_SIZE: usize = TEXTURE_SAMPLER_RECORD_SIZE;
 const SAMPLER_COUNT: usize = 6;
 const RESERVED_START: usize = SAMPLER_OFFSET + SAMPLER_SIZE * SAMPLER_COUNT;
 
+/// Write a complete MAT4 section (header + material records + submesh
+/// ranges) into `out`, returning the byte count used.
+///
+/// Each record is the 256-byte MAT1 core followed by six 24-byte texture
+/// transforms, six sampler records, and the `wind_animated` byte. The
+/// payload is validated via `validate_records` before anything is
+/// written; `out` is zeroed to `needed` first so reserved bytes are 0.
+/// Fails closed on count/size limits, undersized `out`, or invalid data.
 pub(super) fn encode(
     materials: &[MaterialRecord],
     ranges: &[SubmeshRange],
@@ -85,6 +93,15 @@ pub(super) fn encode(
     Ok(offset)
 }
 
+/// Versioned reader for MAT1–MAT4 payloads. Determines record size and
+/// which extension blocks (transforms, samplers, wind flag) the magic
+/// implies, fills the caller-supplied `materials_out` / `ranges_out`
+/// buffers, then re-runs `validate_records` on the decoded data.
+///
+/// Returns `(material_count, range_count)` actually written. Fails on
+/// undersized output buffers (`OutputCountTooSmall`), malformed reserved
+/// bytes, or any post-decode validation error — callers never observe a
+/// partially-trusted section.
 pub(super) fn decode(
     bytes: &[u8],
     mesh_index_count: u32,
@@ -205,6 +222,11 @@ pub(super) fn decode(
     Ok((material_count, range_count))
 }
 
+/// Parse just the section header and return `(material_count,
+/// range_count)`. Verifies magic (`MAT1`–`MAT4` lineage), version tag,
+/// declared record/range strides, count limits, and that `bytes.len()`
+/// exactly equals the computed payload size — so a successful result
+/// guarantees `decode` can iterate without bounds re-checks.
 pub(super) fn counts(bytes: &[u8]) -> Result<(usize, usize), MaterialSectionError> {
     if bytes.len() < MATERIAL_SECTION_HEADER_SIZE {
         return Err(MaterialSectionError::Header);

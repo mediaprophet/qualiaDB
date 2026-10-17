@@ -23,6 +23,7 @@ pub struct BundleWriter {
 }
 
 impl BundleWriter {
+    /// Create an empty bundle writer.
     pub fn new() -> Self {
         Self::default()
     }
@@ -32,6 +33,7 @@ impl BundleWriter {
         self.entries.len()
     }
 
+    /// True when no files have been added.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

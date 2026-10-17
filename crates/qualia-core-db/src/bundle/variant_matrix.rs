@@ -108,6 +108,8 @@ pub struct TwinFamilyManifest {
 }
 
 impl TwinFamilyManifest {
+    /// Create an empty family manifest; variants are added with
+    /// [`Self::add_variant`] and `default_variant` selects the fallback.
     pub fn new(
         family_id: impl Into<String>,
         common_name: impl Into<String>,

@@ -10,7 +10,10 @@
 //!   using 5 scalar additions per sample, eliminating zipper noise and audio clicks.
 //! - **Zero-Heap Hot Path**: Evaluates directly into caller-supplied slices.
 
+/// AudioWorklet render quantum — coefficient updates and ramping occur at
+/// these boundaries (2.67 ms @ 48 kHz).
 pub const QUANTUM_SIZE: usize = 128;
+/// DC offset injected per sample to prevent subnormal-FPU stall penalties.
 pub const DENORMAL_DC_OFFSET: f32 = 1e-24;
 
 /// Low-frequency shelf anchor (Hz).
@@ -24,10 +27,15 @@ pub const ANCHOR_HIGH_HZ: f32 = 8000.0;
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BiquadCoeffs {
+    /// Feed-forward coefficient for `x[n]`.
     pub b0: f32,
+    /// Feed-forward coefficient for `x[n-1]`.
     pub b1: f32,
+    /// Feed-forward coefficient for `x[n-2]`.
     pub b2: f32,
+    /// Feedback coefficient for `y[n-1]`.
     pub a1: f32,
+    /// Feedback coefficient for `y[n-2]`.
     pub a2: f32,
 }
 
@@ -47,11 +55,14 @@ impl Default for BiquadCoeffs {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Df2tState {
+    /// First state register (`s1[n-1]`).
     pub s1: f32,
+    /// Second state register (`s2[n-1]`).
     pub s2: f32,
 }
 
 impl Df2tState {
+    /// Clear both state registers.
     #[inline]
     pub fn reset(&mut self) {
         self.s1 = 0.0;
@@ -62,9 +73,13 @@ impl Df2tState {
 /// Single DF2T biquad filter with linear coefficient ramping.
 #[derive(Debug, Clone)]
 pub struct Df2tBiquad {
+    /// DF2T state registers.
     pub state: Df2tState,
+    /// Coefficients in use this sample (ramped per-sample toward `target`).
     pub active: BiquadCoeffs,
+    /// Coefficients being ramped toward over the current quantum.
     pub target: BiquadCoeffs,
+    /// Per-sample increment derived in `set_target_quantum`.
     pub delta: BiquadCoeffs,
 }
 
@@ -127,13 +142,19 @@ impl Df2tBiquad {
 /// 3. High Shelf (8000 Hz anchor)
 #[derive(Debug, Clone)]
 pub struct ThreeBandParametricBiquad {
+    /// Sample rate the coefficients were computed for (clamped to ≥ 8 kHz).
     pub sample_rate: f32,
+    /// Low shelf stage at `ANCHOR_LOW_HZ` (200 Hz).
     pub low_shelf: Df2tBiquad,
+    /// Mid peaking stage at `ANCHOR_MID_HZ` (1 kHz).
     pub mid_peak: Df2tBiquad,
+    /// High shelf stage at `ANCHOR_HIGH_HZ` (8 kHz).
     pub high_shelf: Df2tBiquad,
 }
 
 impl ThreeBandParametricBiquad {
+    /// Create an EQ at flat unity response (0 dB on all bands), coefficients
+    /// snapped to target so no ramping occurs on the first quantum.
     pub fn new(sample_rate: f32) -> Self {
         let mut eq = Self {
             sample_rate: sample_rate.max(8000.0),

@@ -22,6 +22,8 @@ pub mod journal;
 pub mod machine_gpu_profile;
 /// Canonical Q42 v3 model-metadata volume for converted `.p64` packages.
 pub mod model_helper;
+/// Canonical M64 Matter-64 container for physical strata, points, and holographic entities.
+pub mod m64_matter;
 pub mod p64_weight;
 pub mod q42_kvp;
 #[cfg(not(target_arch = "wasm32"))]

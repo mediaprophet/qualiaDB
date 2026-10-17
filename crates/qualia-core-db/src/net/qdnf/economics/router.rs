@@ -20,6 +20,9 @@ pub struct InProcessRouter {
 }
 
 impl InProcessRouter {
+    /// An off router with a zero budget and no funding source — it can
+    /// only be switched on by [`turn_on_router`] with a funded
+    /// settlement.
     pub const fn new() -> Self {
         Self {
             on: false,
@@ -28,16 +31,21 @@ impl InProcessRouter {
         }
     }
 
+    /// True once a funded settlement has admitted the routing role.
     #[inline]
     pub const fn is_on(&self) -> bool {
         self.on
     }
 
+    /// Unspent budget granted by the role grant; decremented by
+    /// [`admit_router_work`]. Zero while off.
     #[inline]
     pub const fn remaining_budget(&self) -> ResourceBudget {
         self.remaining
     }
 
+    /// Digest identifying the settlement that funded this router;
+    /// `StrongDigest::ZERO` while off.
     #[inline]
     pub const fn funding_source(&self) -> StrongDigest {
         self.funding_source
@@ -45,11 +53,14 @@ impl InProcessRouter {
 }
 
 impl Default for InProcessRouter {
+    /// Equivalent to [`InProcessRouter::new`].
     fn default() -> Self {
         Self::new()
     }
 }
 
+/// Component-wise `have - cost` over bytes/work/io; any underflow
+/// yields `BudgetExhausted` rather than wrapping.
 fn subtract_budget(
     have: ResourceBudget,
     cost: ResourceBudget,

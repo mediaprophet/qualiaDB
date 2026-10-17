@@ -18,11 +18,17 @@ pub const SIDECAR_KIND_CQT: u16 = 1;
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
 pub struct AudioSpectralSidecarHeader {
+    /// Format magic `"Q4AU"` (`SPECTRAL_SIDECAR_MAGIC`).
     pub magic: u32,
+    /// Layout version: `VERSION` (v1) or `VERSION_V2` (appended mel/MFCC planes).
     pub version: u16,
+    /// Carries the `SIDECAR_KIND_*` transform tag (STFT = 0, CQT = 1).
     pub _pad: u16,
+    /// Frequency bins per frame.
     pub bin_count: u32,
+    /// Number of frames in the raster.
     pub frame_count: u32,
+    /// Source sample rate.
     pub sample_rate: u32,
 }
 
@@ -32,6 +38,7 @@ impl AudioSpectralSidecarHeader {
     /// See [`bake_spectral_v2_from_samples`] and the [`SpectralV2SubHeader`] layout.
     pub const VERSION_V2: u16 = 2;
 
+    /// Header initialised with magic + v1, zero frame geometry, 48 kHz.
     #[inline]
     pub const fn empty() -> Self {
         Self {
@@ -44,6 +51,8 @@ impl AudioSpectralSidecarHeader {
         }
     }
 
+    /// Byte size of the frame raster following the header
+    /// (`bin_count × frame_count × 4`, saturating).
     #[inline]
     pub fn payload_bytes(&self) -> usize {
         (self.bin_count as usize)
@@ -51,6 +60,8 @@ impl AudioSpectralSidecarHeader {
             .saturating_mul(4)
     }
 
+    /// True when magic, version (v1 or v2), and non-zero frame geometry are
+    /// all consistent.
     #[inline]
     pub fn is_valid(&self) -> bool {
         self.magic == SPECTRAL_SIDECAR_MAGIC
@@ -75,15 +86,23 @@ pub fn parse_sidecar_header(bytes: &[u8]) -> Option<AudioSpectralSidecarHeader> 
 /// Zero-heap generative sheet view for U3 worklet / parametric DSP.
 #[derive(Debug, Clone, Copy)]
 pub struct AudioSpectralSheetView<'a> {
+    /// Tensor alpha channel (generative gain control).
     pub alpha: f32,
+    /// Tensor mu channel (parametric morph weight).
     pub mu: f32,
+    /// Spectral bins (borrowed — typically a sidecar frame or preview array).
     pub bins: &'a [f32],
+    /// Emitter position from the tensor xyz channels.
     pub position: [f32; 3],
+    /// Track velocity quantized to u8.
     pub track_v: u8,
+    /// Manifold weight quantized to u8.
     pub manifold_w: u8,
 }
 
 impl<'a> AudioSpectralSheetView<'a> {
+    /// Build a view over caller-supplied `bins` from a tensor's scalar
+    /// channels; v/w are clamped to the u8 range.
     #[inline]
     pub fn from_tensor_preview(t: &Tensor10D, bins: &'a [f32]) -> Self {
         Self {
@@ -170,6 +189,8 @@ pub struct SpectralV2SubHeader {
 }
 
 impl SpectralV2SubHeader {
+    /// True when the `"Q4M2"` magic matches and both plane widths are
+    /// non-zero.
     #[inline]
     pub fn is_valid(&self) -> bool {
         self.magic == SPECTRAL_V2_SUBHEADER_MAGIC && self.n_mel > 0 && self.n_mfcc > 0

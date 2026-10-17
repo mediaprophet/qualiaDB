@@ -24,17 +24,25 @@ pub const ACOUSTIC_SAB_BYTES: usize = 1024;
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Pod, Zeroable)]
 pub struct AcousticSabHeader {
+    /// Format magic `"Q3AS"` (`ACOUSTIC_SAB_MAGIC`).
     pub magic: u32,
+    /// Layout version (`ACOUSTIC_SAB_VERSION`).
     pub version: u16,
+    /// Bumped on every uniform write; the worklet polls for changes.
     pub uniform_seq: u16,
+    /// Producer sequence counter for the SAB token ring.
     pub token_write: u32,
+    /// Consumer sequence counter for the SAB token ring.
     pub token_read: u32,
+    /// STFT frame index currently being rendered.
     pub stft_frame: u32,
+    /// Worklet sample rate (default 48,000).
     pub sample_rate: u32,
     pub _pad: u32,
 }
 
 impl AcousticSabHeader {
+    /// Header initialised to defaults: 48 kHz, all sequence counters at 0.
     #[inline]
     pub const fn new() -> Self {
         Self {
@@ -49,6 +57,8 @@ impl AcousticSabHeader {
         }
     }
 
+    /// Parse and validate a header from raw bytes (magic + version); `None`
+    /// on a short buffer or a magic/version mismatch.
     #[inline]
     pub fn parse(bytes: &[u8]) -> Option<Self> {
         let hlen = std::mem::size_of::<Self>();
@@ -60,6 +70,8 @@ impl AcousticSabHeader {
     }
 }
 
+/// Initialise a SAB region: writes the header and zeroes the remaining
+/// layout. Returns false when `out` is smaller than `ACOUSTIC_SAB_BYTES`.
 #[inline]
 pub fn init_acoustic_sab(out: &mut [u8]) -> bool {
     if out.len() < ACOUSTIC_SAB_BYTES {
@@ -79,6 +91,9 @@ pub fn write_uniform_to_sab(out: &mut [u8], uniform: &AcousticUniform) -> bool {
     write_uniform_to_sab_with_mirror(out, uniform, None)
 }
 
+/// Write the uniform plus an optional `f32` mirror region for a worklet
+/// `Float32Array` view, then bump `uniform_seq`. Returns false when `out` is
+/// too small or the uniform would overlap the token region.
 #[inline]
 pub fn write_uniform_to_sab_with_mirror(
     out: &mut [u8],
@@ -113,6 +128,8 @@ fn write_sab_header(out: &mut [u8], h: &AcousticSabHeader) {
     out[..hlen].copy_from_slice(bytemuck::bytes_of(h));
 }
 
+/// Read the `AcousticUniform` payload out of the SAB region; `None` when the
+/// slice is too short to contain it.
 #[inline]
 pub fn read_uniform_from_sab(bytes: &[u8]) -> Option<AcousticUniform> {
     if bytes.len() < ACOUSTIC_SAB_UNIFORM_OFFSET + std::mem::size_of::<AcousticUniform>() {
@@ -157,15 +174,22 @@ pub const MAX_ACOUSTIC_VOICE_SLOTS: usize = 64;
 pub struct VoiceDescriptorSlot {
     /// Monotonic sequence counter: odd = write in progress, even = valid consistent state.
     pub sequence_number: u32,
+    /// Entity emitting this voice.
     pub entity_id: u32,
+    /// Voice amplitude (linear).
     pub amplitude: f32,
+    /// Stereo pan / room-send blend for the voice.
     pub pan_room_send: f32,
+    /// Emitter position in world space.
     pub world_position: [f32; 3],
-    pub acoustic_coeffs: [f32; 3], // Jakob-Hanika dual (c0, c1, c2)
+    /// Jakob-Hanika dual polynomial coefficients (c0, c1, c2) for spectral
+    /// material response.
+    pub acoustic_coeffs: [f32; 3],
     pub padding: [u32; 6],
 }
 
 impl VoiceDescriptorSlot {
+    /// Zeroed slot (`sequence_number = 0`, no voice assigned).
     #[inline]
     pub const fn empty() -> Self {
         Self {
@@ -183,10 +207,15 @@ impl VoiceDescriptorSlot {
 /// Decoded voice snapshot returned when a SeqLock read succeeds without tear.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VoiceSnapshot {
+    /// Entity emitting this voice.
     pub entity_id: u32,
+    /// Voice amplitude (linear).
     pub amplitude: f32,
+    /// Stereo pan / room-send blend.
     pub pan_room_send: f32,
+    /// Emitter position in world space.
     pub world_position: [f32; 3],
+    /// Jakob-Hanika dual polynomial coefficients (c0, c1, c2).
     pub acoustic_coeffs: [f32; 3],
 }
 

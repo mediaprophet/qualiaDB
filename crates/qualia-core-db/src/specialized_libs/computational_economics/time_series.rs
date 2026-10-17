@@ -50,6 +50,7 @@ pub enum TimeSeriesError {
 }
 
 #[inline]
+/// `true` when every element of `values` is finite.
 fn all_finite(values: &[f64]) -> bool {
     values.iter().all(|x| x.is_finite())
 }
@@ -66,11 +67,13 @@ struct SplitMix64 {
 
 impl SplitMix64 {
     #[inline]
+    /// Seed the deterministic PRNG state.
     fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 
     #[inline]
+    /// Advance the state and return the next raw u64 draw.
     fn next_u64(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.state;
@@ -80,12 +83,14 @@ impl SplitMix64 {
     }
 
     #[inline]
+    /// Uniform draw on the open interval (0, 1).
     fn unit_open(&mut self) -> f64 {
         let bits = self.next_u64() >> 11;
         ((bits as f64) + 0.5) * (1.0 / ((1u64 << 53) as f64))
     }
 
     #[inline]
+    /// Standard-normal draw via Box–Muller on two uniform draws.
     fn gaussian(&mut self) -> f64 {
         let u1 = self.unit_open();
         let u2 = self.unit_open();
@@ -98,6 +103,8 @@ impl SplitMix64 {
 /// Delegates to `market_data::simple_returns_into` (no duplication) and maps
 /// its error type onto `TimeSeriesError`. Writes `prices.len() - 1` values.
 #[inline]
+/// Simple period returns `r_t = p_t/p_{t-1} − 1` into `out`
+/// (caller-buffered; returns count written).
 pub fn simple_returns_into(prices: &[f64], out: &mut [f64]) -> Result<usize, TimeSeriesError> {
     if prices.len() < 2 {
         return Err(TimeSeriesError::InsufficientData);
@@ -118,6 +125,7 @@ pub fn simple_returns_into(prices: &[f64], out: &mut [f64]) -> Result<usize, Tim
 ///
 /// Delegates to `market_data::log_returns_into`. Writes `prices.len() - 1`.
 #[inline]
+/// Log returns `ln(p_t/p_{t-1})` into `out` (caller-buffered).
 pub fn log_returns_into(prices: &[f64], out: &mut [f64]) -> Result<usize, TimeSeriesError> {
     if prices.len() < 2 {
         return Err(TimeSeriesError::InsufficientData);
@@ -355,6 +363,7 @@ pub fn cross_correlation(a: &[f64], b: &[f64], lag: i32) -> Result<f64, TimeSeri
 }
 
 #[inline]
+/// Pearson correlation coefficient of two equal-length series.
 fn pearson(x: &[f64], y: &[f64]) -> Result<f64, TimeSeriesError> {
     if x.len() != y.len() || x.is_empty() {
         return Err(TimeSeriesError::InvalidInput);
@@ -500,6 +509,8 @@ pub fn ornstein_uhlenbeck_simulate_into(
 /// distribution. `scratch` must be at least `returns.len()` and is sorted in
 /// place.
 #[inline]
+/// Historical Value-at-Risk — empirical quantile of the return
+/// distribution at `confidence` (delegates to the risk module).
 pub fn historical_var(
     returns: &[f64],
     confidence: f64,
@@ -518,6 +529,8 @@ pub fn historical_var(
 
 /// Historical CVaR / expected shortfall — delegates to `risk::historical_cvar`.
 #[inline]
+/// Historical Conditional VaR (expected shortfall) — mean of
+/// returns beyond the VaR quantile.
 pub fn historical_cvar(
     returns: &[f64],
     confidence: f64,
@@ -536,6 +549,7 @@ pub fn historical_cvar(
 
 /// Parametric Gaussian VaR — delegates to `risk::gaussian_var`.
 #[inline]
+/// Parametric (Gaussian) VaR — `mean − z(confidence)·std_dev`.
 pub fn parametric_var(mean: f64, std_dev: f64, confidence: f64) -> Result<f64, TimeSeriesError> {
     crate::specialized_libs::computational_economics::risk::gaussian_var(mean, std_dev, confidence)
         .map_err(|_| TimeSeriesError::InvalidInput)

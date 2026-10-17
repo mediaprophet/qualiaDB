@@ -232,29 +232,45 @@ pub unsafe extern "C" fn nets_tropical_voronoi_route(
 /// Pure Rust Valency & Stoichiometric Bridges
 /// Previously C-ABI, now migrated to native Rust to avoid FFI overhead.
 pub fn nets_parse_smiles(smiles: &str) -> Option<crate::NQuin> {
-    // Pure Rust semantic parsing of SMILES into a Quin graph entry
     if smiles.is_empty() {
         return None;
     }
 
-    // Placeholder semantic mapping
-    let generated_quin = crate::NQuin {
-        subject: crate::q_hash(smiles),
-        predicate: crate::q_hash("IS_SMILES"),
-        object: 0,
-        context: 0,
-        metadata: 0b01 << 61,
-        parity: 0,
-    };
+    let mol = crate::domains::chemical::organic_chemistry::parse_smiles(smiles);
+    if !mol.is_valid || mol.atoms.is_empty() {
+        return None;
+    }
 
-    Some(generated_quin)
+    let first_valence = crate::domains::chemical::organic_chemistry::default_valence(&mol.atoms[0].element) as u64;
+    let total_valence: u64 = mol.atoms.iter().map(|a| crate::domains::chemical::organic_chemistry::default_valence(&a.element) as u64).sum();
+    let atom_count = mol.atoms.len() as u64;
+    let bond_count = mol.bonds.len() as u64;
+
+    // Pack: [0..15]: first atom valency, [16..31]: total valency, [32..47]: atom count, [48..63]: bond count
+    let object = (first_valence & 0xFFFF)
+        | ((total_valence & 0xFFFF) << 16)
+        | ((atom_count & 0xFFFF) << 32)
+        | ((bond_count & 0xFFFF) << 48);
+
+    let subject = crate::q_hash(smiles);
+    let predicate = crate::q_hash("IS_SMILES");
+    let context = 0;
+    let metadata = 0b01 << 61;
+    let parity = subject ^ predicate ^ object ^ context;
+
+    Some(crate::NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    })
 }
 
 pub fn nets_calculate_valency(molecule_quin: &crate::NQuin) -> i32 {
-    // Pure Rust implementation to mathematically prove stoichiometric viability
-    // Placeholder mocked valency result based on predicate hashing
     if molecule_quin.predicate == crate::q_hash("IS_SMILES") {
-        4 // e.g. Carbon valency mock
+        (molecule_quin.object & 0xFFFF) as i32
     } else {
         -1
     }

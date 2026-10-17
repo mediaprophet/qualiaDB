@@ -50,6 +50,7 @@ pub enum MetricKind {
 
 impl MetricKind {
     #[inline]
+    /// Decode a metric tag; `None` for unknown values.
     pub const fn from_u8(raw: u8) -> Option<MetricKind> {
         match raw {
             0 => Some(MetricKind::Undefined),

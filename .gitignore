@@ -18,6 +18,8 @@ target/
 
 # Private Development Documents, not for GitHub (do not publish on repo)
 .dev-docs/
+/.audit/
+/audit-docs/
 
 *.rdf
 !bundled/ontologies/fibo/rdf/**/*.rdf

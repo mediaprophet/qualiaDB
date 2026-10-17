@@ -68,11 +68,13 @@ pub fn infer_logic_bindings(quins: &[NQuin]) -> Result<Vec<&'static str>, N3Logi
             }
         }
 
-        // Hardware gating: the QPU is strictly assumed offline at this stage.
+        // Hardware acceleration and solver routing:
+        // When QPU hardware is offline, seamlessly route to the software fallback
+        // (classical Simulated Annealing QUBO optimization solver).
         if q.predicate == quantum_opt {
-            return Err(N3LogicError::HardwareUnavailable(
-                "QPU offline. Intent requested q42:quantumOptimize.",
-            ));
+            if !bindings.contains(&"modality:solver:classical_qubo") {
+                bindings.push("modality:solver:classical_qubo");
+            }
         }
         if q.predicate == solve_calculus {
             if !bindings.contains(&"modality:solver:calculus") {
@@ -116,4 +118,49 @@ pub fn infer_logic_bindings(quins: &[NQuin]) -> Result<Vec<&'static str>, N3Logi
     }
 
     Ok(bindings)
+}
+
+/// Enforces strict hardware gating: rejects the intent if physical QPU hardware
+/// is unavailable and physical-only execution was requested.
+pub fn infer_logic_bindings_strict_hardware(
+    quins: &[NQuin],
+) -> Result<Vec<&'static str>, N3LogicError> {
+    let quantum_opt = q_hash("q42:quantumOptimize");
+    for q in quins {
+        if q.predicate == quantum_opt {
+            return Err(N3LogicError::HardwareUnavailable(
+                "QPU offline. Intent requested physical q42:quantumOptimize without fallback.",
+            ));
+        }
+    }
+    infer_logic_bindings(quins)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn infer_logic_bindings_default_sandboxes() {
+        let quins = [NQuin::default()];
+        let bindings = infer_logic_bindings(&quins).unwrap();
+        assert!(bindings.contains(&"modality:epistemic"));
+        assert!(bindings.contains(&"modality:deontic"));
+    }
+
+    #[test]
+    fn quantum_opt_routes_to_software_fallback() {
+        let mut quin = NQuin::default();
+        quin.predicate = q_hash("q42:quantumOptimize");
+        let bindings = infer_logic_bindings(&[quin]).unwrap();
+        assert!(bindings.contains(&"modality:solver:classical_qubo"));
+    }
+
+    #[test]
+    fn strict_hardware_rejects_offline_qpu() {
+        let mut quin = NQuin::default();
+        quin.predicate = q_hash("q42:quantumOptimize");
+        let res = infer_logic_bindings_strict_hardware(&[quin]);
+        assert!(matches!(res, Err(N3LogicError::HardwareUnavailable(_))));
+    }
 }

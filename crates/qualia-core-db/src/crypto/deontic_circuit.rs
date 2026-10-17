@@ -69,12 +69,17 @@ pub struct ZkAccessVerifier {
 
 #[cfg(feature = "zk-culling")]
 impl ZkAccessVerifier {
+    /// Create a verifier with no key loaded — verification fails closed
+    /// until a verifying key is attached.
     pub fn new() -> Self {
         Self {
             verifying_key: None,
         }
     }
 
+    /// Verify a Groth16 proof (uncompressed bytes) against `public_inputs`.
+    /// Fails closed with `SignatureVerificationFailed` when no verifying
+    /// key is loaded.
     pub fn verify_access(
         &self,
         proof: &[u8],
@@ -105,6 +110,9 @@ impl Default for ZkAccessVerifier {
     }
 }
 
+/// Run the Groth16 circuit-specific trusted setup for
+/// `DeonticAccessCircuit` over BLS12-381, returning the (proving key,
+/// verifying key) pair.
 #[cfg(feature = "zk-culling")]
 pub fn generate_deontic_crs() -> Result<(ProvingKey<Bls12_381>, VerifyingKey<Bls12_381>), String> {
     let circuit = DeonticAccessCircuit {

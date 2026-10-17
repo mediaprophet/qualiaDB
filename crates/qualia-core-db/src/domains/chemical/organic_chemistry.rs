@@ -64,6 +64,8 @@ const ATOMIC_WEIGHTS: &[(&str, f64)] = &[
     ("Te", 127.6),
 ];
 
+/// Atomic weight for `symbol` from `ATOMIC_WEIGHTS`; defaults to
+/// carbon (12.0) for unknown elements.
 fn atomic_weight(symbol: &str) -> f64 {
     ATOMIC_WEIGHTS
         .iter()
@@ -92,7 +94,9 @@ const VALENCES: &[(&str, u8)] = &[
     ("As", 3),
 ];
 
-fn default_valence(symbol: &str) -> u8 {
+/// Default bonding valence for `symbol` (first entry wins for
+/// multi-valence elements like S/P); defaults to 4.
+pub fn default_valence(symbol: &str) -> u8 {
     VALENCES
         .iter()
         .find(|(s, _)| *s == symbol)
@@ -361,6 +365,10 @@ pub fn parse_smiles(smiles: &str) -> Molecule {
     }
 }
 
+/// SMILES ring digit handling: on the second occurrence of `ring_num`,
+/// emit the closing bond between the recorded open atom and
+/// `current_atom` (bond order = explicit pending, recorded, or single);
+/// on the first, record the opening atom and pending bond order.
 fn close_or_open_ring(
     ring_map: &mut std::collections::HashMap<u16, (usize, Option<BondOrder>)>,
     bonds: &mut Vec<Bond>,
@@ -478,6 +486,11 @@ fn parse_bracket_atom(
     (elem, is_aromatic, charge, isotope, explicit_h, advance)
 }
 
+/// Populate `n_implicit_h` and `degree` per atom from bond orders and
+/// default valences: implicit H = valence + charge − (bonded valence +
+/// explicit H + aromatic-slot adjustment), clamped ≥ 0. Aromatic atoms
+/// reserve one valence slot for the delocalised π electron (benzene `c`
+/// → 1 implicit H).
 fn fill_implicit_hydrogens(atoms: &mut Vec<Atom>, bonds: &[Bond]) {
     // valence_used: sum of bond orders (double=2, triple=3, single/aromatic=1)
     // connectivity: number of distinct bond partners (for degree field)
@@ -533,6 +546,9 @@ fn mark_ring_bonds(atoms: &[Atom], bonds: &mut Vec<Bond>) {
     }
 }
 
+/// DFS helper for [`mark_ring_bonds`]: flags `in_ring` on back-edges
+/// (edges to already-visited non-parent vertices) — i.e. bonds that
+/// close a cycle not already flagged during ring-digit parsing.
 fn dfs_mark_rings(
     adj: &[Vec<(usize, usize)>],
     bonds: &mut Vec<Bond>,
@@ -692,6 +708,7 @@ pub fn compute_descriptors(mol: &Molecule) -> MolecularDescriptors {
     }
 }
 
+/// Atom-index adjacency list for `mol` (each bond pushed both ways).
 fn build_adj(mol: &Molecule) -> Vec<Vec<usize>> {
     let mut adj = vec![vec![]; mol.atoms.len()];
     for b in &mol.bonds {
@@ -701,6 +718,8 @@ fn build_adj(mol: &Molecule) -> Vec<Vec<usize>> {
     adj
 }
 
+/// Whether atom `a` participates in a double or aromatic bond —
+/// the sp² test used for Crippen atom typing and `fraction_csp3`.
 fn is_sp2_carbon(a: &Atom, _adj: &[Vec<usize>], mol: &Molecule) -> bool {
     mol.bonds.iter().any(|b| {
         (b.atom_a == a.idx || b.atom_b == a.idx)
@@ -708,6 +727,10 @@ fn is_sp2_carbon(a: &Atom, _adj: &[Vec<usize>], mol: &Molecule) -> bool {
     })
 }
 
+/// Estimated aromatic ring count: aromatic in-ring bonds ÷ 6 with a
+/// remainder rule, falling back to an aromatic-atom-count heuristic
+/// (≥5 atoms → 1 ring, +1 per 5 beyond 10) for heteroaromatic systems
+/// whose ring bonds weren't all flagged aromatic.
 fn count_aromatic_rings(_atoms: &[Atom], bonds: &[Bond]) -> u32 {
     // Simplified: each aromatic bond that closes a ring contributes to one ring
     let ring_bonds = bonds
@@ -730,6 +753,8 @@ fn count_aromatic_rings(_atoms: &[Atom], bonds: &[Bond]) -> u32 {
     }
 }
 
+/// Rough total ring count: in-ring bonds ÷ 3 (heuristic — each ring
+/// contributes ≥3 flagged bonds).
 fn count_all_rings(bonds: &[Bond]) -> u32 {
     bonds.iter().filter(|b| b.in_ring).count() as u32 / 3 // rough heuristic
 }
@@ -831,6 +856,8 @@ pub fn compute_logp(mol: &Molecule) -> f64 {
     total
 }
 
+/// Whether `atom` is bonded to a carbonyl carbon (C=O) — the amide
+/// adjacency test used by the Crippen LogP atom typing.
 fn is_adjacent_amide(atom: &Atom, mol: &Molecule) -> bool {
     mol.bonds.iter().any(|b| {
         (b.atom_a == atom.idx || b.atom_b == atom.idx) && {
@@ -857,6 +884,7 @@ fn is_adjacent_amide(atom: &Atom, mol: &Molecule) -> bool {
     })
 }
 
+/// Whether `atom` sits on a double bond (carbonyl-oxygen test).
 fn is_carbonyl_oxygen(atom: &Atom, mol: &Molecule) -> bool {
     mol.bonds
         .iter()
@@ -941,6 +969,8 @@ pub struct LipinskiResult {
     pub passes: bool,
 }
 
+/// Lipinski Rule-of-Five on `desc`: MW ≤ 500, LogP ≤ 5, HBD ≤ 5,
+/// HBA ≤ 10 — passes with ≤ 1 violation.
 pub fn evaluate_lipinski(desc: &MolecularDescriptors) -> LipinskiResult {
     let mw_ok = desc.molecular_weight <= 500.0;
     let logp_ok = desc.logp_crippen <= 5.0;
@@ -966,6 +996,8 @@ pub struct VeberResult {
     pub passes: bool,
 }
 
+/// Veber oral-bioavailability rule: rotatable bonds ≤ 10 and
+/// TPSA ≤ 140 Å² (both required to pass).
 pub fn evaluate_veber(desc: &MolecularDescriptors) -> VeberResult {
     let rot_bonds_ok = desc.rotatable_bonds <= 10;
     let tpsa_ok = desc.tpsa_ertl <= 140.0;
@@ -989,6 +1021,9 @@ pub struct GhoseResult {
     pub passes: bool,
 }
 
+/// Ghose drug-likeness filter: 160 ≤ MW ≤ 480, −0.4 ≤ LogP ≤ 5.6,
+/// 20–70 heavy atoms, and molar refractivity 40–130 (MR approximated as
+/// `0.3285·MW + 0.08·LogP + 1.0`). All four must hold.
 pub fn evaluate_ghose(desc: &MolecularDescriptors) -> GhoseResult {
     let mw_ok = desc.molecular_weight >= 160.0 && desc.molecular_weight <= 480.0;
     let logp_ok = desc.logp_crippen >= -0.4 && desc.logp_crippen <= 5.6;
@@ -1015,6 +1050,8 @@ pub struct EganResult {
     pub passes: bool,
 }
 
+/// Egan absorption model: TPSA ≤ 131.6 Å² and LogP ≤ 5.88
+/// (both required to pass).
 pub fn evaluate_egan(desc: &MolecularDescriptors) -> EganResult {
     let tpsa_ok = desc.tpsa_ertl <= 131.6;
     let logp_ok = desc.logp_crippen <= 5.88;
@@ -1289,6 +1326,9 @@ pub struct SmilesValidation {
     pub error: Option<String>,
 }
 
+/// Validate a SMILES string via [`parse_smiles`]: reports validity,
+/// parsed atom count, and the first parse error. Empty input is
+/// invalid.
 pub fn validate_smiles(smiles: &str) -> SmilesValidation {
     if smiles.trim().is_empty() {
         return SmilesValidation {
@@ -1312,6 +1352,10 @@ pub struct InchiValidation {
     pub layer_count: usize,
 }
 
+/// Syntactic check for an InChI (`InChI=1S/…` or `InChI=1/…` prefix)
+/// or 27-character InChIKey (`XXXXXXXXXXXXXX-XXXXXXXXXX-N`); reports
+/// the layer count for full InChI strings. Not a chemical-semantics
+/// validation.
 pub fn validate_inchi(inchi: &str) -> InchiValidation {
     // Standard InChI: starts with "InChI=1S/" followed by formula and layers
     // InChIKey: 27-character hash XXXXXXXXXXXXXX-XXXXXXXXXX-N

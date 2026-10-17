@@ -29,6 +29,8 @@ pub struct TensorMetadata {
 }
 
 impl Default for TensorMetadata {
+    /// No tensor data: zeroed coordinates, `has_tensor = false`,
+    /// version 1.
     fn default() -> Self {
         Self {
             tensor: Tensor10D::default(),
@@ -79,19 +81,54 @@ impl Tensor10D {
         Tensor10D::new(q, v, w, x, y, z, t, alpha, mu, sigma)
     }
 
-    /// Extract quantum context from NQuin metadata.
-    fn extract_quantum_context(_nquin: &NQuin) -> f32 {
-        0.0
+    /// Extract quantum context from NQuin metadata and predicate modality.
+    /// q = 0.0: Collapsed Ground Truth; q > 0.0: Parallel epistemic contexts.
+    fn extract_quantum_context(nquin: &NQuin) -> f32 {
+        let q_index = ((nquin.metadata >> 24) & 0xFF) as f32;
+        if q_index > 0.0 {
+            q_index
+        } else {
+            let opcode = (nquin.predicate & 0xFF) as u8;
+            if (0x20..=0x22).contains(&opcode) {
+                // Epistemic modality active -> non-zero quantum context
+                1.0
+            } else {
+                0.0
+            }
+        }
     }
 
-    /// Extract topological class from NQuin context.
-    fn extract_topological_class(_nquin: &NQuin) -> f32 {
-        0.0
+    /// Extract topological class from NQuin metadata routing lane and object tag.
+    /// v = 0: Euclidean (Passthrough), v = 1: Cyclic/Toroidal (Commons),
+    /// v = 2: Hyperbolic/Tree (Bilateral), v = 3: Boundary Cliques (Spatial).
+    fn extract_topological_class(nquin: &NQuin) -> f32 {
+        // Universal Quin bit layout: metadata [61..62] stores PermissiveRoutingLane
+        let routing_lane = (nquin.metadata >> 61) & 0x03;
+        routing_lane as f32
     }
 
-    /// Extract manifold index from NQuin context.
-    fn extract_manifold_index(_nquin: &NQuin) -> f32 {
-        0.0
+    /// Extract manifold index from NQuin predicate modality and context tags.
+    /// w = 0: Medical, w = 1: Legal, w = 2: Personal, w = 3: Environmental, w = 4: Socioeconomic.
+    fn extract_manifold_index(nquin: &NQuin) -> f32 {
+        let opcode = (nquin.predicate & 0xFF) as u8;
+        if (0x10..=0x12).contains(&opcode) {
+            // Deontic logic / normative contracts -> Legal
+            super::manifold::ManifoldDomain::Legal.to_index()
+        } else if (0x20..=0x32).contains(&opcode) {
+            // Epistemic / paraconsistent -> Personal
+            super::manifold::ManifoldDomain::Personal.to_index()
+        } else if (0x40..=0x44).contains(&opcode) {
+            // LTL / temporal traces -> Environmental
+            super::manifold::ManifoldDomain::Environmental.to_index()
+        } else {
+            // Decode domain tag from context bits [52..55] modulo 5
+            let tag = ((nquin.context >> 52) & 0x07) as f32;
+            if tag < 5.0 {
+                tag
+            } else {
+                super::manifold::ManifoldDomain::Medical.to_index()
+            }
+        }
     }
 
     /// Extract semantic coordinates from NQuin object field.
@@ -130,6 +167,8 @@ pub struct TensorVolumeConfig {
 }
 
 impl Default for TensorVolumeConfig {
+    /// Tensor operations enabled, manifold/topology defaults 0.0,
+    /// version 1.
     fn default() -> Self {
         Self {
             tensor_enabled: true,
@@ -235,30 +274,39 @@ impl<'a> Q42TensorVolume<'a> {
         self.tensor_metadata.get(index).filter(|_| index < self.len)
     }
 
+    /// The volume's tensor configuration.
     pub fn config(&self) -> &TensorVolumeConfig {
         &self.volume_config
     }
 
+    /// Replace the volume configuration.
     pub fn update_config(&mut self, config: TensorVolumeConfig) {
         self.volume_config = config;
     }
 
+    /// Number of live entries (≤ `capacity`).
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Total slots in the caller-owned backing storage.
     pub fn capacity(&self) -> usize {
         self.nquins.len()
     }
 
+    /// `true` when no entries are stored.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
+    /// Entries whose metadata carries tensor coordinates.
     pub fn tensor_count(&self) -> usize {
         self.as_view().tensor_count()
     }
 
+    /// Copy every tensorized `(NQuin, metadata)` pair into `out`;
+    /// `OutputBufferFull` when `out` can't hold all of them.
+    /// Delegates to the view.
     pub fn get_tensorized_nquins_into<'b>(
         &'b self,
         out: &mut [TensorizedEntry<'b>],
@@ -266,6 +314,8 @@ impl<'a> Q42TensorVolume<'a> {
         self.as_view().get_tensorized_nquins_into(out)
     }
 
+    /// Zero-allocation variant of `get_tensorized_nquins_into` —
+    /// `on_entry` per tensorized pair, `Break` to stop early.
     pub fn visit_tensorized_nquins<F>(&self, on_entry: F) -> Result<(), TensorVolumeError>
     where
         F: FnMut(TensorizedEntry<'_>) -> ControlFlow<()>,
@@ -273,6 +323,8 @@ impl<'a> Q42TensorVolume<'a> {
         self.as_view().visit_tensorized_nquins(on_entry)
     }
 
+    /// Indices of entries within `max_distance` of `query` in 10D
+    /// (full-distance metric) written to `out`. Delegates to the view.
     pub fn tensor_search_into(
         &self,
         query: &Tensor10D,
@@ -282,6 +334,8 @@ impl<'a> Q42TensorVolume<'a> {
         self.as_view().tensor_search_into(query, max_distance, out)
     }
 
+    /// Zero-allocation variant of `tensor_search_into` — `on_match`
+    /// per index, `Break` to stop early.
     pub fn visit_tensor_search<F>(
         &self,
         query: &Tensor10D,
@@ -295,6 +349,8 @@ impl<'a> Q42TensorVolume<'a> {
             .visit_tensor_search(query, max_distance, on_match)
     }
 
+    /// Indices whose tensor `t` coordinate is within `tolerance` of
+    /// `target_t` written to `out`. Delegates to the view.
     pub fn temporal_query_into(
         &self,
         target_t: f32,
@@ -304,6 +360,8 @@ impl<'a> Q42TensorVolume<'a> {
         self.as_view().temporal_query_into(target_t, tolerance, out)
     }
 
+    /// Zero-allocation variant of `temporal_query_into` — `on_match`
+    /// per index, `Break` to stop early.
     pub fn visit_temporal_query<F>(
         &self,
         target_t: f32,
@@ -317,6 +375,9 @@ impl<'a> Q42TensorVolume<'a> {
             .visit_temporal_query(target_t, tolerance, on_match)
     }
 
+    /// Indices matching manifold coordinate `target_w` within
+    /// `max_distance` (see `manifold_matches`) written to `out`.
+    /// Delegates to the view.
     pub fn manifold_query_into(
         &self,
         target_w: f32,
@@ -327,6 +388,8 @@ impl<'a> Q42TensorVolume<'a> {
             .manifold_query_into(target_w, max_distance, out)
     }
 
+    /// Zero-allocation variant of `manifold_query_into` — `on_match`
+    /// per index, `Break` to stop early.
     pub fn visit_manifold_query<F>(
         &self,
         target_w: f32,
@@ -342,6 +405,8 @@ impl<'a> Q42TensorVolume<'a> {
 }
 
 impl<'a> Q42TensorView<'a> {
+    /// Borrowed view over parallel `nquins`/`tensor_metadata` slices
+    /// plus the volume config; `MismatchedStorage` on length mismatch.
     pub fn new(
         nquins: &'a [NQuin],
         tensor_metadata: &'a [TensorMetadata],
@@ -358,22 +423,28 @@ impl<'a> Q42TensorView<'a> {
         })
     }
 
+    /// The view's borrowed tensor configuration.
     pub fn config(&self) -> &'a TensorVolumeConfig {
         self.volume_config
     }
 
+    /// Total entries in the view (all NQuins, tensorized or not).
     pub fn len(&self) -> usize {
         self.nquins.len()
     }
 
+    /// `true` when the view holds no entries.
     pub fn is_empty(&self) -> bool {
         self.nquins.is_empty()
     }
 
+    /// Entries whose metadata carries tensor coordinates.
     pub fn tensor_count(&self) -> usize {
         self.tensor_metadata.iter().filter(|m| m.has_tensor).count()
     }
 
+    /// Copy every tensorized `(NQuin, metadata)` pair into `out`;
+    /// `OutputBufferFull` when `out` can't hold all of them.
     pub fn get_tensorized_nquins_into(
         &self,
         out: &mut [TensorizedEntry<'a>],
@@ -397,6 +468,8 @@ impl<'a> Q42TensorView<'a> {
         Ok(written)
     }
 
+    /// Iterate tensorized entries (`has_tensor`), calling `on_entry`
+    /// per pair; `Break` stops early. Zero-allocation query path.
     pub fn visit_tensorized_nquins<F>(&self, mut on_entry: F) -> Result<(), TensorVolumeError>
     where
         F: FnMut(TensorizedEntry<'a>) -> ControlFlow<()>,
@@ -414,6 +487,9 @@ impl<'a> Q42TensorView<'a> {
         Ok(())
     }
 
+    /// Indices of tensorized entries within `max_distance` of `query`
+    /// in the 10D full-distance metric written to `out`;
+    /// `OutputBufferFull` on overflow.
     pub fn tensor_search_into(
         &self,
         query: &Tensor10D,
@@ -425,6 +501,8 @@ impl<'a> Q42TensorView<'a> {
         })
     }
 
+    /// Zero-allocation variant of `tensor_search_into` — `on_match`
+    /// per matching index, `Break` to stop early.
     pub fn visit_tensor_search<F>(
         &self,
         query: &Tensor10D,
@@ -445,6 +523,8 @@ impl<'a> Q42TensorView<'a> {
         Ok(())
     }
 
+    /// Indices whose tensor `t` coordinate is within `tolerance` of
+    /// `target_t` written to `out`; `OutputBufferFull` on overflow.
     pub fn temporal_query_into(
         &self,
         target_t: f32,
@@ -456,6 +536,8 @@ impl<'a> Q42TensorView<'a> {
         })
     }
 
+    /// Zero-allocation variant of `temporal_query_into` — `on_match`
+    /// per matching index, `Break` to stop early.
     pub fn visit_temporal_query<F>(
         &self,
         target_t: f32,
@@ -476,6 +558,9 @@ impl<'a> Q42TensorView<'a> {
         Ok(())
     }
 
+    /// Indices matching manifold coordinate `target_w` within
+    /// `max_distance` (see `manifold_matches`) written to `out`;
+    /// `OutputBufferFull` on overflow.
     pub fn manifold_query_into(
         &self,
         target_w: f32,
@@ -487,6 +572,8 @@ impl<'a> Q42TensorView<'a> {
         })
     }
 
+    /// Zero-allocation variant of `manifold_query_into` — `on_match`
+    /// per matching index, `Break` to stop early.
     pub fn visit_manifold_query<F>(
         &self,
         target_w: f32,
@@ -507,6 +594,8 @@ impl<'a> Q42TensorView<'a> {
         Ok(())
     }
 
+    /// Shared collector behind the `*_into` queries — writes indices
+    /// satisfying `predicate` to `out`, `OutputBufferFull` on overflow.
     fn collect_matching_indices_into<F>(
         &self,
         out: &mut [usize],
@@ -534,6 +623,9 @@ impl<'a> Q42TensorView<'a> {
     }
 }
 
+/// Manifold query predicate: entry must be tensorized, within a
+/// hardcoded 0.1 neighbourhood of `target_w` on the w axis, then within
+/// `max_distance` in the full 10D metric (w substituted by `target_w`).
 fn manifold_matches(metadata: &TensorMetadata, target_w: f32, max_distance: f32) -> bool {
     if !metadata.has_tensor {
         return false;

@@ -84,19 +84,28 @@ pub struct EthogramBehaviorEntry {
 /// Evaluated transition verdict when a stimulus triggers a behavior.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TransitionVerdict {
+    /// True when a behavior transition fired (vs. no matching rule).
     pub triggered: bool,
+    /// State id entered after the transition (unchanged when not triggered).
     pub target_state_id: u16,
+    /// Animation clip to play for the transition (0 = none).
     pub animation_clip_id: u32,
+    /// Energy level after applying the behavior's delta (0..1000 permill).
     pub new_energy_permill: u16,
+    /// Hydration level after the transition.
     pub new_hydration_permill: u16,
+    /// Damage level after the transition.
     pub new_damage_permill: u16,
 }
 
 /// A fixed-capacity, zero-heap Ethogram Registry for an entity or taxon family.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EthogramRegistry {
+    /// `q_hash` of the taxon/entity-family IRI this registry describes.
     pub taxon_iri_hash: u64,
+    /// Number of live entries in `behaviors` (≤ `MAX_ETHOGRAM_BEHAVIORS`).
     pub behavior_count: usize,
+    /// Fixed-capacity entry table; only the first `behavior_count` are live.
     pub behaviors: [EthogramBehaviorEntry; MAX_ETHOGRAM_BEHAVIORS],
 }
 
@@ -111,6 +120,8 @@ impl Default for EthogramRegistry {
 }
 
 impl EthogramRegistry {
+    /// Create an empty registry for a taxon (all `MAX_ETHOGRAM_BEHAVIORS`
+    /// slots zeroed); `const` so it can live in statics.
     pub const fn new(taxon_iri_hash: u64) -> Self {
         Self {
             taxon_iri_hash,

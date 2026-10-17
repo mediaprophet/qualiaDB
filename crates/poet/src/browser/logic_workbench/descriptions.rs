@@ -86,8 +86,8 @@ pub(super) fn get(key: &str) -> &'static str {
         "meta_deontic" => {
             "Meta-Deontic Breach \u{2014} reasoning about norm violations and their consequences. Used for breach logging and enforcement."
         }
-        "value_flow" => {
-            "Value Flow / Commons \u{2014} reasoning about value contribution, obligation, and commons paydown. Used for cost-base and TSL state tracking."
+        "socioeconomics" => {
+            "Socioeconomics \u{2014} reasoning about value contribution, obligation, and commons paydown. Used for cost-base and TSL state tracking."
         }
         "interaction_gov" => {
             "Interaction Governance \u{2014} reasoning about permitted/forbidden interactions between agents. Used for project policy enforcement."

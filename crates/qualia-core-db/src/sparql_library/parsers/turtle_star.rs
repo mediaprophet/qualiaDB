@@ -38,6 +38,7 @@ struct StackFrame {
 }
 
 impl StackFrame {
+    /// Empty frame awaiting a subject token.
     fn new() -> Self {
         Self {
             subject: None,
@@ -56,6 +57,7 @@ struct ParserStack {
 }
 
 impl ParserStack {
+    /// Empty fixed-size stack of `MAX_NESTING_DEPTH` frames.
     fn new() -> Self {
         Self {
             frames: [StackFrame::new(); MAX_NESTING_DEPTH],
@@ -63,6 +65,7 @@ impl ParserStack {
         }
     }
 
+    /// Push a frame; `BufferOverflow` past `MAX_NESTING_DEPTH`.
     fn push(&mut self, frame: StackFrame) -> Result<(), RdfStarParseError> {
         if self.depth >= MAX_NESTING_DEPTH {
             return Err(RdfStarParseError::BufferOverflow);
@@ -72,6 +75,7 @@ impl ParserStack {
         Ok(())
     }
 
+    /// Pop the top frame, or `None` when empty.
     fn pop(&mut self) -> Option<StackFrame> {
         if self.depth == 0 {
             return None;
@@ -80,14 +84,17 @@ impl ParserStack {
         Some(self.frames[self.depth])
     }
 
+    /// Mutable borrow of the top frame — caller must ensure non-empty.
     fn current(&mut self) -> &mut StackFrame {
         &mut self.frames[self.depth - 1]
     }
 
+    /// Whether no frames are in flight.
     fn is_empty(&self) -> bool {
         self.depth == 0
     }
 
+    /// Current nesting depth (frames pushed).
     fn depth(&self) -> usize {
         self.depth
     }
@@ -120,6 +127,8 @@ impl TurtleStarParser {
         self.stack.is_empty()
     }
 
+    /// Advance `frame` from `expected` to `next`, or
+    /// `MalformedEmbeddedTriple` when the token order is wrong.
     fn expect_state(
         frame: &mut StackFrame,
         expected: ParsingState,
@@ -349,6 +358,8 @@ impl TurtleStarParser {
 }
 
 impl RdfStarParser for TurtleStarParser {
+    /// Parse one `<< s p o >>` embedded triple (leading `<<` optional),
+    /// returning the minted virtual ID and its component hashes.
     fn parse_embedded_triple(
         &mut self,
         input: &[u8],
@@ -363,6 +374,9 @@ impl RdfStarParser for TurtleStarParser {
         self.parse_embedded_triple_internal(input, &mut pos)
     }
 
+    /// Parse one Turtle-Star statement into `(subject, predicate,
+    /// object)` hashes; `<<…>>` terms are minted as virtual IDs.
+    /// `InvalidSyntax` on missing terms.
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let mut pos = 0;
 
@@ -418,19 +432,24 @@ impl RdfStarParser for TurtleStarParser {
         Ok((subject, predicate, object))
     }
 
+    /// Always `UnsupportedFeature` — Turtle-Star has no quads
+    /// (TriG-Star handles named graphs).
     fn parse_quad(&mut self, _input: &[u8]) -> Result<(u64, u64, u64, u64), RdfStarParseError> {
         // Turtle-Star doesn't support quads natively (use Trig-Star for that)
         Err(RdfStarParseError::UnsupportedFeature)
     }
 
+    /// `false` — no quad support in Turtle-Star.
     fn supports_quads(&self) -> bool {
         false
     }
 
+    /// `false` — no named-graph support.
     fn supports_named_graphs(&self) -> bool {
         false
     }
 
+    /// `"Turtle-Star"`.
     fn format_name(&self) -> &'static str {
         "Turtle-Star"
     }
@@ -519,6 +538,9 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
     Ok(count)
 }
 
+/// Streaming Turtle-Star ingest — reads statements from `reader`,
+/// emits quins into `sorter` under `context_hash`, and returns the
+/// quin count. Thin shim over [`parse_turtle_star_into`].
 pub fn parse_turtle_star_stream<R: Read>(
     reader: R,
     context_hash: u64,

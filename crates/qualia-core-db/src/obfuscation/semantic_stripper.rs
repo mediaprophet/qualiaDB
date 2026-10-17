@@ -312,46 +312,109 @@ impl SemanticStripper {
         matrix_value.wrapping_mul(0x9E3779B97F4A7C15) % 0xFFFFFFFFFFFFFFFF
     }
 
-    /// Placeholder implementations for other domains
-    fn extract_statistical_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Statistical computing mathematical structure
+    fn extract_statistical_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::StatisticalModel;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0x243F6A8885A308D3) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
-    fn extract_ml_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Machine learning mathematical structure
+    fn extract_ml_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::OptimizationProblem;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0x452821E638D01377) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
-    fn extract_financial_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Financial modeling mathematical structure
+    fn extract_financial_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::OptimizationProblem;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0x13198A2E03707344) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
-    fn extract_chemistry_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Chemistry modeling mathematical structure
+    fn extract_chemistry_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::HamiltonianOperator;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0xA4093822299F31D0) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
-    fn extract_physics_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Physics simulation mathematical structure
+    fn extract_physics_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::HamiltonianOperator;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0x082EFA98EC4E6C89) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
-    fn extract_engineering_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Engineering analysis mathematical structure
+    fn extract_engineering_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::MatrixTransformation;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0x152FECD8F70E5939) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
-    fn extract_crypto_structure(&self, _quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
-        Ok(MathematicalStructure::default())
+    /// Cryptographic library mathematical structure
+    fn extract_crypto_structure(&self, quins: &[NQuin]) -> ObfuscationResult<MathematicalStructure> {
+        let mut structure = MathematicalStructure::default();
+        structure.structure_type = StructureType::PolynomialSystem;
+        for quin in quins.iter().take(12) {
+            let var = quin.object.wrapping_mul(0x650A735439A7D00F) % 0xFFFFFFFFFFFFFFFF;
+            structure.parameters[structure.parameter_count] = var;
+            structure.parameter_count = (structure.parameter_count + 1).min(12);
+        }
+        Ok(structure)
     }
 
     /// Helper methods for structure preservation
-    fn preserve_matrix_properties(&self, _structure: &mut MathematicalStructure) {
-        // Implementation for preserving matrix mathematical properties
+    fn preserve_matrix_properties(&self, structure: &mut MathematicalStructure) {
+        for i in 0..structure.parameter_count {
+            structure.parameters[i] = structure.parameters[i] | 0x8000_0000_0000_0000;
+        }
     }
 
-    fn preserve_hamiltonian_properties(&self, _structure: &mut MathematicalStructure) {
-        // Implementation for preserving Hamiltonian mathematical properties
+    fn preserve_hamiltonian_properties(&self, structure: &mut MathematicalStructure) {
+        for i in 0..structure.parameter_count {
+            structure.parameters[i] &= 0x7FFF_FFFF_FFFF_FFFF;
+        }
     }
 
-    fn preserve_general_properties(&self, _structure: &mut MathematicalStructure) {
-        // Implementation for general mathematical property preservation
+    fn preserve_general_properties(&self, structure: &mut MathematicalStructure) {
+        for i in 0..structure.parameter_count {
+            if structure.parameters[i] == 0 {
+                structure.parameters[i] = 1;
+            }
+        }
     }
 
     /// Get default context mappings for all specialized libraries
@@ -375,8 +438,54 @@ impl SemanticStripper {
                 removal_strategy: RemovalStrategy::MinimalStripping,
                 preserve_mathematical_structure: true,
             },
-            // Add mappings for other domains...
-            ContextMapping::default(), // Placeholder for remaining slots
+            ContextMapping {
+                source_domain: SourceDomain::StatisticalComputing as u64,
+                target_domain: ObfuscationDomain::OptimizationProblem,
+                removal_strategy: RemovalStrategy::StructurePreserving,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping {
+                source_domain: SourceDomain::MachineLearning as u64,
+                target_domain: ObfuscationDomain::OptimizationProblem,
+                removal_strategy: RemovalStrategy::StructurePreserving,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping {
+                source_domain: SourceDomain::FinancialModeling as u64,
+                target_domain: ObfuscationDomain::OptimizationProblem,
+                removal_strategy: RemovalStrategy::StructurePreserving,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping {
+                source_domain: SourceDomain::ChemistryModeling as u64,
+                target_domain: ObfuscationDomain::HamiltonianOperator,
+                removal_strategy: RemovalStrategy::StructurePreserving,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping {
+                source_domain: SourceDomain::PhysicsSimulation as u64,
+                target_domain: ObfuscationDomain::HamiltonianOperator,
+                removal_strategy: RemovalStrategy::StructurePreserving,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping {
+                source_domain: SourceDomain::EngineeringAnalysis as u64,
+                target_domain: ObfuscationDomain::MatrixTransformation,
+                removal_strategy: RemovalStrategy::StructurePreserving,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping {
+                source_domain: SourceDomain::CryptographicLibrary as u64,
+                target_domain: ObfuscationDomain::PolynomialSystem,
+                removal_strategy: RemovalStrategy::CompleteStripping,
+                preserve_mathematical_structure: true,
+            },
+            ContextMapping::EMPTY,
+            ContextMapping::EMPTY,
+            ContextMapping::EMPTY,
+            ContextMapping::EMPTY,
+            ContextMapping::EMPTY,
+            ContextMapping::EMPTY,
         ]
     }
 }
@@ -451,14 +560,18 @@ impl Default for MathematicalStructure {
     }
 }
 
+impl ContextMapping {
+    pub const EMPTY: Self = Self {
+        source_domain: 0,
+        target_domain: ObfuscationDomain::PolynomialSystem,
+        removal_strategy: RemovalStrategy::CompleteStripping,
+        preserve_mathematical_structure: false,
+    };
+}
+
 impl Default for ContextMapping {
     fn default() -> Self {
-        Self {
-            source_domain: SourceDomain::ClinicalEngine as u64,
-            target_domain: ObfuscationDomain::PolynomialSystem,
-            removal_strategy: RemovalStrategy::CompleteStripping,
-            preserve_mathematical_structure: false,
-        }
+        Self::EMPTY
     }
 }
 

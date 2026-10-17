@@ -28,14 +28,19 @@ impl ConsentScope {
     pub const ALL: u32 =
         Self::VITALS | Self::LABS | Self::CONDITIONS | Self::MEDICATIONS | Self::DOCUMENTS;
 
+    /// A scope granting access to no categories.
     pub const fn empty() -> Self {
         Self(0)
     }
 
+    /// True when every bit in `flag` is set in this scope.
     pub const fn contains(&self, flag: u32) -> bool {
         (self.0 & flag) == flag
     }
 
+    /// Map a data-family label (`"health_vital"`, `"vitals"`, `"labs"`,
+    /// …) to its category bit; `None` for unrecognized families so
+    /// unknown labels never silently widen authority.
     pub fn category_from_family(family: &str) -> Option<u32> {
         match family {
             "health_vital" | "vitals" => Some(Self::VITALS),
@@ -198,6 +203,9 @@ pub struct RevocationReceipt {
 }
 
 impl RevocationReceipt {
+    /// SHA-256 over the receipt's identity fields (`receipt_id`,
+    /// `grant_id`, `revoked_by`, `revoked_at`, `reason_hash`) — the digest
+    /// that the principal's signature commits to.
     pub fn compute_digest(&self) -> [u8; 32] {
         let mut hasher = Sha256::new();
         hasher.update(&self.receipt_id);
@@ -300,12 +308,15 @@ pub struct ConsentLedger {
 }
 
 impl Default for ConsentLedger {
+    /// Equivalent to [`ConsentLedger::new`].
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl ConsentLedger {
+    /// Create an empty ledger — fixed `MAX_CONSENT_LEDGER` slot arrays,
+    /// no heap.
     pub const fn new() -> Self {
         Self {
             seen: [None; MAX_CONSENT_LEDGER],
@@ -315,12 +326,16 @@ impl ConsentLedger {
         }
     }
 
+    /// True when `(grant_id, nonce)` has already been issued through
+    /// this ledger — the replay check behind `issue`.
     fn is_replay(&self, grant: &ConsentGrant) -> bool {
         self.seen.iter().take(self.n_seen).any(|slot| {
             slot.is_some_and(|seen| seen.grant_id == grant.grant_id && seen.nonce == grant.nonce)
         })
     }
 
+    /// Timestamp of the recorded revocation for `grant_id`, or `None`
+    /// when the grant is not revoked in this ledger.
     fn revoked_at(&self, grant_id: &[u8; 32]) -> Option<u64> {
         self.revoked.iter().take(self.n_revoked).find_map(|slot| {
             slot.and_then(|rev| (rev.grant_id == *grant_id).then_some(rev.revoked_at))
@@ -366,6 +381,11 @@ impl ConsentLedger {
         Ok(())
     }
 
+    /// Ledger-backed authorization: fails with `Revoked` if this ledger
+    /// has recorded a revocation for the grant, then delegates to the
+    /// free [`authorize_category_access`] for signature/scope/actor/time
+    /// checks. Prefer this over the free function when the caller can
+    /// omit receipts — the ledger makes revocation un-forgeable-by-omission.
     pub fn authorize_category_access(
         &self,
         grant: &ConsentGrant,

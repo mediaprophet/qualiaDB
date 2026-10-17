@@ -5,16 +5,21 @@ use super::McpSystemError;
 use crate::NQuin;
 use serde_json::{json, Value};
 
+/// `v[key]` as `&str`, or `default` when absent/non-string.
 fn json_str<'a>(v: &'a Value, key: &str, default: &'a str) -> &'a str {
     v.get(key).and_then(Value::as_str).unwrap_or(default)
 }
 
+/// `v[key]` as `u64` (accepting signed JSON ints cast to `u64`), or
+/// `default`.
 fn json_u64(v: &Value, key: &str, default: u64) -> u64 {
     v.get(key)
         .and_then(|x| x.as_u64().or_else(|| x.as_i64().map(|n| n as u64)))
         .unwrap_or(default)
 }
 
+/// Root storage dir: `QUALIA_STORAGE_PATH`, else `~/.qualia`
+/// (HOME/USERPROFILE), else `./.qualia`.
 fn qualia_storage_path() -> std::path::PathBuf {
     std::env::var("QUALIA_STORAGE_PATH")
         .unwrap_or_else(|_| {
@@ -26,10 +31,12 @@ fn qualia_storage_path() -> std::path::PathBuf {
         .into()
 }
 
+/// `<storage>/Qapps` — the installed qapp directory root.
 fn qapps_root() -> std::path::PathBuf {
     qualia_storage_path().join("Qapps")
 }
 
+/// Sorted names of installed qapp dirs (those containing `qapp.json`).
 fn list_qapp_dir_names() -> Vec<String> {
     let root = qapps_root();
     let mut names = Vec::new();
@@ -47,6 +54,8 @@ fn list_qapp_dir_names() -> Vec<String> {
     names
 }
 
+/// Resolve `name` to an installed qapp dir, falling back to bundled
+/// source candidates; `InvalidParameters` when no manifest exists.
 fn resolve_qapp_dir(name: &str) -> Result<std::path::PathBuf, McpSystemError> {
     let dir = qapps_root().join(name);
     if dir.is_dir() && dir.join("qapp.json").is_file() {
@@ -60,6 +69,9 @@ fn resolve_qapp_dir(name: &str) -> Result<std::path::PathBuf, McpSystemError> {
     Err(McpSystemError::InvalidParameters)
 }
 
+/// Candidate source dirs for a bundled qapp — `QUALIA_BUNDLED_QAPPS_DIR`,
+/// exe-relative `bundled/qapps/` and `qapps/`, and repo
+/// `bundled/qapps/` / `app-development/`.
 fn bundled_qapp_source_candidates(qapp_name: &str) -> Vec<std::path::PathBuf> {
     let mut out = Vec::new();
     if let Ok(extra) = std::env::var("QUALIA_BUNDLED_QAPPS_DIR") {
@@ -85,6 +97,8 @@ fn bundled_qapp_source_candidates(qapp_name: &str) -> Vec<std::path::PathBuf> {
     out
 }
 
+/// Read and JSON-parse `qapp.json` for `qapp_name`;
+/// `ParseError` on IO or malformed JSON.
 fn read_qapp_manifest_value(qapp_name: &str) -> Result<Value, McpSystemError> {
     let dir = resolve_qapp_dir(qapp_name)?;
     let content =
@@ -92,12 +106,14 @@ fn read_qapp_manifest_value(qapp_name: &str) -> Result<Value, McpSystemError> {
     serde_json::from_str(&content).map_err(|_| McpSystemError::ParseError)
 }
 
+/// Serialize `quins` to N-Triples text via `resolver::format_ntriples_to`.
 fn quins_to_ntriples(quins: &[NQuin]) -> String {
     let mut buf = Vec::new();
     let _ = crate::resolver::format_ntriples_to(quins, &mut buf);
     String::from_utf8(buf).unwrap_or_default()
 }
 
+/// One `NQuin` as a JSON object of its six `u64` fields.
 fn quin_to_json(q: &NQuin) -> Value {
     json!({
         "subject": q.subject,
@@ -111,6 +127,9 @@ fn quin_to_json(q: &NQuin) -> Value {
 
 // ── Graph ────────────────────────────────────────────────────────────────────
 
+/// `query_sparql` tool — run `query` against the daemon graph and
+/// return match stats, N-Triples, and quin JSON up to `limit`
+/// (default 1000). `ClassifiedEgress` maps to `SanctuaryGateTriggered`.
 pub fn query_sparql(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
     let query = json_str(&v, "query", "");
@@ -150,6 +169,8 @@ pub fn query_sparql(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `get_graph_stats` tool — daemon-graph quin count, arena capacity,
+/// and utilisation fraction.
 pub fn get_graph_stats(_args: &[u8]) -> Result<String, McpSystemError> {
     let count = crate::daemon_graph::graph_quin_count();
     let capacity = crate::daemon_graph::MAX_GRAPH_QUINS;
@@ -166,6 +187,8 @@ pub fn get_graph_stats(_args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `list_ontologies` (native) — the startup ontology catalog with
+/// per-file presence in the ontology dir, plus the graph quin count.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn list_ontologies(_args: &[u8]) -> Result<String, McpSystemError> {
     let dir = crate::ontology_loader::ontology_dir_path();
@@ -189,6 +212,8 @@ pub fn list_ontologies(_args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `list_ontologies` (wasm32) — `ToolNotReady`: no filesystem
+/// ontology-dir access in the WASM profile.
 #[cfg(target_arch = "wasm32")]
 pub fn list_ontologies(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotReady)
@@ -196,6 +221,10 @@ pub fn list_ontologies(_args: &[u8]) -> Result<String, McpSystemError> {
 
 // ── LLM ──────────────────────────────────────────────────────────────────────
 
+/// `llm_infer` (native) — local-model inference on `prompt` (+optional
+/// `graph_context`, `model_path`, `sampler_cbor`); returns text, token
+/// count, provenance hashes, and the emitted semantic quin. `model_path`
+/// falls back to the resident GGUF then `QUALIA_ACTIVE_GGUF`.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn llm_infer(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
@@ -255,11 +284,15 @@ pub fn llm_infer(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `llm_infer` (wasm32) — `ToolNotReady`: local-model inference is
+/// native-only.
 #[cfg(target_arch = "wasm32")]
 pub fn llm_infer(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotReady)
 }
 
+/// `llm_chat` (native) — flatten `messages` (`role`/`content` pairs)
+/// into a prompt and delegate to [`llm_infer`].
 #[cfg(not(target_arch = "wasm32"))]
 pub fn llm_chat(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
@@ -288,11 +321,14 @@ pub fn llm_chat(args: &[u8]) -> Result<String, McpSystemError> {
     llm_infer(&chat_args)
 }
 
+/// `llm_chat` (wasm32) — `ToolNotReady` (see `llm_infer` wasm path).
 #[cfg(target_arch = "wasm32")]
 pub fn llm_chat(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotReady)
 }
 
+/// `list_models` (native) — `.gguf` files under `<storage>/Models`
+/// plus the resident-model entry, if any.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn list_models(_args: &[u8]) -> Result<String, McpSystemError> {
     let models_dir = qualia_storage_path().join("Models");
@@ -332,6 +368,8 @@ pub fn list_models(_args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `list_models` (wasm32) — always-empty model list (no filesystem
+/// scanning in the WASM profile).
 #[cfg(target_arch = "wasm32")]
 pub fn list_models(_args: &[u8]) -> Result<String, McpSystemError> {
     Ok(r#"{"discovered":[],"resident":null}"#.to_string())
@@ -339,6 +377,9 @@ pub fn list_models(_args: &[u8]) -> Result<String, McpSystemError> {
 
 // ── QPU ──────────────────────────────────────────────────────────────────────
 
+/// `qpu_optimize` (native) — formulate `problem` via `PreSolver`, load
+/// its QUBO Hamiltonian into a `QuboMatrix`, and solve it classically;
+/// returns job parameters, energy, and bit assignment.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn qpu_optimize(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::qubo_compiler::{solve_classical, QuboMatrix};
@@ -381,11 +422,15 @@ pub fn qpu_optimize(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `qpu_optimize` (wasm32) — `ToolNotReady`: QUBO pre-solver path is
+/// native-only.
 #[cfg(target_arch = "wasm32")]
 pub fn qpu_optimize(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotReady)
 }
 
+/// `qpu_dft` tool — ground-state energy of the supplied electron quins
+/// on a `grid_resolution` density grid via `quantum_dft::ElectronDensity`.
 pub fn qpu_dft(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
     let resolution = v
@@ -408,6 +453,7 @@ pub fn qpu_dft(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `QPUJobStatus` → lowercase wire label.
 fn qpu_job_status_label(status: crate::specialized_libs::qpu_bridge::QPUJobStatus) -> &'static str {
     use crate::specialized_libs::qpu_bridge::QPUJobStatus;
     match status {
@@ -420,6 +466,8 @@ fn qpu_job_status_label(status: crate::specialized_libs::qpu_bridge::QPUJobStatu
     }
 }
 
+/// `qpu_status` tool — bridge connection flag and current job-status
+/// label from a fresh `QPUBridgeManager`.
 pub fn qpu_status(_args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::qpu_bridge::QPUBridgeManager;
     let bridge = QPUBridgeManager::new();
@@ -432,6 +480,8 @@ pub fn qpu_status(_args: &[u8]) -> Result<String, McpSystemError> {
 
 // ── Identity & wallet ────────────────────────────────────────────────────────
 
+/// `get_wallet_status` tool — parses `pending_payments.ndjson` under
+/// the storage root and returns the queued payment records.
 pub fn get_wallet_status(_args: &[u8]) -> Result<String, McpSystemError> {
     let pending_path = qualia_storage_path().join("pending_payments.ndjson");
     let mut queued = Vec::new();
@@ -459,6 +509,8 @@ pub fn get_wallet_status(_args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `get_did_info` tool — decode a `did:q42:` string into its pointer,
+/// MSB flag, and 60-bit payload.
 pub fn get_did_info(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
     let did = json_str(&v, "did", "");
@@ -478,6 +530,9 @@ pub fn get_did_info(args: &[u8]) -> Result<String, McpSystemError> {
 
 // ── Ontology ─────────────────────────────────────────────────────────────────
 
+/// `ingest_ontology` (native) — load a `.q42` or `.ttl` file (context
+/// = `context_hash` arg or `q_hash(path)`), extend the daemon graph,
+/// and return the ingested quin count.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn ingest_ontology(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
@@ -510,11 +565,15 @@ pub fn ingest_ontology(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `ingest_ontology` (wasm32) — `ToolNotReady`: file ingestion is
+/// native-only.
 #[cfg(target_arch = "wasm32")]
 pub fn ingest_ontology(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotReady)
 }
 
+/// Decode `v["constraints"]` into `ShaclConstraint`s — datatype,
+/// min/max count, deontic, and epistemic kinds; unknown kinds skipped.
 fn parse_shacl_constraints(
     v: &Value,
 ) -> Result<Vec<crate::shacl_compiler::ShaclConstraint>, McpSystemError> {
@@ -569,6 +628,9 @@ fn parse_shacl_constraints(
     Ok(out)
 }
 
+/// `validate_shacl` tool — run `shacl_compiler::validate_shacl_property`
+/// on a quin slice for a target subject/property against the decoded
+/// constraint list.
 pub fn validate_shacl(args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(args)?;
     let quins = parse_quin_slice(&v, "quins")?;
@@ -608,6 +670,8 @@ use crate::modalities::logic::shacl_extensions::{
 };
 use crate::verifiable_credential::Credential;
 
+/// `CryptoScheme` from a wire name (ed25519/mldsa65/blake3/x25519);
+/// unrecognised → `Unknown`.
 fn parse_crypto_scheme(s: &str) -> CryptoScheme {
     match s.to_ascii_lowercase().as_str() {
         "ed25519" => CryptoScheme::Ed25519,
@@ -618,6 +682,8 @@ fn parse_crypto_scheme(s: &str) -> CryptoScheme {
     }
 }
 
+/// `ShaclSeverity` from a wire name (critical/violation/warning);
+/// unrecognised → `Info`.
 fn parse_shacl_severity(s: &str) -> ShaclSeverity {
     match s.to_ascii_lowercase().as_str() {
         "critical" => ShaclSeverity::Critical,
@@ -825,6 +891,8 @@ mod identity_tool_tests {
 
 // ── Qapps ────────────────────────────────────────────────────────────────────
 
+/// `list_qapps` tool — manifests of all installed qapps with
+/// name/version/display-name/category fields.
 pub fn list_qapps(_args: &[u8]) -> Result<String, McpSystemError> {
     let mut entries = Vec::new();
     for name in list_qapp_dir_names() {
@@ -846,11 +914,15 @@ pub fn list_qapps(_args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// Raw `qapp.json` manifest content for `qapp_name`.
 pub fn get_qapp_manifest(qapp_name: &str) -> Result<String, McpSystemError> {
     let manifest = read_qapp_manifest_value(qapp_name)?;
     serde_json::to_string(&manifest).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `inspect_qapp_readiness` tool — per-check readiness report for a
+/// qapp: manifest present, each declared entrypoint on disk, and
+/// (approximately, via graph count) required ontologies loaded.
 pub fn inspect_qapp_readiness(qapp_name: &str) -> Result<String, McpSystemError> {
     let dir = resolve_qapp_dir(qapp_name)?;
     let manifest = read_qapp_manifest_value(qapp_name)?;
@@ -910,6 +982,9 @@ pub fn inspect_qapp_readiness(qapp_name: &str) -> Result<String, McpSystemError>
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
+/// `list_qapp_updates` tool — compares installed qapp versions against
+/// bundled candidates; an update is offered when versions differ or no
+/// install exists.
 pub fn list_qapp_updates(_args: &[u8]) -> Result<String, McpSystemError> {
     let mut offers = Vec::new();
     for name in list_qapp_dir_names() {
@@ -990,6 +1065,9 @@ mod tests {
 
 // ── Orchestration ────────────────────────────────────────────────────────────
 
+/// `get_pending_tasks` tool — pending tasks from a fresh
+/// `AmbientOrchestrationManager` (no global singleton; returns the
+/// manager's initial queue, not persisted state).
 pub fn get_pending_tasks(_args: &[u8]) -> Result<String, McpSystemError> {
     // Currently, we just instantiate a new manager because there is no global singleton.
     let manager = crate::ambient_orchestration::AmbientOrchestrationManager::new();

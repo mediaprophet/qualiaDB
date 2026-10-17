@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 impl InferenceEngine {
+    /// Construct a `InferenceEngine` with default field values.
     pub fn new() -> Self {
         Self {
             inference_backends: HashMap::new(),
@@ -16,6 +17,7 @@ impl InferenceEngine {
         }
     }
 
+    /// Initialize `InferenceEngine`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.request_scheduler.initialize()?;
         self.batch_processor.initialize()?;
@@ -44,6 +46,12 @@ impl InferenceEngine {
         self.inference_backends.remove(backend_id).is_some()
     }
 
+    /// Real MLP forward pass: decodes `request.input_data` as LE f64s,
+    /// runs the model's `Linear`/`Activation`/`Dropout` layers via
+    /// `solvers::activation`, re-encodes the output. Errors on
+    /// unsupported layer types; `confidence: 1.0` marks a completed
+    /// deterministic pass, not calibrated confidence (use
+    /// `gguf_bridge` for LLM inference).
     pub fn execute_inference(
         &mut self,
         request: &InferenceRequest,
@@ -256,6 +264,7 @@ fn apply_activation(buf: &mut [f64], act: &ActivationFunction) -> Result<(), MLE
 }
 
 impl InferenceBackend {
+    /// Construct a `InferenceBackend` with default field values.
     pub fn new() -> Self {
         Self {
             backend_id: "backend_1".to_string(),
@@ -267,6 +276,7 @@ impl InferenceBackend {
 }
 
 impl BackendCapabilities {
+    /// Construct a `BackendCapabilities` with default field values.
     pub fn new() -> Self {
         Self {
             supported_models: vec!["gpt-3".to_string(), "bert".to_string()],
@@ -280,6 +290,7 @@ impl BackendCapabilities {
 }
 
 impl RequestScheduler {
+    /// Construct a `RequestScheduler` with default field values.
     pub fn new() -> Self {
         Self {
             scheduling_policy: SchedulingPolicy::Priority,
@@ -288,6 +299,7 @@ impl RequestScheduler {
         }
     }
 
+    /// Initialize `RequestScheduler`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -322,13 +334,81 @@ impl RequestScheduler {
         &mut self.load_balancer
     }
 
-    pub fn schedule_request(&mut self, _request: &InferenceRequest) -> Result<String, MLError> {
-        // Simplified scheduling - return backend ID
-        Ok("backend_1".to_string())
+    /// Schedule an inference request to an available backend according to the configured
+    /// load-balancing strategy and record it in the queue manager.
+    pub fn schedule_request(&mut self, request: &InferenceRequest) -> Result<String, MLError> {
+        let selected_backend = if !self.load_balancer.backend_metrics.is_empty() {
+            match self.load_balancer.balancing_strategy {
+                LoadBalancingStrategy::LeastConnections => self
+                    .load_balancer
+                    .backend_metrics
+                    .values()
+                    .min_by(|a, b| {
+                        a.current_load
+                            .partial_cmp(&b.current_load)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .map(|m| m.backend_id.clone())
+                    .unwrap_or_else(|| "backend_1".to_string()),
+                LoadBalancingStrategy::ResponseTime => self
+                    .load_balancer
+                    .backend_metrics
+                    .values()
+                    .min_by(|a, b| {
+                        a.average_response_time
+                            .partial_cmp(&b.average_response_time)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .map(|m| m.backend_id.clone())
+                    .unwrap_or_else(|| "backend_1".to_string()),
+                LoadBalancingStrategy::RoundRobin
+                | LoadBalancingStrategy::WeightedRoundRobin
+                | LoadBalancingStrategy::Custom(_) => {
+                    let mut keys: Vec<String> =
+                        self.load_balancer.backend_metrics.keys().cloned().collect();
+                    keys.sort();
+                    let idx = (self.queue_manager.running_count()
+                        + self.queue_manager.completed_requests.len())
+                        % keys.len();
+                    keys[idx].clone()
+                }
+            }
+        } else if !self.load_balancer.health_checker.health_checks.is_empty() {
+            let mut keys: Vec<String> = self
+                .load_balancer
+                .health_checker
+                .health_checks
+                .keys()
+                .cloned()
+                .collect();
+            keys.sort();
+            keys[0].clone()
+        } else {
+            "backend_1".to_string()
+        };
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        self.queue_manager.start_request(RunningRequest {
+            request_id: request.request_id.clone(),
+            backend_id: selected_backend.clone(),
+            started_at: now,
+            progress: 0.0,
+        });
+
+        if let Some(metrics) = self.load_balancer.backend_metrics.get_mut(&selected_backend) {
+            metrics.current_load += 1.0;
+        }
+
+        Ok(selected_backend)
     }
 }
 
 impl QueueManager {
+    /// Construct a `QueueManager` with default field values.
     pub fn new() -> Self {
         Self {
             pending_requests: Vec::new(),
@@ -391,6 +471,7 @@ impl QueueManager {
 }
 
 impl LoadBalancer {
+    /// Construct a `LoadBalancer` with default field values.
     pub fn new() -> Self {
         Self {
             balancing_strategy: LoadBalancingStrategy::RoundRobin,
@@ -437,6 +518,7 @@ impl LoadBalancer {
 }
 
 impl HealthChecker {
+    /// Construct a `HealthChecker` with default field values.
     pub fn new() -> Self {
         Self {
             health_checks: HashMap::new(),
@@ -487,6 +569,7 @@ impl HealthChecker {
 }
 
 impl HealthCheck {
+    /// Construct a `HealthCheck` with default field values.
     pub fn new() -> Self {
         Self {
             check_id: "health_1".to_string(),
@@ -498,6 +581,7 @@ impl HealthCheck {
 }
 
 impl BatchProcessor {
+    /// Construct a `BatchProcessor` with default field values.
     pub fn new() -> Self {
         Self {
             batching_strategy: BatchingStrategy::FixedSize,
@@ -507,6 +591,7 @@ impl BatchProcessor {
         }
     }
 
+    /// Initialize `BatchProcessor`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.batch_optimizer.initialize()?;
         Ok(())
@@ -544,6 +629,7 @@ impl BatchProcessor {
 }
 
 impl BatchOptimizer {
+    /// Construct a `BatchOptimizer` with default field values.
     pub fn new() -> Self {
         Self {
             optimization_algorithms: HashMap::new(),
@@ -551,6 +637,7 @@ impl BatchOptimizer {
         }
     }
 
+    /// Initialize `BatchOptimizer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -583,6 +670,7 @@ impl BatchOptimizer {
 }
 
 impl BatchOptimizationMetrics {
+    /// Construct a `BatchOptimizationMetrics` with default field values.
     pub fn new() -> Self {
         Self {
             average_batch_size: 32.0,
@@ -594,6 +682,7 @@ impl BatchOptimizationMetrics {
 }
 
 impl InferenceOptimizer {
+    /// Construct a `InferenceOptimizer` with default field values.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![InferenceOptimizationStrategy::ModelQuantization],
@@ -602,6 +691,7 @@ impl InferenceOptimizer {
         }
     }
 
+    /// Initialize `InferenceOptimizer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.performance_analyzer.initialize()?;
         self.auto_tuner.initialize()?;
@@ -625,6 +715,7 @@ impl InferenceOptimizer {
 }
 
 impl PerformanceAnalyzer {
+    /// Construct a `PerformanceAnalyzer` with default field values.
     pub fn new() -> Self {
         Self {
             analysis_methods: vec![AnalysisMethod::Profiling],
@@ -633,6 +724,7 @@ impl PerformanceAnalyzer {
         }
     }
 
+    /// Initialize `PerformanceAnalyzer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.bottleneck_detector.initialize()?;
         Ok(())
@@ -666,6 +758,7 @@ impl PerformanceAnalyzer {
 }
 
 impl PerformanceProfile {
+    /// Construct a `PerformanceProfile` with default field values.
     pub fn new() -> Self {
         Self {
             profile_id: "profile_1".to_string(),
@@ -678,6 +771,7 @@ impl PerformanceProfile {
 }
 
 impl PerformanceMetrics {
+    /// Construct a `PerformanceMetrics` with default field values.
     pub fn new() -> Self {
         Self {
             latency: 10.0,
@@ -689,6 +783,7 @@ impl PerformanceMetrics {
 }
 
 impl PerformanceCharacteristics {
+    /// Construct a `PerformanceCharacteristics` with default field values.
     pub fn new() -> Self {
         Self {
             compute_bound: true,
@@ -700,6 +795,7 @@ impl PerformanceCharacteristics {
 }
 
 impl BottleneckDetector {
+    /// Construct a `BottleneckDetector` with default field values.
     pub fn new() -> Self {
         Self {
             detection_algorithms: vec![BottleneckDetectionAlgorithm::Statistical],
@@ -707,6 +803,7 @@ impl BottleneckDetector {
         }
     }
 
+    /// Initialize `BottleneckDetector`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -733,6 +830,7 @@ impl BottleneckDetector {
 }
 
 impl DetectionThresholds {
+    /// Construct a `DetectionThresholds` with default field values.
     pub fn new() -> Self {
         Self {
             cpu_threshold: 0.8,
@@ -744,6 +842,7 @@ impl DetectionThresholds {
 }
 
 impl AutoTuner {
+    /// Construct a `AutoTuner` with default field values.
     pub fn new() -> Self {
         Self {
             tuning_algorithms: HashMap::new(),
@@ -752,6 +851,7 @@ impl AutoTuner {
         }
     }
 
+    /// Initialize `AutoTuner`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -793,6 +893,7 @@ impl AutoTuner {
 }
 
 impl TuningHistory {
+    /// Construct a `TuningHistory` with default field values.
     pub fn new() -> Self {
         Self {
             tuning_records: Vec::new(),
@@ -828,6 +929,7 @@ impl TuningHistory {
 }
 
 impl TuningRecord {
+    /// Construct a `TuningRecord` with default field values.
     pub fn new() -> Self {
         Self {
             record_id: "record_1".to_string(),
@@ -840,6 +942,7 @@ impl TuningRecord {
 }
 
 impl TuningConfiguration {
+    /// Construct a `TuningConfiguration` with default field values.
     pub fn new() -> Self {
         Self {
             configuration_id: "config_1".to_string(),

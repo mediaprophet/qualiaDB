@@ -52,6 +52,8 @@ pub struct Circumstance {
 }
 
 impl Circumstance {
+    /// Solo session in a private sanctuary — principal role, self audience,
+    /// open focus.
     pub fn private_sanctuary() -> Self {
         Self {
             role: "principal".into(),
@@ -63,6 +65,8 @@ impl Circumstance {
         }
     }
 
+    /// Employed context — employee role, employer-org audience,
+    /// work-delivery focus (triggers reduced private chrome).
     pub fn workplace_employee() -> Self {
         Self {
             role: "employee".into(),

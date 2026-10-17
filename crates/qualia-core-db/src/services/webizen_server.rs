@@ -67,6 +67,8 @@ fn proxy_target_allowed(url: &reqwest::Url) -> bool {
     true
 }
 
+/// `true` for loopback, private, or link-local addresses — used to
+/// block SSRF against internal networks from the proxy endpoint.
 fn ip_is_restricted(ip: std::net::IpAddr) -> bool {
     match ip {
         std::net::IpAddr::V4(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local(),
@@ -101,8 +103,10 @@ enum OutputFormat {
     RawQ42,
 }
 
-const SUPPORTED_QUERY_FORMATS: &str = "application/ld+json, application/n-triples";
+const SUPPORTED_QUERY_FORMATS: &str =
+    "application/ld+json, application/n-triples, application/x-qualia-q42";
 
+/// 406 response listing the supported query output formats.
 fn not_acceptable_format_response() -> (StatusCode, Json<serde_json::Value>) {
     (
         StatusCode::NOT_ACCEPTABLE,
@@ -114,6 +118,8 @@ fn not_acceptable_format_response() -> (StatusCode, Json<serde_json::Value>) {
     )
 }
 
+/// Content negotiation: explicit `format` field wins, else the
+/// `Accept` header, else JSON-LD default. `Err(())` on unsupported.
 fn negotiate_format(
     payload_format: Option<&str>,
     accept: Option<&str>,
@@ -144,6 +150,8 @@ fn negotiate_format(
     Ok(OutputFormat::JsonLd)
 }
 
+/// Map a `QueryExecError` to its WebSocket error envelope with the
+/// client-supplied query `id`.
 fn ws_query_error_json(id: u64, err: QueryExecError) -> serde_json::Value {
     match err {
         QueryExecError::EmptyQuery => json!({ "type": "error", "id": id, "code": "empty_query" }),
@@ -160,6 +168,8 @@ fn ws_query_error_json(id: u64, err: QueryExecError) -> serde_json::Value {
     }
 }
 
+/// Whitespace-tolerant base64 decode for bench-load payloads
+/// (dependency-free; rejects non-alphabet characters).
 fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
     let cleaned: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
     let padded = match cleaned.len() % 4 {
@@ -189,6 +199,9 @@ fn decode_bench_load_b64(b64: &str) -> Result<Vec<u8>, &'static str> {
     Ok(out)
 }
 
+/// Build `WebizenState` from `qualia_global.wal` (type index scan),
+/// then spawn the axum server on a dedicated thread pinned to core 3
+/// with a current-thread tokio runtime. Returns the shared state.
 pub fn spawn_loopback_server(
     port: u16,
     dev: bool,
@@ -462,6 +475,8 @@ pub fn spawn_loopback_server(
     state
 }
 
+/// Private Network Access middleware — answers CORS preflights and
+/// adds `Access-Control-Allow-Private-Network` headers.
 async fn pna_middleware(req: axum::extract::Request, next: axum::middleware::Next) -> Response {
     let mut res = next.run(req).await;
     res.headers_mut().insert(
@@ -471,6 +486,7 @@ async fn pna_middleware(req: axum::extract::Request, next: axum::middleware::Nex
     res
 }
 
+/// OPTIONS preflight responder — permissive CORS headers.
 async fn preflight_handler() -> impl IntoResponse {
     (StatusCode::OK, Json(json!({ "status": "ok" })))
 }
@@ -483,6 +499,7 @@ struct TensorSliceQuery {
     lane: Option<String>,
 }
 
+/// Parse a header value as `f32`; `None` when absent or malformed.
 fn header_parse_f32(headers: &HeaderMap, name: &str) -> Option<f32> {
     headers
         .get(name)
@@ -490,6 +507,7 @@ fn header_parse_f32(headers: &HeaderMap, name: &str) -> Option<f32> {
         .and_then(|s| s.parse().ok())
 }
 
+/// Parse a header value as `u32`; `None` when absent or malformed.
 fn header_parse_u32(headers: &HeaderMap, name: &str) -> Option<u32> {
     headers
         .get(name)
@@ -497,6 +515,8 @@ fn header_parse_u32(headers: &HeaderMap, name: &str) -> Option<u32> {
         .and_then(|s| s.parse().ok())
 }
 
+/// Header value as an owned `String`; `None` when absent or
+/// non-UTF-8.
 fn header_str(headers: &HeaderMap, name: &str) -> Option<String> {
     headers
         .get(name)
@@ -504,6 +524,8 @@ fn header_str(headers: &HeaderMap, name: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+/// `GET /tensor/slice` — serve a typed 10D tensor slice, axes and
+/// bounds from headers.
 async fn tensor_slice_handler(
     State(state): State<Arc<WebizenState>>,
     Query(q): Query<TensorSliceQuery>,
@@ -793,6 +815,8 @@ async fn pulse_events_handler() -> Response {
         .unwrap()
 }
 
+/// `GET /health` — liveness plus real telemetry (graph quin count,
+/// revision, webtorrent seed stats, execution environment).
 async fn health_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
     (
         StatusCode::OK,
@@ -831,6 +855,8 @@ async fn vibe_capabilities_handler(
         .into_response()
 }
 
+/// `true` when `x-qualia-token` matches the configured token or a
+/// vault-verified qApp pairing token for localhost.
 fn bridge_probe_authorized(state: &WebizenState, headers: &HeaderMap) -> bool {
     let Some(token) = headers
         .get("x-qualia-token")
@@ -849,6 +875,8 @@ fn bridge_probe_authorized(state: &WebizenState, headers: &HeaderMap) -> bool {
         .is_some()
 }
 
+/// `GET /proxy/fetch?url=` — allow-listed outbound fetch with a
+/// byte cap; restricted IPs rejected (SSRF guard).
 async fn proxy_fetch_handler(
     Query(qs): Query<std::collections::HashMap<String, String>>,
 ) -> impl IntoResponse {
@@ -912,30 +940,69 @@ async fn proxy_fetch_handler(
     ([(header::CONTENT_TYPE, content_type)], bytes.to_vec()).into_response()
 }
 
+/// `POST /cache?filename=` — persist a dataset shard under `.qualia/cache/`.
+/// Sanitizes filename against path traversal and returns 500 on I/O error.
 async fn cache_handler(
     Query(qs): Query<std::collections::HashMap<String, String>>,
     body: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let filename = qs
+    let raw_filename = qs
         .get("filename")
         .cloned()
         .unwrap_or_else(|| "dataset_shard.q42".to_string());
-    let mut path = std::path::PathBuf::from(".qualia");
-    path.push("cache");
-    let _ = std::fs::create_dir_all(&path);
-    path.push(&filename);
-    let _ = std::fs::write(&path, body);
+
+    // Sanitize filename against directory traversal
+    let path_candidate = std::path::Path::new(&raw_filename);
+    let sanitized_name = match path_candidate.file_name().and_then(|f| f.to_str()) {
+        Some(name) if !name.is_empty() && name != "." && name != ".." => name,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "invalid_filename", "message": "Filename contains invalid path characters or traversal components" })),
+            )
+                .into_response();
+        }
+    };
+
+    let cache_dir = std::path::PathBuf::from(".qualia").join("cache");
+    if let Err(e) = std::fs::create_dir_all(&cache_dir) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "cache_dir_failed", "message": e.to_string() })),
+        )
+            .into_response();
+    }
+
+    let target_path = cache_dir.join(sanitized_name);
+    let byte_len = body.len();
+    if let Err(e) = std::fs::write(&target_path, body) {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "write_failed", "message": e.to_string() })),
+        )
+            .into_response();
+    }
+
     (
         StatusCode::OK,
-        Json(json!({ "status": "ok", "saved_to": path.to_str() })),
+        Json(json!({
+            "status": "ok",
+            "saved_to": target_path.to_str(),
+            "bytes_written": byte_len
+        })),
     )
+        .into_response()
 }
 
+/// `GET /storage/selfhood` — report the configured selfhood
+/// storage path (descriptor only; `"isolated"` is a static label).
 async fn storage_selfhood_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
     let path = std::path::Path::new(&state.storage_path).join("selfhood");
     Json(json!({ "path": path.to_str().unwrap_or_default(), "status": "isolated" }))
 }
 
+/// `GET /storage/commons` — report the configured commons storage
+/// path (descriptor only; `"public"` is a static label).
 async fn storage_commons_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
     let path = std::path::Path::new(&state.storage_path).join("commons");
     Json(json!({ "path": path.to_str().unwrap_or_default(), "status": "public" }))
@@ -953,6 +1020,8 @@ pub struct CompiledPermission {
     pub is_permissive_commons: bool,
 }
 
+/// `POST /permissions/compile` — parse a yaml-ld-q42 permission
+/// payload into a routing mask + semantic handshake descriptor.
 pub async fn permissions_compile_handler(
     Json(req): Json<PermissionsCompileRequest>,
 ) -> impl IntoResponse {
@@ -990,6 +1059,8 @@ pub struct WebizenRpcRequest {
     pub payload: Option<String>,
 }
 
+/// `POST /rpc` — Webizen JSON-RPC dispatch; refuses stateful calls
+/// while Sanctuary Mode is engaged.
 pub async fn webizen_rpc_handler(
     State(state): State<Arc<WebizenState>>,
     Json(req): Json<WebizenRpcRequest>,
@@ -1033,6 +1104,8 @@ pub async fn webizen_rpc_handler(
         .into_response()
 }
 
+/// `/bridge` — local browser/WASM bridge endpoint; token-gated
+/// probe plus negotiated capability document.
 async fn bridge_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<WebizenState>>,
@@ -1221,6 +1294,8 @@ async fn update_handler(
     }
 }
 
+/// `POST /query` — execute a native query with format negotiation
+/// (JSON-LD / N-Triples / raw Q42) and bounded output.
 async fn query_handler(
     State(state): State<Arc<WebizenState>>,
     headers: HeaderMap,
@@ -1282,13 +1357,6 @@ async fn query_handler(
         Ok(f) => f,
         Err(_) => return not_acceptable_format_response().into_response(),
     };
-    if matches!(output_format, OutputFormat::RawQ42) {
-        return (
-            StatusCode::NOT_IMPLEMENTED,
-            Json(json!({"error": "raw q42 not implemented - use export tools"})),
-        )
-            .into_response();
-    }
 
     if request.query.trim().is_empty() {
         return (
@@ -1378,10 +1446,24 @@ async fn query_handler(
             let res = json!({ "@context": { "@vocab": "https://webizen.org/vocab#" }, "@graph": graph, "match_count": match_count });
             (StatusCode::OK, response_headers, res.to_string()).into_response()
         }
-        OutputFormat::RawQ42 => unreachable!(),
+        OutputFormat::RawQ42 => {
+            let bytes: &[u8] = bytemuck::cast_slice(&final_results);
+            response_headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/x-qualia-q42"),
+            );
+            (
+                StatusCode::OK,
+                response_headers,
+                bytes.to_vec(),
+            )
+                .into_response()
+        }
     }
 }
 
+/// `GET /telemetry` (WS) — upgrade to a websocket streaming
+/// `telemetry_tx` broadcast frames.
 async fn telemetry_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<WebizenState>>,
@@ -1445,6 +1527,8 @@ struct TelemetryIngestRequest {
     telemetry: crate::render::telemetry::SystemTelemetry,
 }
 
+/// `POST /manifest` — accept and store a new volume manifest
+/// body (capped read).
 async fn manifest_handler(mut body: Body) -> impl IntoResponse {
     use http_body_util::BodyExt;
     let mut payload_bytes = Vec::new();
@@ -1468,6 +1552,7 @@ async fn manifest_handler(mut body: Body) -> impl IntoResponse {
     }
 }
 
+/// `GET /manifest/current` — return the currently stored manifest.
 async fn current_manifest_handler() -> impl IntoResponse {
     let workspace = json!({ "pages": [] });
     Json(workspace)
@@ -1476,6 +1561,7 @@ async fn current_manifest_handler() -> impl IntoResponse {
 use crate::extension_bus::ExtensionBus;
 use std::sync::OnceLock;
 static EXTENSION_BUS: OnceLock<ExtensionBus> = OnceLock::new();
+/// Process-global extension registry (lazily initialized).
 fn get_extension_bus() -> &'static ExtensionBus {
     EXTENSION_BUS.get_or_init(|| {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
@@ -1487,14 +1573,19 @@ fn get_extension_bus() -> &'static ExtensionBus {
         )
     })
 }
+/// `GET /extensions` — list registered extension manifests.
 async fn list_extensions_handler() -> impl IntoResponse {
     Json(get_extension_bus().list_extensions())
 }
+/// `GET /extensions/query` — filter registered extensions by
+/// capability query.
 async fn query_extensions_handler(
     axum::extract::Path(interface): axum::extract::Path<String>,
 ) -> impl IntoResponse {
     Json(get_extension_bus().query_capability(q_hash(&interface)))
 }
+/// `POST /extensions/register` — ingest a new extension manifest
+/// (capped body read); 400 on malformed input.
 async fn register_extension_handler(mut body: Body) -> impl IntoResponse {
     use http_body_util::BodyExt;
     let mut payload_bytes = Vec::new();
@@ -1512,6 +1603,8 @@ async fn register_extension_handler(mut body: Body) -> impl IntoResponse {
     }
     axum::http::StatusCode::BAD_REQUEST
 }
+/// `GET /mobile/qr` — render an SVG QR code pairing this host's
+/// LAN address with the bootstrap gateway URL.
 async fn mobile_qr_handler(
     axum::extract::State(state): axum::extract::State<Arc<WebizenState>>,
 ) -> impl IntoResponse {
@@ -1540,9 +1633,24 @@ async fn mobile_qr_handler(
     )
         .into_response()
 }
+/// `GET /mobile/stream` (and `/mobile/ws`) — **Intentional Bootstrap Scaffold**:
+/// Returns `"WS Mock"` as a lightweight reachability probe for mobile devices connecting
+/// to localhost via LAN pairing after scanning `GET /mobile/qr`.
+///
+/// Workflow Context:
+/// 1. Desktop renders QR code via `mobile_qr_handler`, directing mobile browser to
+///    `https://webizen.au/bootstrap_gateway/index.html?target=http://{local_ip}:{port}/mobile/app/index.html`.
+/// 2. Mobile browser resolves LAN IP and loads the PWA (`bootstrap_gateway/mobile`).
+/// 3. Mobile probes `/mobile/stream` to verify HTTP connectivity and port reachability
+///    before initiating WebSocket upgrades or pane subscription. Real mobile telemetry
+///    egress flows through the fully wired `POST /telemetry/ingest` and `/qualia-bridge`.
 async fn mobile_ws_handler() -> impl IntoResponse {
     (StatusCode::OK, "WS Mock").into_response()
 }
+
+/// `POST /generate_pane` (and `/mobile/pane`) — **Intentional Bootstrap Scaffold**:
+/// Returns `"Pane Mock"` as a reachability probe for the mobile client's pane negotiation
+/// loop during initial QR pairing handshake.
 async fn mobile_generate_pane_handler() -> impl IntoResponse {
     (StatusCode::OK, "Pane Mock").into_response()
 }

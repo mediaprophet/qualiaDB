@@ -25,3 +25,6 @@ pub mod host;
 pub mod local_scheduler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod platform_scheduler;
+pub mod precision_timer;
+
+pub use precision_timer::{format_duration_human, BenchmarkResult, DurationPrecisionExt, PrecisionTimer};

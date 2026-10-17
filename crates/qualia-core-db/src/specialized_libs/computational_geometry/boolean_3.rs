@@ -64,6 +64,8 @@ pub enum Boolean3Error {
 }
 
 impl core::fmt::Display for Boolean3Error {
+    /// Human-readable diagnostic naming the failing mesh, index, and
+    /// constraint (`"boolean_3: mesh {mesh} …"`).
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::IndexOutOfBounds { mesh, triangle, vertex } => write!(
@@ -469,6 +471,8 @@ pub fn boolean_3_exact(
 //  Validation and setup helpers
 // ───────────────────────────────────────────────────────────────────────────
 
+/// Input contract check: all vertex coordinates finite and every
+/// triangle index in bounds (`mesh` labels the error — `"a"`/`"b"`).
 fn validate_mesh(
     mesh: &'static str,
     vertices: &[Point3],
@@ -493,6 +497,8 @@ fn validate_mesh(
     Ok(())
 }
 
+/// Dereference the index soup into per-triangle `[Point3; 3]` corner
+/// arrays (Tier-2 construction allocation).
 fn gather_corners(
     mesh: &'static str,
     vertices: &[Point3],
@@ -516,6 +522,7 @@ fn gather_corners(
 }
 
 #[inline]
+/// Tight axis-aligned bounding box of one triangle's three corners.
 fn tri_aabb(c: [Point3; 3]) -> Aabb {
     let min = Point3::new(
         c[0].x.min(c[1].x).min(c[2].x),
@@ -531,6 +538,7 @@ fn tri_aabb(c: [Point3; 3]) -> Aabb {
 }
 
 #[inline]
+/// Arithmetic-mean centre of a triangle's three corners.
 fn tri_centroid(v: [Point3; 3]) -> Point3 {
     Point3::new(
         (v[0].x + v[1].x + v[2].x) / 3.0,
@@ -560,6 +568,8 @@ fn brute_force_aabb_pairs(boxes_a: &[Aabb], boxes_b: &[Aabb]) -> Vec<(usize, usi
 }
 
 #[inline]
+/// Separating-axis test on all three axes — `true` when the boxes
+/// touch or overlap (inclusive bounds).
 fn aabb_overlap(a: &Aabb, b: &Aabb) -> bool {
     a.min.x <= b.max.x
         && a.max.x >= b.min.x
@@ -736,6 +746,7 @@ fn locate_on_triangle(p: Point3, a: Point3, b: Point3, c: Point3) -> EdgeLoc {
 }
 
 #[inline]
+/// Squared Euclidean distance between two `Point3`s.
 fn dist_sq(a: Point3, b: Point3) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
@@ -744,6 +755,8 @@ fn dist_sq(a: Point3, b: Point3) -> f64 {
 }
 
 #[inline]
+/// `p` on the closed segment `a→b`: near-collinear (|ab×ap|² ≤
+/// ab²·1e-20) and within the endpoints (dot ∈ [−1e-10, ab²+1e-10]).
 fn on_segment(p: Point3, a: Point3, b: Point3) -> bool {
     // p is on segment ab iff:
     // 1. p is collinear with a and b (cross product ~ 0)
@@ -928,6 +941,7 @@ fn normals_align(frag: [Point3; 3], other: &[[Point3; 3]]) -> bool {
 }
 
 #[inline]
+/// Unnormalised triangle normal `(b−a) × (c−a)`.
 fn tri_normal(a: Point3, b: Point3, c: Point3) -> Point3 {
     Point3::new(
         (b.y - a.y) * (c.z - a.z) - (b.z - a.z) * (c.y - a.y),

@@ -48,6 +48,9 @@ pub enum IngestAccessPolicy {
 }
 
 impl IngestAccessPolicy {
+    /// Parse a policy name (`restricted` | `project-internal` |
+    /// `public-not-for-redistribution` | `public-redistributable`,
+    /// plus review/licence-review aliases).
     pub fn parse(raw: &str) -> Result<Self, String> {
         match raw.trim().to_ascii_lowercase().as_str() {
             "restricted" => Ok(Self::Restricted),
@@ -66,6 +69,7 @@ impl IngestAccessPolicy {
         }
     }
 
+    /// Canonical lowercase policy token (as accepted by `parse`).
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Restricted => "restricted",
@@ -93,6 +97,8 @@ pub struct IngestProvenanceRecord {
 }
 
 impl IngestProvenanceRecord {
+    /// New record; `engine_version` is stamped from
+    /// `CARGO_PKG_VERSION` automatically.
     pub fn new(
         policy: IngestAccessPolicy,
         source_sha256: impl Into<String>,
@@ -111,6 +117,8 @@ impl IngestProvenanceRecord {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Write `<q42>.provenance.json` beside the volume; returns the
+    /// written path.
     pub fn write_beside_volume(&self, q42_path: &Path) -> io::Result<std::path::PathBuf> {
         let path = provenance_path_for(q42_path);
         let json = serde_json::to_vec_pretty(self).map_err(|e| {
@@ -121,6 +129,7 @@ impl IngestProvenanceRecord {
     }
 }
 
+/// `<q42_path>.provenance.json` — the sidecar provenance location.
 pub fn provenance_path_for(q42_path: &Path) -> std::path::PathBuf {
     std::path::PathBuf::from(format!("{}.provenance.json", q42_path.display()))
 }
@@ -179,6 +188,7 @@ pub struct Q42PublicationVerdict {
 }
 
 impl Q42PublicationClass {
+    /// Lowercase class token (`permissive-commons`, `sanctuary`, …).
     pub fn as_str(self) -> &'static str {
         match self {
             Self::PermissiveCommons => "permissive-commons",
@@ -191,6 +201,8 @@ impl Q42PublicationClass {
 }
 
 impl Q42Transport {
+    /// Human-readable transport description (Commons magnet /
+    /// SocialWebNet bilateral / local sanctuary).
     pub fn as_str(self) -> &'static str {
         match self {
             Self::WebTorrentCommons => {
@@ -223,6 +235,7 @@ pub fn quin_requires_sanctuary(quin: &NQuin) -> bool {
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
+/// Open `path` and classify it for publication under `intent`.
 pub fn classify_q42_path(
     path: &Path,
     intent: PublicationIntent,
@@ -232,6 +245,9 @@ pub fn classify_q42_path(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Full-volume publication verdict: scans every decoded Quin's
+/// sensitivity byte/tier and routing lane, then applies the
+/// fail-closed `decide` policy.
 pub fn classify_q42_volume(volume: &Q42Volume, intent: PublicationIntent) -> Q42PublicationVerdict {
     let flags = volume.header().flags;
     let header_commons = flags & FLAG_PERMISSIVE_COMMONS != 0;
@@ -288,6 +304,9 @@ pub fn classify_q42_volume_set(
     Ok(root_verdict)
 }
 
+/// `PermissionDenied` with the verdict's reason unless
+/// `may_emit_public_magnet` — the enforcement gate for public
+/// publication paths.
 pub fn deny_public_publication(verdict: &Q42PublicationVerdict) -> io::Result<()> {
     if verdict.may_emit_public_magnet {
         return Ok(());
@@ -298,6 +317,8 @@ pub fn deny_public_publication(verdict: &Q42PublicationVerdict) -> io::Result<()
     ))
 }
 
+/// Tally one Quin into `counts` — sensitivity byte, protected tiers,
+/// and routing lane.
 fn accumulate(counts: &mut ClassificationCounts, quin: &NQuin) {
     counts.quins_scanned += 1;
     match quin.get_sensitivity_byte() {
@@ -320,6 +341,8 @@ fn accumulate(counts: &mut ClassificationCounts, quin: &NQuin) {
     }
 }
 
+/// Total Quins that force Sanctuary handling (restricted +
+/// classified + protected tiers + bilateral lane).
 fn sanctuary_quin_count(counts: &ClassificationCounts) -> u64 {
     counts.restricted
         + counts.classified
@@ -329,6 +352,12 @@ fn sanctuary_quin_count(counts: &ClassificationCounts) -> u64 {
         + counts.bilateral
 }
 
+/// The fail-closed policy core: sanctuary material + commons
+/// signals → `MixedFailClosed` (split the volume); sanctuary alone →
+/// `Sanctuary`; declared/intended commons → `CommonsGated` or
+/// `PermissiveCommons`; unmarked → `UnmarkedLocal` (stays local).
+/// Decode failures count as sanctuary bits — unverifiable data never
+/// goes public.
 fn decide(
     header_commons: bool,
     header_sanctuary: bool,

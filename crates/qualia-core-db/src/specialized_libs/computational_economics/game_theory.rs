@@ -35,6 +35,7 @@ pub enum GameTheoryError {
     NonFinite,
 }
 
+/// Reject slices containing NaN or ±∞.
 fn require_finite_slice(xs: &[f64]) -> Result<(), GameTheoryError> {
     for &x in xs {
         if !x.is_finite() {
@@ -44,6 +45,8 @@ fn require_finite_slice(xs: &[f64]) -> Result<(), GameTheoryError> {
     Ok(())
 }
 
+/// Validate a payoff matrix: nonzero dimensions, `payoffs.len() ==
+/// n_row*n_col`, dimension cap, finite entries.
 fn validate_matrix(payoffs: &[f64], n_row: usize, n_col: usize) -> Result<(), GameTheoryError> {
     if n_row == 0 || n_col == 0 {
         return Err(GameTheoryError::InvalidInput);

@@ -72,6 +72,8 @@ enum DisplayMode {
 }
 
 impl DisplayMode {
+    /// Parse a display-mode name; unknown strings fall back to
+    /// `Wireframe`.
     fn from_str(s: &str) -> Self {
         match s {
             "points" => Self::Points,
@@ -119,6 +121,7 @@ enum BodyRendererBackend {
 }
 
 impl BodyRendererBackend {
+    /// Backend name for receipts/diagnostics.
     fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
@@ -199,6 +202,9 @@ pub struct QualiaPortal {
 
 #[wasm_bindgen]
 impl QualiaPortal {
+    /// Construct the portal on `canvas`: detect the device tier, mint a
+    /// session nonce + spectator standpoint, sample ambient telemetry,
+    /// and paint the first frame.
     #[wasm_bindgen(constructor)]
     pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
         let tier = detect_tier();
@@ -260,6 +266,8 @@ impl QualiaPortal {
         Ok(portal)
     }
 
+    /// Device tier — 0 = Canvas2D, 1 = WebGPU-capable, 2 = phenomenal
+    /// viewport (tensor upload confirmed).
     pub fn tier(&self) -> u8 {
         self.tier
     }
@@ -311,6 +319,8 @@ impl QualiaPortal {
         self.drain_and_apply_control(max)
     }
 
+    /// VRAM-ledger operational mode as its `u8` code
+    /// (0 = Full, 1 = Eco, 2 = Reserve).
     pub fn operational_mode(&self) -> u8 {
         global_vram_ledger().mode() as u8
     }
@@ -332,6 +342,8 @@ impl QualiaPortal {
         self.acoustic_enabled = enabled;
     }
 
+    /// Whether the U3 AcousticPlane is effectively on — user flag AND
+    /// the operational-mode gate (off in Reserve).
     pub fn acoustic_enabled(&self) -> bool {
         self.acoustic_enabled && acoustic_enabled_for_mode(global_vram_ledger().mode())
     }
@@ -349,6 +361,7 @@ impl QualiaPortal {
         Ok(arr.into())
     }
 
+    /// Number of sonic tokens currently queued in the SPSC ring.
     pub fn sonic_token_pending(&self) -> u32 {
         crate::audio::acoustic_plane::sonic_token_ring().len() as u32
     }
@@ -368,6 +381,8 @@ impl QualiaPortal {
         ))
     }
 
+    /// Push a raw `u64` sonic token onto the acoustic ring; `false`
+    /// when the ring is full.
     pub fn push_sonic_token_raw(&self, raw: u64) -> bool {
         push_sonic_token(SonicToken { raw })
     }
@@ -421,6 +436,10 @@ impl QualiaPortal {
         self.bake_acoustic_sidecar_demo(frames, true)
     }
 
+    /// Cold-bake a spectral sidecar (STFT or CQT, `frames` clamped to
+    /// 1–128) from the selected tensor node's preview bins; pins it on
+    /// the portal and returns it as a `Uint8Array`. Fails when no
+    /// tensor buffer is resident.
     fn bake_acoustic_sidecar_demo(
         &mut self,
         frames: u32,
@@ -455,6 +474,8 @@ impl QualiaPortal {
         self.acoustic_sidecar.is_some()
     }
 
+    /// Resize the canvas backing store (and the GPU surface when
+    /// active), then repaint.
     pub fn resize(
         &mut self,
         canvas: HtmlCanvasElement,
@@ -471,6 +492,9 @@ impl QualiaPortal {
         self.paint_frame(&canvas)
     }
 
+    /// Per-frame advance: device-loss check, scene animation, ICP
+    /// control drain (≤16), time/telemetry/acoustic updates, camera-fly
+    /// interpolation, then paint.
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
         self.note_device_loss();
         self.tick_scene_animation(dt_ms)?;
@@ -528,6 +552,7 @@ impl QualiaPortal {
         self.selected_node_index()
     }
 
+    /// Selected tensor-node index, or `-1` while none/pick pending.
     pub fn selected_node_index(&self) -> i32 {
         self.selected_node.map(|n| n as i32).unwrap_or(-1)
     }
@@ -580,11 +605,14 @@ impl QualiaPortal {
         Ok(self.poll_selected_node())
     }
 
+    /// Apply a flat `f32` telemetry sample block to the HUD model.
     pub fn set_telemetry(&mut self, floats: &[f32]) -> Result<(), JsValue> {
         self.telemetry.apply_floats(floats);
         Ok(())
     }
 
+    /// Set the display mode by name (`DisplayMode::from_str`;
+    /// unrecognised names fall back to its default).
     pub fn set_display_mode(&mut self, mode: &str) -> Result<(), JsValue> {
         self.display_mode = DisplayMode::from_str(mode);
         Ok(())
@@ -633,14 +661,17 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Camera orbit yaw (radians).
     pub fn camera_yaw(&self) -> f32 {
         self.camera.yaw
     }
 
+    /// Camera orbit pitch (radians).
     pub fn camera_pitch(&self) -> f32 {
         self.camera.pitch
     }
 
+    /// Camera zoom (eye distance in world units).
     pub fn camera_zoom(&self) -> f32 {
         self.camera.zoom
     }
@@ -688,14 +719,17 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// X of the camera look-at target.
     pub fn camera_target_x(&self) -> f32 {
         self.camera.target[0]
     }
 
+    /// Y of the camera look-at target.
     pub fn camera_target_y(&self) -> f32 {
         self.camera.target[1]
     }
 
+    /// Z of the camera look-at target.
     pub fn camera_target_z(&self) -> f32 {
         self.camera.target[2]
     }
@@ -738,35 +772,46 @@ impl QualiaPortal {
             .set_screen_space_ao_enabled(enabled, self.gpu.as_mut());
     }
 
+    /// Tune SSAO kernel parameters (world-space radius, strength,
+    /// depth bias); forwarded to the GPU when active.
     pub fn set_screen_space_ao(&mut self, radius: f32, strength: f32, bias: f32) {
         self.graphics
             .set_screen_space_ao(radius, strength, bias, self.gpu.as_mut());
     }
 
+    /// Set the SSAO per-pixel sample count.
     pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
         self.graphics
             .set_screen_space_ao_sample_count(samples, self.gpu.as_mut());
     }
 
+    /// Toggle auto temporal smoothing; a change invalidates the
+    /// temporal history so the first frame isn't blended from stale data.
     pub fn set_auto_temporal_enabled(&mut self, enabled: bool) {
         if self.graphics.set_auto_temporal_enabled(enabled) {
             self.graphics.invalidate_temporal_history(self.gpu.as_mut());
         }
     }
 
+    /// Drop accumulated temporal history (e.g. after a camera cut or
+    /// scene swap) so the next frame isn't ghosted.
     pub fn invalidate_temporal_history(&mut self) {
         self.graphics.invalidate_temporal_history(self.gpu.as_mut());
     }
 
+    /// Toggle the shadow pass on the GPU renderer when present.
     pub fn set_shadows_enabled(&mut self, enabled: bool) {
         self.graphics
             .set_shadows_enabled(enabled, self.gpu.as_mut());
     }
 
+    /// Whether the active backend supports the shadow pass.
     pub fn shadows_available(&self) -> bool {
         PortalGraphicsState::shadows_available(self.gpu.as_ref())
     }
 
+    /// Whether SSAO is currently enabled on the GPU backend
+    /// (`false` without an active GPU).
     pub fn screen_space_ao_enabled(&self) -> bool {
         self.gpu
             .as_ref()
@@ -774,6 +819,8 @@ impl QualiaPortal {
             .unwrap_or(false)
     }
 
+    /// Upload packed IBL probe coefficients plus a fallback radiance
+    /// colour; `false`/error when the GPU backend can't take them.
     pub fn set_environment_probe_data(
         &mut self,
         packed_probes: &[f32],
@@ -796,6 +843,8 @@ impl QualiaPortal {
             .set_water_geometry(positions_xyz, indices, self.gpu.as_mut())
     }
 
+    /// Set water-surface appearance — RGBA colour, wave amplitude and
+    /// frequency, and mesh `quality` tier.
     pub fn set_water_surface(
         &mut self,
         r: f32,
@@ -813,14 +862,17 @@ impl QualiaPortal {
         );
     }
 
+    /// Temporal-graphics execution receipt for honesty reporting.
     pub fn temporal_graphics_receipt(&self) -> JsValue {
         self.graphics.temporal_receipt(self.gpu.as_ref())
     }
 
+    /// Whether the backend supports the SSAO pass at all.
     pub fn screen_space_ao_available(&self) -> bool {
         PortalGraphicsState::screen_space_ao_available(self.gpu.as_ref())
     }
 
+    /// SSAO target width (0 without an active GPU pass).
     pub fn screen_space_ao_width(&self) -> u32 {
         self.gpu
             .as_ref()
@@ -829,6 +881,7 @@ impl QualiaPortal {
             .unwrap_or(0)
     }
 
+    /// SSAO target height (0 without an active GPU pass).
     pub fn screen_space_ao_height(&self) -> u32 {
         self.gpu
             .as_ref()
@@ -851,6 +904,8 @@ impl QualiaPortal {
         self.preserve_authored_frame = on;
     }
 
+    /// Select an authored sky preset index
+    /// (0 = deep void, 1 = daylight, 2 = sunset, 3 = moonlight).
     pub fn set_sky_preset(&mut self, preset: u32) {
         self.sky_preset = Some(preset);
         self.atmosphere_preset = preset;
@@ -869,10 +924,12 @@ impl QualiaPortal {
         }
     }
 
+    /// Directional (sun) light intensity.
     pub fn sun_intensity(&self) -> f32 {
         self.camera.sun_intensity
     }
 
+    /// Ambient light intensity.
     pub fn ambient_intensity(&self) -> f32 {
         self.camera.ambient_intensity
     }
@@ -923,22 +980,28 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Current standpoint class (observer role code).
     pub fn standpoint_class(&self) -> u32 {
         self.standpoint.standpoint_class
     }
 
+    /// Standpoint epistemic-quality scalar ∈ [0, 1].
     pub fn epistemic_q(&self) -> f32 {
         self.standpoint.epistemic_q
     }
 
+    /// Standpoint temporal-slice position ∈ [0, 1].
     pub fn t_slice(&self) -> f32 {
         self.standpoint.t_slice
     }
 
+    /// Standpoint temporal-window width ∈ (0, 1].
     pub fn t_window(&self) -> f32 {
         self.standpoint.t_window
     }
 
+    /// Replace the standpoint temporal slice/window and push it to the
+    /// GPU when active.
     pub fn set_temporal_slice(&mut self, t_slice: f32, t_window: f32) {
         self.standpoint = self.standpoint.with_temporal(t_slice, t_window);
         #[cfg(target_arch = "wasm32")]
@@ -947,6 +1010,8 @@ impl QualiaPortal {
         }
     }
 
+    /// Spatially encode a JSON scene, upload the resulting tensor
+    /// buffer, and return the parsed scene record.
     pub fn encode_geometry(&mut self, json: &str) -> Result<JsValue, JsValue> {
         let parsed = spatial_encode_wasm(json)?;
         let buf_js = export_tensor_buffer_wasm(json)?;
@@ -1721,6 +1786,9 @@ impl QualiaPortal {
         }
     }
 
+    /// Finalise a body-mesh upload accumulated across append calls:
+    /// uploads to the active backend (WebGPU/WebGL2/CPU canvas), updates
+    /// residency accounting, and returns the manifest receipt.
     fn finish_body_mesh_upload(&mut self, mut accum: BodyMeshAccum) -> Result<JsValue, JsValue> {
         self.adopt_pending_gpu();
         accum
@@ -2050,6 +2118,9 @@ impl QualiaPortal {
         out
     }
 
+    /// Upload a packed tensor buffer: stores it, feeds the resident
+    /// substrate and VRAM ledger, forwards to the GPU (promoting the
+    /// tier to 2 on success), and updates the description line.
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
         let count = tensor_node_count(bytes).unwrap_or(0);
         self.last_tensor = Some(bytes.to_vec());
@@ -2078,10 +2149,14 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Spatially encode a JSON scene without uploading —
+    /// [`spatial_encode_wasm`] passthrough.
     pub fn spatial_encode(&self, json: &str) -> Result<JsValue, JsValue> {
         spatial_encode_wasm(json)
     }
 
+    /// Parse a `.q42` (CBOR-LD) payload, stash it as `last_parsed`,
+    /// and return the parsed record.
     pub fn load_q42(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         let parsed = parse_cbor_ld_wasm(bytes);
         self.description = format!("loaded .q42 ({} bytes)", bytes.len());
@@ -2089,6 +2164,8 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Parse a JSON scene payload, stash it as `last_parsed`, and
+    /// return the parsed record.
     pub fn load_json_scene(&mut self, json: &str) -> Result<JsValue, JsValue> {
         let parsed = parse_json_wasm(json);
         self.description = "loaded JSON scene".to_string();
@@ -2096,14 +2173,19 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Sample browser ambient telemetry (perf/memory probes) as JS.
     pub fn sample_telemetry(&self) -> Result<JsValue, JsValue> {
         sample_browser_telemetry_wasm()
     }
 
+    /// The most recently parsed scene payload, if any.
     pub fn last_parsed(&self) -> Option<JsValue> {
         self.last_parsed.clone()
     }
 
+    /// Mount a minimal qapp document into the DOM element `root_id`:
+    /// clears it, emits a header with the description line, and appends
+    /// the parsed scene (or a "load a scene first" hint).
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
         let document = window
@@ -2142,6 +2224,7 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Frame count from a sidecar header, `1` when unparseable.
     #[inline]
     fn sidecar_frame_count(bytes: &[u8]) -> u32 {
         parse_sidecar_header(bytes)
@@ -2149,6 +2232,8 @@ impl QualiaPortal {
             .unwrap_or(1)
     }
 
+    /// Pop and apply up to `max` pending ICP control commands;
+    /// returns the count applied (failures are dropped, not fatal).
     fn drain_and_apply_control(&mut self, max: u32) -> u32 {
         let mut applied = 0u32;
         for _ in 0..max {
@@ -2162,6 +2247,10 @@ impl QualiaPortal {
         applied
     }
 
+    /// Dispatch one ICP command by opcode: camera deltas, navigate/
+    /// collapse by node index, standpoint scalar nudges, menu actions,
+    /// sonic-token forwards; `invalid_icp_magic` / `unknown_icp_opcode`
+    /// on malformed input.
     fn apply_control_command(&mut self, cmd: PortalControlCommand) -> Result<(), JsValue> {
         if !cmd.has_icp_magic() {
             return Err(JsValue::from_str("invalid_icp_magic"));
@@ -2243,6 +2332,9 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Assemble the `AcousticUniform` for the AudioWorklet: tensor-node
+    /// params + sidecar-enriched preview when a tensor is resident
+    /// (advancing the sidecar frame), else a telemetry-derived default.
     fn build_acoustic_uniform(&mut self) -> AcousticUniform {
         let enabled = self.acoustic_enabled();
         let node = self.selected_node.unwrap_or(0);
@@ -2279,6 +2371,8 @@ impl QualiaPortal {
         ACOUSTIC_UNIFORM_FLOAT_COUNT as u32
     }
 
+    /// 250 ms sonification pulse: emits a sonic token for the selected
+    /// tensor node when acoustics are enabled.
     fn tick_acoustic_plane(&mut self, dt_ms: f32) {
         if !self.acoustic_enabled() {
             return;
@@ -2334,6 +2428,8 @@ impl QualiaPortal {
     }
 
     #[allow(dead_code)]
+    /// Adopt a `PortalGpu`/`AnatomyWebGl2` placed in the pending slots
+    /// by the async init path (called once per frame until consumed).
     fn adopt_pending_gpu(&mut self) {
         #[cfg(target_arch = "wasm32")]
         {
@@ -2406,6 +2502,10 @@ impl QualiaPortal {
         }
     }
 
+    /// Paint one frame onto `canvas`: on wasm32 handles device-loss
+    /// early-out, pending-GPU adoption, surface/depth size
+    /// reconciliation, and backend present; falls back to Canvas2D
+    /// painters when no GPU is bound.
     pub(crate) fn paint_frame(&mut self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
         let mode = global_vram_ledger().mode();
         self.graphics.record_temporal_execution(false);
@@ -2724,6 +2824,8 @@ pub fn portal_webgpu_canvas_claimed() -> bool {
     portal_gpu_canvas_claimed()
 }
 
+/// Race GPU-init `work` against a 20 s timeout; resolves to the
+/// backend name or `"timeout"` (which also aborts the pending init).
 #[cfg(target_arch = "wasm32")]
 async fn race_init<F>(work: F) -> String
 where
@@ -2763,6 +2865,9 @@ pub fn portal_init_webgl2(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
     Ok(true)
 }
 
+/// Replace `canvas` with a fresh element (same id/size/aria-label) —
+/// the only way to release a claimed WebGPU context binding so a
+/// Canvas2D or WebGL2 context can be created.
 fn release_claimed_canvas(canvas: &HtmlCanvasElement) -> Result<HtmlCanvasElement, JsValue> {
     let doc = canvas
         .owner_document()
@@ -2781,6 +2886,7 @@ fn release_claimed_canvas(canvas: &HtmlCanvasElement) -> Result<HtmlCanvasElemen
     Ok(fresh)
 }
 
+/// Initial device tier: 1 when `navigator.gpu` exists, else 0.
 fn detect_tier() -> u8 {
     if has_webgpu() {
         1
@@ -2789,6 +2895,8 @@ fn detect_tier() -> u8 {
     }
 }
 
+/// Whether `navigator.gpu` is present (WebGPU capability probe —
+/// presence only, not adapter usability).
 fn has_webgpu() -> bool {
     let Some(window) = web_sys::window() else {
         return false;

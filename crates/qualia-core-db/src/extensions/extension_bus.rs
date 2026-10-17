@@ -192,10 +192,31 @@ impl ExtensionBus {
             asset_url, target_file
         );
 
-        // In production, this would use Reqwest to stream the download with a progress bar.
-        // For the Phase B architecture proof, we create a placeholder file.
-        std::fs::write(&target_file, b"MOCK_ASSET_DATA")
-            .map_err(|e| format!("Failed to write asset: {}", e))?;
+        if let Some(file_path) = asset_url.strip_prefix("file://") {
+            let src = std::path::Path::new(file_path);
+            let bytes = std::fs::read(src)
+                .map_err(|e| format!("Failed to read asset from {}: {}", file_path, e))?;
+            std::fs::write(&target_file, bytes)
+                .map_err(|e| format!("Failed to write asset to {:?}: {}", target_file, e))?;
+        } else if std::path::Path::new(asset_url).exists() {
+            let bytes = std::fs::read(asset_url)
+                .map_err(|e| format!("Failed to read asset from {}: {}", asset_url, e))?;
+            std::fs::write(&target_file, bytes)
+                .map_err(|e| format!("Failed to write asset to {:?}: {}", target_file, e))?;
+        } else if let Some(data_content) = asset_url.strip_prefix("data:") {
+            if let Some((_header, data)) = data_content.split_once(',') {
+                let bytes = data.as_bytes();
+                std::fs::write(&target_file, bytes)
+                    .map_err(|e| format!("Failed to write asset to {:?}: {}", target_file, e))?;
+            } else {
+                return Err("Malformed data URI in asset_url".to_string());
+            }
+        } else {
+            return Err(format!(
+                "Cannot provision asset from remote URL '{}': network transport not configured; provide a local path, file:// URI, or data: URI",
+                asset_url
+            ));
+        }
 
         Ok(format!(
             "Asset provisioned successfully at {:?}",
@@ -284,8 +305,8 @@ pub mod wasm_bus {
         }) as Box<dyn FnMut(MessageEvent)>);
         ws.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
 
-        let on_error = Closure::wrap(Box::new(move |_e: ErrorEvent| {
-            // Placeholder for error telemetry
+        let on_error = Closure::wrap(Box::new(move |e: ErrorEvent| {
+            web_sys::console::error_1(&e.message().into());
         }) as Box<dyn FnMut(ErrorEvent)>);
         ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
 
@@ -346,5 +367,66 @@ pub mod wasm_bus {
             }
             Err("Not connected or authenticated".into())
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn provision_asset_with_data_uri() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bus = ExtensionBus::new(temp_dir.path());
+
+        // Register dummy manifest directly
+        let manifest = ExtensionManifest {
+            extension_id: "test-ext".to_string(),
+            display_name: "Test Ext".to_string(),
+            version: "1.0.0".to_string(),
+            description: "A test extension".to_string(),
+            capabilities: Vec::new(),
+            entrypoints: HashMap::new(),
+        };
+        bus.registered_extensions
+            .write()
+            .unwrap()
+            .insert("test-ext".to_string(), manifest);
+
+        let data_url = "data:application/octet-stream,GENUINE_BINARY_PAYLOAD";
+        let res = bus
+            .provision_asset("test-ext", data_url, "weights.bin")
+            .await;
+        assert!(res.is_ok());
+
+        let target = temp_dir.path().join("test-ext").join("assets").join("weights.bin");
+        assert!(target.exists());
+        let content = std::fs::read(&target).unwrap();
+        assert_eq!(content, b"GENUINE_BINARY_PAYLOAD");
+    }
+
+    #[tokio::test]
+    async fn provision_asset_fails_closed_on_unsupported_remote_url() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let bus = ExtensionBus::new(temp_dir.path());
+
+        let manifest = ExtensionManifest {
+            extension_id: "remote-ext".to_string(),
+            display_name: "Remote Ext".to_string(),
+            version: "1.0.0".to_string(),
+            description: "A test extension".to_string(),
+            capabilities: Vec::new(),
+            entrypoints: HashMap::new(),
+        };
+        bus.registered_extensions
+            .write()
+            .unwrap()
+            .insert("remote-ext".to_string(), manifest);
+
+        let res = bus
+            .provision_asset("remote-ext", "https://example.com/model.onnx", "model.onnx")
+            .await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("network transport not configured"));
     }
 }

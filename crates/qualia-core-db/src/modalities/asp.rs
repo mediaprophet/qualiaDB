@@ -60,6 +60,8 @@ pub struct AspRule {
 }
 
 impl AspRule {
+    /// Build a rule `head :- pos, not neg` into the fixed-size body
+    /// arrays; literals beyond `ASP_MAX_BODY` are silently truncated.
     pub fn new(head: u64, pos: &[u64], neg: &[u64]) -> Self {
         let mut r = AspRule {
             head,
@@ -78,9 +80,12 @@ impl AspRule {
         }
         r
     }
+    /// A fact: a rule with `head` and no body.
     pub fn fact(head: u64) -> Self {
         Self::new(head, &[], &[])
     }
+    /// An integrity constraint: `head` 0, so a model where the body
+    /// holds is disallowed.
     pub fn constraint(pos: &[u64], neg: &[u64]) -> Self {
         Self::new(0, pos, neg)
     }
@@ -171,6 +176,9 @@ pub fn atom_index(atoms: &[u64], a: u64) -> Option<usize> {
     atoms.iter().take(ASP_MAX_ATOMS).position(|&x| x == a)
 }
 
+/// Rule-body satisfaction under a candidate model bitmask: every
+/// `pos` atom's bit set, no `neg` atom's bit set (atoms outside
+/// `atoms` fail `pos` but vacuously satisfy `neg`).
 #[inline]
 fn body_holds(atoms: &[u64], model: u64, pos: &[u64], neg: &[u64]) -> bool {
     for &p in pos {
@@ -230,6 +238,9 @@ pub struct WeakConstraint {
 }
 
 impl WeakConstraint {
+    /// Build a `:~ pos, not neg [weight]` weak constraint into the
+    /// fixed-size body arrays; literals beyond `ASP_MAX_BODY`
+    /// truncate.
     pub fn new(pos: &[u64], neg: &[u64], weight: i64) -> Self {
         let mut w = WeakConstraint {
             pos: [0; ASP_MAX_BODY],

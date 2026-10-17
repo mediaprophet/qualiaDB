@@ -12,11 +12,11 @@ pub(super) fn governance_request(
     mode: &str,
 ) -> Result<(&'static str, serde_json::Value), String> {
     let args = match mode {
-        "value-flow" | "value-flow-royalty" => {
-            let source = field_value(document, "value-flow-editor");
+        "socioeconomics" | "socioeconomics-royalty" => {
+            let source = field_value(document, "socioeconomics-editor");
             if mode.ends_with("royalty") {
                 serde_json::json!({
-                    "mode": "value_flow",
+                    "mode": "socioeconomics",
                     "operation": "royalty",
                     "base": required_u64(&source, "base")?,
                     "agent_multiplier_percent": required_u64(&source, "agent_multiplier_percent")?,
@@ -25,7 +25,7 @@ pub(super) fn governance_request(
                 })
             } else {
                 serde_json::json!({
-                    "mode": "value_flow",
+                    "mode": "socioeconomics",
                     "operation": "flow",
                     "production_cost": required_u64(&source, "production_cost")?,
                     "roi_cap_percent": required_u64(&source, "roi_cap_percent")?,

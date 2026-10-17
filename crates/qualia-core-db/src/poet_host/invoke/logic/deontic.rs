@@ -17,6 +17,15 @@ use vibe::{DiagCode, Diagnostic, Span, Value};
 
 const MAX_VERDICTS: usize = 32;
 
+/// `DeonticLogic.evaluate` — workshop entry point for a deontic scan.
+///
+/// With `operation = "compile"` in `args`, compiles the term to an
+/// `NQuin` and returns the raw six-field layout (subject … parity) for
+/// inspection. Otherwise the compiled norm is prepended to the live
+/// graph slice and `evaluate_deontic_contract` scans it into a fixed
+/// `MAX_VERDICTS` (32) output buffer; a full buffer reports `E400`
+/// rather than truncating silently. Returns the verdict record including
+/// the snapshot's honesty marker.
 pub fn evaluate(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let compiled = compile_term_quin(args);
     if matches!(args, Value::Record(record) if matches!(record.get("operation"), Some(Value::String(operation)) if operation == "compile"))
@@ -52,6 +61,11 @@ pub fn evaluate(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, 
     })
 }
 
+/// Lower a workshop term record to a norm `NQuin`: `modality` must be
+/// `obligate`/`permit`/`forbid` (anything else → `None`), `body` accepts
+/// String/Iri/Prefixed forms and defaults to `vibe:modal`. Party, action
+/// and contract are generic `vibe:` tokens — the workshop seam does not
+/// carry agent-specific IRIs.
 fn compile_term_quin(args: &Value) -> Option<NQuin> {
     let rec = match args {
         Value::Record(m) => m,
@@ -83,6 +97,8 @@ fn compile_term_quin(args: &Value) -> Option<NQuin> {
     ))
 }
 
+/// Human-readable label for a `DeonticStatus` variant, matching the
+/// names emitted in verdict JSON.
 fn status_name(status: DeonticStatus) -> &'static str {
     match status {
         DeonticStatus::Active => "Active",
@@ -95,6 +111,10 @@ fn status_name(status: DeonticStatus) -> &'static str {
     }
 }
 
+/// Build the `DeonticLogic.evaluate` result record: `evaluated` flag,
+/// the snapshot `honesty` marker, `verdict_count`, a convenience copy of
+/// the first verdict's opcode/status at top level, and the full verdict
+/// list (`opcode`, `status_code`, `status` per entry).
 fn verdict_record(honesty: &'static str, n: usize, verdicts: &[DeonticVerdict]) -> Value {
     let mut rec = BTreeMap::new();
     rec.insert("id".into(), Value::String("DeonticLogic.evaluate".into()));

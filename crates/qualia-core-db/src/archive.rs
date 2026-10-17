@@ -48,6 +48,8 @@ pub struct Q42JumpEntry {
 }
 
 impl Q42JumpEntry {
+    /// Reassemble the 6-byte physical offset (low 4 bytes + high 2 bytes)
+    /// into a `u64`.
     pub fn physical_offset(&self) -> u64 {
         (self.physical_offset_low as u64) | ((self.physical_offset_high as u64) << 32)
     }

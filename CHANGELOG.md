@@ -15,6 +15,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **WebGPU WGSL Uniform Control Flow**: Restructured `mesh.wgsl`, `sun_shadow.wgsl`, and `ao_prepass.wgsl` shaders so derivative calls (`dpdx`, `dpdy`) and texture sampling strictly execute in uniform control flow prior to branching, eliminating WebGPU pipeline creation failures in modern browsers.
 
+### Changed
+
+- **Renamed `modalities::value_flow` → `modalities::socioeconomics`** (module file, `GovernanceLogic.compute` mode string, Poet workbench/JS registry IDs `value-flow*` → `socioeconomics*`, `q42:ValueFlowConfigurationShape` → `q42:SocioeconomicsConfigurationShape`). Disambiguates the internal commons-economics engine — agent-category-scaled royalties, human-rooted obligation discharge, capped ROI, E-ROI gating, usury ceiling — from the unrelated external ValueFlows project/ontology. No persisted wire-format fields change.
+
 ## [0.0.40] — 2026-09-28
 
 ### Added
@@ -256,7 +260,7 @@ throughout, **2091 tests** by series end (authoritative build from `C:\Projects\
   content-addressed `JobSpec` (Personal/Collaborative/Paid), a `JobExecutor` trait + real local
   executor, **Freivalds' O(n²) probabilistic matrix-product verification** + embedding-artifact
   ranking reproduction, and a dispatch path where no `Rejected` verdict can reach a payment.
-- Settlement is an **escrow state machine over `value_flow`** (ROI-capped pricing via `commons_cost`;
+- Settlement is an **escrow state machine over `socioeconomics`** (ROI-capped pricing via `commons_cost`;
   `eroi_viable` = the solar-excess thermodynamic gate). On `Verified` it emits a
   `MicropaymentInstruction` for the existing `ilp_dispatcher` rail; on `Rejected`, a refund. **It
   never moves funds itself.**
@@ -329,7 +333,7 @@ All §1–§30 logic operators implemented as tested `modalities/*.rs` (only the
 - **Capacity/delegation/contract** (`capacity.rs`, `delegation.rs`, `contract.rs`): duress →
   voidable-at-election (confirmed by Timothy), guardianship, posthumous standing, delegation +
   revocation cascade, Offer→Assent→Binding.
-- **Economic/identity** (`value_flow.rs`, `capability_gap.rs`, `identity_fabric.rs`): Permissive
+- **Economic/identity** (`socioeconomics.rs`, `capability_gap.rs`, `identity_fabric.rs`): Permissive
   Commons capped-ROI threshold discharge, RPL capability gap, k-of-n resilient identity.
 - **Meta-deontic / governance** (`meta_deontic.rs`, `interaction_governance.rs`,
   `responsibility.rs`): provenance-anchored court-admissible WAL BreachRecords with ed25519

@@ -290,7 +290,7 @@ impl LicencePolicy {
     pub fn is_spc_discharged(&self, accumulated_pool: u64, cost: u64) -> bool {
         self.obligations
             .contains(LicenceObligations::COMMONS_DISCHARGEABLE)
-            && crate::modalities::value_flow::is_commons_discharged(accumulated_pool, cost)
+            && crate::modalities::socioeconomics::is_commons_discharged(accumulated_pool, cost)
     }
 
     /// May this asset (or a derived bundle) be redistributed outside the local node?

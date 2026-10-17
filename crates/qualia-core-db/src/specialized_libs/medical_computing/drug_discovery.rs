@@ -147,6 +147,7 @@ pub struct ToxicityProfile {
 }
 
 impl Compound {
+    /// Create a `Compound` with default sub-components.
     pub fn new() -> Self {
         Self {
             compound_id: "compound_1".to_string(),
@@ -168,6 +169,7 @@ impl Compound {
 }
 
 impl DrugTarget {
+    /// Create a `DrugTarget` with default sub-components.
     pub fn new() -> Self {
         Self {
             target_id: "target_1".to_string(),
@@ -426,6 +428,7 @@ pub enum AssessmentType {
 }
 
 impl DrugDiscovery {
+    /// Create a `DrugDiscovery` with default sub-components.
     pub fn new() -> Self {
         Self {
             target_identification: TargetIdentification::new(),
@@ -435,6 +438,7 @@ impl DrugDiscovery {
         }
     }
 
+    /// Initialise the `DrugDiscovery` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.target_identification.initialize()?;
         self.compound_screening.initialize()?;
@@ -443,6 +447,7 @@ impl DrugDiscovery {
         Ok(())
     }
 
+    /// Validate `compounds` against the `DrugDiscovery` rules; domain error on violation.
     pub fn validate_compounds(&self, compounds: &[Compound]) -> Result<(), MedicalError> {
         if compounds.is_empty() {
             return Err(MedicalError::ValidationError(
@@ -468,6 +473,7 @@ impl DrugDiscovery {
 }
 
 impl TargetIdentification {
+    /// Create a `TargetIdentification` with default sub-components.
     pub fn new() -> Self {
         Self {
             target_databases: HashMap::new(),
@@ -475,30 +481,36 @@ impl TargetIdentification {
         }
     }
 
+    /// Initialise the `TargetIdentification` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `target_database` in the `TargetIdentification` collection.
     pub fn add_target_database(&mut self, database: TargetDatabase) {
         self.target_databases
             .insert(database.database_id.clone(), database);
     }
 
+    /// Borrow `target_database` by id, or `None` when absent.
     pub fn get_target_database(&self, database_id: &str) -> Option<&TargetDatabase> {
         self.target_databases.get(database_id)
     }
 
+    /// Register `validation_method` in the `TargetIdentification` collection.
     pub fn add_validation_method(&mut self, method: ValidationMethod) {
         self.validation_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Borrow `validation_method` by id, or `None` when absent.
     pub fn get_validation_method(&self, method_id: &str) -> Option<&ValidationMethod> {
         self.validation_methods.get(method_id)
     }
 }
 
 impl CompoundScreening {
+    /// Create a `CompoundScreening` with default sub-components.
     pub fn new() -> Self {
         Self {
             compound_libraries: HashMap::new(),
@@ -506,29 +518,35 @@ impl CompoundScreening {
         }
     }
 
+    /// Initialise the `CompoundScreening` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `compound_library` in the `CompoundScreening` collection.
     pub fn add_compound_library(&mut self, library: CompoundLibrary) {
         self.compound_libraries
             .insert(library.library_id.clone(), library);
     }
 
+    /// Borrow `compound_library` by id, or `None` when absent.
     pub fn get_compound_library(&self, library_id: &str) -> Option<&CompoundLibrary> {
         self.compound_libraries.get(library_id)
     }
 
+    /// Register `screening_assay` in the `CompoundScreening` collection.
     pub fn add_screening_assay(&mut self, assay: ScreeningAssay) {
         self.screening_assays.insert(assay.assay_id.clone(), assay);
     }
 
+    /// Borrow `screening_assay` by id, or `None` when absent.
     pub fn get_screening_assay(&self, assay_id: &str) -> Option<&ScreeningAssay> {
         self.screening_assays.get(assay_id)
     }
 }
 
 impl LeadOptimization {
+    /// Create a `LeadOptimization` with default sub-components.
     pub fn new() -> Self {
         Self {
             optimization_strategies: HashMap::new(),
@@ -536,25 +554,30 @@ impl LeadOptimization {
         }
     }
 
+    /// Initialise the `LeadOptimization` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `optimization_strategy` in the `LeadOptimization` collection.
     pub fn add_optimization_strategy(&mut self, strategy: OptimizationStrategy) {
         self.optimization_strategies
             .insert(strategy.strategy_id.clone(), strategy);
     }
 
+    /// Borrow `optimization_strategy` by id, or `None` when absent.
     pub fn get_optimization_strategy(&self, strategy_id: &str) -> Option<&OptimizationStrategy> {
         self.optimization_strategies.get(strategy_id)
     }
 
+    /// Borrow the `adme_prediction` component.
     pub fn adme_prediction(&self) -> &ADMEPrediction {
         &self.adme_prediction
     }
 }
 
 impl ADMEPrediction {
+    /// Create a `ADMEPrediction` with default sub-components.
     pub fn new() -> Self {
         Self {
             absorption_model: AbsorptionModel::new(),
@@ -564,18 +587,22 @@ impl ADMEPrediction {
         }
     }
 
+    /// Borrow the `absorption_model` component.
     pub fn absorption_model(&self) -> &AbsorptionModel {
         &self.absorption_model
     }
 
+    /// Borrow the `distribution_model` component.
     pub fn distribution_model(&self) -> &DistributionModel {
         &self.distribution_model
     }
 
+    /// Borrow the `metabolism_model` component.
     pub fn metabolism_model(&self) -> &MetabolismModel {
         &self.metabolism_model
     }
 
+    /// Borrow the `excretion_model` component.
     pub fn excretion_model(&self) -> &ExcretionModel {
         &self.excretion_model
     }
@@ -594,6 +621,7 @@ impl ADMEPrediction {
 }
 
 impl AbsorptionModel {
+    /// Create a `AbsorptionModel` with default sub-components.
     pub fn new() -> Self {
         Self {
             model_type: ModelType::PhysiologicallyBased,
@@ -604,6 +632,7 @@ impl AbsorptionModel {
 }
 
 impl DistributionModel {
+    /// Create a `DistributionModel` with default sub-components.
     pub fn new() -> Self {
         Self {
             volume_of_distribution: 10.0,
@@ -614,6 +643,7 @@ impl DistributionModel {
 }
 
 impl MetabolismModel {
+    /// Create a `MetabolismModel` with default sub-components.
     pub fn new() -> Self {
         Self {
             metabolic_pathways: Vec::new(),
@@ -624,6 +654,7 @@ impl MetabolismModel {
 }
 
 impl ExcretionModel {
+    /// Create a `ExcretionModel` with default sub-components.
     pub fn new() -> Self {
         Self {
             excretion_routes: Vec::new(),
@@ -633,6 +664,7 @@ impl ExcretionModel {
 }
 
 impl PreclinicalTesting {
+    /// Create a `PreclinicalTesting` with default sub-components.
     pub fn new() -> Self {
         Self {
             in_vitro_testing: InVitroTesting::new(),
@@ -641,24 +673,29 @@ impl PreclinicalTesting {
         }
     }
 
+    /// Initialise the `PreclinicalTesting` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Borrow the `in_vitro_testing` component.
     pub fn in_vitro_testing(&self) -> &InVitroTesting {
         &self.in_vitro_testing
     }
 
+    /// Borrow the `in_vivo_testing` component.
     pub fn in_vivo_testing(&self) -> &InVivoTesting {
         &self.in_vivo_testing
     }
 
+    /// Borrow the `toxicology_studies` component.
     pub fn toxicology_studies(&self) -> &ToxicologyStudies {
         &self.toxicology_studies
     }
 }
 
 impl InVitroTesting {
+    /// Create a `InVitroTesting` with default sub-components.
     pub fn new() -> Self {
         Self {
             test_types: HashMap::new(),
@@ -666,24 +703,29 @@ impl InVitroTesting {
         }
     }
 
+    /// Register `test` in the `InVitroTesting` collection.
     pub fn add_test(&mut self, test: InVitroTest) {
         self.test_types.insert(test.test_id.clone(), test);
     }
 
+    /// Borrow `test` by id, or `None` when absent.
     pub fn get_test(&self, test_id: &str) -> Option<&InVitroTest> {
         self.test_types.get(test_id)
     }
 
+    /// Register `result` in the `InVitroTesting` collection.
     pub fn add_result(&mut self, result: TestResult) {
         self.results.insert(result.result_id.clone(), result);
     }
 
+    /// Borrow `result` by id, or `None` when absent.
     pub fn get_result(&self, result_id: &str) -> Option<&TestResult> {
         self.results.get(result_id)
     }
 }
 
 impl InVivoTesting {
+    /// Create a `InVivoTesting` with default sub-components.
     pub fn new() -> Self {
         Self {
             animal_models: HashMap::new(),
@@ -691,24 +733,29 @@ impl InVivoTesting {
         }
     }
 
+    /// Register `animal_model` in the `InVivoTesting` collection.
     pub fn add_animal_model(&mut self, model: AnimalModel) {
         self.animal_models.insert(model.model_id.clone(), model);
     }
 
+    /// Borrow `animal_model` by id, or `None` when absent.
     pub fn get_animal_model(&self, model_id: &str) -> Option<&AnimalModel> {
         self.animal_models.get(model_id)
     }
 
+    /// Register `study_design` in the `InVivoTesting` collection.
     pub fn add_study_design(&mut self, design: StudyDesign) {
         self.study_designs.insert(design.design_id.clone(), design);
     }
 
+    /// Borrow `study_design` by id, or `None` when absent.
     pub fn get_study_design(&self, design_id: &str) -> Option<&StudyDesign> {
         self.study_designs.get(design_id)
     }
 }
 
 impl ToxicologyStudies {
+    /// Create a `ToxicologyStudies` with default sub-components.
     pub fn new() -> Self {
         Self {
             study_types: HashMap::new(),
@@ -716,19 +763,23 @@ impl ToxicologyStudies {
         }
     }
 
+    /// Register `study` in the `ToxicologyStudies` collection.
     pub fn add_study(&mut self, study: ToxicologyStudy) {
         self.study_types.insert(study.study_id.clone(), study);
     }
 
+    /// Borrow `study` by id, or `None` when absent.
     pub fn get_study(&self, study_id: &str) -> Option<&ToxicologyStudy> {
         self.study_types.get(study_id)
     }
 
+    /// Register `safety_assessment` in the `ToxicologyStudies` collection.
     pub fn add_safety_assessment(&mut self, assessment: SafetyAssessment) {
         self.safety_assessments
             .insert(assessment.assessment_id.clone(), assessment);
     }
 
+    /// Borrow `safety_assessment` by id, or `None` when absent.
     pub fn get_safety_assessment(&self, assessment_id: &str) -> Option<&SafetyAssessment> {
         self.safety_assessments.get(assessment_id)
     }

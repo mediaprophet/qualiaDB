@@ -13,18 +13,22 @@ use serde::{Deserialize, Serialize};
 pub struct EntityId(pub u64);
 
 impl EntityId {
+    /// Wrap a precomputed `u64` (already in the FNV/`q_hash` space).
     pub const fn from_raw(id: u64) -> Self {
         Self(id)
     }
 
+    /// Alias of [`Self::from_raw`].
     pub const fn from_u64(id: u64) -> Self {
         Self(id)
     }
 
+    /// The raw `u64` identifier.
     pub const fn raw(self) -> u64 {
         self.0
     }
 
+    /// True when the id is 0 (the sentinel "no entity" value).
     pub fn is_unset(self) -> bool {
         self.0 == 0
     }

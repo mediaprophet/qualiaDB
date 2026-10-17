@@ -10,20 +10,30 @@
 /// Envelope stage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EnvStage {
+    /// Not running — output is 0.
     Idle,
+    /// Ramping 0 → 1 over `attack` seconds.
     Attack,
+    /// Falling 1 → `sustain` over `decay` seconds.
     Decay,
+    /// Holding at `sustain` until `note_off`.
     Sustain,
+    /// Falling to 0 over `release` seconds, then `Idle`.
     Release,
 }
 
 /// ADSR envelope generator.
 #[derive(Debug, Clone)]
 pub struct AdsrEnvelope {
-    pub attack: f64,  // seconds
-    pub decay: f64,   // seconds
-    pub sustain: f64, // level [0, 1]
-    pub release: f64, // seconds
+    /// Attack time in seconds.
+    pub attack: f64,
+    /// Decay time in seconds.
+    pub decay: f64,
+    /// Sustain level `[0, 1]` (clamped at construction).
+    pub sustain: f64,
+    /// Release time in seconds.
+    pub release: f64,
+    /// Sample rate the stage times are evaluated against.
     pub sample_rate: f64,
     stage: EnvStage,
     value: f64,
@@ -31,6 +41,8 @@ pub struct AdsrEnvelope {
 }
 
 impl AdsrEnvelope {
+    /// Create an idle envelope; times in seconds, `sustain` clamped to
+    /// `[0, 1]`.
     pub fn new(attack: f64, decay: f64, sustain: f64, release: f64, sample_rate: f64) -> Self {
         Self {
             attack,

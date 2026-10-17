@@ -116,24 +116,24 @@ impl CommonsObligation {
         if self.production_cost_cents == 0 {
             return true;
         }
-        let total_cost = crate::modalities::value_flow::commons_cost(
+        let total_cost = crate::modalities::socioeconomics::commons_cost(
             self.production_cost_cents,
             self.roi_cap_percent,
             20,
         );
-        crate::modalities::value_flow::is_commons_discharged(
+        crate::modalities::socioeconomics::is_commons_discharged(
             self.accumulated_pool_cents,
             total_cost,
         )
     }
 
     pub fn outstanding_obligation(&self) -> u64 {
-        let total_cost = crate::modalities::value_flow::commons_cost(
+        let total_cost = crate::modalities::socioeconomics::commons_cost(
             self.production_cost_cents,
             self.roi_cap_percent,
             20,
         );
-        crate::modalities::value_flow::outstanding(self.accumulated_pool_cents, total_cost)
+        crate::modalities::socioeconomics::outstanding(self.accumulated_pool_cents, total_cost)
     }
 
     /// Automatically discharges the obligation when accumulated compensation meets

@@ -9,10 +9,10 @@ fn span() -> Span {
 }
 
 #[test]
-fn value_flow_and_gap_use_native_cores() {
+fn socioeconomics_and_gap_use_native_cores() {
     let flow = compute(
         &rec([
-            ("mode", Value::String("value_flow".into())),
+            ("mode", Value::String("socioeconomics".into())),
             ("production_cost", Value::U64(1000)),
             ("roi_cap_percent", Value::U64(20)),
             ("max_roi_percent", Value::U64(20)),

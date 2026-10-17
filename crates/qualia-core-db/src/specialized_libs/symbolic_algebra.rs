@@ -37,45 +37,60 @@ pub enum Expr {
 }
 
 // ── ergonomic constructors ──────────────────────────────────────────────────────
+/// Constant leaf `Expr::Const(v)`.
 pub fn c(v: f64) -> Expr {
     Expr::Const(v)
 }
+/// Variable leaf `Expr::Var(name)` (names > 8 bytes are truncated at
+/// Quin encode time).
 pub fn var(name: &str) -> Expr {
     Expr::Var(name.to_string())
 }
+/// `a + b` node.
 pub fn add(a: Expr, b: Expr) -> Expr {
     Expr::Add(Box::new(a), Box::new(b))
 }
+/// `a − b` node.
 pub fn sub(a: Expr, b: Expr) -> Expr {
     Expr::Sub(Box::new(a), Box::new(b))
 }
+/// `a · b` node.
 pub fn mul(a: Expr, b: Expr) -> Expr {
     Expr::Mul(Box::new(a), Box::new(b))
 }
+/// `a / b` node.
 pub fn div(a: Expr, b: Expr) -> Expr {
     Expr::Div(Box::new(a), Box::new(b))
 }
+/// `a^e` node with integer exponent.
 pub fn pow(a: Expr, e: i32) -> Expr {
     Expr::Pow(Box::new(a), e)
 }
+/// Unary `−a` node.
 pub fn neg(a: Expr) -> Expr {
     Expr::Neg(Box::new(a))
 }
+/// `√a` node.
 pub fn sqrt(a: Expr) -> Expr {
     Expr::Sqrt(Box::new(a))
 }
+/// `e^a` node.
 pub fn exp(a: Expr) -> Expr {
     Expr::Exp(Box::new(a))
 }
+/// `ln a` node.
 pub fn ln(a: Expr) -> Expr {
     Expr::Ln(Box::new(a))
 }
+/// `sin a` node.
 pub fn sin(a: Expr) -> Expr {
     Expr::Sin(Box::new(a))
 }
+/// `cos a` node.
 pub fn cos(a: Expr) -> Expr {
     Expr::Cos(Box::new(a))
 }
+/// `tan a` node.
 pub fn tan(a: Expr) -> Expr {
     Expr::Tan(Box::new(a))
 }
@@ -189,6 +204,9 @@ pub fn simplify(expr: &Expr) -> Expr {
     cur
 }
 
+/// One bottom-up simplification pass: constant folding, identity
+/// elimination (x+0, x·1, x−x), and self-cases (x+x→2x, x/x→1).
+/// `simplify` iterates to fixpoint.
 fn simplify_once(expr: &Expr) -> Expr {
     match expr {
         Expr::Const(_) | Expr::Var(_) => expr.clone(),
@@ -340,6 +358,7 @@ pub fn expand(expr: &Expr) -> Expr {
     }
 }
 
+/// Distribute `a · b` over `Add`/`Sub` children (one level).
 fn expand_mul(a: &Expr, b: &Expr) -> Expr {
     match (a, b) {
         (Expr::Add(a1, a2), _) => add(expand_mul(a1, b), expand_mul(a2, b)),
@@ -352,6 +371,8 @@ fn expand_mul(a: &Expr, b: &Expr) -> Expr {
     }
 }
 
+/// Expand `base^e` into repeated `expand_mul` for small non-negative
+/// `e`; leaves `Pow` intact otherwise.
 fn expand_pow(base: &Expr, e: i32) -> Expr {
     if e <= 1 || e > 8 {
         return pow(base.clone(), e);
@@ -413,10 +434,13 @@ pub fn expr_citation_hash(expr: &Expr) -> u64 {
 //   pow     object = base child index, metadata = exponent (i32 as u64)
 //   neg/sqrt object = child index
 
+/// `q_hash` predicate tag for a CAS node kind (`"cas:add"`, …).
 fn name_tag(kind: &str) -> u64 {
     crate::q_hash(kind)
 }
 
+/// Pack a variable name into (LE-packed-u64, byte-len), truncating to
+/// 8 bytes — the Quin object/metadata encoding for `cas:var`.
 fn pack_name(name: &str) -> (u64, u64) {
     let bytes = name.as_bytes();
     let len = bytes.len().min(8);
@@ -427,6 +451,7 @@ fn pack_name(name: &str) -> (u64, u64) {
     (v, len as u64)
 }
 
+/// Inverse of `pack_name` — extract up to 8 name bytes.
 fn unpack_name(v: u64, len: u64) -> String {
     let len = (len as usize).min(8);
     let mut s = String::with_capacity(len);
@@ -436,6 +461,8 @@ fn unpack_name(v: u64, len: u64) -> String {
     s
 }
 
+/// Append a CAS node Quin (subject = its index in `out`, parity
+/// computed) and return that index for child references.
 fn push_node(
     out: &mut Vec<NQuin>,
     predicate: u64,
@@ -456,6 +483,8 @@ fn push_node(
     idx
 }
 
+/// Encode `e` post-order into `out` (children before parents,
+/// index-linked); returns the root node index.
 fn encode(e: &Expr, out: &mut Vec<NQuin>) -> usize {
     match e {
         Expr::Const(k) => push_node(out, name_tag("cas:const"), k.to_bits(), 0, 0),
@@ -521,6 +550,8 @@ pub fn to_quins(expr: &Expr) -> Vec<NQuin> {
     out
 }
 
+/// Decode node `idx` (and its index-linked children) back into an
+/// `Expr`; errors on unknown predicates or malformed references.
 fn decode(quins: &[NQuin], idx: usize) -> Result<Expr, String> {
     let node = quins
         .get(idx)
@@ -600,6 +631,7 @@ enum Tok {
     RParen,
 }
 
+/// Lex `s` into tokens (numbers, names, operators, parens).
 fn tokenize(s: &str) -> Result<Vec<Tok>, String> {
     let mut out = Vec::new();
     let chars: Vec<char> = s.chars().collect();
@@ -665,9 +697,11 @@ struct Parser {
 }
 
 impl Parser {
+    /// Current token without consuming it.
     fn peek(&self) -> Option<&Tok> {
         self.tokens.get(self.pos)
     }
+    /// Consume and return the current token.
     fn next(&mut self) -> Option<Tok> {
         let t = self.tokens.get(self.pos).cloned();
         if t.is_some() {
@@ -676,6 +710,7 @@ impl Parser {
         t
     }
 
+    /// expr := term (('+'|'-') term)* — lowest precedence level.
     fn parse_expr(&mut self) -> Result<Expr, String> {
         let mut left = self.parse_term()?;
         while let Some(op) = self.peek() {
@@ -694,6 +729,7 @@ impl Parser {
         Ok(left)
     }
 
+    /// term := factor (('*'|'/') factor)*.
     fn parse_term(&mut self) -> Result<Expr, String> {
         let mut left = self.parse_factor()?;
         while let Some(op) = self.peek() {
@@ -712,6 +748,7 @@ impl Parser {
         Ok(left)
     }
 
+    /// factor := unary ('^' unary)* — right-binding power level.
     fn parse_factor(&mut self) -> Result<Expr, String> {
         let base = self.parse_unary()?;
         if let Some(Tok::Caret) = self.peek() {
@@ -733,6 +770,7 @@ impl Parser {
         }
     }
 
+    /// unary := '-' unary | base — prefix negation.
     fn parse_unary(&mut self) -> Result<Expr, String> {
         if let Some(Tok::Minus) = self.peek() {
             self.next();
@@ -741,6 +779,8 @@ impl Parser {
         self.parse_base()
     }
 
+    /// base := number | name | name '(' args ')' | '(' expr ')' —
+    /// function calls map to `exp`/`ln`/`sin`/`cos`/`tan`/`sqrt`.
     fn parse_base(&mut self) -> Result<Expr, String> {
         match self.next() {
             Some(Tok::Num(n)) => Ok(c(n)),
@@ -773,6 +813,7 @@ impl Parser {
         }
     }
 
+    /// Consume the next token, erroring unless it equals `t`.
     fn expect(&mut self, t: Tok) -> Result<(), String> {
         if self.next().as_ref() == Some(&t) {
             Ok(())
@@ -783,6 +824,7 @@ impl Parser {
 }
 
 impl std::fmt::Display for Expr {
+    /// Infix pretty-print with parenthesized children.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Expr::Const(k) => write!(f, "{k}"),

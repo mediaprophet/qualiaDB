@@ -170,6 +170,8 @@ impl Q42VolumeHeader {
         Ok(())
     }
 
+    /// Embedded volume-manifest (offset, length) decoded from the
+    /// `_reserved` field; `None` unless `FLAG_VOLUME_ROOT` is set.
     fn volume_manifest_range(&self) -> Option<(u64, u64)> {
         if self.flags & FLAG_VOLUME_ROOT == 0 {
             return None;
@@ -181,6 +183,8 @@ impl Q42VolumeHeader {
         ))
     }
 
+    /// Field-range-index (offset, length) from `_reserved`; `None`
+    /// unless `FLAG_FIELD_RANGES` is set.
     fn field_range_index_range(&self) -> Option<(u64, u64)> {
         if self.flags & FLAG_FIELD_RANGES == 0 {
             return None;
@@ -192,6 +196,8 @@ impl Q42VolumeHeader {
         ))
     }
 
+    /// Field-postings (offset, length) from `_reserved`; `None` unless
+    /// `FLAG_FIELD_POSTINGS` is set.
     fn field_postings_range(&self) -> Option<(u64, u64)> {
         if self.flags & FLAG_FIELD_POSTINGS == 0 {
             return None;
@@ -260,6 +266,8 @@ pub struct BlockDirectoryEntry {
 impl BlockDirectoryEntry {
     pub const SIZE: usize = 16;
 
+    /// Serialize the 16-byte entry (`rel_offset`, `comp_len`,
+    /// `uncomp_len`, little-endian) to `out`.
     pub fn write_to(&self, out: &mut impl Write) -> io::Result<()> {
         out.write_all(&self.rel_offset.to_le_bytes())?;
         out.write_all(&self.comp_len.to_le_bytes())?;
@@ -267,6 +275,7 @@ impl BlockDirectoryEntry {
         Ok(())
     }
 
+    /// Deserialize a 16-byte little-endian directory entry.
     fn from_bytes(buf: &[u8; 16]) -> Self {
         Self {
             rel_offset: u64::from_le_bytes(buf[0..8].try_into().unwrap()),
@@ -460,6 +469,8 @@ pub fn decode_superblock_quins(block: &[u8]) -> io::Result<Vec<NQuin>> {
     Ok(out)
 }
 
+/// Serialize a v3/v4 volume header to its fixed `HEADER_SIZE` byte
+/// layout (core fields 0–88, v3 extensions 88–176, reserved tail).
 pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     let mut buf = [0u8; HEADER_SIZE];
     // Core fields (0..88)
@@ -490,6 +501,8 @@ pub fn header_to_bytes(h: &Q42VolumeHeader) -> [u8; HEADER_SIZE] {
     buf
 }
 
+/// Deserialize and validate a header — rejects bad magic and
+/// non-v3/v4 versions.
 fn header_from_bytes(buf: &[u8; HEADER_SIZE]) -> io::Result<Q42VolumeHeader> {
     if buf[0..4] != Q42_MAGIC {
         return Err(io::Error::new(
@@ -631,6 +644,8 @@ pub fn write_volume_root_with_lex(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Map a `LexError` to `io::Error` (`InvalidInput`, message includes
+/// the lex error debug form).
 fn lex_error_to_io(error: LexError) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
@@ -696,6 +711,8 @@ pub struct UnifiedVolumeBuilder {
 }
 
 impl UnifiedVolumeBuilder {
+    /// Builder whose Q42LEX section is encoded from `lex`
+    /// (hash → term string).
     pub fn with_lex_map(lex: &HashMap<u64, String>) -> Result<Self, LexError> {
         Ok(Self {
             lex_bytes: encode_lex(lex)?,
@@ -735,6 +752,7 @@ impl UnifiedVolumeBuilder {
         })
     }
 
+    /// Builder with an empty (but structurally valid) Q42LEX section.
     pub fn with_empty_lex() -> Self {
         Self::with_lex_map(&HashMap::new()).expect("an empty Q42LEX is valid")
     }
@@ -764,6 +782,10 @@ impl UnifiedVolumeBuilder {
         self
     }
 
+    /// Append one SuperBlock: enforces global object-hash sort order,
+    /// accumulates block/field ranges, postings and the LZ4'd data
+    /// blob, and commits the block to the Merkle-DAG
+    /// (genesis on first block).
     pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) -> io::Result<()> {
         let (min_hash, max_hash) = object_range(quins)?;
         if let Some(previous) = self.last_object_hash {
@@ -831,10 +853,13 @@ impl UnifiedVolumeBuilder {
         Ok(())
     }
 
+    /// SuperBlocks pushed so far.
     pub fn block_count(&self) -> u64 {
         self.block_ranges.len() as u64
     }
 
+    /// Assemble and write the complete `.q42` file to `path`
+    /// (native only — needs filesystem access).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn finish(self, path: &Path) -> io::Result<()> {
         let bytes = self.finish_to_bytes();
@@ -982,6 +1007,8 @@ pub struct Q42Volume {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl Q42Volume {
+    /// Memory-map/open a `.q42` volume, validating header and section
+    /// bounds.
     pub fn open(path: &Path) -> io::Result<Self> {
         let file = File::open(path)?;
         let mmap = unsafe { MmapOptions::new().map(&file)? };
@@ -998,24 +1025,29 @@ impl Q42Volume {
         Ok(Self { mmap, header })
     }
 
+    /// The parsed volume header.
     pub fn header(&self) -> &Q42VolumeHeader {
         &self.header
     }
 
+    /// The whole volume as a byte slice.
     pub fn as_bytes(&self) -> &[u8] {
         &self.mmap
     }
 
+    /// Raw Q42LEX section bytes.
     pub fn lex_bytes(&self) -> &[u8] {
         let start = self.header.lex_offset as usize;
         let end = start + self.header.lex_length as usize;
         &self.mmap[start..end]
     }
 
+    /// Zero-copy `Q42LexMmap` view over the lexicon section.
     pub fn lex_view(&self) -> Result<Q42LexMmap<'_>, LexError> {
         Q42LexMmap::from_bytes(self.lex_bytes())
     }
 
+    /// Raw BIDX section bytes.
     pub fn bidx_bytes(&self) -> &[u8] {
         let start = self.header.bidx_offset as usize;
         let end = start + self.header.bidx_length as usize;
@@ -1064,6 +1096,7 @@ impl Q42Volume {
             .transpose()
     }
 
+    /// SuperBlock count from the header.
     pub fn block_count(&self) -> u64 {
         self.header.block_count
     }
@@ -1178,6 +1211,8 @@ impl Q42Volume {
         Some((first, last))
     }
 
+    /// Read directory entry `index` from the block directory;
+    /// out-of-range indices error.
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
         if index >= self.header.block_count as usize {
             return Err(io::Error::new(
@@ -1682,6 +1717,8 @@ pub struct StreamingVolumeAppender {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl StreamingVolumeAppender {
+    /// Create a new streaming volume at `path` — writes the v4 header
+    /// eagerly; rejects non-empty files (immutable segments only).
     pub fn new(path: &std::path::Path) -> std::io::Result<Self> {
         let mut file = std::fs::OpenOptions::new()
             .create(true)
@@ -1739,11 +1776,15 @@ impl StreamingVolumeAppender {
         })
     }
 
+    /// Set the author DID recorded on DAG commit nodes.
     pub fn with_author_did(mut self, did: u64) -> Self {
         self.author_did = did;
         self
     }
 
+    /// Append one SuperBlock incrementally — same global object-sort
+    /// enforcement, LZ4 compression, and DAG commit as the batch
+    /// builder, but streamed straight to the file.
     pub fn append_block(&mut self, seq_id: u64, quins: &[NQuin]) -> std::io::Result<()> {
         let (min_hash, max_hash) = object_range(quins)?;
         if let Some(previous) = self.last_object_hash {

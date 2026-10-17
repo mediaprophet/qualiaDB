@@ -56,6 +56,7 @@ pub struct GraphProofOptions {
 }
 
 impl Default for GraphProofOptions {
+    /// Sensible proof defaults (bounded temp budget, default limits).
     fn default() -> Self {
         Self {
             memory_limit_bytes: DEFAULT_GRAPH_PROOF_MEMORY_BYTES,
@@ -76,6 +77,7 @@ pub struct ImportProofOptions {
 }
 
 impl Default for ImportProofOptions {
+    /// Sensible import-proof defaults.
     fn default() -> Self {
         Self {
             memory_limit_bytes: DEFAULT_GRAPH_PROOF_MEMORY_BYTES,
@@ -87,6 +89,7 @@ impl Default for ImportProofOptions {
 }
 
 impl ImportProofOptions {
+    /// Derive import-proof options from a graph-proof config.
     pub fn from_graph_options(options: GraphProofOptions) -> Self {
         Self {
             memory_limit_bytes: options.memory_limit_bytes,
@@ -266,6 +269,8 @@ struct LexStats {
     has_no_terms: bool,
 }
 
+/// Read the Q42 volume's lexicon statistics (term count, collision
+/// count) from its on-disk header.
 fn read_lex_stats(q42_path: &Path) -> io::Result<LexStats> {
     let volume = Q42Volume::open(q42_path)?;
     let length_bytes = volume.header().lex_length;
@@ -278,6 +283,8 @@ fn read_lex_stats(q42_path: &Path) -> io::Result<LexStats> {
     })
 }
 
+/// Assemble the final `GraphProofReport` from the set comparison,
+/// import stats, and lexicon stats.
 fn finish_report(
     source_records: u64,
     q42_records: u64,
@@ -322,6 +329,8 @@ fn finish_report(
     }
 }
 
+/// Encode a raw parsed triple into the canonical 4×u64
+/// `QuadRecord` used for byte-level set comparison.
 fn encode_import_raw(raw: &RawTriple) -> QuadRecord {
     let subject = q_hash(&raw.subject);
     let predicate = q_hash(&raw.predicate);
@@ -345,6 +354,8 @@ struct ImportStreamStats {
     has_blank_nodes: bool,
 }
 
+/// Stream triples from the import source, encoding each into
+/// `QuadRecord`s and spooling sorted runs under the temp budget.
 fn stream_import_source_records(
     source_path: &Path,
     omit_predicate_hashes: &[u64],
@@ -409,12 +420,14 @@ struct QuadRecord {
 }
 
 impl QuadRecord {
+    /// Record as a `[u64; 4]` for lexicographic ordering.
     fn as_array(self) -> [u64; 4] {
         [self.subject, self.predicate, self.object, self.context]
     }
 }
 
 impl Ord for QuadRecord {
+    /// Lexicographic order over the record's u64 fields.
     fn cmp(&self, other: &Self) -> Ordering {
         (self.object, self.subject, self.predicate, self.context).cmp(&(
             other.object,
@@ -426,6 +439,7 @@ impl Ord for QuadRecord {
 }
 
 impl PartialOrd for QuadRecord {
+    /// Delegates to `Ord::cmp` (total order).
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -442,6 +456,7 @@ struct TempBudget {
 }
 
 impl TempBudget {
+    /// Budget with `maximum` bytes available.
     fn new(maximum: u64) -> Self {
         Self {
             maximum,
@@ -449,6 +464,8 @@ impl TempBudget {
         }
     }
 
+    /// Reserve `bytes`; error (fail closed) when the budget would
+    /// be exceeded.
     fn reserve(&mut self, bytes: u64) -> io::Result<()> {
         let next = self.current.checked_add(bytes).ok_or_else(|| {
             io::Error::new(
@@ -469,6 +486,7 @@ impl TempBudget {
         Ok(())
     }
 
+    /// Return `bytes` to the budget.
     fn release(&mut self, bytes: u64) {
         self.current = self.current.saturating_sub(bytes);
     }
@@ -484,6 +502,8 @@ struct DiskSpool {
 }
 
 impl DiskSpool {
+    /// Spool writing runs of `records_per_chunk` into `temp_dir`
+    /// files named with `prefix`.
     fn new(temp_dir: &Path, prefix: &'static str, records_per_chunk: usize) -> Self {
         Self {
             temp_dir: temp_dir.to_path_buf(),
@@ -495,6 +515,8 @@ impl DiskSpool {
         }
     }
 
+    /// Buffer a record; flush a sorted run to disk when the chunk
+    /// fills (budget-charged).
     fn push(&mut self, record: QuadRecord, budget: &mut TempBudget) -> io::Result<()> {
         self.records.push(record);
         self.record_count += 1;
@@ -504,6 +526,7 @@ impl DiskSpool {
         Ok(())
     }
 
+    /// Sort the buffered chunk and write it as a disk run.
     fn flush(&mut self, budget: &mut TempBudget) -> io::Result<()> {
         if self.records.is_empty() {
             return Ok(());
@@ -525,12 +548,15 @@ impl DiskSpool {
         Ok(())
     }
 
+    /// Flush any remainder and return the list of disk runs.
     fn finish(&mut self, budget: &mut TempBudget) -> io::Result<Vec<DiskRun>> {
         self.flush(budget)?;
         Ok(std::mem::take(&mut self.runs))
     }
 }
 
+/// Chunk size in records for the given memory limit; fails closed
+/// when the limit can't hold one record.
 fn records_per_chunk(memory_limit_bytes: usize) -> io::Result<usize> {
     let records = memory_limit_bytes / RECORD_BYTES as usize;
     if records == 0 {
@@ -542,6 +568,8 @@ fn records_per_chunk(memory_limit_bytes: usize) -> io::Result<usize> {
     Ok(records)
 }
 
+/// Stream `QuadRecord`s from an N-Triples source into sorted
+/// disk runs.
 fn stream_source_records(
     source_path: &Path,
     spool: &mut DiskSpool,
@@ -590,6 +618,8 @@ fn stream_source_records(
     Ok((skipped, has_blank_nodes))
 }
 
+/// Stream `QuadRecord`s from a single Q42 volume into sorted disk
+/// runs.
 fn stream_q42_records(
     q42_path: &Path,
     spool: &mut DiskSpool,
@@ -606,6 +636,8 @@ fn stream_q42_records(
     stream_q42_volume_records(&volume, spool, budget)
 }
 
+/// Stream `QuadRecord`s across a Q42 volume set (manifest
+/// children) into sorted disk runs.
 fn stream_q42_volume_records(
     volume: &Q42Volume,
     spool: &mut DiskSpool,
@@ -646,6 +678,7 @@ fn stream_q42_volume_records(
     Ok(())
 }
 
+/// Write records verbatim to `path` (fixed-width binary run).
 fn write_records(path: &Path, records: &[QuadRecord]) -> io::Result<()> {
     let mut writer = BufWriter::with_capacity(READ_BUFFER_BYTES, File::create(path)?);
     for record in records {
@@ -654,6 +687,8 @@ fn write_records(path: &Path, records: &[QuadRecord]) -> io::Result<()> {
     writer.flush()
 }
 
+/// K-way merge all runs into a single sorted output file
+/// (grouped merges when the fan-in exceeds limits).
 fn merge_to_one(
     mut runs: Vec<DiskRun>,
     temp_dir: &Path,
@@ -695,6 +730,8 @@ fn merge_to_one(
     Ok(runs.pop().expect("non-empty run list"))
 }
 
+/// Merge one group of runs into `output` via a min-heap over
+/// per-run readers.
 fn merge_group(group: &[DiskRun], output: &Path) -> io::Result<()> {
     let mut readers = Vec::with_capacity(group.len());
     for run in group {
@@ -725,6 +762,8 @@ struct RecordReader {
 }
 
 impl RecordReader {
+    /// Buffered reader over a sorted run file, positioned before
+    /// the first record.
     fn open(path: &Path) -> io::Result<Self> {
         let mut reader = Self {
             reader: BufReader::with_capacity(READ_BUFFER_BYTES, File::open(path)?),
@@ -734,6 +773,7 @@ impl RecordReader {
         Ok(reader)
     }
 
+    /// Advance to the next record (EOF sets `current` to `None`).
     fn advance(&mut self) -> io::Result<()> {
         let mut bytes = [0u8; RECORD_BYTES as usize];
         match self.reader.read_exact(&mut bytes) {
@@ -749,6 +789,8 @@ impl RecordReader {
         }
     }
 
+    /// Next record strictly greater than the previous emission —
+    /// skips duplicates in the sorted run.
     fn next_distinct(&mut self) -> io::Result<Option<QuadRecord>> {
         let Some(record) = self.peek else {
             return Ok(None);
@@ -770,6 +812,8 @@ struct SetComparison {
     first_unexpected: Option<QuadRecord>,
 }
 
+/// Two-pointer scan over the two sorted-unique runs — counts
+/// common, left-only, and right-only records.
 fn compare_unique_sets(left: &Path, right: &Path) -> io::Result<SetComparison> {
     let mut left_reader = RecordReader::open(left)?;
     let mut right_reader = RecordReader::open(right)?;

@@ -50,12 +50,16 @@ pub struct ConstraintSpec {
     pub list: Option<Vec<String>>,
 }
 
+/// Unwrap any `Term` variant to its string payload (Uri, Variable,
+/// Literal and Formula all carry their surface form).
 fn term_str<'a>(t: &Term<'a>) -> &'a str {
     match t {
         Term::Uri(s) | Term::Variable(s) | Term::Literal(s) | Term::Formula(s) => s,
     }
 }
 
+/// `q_hash` `s` and record its lexical form in resolver `r` for later
+/// string constraints; returns the hash. First occurrence wins.
 fn intern(s: &str, r: &mut HashMap<u64, String>) -> u64 {
     let h = q_hash(s);
     r.entry(h).or_insert_with(|| s.to_string());
@@ -101,6 +105,8 @@ pub fn build_graph(data: &str) -> (Vec<NQuin>, HashMap<u64, String>) {
     (quins, resolver)
 }
 
+/// Map a severity string to `ShaclSeverity`; anything absent or
+/// unrecognized defaults to `Violation` (fail closed).
 fn severity_of(s: &Option<String>) -> ShaclSeverity {
     match s.as_deref() {
         Some("Warning") | Some("warning") => ShaclSeverity::Warning,
@@ -109,6 +115,9 @@ fn severity_of(s: &Option<String>) -> ShaclSeverity {
     }
 }
 
+/// Convert a JSON `ConstraintSpec` to a typed `ShaclConstraint` by
+/// `kind` name — numeric kinds read `num` (default 0.0), text kinds
+/// read `text`, list kinds read `list`. `None` for unknown kinds.
 fn constraint_of(c: &ConstraintSpec) -> Option<ShaclConstraint> {
     let num = c.num.unwrap_or(0.0);
     let u = num as u32;

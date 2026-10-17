@@ -16,6 +16,7 @@ use vibe::{Diagnostic, Span, Value};
 
 // ── Asset pricing ────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.capm_expected_return` — validates args and wraps `computational_economics::asset_pricing::capm_expected_return`.
 pub fn econ_capm_expected_return(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rf = args::rec_f64(args, "rf")
         .ok_or_else(|| args::bad(span, "Econ.capm_expected_return needs rf"))?;
@@ -33,6 +34,7 @@ pub fn econ_capm_expected_return(args: &Value, span: Span) -> Result<Value, Diag
     }
 }
 
+/// VibeScript seam for `Econ.capm_beta` — validates args and wraps `computational_economics::asset_pricing::capm_beta`.
 pub fn econ_capm_beta(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let asset_returns = args::rec_f64_list(args, "asset_returns")
         .ok_or_else(|| args::bad(span, "Econ.capm_beta needs asset_returns"))?;
@@ -47,6 +49,7 @@ pub fn econ_capm_beta(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.gordon_growth` — validates args and wraps `computational_economics::asset_pricing::gordon_growth_price`.
 pub fn econ_gordon_growth(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let d1 = args::rec_f64(args, "next_dividend")
         .ok_or_else(|| args::bad(span, "Econ.gordon_growth needs next_dividend"))?;
@@ -62,6 +65,7 @@ pub fn econ_gordon_growth(args: &Value, span: Span) -> Result<Value, Diagnostic>
     }
 }
 
+/// VibeScript seam for `Econ.multi_period_ddm` — validates args and wraps `computational_economics::asset_pricing::multi_period_ddm`.
 pub fn econ_multi_period_ddm(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let dividends = args::rec_f64_list(args, "dividends")
         .ok_or_else(|| args::bad(span, "Econ.multi_period_ddm needs dividends"))?;
@@ -77,6 +81,7 @@ pub fn econ_multi_period_ddm(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.ccapm_equity_premium` — validates args and wraps `computational_economics::asset_pricing::ccapm_equity_premium`.
 pub fn econ_ccapm_equity_premium(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let gamma = args::rec_f64(args, "gamma")
         .ok_or_else(|| args::bad(span, "Econ.ccapm_equity_premium needs gamma"))?;
@@ -96,6 +101,7 @@ pub fn econ_ccapm_equity_premium(args: &Value, span: Span) -> Result<Value, Diag
     }
 }
 
+/// VibeScript seam for `Econ.ccapm_sdf` — validates args and wraps `computational_economics::asset_pricing::ccapm_stochastic_discount_factor`.
 pub fn econ_ccapm_sdf(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let cg = args::rec_f64(args, "consumption_growth")
         .ok_or_else(|| args::bad(span, "Econ.ccapm_sdf needs consumption_growth"))?;
@@ -111,6 +117,7 @@ pub fn econ_ccapm_sdf(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Behavioral ───────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.prospect_value` — validates args and wraps `computational_economics::behavioral::prospect_value`.
 pub fn econ_prospect_value(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x =
         args::rec_f64(args, "x").ok_or_else(|| args::bad(span, "Econ.prospect_value needs x"))?;
@@ -125,6 +132,7 @@ pub fn econ_prospect_value(args: &Value, span: Span) -> Result<Value, Diagnostic
     }
 }
 
+/// VibeScript seam for `Econ.probability_weight` — validates args and wraps `computational_economics::behavioral::probability_weight`.
 pub fn econ_probability_weight(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64(args, "p")
         .ok_or_else(|| args::bad(span, "Econ.probability_weight needs p"))?;
@@ -136,6 +144,7 @@ pub fn econ_probability_weight(args: &Value, span: Span) -> Result<Value, Diagno
     }
 }
 
+/// VibeScript seam for `Econ.hyperbolic_discount` — validates args and wraps `computational_economics::behavioral::hyperbolic_discount`.
 pub fn econ_hyperbolic_discount(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let t = args::rec_u64(args, "t")
         .ok_or_else(|| args::bad(span, "Econ.hyperbolic_discount needs t"))? as u32;
@@ -149,6 +158,7 @@ pub fn econ_hyperbolic_discount(args: &Value, span: Span) -> Result<Value, Diagn
     }
 }
 
+/// VibeScript seam for `Econ.endowment_effect` — validates args and wraps `computational_economics::behavioral::endowment_effect_wta`.
 pub fn econ_endowment_effect(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let wtp = args::rec_f64(args, "wtp")
         .ok_or_else(|| args::bad(span, "Econ.endowment_effect needs wtp"))?;
@@ -163,6 +173,7 @@ pub fn econ_endowment_effect(args: &Value, span: Span) -> Result<Value, Diagnost
 
 // ── Derivatives ──────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.black_scholes` — validates args and wraps `computational_economics::derivatives::black_scholes_price_and_greeks`.
 pub fn econ_black_scholes(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::derivatives::{
         black_scholes_price_and_greeks, OptionKind,
@@ -197,6 +208,7 @@ pub fn econ_black_scholes(args: &Value, span: Span) -> Result<Value, Diagnostic>
     }
 }
 
+/// VibeScript seam for `Econ.put_call_parity` — validates args and wraps `computational_economics::derivatives::put_call_parity`.
 pub fn econ_put_call_parity(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::derivatives::put_call_parity;
     let call_price = args::rec_f64(args, "call_price")
@@ -217,6 +229,7 @@ pub fn econ_put_call_parity(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.binomial_option` — validates args and wraps `computational_economics::derivatives::binomial_option_price`.
 pub fn econ_binomial_option(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::derivatives::{
         binomial_option_price, OptionKind, OptionStyle,
@@ -247,6 +260,7 @@ pub fn econ_binomial_option(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 // ── Game theory ──────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.mixed_nash_2x2` — validates args and wraps `computational_economics::game_theory::mixed_nash_2x2`.
 pub fn econ_mixed_nash_2x2(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64_list(args, "payoff_matrix_a")
         .ok_or_else(|| args::bad(span, "Econ.mixed_nash_2x2 needs payoff_matrix_a (4 values)"))?;
@@ -269,6 +283,7 @@ pub fn econ_mixed_nash_2x2(args: &Value, span: Span) -> Result<Value, Diagnostic
     }
 }
 
+/// VibeScript seam for `Econ.cournot_duopoly` — validates args and wraps `computational_economics::game_theory::cournot_duopoly`.
 pub fn econ_cournot_duopoly(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64(args, "demand_intercept")
         .ok_or_else(|| args::bad(span, "Econ.cournot_duopoly needs demand_intercept"))?;
@@ -290,6 +305,7 @@ pub fn econ_cournot_duopoly(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.bertrand_duopoly` — validates args and wraps `computational_economics::game_theory::bertrand_duopoly`.
 pub fn econ_bertrand_duopoly(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let c1 = args::rec_f64(args, "cost_1")
         .ok_or_else(|| args::bad(span, "Econ.bertrand_duopoly needs cost_1"))?;
@@ -304,6 +320,7 @@ pub fn econ_bertrand_duopoly(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.stackelberg_duopoly` — validates args and wraps `computational_economics::game_theory::stackelberg_duopoly`.
 pub fn econ_stackelberg_duopoly(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64(args, "demand_intercept")
         .ok_or_else(|| args::bad(span, "Econ.stackelberg_duopoly needs demand_intercept"))?;
@@ -327,6 +344,7 @@ pub fn econ_stackelberg_duopoly(args: &Value, span: Span) -> Result<Value, Diagn
 
 // ── Macro models ─────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.solow_steady_state` — validates args and wraps `computational_economics::macro_models::solow_steady_state`.
 pub fn econ_solow_steady_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::rec_f64(args, "savings_rate")
         .ok_or_else(|| args::bad(span, "Econ.solow_steady_state needs savings_rate"))?;
@@ -347,6 +365,7 @@ pub fn econ_solow_steady_state(args: &Value, span: Span) -> Result<Value, Diagno
     }
 }
 
+/// VibeScript seam for `Econ.ramsey_steady_state` — validates args and wraps `computational_economics::macro_models::ramsey_steady_state`.
 pub fn econ_ramsey_steady_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let alpha = args::rec_f64(args, "alpha")
         .ok_or_else(|| args::bad(span, "Econ.ramsey_steady_state needs alpha"))?;
@@ -362,6 +381,7 @@ pub fn econ_ramsey_steady_state(args: &Value, span: Span) -> Result<Value, Diagn
     }
 }
 
+/// VibeScript seam for `Econ.olg_steady_state` — validates args and wraps `computational_economics::macro_models::olg_steady_state`.
 pub fn econ_olg_steady_state(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let alpha = args::rec_f64(args, "alpha")
         .ok_or_else(|| args::bad(span, "Econ.olg_steady_state needs alpha"))?;
@@ -381,6 +401,7 @@ pub fn econ_olg_steady_state(args: &Value, span: Span) -> Result<Value, Diagnost
 
 // ── Welfare ──────────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.gini` — validates args and wraps `computational_economics::welfare::gini_coefficient`.
 pub fn econ_gini(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let incomes = args::rec_f64_list(args, "incomes")
         .ok_or_else(|| args::bad(span, "Econ.gini needs incomes"))?;
@@ -390,6 +411,7 @@ pub fn econ_gini(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.atkinson` — validates args and wraps `computational_economics::welfare::atkinson_inequality`.
 pub fn econ_atkinson(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let incomes = args::rec_f64_list(args, "incomes")
         .ok_or_else(|| args::bad(span, "Econ.atkinson needs incomes"))?;
@@ -403,6 +425,7 @@ pub fn econ_atkinson(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.headcount_poverty` — validates args and wraps `computational_economics::welfare::headcount_poverty`.
 pub fn econ_headcount_poverty(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let incomes = args::rec_f64_list(args, "incomes")
         .ok_or_else(|| args::bad(span, "Econ.headcount_poverty needs incomes"))?;
@@ -419,6 +442,7 @@ pub fn econ_headcount_poverty(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.poverty_gap` — validates args and wraps `computational_economics::welfare::poverty_gap_ratio`.
 pub fn econ_poverty_gap(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let incomes = args::rec_f64_list(args, "incomes")
         .ok_or_else(|| args::bad(span, "Econ.poverty_gap needs incomes"))?;
@@ -432,6 +456,7 @@ pub fn econ_poverty_gap(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.utilitarian_welfare` — validates args and wraps `computational_economics::welfare::utilitarian_welfare`.
 pub fn econ_utilitarian_welfare(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let utilities = args::rec_f64_list(args, "utilities")
         .ok_or_else(|| args::bad(span, "Econ.utilitarian_welfare needs utilities"))?;
@@ -442,6 +467,7 @@ pub fn econ_utilitarian_welfare(args: &Value, span: Span) -> Result<Value, Diagn
     }
 }
 
+/// VibeScript seam for `Econ.rawlsian_welfare` — validates args and wraps `computational_economics::welfare::rawlsian_welfare`.
 pub fn econ_rawlsian_welfare(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let utilities = args::rec_f64_list(args, "utilities")
         .ok_or_else(|| args::bad(span, "Econ.rawlsian_welfare needs utilities"))?;
@@ -451,6 +477,7 @@ pub fn econ_rawlsian_welfare(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.nash_welfare` — validates args and wraps `computational_economics::welfare::nash_welfare`.
 pub fn econ_nash_welfare(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let utilities = args::rec_f64_list(args, "utilities")
         .ok_or_else(|| args::bad(span, "Econ.nash_welfare needs utilities"))?;
@@ -460,6 +487,7 @@ pub fn econ_nash_welfare(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     }
 }
 
+/// VibeScript seam for `Econ.npv` — validates args and wraps `computational_economics::welfare::net_present_value`.
 pub fn econ_npv(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let benefits = args::rec_f64_list(args, "benefits")
         .ok_or_else(|| args::bad(span, "Econ.npv needs benefits"))?;
@@ -479,6 +507,7 @@ pub fn econ_npv(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Portfolio ────────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.mean_return` — validates args and wraps `computational_economics::portfolio::mean_return`.
 pub fn econ_mean_return(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.mean_return needs returns"))?;
@@ -488,6 +517,7 @@ pub fn econ_mean_return(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.sample_variance` — validates args and wraps `computational_economics::portfolio::sample_variance`.
 pub fn econ_sample_variance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.sample_variance needs returns"))?;
@@ -497,6 +527,7 @@ pub fn econ_sample_variance(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.portfolio_max_drawdown` — validates args and wraps `computational_economics::portfolio::max_drawdown`.
 pub fn econ_portfolio_max_drawdown(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.portfolio_max_drawdown needs returns"))?;
@@ -508,6 +539,7 @@ pub fn econ_portfolio_max_drawdown(args: &Value, span: Span) -> Result<Value, Di
 
 // ── Time series / risk ───────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.historical_var` — validates args and wraps `computational_economics::risk::historical_var`.
 pub fn econ_historical_var(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.historical_var needs returns"))?;
@@ -523,6 +555,7 @@ pub fn econ_historical_var(args: &Value, span: Span) -> Result<Value, Diagnostic
     }
 }
 
+/// VibeScript seam for `Econ.historical_cvar` — validates args and wraps `computational_economics::risk::historical_cvar`.
 pub fn econ_historical_cvar(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.historical_cvar needs returns"))?;
@@ -538,6 +571,7 @@ pub fn econ_historical_cvar(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.parametric_var` — validates args and wraps `computational_economics::risk::gaussian_var`.
 pub fn econ_parametric_var(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mean = args::rec_f64(args, "mean")
         .ok_or_else(|| args::bad(span, "Econ.parametric_var needs mean"))?;
@@ -552,6 +586,7 @@ pub fn econ_parametric_var(args: &Value, span: Span) -> Result<Value, Diagnostic
     }
 }
 
+/// VibeScript seam for `Econ.autocorrelation` — validates args and wraps `computational_economics::time_series::autocorrelation`.
 pub fn econ_autocorrelation(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values = args::rec_f64_list(args, "values")
         .ok_or_else(|| args::bad(span, "Econ.autocorrelation needs values"))?;
@@ -564,6 +599,7 @@ pub fn econ_autocorrelation(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.cross_correlation` — validates args and wraps `computational_economics::time_series::cross_correlation`.
 pub fn econ_cross_correlation(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64_list(args, "series_a")
         .ok_or_else(|| args::bad(span, "Econ.cross_correlation needs series_a"))?;
@@ -580,6 +616,7 @@ pub fn econ_cross_correlation(args: &Value, span: Span) -> Result<Value, Diagnos
 
 // ── Yield curve ──────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.interpolate_zero_rate` — validates args and wraps `computational_economics::yield_curve::interpolate_zero_rate`.
 pub fn econ_interpolate_zero_rate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::yield_curve::{
         interpolate_zero_rate, CurvePoint,
@@ -610,6 +647,7 @@ pub fn econ_interpolate_zero_rate(args: &Value, span: Span) -> Result<Value, Dia
     }
 }
 
+/// VibeScript seam for `Econ.discount_factor` — validates args and wraps `computational_economics::yield_curve::discount_factor_from_curve`.
 pub fn econ_discount_factor(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::yield_curve::{
         discount_factor_from_curve, CurvePoint,
@@ -641,6 +679,7 @@ pub fn econ_discount_factor(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.forward_rate` — validates args and wraps `computational_economics::yield_curve::annualized_forward_rate`.
 pub fn econ_forward_rate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::yield_curve::{
         annualized_forward_rate, CurvePoint,
@@ -676,6 +715,7 @@ pub fn econ_forward_rate(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 // ── Spatial economics ────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.gravity_flow` — validates args and wraps `computational_economics::spatial_economics::gravity_flow`.
 pub fn econ_gravity_flow(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mass_1 = args::rec_f64(args, "mass_1")
         .ok_or_else(|| args::bad(span, "Econ.gravity_flow needs mass_1"))?;
@@ -694,6 +734,7 @@ pub fn econ_gravity_flow(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     }
 }
 
+/// VibeScript seam for `Econ.morans_i` — validates args and wraps `computational_economics::spatial_economics::morans_i`.
 pub fn econ_morans_i(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values = args::rec_f64_list(args, "values")
         .ok_or_else(|| args::bad(span, "Econ.morans_i needs values"))?;
@@ -711,6 +752,7 @@ pub fn econ_morans_i(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Public finance ───────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.transfer_payment` — validates args and wraps `computational_economics::public_finance::transfer_payment`.
 pub fn econ_transfer_payment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let base = args::rec_f64(args, "base")
         .ok_or_else(|| args::bad(span, "Econ.transfer_payment needs base"))?;
@@ -731,6 +773,7 @@ pub fn econ_transfer_payment(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.fiscal_multiplier` — validates args and wraps `computational_economics::public_finance::fiscal_multiplier`.
 pub fn econ_fiscal_multiplier(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let initial_spending = args::rec_f64(args, "initial_spending")
         .ok_or_else(|| args::bad(span, "Econ.fiscal_multiplier needs initial_spending"))?;
@@ -747,6 +790,7 @@ pub fn econ_fiscal_multiplier(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.laffer_curve` — validates args and wraps `computational_economics::public_finance::laffer_curve_revenue`.
 pub fn econ_laffer_curve(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let tax_rate = args::rec_f64(args, "tax_rate")
         .ok_or_else(|| args::bad(span, "Econ.laffer_curve needs tax_rate"))?;
@@ -764,6 +808,7 @@ pub fn econ_laffer_curve(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 // ── Mechanism design ─────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.check_ir` — validates args and wraps `computational_economics::mechanism::check_individual_rationality`.
 pub fn econ_check_ir(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let valuations = args::rec_f64_list(args, "valuations")
         .ok_or_else(|| args::bad(span, "Econ.check_ir needs valuations"))?;
@@ -778,6 +823,7 @@ pub fn econ_check_ir(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.check_budget_balance` — validates args and wraps `computational_economics::mechanism::check_budget_balance`.
 pub fn econ_check_budget_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let payments = args::rec_f64_list(args, "payments")
         .ok_or_else(|| args::bad(span, "Econ.check_budget_balance needs payments"))?;
@@ -794,6 +840,7 @@ pub fn econ_check_budget_balance(args: &Value, span: Span) -> Result<Value, Diag
 
 // ── Markov chains ────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.validate_transition_matrix` — validates args and wraps `computational_economics::markov::validate_transition_matrix`.
 pub fn econ_validate_transition_matrix(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.validate_transition_matrix needs matrix"))?;
@@ -811,6 +858,7 @@ pub fn econ_validate_transition_matrix(args: &Value, span: Span) -> Result<Value
     }
 }
 
+/// VibeScript seam for `Econ.transition_probability` — validates args and wraps `computational_economics::markov::transition_probability`.
 pub fn econ_transition_probability(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.transition_probability needs matrix"))?;
@@ -831,6 +879,7 @@ pub fn econ_transition_probability(args: &Value, span: Span) -> Result<Value, Di
     }
 }
 
+/// VibeScript seam for `Econ.expected_holding_time` — validates args and wraps `computational_economics::markov::expected_holding_time`.
 pub fn econ_expected_holding_time(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.expected_holding_time needs matrix"))?;
@@ -849,6 +898,7 @@ pub fn econ_expected_holding_time(args: &Value, span: Span) -> Result<Value, Dia
 
 // ── Labor / household ────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.labor_supply` — validates args and wraps `computational_economics::labor_household::labor_supply_cobb_douglas`.
 pub fn econ_labor_supply(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let wage = args::rec_f64(args, "wage")
         .ok_or_else(|| args::bad(span, "Econ.labor_supply needs wage"))?;
@@ -864,6 +914,7 @@ pub fn econ_labor_supply(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     }
 }
 
+/// VibeScript seam for `Econ.efficiency_units` — validates args and wraps `computational_economics::labor_household::efficiency_units`.
 pub fn econ_efficiency_units(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let raw = args::rec_f64(args, "raw_labor")
         .ok_or_else(|| args::bad(span, "Econ.efficiency_units needs raw_labor"))?;
@@ -879,6 +930,7 @@ pub fn econ_efficiency_units(args: &Value, span: Span) -> Result<Value, Diagnost
 
 // ── Environmental ────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.social_cost_of_carbon` — validates args and wraps `computational_economics::environmental_resource::social_cost_of_carbon`.
 pub fn econ_social_cost_of_carbon(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let emissions = args::rec_f64(args, "emissions")
         .ok_or_else(|| args::bad(span, "Econ.social_cost_of_carbon needs emissions"))?;
@@ -890,6 +942,7 @@ pub fn econ_social_cost_of_carbon(args: &Value, span: Span) -> Result<Value, Dia
     }
 }
 
+/// VibeScript seam for `Econ.optimal_pollution` — validates args and wraps `computational_economics::environmental_resource::optimal_pollution`.
 pub fn econ_optimal_pollution(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let baseline_emissions = args::rec_f64(args, "baseline_emissions")
         .ok_or_else(|| args::bad(span, "Econ.optimal_pollution needs baseline_emissions"))?;
@@ -903,6 +956,7 @@ pub fn econ_optimal_pollution(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.optimal_abatement` — validates args and wraps `computational_economics::environmental_resource::optimal_abatement`.
 pub fn econ_optimal_abatement(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let baseline_emissions = args::rec_f64(args, "baseline_emissions")
         .ok_or_else(|| args::bad(span, "Econ.optimal_abatement needs baseline_emissions"))?;
@@ -918,6 +972,7 @@ pub fn econ_optimal_abatement(args: &Value, span: Span) -> Result<Value, Diagnos
 
 // ── Dynamic programming ──────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.bellman_update` — validates args and wraps `computational_economics::dynamic_programming::bellman_update`.
 pub fn econ_bellman_update(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rewards = args::rec_f64_list(args, "rewards")
         .ok_or_else(|| args::bad(span, "Econ.bellman_update needs rewards"))?;
@@ -952,6 +1007,7 @@ pub fn econ_bellman_update(args: &Value, span: Span) -> Result<Value, Diagnostic
 
 // ── Forensic economics ───────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.malfeasance_delta` — validates args and wraps `computational_economics::forensic_economics::compute_malfeasance_delta`.
 pub fn econ_malfeasance_delta(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let capital_allocated = args::rec_f64(args, "capital_allocated")
         .ok_or_else(|| args::bad(span, "Econ.malfeasance_delta needs capital_allocated"))?;
@@ -971,6 +1027,7 @@ pub fn econ_malfeasance_delta(args: &Value, span: Span) -> Result<Value, Diagnos
 
 // ── Econometrics ─────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.ols` — validates args and wraps `computational_economics::econometrics::ols_into`.
 pub fn econ_ols(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64_list(args, "x").ok_or_else(|| args::bad(span, "Econ.ols needs x"))?;
     let y = args::rec_f64_list(args, "y").ok_or_else(|| args::bad(span, "Econ.ols needs y"))?;
@@ -1070,6 +1127,7 @@ pub fn econ_aggregate_wealth(args: &Value, _span: Span) -> Result<Value, Diagnos
 
 // ── Input-output ─────────────────────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.total_transport_cost` — validates args and wraps `computational_economics::spatial_economics::total_transport_cost`.
 pub fn econ_total_transport_cost(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let flows = args::rec_f64_list(args, "flows")
         .ok_or_else(|| args::bad(span, "Econ.total_transport_cost needs flows"))?;
@@ -1087,6 +1145,7 @@ pub fn econ_total_transport_cost(args: &Value, span: Span) -> Result<Value, Diag
 
 // ── Asset pricing: Lucas pricing ─────────────────────────────────────────────
 
+/// VibeScript seam for `Econ.lucas_asset_price` — validates args and wraps `computational_economics::asset_pricing::lucas_asset_price`.
 pub fn econ_lucas_asset_price(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let dividend_paths = args::rec_f64_list(args, "dividend_paths")
         .ok_or_else(|| args::bad(span, "Econ.lucas_asset_price needs dividend_paths"))?;
@@ -1118,6 +1177,7 @@ pub fn econ_lucas_asset_price(args: &Value, span: Span) -> Result<Value, Diagnos
 
 // ── Behavioral: present-biased, reference-dependent ───────────────────────────
 
+/// VibeScript seam for `Econ.present_biased_utility` — validates args and wraps `computational_economics::behavioral::present_biased_utility`.
 pub fn econ_present_biased_utility(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let utilities = args::rec_f64_list(args, "utilities")
         .ok_or_else(|| args::bad(span, "Econ.present_biased_utility needs utilities"))?;
@@ -1131,6 +1191,7 @@ pub fn econ_present_biased_utility(args: &Value, span: Span) -> Result<Value, Di
     }
 }
 
+/// VibeScript seam for `Econ.reference_dependent_utility` — validates args and wraps `computational_economics::behavioral::reference_dependent_utility`.
 pub fn econ_reference_dependent_utility(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64(args, "x")
         .ok_or_else(|| args::bad(span, "Econ.reference_dependent_utility needs x"))?;
@@ -1152,6 +1213,7 @@ pub fn econ_reference_dependent_utility(args: &Value, span: Span) -> Result<Valu
 
 // ── Game theory: pure Nash, dominated strategies, repeated games ──────────────
 
+/// VibeScript seam for `Econ.pure_nash_equilibria` — validates args and wraps `computational_economics::game_theory::pure_nash_equilibria_into`.
 pub fn econ_pure_nash_equilibria(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let row = args::rec_f64_list(args, "payoff_row")
         .ok_or_else(|| args::bad(span, "Econ.pure_nash_equilibria needs payoff_row"))?;
@@ -1186,6 +1248,7 @@ pub fn econ_pure_nash_equilibria(args: &Value, span: Span) -> Result<Value, Diag
     }
 }
 
+/// VibeScript seam for `Econ.repeated_game_payoff` — validates args and wraps `computational_economics::game_theory::repeated_game_payoff`.
 pub fn econ_repeated_game_payoff(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let stage_payoffs = args::rec_f64_list(args, "stage_payoffs")
         .ok_or_else(|| args::bad(span, "Econ.repeated_game_payoff needs stage_payoffs"))?;
@@ -1202,6 +1265,7 @@ pub fn econ_repeated_game_payoff(args: &Value, span: Span) -> Result<Value, Diag
     }
 }
 
+/// VibeScript seam for `Econ.bertrand_with_demand` — validates args and wraps `computational_economics::game_theory::bertrand_duopoly_with_demand`.
 pub fn econ_bertrand_with_demand(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64(args, "demand_intercept")
         .ok_or_else(|| args::bad(span, "Econ.bertrand_with_demand needs demand_intercept"))?;
@@ -1222,6 +1286,7 @@ pub fn econ_bertrand_with_demand(args: &Value, span: Span) -> Result<Value, Diag
 
 // ── Macro: Solow simulate, Ramsey euler, RBC, New Keynesian ───────────────────
 
+/// VibeScript seam for `Econ.ramsey_euler_residual` — validates args and wraps `computational_economics::macro_models::ramsey_euler_residual`.
 pub fn econ_ramsey_euler_residual(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let k = args::rec_f64(args, "capital")
         .ok_or_else(|| args::bad(span, "Econ.ramsey_euler_residual needs capital"))?;
@@ -1241,6 +1306,7 @@ pub fn econ_ramsey_euler_residual(args: &Value, span: Span) -> Result<Value, Dia
     Ok(args::record([("euler_residual", Value::F64(residual))]))
 }
 
+/// VibeScript seam for `Econ.new_keynesian_solve` — validates args and wraps `computational_economics::macro_models::new_keynesian_solve`.
 pub fn econ_new_keynesian_solve(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let r_prev = args::rec_f64(args, "r_prev")
         .ok_or_else(|| args::bad(span, "Econ.new_keynesian_solve needs r_prev"))?;
@@ -1272,6 +1338,7 @@ pub fn econ_new_keynesian_solve(args: &Value, span: Span) -> Result<Value, Diagn
 
 // ── Welfare: Lorenz, distributional NPV, survival floor ───────────────────────
 
+/// VibeScript seam for `Econ.lorenz_curve` — validates args and wraps `computational_economics::welfare::lorenz_curve_into`.
 pub fn econ_lorenz_curve(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let incomes = args::rec_f64_list(args, "incomes")
         .ok_or_else(|| args::bad(span, "Econ.lorenz_curve needs incomes"))?;
@@ -1290,6 +1357,7 @@ pub fn econ_lorenz_curve(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     }
 }
 
+/// VibeScript seam for `Econ.distributional_npv` — validates args and wraps `computational_economics::welfare::distributional_npv`.
 pub fn econ_distributional_npv(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let benefits = args::rec_f64_list(args, "benefits")
         .ok_or_else(|| args::bad(span, "Econ.distributional_npv needs benefits"))?;
@@ -1320,6 +1388,7 @@ pub fn econ_distributional_npv(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Portfolio: covariance, variance, risk contributions ───────────────────────
 
+/// VibeScript seam for `Econ.portfolio_returns` — validates args and wraps `computational_economics::portfolio::portfolio_returns_into`.
 pub fn econ_portfolio_returns(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let flat_returns = args::rec_f64_list(args, "asset_returns")
         .ok_or_else(|| args::bad(span, "Econ.portfolio_returns needs asset_returns"))?;
@@ -1350,6 +1419,7 @@ pub fn econ_portfolio_returns(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.covariance_matrix` — validates args and wraps `computational_economics::portfolio::covariance_matrix_into`.
 pub fn econ_covariance_matrix(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.covariance_matrix needs returns"))?;
@@ -1374,6 +1444,7 @@ pub fn econ_covariance_matrix(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.portfolio_variance` — validates args and wraps `computational_economics::portfolio::portfolio_variance_from_covariance`.
 pub fn econ_portfolio_variance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let weights = args::rec_f64_list(args, "weights")
         .ok_or_else(|| args::bad(span, "Econ.portfolio_variance needs weights"))?;
@@ -1390,6 +1461,7 @@ pub fn econ_portfolio_variance(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Time series: returns, wealth, drawdown, rolling stats, simulations ────────
 
+/// VibeScript seam for `Econ.simple_returns` — validates args and wraps `computational_economics::time_series::simple_returns_into`.
 pub fn econ_simple_returns(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let prices = args::rec_f64_list(args, "prices")
         .ok_or_else(|| args::bad(span, "Econ.simple_returns needs prices"))?;
@@ -1408,6 +1480,7 @@ pub fn econ_simple_returns(args: &Value, span: Span) -> Result<Value, Diagnostic
     }
 }
 
+/// VibeScript seam for `Econ.log_returns` — validates args and wraps `computational_economics::time_series::log_returns_into`.
 pub fn econ_log_returns(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let prices = args::rec_f64_list(args, "prices")
         .ok_or_else(|| args::bad(span, "Econ.log_returns needs prices"))?;
@@ -1426,6 +1499,7 @@ pub fn econ_log_returns(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.cumulative_wealth` — validates args and wraps `computational_economics::time_series::cumulative_wealth_into`.
 pub fn econ_cumulative_wealth(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.cumulative_wealth needs returns"))?;
@@ -1444,6 +1518,7 @@ pub fn econ_cumulative_wealth(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.drawdown` — validates args and wraps `computational_economics::time_series::drawdown_into`.
 pub fn econ_drawdown(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let wealth = args::rec_f64_list(args, "wealth")
         .ok_or_else(|| args::bad(span, "Econ.drawdown needs wealth"))?;
@@ -1462,6 +1537,7 @@ pub fn econ_drawdown(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.rolling_mean` — validates args and wraps `computational_economics::time_series::rolling_mean_into`.
 pub fn econ_rolling_mean(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values = args::rec_f64_list(args, "values")
         .ok_or_else(|| args::bad(span, "Econ.rolling_mean needs values"))?;
@@ -1483,6 +1559,7 @@ pub fn econ_rolling_mean(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     }
 }
 
+/// VibeScript seam for `Econ.rolling_variance` — validates args and wraps `computational_economics::time_series::rolling_variance_into`.
 pub fn econ_rolling_variance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values = args::rec_f64_list(args, "values")
         .ok_or_else(|| args::bad(span, "Econ.rolling_variance needs values"))?;
@@ -1504,6 +1581,7 @@ pub fn econ_rolling_variance(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.gbm_simulate` — validates args and wraps `computational_economics::time_series::gbm_simulate_into`.
 pub fn econ_gbm_simulate(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s0 =
         args::rec_f64(args, "s0").ok_or_else(|| args::bad(span, "Econ.gbm_simulate needs s0"))?;
@@ -1529,6 +1607,7 @@ pub fn econ_gbm_simulate(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     }
 }
 
+/// VibeScript seam for `Econ.stress_scenario` — validates args and wraps `computational_economics::time_series::apply_stress_scenario_into`.
 pub fn econ_stress_scenario(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.stress_scenario needs returns"))?;
@@ -1549,6 +1628,7 @@ pub fn econ_stress_scenario(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.block_bootstrap` — validates args and wraps `computational_economics::time_series::block_bootstrap_mean_into`.
 pub fn econ_block_bootstrap(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let returns = args::rec_f64_list(args, "returns")
         .ok_or_else(|| args::bad(span, "Econ.block_bootstrap needs returns"))?;
@@ -1577,6 +1657,7 @@ pub fn econ_block_bootstrap(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 // ── Yield curve: par yield, spot curve ────────────────────────────────────────
 
+/// VibeScript seam for `Econ.par_yield` — validates args and wraps `computational_economics::yield_curve::par_yield_from_zero_curve`.
 pub fn econ_par_yield(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::yield_curve::{
         par_yield_from_zero_curve, CurvePoint,
@@ -1610,6 +1691,7 @@ pub fn econ_par_yield(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Spatial: gravity matrix, transport cost matrix, nearest facility ──────────
 
+/// VibeScript seam for `Econ.nearest_facility` — validates args and wraps `computational_economics::spatial_economics::nearest_facility_into`.
 pub fn econ_nearest_facility(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let demands = args::rec_f64_list(args, "demands")
         .ok_or_else(|| args::bad(span, "Econ.nearest_facility needs demands"))?;
@@ -1639,6 +1721,7 @@ pub fn econ_nearest_facility(args: &Value, span: Span) -> Result<Value, Diagnost
 
 // ── Public finance: progressive tax ───────────────────────────────────────────
 
+/// VibeScript seam for `Econ.progressive_tax` — validates args and wraps `computational_economics::public_finance::progressive_tax_into`.
 pub fn econ_progressive_tax(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::public_finance::{
         progressive_tax_into, TaxBracket,
@@ -1679,6 +1762,7 @@ pub fn econ_progressive_tax(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 // ── Mechanism: VCG, strategy-proofness, report ────────────────────────────────
 
+/// VibeScript seam for `Econ.vcg_payment` — validates args and wraps `computational_economics::mechanism::vickrey_clarke_groves_payment_into`.
 pub fn econ_vcg_payment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let valuations = args::rec_f64_list(args, "valuations")
         .ok_or_else(|| args::bad(span, "Econ.vcg_payment needs valuations"))?;
@@ -1693,6 +1777,7 @@ pub fn econ_vcg_payment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.strategy_proofness` — validates args and wraps `computational_economics::mechanism::check_strategy_proofness_2x2`.
 pub fn econ_strategy_proofness(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let valuations = args::rec_f64_list(args, "valuations")
         .ok_or_else(|| args::bad(span, "Econ.strategy_proofness needs valuations (2x2)"))?;
@@ -1712,6 +1797,7 @@ pub fn econ_strategy_proofness(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Markov: stationary distribution, simulate, first passage ──────────────────
 
+/// VibeScript seam for `Econ.stationary_distribution` — validates args and wraps `computational_economics::markov::stationary_distribution_into`.
 pub fn econ_stationary_distribution(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.stationary_distribution needs matrix"))?;
@@ -1732,6 +1818,7 @@ pub fn econ_stationary_distribution(args: &Value, span: Span) -> Result<Value, D
     }
 }
 
+/// VibeScript seam for `Econ.simulate_chain` — validates args and wraps `computational_economics::markov::simulate_chain_into`.
 pub fn econ_simulate_chain(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.simulate_chain needs matrix"))?;
@@ -1756,6 +1843,7 @@ pub fn econ_simulate_chain(args: &Value, span: Span) -> Result<Value, Diagnostic
     }
 }
 
+/// VibeScript seam for `Econ.mean_first_passage` — validates args and wraps `computational_economics::markov::mean_first_passage_time_into`.
 pub fn econ_mean_first_passage(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let p = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.mean_first_passage needs matrix"))?;
@@ -1780,6 +1868,7 @@ pub fn econ_mean_first_passage(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Labor: CES household production, human capital ────────────────────────────
 
+/// VibeScript seam for `Econ.household_production_ces` — validates args and wraps `computational_economics::labor_household::household_production_ces`.
 pub fn econ_household_production_ces(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let time = args::rec_f64(args, "time")
         .ok_or_else(|| args::bad(span, "Econ.household_production_ces needs time"))?;
@@ -1797,6 +1886,7 @@ pub fn econ_household_production_ces(args: &Value, span: Span) -> Result<Value, 
 
 // ── Environmental: pollution damage, marginal damage, abatement net benefit ───
 
+/// VibeScript seam for `Econ.pollution_damage` — validates args and wraps `computational_economics::environmental_resource::pollution_damage`.
 pub fn econ_pollution_damage(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let emissions = args::rec_f64(args, "emissions")
         .ok_or_else(|| args::bad(span, "Econ.pollution_damage needs emissions"))?;
@@ -1811,6 +1901,7 @@ pub fn econ_pollution_damage(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.marginal_damage` — validates args and wraps `computational_economics::environmental_resource::marginal_damage`.
 pub fn econ_marginal_damage(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let emissions = args::rec_f64(args, "emissions")
         .ok_or_else(|| args::bad(span, "Econ.marginal_damage needs emissions"))?;
@@ -1825,6 +1916,7 @@ pub fn econ_marginal_damage(args: &Value, span: Span) -> Result<Value, Diagnosti
     }
 }
 
+/// VibeScript seam for `Econ.abatement_net_benefit` — validates args and wraps `computational_economics::environmental_resource::abatement_net_benefit`.
 pub fn econ_abatement_net_benefit(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let baseline = args::rec_f64(args, "baseline_emissions")
         .ok_or_else(|| args::bad(span, "Econ.abatement_net_benefit needs baseline_emissions"))?;
@@ -1842,6 +1934,7 @@ pub fn econ_abatement_net_benefit(args: &Value, span: Span) -> Result<Value, Dia
 
 // ── Econometrics: WLS, IV/2SLS, logistic MLE ──────────────────────────────────
 
+/// VibeScript seam for `Econ.wls` — validates args and wraps `computational_economics::econometrics::wls_into`.
 pub fn econ_wls(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64_list(args, "x").ok_or_else(|| args::bad(span, "Econ.wls needs x"))?;
     let y = args::rec_f64_list(args, "y").ok_or_else(|| args::bad(span, "Econ.wls needs y"))?;
@@ -1872,6 +1965,7 @@ pub fn econ_wls(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.iv_2sls` — validates args and wraps `computational_economics::econometrics::iv_2sls_into`.
 pub fn econ_iv_2sls(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64_list(args, "x_endogenous")
         .ok_or_else(|| args::bad(span, "Econ.iv_2sls needs x_endogenous"))?;
@@ -1897,6 +1991,7 @@ pub fn econ_iv_2sls(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
+/// VibeScript seam for `Econ.logistic_mle` — validates args and wraps `computational_economics::econometrics::logistic_mle_into`.
 pub fn econ_logistic_mle(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64_list(args, "x")
         .ok_or_else(|| args::bad(span, "Econ.logistic_mle needs x"))?;
@@ -1921,6 +2016,7 @@ pub fn econ_logistic_mle(args: &Value, span: Span) -> Result<Value, Diagnostic> 
 
 // ── Dynamic programming: value iteration, policy iteration ────────────────────
 
+/// VibeScript seam for `Econ.value_iteration` — validates args and wraps `computational_economics::dynamic_programming::value_iteration_into`.
 pub fn econ_value_iteration(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rewards = args::rec_f64_list(args, "rewards")
         .ok_or_else(|| args::bad(span, "Econ.value_iteration needs rewards"))?;
@@ -1949,6 +2045,7 @@ pub fn econ_value_iteration(args: &Value, span: Span) -> Result<Value, Diagnosti
 
 // ── Forensic: narrative divergence, harm trace ────────────────────────────────
 
+/// VibeScript seam for `Econ.narrative_divergence` — validates args and wraps `computational_economics::forensic_economics::compute_narrative_divergence`.
 pub fn econ_narrative_divergence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::forensic_economics::{
         compute_narrative_divergence, NquinVector,
@@ -2061,6 +2158,7 @@ pub fn econ_narrative_divergence(args: &Value, span: Span) -> Result<Value, Diag
 
 // ── Network economics: centrality, cascades, interbank clearing ───────────────
 
+/// VibeScript seam for `Econ.eigenvector_centrality` — validates args and wraps `computational_economics::network_economics::eigenvector_centrality_into`.
 pub fn econ_eigenvector_centrality(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let adj = args::rec_f64_list(args, "adjacency")
         .ok_or_else(|| args::bad(span, "Econ.eigenvector_centrality needs adjacency"))?;
@@ -2078,6 +2176,7 @@ pub fn econ_eigenvector_centrality(args: &Value, span: Span) -> Result<Value, Di
     }
 }
 
+/// VibeScript seam for `Econ.degree_centrality` — validates args and wraps `computational_economics::network_economics::degree_centrality_into`.
 pub fn econ_degree_centrality(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let adj = args::rec_f64_list(args, "adjacency")
         .ok_or_else(|| args::bad(span, "Econ.degree_centrality needs adjacency"))?;
@@ -2092,6 +2191,7 @@ pub fn econ_degree_centrality(args: &Value, span: Span) -> Result<Value, Diagnos
     }
 }
 
+/// VibeScript seam for `Econ.interbank_clearing` — validates args and wraps `computational_economics::network_economics::interbank_clearing_into`.
 pub fn econ_interbank_clearing(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let exposures = args::rec_f64_list(args, "exposures")
         .ok_or_else(|| args::bad(span, "Econ.interbank_clearing needs exposures"))?;
@@ -2112,6 +2212,7 @@ pub fn econ_interbank_clearing(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Input-output: Leontief inverse, multipliers, key sectors ──────────────────
 
+/// VibeScript seam for `Econ.leontief_inverse` — validates args and wraps `computational_economics::input_output::leontief_inverse_into`.
 pub fn econ_leontief_inverse(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = args::rec_f64_list(args, "matrix")
         .ok_or_else(|| args::bad(span, "Econ.leontief_inverse needs matrix"))?;
@@ -2131,6 +2232,7 @@ pub fn econ_leontief_inverse(args: &Value, span: Span) -> Result<Value, Diagnost
     }
 }
 
+/// VibeScript seam for `Econ.output_multipliers` — validates args and wraps `computational_economics::input_output::output_multipliers_from_inverse`.
 pub fn econ_output_multipliers(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let leontief_inv = args::rec_f64_list(args, "leontief_inverse")
         .ok_or_else(|| args::bad(span, "Econ.output_multipliers needs leontief_inverse"))?;
@@ -2157,6 +2259,7 @@ pub fn econ_agent_based_aggregate_wealth(_args: &Value, _span: Span) -> Result<V
 
 // ── Ontology bridge: scalar/vector encoding, FIBO ─────────────────────────────
 
+/// VibeScript seam for `Econ.validate_scalar_constraint` — validates args and wraps `computational_economics::ontology_bridge::validate_scalar_econ_constraint`.
 pub fn econ_validate_scalar_constraint(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let value = args::rec_f64(args, "value")
         .ok_or_else(|| args::bad(span, "Econ.validate_scalar_constraint needs value"))?;
@@ -2178,8 +2281,9 @@ pub fn econ_aggregate_paper_fills(_args: &Value, _span: Span) -> Result<Value, D
     )]))
 }
 
-// ── Double-entry accounting & REA value flows ──────────────────────────────
+// ── Double-entry accounting & obligation flows ─────────────────────────────
 
+/// VibeScript seam for `Econ.accounting_balance` — validates args and wraps `computational_economics::accounting::account_balances_into`.
 pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::accounting::{
         account_balances_into, trial_balance, Account, AccountType, Posting,

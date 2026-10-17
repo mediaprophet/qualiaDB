@@ -24,8 +24,8 @@
 //!
 //! **Scaffold status (P0.7 partial):** the golden vectors for the P0.1–P0.5
 //! container (header + section table + CRC + NODE section) are pinned here.
-//! The mesh-section golden vectors (P0.4) are a clearly-marked placeholder —
-//! they will be added when P0.4 lands. The normative `.10d` v1 spec document
+//! The mesh-section golden vectors (P0.4) are pinned and verified (unit cube) —
+//! with pinned CRC-32C (GOLDEN_MESH_ONLY_CRC). The normative `.10d` v1 spec document
 //! (the prose layout tables, magic bytes, version number, etc.) is the
 //! execution plan's P0.7 deliverable; this module is the executable
 //! conformance check, not the prose spec.

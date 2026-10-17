@@ -1,7 +1,7 @@
 //! Finance invoke extensions — currency conversion, multi-sig, ledger.
 
 use super::super::args;
-use crate::modalities::{carrier, value_flow};
+use crate::modalities::{carrier, socioeconomics};
 use vibe::{DiagCode, Diagnostic, Span, Value};
 
 /// `Finance.convert_currency` — convert an amount using a rate in micros.
@@ -12,7 +12,7 @@ pub fn convert_currency(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         .ok_or_else(|| args::bad(span, "Finance.convert_currency needs amount"))?;
     let rate_micros = args::rec_u64(args, "rate_micros")
         .ok_or_else(|| args::bad(span, "Finance.convert_currency needs rate_micros"))?;
-    let converted = value_flow::convert_currency(amount, rate_micros);
+    let converted = socioeconomics::convert_currency(amount, rate_micros);
     Ok(args::record([
         ("amount", Value::U64(amount)),
         ("rate_micros", Value::U64(rate_micros)),

@@ -134,8 +134,8 @@ pub mod contract;
 pub use contract::{
     formation_stage, incorporates_by_reference, is_binding_contract, FormationStage,
 };
-pub mod value_flow;
-pub use value_flow::{commons_cost, is_commons_discharged, outstanding, pool_after, royalty};
+pub mod socioeconomics;
+pub use socioeconomics::{commons_cost, is_commons_discharged, outstanding, pool_after, royalty};
 pub mod capability_gap;
 pub use capability_gap::{capability_gap, requirements_met};
 pub mod identity_fabric;
@@ -175,3 +175,9 @@ pub use reconciliation::{
     cascade_recheck_flags, compare_views, ReconciliationRecord, ReconciliationStatus,
     RECHECKABLE_FLAG,
 };
+pub mod spatiotemporal_predicates;
+pub use spatiotemporal_predicates::*;
+pub mod spatiotemporal_linguistics;
+pub use spatiotemporal_linguistics::*;
+
+

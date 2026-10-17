@@ -136,6 +136,20 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
         start.elapsed().as_secs_f64() * 1000.0
     }
 
+    fn format_bench_ms(ms: f64) -> String {
+        if ms < 0.001 {
+            let ns = (ms * 1_000_000.0).round() as u64;
+            format!("{ns} ns")
+        } else if ms < 0.1 {
+            let us = ms * 1_000.0;
+            format!("{:.2} µs", us)
+        } else if ms < 1.0 {
+            format!("{:.3} ms", ms)
+        } else {
+            format!("{:.2} ms", ms)
+        }
+    }
+
     fn latency_stats_with_samples<F: FnMut() -> T, T>(
         warmup_samples: usize,
         measured_samples: usize,
@@ -313,7 +327,14 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
     }
     let mean: f64 = times.iter().sum::<f64>() / times.len() as f64;
     let var: f64 = times.iter().map(|&t| (t - mean).powi(2)).sum::<f64>() / times.len() as f64;
-    let qualia_jitter = format!("+/- {:.2} ms (measured stddev)", var.sqrt());
+    let jitter_stddev = var.sqrt();
+    let qualia_jitter = if jitter_stddev < 0.001 {
+        format!("+/- {:.0} ns (measured stddev)", jitter_stddev * 1_000_000.0)
+    } else if jitter_stddev < 0.1 {
+        format!("+/- {:.2} µs (measured stddev)", jitter_stddev * 1_000.0)
+    } else {
+        format!("+/- {:.2} ms (measured stddev)", jitter_stddev)
+    };
 
     let qualia_sync = time_ms(|| {
         let mut copy = synth_map.clone();
@@ -495,7 +516,7 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
             "scaling_stats": "qualia_scaling_stats reports bounded synthetic scaling at 10k, 100k, and 1M subjects with 5 warmups plus 50 measured samples per operation.",
             "timer_calibration": "timer_calibration reports empty benchmark overhead and observed Instant granularity so sub-microsecond results can be interpreted against measurement noise.",
             "operation_classes": "point is an indexed hash lookup, twohop is two indexed adjacency lookups, and filter is a predicate scan across materialized synthetic adjacency values.",
-            "single_run_metrics": "metrics.qualia preserves the legacy single-run millisecond strings for CLI/dashboard compatibility; sub-0.005ms timings may round to 0.00 ms there.",
+            "single_run_metrics": "metrics.qualia reports adaptive-precision timings (ns, µs, or ms) avoiding integer millisecond zero-truncation; sub-millisecond operations accurately show their microsecond/nanosecond duration.",
             "wordnet_metrics": "WordNet compression and SHACL figures are reported as synthetic/reference highlights when a real WordNet .q42 file is not present."
         },
         "comparison_scope": {
@@ -521,24 +542,25 @@ pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>>
         "qualia_scaling_stats": qualia_scaling_stats,
         "timer_calibration": timer_calibration,
         "metrics": {
-            "point": { "qualia": format!("{:.2} ms", qualia_point), "oxi": "0.4 ms", "surreal": "0.9 ms" },
-            "twohop": { "qualia": format!("{:.2} ms", qualia_twohop), "oxi": "1.5 ms", "surreal": "3.2 ms" },
-            "filter": { "qualia": format!("{:.2} ms", qualia_filter), "oxi": "2.1 ms", "surreal": "1.4 ms" },
-            "ingestion": { "qualia": format!("{:.2} ms (0 alloc style)", qualia_ingest), "oxi": "OOM", "surreal": "OOM" },
-            "cyclic": { "qualia": format!("{:.2} ms", qualia_cyclic), "oxi": "TIMEOUT", "surreal": "TIMEOUT" },
-            "ttfq": { "qualia": format!("{:.2} ms", qualia_ttfq), "oxi": "1240 ms", "surreal": "1850 ms" },
+            "point": { "qualia": format_bench_ms(qualia_point), "oxi": "0.4 ms", "surreal": "0.9 ms" },
+            "twohop": { "qualia": format_bench_ms(qualia_twohop), "oxi": "1.5 ms", "surreal": "3.2 ms" },
+            "filter": { "qualia": format_bench_ms(qualia_filter), "oxi": "2.1 ms", "surreal": "1.4 ms" },
+            "ingestion": { "qualia": format!("{} (0 alloc style)", format_bench_ms(qualia_ingest)), "oxi": "OOM", "surreal": "OOM" },
+            "cyclic": { "qualia": format_bench_ms(qualia_cyclic), "oxi": "TIMEOUT", "surreal": "TIMEOUT" },
+            "ttfq": { "qualia": format_bench_ms(qualia_ttfq), "oxi": "1240 ms", "surreal": "1850 ms" },
             "jitter": { "qualia": qualia_jitter, "oxi": "+/- 450 ms", "surreal": "+/- 320 ms" },
-            "sync": { "qualia": format!("{:.2} ms", qualia_sync), "oxi": "N/A", "surreal": "2450 ms" },
-            "intercept": { "qualia": format!("{:.2} ms", qualia_intercept), "oxi": "N/A", "surreal": "N/A" },
-            "obligation_escrow": { "qualia": format!("{:.2} ms", qualia_escrow), "oxi": "TIMEOUT (10k joins)", "surreal": "4800 ms" },
-            "provenance_val": { "qualia": format!("{:.2} ms", qualia_provenance), "oxi": "150 ms", "surreal": "85 ms" },
-            "nym_partition": { "qualia": format!("{:.2} ms (O(1) style)", qualia_nym), "oxi": "650 ms (RLS decay)", "surreal": "340 ms" },
+            "sync": { "qualia": format_bench_ms(qualia_sync), "oxi": "N/A", "surreal": "2450 ms" },
+            "intercept": { "qualia": format_bench_ms(qualia_intercept), "oxi": "N/A", "surreal": "N/A" },
+            "obligation_escrow": { "qualia": format_bench_ms(qualia_escrow), "oxi": "TIMEOUT (10k joins)", "surreal": "4800 ms" },
+            "provenance_val": { "qualia": format_bench_ms(qualia_provenance), "oxi": "150 ms", "surreal": "85 ms" },
+            "nym_partition": { "qualia": format!("{} (O(1) style)", format_bench_ms(qualia_nym)), "oxi": "650 ms (RLS decay)", "surreal": "340 ms" },
             "wordnet_compression": { "qualia": if std::path::Path::new("wordnet.q42").exists() { "85.1% (523MB to 74.6MB, 5.56M quins)" } else { "85.1% (synthetic)" }, "oxi": "N/A (OOM)", "surreal": "N/A (OOM)" },
-            "wordnet_streaming": { "qualia": format!("{:.1} ms (first query, no full load)", qualia_ttfq), "oxi": "1240 ms (full load)", "surreal": "1850 ms (full load)" },
+            "wordnet_streaming": { "qualia": format!("{} (first query, no full load)", format_bench_ms(qualia_ttfq)), "oxi": "1240 ms (full load)", "surreal": "1850 ms (full load)" },
             "wordnet_shacl": { "qualia": "42k quins/s + SHACL (5.56M quins)", "oxi": "2.1k/s (no native)", "surreal": "1.4k/s (no native)" },
-            "wordnet_defeasible": { "qualia": format!("{:.2} ms (lexical rights)", qualia_cyclic), "oxi": "TIMEOUT", "surreal": "TIMEOUT" },
+            "wordnet_defeasible": { "qualia": format!("{} (lexical rights)", format_bench_ms(qualia_cyclic)), "oxi": "TIMEOUT", "surreal": "TIMEOUT" },
             "wordnet_p2p_stream": { "qualia": "3.2 ms (WebRTC only needed SuperBlocks)", "oxi": "N/A", "surreal": "N/A" }
         }
+
     });
 
     let json_str = serde_json::to_string_pretty(&results)?;

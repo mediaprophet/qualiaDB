@@ -13,7 +13,7 @@ use super::scene::{Camera, Vec3};
 use super::{Renderer, ScreenPoint};
 
 /// Draw style for a node's mesh. Colors are CSS strings (theme `--qualia-*`
-/// variables work) so the value flows straight to the Canvas2D backend.
+/// variables work) so values flow straight to the Canvas2D backend.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Style {
     /// Edge/line color, or `None` to skip wireframe.

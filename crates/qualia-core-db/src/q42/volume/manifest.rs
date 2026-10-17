@@ -28,6 +28,7 @@ const HEADER_BYTES: usize = 32;
 const ENTRY_FIXED_BYTES: usize = 66;
 const LEX_ENTRY_FIXED_BYTES: usize = 58;
 
+/// Build an `InvalidData` io::Error for malformed manifest content.
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
@@ -74,10 +75,12 @@ pub struct Q42SegmentMatchRange {
 }
 
 impl Q42SegmentMatchRange {
+    /// Number of segment indices in the range.
     pub fn len(self) -> usize {
         self.end - self.start
     }
 
+    /// `true` when the match range is empty.
     pub fn is_empty(self) -> bool {
         self.start == self.end
     }
@@ -92,6 +95,9 @@ pub struct Q42SegmentMatchPage {
 }
 
 impl Q42VolumeManifest {
+    /// Serialize the manifest (magic, version, generation, then
+    /// volume + lexicon segment entries) — validates first and
+    /// enforces the 4 MiB front-matter ceiling.
     pub fn encode(&self) -> io::Result<Vec<u8>> {
         self.validate()?;
         let mut bytes = Vec::with_capacity(
@@ -145,6 +151,8 @@ impl Q42VolumeManifest {
         Ok(bytes)
     }
 
+    /// Parse a manifest blob: size cap, magic, version, and each
+    /// segment entry — then `validate()`.
     pub fn decode(bytes: &[u8]) -> io::Result<Self> {
         if bytes.len() < HEADER_BYTES || bytes.len() > MAX_VOLUME_MANIFEST_BYTES {
             return Err(invalid("invalid Q42 volume manifest length"));
@@ -251,6 +259,8 @@ impl Q42VolumeManifest {
         Ok(manifest)
     }
 
+    /// Structural validation: locator syntax, hash-range ordering,
+    /// non-empty segments, duplicate detection.
     pub fn validate(&self) -> io::Result<()> {
         if self.segments.is_empty() || self.segments.len() > MAX_VOLUME_SEGMENTS {
             return Err(io::Error::new(
@@ -361,6 +371,9 @@ impl Q42VolumeManifest {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Build the manifest entry for an on-disk segment: scans every
+    /// superblock for first/last object hash and Quin count, then
+    /// hashes the file (SHA-256).
     pub fn segment_from_file(path: &Path, locator: String) -> io::Result<Q42VolumeSegment> {
         let volume = Q42Volume::open(path)?;
         let mut first = None;
@@ -397,6 +410,8 @@ impl Q42VolumeManifest {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Build the manifest entry for a Q42LEX shard: first/last hash
+    /// from the lexicon view plus the file's SHA-256.
     pub fn lexicon_segment_from_file(
         path: &Path,
         locator: String,
@@ -426,6 +441,8 @@ impl Q42VolumeManifest {
 pub trait Q42SegmentRangeFactory {
     type Source: Q42RangeSource;
 
+    /// Open the segment as a range source (local file, HTTP range,
+    /// IPFS block — transport is the implementor's choice).
     fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source>;
 }
 
@@ -433,6 +450,7 @@ pub trait Q42SegmentRangeFactory {
 pub trait Q42LexiconRangeFactory {
     type Source: Q42RangeSource;
 
+    /// Open the lexicon shard as a range source.
     fn open_lexicon_segment(&self, segment: &Q42LexiconSegment) -> io::Result<Self::Source>;
 }
 
@@ -443,6 +461,7 @@ where
 {
     type Source = S;
 
+    /// Blanket impl: a closure doubles as the factory.
     fn open_lexicon_segment(&self, segment: &Q42LexiconSegment) -> io::Result<Self::Source> {
         self(segment)
     }
@@ -455,6 +474,7 @@ where
 {
     type Source = S;
 
+    /// Blanket impl: a closure doubles as the factory.
     fn open_segment(&self, segment: &Q42VolumeSegment) -> io::Result<Self::Source> {
         self(segment)
     }
@@ -498,6 +518,9 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
         set.attach_lexicon_segments(&|segment| lexicon_factory.open_lexicon_segment(segment))?;
         Ok(set)
     }
+    /// Open a logical volume set over arbitrary transports: reads the
+    /// root's front-embedded manifest, then opens each child segment
+    /// through `factory`.
     pub fn open_root<R, F>(root: &Q42RangeVolume<R>, factory: &F) -> io::Result<Self>
     where
         R: Q42RangeSource,
@@ -536,14 +559,17 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
         })
     }
 
+    /// The decoded root manifest.
     pub fn manifest(&self) -> &Q42VolumeManifest {
         &self.manifest
     }
 
+    /// Opened data segments, in manifest order.
     pub fn segments(&self) -> &[Q42RangeVolume<S>] {
         &self.segments
     }
 
+    /// Opened lexicon shard segments, in manifest order.
     pub fn lexicon_segments(&self) -> &[Q42RangeVolume<S>] {
         &self.lexicon_segments
     }
@@ -706,6 +732,8 @@ impl<S: Q42RangeSource> Q42RangeVolumeSet<S> {
             .map(|range| range.start)
     }
 
+    /// Caller-buffered page of candidate segment indices for
+    /// `object_hash` — forwards to the manifest's interval search.
     pub fn segment_indices_for_object_into(
         &self,
         object_hash: u64,
@@ -767,6 +795,8 @@ impl Q42VolumeSegment {
     }
 }
 
+/// Locator contract: non-empty; `ipfs://` locators must carry an
+/// alphanumeric CID. (Cold-path validation.)
 fn validate_segment_locator(locator: &str) -> io::Result<()> {
     if locator.is_empty() {
         return Err(io::Error::new(
@@ -812,6 +842,8 @@ pub struct Q42VolumeSet {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl Q42VolumeSet {
+    /// Open a local logical volume set: parse the root's embedded
+    /// manifest and open each sibling segment file.
     pub fn open_root(path: &Path) -> io::Result<Self> {
         let root = Q42Volume::open(path)?;
         let manifest = root
@@ -874,13 +906,16 @@ impl Q42VolumeSet {
         &self.root
     }
 
+    /// The decoded root manifest.
     pub fn manifest(&self) -> &Q42VolumeManifest {
         &self.manifest
     }
+    /// Opened local data segments, in manifest order.
     pub fn segments(&self) -> &[Q42Volume] {
         &self.segments
     }
 
+    /// Opened local lexicon shards, in manifest order.
     pub fn lexicon_segments(&self) -> &[Q42Volume] {
         &self.lexicon_segments
     }
@@ -938,6 +973,9 @@ impl Q42VolumeSet {
         }
     }
 
+    /// Re-hash every segment and lexicon shard beside `root_path`
+    /// and compare against the manifest's attested SHA-256s — fails
+    /// on the first mismatch.
     pub fn verify_segment_hashes(&self, root_path: &Path) -> io::Result<()> {
         let parent = root_path.parent().unwrap_or_else(|| Path::new("."));
         for entry in &self.manifest.segments {
@@ -990,6 +1028,7 @@ impl Q42VolumeSet {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Streamed SHA-256 of a file (64 KiB scratch buffer).
 fn sha256_file(path: &Path) -> io::Result<[u8; 32]> {
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
@@ -1005,6 +1044,9 @@ fn sha256_file(path: &Path) -> io::Result<[u8; 32]> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// `segment`'s path relative to `root`'s parent directory — the
+/// locator form recorded in manifests. Errors when `segment` is not
+/// under the root directory or is non-UTF-8.
 pub fn root_relative_path(root: &Path, segment: &Path) -> io::Result<String> {
     let parent = root.parent().unwrap_or_else(|| Path::new("."));
     let relative: PathBuf = segment

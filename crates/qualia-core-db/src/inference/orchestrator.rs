@@ -77,6 +77,7 @@ pub trait ThermalGovernor: Send + Sync {
 
 pub struct NullThermalGovernor;
 impl ThermalGovernor for NullThermalGovernor {
+    /// Always-`Cool` governor (thermal checks disabled).
     fn get_thermal_state(&self) -> ThermalStatus {
         ThermalStatus::Cool
     }
@@ -92,6 +93,8 @@ struct NewtonCoolingODE {
 }
 
 impl ODEFunction for NewtonCoolingODE {
+    /// ODE right-hand side for the thermal model (load + ambient
+    /// cooling terms).
     fn derivatives(&self, _t: f64, y: &[f64; 4]) -> [f64; 4] {
         let temp = y[0];
         let dt_dt = -self.cooling_constant * (temp - self.ambient_temp) + self.power_input;
@@ -104,6 +107,7 @@ pub struct CalculusThermalGovernor {
 }
 
 impl CalculusThermalGovernor {
+    /// Governor seeded at `initial_temp` °C.
     pub fn new(initial_temp: f64) -> Self {
         Self {
             current_temp: std::sync::Mutex::new(initial_temp),
@@ -112,6 +116,8 @@ impl CalculusThermalGovernor {
 }
 
 impl ThermalGovernor for CalculusThermalGovernor {
+    /// Thermal status after advancing the Newton-cooling ODE one
+    /// RK4 step from the last temperature.
     fn get_thermal_state(&self) -> ThermalStatus {
         let mut temp = self.current_temp.lock().unwrap();
 
@@ -148,6 +154,7 @@ pub struct TaskOrchestrator {
 }
 
 impl TaskOrchestrator {
+    /// Compiled shapes this intent routes to.
     fn routed_shapes(intent: &AgentIntent) -> Vec<CompiledShape> {
         let compiler = ShaclCompiler::new();
         let mut shapes = Vec::new();
@@ -231,6 +238,7 @@ impl TaskOrchestrator {
         shapes
     }
 
+    /// Orchestrator driven by `thermal_governor`.
     pub fn new(thermal_governor: Box<dyn ThermalGovernor>) -> Self {
         Self {
             thermal_governor,
@@ -242,6 +250,7 @@ impl TaskOrchestrator {
         }
     }
 
+    /// Human-readable label for the current thermal state.
     pub fn thermal_state_label(&self) -> &'static str {
         match self.thermal_governor.get_thermal_state() {
             ThermalStatus::Cool => "Cool",
@@ -250,19 +259,25 @@ impl TaskOrchestrator {
         }
     }
 
+    /// Currently resident model id, if any.
     pub fn resident_model_id(&self) -> Option<u64> {
         *self.current_model_id.lock().unwrap()
     }
 
+    /// Bytes held by the resident model.
     pub fn resident_memory_bytes(&self) -> u64 {
         self.resident_memory_bytes.load(Ordering::Relaxed)
     }
 
+    /// Record `model_id`/`bytes` as resident (ledger only — the
+    /// caller owns actual loading).
     pub fn register_resident_model(&self, model_id: u64, bytes: u64) {
         *self.current_model_id.lock().unwrap() = Some(model_id);
         self.resident_memory_bytes.store(bytes, Ordering::Relaxed);
     }
 
+    /// Load `model_id` through `agent` when not already resident;
+    /// evicts the current model first if needed.
     pub fn load_model(&self, agent: &LocalLlmAgent, model_id: u64) -> Result<(), &'static str> {
         if self.scrubbing_lock.load(Ordering::Acquire) {
             return Err("Cannot load model: Swarm Worker is actively scrubbing memory arena");
@@ -300,6 +315,7 @@ impl TaskOrchestrator {
         Ok(())
     }
 
+    /// Evict `model_id` from the residency ledger.
     pub fn evict_model(&self, model_id: u64) {
         let resident = self.resident_model_id();
         if resident.is_none() {
@@ -435,6 +451,9 @@ impl TaskOrchestrator {
         )
     }
 
+    /// Core inference orchestration: intent validation, sanctuary
+    /// and thermal gates, resident-model load, grounding gate, then
+    /// agent inference.
     fn orchestrate_inference_inner(
         &self,
         agent: &dyn AgentRuntime,

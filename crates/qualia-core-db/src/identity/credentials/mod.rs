@@ -105,11 +105,29 @@ pub enum StatusResult {
 /// Issues, holds, presents, and verifies Verifiable Credentials with ML-DSA-65 proofs.
 pub struct VcRuntime {
     crypto: FiduciaryCrypto,
+    revocation_registry: std::sync::RwLock<HashMap<String, StatusResult>>,
 }
 
 impl VcRuntime {
     pub fn new(crypto: FiduciaryCrypto) -> Self {
-        Self { crypto }
+        Self {
+            crypto,
+            revocation_registry: std::sync::RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Revoke a credential by ID in the status registry.
+    pub fn revoke_credential(&self, credential_id: &str) {
+        if let Ok(mut reg) = self.revocation_registry.write() {
+            reg.insert(credential_id.to_string(), StatusResult::Revoked);
+        }
+    }
+
+    /// Suspend a credential by ID in the status registry.
+    pub fn suspend_credential(&self, credential_id: &str) {
+        if let Ok(mut reg) = self.revocation_registry.write() {
+            reg.insert(credential_id.to_string(), StatusResult::Suspended);
+        }
     }
 
     /// Issue a Verifiable Credential: sign the proof-less credential and attach the proof.
@@ -243,6 +261,226 @@ impl VcRuntime {
     }
 }
 
+impl CredentialStatus for VcRuntime {
+    fn check_status(&self, credential_id: &str) -> Result<StatusResult, VcError> {
+        let reg = self
+            .revocation_registry
+            .read()
+            .map_err(|e| VcError::CryptoError(format!("Lock error: {:?}", e)))?;
+        Ok(reg.get(credential_id).cloned().unwrap_or(StatusResult::Valid))
+    }
+}
+
+impl SelectiveDisclosure for VcRuntime {
+    fn generate_selective_presentation(
+        &self,
+        credential: &Credential,
+        disclosed_fields: &[String],
+    ) -> Result<Presentation, VcError> {
+        self.verify_credential(credential)?;
+
+        for field in disclosed_fields {
+            if !credential.credential_subject.contains_key(field) {
+                return Err(VcError::VerificationFailed);
+            }
+        }
+
+        let mut filtered_subject = HashMap::new();
+        if let Some(id) = credential.credential_subject.get("id") {
+            filtered_subject.insert("id".to_string(), id.clone());
+        }
+        for field in disclosed_fields {
+            if let Some(val) = credential.credential_subject.get(field) {
+                filtered_subject.insert(field.clone(), val.clone());
+            }
+        }
+
+        use sha2::{Digest, Sha256};
+        let mut hidden_hasher = Sha256::new();
+        for (k, v) in &credential.credential_subject {
+            if !disclosed_fields.contains(k) && k != "id" {
+                hidden_hasher.update(k.as_bytes());
+                hidden_hasher.update(b":");
+                hidden_hasher.update(v.as_bytes());
+                hidden_hasher.update(b";");
+            }
+        }
+        let hidden_hash = hex::encode(hidden_hasher.finalize());
+        filtered_subject.insert("_hiddenFieldsDigest".to_string(), hidden_hash);
+
+        let derived_cred = Credential {
+            context: credential.context.clone(),
+            id: format!("{}-selective", credential.id),
+            types: {
+                let mut t = credential.types.clone();
+                if !t.contains(&"SelectiveDisclosureCredential".to_string()) {
+                    t.push("SelectiveDisclosureCredential".to_string());
+                }
+                t
+            },
+            issuer: credential.issuer.clone(),
+            issuance_date: credential.issuance_date.clone(),
+            credential_subject: filtered_subject,
+            proof: None,
+        };
+
+        let key_id = credential
+            .proof
+            .as_ref()
+            .map(|p| p.verification_method.as_str());
+        let signed_cred = self.issue(derived_cred, key_id)?;
+        self.present(vec![signed_cred], key_id)
+    }
+
+    fn verify_selective_presentation(&self, presentation: &Presentation) -> Result<bool, VcError> {
+        self.verify_presentation(presentation)
+    }
+}
+
+impl ZkDisclosure for VcRuntime {
+    fn generate_zk_proof(
+        &self,
+        credential: &Credential,
+        predicates: &[String],
+    ) -> Result<Presentation, VcError> {
+        self.verify_credential(credential)?;
+
+        use sha2::{Digest, Sha256};
+        let mut zk_subject = HashMap::new();
+        if let Some(id) = credential.credential_subject.get("id") {
+            zk_subject.insert("id".to_string(), id.clone());
+        }
+
+        for (idx, pred) in predicates.iter().enumerate() {
+            let satisfied = evaluate_credential_predicate(&credential.credential_subject, pred)?;
+            if !satisfied {
+                return Err(VcError::VerificationFailed);
+            }
+
+            let mut hasher = Sha256::new();
+            hasher.update(credential.id.as_bytes());
+            hasher.update(b"||");
+            hasher.update(pred.as_bytes());
+            hasher.update(b"||satisfied");
+            let commitment = hex::encode(hasher.finalize());
+
+            zk_subject.insert(format!("predicate_{}", idx), pred.clone());
+            zk_subject.insert(format!("predicate_{}_satisfied", idx), "true".to_string());
+            zk_subject.insert(format!("zk_commitment_{}", idx), commitment);
+        }
+
+        let zk_cred = Credential {
+            context: credential.context.clone(),
+            id: format!("{}-zk", credential.id),
+            types: {
+                let mut t = credential.types.clone();
+                if !t.contains(&"ZkPredicateCredential".to_string()) {
+                    t.push("ZkPredicateCredential".to_string());
+                }
+                t
+            },
+            issuer: credential.issuer.clone(),
+            issuance_date: credential.issuance_date.clone(),
+            credential_subject: zk_subject,
+            proof: None,
+        };
+
+        let key_id = credential
+            .proof
+            .as_ref()
+            .map(|p| p.verification_method.as_str());
+        let signed_cred = self.issue(zk_cred, key_id)?;
+        self.present(vec![signed_cred], key_id)
+    }
+
+    fn verify_zk_proof(&self, presentation: &Presentation) -> Result<bool, VcError> {
+        self.verify_presentation(presentation)?;
+        use sha2::{Digest, Sha256};
+
+        for cred in &presentation.verifiable_credential {
+            let mut idx = 0;
+            while let Some(pred) = cred.credential_subject.get(&format!("predicate_{}", idx)) {
+                let satisfied_str = cred
+                    .credential_subject
+                    .get(&format!("predicate_{}_satisfied", idx))
+                    .ok_or(VcError::VerificationFailed)?;
+                if satisfied_str != "true" {
+                    return Err(VcError::VerificationFailed);
+                }
+
+                let commitment = cred
+                    .credential_subject
+                    .get(&format!("zk_commitment_{}", idx))
+                    .ok_or(VcError::VerificationFailed)?;
+
+                let mut hasher = Sha256::new();
+                let orig_cred_id = cred.id.trim_end_matches("-zk");
+                hasher.update(orig_cred_id.as_bytes());
+                hasher.update(b"||");
+                hasher.update(pred.as_bytes());
+                hasher.update(b"||satisfied");
+                let expected = hex::encode(hasher.finalize());
+
+                if commitment != &expected {
+                    return Err(VcError::VerificationFailed);
+                }
+                idx += 1;
+            }
+        }
+        Ok(true)
+    }
+}
+
+fn evaluate_credential_predicate(
+    subject: &HashMap<String, String>,
+    pred: &str,
+) -> Result<bool, VcError> {
+    let pred = pred.trim();
+    if let Some((k, v)) = pred.split_once(">=") {
+        let (k, v) = (k.trim(), v.trim());
+        let val_str = subject.get(k).ok_or(VcError::VerificationFailed)?;
+        if let (Ok(lhs), Ok(rhs)) = (val_str.parse::<f64>(), v.parse::<f64>()) {
+            return Ok(lhs >= rhs);
+        }
+        return Ok(val_str.as_str() >= v);
+    }
+    if let Some((k, v)) = pred.split_once("<=") {
+        let (k, v) = (k.trim(), v.trim());
+        let val_str = subject.get(k).ok_or(VcError::VerificationFailed)?;
+        if let (Ok(lhs), Ok(rhs)) = (val_str.parse::<f64>(), v.parse::<f64>()) {
+            return Ok(lhs <= rhs);
+        }
+        return Ok(val_str.as_str() <= v);
+    }
+    if let Some((k, v)) = pred.split_once("==") {
+        let (k, v) = (k.trim(), v.trim());
+        let val_str = subject.get(k).ok_or(VcError::VerificationFailed)?;
+        return Ok(val_str == v);
+    }
+    if let Some((k, v)) = pred.split_once("!=") {
+        let (k, v) = (k.trim(), v.trim());
+        let val_str = subject.get(k).ok_or(VcError::VerificationFailed)?;
+        return Ok(val_str != v);
+    }
+    if let Some((k, v)) = pred.split_once('>') {
+        let (k, v) = (k.trim(), v.trim());
+        let val_str = subject.get(k).ok_or(VcError::VerificationFailed)?;
+        if let (Ok(lhs), Ok(rhs)) = (val_str.parse::<f64>(), v.parse::<f64>()) {
+            return Ok(lhs > rhs);
+        }
+        return Ok(val_str.as_str() > v);
+    }
+    if let Some((k, v)) = pred.split_once('<') {
+        let (k, v) = (k.trim(), v.trim());
+        let val_str = subject.get(k).ok_or(VcError::VerificationFailed)?;
+        if let (Ok(lhs), Ok(rhs)) = (val_str.parse::<f64>(), v.parse::<f64>()) {
+            return Ok(lhs < rhs);
+        }
+        return Ok(val_str.as_str() < v);
+    }
+    Ok(subject.contains_key(pred))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,6 +495,8 @@ mod tests {
             "degree".to_string(),
             "Bachelor of Science and Arts".to_string(),
         );
+        subject.insert("gpa".to_string(), "3.85".to_string());
+        subject.insert("age".to_string(), "24".to_string());
         Credential {
             context: vec!["https://www.w3.org/2018/credentials/v1".to_string()],
             id: "http://example.edu/credentials/3732".to_string(),
@@ -316,5 +556,63 @@ mod tests {
         let issued = runtime.issue(test_credential(), Some("default")).unwrap();
         let presentation = runtime.present(vec![issued], Some("default")).unwrap();
         assert_eq!(runtime.verify_presentation(&presentation), Ok(true));
+    }
+
+    #[test]
+    fn selective_disclosure_roundtrip() {
+        let mut crypto = FiduciaryCrypto::new();
+        crypto.generate_key("default".to_string()).unwrap();
+        let runtime = VcRuntime::new(crypto);
+
+        let cred = runtime.issue(test_credential(), Some("default")).unwrap();
+        let disclosed = vec!["degree".to_string()];
+        let pres = runtime.generate_selective_presentation(&cred, &disclosed).unwrap();
+
+        assert_eq!(pres.verifiable_credential.len(), 1);
+        let subj = &pres.verifiable_credential[0].credential_subject;
+        assert_eq!(subj.get("degree").map(|s| s.as_str()), Some("Bachelor of Science and Arts"));
+        assert!(subj.get("age").is_none());
+        assert!(subj.get("gpa").is_none());
+        assert!(subj.contains_key("_hiddenFieldsDigest"));
+
+        assert_eq!(runtime.verify_selective_presentation(&pres), Ok(true));
+    }
+
+    #[test]
+    fn zk_predicate_disclosure_roundtrip() {
+        let mut crypto = FiduciaryCrypto::new();
+        crypto.generate_key("default".to_string()).unwrap();
+        let runtime = VcRuntime::new(crypto);
+
+        let cred = runtime.issue(test_credential(), Some("default")).unwrap();
+        let predicates = vec!["age >= 21".to_string(), "gpa > 3.5".to_string()];
+        let pres = runtime.generate_zk_proof(&cred, &predicates).unwrap();
+
+        assert_eq!(pres.verifiable_credential.len(), 1);
+        let subj = &pres.verifiable_credential[0].credential_subject;
+        // Age and gpa values are NOT exposed!
+        assert!(subj.get("age").is_none());
+        assert!(subj.get("gpa").is_none());
+        assert_eq!(subj.get("predicate_0_satisfied").map(|s| s.as_str()), Some("true"));
+        assert_eq!(subj.get("predicate_1_satisfied").map(|s| s.as_str()), Some("true"));
+
+        assert_eq!(runtime.verify_zk_proof(&pres), Ok(true));
+
+        // False predicate fails closed
+        let false_pred = vec!["age < 18".to_string()];
+        assert_eq!(runtime.generate_zk_proof(&cred, &false_pred), Err(VcError::VerificationFailed));
+    }
+
+    #[test]
+    fn credential_status_revocation() {
+        let runtime = VcRuntime::new(FiduciaryCrypto::new());
+        let cred_id = "http://example.edu/credentials/3732";
+        assert_eq!(runtime.check_status(cred_id), Ok(StatusResult::Valid));
+
+        runtime.suspend_credential(cred_id);
+        assert_eq!(runtime.check_status(cred_id), Ok(StatusResult::Suspended));
+
+        runtime.revoke_credential(cred_id);
+        assert_eq!(runtime.check_status(cred_id), Ok(StatusResult::Revoked));
     }
 }

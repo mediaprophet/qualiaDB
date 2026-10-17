@@ -58,6 +58,7 @@ pub struct ExternalSorter {
 }
 
 impl ExternalSorter {
+    /// External sorter spooling runs into `temp_dir`.
     pub fn new(temp_dir: PathBuf) -> Self {
         // Ensure temp_dir exists
         std::fs::create_dir_all(&temp_dir).unwrap();
@@ -77,12 +78,14 @@ impl ExternalSorter {
         }
     }
 
+    /// Install a diagnostic-message sink (progress/notes).
     pub fn set_note_sink(&mut self, sink: std::sync::Arc<dyn Fn(&str) + Send + Sync>) {
         self.note = Some(sink.clone());
         #[cfg(not(target_arch = "wasm32"))]
         self.lex.set_note_sink(sink);
     }
 
+    /// Emit a note through the sink when one is installed.
     fn note(&self, msg: impl AsRef<str>) {
         let msg = msg.as_ref();
         if let Some(sink) = &self.note {
@@ -92,6 +95,7 @@ impl ExternalSorter {
         }
     }
 
+    /// Buffer a quin; flush a sorted chunk to disk when full.
     pub fn push(&mut self, quin: NQuin) -> std::io::Result<()> {
         self.buffer.push(quin);
         self.total_quins += 1;
@@ -128,6 +132,8 @@ impl ExternalSorter {
         }
     }
 
+    /// Intern a (hash, term) pair into the native lexicon —
+    /// collision count is refreshed from the lexicon.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn intern_term(&mut self, hash: u64, term: &str) -> std::io::Result<()> {
         self.lex.intern(hash, term)?;
@@ -135,16 +141,19 @@ impl ExternalSorter {
         Ok(())
     }
 
+    /// Intern a (hash, term) pair into the WASM lex run buffer.
     #[cfg(target_arch = "wasm32")]
     pub fn intern_term(&mut self, hash: u64, term: &str) -> std::io::Result<()> {
         self.push_lex(hash, term);
         Ok(())
     }
 
+    /// Lexicon hash collisions detected during interning.
     pub fn lex_collision_count(&self) -> u64 {
         self.lex_collisions
     }
 
+    /// Total terms interned so far.
     pub fn lex_interned_count(&self) -> u64 {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -156,6 +165,7 @@ impl ExternalSorter {
         }
     }
 
+    /// Number of sorted quin runs on disk.
     pub fn quin_run_count(&self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -167,16 +177,20 @@ impl ExternalSorter {
         }
     }
 
+    /// Total quins pushed across all runs.
     pub fn quin_total(&self) -> u64 {
         self.total_quins
     }
 
+    /// Adopt externally produced run files as the sorter's chunks
+    /// (used when runs were written by a parallel stage).
     pub fn replace_chunks(&mut self, files: Vec<PathBuf>, total_quins: u64) {
         self.chunk_files = files;
         self.total_quins = total_quins;
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Finalize buffered lexicon entries into sorted lex runs.
     pub fn adopt_lex_runs(&mut self) -> std::io::Result<()> {
         self.lex.adopt_existing_runs()
     }
@@ -212,6 +226,7 @@ impl ExternalSorter {
         Ok(sorter)
     }
 
+    /// Number of sorted lexicon runs.
     pub fn lex_run_count(&self) -> usize {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -223,6 +238,7 @@ impl ExternalSorter {
         }
     }
 
+    /// Sort the in-memory chunk and write it as a run file.
     fn flush_chunk(&mut self) -> std::io::Result<()> {
         if self.buffer.is_empty() {
             return Ok(());
@@ -339,17 +355,20 @@ impl ExternalSorter {
         }
 
         impl Ord for HeapItem {
+            /// Reversed object-hash order (min-heap behavior).
             fn cmp(&self, other: &Self) -> Ordering {
                 // Min-heap based on object hash
                 other.quin.object.cmp(&self.quin.object)
             }
         }
         impl PartialOrd for HeapItem {
+            /// Delegates to `Ord::cmp`.
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
         impl PartialEq for HeapItem {
+            /// Object-hash equality (consistent with `Ord`).
             fn eq(&self, other: &Self) -> bool {
                 self.quin.object == other.quin.object
             }
@@ -470,23 +489,27 @@ impl ExternalSorter {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn merge_memory_runs(inputs: &[Vec<NQuin>]) -> Vec<NQuin> {
+    /// K-way merge of in-memory sorted quin runs.
+fn merge_memory_runs(inputs: &[Vec<NQuin>]) -> Vec<NQuin> {
         #[derive(Eq)]
         struct Item {
             quin: NQuin,
             reader: usize,
         }
         impl Ord for Item {
+            /// Reversed object-hash order (min-heap behavior).
             fn cmp(&self, other: &Self) -> Ordering {
                 other.quin.object.cmp(&self.quin.object)
             }
         }
         impl PartialOrd for Item {
+            /// Delegates to `Ord::cmp`.
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
         impl PartialEq for Item {
+            /// Object-hash equality (consistent with `Ord`).
             fn eq(&self, other: &Self) -> bool {
                 self.quin.object == other.quin.object
             }
@@ -520,6 +543,7 @@ impl ExternalSorter {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Read the next 48-byte quin; `None` at EOF.
     fn read_quin(reader: &mut BufReader<File>) -> std::io::Result<Option<NQuin>> {
         let mut bytes = [0u8; 48];
         match reader.read_exact(&mut bytes) {
@@ -530,6 +554,8 @@ impl ExternalSorter {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Merge run files down to the compaction target (bounded
+    /// fan-in per pass).
     fn compact_runs(&self) -> std::io::Result<Vec<PathBuf>> {
         let mut runs = self.chunk_files.clone();
         let mut pass = 0usize;
@@ -557,7 +583,9 @@ impl ExternalSorter {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn merge_raw_runs(inputs: &[PathBuf], output: &Path) -> std::io::Result<()> {
+    /// K-way merge of on-disk quin runs into `output`, preserving
+/// global order.
+fn merge_raw_runs(inputs: &[PathBuf], output: &Path) -> std::io::Result<()> {
         if inputs.is_empty() || inputs.len() > MAX_MERGE_FAN_IN {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -570,16 +598,19 @@ impl ExternalSorter {
             reader: usize,
         }
         impl Ord for Item {
+            /// Reversed object-hash order (min-heap behavior).
             fn cmp(&self, other: &Self) -> Ordering {
                 other.quin.object.cmp(&self.quin.object)
             }
         }
         impl PartialOrd for Item {
+            /// Delegates to `Ord::cmp`.
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
                 Some(self.cmp(other))
             }
         }
         impl PartialEq for Item {
+            /// Object-hash equality (consistent with `Ord`).
             fn eq(&self, other: &Self) -> bool {
                 self.quin.object == other.quin.object
             }

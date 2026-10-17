@@ -461,9 +461,9 @@ export const MODALITIES = [
         },
     },
     {
-        id: 'value-flow', name: 'Value-Flow / Commons', category: 'governance', opcode: '§23',
+        id: 'socioeconomics', name: 'Socioeconomics', category: 'governance', opcode: '§23',
         icon: 'fa-coins', hue: 'rose', wasm: false,
-        blurb: 'Permissive Commons: cost = production + CAPPED ROI; royalty scales by agent class; pool ≥ cost → discharged, freed globally (value_flow.rs).',
+        blurb: 'Permissive Commons: cost = production + CAPPED ROI; royalty scales by agent class; pool ≥ cost → discharged, freed globally (socioeconomics.rs).',
         run() {
             const cost = (prod, roi, cap) => prod + prod * Math.min(roi, cap) / 100;
             const c = cost(1000, 50, 20); // ROI asked 50%, capped 20% → 1200

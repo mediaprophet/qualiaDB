@@ -45,6 +45,8 @@ pub enum WelfareError {
 impl WelfareError {
     /// True when the failure is a caller-side buffer/dimension problem.
     #[inline]
+    /// `true` for caller-correctable errors (invalid input, buffer
+    /// too small) vs internal failures.
     pub fn is_caller_error(self) -> bool {
         matches!(
             self,
@@ -111,17 +113,23 @@ impl WelfareReport {
 // Validation helpers
 // ---------------------------------------------------------------------------
 
+/// `x` is finite (no NaN/inf in welfare aggregates).
 #[inline]
+/// `true` when `x` is finite (not NaN/±∞).
 fn finite(x: f64) -> bool {
     x.is_finite()
 }
 
+/// `x` is finite and ≥ 0 (incomes, weights).
 #[inline]
+/// `true` when `x` is finite and ≥ 0.
 fn finite_nonnegative(x: f64) -> bool {
     x.is_finite() && x >= 0.0
 }
 
+/// `x` is finite and > 0 (denominators, elasticities).
 #[inline]
+/// `true` when `x` is finite and > 0.
 fn finite_strictly_positive(x: f64) -> bool {
     x.is_finite() && x > 0.0
 }

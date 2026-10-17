@@ -75,6 +75,9 @@ fn node_kind_of(object: u64) -> u8 {
     }
 }
 
+/// Test an object against a `sh:NodeKind` requirement using the
+/// `node_kind_of` classification (0=blank, 1=IRI/`did:q42` pointer,
+/// 2=inline-typed literal).
 fn node_kind_matches(object: u64, want: NodeKindType) -> bool {
     let k = node_kind_of(object); // 0=blank,1=iri,2=literal
     match want {
@@ -140,6 +143,8 @@ pub struct ShaclEngine<'a> {
 }
 
 impl<'a> ShaclEngine<'a> {
+    /// Bind the quin graph and compiled shapes for one validation pass —
+    /// borrows only, no allocation.
     pub fn new(quins: &'a [NQuin], shapes: &'a [CompiledShape]) -> Self {
         Self { quins, shapes }
     }
@@ -221,6 +226,10 @@ impl<'a> ShaclEngine<'a> {
         }
     }
 
+    /// Evaluate one constraint against a focus node's `values`,
+    /// appending a `ValidationResult` per violation with the SHACL
+    /// component name. Non-numeric/missing values fail closed — a value
+    /// that can't be checked is a violation, not a skip.
     #[allow(clippy::too_many_arguments)]
     fn check(
         &self,
@@ -1139,6 +1148,9 @@ impl<'a> ShaclEngine<'a> {
         }
     }
 
+    /// Cross-property comparison (`sh:lessThan`/`equals`/…): every
+    /// (value, other-property-value) pair must satisfy `cmp` as `f64`;
+    /// pairs that can't be decoded to numbers are violations.
     #[allow(clippy::too_many_arguments)]
     fn compare_pair(
         &self,
@@ -1174,6 +1186,9 @@ impl<'a> ShaclEngine<'a> {
         }
     }
 
+    /// `q42`-extension check: every quin on `focus` (optionally filtered
+    /// to `path`) must carry `truth_degree` ≥ `threshold` in its metadata;
+    /// under-threshold quins emit a violation per quin.
     #[allow(clippy::too_many_arguments)]
     fn check_truth_degree(
         &self,
@@ -1224,6 +1239,8 @@ impl<'a> ShaclEngine<'a> {
     }
 }
 
+/// Parse a `sh:nodeKind` lexical value into `NodeKindType` — accepts
+/// with or without the `sh:` prefix; `None` for unrecognized kinds.
 fn parse_node_kind(s: &str) -> Option<NodeKindType> {
     match s.trim_start_matches("sh:") {
         "BlankNode" => Some(NodeKindType::BlankNode),
@@ -1236,6 +1253,9 @@ fn parse_node_kind(s: &str) -> Option<NodeKindType> {
     }
 }
 
+/// Render a `PropertyPath` back to SHACL surface syntax (`^` inverse,
+/// `/` sequence, `|` alternative, `*`/`+`/`?` cardinality) for report
+/// `result_path` labels.
 fn property_path_label(p: &PropertyPath) -> String {
     match p {
         PropertyPath::Predicate(s) => s.clone(),
@@ -1256,6 +1276,9 @@ fn property_path_label(p: &PropertyPath) -> String {
     }
 }
 
+/// Order-insensitive set equality over two `u64` slices (duplicates
+/// ignored). O(n·m) — inputs are property-value counts, small in
+/// practice.
 fn same_set(a: &[u64], b: &[u64]) -> bool {
     a.iter().all(|x| b.contains(x)) && b.iter().all(|x| a.contains(x))
 }

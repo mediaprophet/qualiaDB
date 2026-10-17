@@ -16,6 +16,7 @@ const BIDX_ENTRY_BYTES: usize = 16;
 const FIELD_RANGE_INDEX_HEADER_BYTES: usize = 16;
 const FIELD_RANGE_INDEX_ENTRY_BYTES: usize = 48;
 
+/// Build an `InvalidData` io::Error for malformed volume content.
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
@@ -91,6 +92,9 @@ pub struct Q42RangeQueryPlan {
 }
 
 impl Q42RangeQueryPlan {
+    /// Pick the scan strategy for `pattern`: object BIDX when an object
+    /// constraint is present, field-range index for s/p/c constraints,
+    /// sequential scan otherwise.
     pub fn for_pattern(pattern: Q42RangeQueryPattern) -> Self {
         Self {
             strategy: if pattern.object.is_some() {
@@ -122,6 +126,9 @@ pub struct Q42RangeQueryPage {
 }
 
 impl<S: Q42RangeSource> Q42RangeVolume<S> {
+    /// Open and validate a range source: header version/flags, section
+    /// bounds, directory-vs-block-count consistency, and BIDX +
+    /// field-index headers all checked before first use.
     pub fn open(source: S) -> io::Result<Self> {
         let source_length = source.length()?;
         if source_length < HEADER_SIZE as u64 {
@@ -190,12 +197,15 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(volume)
     }
 
+    /// The validated volume header.
     pub fn header(&self) -> &Q42VolumeHeader {
         &self.header
     }
+    /// Byte length of the underlying range source.
     pub fn source_length(&self) -> u64 {
         self.source_length
     }
+    /// Number of superblocks declared in the header.
     pub fn block_count(&self) -> u64 {
         self.header.block_count
     }
@@ -317,10 +327,13 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             next_cursor: None,
         })
     }
+    /// Borrow the underlying range source.
     pub fn source(&self) -> &S {
         &self.source
     }
 
+    /// Read the lexicon section into `out` (must match its byte
+    /// length exactly).
     pub fn read_lexicon_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.lex_offset, self.header.lex_length, out)
     }
@@ -568,6 +581,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         }
         Ok(None)
     }
+    /// Read the whole BIDX index section into `out` (must match its
+    /// byte length exactly).
     pub fn read_bidx_into(&self, out: &mut [u8]) -> io::Result<()> {
         self.read_section(self.header.bidx_offset, self.header.bidx_length, out)
     }
@@ -590,6 +605,9 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(Some(length))
     }
 
+    /// Copy the front-embedded manifest into `out`; `false` when this
+    /// segment is not a root (no embedded manifest). Buffer length
+    /// must equal `volume_manifest_length()`.
     pub fn read_volume_manifest_into(&self, out: &mut [u8]) -> io::Result<bool> {
         let Some(length) = self.volume_manifest_length()? else {
             return Ok(false);
@@ -608,6 +626,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             .read_range_into(Q42ByteRange { offset, length }, out)?;
         Ok(true)
     }
+    /// Read exactly `length` bytes at `offset` — `out.len()` must
+    /// equal the section length (exact-fit contract).
     fn read_section(&self, offset: u64, length: u64, out: &mut [u8]) -> io::Result<()> {
         let length =
             usize::try_from(length).map_err(|_| invalid("Q42 section exceeds platform"))?;
@@ -621,6 +641,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
             .read_range_into(Q42ByteRange { offset, length }, out)
     }
 
+    /// Fetch directory entry `index` — a single bounded range read,
+    /// bounds-checked against `block_count`.
     pub fn block_directory_entry(&self, index: usize) -> io::Result<BlockDirectoryEntry> {
         if index >= self.header.block_count as usize {
             return Err(io::Error::new(
@@ -851,10 +873,13 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(decoded)
     }
 
+    /// Consume the volume and return the underlying range source.
     pub fn into_source(self) -> S {
         self.source
     }
 
+    /// Validate the BIDX header (magic, version, count vs directory,
+    /// section-length arithmetic) and return its entry count.
     fn bidx_block_count(&self) -> io::Result<usize> {
         let bidx_length = self.header.bidx_length;
         if bidx_length < BIDX_HEADER_BYTES as u64 {
@@ -889,6 +914,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(count)
     }
 
+    /// Read BIDX entry `index` — the (min, max) object-hash range of
+    /// one block; rejects min > max.
     fn bidx_entry(&self, index: usize) -> io::Result<(u64, u64)> {
         let block_count = usize::try_from(self.header.block_count)
             .map_err(|_| invalid("Q42 block count exceeds platform"))?;
@@ -920,6 +947,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok((min, max))
     }
 
+    /// When present, check the field-range index header (magic,
+    /// version, count) and its section-length arithmetic.
     fn validate_field_range_index(&self) -> io::Result<()> {
         let Some((offset, length)) = self.header.field_range_index_range() else {
             return Ok(());
@@ -948,6 +977,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(())
     }
 
+    /// When present, check the field-postings header (magic, version,
+    /// per-block count).
     fn validate_field_postings(&self) -> io::Result<()> {
         let Some((offset, length)) = self.header.field_postings_range() else {
             return Ok(());
@@ -971,6 +1002,8 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         Ok(())
     }
 
+    /// Combined prune test: postings first (definitive), then the
+    /// coarser field-range index. `true` means "may match — must scan".
     fn field_membership_may_match(
         &self,
         block_index: usize,
@@ -982,6 +1015,10 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         self.field_range_may_match(block_index, pattern)
     }
 
+    /// Postings-table prune for `block_index`: reads the block's
+    /// payload interval and tests s/p/c pattern values against the
+    /// per-field membership filter. `None` when the volume has no
+    /// postings section.
     fn field_postings_may_match(
         &self,
         block_index: usize,
@@ -1025,6 +1062,9 @@ impl<S: Q42RangeSource> Q42RangeVolume<S> {
         ))
     }
 
+    /// Min/max field-range prune for `block_index`: each present
+    /// pattern value must fall inside the block's recorded hash range.
+    /// `true` when the index section is absent (cannot prune).
     fn field_range_may_match(
         &self,
         block_index: usize,

@@ -86,6 +86,8 @@ pub fn enrich_preview_from_sidecar(
     copy_sidecar_frame_to_preview_bins(sidecar_bytes, frame_index, preview)
 }
 
+/// Persist baked sidecar bytes under `{storage_root}/spectral/audio/{hash:016x}.bin`,
+/// creating parent directories. Returns the written path. Native only.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn write_sidecar_file(
     storage_root: &std::path::Path,

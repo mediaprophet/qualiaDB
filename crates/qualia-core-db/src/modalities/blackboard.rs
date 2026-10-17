@@ -179,6 +179,8 @@ pub struct Channel {
 }
 
 impl Channel {
+    /// Create an empty channel for `name_hash` (writeable, Lamport 0,
+    /// no constraints).
     pub fn new(name_hash: u64) -> Self {
         Self {
             name_hash,
@@ -289,6 +291,8 @@ pub struct SemanticBlackboard {
 }
 
 impl SemanticBlackboard {
+    /// Create an empty blackboard: no channels, no pinned root
+    /// constraints, global Lamport 0.
     pub fn new() -> Self {
         Self {
             channels: HashMap::new(),
@@ -412,6 +416,7 @@ impl SemanticBlackboard {
 }
 
 impl Default for SemanticBlackboard {
+    /// Equivalent to [`SemanticBlackboard::new`].
     fn default() -> Self {
         Self::new()
     }
@@ -437,12 +442,15 @@ pub struct BlackboardBus {
 }
 
 impl BlackboardBus {
+    /// Create a bus over a fresh, empty [`SemanticBlackboard`].
     pub fn new() -> Self {
         Self {
             board: SemanticBlackboard::new(),
         }
     }
 
+    /// Create a bus wrapping an existing `board`, preserving its
+    /// channels, constraints, and Lamport state.
     pub fn from_board(board: SemanticBlackboard) -> Self {
         Self { board }
     }
@@ -537,6 +545,7 @@ impl BlackboardBus {
 }
 
 impl Default for BlackboardBus {
+    /// Equivalent to [`BlackboardBus::new`].
     fn default() -> Self {
         Self::new()
     }

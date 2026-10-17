@@ -205,6 +205,9 @@ pub struct GraduatedCompetence {
 }
 
 impl GraduatedCompetence {
+    /// Pair an assessed understanding score with a decision's inherent
+    /// complexity — both normalized to `[0.0, 1.0]` (not clamped here;
+    /// callers supply normalized values).
     #[inline]
     pub const fn new(understanding_score: f32, decision_complexity: f32) -> Self {
         Self {

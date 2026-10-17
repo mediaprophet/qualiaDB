@@ -1208,3 +1208,46 @@ fn structural_nonlinear_dynamic_facade_runs_and_amplifies() {
         dyn_peak / stat
     );
 }
+
+#[test]
+fn structural_vibration_facade_computes_modal_frequency() {
+    let mut library = EngineeringAnalysisLibrary::new();
+    library.initialize().unwrap();
+    let res = library
+        .perform_structural_analysis(prismatic_model(200.0), AnalysisType::Vibration)
+        .unwrap()
+        .result;
+    assert_eq!(res.analysis_type, AnalysisType::Vibration);
+    let freq_hz = res.displacement_field[0];
+    let omega_rad = res.stress_field[0];
+    assert!(freq_hz > 0.0 && freq_hz.is_finite());
+    assert!((omega_rad - freq_hz * 2.0 * std::f64::consts::PI).abs() < 1e-6);
+}
+
+#[test]
+fn structural_thermal_facade_solves_conduction() {
+    let mut model = prismatic_model(100.0);
+    model.materials.get_mut("steel").unwrap().material_properties.thermal_conductivity = 50.0;
+    model.boundary_conditions.push(BoundaryCondition {
+        boundary_id: "bc_t0".to_string(),
+        boundary_type: BoundaryType::Temperature,
+        boundary_values: vec![300.0],
+        applied_region: "inlet".to_string(),
+    });
+    model.boundary_conditions.push(BoundaryCondition {
+        boundary_id: "bc_t1".to_string(),
+        boundary_type: BoundaryType::Temperature,
+        boundary_values: vec![400.0],
+        applied_region: "outlet".to_string(),
+    });
+
+    let mut library = EngineeringAnalysisLibrary::new();
+    library.initialize().unwrap();
+    let res = library
+        .perform_structural_analysis(model, AnalysisType::Thermal)
+        .unwrap()
+        .result;
+    assert_eq!(res.analysis_type, AnalysisType::Thermal);
+    assert!(!res.temperature_field.is_empty());
+    assert!(res.temperature_field[0] >= 300.0);
+}

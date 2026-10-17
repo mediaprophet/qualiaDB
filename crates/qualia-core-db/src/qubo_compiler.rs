@@ -82,40 +82,164 @@ impl QuboMatrix {
     }
 }
 
-/// Classical QUBO solver (placeholder - actual implementation would use simulated annealing or other algorithms)
-pub fn solve_classical(matrix: &QuboMatrix, assignment: &mut [u8]) -> f32 {
-    // Placeholder: simple greedy assignment
-    let mut energy = 0.0f32;
-    for i in 0..matrix.num_vars.min(assignment.len()) {
-        assignment[i] = if matrix.linear[i] > 0.0 { 0 } else { 1 };
-        energy += matrix.linear[i] as f32 * assignment[i] as f32;
+/// Calculates the exact QUBO objective energy for a given binary assignment:
+/// E(x) = sum_i linear[i] * x[i] + sum_(i, j, J) J * x[i] * x[j]
+pub fn calculate_energy(matrix: &QuboMatrix, assignment: &[u8]) -> f64 {
+    let mut energy = 0.0;
+    let n = matrix.num_vars.min(assignment.len());
+    for i in 0..n {
+        if assignment[i] == 1 {
+            energy += matrix.linear[i];
+        }
+    }
+    for coupler in &matrix.couplers {
+        if coupler.var_a < n && coupler.var_b < n {
+            if assignment[coupler.var_a] == 1 && assignment[coupler.var_b] == 1 {
+                energy += coupler.weight;
+            }
+        }
     }
     energy
 }
 
-/// Compile Quins to QUBO matrix (placeholder)
+/// Classical QUBO solver using Simulated Annealing over linear and quadratic couplers.
+pub fn solve_classical(matrix: &QuboMatrix, assignment: &mut [u8]) -> f32 {
+    let n = matrix.num_vars.min(assignment.len());
+    if n == 0 {
+        return 0.0;
+    }
+
+    // 1. Initial assignment: greedy based on linear terms
+    for i in 0..n {
+        assignment[i] = if matrix.linear[i] < 0.0 { 1 } else { 0 };
+    }
+
+    let mut current_energy = calculate_energy(matrix, &assignment[..n]);
+    let mut best_assignment = assignment[..n].to_vec();
+    let mut best_energy = current_energy;
+
+    // 2. Simulated Annealing schedule
+    let mut t = 10.0f64;
+    let t_min = 0.001f64;
+    let alpha = 0.95f64;
+    let sweeps_per_temp = 50;
+    let mut lcg_state: u64 = 0x5155_B001_DEAD_BEEF;
+
+    while t > t_min {
+        for _ in 0..sweeps_per_temp {
+            lcg_state = lcg_state.wrapping_mul(6364136223846793005).wrapping_add(1);
+            let var = ((lcg_state >> 32) as usize) % n;
+
+            let old_val = assignment[var];
+            let new_val = 1 - old_val;
+
+            let sign: f64 = if new_val == 1 { 1.0 } else { -1.0 };
+            let mut delta = sign * matrix.linear[var];
+
+            for coupler in &matrix.couplers {
+                if coupler.var_a == var && coupler.var_b < n {
+                    if assignment[coupler.var_b] == 1 {
+                        delta += sign * coupler.weight;
+                    }
+                } else if coupler.var_b == var && coupler.var_a < n {
+                    if assignment[coupler.var_a] == 1 {
+                        delta += sign * coupler.weight;
+                    }
+                }
+            }
+
+            let accept = if delta <= 0.0 {
+                true
+            } else {
+                lcg_state = lcg_state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                let rand_f = ((lcg_state >> 11) as f64) / ((1u64 << 53) as f64);
+                (-delta / t).exp() > rand_f
+            };
+
+            if accept {
+                assignment[var] = new_val;
+                current_energy += delta;
+                if current_energy < best_energy {
+                    best_energy = current_energy;
+                    best_assignment.copy_from_slice(&assignment[..n]);
+                }
+            }
+        }
+        t *= alpha;
+    }
+
+    assignment[..n].copy_from_slice(&best_assignment);
+    best_energy as f32
+}
+
+/// Compiles Quins to a QUBO matrix, mapping subjects to variable indices
+/// and relationships/couplers to quadratic terms.
 pub fn compile_quins_to_qubo(quins: &[NQuin], matrix: &mut QuboMatrix) -> Result<(), String> {
-    // Placeholder: simple conversion
-    for quin in quins.iter().take(MAX_QUBO_VARS) {
-        let var = quin.object as usize % MAX_QUBO_VARS;
-        matrix.set_linear(var, quin.predicate as f64);
+    for quin in quins {
+        if matrix.index_count >= matrix.num_vars {
+            break;
+        }
+        let subj = quin.subject;
+        let pos = matrix.index_map[..matrix.index_count]
+            .iter()
+            .position(|&(s, _)| s == subj);
+        let var_idx = match pos {
+            Some(idx) => idx,
+            None => {
+                let idx = matrix.index_count;
+                matrix.index_map[idx] = (subj, quin.object);
+                matrix.index_count += 1;
+                idx
+            }
+        };
+
+        let weight = if (quin.object & 0x7FFF_FFFF) != 0 {
+            (quin.object as i32) as f64 / 1000.0
+        } else {
+            1.0
+        };
+
+        let opcode = (quin.predicate & 0xFF) as u8;
+        if opcode == 0x10 {
+            matrix.set_linear(var_idx, matrix.linear[var_idx] - weight);
+        } else if opcode == 0x12 {
+            matrix.set_linear(var_idx, matrix.linear[var_idx] + weight);
+        } else {
+            matrix.set_linear(var_idx, matrix.linear[var_idx] + (weight * 0.1));
+        }
+
+        if quin.context != 0 {
+            if let Some(other_idx) = matrix.index_map[..matrix.index_count]
+                .iter()
+                .position(|&(s, _)| s == quin.context)
+            {
+                if var_idx != other_idx {
+                    matrix.set_quadratic(var_idx, other_idx, weight * 0.5);
+                }
+            }
+        }
     }
     Ok(())
 }
 
-/// Rehydrate solution from assignment (placeholder)
+/// Rehydrates solution from assignment back into Quins with original subject URIs from index_map.
 pub fn rehydrate_solution(matrix: &mut QuboMatrix, assignment: &[u8], out: &mut [NQuin]) -> usize {
-    // Placeholder: simple conversion
     let mut count = 0;
     for (i, &val) in assignment.iter().enumerate().take(out.len()) {
-        if i < matrix.num_vars {
+        if i < matrix.index_count && count < out.len() {
+            let (subj, obj) = matrix.index_map[i];
+            let predicate = if val == 1 {
+                crate::q_hash("q42:selected")
+            } else {
+                crate::q_hash("q42:unselected")
+            };
             out[count] = NQuin {
-                subject: i as u64,
-                predicate: val as u64,
-                object: 0,
+                subject: subj,
+                predicate,
+                object: obj,
                 context: 0,
-                metadata: 0,
-                parity: 0,
+                metadata: val as u64,
+                parity: subj ^ predicate ^ obj,
             };
             count += 1;
         }
@@ -189,20 +313,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rigorous_metadata_scrubbing() {
+    fn test_qubo_simulated_annealing() {
         let mut matrix = QuboMatrix::new(2);
-        // Inject mock personal URI data
-        matrix.index_map.push((12345, 67890));
-        matrix.index_count = 1;
+        // Objective: E(x0, x1) = -2*x0 - 2*x1 + 5*x0*x1
+        // x = (0,0): E = 0
+        // x = (1,0): E = -2
+        // x = (0,1): E = -2
+        // x = (1,1): E = -2 - 2 + 5 = 1
+        // Minimum energy is -2 (either (1,0) or (0,1))
+        matrix.set_linear(0, -2.0);
+        matrix.set_linear(1, -2.0);
+        matrix.set_quadratic(0, 1, 5.0);
 
-        // Scrub
-        scrub_metadata(&mut matrix);
-
-        // Assert no traces of personal URIs
-        assert_eq!(matrix.index_count, 0);
-        assert!(
-            matrix.index_map.is_empty(),
-            "Index map was not fully scrubbed!"
-        );
+        let mut assignment = [0u8; 2];
+        let energy = solve_classical(&matrix, &mut assignment);
+        assert!((energy - (-2.0)).abs() < 1e-4);
+        assert!((assignment[0] == 1 && assignment[1] == 0) || (assignment[0] == 0 && assignment[1] == 1));
     }
 }

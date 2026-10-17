@@ -108,6 +108,12 @@ struct BoundedQualiaGraph {
 }
 
 impl BoundedQualiaGraph {
+    /// Build the bounded adjacency-matrix graph from `quins`: each quin's
+    /// `subject`→`object` becomes a directed edge (deduplicated, in-degree
+    /// counted on the source), with node ids in first-seen order.
+    /// `NodeCapacityExceeded` when distinct nodes exceed
+    /// `MAX_BOUNDED_GRAPH_ANALYSIS_NODES`. All state is stack arrays — no
+    /// heap, per the Tier-1 contract.
     fn from_quins(quins: &[NQuin]) -> Result<Self, GraphAnalysisError> {
         let mut graph = Self {
             node_ids: [0; MAX_BOUNDED_GRAPH_ANALYSIS_NODES],
@@ -131,6 +137,9 @@ impl BoundedQualiaGraph {
         Ok(graph)
     }
 
+    /// Map `node_id` to its dense index, inserting it if unseen. Linear
+    /// scan over `node_count` — O(n²) total for `from_quins`, acceptable
+    /// at the bounded node cap. `NodeCapacityExceeded` when full.
     fn get_or_insert_node(&mut self, node_id: u64) -> Result<usize, GraphAnalysisError> {
         for index in 0..self.node_count {
             if self.node_ids[index] == node_id {
@@ -148,6 +157,10 @@ impl BoundedQualiaGraph {
         Ok(index)
     }
 
+    /// Brandes' unweighted betweenness centrality, normalized by
+    /// `(n-1)(n-2)` for n > 2. Per-source BFS accumulation using
+    /// fixed-size sigma/distance/delta/queue/stack arrays — no
+    /// recursion, no heap.
     fn calculate_betweenness_centrality(&mut self) {
         let n = self.node_count;
         if n < 2 {
@@ -221,6 +234,8 @@ impl BoundedQualiaGraph {
         }
     }
 
+    /// Directed-edge density `E / (N·(N-1))`; `0.0` for fewer than two
+    /// nodes.
     fn density(&self) -> f32 {
         if self.node_count < 2 {
             return 0.0;
@@ -229,6 +244,11 @@ impl BoundedQualiaGraph {
         self.edge_count as f32 / possible_edges
     }
 
+    /// Weakly-connected components via iterative DFS (either-direction
+    /// adjacency). Emits each component's node ids contiguously into
+    /// `community_nodes_out` with its `(start, len)` span in
+    /// `community_spans_out`; returns the community count or
+    /// `OutputBufferFull` when either buffer is too small.
     fn write_communities(
         &self,
         community_nodes_out: &mut [u64],
@@ -282,6 +302,9 @@ impl BoundedQualiaGraph {
         Ok(communities_written)
     }
 
+    /// Enumerate directed 3-cycles (a→b→c→a), deduplicated by sorted
+    /// node-id triple so each triangle is emitted once regardless of
+    /// rotation. Returns the motif count or `OutputBufferFull`.
     fn write_motifs(&self, motifs_out: &mut [MotifRecord]) -> Result<usize, GraphAnalysisError> {
         let mut written = 0usize;
 
@@ -323,6 +346,8 @@ impl BoundedQualiaGraph {
         Ok(written)
     }
 
+    /// Copy the `min(out.len(), node_count)` highest betweenness scores,
+    /// descending. Returns the count written.
     fn write_top_nodes(&self, out: &mut [TopNodeScore]) -> usize {
         let count = out.len().min(self.node_count);
         if count == 0 {
@@ -348,6 +373,10 @@ impl BoundedQualiaGraph {
         count
     }
 
+    /// Emit one `NQuin` per node encoding its centrality (`has_centrality_score`
+    /// predicate, object = score × 1000 as u64, node degree in metadata)
+    /// under `context`. `out` must hold ≥ `node_count`; returns the count
+    /// written or `OutputBufferFull`.
     fn write_graph_quins(
         &self,
         context: u64,
@@ -483,6 +512,12 @@ impl BoundedQualiaGraph {
         written
     }
 
+    /// Backtracking subgraph-isomorphism worker: assigns pattern node
+    /// `depth` to an unused graph node consistent with edges to
+    /// already-assigned nodes, tolerating up to `max_missing_edges`
+    /// absent edges (approximate matching). Stops when `out` is full.
+    /// Bounded by `MAX_SUBGRAPH_PATTERN_NODES` depth — iterative-ish
+    /// recursion over a tiny pattern cap, fixed scratch arrays only.
     #[allow(clippy::too_many_arguments)]
     fn match_subgraph(
         &self,

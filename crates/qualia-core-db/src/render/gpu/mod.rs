@@ -33,6 +33,8 @@ mod temporal_producers_gpu;
 mod temporal_resolve_gpu;
 mod texture_mips;
 mod water;
+pub mod frame_lock;
+pub use frame_lock::*;
 
 use crate::gpu_context::{
     ambient_draw_instances, global_vram_ledger, universe_orchestrator, ComputeUniverse,

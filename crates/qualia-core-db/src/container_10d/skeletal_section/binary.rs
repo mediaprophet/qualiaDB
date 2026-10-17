@@ -63,6 +63,14 @@ pub struct SkeletalSection<'a> {
     offsets: Offsets,
 }
 impl<'a> SkeletalSection<'a> {
+    /// Validate an `SKL1` payload and return a zero-copy view over it.
+    ///
+    /// Checks magic/version/reserved header fields, computes the expected
+    /// length from the five counts (rejecting overflow via `CountLimit`),
+    /// requires `bytes.len()` to match exactly and the declared vertex
+    /// count to equal `expected_vertices`, scans joint/clip records for
+    /// non-zero reserved bytes, then runs `validation::validate` for
+    /// cross-record consistency. No allocation — the view borrows `bytes`.
     pub fn parse(bytes: &'a [u8], expected_vertices: usize) -> Result<Self, SkeletalSectionError> {
         if bytes.len() < HEADER_BYTES
             || bytes[..4] != *b"SKL1"
@@ -103,28 +111,48 @@ impl<'a> SkeletalSection<'a> {
         validation::validate(&result)?;
         Ok(result)
     }
+    /// Record counts decoded from the header (joints, vertices, clips,
+    /// tracks, keys).
     pub fn counts(&self) -> Counts {
         self.counts
     }
+    /// Joint record `i` (parent index, rest pose, inverse bind motor), or
+    /// `None` when out of range.
     pub fn joint(&self, i: usize) -> Option<Joint> {
         (i < self.counts.joints).then(|| Records::joint(self, i))
     }
+    /// Stable 64-bit identifier of joint `i`, or `None` when out of range.
     pub fn joint_id(&self, i: usize) -> Option<u64> {
         (i < self.counts.joints).then(|| Records::joint_id(self, i))
     }
+    /// Animation clip record `i` (id, duration, track span, loop flag),
+    /// or `None` when out of range.
     pub fn clip(&self, i: usize) -> Option<ClipRecord> {
         (i < self.counts.clips).then(|| Records::clip(self, i))
     }
+    /// Track record `i` (target joint + key span), or `None` when out of
+    /// range.
     pub fn track(&self, i: usize) -> Option<Track> {
         (i < self.counts.tracks).then(|| Records::track(self, i))
     }
+    /// Keyframe `i` (time + local-space motor pose), or `None` when out
+    /// of range.
     pub fn key(&self, i: usize) -> Option<Key> {
         (i < self.counts.keys).then(|| Records::key(self, i))
     }
+    /// Skin weights for vertex `i` (up to four joint/weight pairs), or
+    /// `None` when out of range.
     pub fn skin(&self, i: usize) -> Option<SkinWeight> {
         (i < self.counts.vertices).then(|| Records::skin(self, i))
     }
 
+    /// Copy every decoded record into caller-supplied buffers.
+    ///
+    /// All six buffers must be at least as large as the corresponding
+    /// count — `joints`/`ids` ≥ joints, `skin` ≥ vertices, `clips` ≥
+    /// clips, `tracks` ≥ tracks, `keys` ≥ keys — otherwise
+    /// `SkeletalSectionError::OutputTooSmall` is returned before any
+    /// writes. Returns the decoded `Counts`.
     pub fn decode_into(
         &self,
         joints: &mut [Joint],
@@ -214,6 +242,13 @@ impl Records for SkeletalSection<'_> {
     }
 }
 
+/// Serialise `data` as an `SKL1` section into `out`, returning the byte
+/// count (header + joints + clips + tracks + keys + skin weights).
+///
+/// Validates `data` (including `joint_ids.len() == joints`), requires
+/// `out` to hold the computed size, and zero-fills before writing so all
+/// reserved/padding bytes are deterministic. Fails closed on overflow,
+/// inconsistent input, or undersized output.
 pub fn encode_skeletal_section_into(
     data: &SkeletalData<'_>,
     out: &mut [u8],

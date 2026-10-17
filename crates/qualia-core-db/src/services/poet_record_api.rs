@@ -191,6 +191,8 @@ struct RecordStore {
 
 static STORE: Mutex<Option<RecordStore>> = Mutex::new(None);
 
+/// Point the record store at `path`; called once at server spawn.
+/// Until configured, handlers return store-unavailable.
 pub fn configure(path: PathBuf) {
     let ledger = load_ledger(&path);
     *STORE.lock().expect("COP record store lock") = Some(RecordStore { path, ledger });
@@ -305,6 +307,7 @@ pub fn authorize_agent_run(
     Ok(())
 }
 
+/// JSON error envelope `{code, message}` with `status`.
 fn diagnostic(status: StatusCode, code: &'static str, message: impl Into<String>) -> Response {
     (
         status,
@@ -318,6 +321,7 @@ fn diagnostic(status: StatusCode, code: &'static str, message: impl Into<String>
         .into_response()
 }
 
+/// 200 JSON response wrapping `data`.
 fn ok(data: serde_json::Value) -> Response {
     Json(serde_json::json!({
         "ok": true,
@@ -327,6 +331,7 @@ fn ok(data: serde_json::Value) -> Response {
     .into_response()
 }
 
+/// Deserialize the request body; 400 diagnostic on malformed JSON.
 fn decode<T: serde::de::DeserializeOwned>(body: &Bytes) -> Result<T, Response> {
     if body.len() > RECORD_REQUEST_LIMIT_BYTES {
         return Err(diagnostic(
@@ -339,6 +344,8 @@ fn decode<T: serde::de::DeserializeOwned>(body: &Bytes) -> Result<T, Response> {
         .map_err(|error| diagnostic(StatusCode::BAD_REQUEST, "invalid_json", error.to_string()))
 }
 
+/// Run `op` under the global store lock; maps store errors to
+/// diagnostics.
 fn with_store<T>(op: impl FnOnce(&mut RecordStore) -> Result<T, String>) -> Result<T, Response> {
     let mut guard = STORE.lock().map_err(|_| {
         diagnostic(
@@ -357,6 +364,7 @@ fn with_store<T>(op: impl FnOnce(&mut RecordStore) -> Result<T, String>) -> Resu
     op(store).map_err(|error| diagnostic(StatusCode::BAD_REQUEST, "record_rejected", error))
 }
 
+/// `POST /records/query` — filter records by family/kind/fields.
 pub async fn query_handler(body: Bytes) -> Response {
     let request: RecordQueryRequest = match decode(&body) {
         Ok(request) => request,
@@ -368,6 +376,8 @@ pub async fn query_handler(body: Bytes) -> Response {
     }
 }
 
+/// `POST /records/upsert` — insert or replace a record after
+/// family-scoped validation.
 pub async fn upsert_handler(body: Bytes) -> Response {
     let request: RecordUpsertRequest = match decode(&body) {
         Ok(request) => request,
@@ -379,6 +389,7 @@ pub async fn upsert_handler(body: Bytes) -> Response {
     }
 }
 
+/// `POST /records/delete` — remove a record by id.
 pub async fn delete_handler(body: Bytes) -> Response {
     let request: RecordDeleteRequest = match decode(&body) {
         Ok(request) => request,
@@ -391,6 +402,8 @@ pub async fn delete_handler(body: Bytes) -> Response {
 }
 
 impl RecordStore {
+    /// Filter records matching the query's family/kind/field
+    /// constraints.
     fn query(&self, request: &RecordQueryRequest) -> Result<serde_json::Value, String> {
         let family = validate_family(&request.family)?;
         let needle = request.query.trim().to_ascii_lowercase();
@@ -426,6 +439,8 @@ impl RecordStore {
         }))
     }
 
+    /// Validate the record against its family's schema, then
+    /// insert/replace and persist the ledger.
     fn upsert(&mut self, mut request: RecordUpsertRequest) -> Result<serde_json::Value, String> {
         let family = validate_family(&request.family)?;
         request.title = request.title.trim().to_string();
@@ -486,6 +501,7 @@ impl RecordStore {
         Ok(serde_json::to_value(record).unwrap_or(serde_json::Value::Null))
     }
 
+    /// Remove the record with `request.id`; error when absent.
     fn delete(&mut self, request: &RecordDeleteRequest) -> Result<serde_json::Value, String> {
         let family = validate_family(&request.family)?;
         let before = self.ledger.records.len();
@@ -500,6 +516,8 @@ impl RecordStore {
     }
 }
 
+/// Resolve `family` to a known family name; reject unknown
+/// families.
 fn validate_family(family: &str) -> Result<&'static str, String> {
     FAMILIES
         .iter()
@@ -508,6 +526,8 @@ fn validate_family(family: &str) -> Result<&'static str, String> {
         .ok_or_else(|| format!("unsupported COP record family `{family}`"))
 }
 
+/// Base field validation — size caps, depth limits, no nested
+/// record payloads.
 fn validate_fields(fields: &BTreeMap<String, serde_json::Value>) -> Result<(), String> {
     if fields.len() > MAX_FIELD_KEYS {
         return Err("a record may carry at most 32 fields".into());
@@ -530,6 +550,8 @@ fn validate_fields(fields: &BTreeMap<String, serde_json::Value>) -> Result<(), S
     Ok(())
 }
 
+/// Economic-family validation — requires auditable units and a
+/// lifecycle state per the commons ledger contract.
 fn validate_economic_fields(
     family: &str,
     fields: &BTreeMap<String, serde_json::Value>,
@@ -582,6 +604,8 @@ fn validate_economic_fields(
     Ok(())
 }
 
+/// Extract a scalar string field; error when missing or
+/// non-scalar.
 fn scalar_text<'a>(
     fields: &'a BTreeMap<String, serde_json::Value>,
     key: &str,
@@ -594,6 +618,8 @@ fn scalar_text<'a>(
         .ok_or_else(|| format!("economic field `{key}` is required and must be a string"))
 }
 
+/// Connector-family validation — endpoint, protocol, and
+/// auth-scope requirements.
 fn validate_connector_fields(
     family: &str,
     fields: &BTreeMap<String, serde_json::Value>,
@@ -719,6 +745,8 @@ fn validate_connector_fields(
     Ok(())
 }
 
+/// Social-family validation — channel membership, reply
+/// targets, and content bounds.
 fn validate_social_fields(
     family: &str,
     fields: &BTreeMap<String, serde_json::Value>,
@@ -866,6 +894,8 @@ fn validate_social_fields(
     Ok(())
 }
 
+/// Agent-family validation — DID presence, capability scope,
+/// model binding.
 fn validate_agent_fields(
     family: &str,
     fields: &BTreeMap<String, serde_json::Value>,
@@ -969,6 +999,8 @@ fn validate_agent_fields(
     Ok(())
 }
 
+/// Cross-record social checks — channel exists, reply target
+/// resolves, sender is a member.
 fn validate_social_context(
     family: &str,
     fields: &BTreeMap<String, serde_json::Value>,
@@ -1322,6 +1354,7 @@ fn validate_social_context(
     }
 }
 
+/// Reply target must exist in the same channel.
 fn validate_reply_target(
     records: &[CopRecord],
     reply_to: &str,
@@ -1342,6 +1375,7 @@ fn validate_reply_target(
     Ok(())
 }
 
+/// Find the channel record with `channel_id`.
 fn channel_record<'a>(records: &'a [CopRecord], channel_id: &str) -> Option<&'a CopRecord> {
     records.iter().find(|record| {
         record.family == "channel"
@@ -1353,6 +1387,7 @@ fn channel_record<'a>(records: &'a [CopRecord], channel_id: &str) -> Option<&'a 
     })
 }
 
+/// Extract a required DID field; error when absent.
 fn require_did<'a>(
     fields: &'a BTreeMap<String, serde_json::Value>,
     key: &str,
@@ -1364,6 +1399,7 @@ fn require_did<'a>(
     Ok(value)
 }
 
+/// Current Unix timestamp (seconds).
 fn unix_now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -1371,6 +1407,8 @@ fn unix_now() -> i64 {
         .unwrap_or(0)
 }
 
+/// Load the persisted ledger from `path`; empty ledger when
+/// absent or unreadable.
 fn load_ledger(path: &Path) -> RecordLedger {
     let Ok(bytes) = fs::read(path) else {
         return RecordLedger::default();
@@ -1381,6 +1419,8 @@ fn load_ledger(path: &Path) -> RecordLedger {
     serde_json::from_slice(&bytes).unwrap_or_default()
 }
 
+/// Persist the ledger to `path` (atomic-ish write; error on I/O
+/// failure).
 fn persist(path: &Path, ledger: &RecordLedger) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
@@ -1403,7 +1443,8 @@ mod tests {
     // Rust's otherwise parallel test harness.
     static TEST_STORE_LOCK: Mutex<()> = Mutex::new(());
 
-    fn serial_store() -> std::sync::MutexGuard<'static, ()> {
+    /// Global mutex serializing store access across tests/handlers.
+fn serial_store() -> std::sync::MutexGuard<'static, ()> {
         TEST_STORE_LOCK.lock().expect("COP test store lock")
     }
 

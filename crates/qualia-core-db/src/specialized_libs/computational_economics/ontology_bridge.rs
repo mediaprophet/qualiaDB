@@ -73,9 +73,14 @@ pub fn validate_scalar_econ_constraint(value: f64, min: f64, max: f64) -> bool {
     value.is_finite() && value >= min && value <= max
 }
 
-/// Example FIBO-style note encoder (placeholder for full bridge).
+/// FIBO-style ontology constants for financial instruments and metrics.
 pub const FIBO_INSTRUMENT_PRICE: u64 = q_hash("fibo:price");
+pub const FIBO_VALUE_AT_RISK: u64 = q_hash("fibo:valueAtRisk");
 
 pub fn encode_fibo_price(model: u64, price: f64, prov: u64, out: &mut NQuin) {
     encode_scalar_result(model, FIBO_INSTRUMENT_PRICE, price, prov, out);
+}
+
+pub fn encode_fibo_var(model: u64, var: f64, prov: u64, out: &mut NQuin) {
+    encode_scalar_result(model, FIBO_VALUE_AT_RISK, var, prov, out);
 }

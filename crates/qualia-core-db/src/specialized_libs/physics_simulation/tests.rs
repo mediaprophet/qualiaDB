@@ -916,3 +916,115 @@ fn test_mesh_distribute_task() {
     let result = coordinator.distribute_simulation_task(task_data);
     assert!(result.is_ok());
 }
+
+// ---- Holographic Earth-Terrain: Homogenization & Cartoon Deformation Tests ----
+
+#[test]
+fn test_vrh_elasticity_computation() {
+    // 70% Quartz (K=37 GPa, G=44 GPa), 30% Clay (K=12 GPa, G=6 GPa)
+    let vols = [0.7, 0.3];
+    let ks = [37.0e9, 12.0e9];
+    let gs = [44.0e9, 6.0e9];
+
+    let vrh = compute_vrh_elasticity(&vols, &ks, &gs).expect("VRH computation succeeds");
+    assert!(vrh.bulk_modulus_k_pa > 12.0e9 && vrh.bulk_modulus_k_pa < 37.0e9);
+    assert!(vrh.shear_modulus_g_pa > 6.0e9 && vrh.shear_modulus_g_pa < 44.0e9);
+    assert!(vrh.youngs_modulus_e_pa > 0.0);
+    assert!(vrh.poissons_ratio_nu > 0.0 && vrh.poissons_ratio_nu < 0.5);
+}
+
+#[test]
+fn test_drucker_prager_yield_criterion() {
+    let cohesion_pa = 25_000.0; // 25 kPa
+    let friction_angle_rad = 32.0f64.to_radians(); // 32 degrees
+    let i1_stress_pa = 150_000.0; // 150 kPa mean confinement
+
+    let yield_stress = drucker_prager_yield_stress(cohesion_pa, friction_angle_rad, i1_stress_pa);
+    assert!(yield_stress > 0.0);
+
+    // Stress state with low shear (stable)
+    let low_shear_stress = [50000.0, 50000.0, 50000.0, 1000.0, 1000.0, 1000.0];
+    assert!(!check_drucker_prager_failure(low_shear_stress, cohesion_pa, friction_angle_rad));
+
+    // Stress state with high shear (shear failure)
+    let high_shear_stress = [50000.0, 50000.0, 50000.0, 80000.0, 80000.0, 80000.0];
+    assert!(check_drucker_prager_failure(high_shear_stress, cohesion_pa, friction_angle_rad));
+}
+
+#[test]
+fn test_kozeny_carman_and_exner() {
+    let d_eff = 0.0002; // 0.2 mm fine sand
+    let phi = 0.35; // 35% porosity
+    let perm = kozeny_carman_permeability_m2(d_eff, phi).expect("Kozeny-Carman succeeds");
+    assert!(perm > 1e-13 && perm < 1e-10); // Typical sand permeability 10^-12 to 10^-11 m^2
+
+    // Exner elevation change
+    let dt = 60.0; // 60 seconds
+    let lambda_p = 0.4; // 40% bed porosity
+    let div_qs = 0.001; // Positive flux divergence -> erosion
+    let dz = exner_elevation_change_m(dt, lambda_p, div_qs).expect("Exner succeeds");
+    assert!(dz < 0.0); // Erosion -> negative elevation change
+    assert_eq!(dz, -60.0 * 0.001 / 0.6);
+}
+
+#[test]
+fn test_bachmann_wetting_and_kubelka_munk() {
+    let r_dry = 0.40;
+    let n_mineral = 1.54; // Quartz
+    let n_water = 1.333;
+
+    // Dry (Sw = 0) vs saturated (Sw = 1.0)
+    let r_dry_out = bachmann_wetting_reflectance(r_dry, n_mineral, n_water, 0.0);
+    let r_wet_out = bachmann_wetting_reflectance(r_dry, n_mineral, n_water, 1.0);
+    assert!(r_wet_out < r_dry_out, "Moist soil must be darker than dry soil");
+
+    // Kubelka-Munk reflectance
+    let r_inf = kubelka_munk_reflectance(0.2, 0.8);
+    assert!(r_inf > 0.0 && r_inf < 1.0);
+}
+
+#[test]
+fn test_crim_and_biot_acoustics() {
+    let phi = 0.35;
+    let sw = 0.60;
+    let fractions = [1.0];
+    let eps_mineral = [4.5]; // Quartz
+    let eps_water = 80.0;
+    let eps_air = 1.0;
+
+    let eps_eff = crim_dielectric_permittivity(phi, sw, &fractions, &eps_mineral, eps_water, eps_air);
+    // Effective permittivity must be between solid quartz (4.5) and liquid water (80.0)
+    assert!(eps_eff > 4.5 && eps_eff < 80.0);
+
+    // Biot acoustics
+    let k_bulk = 25.0e9;
+    let g_shear = 15.0e9;
+    let density = 2200.0; // kg/m³
+    let (vp, vs) = biot_acoustic_velocities(k_bulk, g_shear, density).expect("Biot succeeds");
+    assert!(vp > vs);
+    assert!(vp > 3000.0 && vp < 6000.0);
+    assert!(vs > 2000.0 && vs < 3500.0);
+}
+
+#[test]
+fn test_cartoon_deformation_kinetics() {
+    let config = CartoonKineticsConfig::default();
+
+    // 1. Extreme squash clamp to wafer floor epsilon
+    let (lambda_tilde, det_f) = compute_cartoon_jacobian_det(0.0001, &config);
+    assert_eq!(lambda_tilde, config.wafer_floor_epsilon);
+    assert!(det_f < 1.0);
+
+    let deficit_m3 = compute_wafer_volume_deficit_m3(1.0, 0.0001, &config);
+    assert!(deficit_m3 > 0.0 && deficit_m3 < 1.0);
+
+    // 2. Anharmonic cubic restoring force
+    let f_linear = -config.linear_stiffness_k * 0.5;
+    let f_total = anharmonic_restoring_force(0.5, &config);
+    assert!(f_total.abs() > f_linear.abs(), "Cubic term must stiffen restore force");
+
+    // 3. Comedic apex hang-time impulse
+    let v_apex = [0.01, 0.0, 0.02]; // near zero velocity at trajectory apex
+    let aero_apex = compute_comedic_aerodynamics(v_apex, 1.2, 0.47, 0.5, &config);
+    assert!(aero_apex[2] > 0.0, "Apex hang-time must apply positive vertical lift force");
+}

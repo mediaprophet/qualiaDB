@@ -154,6 +154,8 @@ pub enum MatrixLayout {
 const SIMD_WIDTH: usize = 4;
 
 impl OptimizationEngine {
+    /// Constructs the engine with a fresh optimizer, analyzer, and
+    /// transformer.
     pub fn new() -> Self {
         Self {
             optimizer: MatrixOptimizer::new(),
@@ -162,6 +164,7 @@ impl OptimizationEngine {
         }
     }
 
+    /// Initializes the optimizer, analyzer, and transformer in order.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.optimizer.initialize()?;
         self.analyzer.initialize()?;
@@ -169,6 +172,10 @@ impl OptimizationEngine {
         Ok(())
     }
 
+    /// Runs `analyze_matrix` on both operands, then DISCARDS the analysis
+    /// and returns the inputs wrapped with a hardcoded `Vectorization`
+    /// strategy and a fabricated `expected_performance_gain: 2.0`.
+    /// **Stub** — no strategy is actually selected (STUBS.md F30).
     pub fn optimize_multiplication(
         &mut self,
         left: &Matrix,
@@ -191,6 +198,9 @@ impl OptimizationEngine {
 }
 
 impl MatrixOptimizer {
+    /// Registers the three strategy variants and an empty history. **Scaffold**:
+    /// no method ever reads `optimization_strategies` or writes
+    /// `optimization_history` (STUBS.md §4).
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
@@ -202,12 +212,15 @@ impl MatrixOptimizer {
         }
     }
 
+    /// No-op — there is no optimizer state to prepare.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         Ok(())
     }
 }
 
 impl MatrixAnalyzer {
+    /// Constructs an analyzer with structure+sparsity algorithms and a fresh
+    /// pattern-recognition registry.
     pub fn new() -> Self {
         Self {
             analysis_algorithms: vec![
@@ -218,6 +231,8 @@ impl MatrixAnalyzer {
         }
     }
 
+    /// Initializes the inner pattern-recognition library (populates the
+    /// pattern/hint maps).
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.pattern_recognition.initialize()?;
         Ok(())
@@ -263,6 +278,8 @@ impl MatrixAnalyzer {
         })
     }
 
+    /// Fraction of elements with `|x| <= 1e-10` (1.0 = all-zero). Returns 0.0
+    /// for an empty buffer.
     fn calculate_sparsity(&self, matrix: &Matrix) -> f64 {
         let non_zero = matrix.data.iter().filter(|&&x| x.abs() > 1e-10).count();
         1.0 - (non_zero as f64 / matrix.data.len().max(1) as f64)
@@ -624,6 +641,9 @@ impl MatrixAnalyzer {
 }
 
 impl PatternRecognition {
+    /// Creates the registry with an empty `recognized_patterns` list.
+    /// **Scaffold**: `recognized_patterns` is never populated — only the inner
+    /// `pattern_library` is used, by `MatrixAnalyzer` (STUBS.md §4).
     pub fn new() -> Self {
         Self {
             recognized_patterns: Vec::new(),
@@ -631,6 +651,7 @@ impl PatternRecognition {
         }
     }
 
+    /// Initializes the pattern library (populates pattern/hint maps).
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.pattern_library.initialize()?;
         Ok(())
@@ -638,6 +659,8 @@ impl PatternRecognition {
 }
 
 impl PatternLibrary {
+    /// Creates an empty library; `initialize` populates the pattern names and
+    /// per-pattern optimization hints.
     pub fn new() -> Self {
         Self {
             patterns: HashMap::new(),
@@ -645,6 +668,8 @@ impl PatternLibrary {
         }
     }
 
+    /// Populates the `patterns` name map and `optimization_hints` entries for
+    /// every `MatrixPattern` variant.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         // Populate the patterns HashMap with names for each MatrixPattern variant
         self.patterns
@@ -806,6 +831,9 @@ impl PatternLibrary {
 }
 
 impl MatrixTransformer {
+    /// Registers the four rule variants and an empty history. NOTE:
+    /// `transformation_rules`/`transformation_history` are inert registries —
+    /// the real work happens in `transform_matrix`/`optimize_layout`.
     pub fn new() -> Self {
         Self {
             transformation_rules: vec![
@@ -818,6 +846,7 @@ impl MatrixTransformer {
         }
     }
 
+    /// No-op — the transformer has no preparable state.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         Ok(())
     }

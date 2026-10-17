@@ -39,6 +39,8 @@ pub struct InstrumentTraceLedger {
 }
 
 impl Default for InstrumentTraceLedger {
+    /// Equivalent to [`InstrumentTraceLedger::new`] (capacity
+    /// `DEFAULT_MAX_ENTRIES`).
     fn default() -> Self {
         Self::new()
     }

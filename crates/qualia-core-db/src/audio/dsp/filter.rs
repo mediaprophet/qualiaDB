@@ -6,18 +6,26 @@
 /// Filter type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FilterType {
+    /// Attenuates above the cutoff.
     LowPass,
+    /// Attenuates below the cutoff.
     HighPass,
+    /// Passes a band around the cutoff (0 dB peak).
     BandPass,
+    /// Rejects a narrow band at the cutoff.
     Notch,
 }
 
 /// Biquad filter state and coefficients.
 #[derive(Debug, Clone)]
 pub struct BiquadFilter {
+    /// Filter topology (RBJ cookbook variant).
     pub filter_type: FilterType,
-    pub cutoff: f64, // Hz
-    pub q: f64,      // Quality factor
+    /// Cutoff / centre frequency in Hz.
+    pub cutoff: f64,
+    /// Quality factor (resonance).
+    pub q: f64,
+    /// Sample rate the coefficients were computed for.
     pub sample_rate: f64,
     // Coefficients
     a0: f64,
@@ -34,6 +42,8 @@ pub struct BiquadFilter {
 }
 
 impl BiquadFilter {
+    /// Create a filter and compute its initial coefficients (RBJ cookbook);
+    /// `cutoff` in Hz.
     pub fn new(filter_type: FilterType, cutoff: f64, q: f64, sample_rate: f64) -> Self {
         let mut filter = Self {
             filter_type,

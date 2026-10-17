@@ -20,10 +20,15 @@ pub struct PackageWing {
 /// Bifurcated presentation / socio-cognitive package v1.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BifurcatedPackage {
+    /// Layout version (`VERSION`).
     pub version: u32,
+    /// `fnv60` of the caller's package key.
     pub package_id: u64,
+    /// Entities visible only to the principal.
     pub private_wing: PackageWing,
+    /// Entities offered under negotiated/conditional terms.
     pub offered_wing: PackageWing,
+    /// Entities in the permissive commons.
     pub commons_wing: PackageWing,
     /// Combined digest of the three wing digests (ordering fixed).
     pub package_digest: u64,
@@ -32,6 +37,9 @@ pub struct BifurcatedPackage {
 impl BifurcatedPackage {
     pub const VERSION: u32 = 1;
 
+    /// Build a package from three wing entity lists; `package_id` is
+    /// `fnv60(package_key)` and `package_digest` folds the three wing
+    /// digests plus the id.
     pub fn new(
         package_key: &str,
         private_ids: &[EntityId],

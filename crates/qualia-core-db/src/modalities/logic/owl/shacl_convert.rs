@@ -72,6 +72,8 @@ pub enum OwlToShaclError {
 }
 
 impl std::fmt::Display for OwlToShaclError {
+    /// Human-readable error text (`IO error: …`, `parse error: …`,
+    /// `no triples or relations parsed`).
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Io(msg) => write!(f, "IO error: {msg}"),
@@ -83,14 +85,20 @@ impl std::fmt::Display for OwlToShaclError {
 
 impl std::error::Error for OwlToShaclError {}
 
+/// True for blank/anonymous node spellings (`_:…`, `[…`) that cannot
+/// be named subjects in emitted SHACL.
 fn is_blank_or_anon(subject: &str) -> bool {
     subject.starts_with("_:") || subject.starts_with('[')
 }
 
+/// Fragment after the last `#` or `/` (or the whole URI when neither
+/// is present).
 fn local_name(uri: &str) -> String {
     uri.rsplit(['#', '/']).next().unwrap_or(uri).to_string()
 }
 
+/// Shape name for a class/property URI — namespaced `hc:`/`radlex:` for
+/// the known vocabularies, `ex:` otherwise.
 fn shape_name_for_uri(uri: &str) -> String {
     let local = local_name(uri);
     if uri.contains("healthcarevocab") {
@@ -102,6 +110,8 @@ fn shape_name_for_uri(uri: &str) -> String {
     }
 }
 
+/// Compact `hc:`/`radlex:`/`q42:` CURIE for the known vocab prefixes;
+/// `<uri>` bracket form for anything else.
 fn curie_for_uri(uri: &str) -> String {
     if let Some(tag) = uri.strip_prefix("http://purl.org/healthcarevocab/v1#") {
         return format!("hc:{tag}");
@@ -116,6 +126,9 @@ fn curie_for_uri(uri: &str) -> String {
     format!("<{uri}>")
 }
 
+/// Map an XSD datatype URI to its CURIE (`xsd:date`, `xsd:integer`,
+/// `xsd:decimal`, `xsd:boolean`, …); `None` for unrecognized ranges so
+/// the caller can emit the full URI instead.
 fn xsd_from_range(range: &str) -> Option<&'static str> {
     match range {
         "http://www.w3.org/2001/XMLSchema#date" => Some("xsd:date"),
@@ -131,6 +144,10 @@ fn xsd_from_range(range: &str) -> Option<&'static str> {
     }
 }
 
+/// Fold one parsed `(s, p, o)` triple into `model`: registers classes
+/// and datatype/object properties on `rdf:type`, labels on
+/// `rdfs:label`, and `owl:equivalentClass`/`equivalentProperty` links.
+/// Unrecognized predicates are ignored.
 fn ingest_owl_triple(model: &mut HealthcareOwlModel, s: String, p: String, o: String) {
     if p == RDF_TYPE {
         if o == OWL_CLASS {
@@ -278,12 +295,16 @@ pub fn parse_healthcare_owl_lines(path: &Path) -> Result<HealthcareOwlModel, Owl
     Ok(model)
 }
 
+/// First `<…>` bracket URI on a line, or `None` when no complete pair
+/// exists (used by the line-oriented N3 fallback parser).
 fn extract_first_uri(line: &str) -> Option<String> {
     let start = line.find('<')? + 1;
     let end = line[start..].find('>')? + start;
     Some(line[start..end].to_string())
 }
 
+/// First `"…"` string literal on a line, or `None` (no escape handling —
+/// the line-oriented fallback only needs simple literals).
 fn extract_turtle_string_literal(line: &str) -> Option<String> {
     let start = line.find('"')? + 1;
     let rest = &line[start..];
@@ -298,6 +319,8 @@ pub fn parse_healthcare_owl(path: &Path) -> Result<HealthcareOwlModel, OwlToShac
         .or_else(|_| parse_healthcare_owl_n3(path))
 }
 
+/// Unwrap any `n3_parser::Term` variant to its string payload — Uri,
+/// Variable, Literal, and Formula all carry their surface form.
 fn term_uri(term: &crate::modalities::logic::n3_parser::Term) -> String {
     match term {
         crate::modalities::logic::n3_parser::Term::Uri(s) => s.to_string(),
@@ -599,6 +622,8 @@ pub fn write_anatomy_shape_bundle(
     Ok(written)
 }
 
+/// Write `content` to `path` verbatim (create/truncate), mapping I/O
+/// failures to `OwlToShaclError::Io`.
 fn write_text(path: &Path, content: &str) -> Result<(), OwlToShaclError> {
     let mut f = File::create(path).map_err(|e| OwlToShaclError::Io(e.to_string()))?;
     f.write_all(content.as_bytes())

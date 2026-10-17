@@ -103,6 +103,8 @@ pub enum SectionType {
     HierarchicalSurfels = 20,
     /// Multi-band sensor reflectance & emittance data cube (400nm-1000nm band stacks).
     HyperspectralCube = 21,
+    /// 3D Sparse Voxel Octree / DAG (VOX0) with 16B nodes and material LUT indices.
+    VoxelLattice = 22,
 }
 
 impl SectionType {
@@ -113,6 +115,7 @@ impl SectionType {
     #[allow(non_upper_case_globals)]
     pub const PersonalOntology: Self = Self::EntityOntology;
 
+    /// Decode a section-type tag (0–22); `None` for unknown values.
     #[inline]
     pub const fn from_u8(raw: u8) -> Option<SectionType> {
         match raw {
@@ -138,6 +141,7 @@ impl SectionType {
             19 => Some(SectionType::ImpostorAtlas),
             20 => Some(SectionType::HierarchicalSurfels),
             21 => Some(SectionType::HyperspectralCube),
+            22 => Some(SectionType::VoxelLattice),
             _ => None,
         }
     }
@@ -165,6 +169,7 @@ impl SectionType {
                 | SectionType::ImpostorAtlas
                 | SectionType::HierarchicalSurfels
                 | SectionType::HyperspectralCube
+                | SectionType::VoxelLattice
         )
     }
 }
@@ -196,6 +201,7 @@ impl AlignmentTier {
         }
     }
 
+    /// Decode an alignment tier (0–3); `None` for unknown values.
     #[inline]
     pub const fn from_u8(raw: u8) -> Option<AlignmentTier> {
         match raw {

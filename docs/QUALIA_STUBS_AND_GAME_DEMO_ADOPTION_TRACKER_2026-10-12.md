@@ -32,7 +32,7 @@ This document tracks three coordinated engineering workstreams:
 │  ├── Deontic Logic (0x10-0x12) [Sanctuary & Park Laws] │
 │  ├── Temporal LTL (0x40-0x44)  [Invariants & Contracts]│
 │  ├── Allen Interval Algebra    [Diurnal Scheduling]    │
-│  ├── REA Value Flows           [Solar / Water Balance] │
+│  ├── REA Socioeconomics        [Solar / Water Balance] │
 │  ├── Geospatial Graph A*       [Outback Navigation]    │
 │  └── Dimensional Units         [Telemetry Validation]  │
 └────────────────────────────────────────────────────────┘
@@ -50,7 +50,7 @@ This document tracks three coordinated engineering workstreams:
   - [x] **Task 2.2 (LTL Temporal Verification):** Exposed `ltl.evaluate_trace`, `ltl.globally`, `ltl.finally` to VibeScript for trace invariant and temporal contract validation.
   - [x] **Task 2.3 (Allen Interval Algebra):** Exposed `temporal.allen_relation` and `temporal.allen` to VibeScript with auto-detecting interval comparison (`Overlaps`, `Before`, `Meets`, `Equal`).
 
-- [x] **Phase 3: REA Value-Flow Economics for Expedition Systems**
+- [x] **Phase 3: REA Socioeconomics for Expedition Systems**
   - [x] **Task 3.1 & 3.2:** Bound `computational_economics::rea` dual-entry resource ledgers via `Econ.accounting_balance` / `rea.balance` returning verified balanced trial balances.
 
 - [x] **Phase 4: Geospatial Graph Navigation**
@@ -246,7 +246,7 @@ This track codifies all upstream engine requirements, architectural gaps, and en
 
 ### Workstream 4.4: Cooperative Commons & LOD Cloud Ingest
 - [x] **Task 4.4.1 (Social Permissive Commons & LicencePolicy Alignment):**
-  - **Location:** `crates/qualia-core-db/src/q42/asset_envelope/licence.rs`, `src/modalities/value_flow.rs`
+  - **Location:** `crates/qualia-core-db/src/q42/asset_envelope/licence.rs`, `src/modalities/socioeconomics.rs`
   - **Status:** Complete. Added `LicenceClass::SocialPermissiveCommons`, `THIRD_PARTY_ANCHORED`, `ARTIFACT_TRAVELLING`, `COMMONS_DISCHARGEABLE` obligation flags, and `is_spc_discharged` checking threshold discharge against audited production costs and ROI caps.
 - [x] **Task 4.4.2 (LOD Cloud Ingest & Registry Expansion):**
   - **Location:** `manifests/ontologies.json`, `crates/qualia-core-db/src/query/ontology_loader.rs`

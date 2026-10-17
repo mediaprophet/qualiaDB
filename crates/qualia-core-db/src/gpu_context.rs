@@ -51,6 +51,8 @@ pub enum OperationalMode {
 }
 
 impl OperationalMode {
+    /// Mode from VRAM pressure ∈ [0, ~1.25]: `Reserve` ≥ 0.92,
+    /// `Eco` ≥ 0.72, else `Full`.
     #[inline]
     pub fn from_pressure(pressure: f32) -> Self {
         if pressure >= 0.92 {
@@ -62,6 +64,7 @@ impl OperationalMode {
         }
     }
 
+    /// Ambient-particle draw cap per mode (50k Full / 8k Eco / 0 Reserve).
     #[inline]
     pub fn max_particles(self) -> u32 {
         match self {
@@ -71,6 +74,7 @@ impl OperationalMode {
         }
     }
 
+    /// Whether the bloom post-process is enabled — `Full` only.
     #[inline]
     pub fn bloom_enabled(self) -> bool {
         matches!(self, Self::Full)
@@ -116,6 +120,7 @@ impl ComputeUniverse {
         }
     }
 
+    /// Short display label (`"U0 LLM"`, …) for telemetry/receipts.
     #[inline]
     pub fn label(self) -> &'static str {
         match self {
@@ -126,6 +131,7 @@ impl ComputeUniverse {
         }
     }
 
+    /// Preferred queue lane for this universe's work.
     #[inline]
     pub fn default_queue_lane(self) -> QueueLane {
         match self {
@@ -135,6 +141,7 @@ impl ComputeUniverse {
         }
     }
 
+    /// The `VramLedgerSlot`s whose bytes count toward this universe.
     #[inline]
     pub fn ledger_slots(self) -> &'static [VramLedgerSlot] {
         match self {
@@ -172,11 +179,13 @@ pub struct VramByteRange {
 }
 
 impl VramByteRange {
+    /// Zero-size range at offset 0.
     #[inline]
     pub const fn empty() -> Self {
         Self { offset: 0, size: 0 }
     }
 
+    /// Exclusive end offset (`offset + size`, saturating).
     #[inline]
     pub fn end(&self) -> u64 {
         self.offset.saturating_add(self.size)
@@ -237,6 +246,8 @@ impl UniverseOrchestrator {
         }
     }
 
+    /// Build one partition for `universe` spanning
+    /// `[offset, offset+size)` of the ledger under `mode`.
     fn partition_at_offset(
         universe: ComputeUniverse,
         mode: OperationalMode,
@@ -276,6 +287,8 @@ impl UniverseOrchestrator {
         Self::from_total_budget(total_bytes, OperationalMode::Full)
     }
 
+    /// The pinned partition for `universe` (U3 resolves to the U1
+    /// partition via `partition_index`).
     #[inline]
     pub fn partition(&self, universe: ComputeUniverse) -> &UniversePartition {
         &self.partitions[universe.partition_index()]
@@ -304,11 +317,15 @@ impl UniverseOrchestrator {
         }
     }
 
+    /// Particle cap for `universe` under `global` pressure (via
+    /// `effective_mode`).
     #[inline]
     pub fn max_particles(&self, universe: ComputeUniverse, global: OperationalMode) -> u32 {
         self.effective_mode(universe, global).max_particles()
     }
 
+    /// Whether bloom runs in `universe` under `global` pressure —
+    /// Viewport only, and only at effective `Full`.
     #[inline]
     pub fn bloom_enabled(&self, universe: ComputeUniverse, global: OperationalMode) -> bool {
         universe == ComputeUniverse::Viewport
@@ -366,8 +383,10 @@ pub struct VramLedger {
 }
 
 impl VramLedger {
+    /// Hard cap on tracked KV-cache bytes (448 MiB).
     pub const KV_CACHE_CAP_BYTES: u64 = 448 * 1024 * 1024;
 
+    /// Bytes currently recorded in `slot` (relaxed read).
     #[inline]
     fn load_slot(&self, slot: VramLedgerSlot) -> u64 {
         match slot {
@@ -380,6 +399,8 @@ impl VramLedger {
         }
     }
 
+    /// Write `bytes` into `slot` (KV cache clamped to
+    /// `KV_CACHE_CAP_BYTES`) and refresh the operational mode.
     #[inline]
     fn store_slot(&self, slot: VramLedgerSlot, bytes: u64) {
         let bytes = match slot {
@@ -397,21 +418,28 @@ impl VramLedger {
         self.refresh_mode();
     }
 
+    /// Configured total budget in bytes.
     #[inline]
     pub fn budget(&self) -> u64 {
         self.budget_bytes.load(Ordering::Relaxed)
     }
 
+    /// Bytes currently recorded in `slot`.
     #[inline]
     pub fn used_in_slot(&self, slot: VramLedgerSlot) -> u64 {
         self.load_slot(slot)
     }
 
+    /// Record `bytes` as the new usage of `slot` (clamped for KV cache;
+    /// refreshes mode).
     #[inline]
     pub fn record_slot(&self, slot: VramLedgerSlot, bytes: u64) {
         self.store_slot(slot, bytes);
     }
 
+    /// Total recorded bytes across `universe`'s slots; the Viewport
+    /// universe additionally includes live `try_reserve_graphics`
+    /// reservations.
     #[inline]
     pub fn universe_used_bytes(&self, universe: ComputeUniverse) -> u64 {
         let recorded = universe
@@ -426,6 +454,8 @@ impl VramLedger {
         }
     }
 
+    /// `universe` used-bytes ÷ its partition budget, clamped to
+    /// [0, 1.25] (0 when the partition has no budget).
     #[inline]
     pub fn universe_pressure(
         &self,
@@ -439,6 +469,8 @@ impl VramLedger {
         (self.universe_used_bytes(universe) as f32 / cap as f32).clamp(0.0, 1.25)
     }
 
+    /// Whether `extra_bytes` fits both inside `universe`'s partition
+    /// range (at the current usage offset) and the global budget.
     #[inline]
     pub fn can_allocate_in_universe(
         &self,
@@ -479,12 +511,14 @@ impl VramLedger {
         used_before
     }
 
+    /// Record `bytes` into `slot`, asserting it belongs to `universe`.
     #[inline]
     pub fn record_universe(&self, universe: ComputeUniverse, slot: VramLedgerSlot, bytes: u64) {
         debug_assert!(universe.ledger_slots().contains(&slot));
         self.store_slot(slot, bytes);
     }
 
+    /// Ledger with `budget_bytes` total and zeroed usage counters.
     #[inline]
     pub fn new(budget_bytes: u64) -> Self {
         Self {
@@ -493,16 +527,19 @@ impl VramLedger {
         }
     }
 
+    /// Overwrite the total budget (does not refresh mode).
     #[inline]
     pub fn set_budget(&self, bytes: u64) {
         self.budget_bytes.store(bytes, Ordering::Relaxed);
     }
 
+    /// Record Tensor10D (U1) usage bytes.
     #[inline]
     pub fn record_tensor(&self, bytes: u64) {
         self.record_universe(ComputeUniverse::Tensor10D, VramLedgerSlot::Tensor10D, bytes);
     }
 
+    /// Record LLM KV-cache usage bytes (clamped to `KV_CACHE_CAP_BYTES`).
     #[inline]
     pub fn record_kv_cache(&self, bytes: u64) {
         self.record_universe(
@@ -512,11 +549,13 @@ impl VramLedger {
         );
     }
 
+    /// Record Viewport (U2) render usage bytes.
     #[inline]
     pub fn record_render(&self, bytes: u64) {
         self.record_universe(ComputeUniverse::Viewport, VramLedgerSlot::Viewport, bytes);
     }
 
+    /// Record LLM weight-staging usage bytes.
     #[inline]
     pub fn record_llm_staging(&self, bytes: u64) {
         self.record_universe(
@@ -526,12 +565,16 @@ impl VramLedger {
         );
     }
 
+    /// Total used bytes — recorded slots plus live graphics
+    /// reservations.
     #[inline]
     pub fn used_bytes(&self) -> u64 {
         self.recorded_used_bytes()
             .saturating_add(self.reserved_graphics_bytes.load(Ordering::Acquire))
     }
 
+    /// Sum of the four recorded slot counters (excludes graphics
+    /// reservations).
     #[inline]
     fn recorded_used_bytes(&self) -> u64 {
         self.tensor_bytes
@@ -541,6 +584,8 @@ impl VramLedger {
             .saturating_add(self.llm_weight_staging_bytes.load(Ordering::Relaxed))
     }
 
+    /// Global pressure = used ÷ budget, clamped to [0, 1.25] (0 with
+    /// no budget configured).
     #[inline]
     pub fn pressure(&self) -> f32 {
         let budget = self.budget_bytes.load(Ordering::Relaxed);
@@ -550,6 +595,8 @@ impl VramLedger {
         (self.used_bytes() as f32 / budget as f32).clamp(0.0, 1.25)
     }
 
+    /// Current operational mode (last `refresh_mode` result; `Full`
+    /// before any write).
     #[inline]
     pub fn mode(&self) -> OperationalMode {
         match self.mode.load(Ordering::Relaxed) {
@@ -559,12 +606,15 @@ impl VramLedger {
         }
     }
 
+    /// Recompute the operational mode from live pressure and store it.
     #[inline]
     pub fn refresh_mode(&self) {
         let m = OperationalMode::from_pressure(self.pressure());
         self.mode.store(m as u32, Ordering::Relaxed);
     }
 
+    /// Whether `extra_bytes` fits inside the global budget
+    /// (overflow-safe comparison).
     #[inline]
     pub fn can_allocate(&self, extra_bytes: u64) -> bool {
         let budget = self.budget_bytes.load(Ordering::Relaxed);
@@ -577,6 +627,7 @@ impl VramLedger {
 /// Process-wide ledger (lazy static).
 static LEDGER: std::sync::OnceLock<VramLedger> = std::sync::OnceLock::new();
 
+/// Process-wide VRAM ledger (lazy static, 6 GiB default budget).
 #[inline]
 pub fn global_vram_ledger() -> &'static VramLedger {
     LEDGER.get_or_init(|| VramLedger::new(6 * 1024 * 1024 * 1024))
@@ -593,12 +644,15 @@ static CONTEXT_RING_DROP_MILLI: AtomicU32 = AtomicU32::new(0);
 static DRAFT_ACCEPT_MILLI: AtomicU32 = AtomicU32::new(0);
 static DRAFT_LEN_CUR: AtomicU32 = AtomicU32::new(0);
 
+/// Raise `atom` to at least `strength_milli` (monotonic-max pulse).
 #[inline]
 fn pulse(atom: &AtomicU32, strength_milli: u32) {
     let cur = atom.load(Ordering::Relaxed);
     atom.store(cur.max(strength_milli), Ordering::Relaxed);
 }
 
+/// Read `atom` as a [0,1] fraction, then subtract `decay`
+/// (saturating) — per-frame ambient telemetry decay.
 #[inline]
 fn sample_decay(atom: &AtomicU32, decay: u32) -> f32 {
     let v = atom.load(Ordering::Relaxed);
@@ -704,6 +758,8 @@ impl SharedGpuContext {
         &self.queue
     }
 
+    /// Queue for `universe`'s default lane — same physical queue;
+    /// universe tagging is intent metadata today.
     #[inline]
     pub fn queue_for_universe(&self, universe: ComputeUniverse) -> &wgpu::Queue {
         self.queue_for_lane(universe.default_queue_lane())
@@ -727,6 +783,8 @@ std::thread_local! {
 ///   2. `dxcompiler.dll` beside the current executable (where `build.rs` copies the vendored
 ///      `vendor/dxc/` DLLs) → `DynamicDxc` at that path (turnkey — no env var needed).
 ///   3. Otherwise `Auto` (static-DXC → PATH-DXC → FXC) — graceful fallback (Vulkan stays default).
+///
+/// Resolution order documented above; returns the chosen compiler.
 #[cfg(all(
     not(target_arch = "wasm32"),
     feature = "gpu-runtime",
@@ -756,6 +814,8 @@ fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
     wgpu::Dx12Compiler::Auto
 }
 
+/// Native init: request a high-performance adapter (falling back to
+/// the default), then build the `SharedGpuContext` for it.
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
@@ -1014,6 +1074,8 @@ pub async fn ensure_shared_gpu() -> Result<(), String> {
     Ok(())
 }
 
+/// WASM init: request a BROWSER_WEBGPU adapter (high-performance,
+/// falling back to default), then build the `SharedGpuContext` for it.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
     let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
@@ -1039,11 +1101,16 @@ async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
     init_shared_gpu_for_adapter(instance, adapter).await
 }
 
+/// The thread-local shared GPU context, `None` until
+/// `ensure_shared_gpu` succeeds (WASM: per-thread slot since `Device`
+/// is `!Send`/`!Sync`).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
     WASM_SHARED_GPU.with(|c| c.get())
 }
 
+/// Shared GPU context — **panics** if init hasn't run; prefer
+/// [`try_shared_gpu`] on fallible paths.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub fn shared_gpu() -> &'static SharedGpuContext {
     try_shared_gpu().expect("shared wgpu init failed — call ensure_shared_gpu() first")

@@ -284,6 +284,103 @@ impl PropertyPredictor {
                 },
             },
         );
+
+        // Density — empirical group contribution (g/cm³ at standard conditions):
+        self.register_model(
+            "density",
+            PropertyModel {
+                model_id: "qspr_density".to_string(),
+                property_type: PropertyType::Density,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 0.85);
+                        c.insert("molecular_weight".to_string(), 0.0018);
+                        c.insert("O".to_string(), 0.08);
+                        c.insert("N".to_string(), 0.05);
+                        c.insert("Cl".to_string(), 0.15);
+                        c
+                    },
+                    descriptors: vec![
+                        "molecular_weight".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                        "Cl".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Heat capacity (J/(mol·K)):
+        self.register_model(
+            "heat_capacity",
+            PropertyModel {
+                model_id: "qspr_heat_capacity".to_string(),
+                property_type: PropertyType::HeatCapacity,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 25.0);
+                        c.insert("C".to_string(), 15.0);
+                        c.insert("H".to_string(), 7.5);
+                        c.insert("O".to_string(), 18.0);
+                        c.insert("N".to_string(), 12.0);
+                        c
+                    },
+                    descriptors: vec![
+                        "C".to_string(),
+                        "H".to_string(),
+                        "O".to_string(),
+                        "N".to_string(),
+                    ],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Surface tension (mN/m):
+        self.register_model(
+            "surface_tension",
+            PropertyModel {
+                model_id: "qspr_surface_tension".to_string(),
+                property_type: PropertyType::SurfaceTension,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 18.0);
+                        c.insert("molecular_weight".to_string(), 0.04);
+                        c.insert("O".to_string(), 4.5);
+                        c
+                    },
+                    descriptors: vec!["molecular_weight".to_string(), "O".to_string()],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
+
+        // Viscosity (mPa·s):
+        self.register_model(
+            "viscosity",
+            PropertyModel {
+                model_id: "qspr_viscosity".to_string(),
+                property_type: PropertyType::Viscosity,
+                model_type: PropertyModelType::GroupContribution,
+                parameters: PropertyModelParameters {
+                    coefficients: {
+                        let mut c = HashMap::new();
+                        c.insert("intercept".to_string(), 0.3);
+                        c.insert("molecular_weight".to_string(), 0.005);
+                        c
+                    },
+                    descriptors: vec!["molecular_weight".to_string()],
+                    reference_data: Vec::new(),
+                },
+            },
+        );
     }
 
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
@@ -362,6 +459,10 @@ impl PropertyPredictor {
             let name = match property_type {
                 PropertyType::BoilingPoint => "boiling_point",
                 PropertyType::MeltingPoint => "melting_point",
+                PropertyType::Density => "density",
+                PropertyType::HeatCapacity => "heat_capacity",
+                PropertyType::SurfaceTension => "surface_tension",
+                PropertyType::Viscosity => "viscosity",
                 // No registered QSPR model for the remaining property types.
                 _ => continue,
             };
@@ -581,5 +682,59 @@ impl TrainingData {
             targets: vec![100.0; 100],
             data_size: 100,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn water_molecule() -> Molecule {
+        let mut m = Molecule::new();
+        m.atoms.push(Atom {
+            atom_id: "O1".to_string(),
+            element: "O".to_string(),
+            atomic_number: 8,
+            mass: 15.999,
+            coordinates: vec![0.0, 0.0, 0.0],
+            properties: HashMap::new(),
+        });
+        m.atoms.push(Atom {
+            atom_id: "H1".to_string(),
+            element: "H".to_string(),
+            atomic_number: 1,
+            mass: 1.008,
+            coordinates: vec![0.0, 0.757, 0.586],
+            properties: HashMap::new(),
+        });
+        m.atoms.push(Atom {
+            atom_id: "H2".to_string(),
+            element: "H".to_string(),
+            atomic_number: 1,
+            mass: 1.008,
+            coordinates: vec![0.0, -0.757, 0.586],
+            properties: HashMap::new(),
+        });
+        m
+    }
+
+    #[test]
+    fn predict_from_molecule_density_and_boiling_point() {
+        let predictor = PropertyPredictor::new();
+        let mol = water_molecule();
+        let res = predictor
+            .predict_from_molecule(
+                &mol,
+                &[
+                    PropertyType::BoilingPoint,
+                    PropertyType::Density,
+                    PropertyType::HeatCapacity,
+                ],
+            )
+            .unwrap();
+        assert!(res.properties.contains_key("boiling_point"));
+        assert!(res.properties.contains_key("density"));
+        assert!(res.properties.contains_key("heat_capacity"));
+        assert!(res.properties["density"] > 0.0);
     }
 }

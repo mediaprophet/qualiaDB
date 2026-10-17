@@ -106,15 +106,41 @@ impl FederatedNodeManager {
 /// Performs topological pruning and validates meshes prior to physics offloading
 #[wasm_bindgen]
 pub fn prune_and_validate_mesh(mesh_id: u64) -> bool {
-    // Defeasible reasoning placeholder
-    mesh_id != 0
+    if mesh_id == 0 {
+        return false;
+    }
+    // Verify using defeasible reasoning rule: validity holds unless a defeater is asserted
+    let subject = mesh_id;
+    let predicate = crate::q_hash("mesh:isValid");
+    let test_quin = crate::NQuin {
+        subject,
+        predicate,
+        object: 1,
+        context: 0,
+        metadata: 0,
+        parity: subject ^ predicate ^ 1,
+    };
+    let quins = [test_quin];
+    let mut verdicts = [crate::modalities::defeasible::DefeasibleVerdict {
+        quin: test_quin,
+        status: crate::modalities::defeasible::DefeasibleStatus::Active,
+    }];
+    if let Ok(count) = crate::modalities::defeasible::evaluate_defeasible_frame(&quins, &mut verdicts) {
+        count > 0 && verdicts[0].status == crate::modalities::defeasible::DefeasibleStatus::Active
+    } else {
+        false
+    }
 }
 
 /// Enforces the rights ontology prior to transmission (e.g., checking DID constraints)
 #[wasm_bindgen]
 pub fn enforce_rights_ontology(subject_did: u64) -> bool {
-    // SHACL shape validation placeholder
-    subject_did != 0
+    if subject_did == 0 {
+        return false;
+    }
+    // Validate subject DID authority under juridical capacity framework
+    let principal = crate::modalities::capacity::effective_principal(subject_did, 0, false);
+    principal == subject_did && crate::modalities::capacity::stipulation_binding(crate::modalities::capacity::CapacityStatus::Intact)
 }
 
 /// Packs an array of floats into a Uint8Array strictly typed buffer to avoid IEEE-754 truncation

@@ -30,6 +30,8 @@ impl std::fmt::Display for TextureCoordinateSectionError {
 
 impl std::error::Error for TextureCoordinateSectionError {}
 
+/// Byte size of a UV01 section for `count` coordinates; `None` when
+/// `count` is 0 or exceeds `MAX_TEXTURE_COORDINATES`.
 pub fn encoded_len(count: usize) -> Option<usize> {
     if count == 0 || count > MAX_TEXTURE_COORDINATES {
         return None;
@@ -119,6 +121,8 @@ pub fn decode_texture_coordinates_into(
     Ok(count)
 }
 
+/// Read the declared coordinate count from a section's header without
+/// decoding the payload (validates magic, record size, and version).
 pub fn texture_coordinate_section_count(
     payload: &[u8],
 ) -> Result<usize, TextureCoordinateSectionError> {

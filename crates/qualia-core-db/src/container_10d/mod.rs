@@ -86,6 +86,9 @@ pub mod procedural_synthesis;
 pub mod spatial_index_section;
 pub mod surfel_section;
 pub mod topology_section;
+pub mod voxel_section;
+
+pub use voxel_section::*;
 
 pub use axis_role::{
     AxisRole, AXIS_ORDER, COORDINATE_AXES, MU_AXIS, PROPOSED_AXIS_ROLES, SELECTOR_AXES,

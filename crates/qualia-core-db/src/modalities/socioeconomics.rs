@@ -1,4 +1,4 @@
-//! Value-flow & compensation (§23, legal_logic.md) — the Permissive Commons.
+//! Socioeconomics & compensation (§23, legal_logic.md) — the Permissive Commons.
 //!
 //! Shifts economic obligation from infinite linear consumption to **threshold-based discharge**
 //! to prevent extraction: a work's cost is its audited production cost plus a *legally capped*
@@ -45,7 +45,7 @@ pub fn outstanding(pool: u64, cost: u64) -> u64 {
 // ─── Thermodynamic cost caps (E-ROI) ──────────────────────────────────────────────
 
 /// **Energy Return On Investment** = `energy_returned / energy_invested`. `0.0` if nothing was
-/// invested. The physics-bound viability ratio of a value flow.
+/// invested. The physics-bound viability ratio of a resource flow.
 pub fn eroi(energy_returned: u64, energy_invested: u64) -> f32 {
     if energy_invested == 0 {
         0.0
@@ -54,7 +54,7 @@ pub fn eroi(energy_returned: u64, energy_invested: u64) -> f32 {
     }
 }
 
-/// Is a value flow thermodynamically viable — E-ROI at or above `min_ratio`? Below this floor the
+/// Is a resource flow thermodynamically viable — E-ROI at or above `min_ratio`? Below this floor the
 /// flow is net-extractive (spends more energy than it recovers) and is refused — the physics-bound
 /// cost cap.
 #[inline]

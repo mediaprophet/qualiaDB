@@ -77,26 +77,39 @@ pub fn transpose(note: u8, semitones: i32) -> u8 {
 /// Transport state machine — play, stop, record, loop.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportState {
+    /// Not running; position resets on `stop`.
     Stopped,
+    /// Playing — position advances on `tick`.
     Playing,
+    /// Paused — position is retained.
     Paused,
+    /// Recording — position advances; capture is caller-managed.
     Recording,
 }
 
+/// Playback/record transport — position, tempo, loop, and metronome state.
 #[derive(Debug, Clone)]
 pub struct Transport {
+    /// Current state-machine state.
     pub state: TransportState,
-    pub tempo: f64, // BPM
+    /// Tempo in BPM (clamped to ≥ 1 by `set_tempo`).
+    pub tempo: f64,
+    /// Sample rate used for beat/second conversion.
     pub sample_rate: f64,
+    /// Playhead position in samples.
     pub position_samples: u64,
+    /// Loop start in samples, when looping is armed.
     pub loop_start: Option<u64>,
+    /// Loop end in samples, when looping is armed.
     pub loop_end: Option<u64>,
+    /// True when a loop region is armed.
     pub is_looping: bool,
     is_metronome_on: bool,
     metronome_phase: f64,
 }
 
 impl Transport {
+    /// Create a stopped transport at position 0, no loop, metronome off.
     pub fn new(tempo: f64, sample_rate: f64) -> Self {
         Self {
             state: TransportState::Stopped,
@@ -111,41 +124,49 @@ impl Transport {
         }
     }
 
+    /// Enter `Playing` (position is retained).
     pub fn play(&mut self) {
         self.state = TransportState::Playing;
     }
 
+    /// Enter `Stopped` and rewind the playhead to 0.
     pub fn stop(&mut self) {
         self.state = TransportState::Stopped;
         self.position_samples = 0;
     }
 
+    /// Pause playback; no-op unless currently `Playing`.
     pub fn pause(&mut self) {
         if self.state == TransportState::Playing {
             self.state = TransportState::Paused;
         }
     }
 
+    /// Enter `Recording`.
     pub fn record(&mut self) {
         self.state = TransportState::Recording;
     }
 
+    /// Set tempo in BPM (clamped to ≥ 1).
     pub fn set_tempo(&mut self, bpm: f64) {
         self.tempo = bpm.max(1.0);
     }
 
+    /// Arm a loop region `[start, end)` in samples.
     pub fn set_loop(&mut self, start: u64, end: u64) {
         self.loop_start = Some(start);
         self.loop_end = Some(end);
         self.is_looping = true;
     }
 
+    /// Disarm the loop region.
     pub fn clear_loop(&mut self) {
         self.loop_start = None;
         self.loop_end = None;
         self.is_looping = false;
     }
 
+    /// Enable/disable the metronome click.
     pub fn set_metronome(&mut self, on: bool) {
         self.is_metronome_on = on;
     }

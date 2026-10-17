@@ -40,16 +40,19 @@ pub struct Vector {
 }
 
 impl Vector {
+    /// Vector over an existing dimension buffer.
     pub fn new(dims: Vec<f32>) -> Self {
         Self { dims }
     }
 
+    /// Zero vector of `dim` dimensions.
     pub fn zeros(dim: usize) -> Self {
         Self {
             dims: vec![0.0; dim],
         }
     }
 
+    /// Vector dimensionality.
     pub fn dim(&self) -> usize {
         self.dims.len()
     }
@@ -106,10 +109,13 @@ pub struct TextEmbedder {
 }
 
 impl TextEmbedder {
+    /// Text embedder producing `dim`-d vectors from `ngram_size`
+    /// character n-grams.
     pub fn new(dim: usize, ngram_size: usize) -> Self {
         Self { dim, ngram_size }
     }
 
+    /// Default embedder (`EMBED_DIM`, trigram n-grams).
     pub fn default() -> Self {
         Self::new(EMBED_DIM, 3)
     }
@@ -166,6 +172,7 @@ pub struct VectorStore {
 }
 
 impl VectorStore {
+    /// Empty vector store (default embedder).
     pub fn new() -> Self {
         Self {
             vectors: Vec::new(),
@@ -173,6 +180,7 @@ impl VectorStore {
         }
     }
 
+    /// Vector store using a custom `embedder`.
     pub fn with_embedder(embedder: TextEmbedder) -> Self {
         Self {
             vectors: Vec::new(),
@@ -255,6 +263,7 @@ impl VectorStore {
 }
 
 impl Default for VectorStore {
+    /// Default is the empty store.
     fn default() -> Self {
         Self::new()
     }
@@ -279,6 +288,7 @@ pub struct ScratchpadEntry {
 }
 
 impl ScratchpadEntry {
+    /// Scratchpad entry expiring `ttl` ticks after `tick`.
     pub fn new(value: String, tick: u32, ttl: u32) -> Self {
         Self { value, tick, ttl }
     }
@@ -298,6 +308,7 @@ pub struct Scratchpad {
 }
 
 impl Scratchpad {
+    /// Scratchpad where entries expire after `default_ttl` ticks.
     pub fn new(default_ttl: u32) -> Self {
         Self {
             entries: HashMap::new(),
@@ -306,6 +317,7 @@ impl Scratchpad {
         }
     }
 
+    /// Default scratchpad (default TTL).
     pub fn default() -> Self {
         Self::new(DEFAULT_SCRATCHPAD_TTL)
     }

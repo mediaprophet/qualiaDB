@@ -1006,6 +1006,7 @@ pub struct RoleHierarchy {
     pub child_roles: Vec<String>,
 }
 impl PrivacyProtection {
+    /// Create a `PrivacyProtection` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             encryption: EncryptionManager::new(),
@@ -1015,6 +1016,7 @@ impl PrivacyProtection {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.encryption.initialize()?;
         self.anonymization.initialize()?;
@@ -1025,6 +1027,7 @@ impl PrivacyProtection {
 }
 
 impl EncryptionManager {
+    /// Create a `EncryptionManager` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             encryption_algorithms: HashMap::new(),
@@ -1033,27 +1036,32 @@ impl EncryptionManager {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.key_management.initialize()?;
         self.data_protection.initialize()?;
         Ok(())
     }
 
+    /// Register `algorithm` (keyed by its id field).
     pub fn add_algorithm(&mut self, algorithm: EncryptionAlgorithm) {
         self.encryption_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Fetch the registered `algorithm` by id, or `None`.
     pub fn get_algorithm(&self, algorithm_id: &str) -> Option<&EncryptionAlgorithm> {
         self.encryption_algorithms.get(algorithm_id)
     }
 
+    /// Ids of every registered `algorithms`.
     pub fn list_algorithms(&self) -> Vec<String> {
         self.encryption_algorithms.keys().cloned().collect()
     }
 }
 
 impl KeyManagement {
+    /// Create a `KeyManagement` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             keys: HashMap::new(),
@@ -1062,32 +1070,39 @@ impl KeyManagement {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `key` (keyed by its id field).
     pub fn add_key(&mut self, key: EncryptionKey) {
         self.keys.insert(key.key_id.clone(), key);
     }
 
+    /// Fetch the registered `key` by id, or `None`.
     pub fn get_key(&self, key_id: &str) -> Option<&EncryptionKey> {
         self.keys.get(key_id)
     }
 
+    /// Remove `key` by id, returning it when present.
     pub fn remove_key(&mut self, key_id: &str) -> Option<EncryptionKey> {
         self.keys.remove(key_id)
     }
 
+    /// Borrow the `KeyRotation` sub-component.
     pub fn key_rotation(&self) -> &KeyRotation {
         &self.key_rotation
     }
 
+    /// Borrow the `KeyRecovery` sub-component.
     pub fn key_recovery(&self) -> &KeyRecovery {
         &self.key_recovery
     }
 }
 
 impl KeyRotation {
+    /// Create a `KeyRotation` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             rotation_policy: RotationPolicy::new(),
@@ -1096,20 +1111,24 @@ impl KeyRotation {
         }
     }
 
+    /// Borrow the `RotationPolicy` sub-component.
     pub fn rotation_policy(&self) -> &RotationPolicy {
         &self.rotation_policy
     }
 
+    /// Borrow the `RotationSchedule` sub-component.
     pub fn rotation_schedule(&self) -> &RotationSchedule {
         &self.rotation_schedule
     }
 
+    /// Borrow the `RotationHistory` sub-component.
     pub fn rotation_history(&self) -> &RotationHistory {
         &self.rotation_history
     }
 }
 
 impl RotationPolicy {
+    /// Create a `RotationPolicy` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             policy_id: "policy_1".to_string(),
@@ -1121,6 +1140,7 @@ impl RotationPolicy {
 }
 
 impl RotationSchedule {
+    /// Create a `RotationSchedule` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             schedule_id: "schedule_1".to_string(),
@@ -1132,6 +1152,7 @@ impl RotationSchedule {
 }
 
 impl RotationHistory {
+    /// Create a `RotationHistory` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             history_id: "history_1".to_string(),
@@ -1144,6 +1165,7 @@ impl RotationHistory {
 }
 
 impl KeyRecovery {
+    /// Create a `KeyRecovery` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             recovery_methods: HashMap::new(),
@@ -1151,26 +1173,31 @@ impl KeyRecovery {
         }
     }
 
+    /// Register `recovery_method` (keyed by its id field).
     pub fn add_recovery_method(&mut self, method: RecoveryMethod) {
         self.recovery_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Fetch the registered `recovery_method` by id, or `None`.
     pub fn get_recovery_method(&self, method_id: &str) -> Option<&RecoveryMethod> {
         self.recovery_methods.get(method_id)
     }
 
+    /// Register `recovery_procedure` (keyed by its id field).
     pub fn add_recovery_procedure(&mut self, procedure: RecoveryProcedure) {
         self.recovery_procedures
             .insert(procedure.procedure_id.clone(), procedure);
     }
 
+    /// Fetch the registered `recovery_procedure` by id, or `None`.
     pub fn get_recovery_procedure(&self, procedure_id: &str) -> Option<&RecoveryProcedure> {
         self.recovery_procedures.get(procedure_id)
     }
 }
 
 impl DataProtection {
+    /// Create a `DataProtection` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             protection_policies: HashMap::new(),
@@ -1179,29 +1206,35 @@ impl DataProtection {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `protection_policy` (keyed by its id field).
     pub fn add_protection_policy(&mut self, policy: ProtectionPolicy) {
         self.protection_policies
             .insert(policy.policy_id.clone(), policy);
     }
 
+    /// Fetch the registered `protection_policy` by id, or `None`.
     pub fn get_protection_policy(&self, policy_id: &str) -> Option<&ProtectionPolicy> {
         self.protection_policies.get(policy_id)
     }
 
+    /// Borrow the `BreachDetection` sub-component.
     pub fn breach_detection(&self) -> &BreachDetection {
         &self.breach_detection
     }
 
+    /// Borrow the `IncidentResponse` sub-component.
     pub fn incident_response(&self) -> &IncidentResponse {
         &self.incident_response
     }
 }
 
 impl BreachDetection {
+    /// Create a `BreachDetection` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             detection_algorithms: HashMap::new(),
@@ -1209,25 +1242,30 @@ impl BreachDetection {
         }
     }
 
+    /// Register `detection_algorithm` (keyed by its id field).
     pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
         self.detection_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Fetch the registered `detection_algorithm` by id, or `None`.
     pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
         self.detection_algorithms.get(algorithm_id)
     }
 
+    /// Register `alert_system` (keyed by its id field).
     pub fn add_alert_system(&mut self, system: AlertSystem) {
         self.alert_systems.insert(system.system_id.clone(), system);
     }
 
+    /// Fetch the registered `alert_system` by id, or `None`.
     pub fn get_alert_system(&self, system_id: &str) -> Option<&AlertSystem> {
         self.alert_systems.get(system_id)
     }
 }
 
 impl IncidentResponse {
+    /// Create a `IncidentResponse` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             response_plans: HashMap::new(),
@@ -1236,24 +1274,29 @@ impl IncidentResponse {
         }
     }
 
+    /// Register `response_plan` (keyed by its id field).
     pub fn add_response_plan(&mut self, plan: ResponsePlan) {
         self.response_plans.insert(plan.plan_id.clone(), plan);
     }
 
+    /// Fetch the registered `response_plan` by id, or `None`.
     pub fn get_response_plan(&self, plan_id: &str) -> Option<&ResponsePlan> {
         self.response_plans.get(plan_id)
     }
 
+    /// Borrow the `ResponseTeam` sub-component.
     pub fn response_team(&self) -> &ResponseTeam {
         &self.response_team
     }
 
+    /// Borrow the `EscalationProcedures` sub-component.
     pub fn escalation_procedures(&self) -> &EscalationProcedures {
         &self.escalation_procedures
     }
 }
 
 impl ResponseTeam {
+    /// Create a `ResponseTeam` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             team_id: "team_1".to_string(),
@@ -1265,6 +1308,7 @@ impl ResponseTeam {
 }
 
 impl EscalationProcedures {
+    /// Create a `EscalationProcedures` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             escalation_rules: HashMap::new(),
@@ -1272,20 +1316,24 @@ impl EscalationProcedures {
         }
     }
 
+    /// Register `escalation_rule` (keyed by its id field).
     pub fn add_escalation_rule(&mut self, rule: EscalationRule) {
         self.escalation_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Fetch the registered `escalation_rule` by id, or `None`.
     pub fn get_escalation_rule(&self, rule_id: &str) -> Option<&EscalationRule> {
         self.escalation_rules.get(rule_id)
     }
 
+    /// Borrow the `EscalationMatrix` sub-component.
     pub fn escalation_matrix(&self) -> &EscalationMatrix {
         &self.escalation_matrix
     }
 }
 
 impl EscalationMatrix {
+    /// Create a `EscalationMatrix` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             matrix_id: "matrix_1".to_string(),
@@ -1296,6 +1344,7 @@ impl EscalationMatrix {
 }
 
 impl AnonymizationEngine {
+    /// Create a `AnonymizationEngine` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             anonymization_methods: HashMap::new(),
@@ -1304,33 +1353,40 @@ impl AnonymizationEngine {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `anonymization_method` (keyed by its id field).
     pub fn add_anonymization_method(&mut self, method: AnonymizationMethod) {
         self.anonymization_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Fetch the registered `anonymization_method` by id, or `None`.
     pub fn get_anonymization_method(&self, method_id: &str) -> Option<&AnonymizationMethod> {
         self.anonymization_methods.get(method_id)
     }
 
+    /// Register `privacy_model` (keyed by its id field).
     pub fn add_privacy_model(&mut self, model: PrivacyModel) {
         self.privacy_models.insert(model.model_id.clone(), model);
     }
 
+    /// Fetch the registered `privacy_model` by id, or `None`.
     pub fn get_privacy_model(&self, model_id: &str) -> Option<&PrivacyModel> {
         self.privacy_models.get(model_id)
     }
 
+    /// Borrow the `RiskAssessment` sub-component.
     pub fn risk_assessment(&self) -> &RiskAssessment {
         &self.risk_assessment
     }
 }
 
 impl RiskAssessment {
+    /// Create a `RiskAssessment` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             risk_models: HashMap::new(),
@@ -1338,22 +1394,27 @@ impl RiskAssessment {
         }
     }
 
+    /// Register `risk_model` (keyed by its id field).
     pub fn add_risk_model(&mut self, model: RiskModel) {
         self.risk_models.insert(model.model_id.clone(), model);
     }
 
+    /// Fetch the registered `risk_model` by id, or `None`.
     pub fn get_risk_model(&self, model_id: &str) -> Option<&RiskModel> {
         self.risk_models.get(model_id)
     }
 
+    /// Register `risk_metric` (keyed by its id field).
     pub fn add_risk_metric(&mut self, metric: RiskMetric) {
         self.risk_metrics.insert(metric.metric_id.clone(), metric);
     }
 
+    /// Fetch the registered `risk_metric` by id, or `None`.
     pub fn get_risk_metric(&self, metric_id: &str) -> Option<&RiskMetric> {
         self.risk_metrics.get(metric_id)
     }
 
+    /// Weighted-average risk score over `factors`; 0.0 on empty input or zero total weight.
     pub fn assess_risk(&self, factors: &[RiskFactor]) -> f64 {
         if factors.is_empty() {
             return 0.0;
@@ -1371,6 +1432,7 @@ impl RiskAssessment {
 }
 
 impl AccessLogging {
+    /// Create a `AccessLogging` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             log_entries: HashMap::new(),
@@ -1379,28 +1441,34 @@ impl AccessLogging {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `log_entry` (keyed by its id field).
     pub fn add_log_entry(&mut self, entry: LogEntry) {
         self.log_entries.insert(entry.entry_id.clone(), entry);
     }
 
+    /// Fetch the registered `log_entry` by id, or `None`.
     pub fn get_log_entry(&self, entry_id: &str) -> Option<&LogEntry> {
         self.log_entries.get(entry_id)
     }
 
+    /// Borrow the `LogAnalysis` sub-component.
     pub fn log_analysis(&self) -> &LogAnalysis {
         &self.log_analysis
     }
 
+    /// Borrow the `RetentionPolicy` sub-component.
     pub fn retention_policy(&self) -> &RetentionPolicy {
         &self.retention_policy
     }
 }
 
 impl LogAnalysis {
+    /// Create a `LogAnalysis` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             analysis_methods: HashMap::new(),
@@ -1408,21 +1476,25 @@ impl LogAnalysis {
         }
     }
 
+    /// Register `analysis_method` (keyed by its id field).
     pub fn add_analysis_method(&mut self, method: AnalysisMethod) {
         self.analysis_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Fetch the registered `analysis_method` by id, or `None`.
     pub fn get_analysis_method(&self, method_id: &str) -> Option<&AnalysisMethod> {
         self.analysis_methods.get(method_id)
     }
 
+    /// Borrow the `AnomalyDetection` sub-component.
     pub fn anomaly_detection(&self) -> &AnomalyDetection {
         &self.anomaly_detection
     }
 }
 
 impl AnomalyDetection {
+    /// Create a `AnomalyDetection` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             detection_algorithms: HashMap::new(),
@@ -1430,26 +1502,31 @@ impl AnomalyDetection {
         }
     }
 
+    /// Register `detection_algorithm` (keyed by its id field).
     pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
         self.detection_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Fetch the registered `detection_algorithm` by id, or `None`.
     pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
         self.detection_algorithms.get(algorithm_id)
     }
 
+    /// Set the `alert_threshold`.
     pub fn set_alert_threshold(&mut self, metric_name: &str, threshold: f64) {
         self.alert_thresholds
             .insert(metric_name.to_string(), threshold);
     }
 
+    /// Fetch the registered `alert_threshold` by id, or `None`.
     pub fn get_alert_threshold(&self, metric_name: &str) -> Option<&f64> {
         self.alert_thresholds.get(metric_name)
     }
 }
 
 impl RetentionPolicy {
+    /// Create a `RetentionPolicy` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             policy_id: "policy_1".to_string(),
@@ -1462,6 +1539,7 @@ impl RetentionPolicy {
 }
 
 impl ConsentManagement {
+    /// Create a `ConsentManagement` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             consent_records: HashMap::new(),
@@ -1470,39 +1548,47 @@ impl ConsentManagement {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `consent_record` (keyed by its id field).
     pub fn add_consent_record(&mut self, record: ConsentRecord) {
         self.consent_records
             .insert(record.record_id.clone(), record);
     }
 
+    /// Fetch the registered `consent_record` by id, or `None`.
     pub fn get_consent_record(&self, record_id: &str) -> Option<&ConsentRecord> {
         self.consent_records.get(record_id)
     }
 
+    /// Register `consent_policy` (keyed by its id field).
     pub fn add_consent_policy(&mut self, policy: ConsentPolicy) {
         self.consent_policies
             .insert(policy.policy_id.clone(), policy);
     }
 
+    /// Fetch the registered `consent_policy` by id, or `None`.
     pub fn get_consent_policy(&self, policy_id: &str) -> Option<&ConsentPolicy> {
         self.consent_policies.get(policy_id)
     }
 
+    /// Register `consent_workflow` (keyed by its id field).
     pub fn add_consent_workflow(&mut self, workflow: ConsentWorkflow) {
         self.consent_workflows
             .insert(workflow.workflow_id.clone(), workflow);
     }
 
+    /// Fetch the registered `consent_workflow` by id, or `None`.
     pub fn get_consent_workflow(&self, workflow_id: &str) -> Option<&ConsentWorkflow> {
         self.consent_workflows.get(workflow_id)
     }
 }
 
 impl DataAccessControl {
+    /// Create a `DataAccessControl` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             access_policies: HashMap::new(),
@@ -1511,27 +1597,32 @@ impl DataAccessControl {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.authentication.initialize()?;
         self.authorization.initialize()?;
         Ok(())
     }
 
+    /// Register `access_policy` (keyed by its id field).
     pub fn add_access_policy(&mut self, policy: AccessPolicy) {
         self.access_policies
             .insert(policy.policy_id.clone(), policy);
     }
 
+    /// Fetch the registered `access_policy` by id, or `None`.
     pub fn get_access_policy(&self, policy_id: &str) -> Option<&AccessPolicy> {
         self.access_policies.get(policy_id)
     }
 
+    /// Ids of every registered `access_policies`.
     pub fn list_access_policies(&self) -> Vec<String> {
         self.access_policies.keys().cloned().collect()
     }
 }
 
 impl AuthenticationSystem {
+    /// Create a `AuthenticationSystem` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             authentication_methods: HashMap::new(),
@@ -1540,29 +1631,35 @@ impl AuthenticationSystem {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `authentication_method` (keyed by its id field).
     pub fn add_authentication_method(&mut self, method: AuthenticationMethod) {
         self.authentication_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Fetch the registered `authentication_method` by id, or `None`.
     pub fn get_authentication_method(&self, method_id: &str) -> Option<&AuthenticationMethod> {
         self.authentication_methods.get(method_id)
     }
 
+    /// Borrow the `SessionManagement` sub-component.
     pub fn session_management(&self) -> &SessionManagement {
         &self.session_management
     }
 
+    /// Borrow the `MultiFactorAuthentication` sub-component.
     pub fn multi_factor(&self) -> &MultiFactorAuthentication {
         &self.multi_factor
     }
 }
 
 impl SessionManagement {
+    /// Create a `SessionManagement` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             sessions: HashMap::new(),
@@ -1570,29 +1667,35 @@ impl SessionManagement {
         }
     }
 
+    /// Register `session` (keyed by its id field).
     pub fn add_session(&mut self, session: Session) {
         self.sessions.insert(session.session_id.clone(), session);
     }
 
+    /// Fetch the registered `session` by id, or `None`.
     pub fn get_session(&self, session_id: &str) -> Option<&Session> {
         self.sessions.get(session_id)
     }
 
+    /// Remove `session` by id, returning it when present.
     pub fn remove_session(&mut self, session_id: &str) -> Option<Session> {
         self.sessions.remove(session_id)
     }
 
+    /// Register `session_policy` (keyed by its id field).
     pub fn add_session_policy(&mut self, policy: SessionPolicy) {
         self.session_policies
             .insert(policy.policy_id.clone(), policy);
     }
 
+    /// Fetch the registered `session_policy` by id, or `None`.
     pub fn get_session_policy(&self, policy_id: &str) -> Option<&SessionPolicy> {
         self.session_policies.get(policy_id)
     }
 }
 
 impl MultiFactorAuthentication {
+    /// Create a `MultiFactorAuthentication` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             factors: HashMap::new(),
@@ -1600,25 +1703,30 @@ impl MultiFactorAuthentication {
         }
     }
 
+    /// Register `factor` (keyed by its id field).
     pub fn add_factor(&mut self, factor: AuthenticationFactor) {
         self.factors.insert(factor.factor_id.clone(), factor);
     }
 
+    /// Fetch the registered `factor` by id, or `None`.
     pub fn get_factor(&self, factor_id: &str) -> Option<&AuthenticationFactor> {
         self.factors.get(factor_id)
     }
 
+    /// Register `factor_combination` (keyed by its id field).
     pub fn add_factor_combination(&mut self, combination: FactorCombination) {
         self.factor_combinations
             .insert(combination.combination_id.clone(), combination);
     }
 
+    /// Fetch the registered `factor_combination` by id, or `None`.
     pub fn get_factor_combination(&self, combination_id: &str) -> Option<&FactorCombination> {
         self.factor_combinations.get(combination_id)
     }
 }
 
 impl AuthorizationSystem {
+    /// Create a `AuthorizationSystem` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             authorization_policies: HashMap::new(),
@@ -1627,29 +1735,35 @@ impl AuthorizationSystem {
         }
     }
 
+    /// Initialize owned sub-components in dependency order.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `authorization_policy` (keyed by its id field).
     pub fn add_authorization_policy(&mut self, policy: AuthorizationPolicy) {
         self.authorization_policies
             .insert(policy.policy_id.clone(), policy);
     }
 
+    /// Fetch the registered `authorization_policy` by id, or `None`.
     pub fn get_authorization_policy(&self, policy_id: &str) -> Option<&AuthorizationPolicy> {
         self.authorization_policies.get(policy_id)
     }
 
+    /// Borrow the `PermissionManagement` sub-component.
     pub fn permission_management(&self) -> &PermissionManagement {
         &self.permission_management
     }
 
+    /// Borrow the `RoleManagement` sub-component.
     pub fn role_management(&self) -> &RoleManagement {
         &self.role_management
     }
 }
 
 impl PermissionManagement {
+    /// Create a `PermissionManagement` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             permissions: HashMap::new(),
@@ -1657,24 +1771,29 @@ impl PermissionManagement {
         }
     }
 
+    /// Register `permission` (keyed by its id field).
     pub fn add_permission(&mut self, name: &str, permission: Permission) {
         self.permissions.insert(name.to_string(), permission);
     }
 
+    /// Fetch the registered `permission` by id, or `None`.
     pub fn get_permission(&self, name: &str) -> Option<&Permission> {
         self.permissions.get(name)
     }
 
+    /// Register `permission_group` (keyed by its id field).
     pub fn add_permission_group(&mut self, group: PermissionGroup) {
         self.permission_groups.insert(group.group_id.clone(), group);
     }
 
+    /// Fetch the registered `permission_group` by id, or `None`.
     pub fn get_permission_group(&self, group_id: &str) -> Option<&PermissionGroup> {
         self.permission_groups.get(group_id)
     }
 }
 
 impl RoleManagement {
+    /// Create a `RoleManagement` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             roles: HashMap::new(),
@@ -1682,20 +1801,24 @@ impl RoleManagement {
         }
     }
 
+    /// Register `role` (keyed by its id field).
     pub fn add_role(&mut self, role: Role) {
         self.roles.insert(role.role_id.clone(), role);
     }
 
+    /// Fetch the registered `role` by id, or `None`.
     pub fn get_role(&self, role_id: &str) -> Option<&Role> {
         self.roles.get(role_id)
     }
 
+    /// Borrow the `RoleHierarchy` sub-component.
     pub fn role_hierarchy(&self) -> &RoleHierarchy {
         &self.role_hierarchy
     }
 }
 
 impl RoleHierarchy {
+    /// Create a `RoleHierarchy` with default sub-components / empty registries.
     pub fn new() -> Self {
         Self {
             hierarchy_id: "hierarchy_1".to_string(),

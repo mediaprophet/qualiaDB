@@ -16,11 +16,14 @@ pub enum HrtfProfile {
 
 static HRTF_PROFILE: AtomicU8 = AtomicU8::new(HrtfProfile::KemarLite as u8);
 
+/// Select the process-global HRTF profile used by the hot path
+/// (`Analytic` or `KemarLite`; default `KemarLite`).
 #[inline]
 pub fn set_hrtf_profile(profile: HrtfProfile) {
     HRTF_PROFILE.store(profile as u8, Ordering::Relaxed);
 }
 
+/// The currently selected process-global HRTF profile.
 #[inline]
 pub fn hrtf_profile() -> HrtfProfile {
     match HRTF_PROFILE.load(Ordering::Relaxed) {

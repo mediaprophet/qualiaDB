@@ -303,6 +303,7 @@ pub enum MeasurementMethod {
     Categorical,
 }
 impl ClinicalAnalyzer {
+    /// Create a `ClinicalAnalyzer` with default sub-components.
     pub fn new() -> Self {
         Self {
             diagnostic_engine: DiagnosticEngine::new(),
@@ -312,6 +313,7 @@ impl ClinicalAnalyzer {
         }
     }
 
+    /// Initialise the `ClinicalAnalyzer` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.diagnostic_engine.initialize()?;
         self.risk_assessment.initialize()?;
@@ -354,6 +356,7 @@ impl ClinicalAnalyzer {
 }
 
 impl DiagnosticEngine {
+    /// Create a `DiagnosticEngine` with default sub-components.
     pub fn new() -> Self {
         Self {
             diagnostic_algorithms: HashMap::new(),
@@ -362,29 +365,35 @@ impl DiagnosticEngine {
         }
     }
 
+    /// Initialise the `DiagnosticEngine` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `diagnostic_algorithm` in the `DiagnosticEngine` collection.
     pub fn add_diagnostic_algorithm(&mut self, algorithm: DiagnosticAlgorithm) {
         self.diagnostic_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Borrow `diagnostic_algorithm` by id, or `None` when absent.
     pub fn get_diagnostic_algorithm(&self, algorithm_id: &str) -> Option<&DiagnosticAlgorithm> {
         self.diagnostic_algorithms.get(algorithm_id)
     }
 
+    /// Borrow the `symptom_analyzer` component.
     pub fn symptom_analyzer(&self) -> &SymptomAnalyzer {
         &self.symptom_analyzer
     }
 
+    /// Borrow the `lab_interpreter` component.
     pub fn lab_interpreter(&self) -> &LabInterpreter {
         &self.lab_interpreter
     }
 }
 
 impl SymptomAnalyzer {
+    /// Create a `SymptomAnalyzer` with default sub-components.
     pub fn new() -> Self {
         Self {
             symptom_patterns: HashMap::new(),
@@ -392,26 +401,31 @@ impl SymptomAnalyzer {
         }
     }
 
+    /// Register `symptom_pattern` in the `SymptomAnalyzer` collection.
     pub fn add_symptom_pattern(&mut self, pattern: SymptomPattern) {
         self.symptom_patterns
             .insert(pattern.pattern_id.clone(), pattern);
     }
 
+    /// Borrow `symptom_pattern` by id, or `None` when absent.
     pub fn get_symptom_pattern(&self, pattern_id: &str) -> Option<&SymptomPattern> {
         self.symptom_patterns.get(pattern_id)
     }
 
+    /// Register `symptom_correlation` in the `SymptomAnalyzer` collection.
     pub fn add_symptom_correlation(&mut self, correlation: SymptomCorrelation) {
         self.symptom_correlations
             .insert(correlation.correlation_id.clone(), correlation);
     }
 
+    /// Borrow `symptom_correlation` by id, or `None` when absent.
     pub fn get_symptom_correlation(&self, correlation_id: &str) -> Option<&SymptomCorrelation> {
         self.symptom_correlations.get(correlation_id)
     }
 }
 
 impl LabInterpreter {
+    /// Create a `LabInterpreter` with default sub-components.
     pub fn new() -> Self {
         Self {
             reference_ranges: HashMap::new(),
@@ -419,18 +433,22 @@ impl LabInterpreter {
         }
     }
 
+    /// Register `reference_range` in the `LabInterpreter` collection.
     pub fn add_reference_range(&mut self, test_code: &str, range: ReferenceRange) {
         self.reference_ranges.insert(test_code.to_string(), range);
     }
 
+    /// Borrow `reference_range` by id, or `None` when absent.
     pub fn get_reference_range(&self, test_code: &str) -> Option<&ReferenceRange> {
         self.reference_ranges.get(test_code)
     }
 
+    /// Borrow the `abnormality_detector` component.
     pub fn abnormality_detector(&self) -> &AbnormalityDetector {
         &self.abnormality_detector
     }
 
+    /// Interpret `result` against the reference ranges; returns a `ResultStatus`.
     pub fn interpret_result(&self, result: &LabResult) -> ResultStatus {
         if let Some(range) = self.reference_ranges.get(&result.test_code) {
             if result.value < range.minimum || result.value > range.maximum {
@@ -445,6 +463,7 @@ impl LabInterpreter {
 }
 
 impl AbnormalityDetector {
+    /// Create a `AbnormalityDetector` with default sub-components.
     pub fn new() -> Self {
         Self {
             detection_algorithms: HashMap::new(),
@@ -452,21 +471,25 @@ impl AbnormalityDetector {
         }
     }
 
+    /// Register `detection_algorithm` in the `AbnormalityDetector` collection.
     pub fn add_detection_algorithm(&mut self, algorithm: DetectionAlgorithm) {
         self.detection_algorithms
             .insert(algorithm.algorithm_id.clone(), algorithm);
     }
 
+    /// Borrow `detection_algorithm` by id, or `None` when absent.
     pub fn get_detection_algorithm(&self, algorithm_id: &str) -> Option<&DetectionAlgorithm> {
         self.detection_algorithms.get(algorithm_id)
     }
 
+    /// Borrow the `severity_assessment` component.
     pub fn severity_assessment(&self) -> &SeverityAssessment {
         &self.severity_assessment
     }
 }
 
 impl SeverityAssessment {
+    /// Create a `SeverityAssessment` with default sub-components.
     pub fn new() -> Self {
         Self {
             assessment_criteria: HashMap::new(),
@@ -474,21 +497,25 @@ impl SeverityAssessment {
         }
     }
 
+    /// Register `criterion` in the `SeverityAssessment` collection.
     pub fn add_criterion(&mut self, criterion: AssessmentCriterion) {
         self.assessment_criteria
             .insert(criterion.criterion_id.clone(), criterion);
     }
 
+    /// Borrow `criterion` by id, or `None` when absent.
     pub fn get_criterion(&self, criterion_id: &str) -> Option<&AssessmentCriterion> {
         self.assessment_criteria.get(criterion_id)
     }
 
+    /// Borrow the `scoring_system` component.
     pub fn scoring_system(&self) -> &ScoringSystem {
         &self.scoring_system
     }
 }
 
 impl ScoringSystem {
+    /// Create a `ScoringSystem` with default sub-components.
     pub fn new() -> Self {
         Self {
             system_id: "system_1".to_string(),
@@ -499,6 +526,7 @@ impl ScoringSystem {
 }
 
 impl ClinicalRiskAssessment {
+    /// Create a `ClinicalRiskAssessment` with default sub-components.
     pub fn new() -> Self {
         Self {
             risk_models: HashMap::new(),
@@ -506,26 +534,32 @@ impl ClinicalRiskAssessment {
         }
     }
 
+    /// Initialise the `ClinicalRiskAssessment` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `risk_model` in the `ClinicalRiskAssessment` collection.
     pub fn add_risk_model(&mut self, model: ClinicalRiskModel) {
         self.risk_models.insert(model.model_id.clone(), model);
     }
 
+    /// Borrow `risk_model` by id, or `None` when absent.
     pub fn get_risk_model(&self, model_id: &str) -> Option<&ClinicalRiskModel> {
         self.risk_models.get(model_id)
     }
 
+    /// Register `risk_factor` in the `ClinicalRiskAssessment` collection.
     pub fn add_risk_factor(&mut self, factor: ClinicalRiskFactor) {
         self.risk_factors.insert(factor.factor_id.clone(), factor);
     }
 
+    /// Borrow `risk_factor` by id, or `None` when absent.
     pub fn get_risk_factor(&self, factor_id: &str) -> Option<&ClinicalRiskFactor> {
         self.risk_factors.get(factor_id)
     }
 
+    /// Borrow the `compute_risk_score` component.
     pub fn compute_risk_score(&self, factor_ids: &[String]) -> f64 {
         if factor_ids.is_empty() {
             return 0.0;
@@ -540,6 +574,7 @@ impl ClinicalRiskAssessment {
 }
 
 impl TreatmentPlanner {
+    /// Create a `TreatmentPlanner` with default sub-components.
     pub fn new() -> Self {
         Self {
             treatment_guidelines: HashMap::new(),
@@ -547,25 +582,30 @@ impl TreatmentPlanner {
         }
     }
 
+    /// Initialise the `TreatmentPlanner` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `treatment_guideline` in the `TreatmentPlanner` collection.
     pub fn add_treatment_guideline(&mut self, guideline: TreatmentGuideline) {
         self.treatment_guidelines
             .insert(guideline.guideline_id.clone(), guideline);
     }
 
+    /// Borrow `treatment_guideline` by id, or `None` when absent.
     pub fn get_treatment_guideline(&self, guideline_id: &str) -> Option<&TreatmentGuideline> {
         self.treatment_guidelines.get(guideline_id)
     }
 
+    /// Borrow the `decision_support` component.
     pub fn decision_support(&self) -> &DecisionSupport {
         &self.decision_support
     }
 }
 
 impl DecisionSupport {
+    /// Create a `DecisionSupport` with default sub-components.
     pub fn new() -> Self {
         Self {
             decision_trees: HashMap::new(),
@@ -573,25 +613,30 @@ impl DecisionSupport {
         }
     }
 
+    /// Register `decision_tree` in the `DecisionSupport` collection.
     pub fn add_decision_tree(&mut self, tree: DecisionTree) {
         self.decision_trees.insert(tree.tree_id.clone(), tree);
     }
 
+    /// Borrow `decision_tree` by id, or `None` when absent.
     pub fn get_decision_tree(&self, tree_id: &str) -> Option<&DecisionTree> {
         self.decision_trees.get(tree_id)
     }
 
+    /// Register `scoring_system` in the `DecisionSupport` collection.
     pub fn add_scoring_system(&mut self, system: ScoringSystem) {
         self.scoring_systems
             .insert(system.system_id.clone(), system);
     }
 
+    /// Borrow `scoring_system` by id, or `None` when absent.
     pub fn get_scoring_system(&self, system_id: &str) -> Option<&ScoringSystem> {
         self.scoring_systems.get(system_id)
     }
 }
 
 impl OutcomePredictor {
+    /// Create a `OutcomePredictor` with default sub-components.
     pub fn new() -> Self {
         Self {
             prediction_models: HashMap::new(),
@@ -599,22 +644,27 @@ impl OutcomePredictor {
         }
     }
 
+    /// Initialise the `OutcomePredictor` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Register `prediction_model` in the `OutcomePredictor` collection.
     pub fn add_prediction_model(&mut self, model_id: &str, model: PredictionModel) {
         self.prediction_models.insert(model_id.to_string(), model);
     }
 
+    /// Borrow `prediction_model` by id, or `None` when absent.
     pub fn get_prediction_model(&self, model_id: &str) -> Option<&PredictionModel> {
         self.prediction_models.get(model_id)
     }
 
+    /// Register `outcome_metric` in the `OutcomePredictor` collection.
     pub fn add_outcome_metric(&mut self, metric_id: &str, value: OutcomeMetric) {
         self.outcome_metrics.insert(metric_id.to_string(), value);
     }
 
+    /// Borrow `outcome_metric` by id, or `None` when absent.
     pub fn get_outcome_metric(&self, metric_id: &str) -> Option<&OutcomeMetric> {
         self.outcome_metrics.get(metric_id)
     }

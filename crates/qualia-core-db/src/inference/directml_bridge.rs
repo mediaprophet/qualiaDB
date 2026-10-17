@@ -98,22 +98,26 @@ unsafe fn directstorage_read_impl(
     }
 
     // Cast type-erased pointers back to specific Windows types
-    let device = &(*device_ptr).d3d12;
+    let _device = &(*device_ptr).d3d12;
     let handle = HANDLE(file_handle);
     let _gpu_buffer = &*(gpu_buffer_ptr as *const ID3D12Resource);
 
-    // Perform DirectStorage read operation
-    // Note: Actual DirectStorage implementation would go here
-    // For now, this is a stub that validates the FFI boundary
-    log::trace!(
-        "DirectStorage FFI: device={:?}, handle={:?}, offset={}, size={}",
-        device,
+    // DirectStorage requires the Microsoft.DirectStorage SDK (dstorage.dll) runtime.
+    // When dstorage.dll is not linked/loaded, fail closed honestly with DmlStatus::DirectStorageFailed
+    // so callers immediately route through MmapGridManager or IOCP file streaming rather than
+    // silently reading uninitialized GPU memory.
+    log::warn!(
+        "DirectStorage DMA bypass requested (handle={:?}, offset={}, size={}), but Microsoft.DirectStorage SDK runtime (dstorage.dll) is not loaded. Failing closed to invoke fallback.",
         handle,
         offset,
         size
     );
 
-    Ok(())
+    Err(DmlError::DirectStorageFailed(
+        "DirectStorage hardware DMA bypass requires Microsoft.DirectStorage SDK (dstorage.dll). \
+         Runtime not loaded; route through MmapGridManager or IOCP streaming path."
+            .to_string(),
+    ))
 }
 
 /// FFI-safe wrapper for D3D12 device creation.

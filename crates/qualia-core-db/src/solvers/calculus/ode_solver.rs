@@ -170,6 +170,7 @@ pub struct ChaoitonProfile {
 }
 
 impl ChaoitonProfile {
+    /// Default chaoiton profile problem parameters.
     pub fn new() -> Self {
         Self {
             scale_radius: 1.0,
@@ -177,6 +178,8 @@ impl ChaoitonProfile {
         }
     }
 
+    /// Chaoiton problem with explicit scale radius and central
+    /// density.
     pub fn with_params(scale_radius: f64, central_density: f64) -> Self {
         Self {
             scale_radius,
@@ -186,6 +189,7 @@ impl ChaoitonProfile {
 }
 
 impl BvpSystem for ChaoitonProfile {
+    /// Radial profile derivative `dβ/dr` for the chaoiton model.
     fn derivative(&self, r: f64, beta: f64) -> f64 {
         // Simplified chaoiton profile equation: dβ/dr = -β/r * (1 + β/ρ)
         // This represents the radial decay of the chaoiton field
@@ -197,10 +201,13 @@ impl BvpSystem for ChaoitonProfile {
         }
     }
 
+    /// Left boundary value — central density at r = a.
     fn boundary_left(&self, _a: f64) -> f64 {
         self.central_density
     }
 
+    /// Right boundary target — 1% of central density at the outer
+    /// radius.
     fn boundary_right(&self, _b: f64) -> f64 {
         0.01 // Target: decay to 1% of central density at outer boundary
     }
@@ -213,14 +220,17 @@ impl BvpSystem for ChaoitonProfile {
 pub struct LinearDecayBvp;
 
 impl BvpSystem for LinearDecayBvp {
+    /// `dy/dt = −y`.
     fn derivative(&self, _t: f64, y: f64) -> f64 {
         -y
     }
 
+    /// Left boundary value y(0) = 1.
     fn boundary_left(&self, _a: f64) -> f64 {
         1.0
     }
 
+    /// Right boundary value y(1) = e⁻¹ ≈ 0.3679.
     fn boundary_right(&self, _b: f64) -> f64 {
         0.3679 // e^(-1)
     }
@@ -320,6 +330,8 @@ pub struct CoupledBoltzmann {
 }
 
 impl CoupledBoltzmann {
+    /// Coupled Boltzmann problem with coupling strength and
+    /// relaxation rate.
     pub fn new(coupling_strength: f64, relaxation_rate: f64) -> Self {
         Self {
             coupling_strength,
@@ -329,6 +341,8 @@ impl CoupledBoltzmann {
 }
 
 impl OdeSystem for CoupledBoltzmann {
+    /// Simplified two-species Boltzmann derivative
+    /// `−τ·y + k(1−y)`.
     fn derivative(&self, _t: f64, y: f64) -> f64 {
         // Simplified coupled Boltzmann equation:
         // dy/dt = -relaxation_rate * y + coupling_strength * (1 - y)
@@ -474,28 +488,56 @@ pub trait OdeSystem: Send + Sync {
     fn derivative(&self, t: f64, y: f64) -> f64;
 }
 
-/// Simple harmonic oscillator: d²x/dt² + ω²x = 0
-///
-/// Converted to first-order system:
-/// - dx/dt = v
-/// - dv/dt = -ω²x
+/// Simple harmonic oscillator: d²x/dt² + ω²x = 0 (1D acceleration response: a = -ω²x)
 #[derive(Clone)]
 pub struct HarmonicOscillator {
     pub omega: f64,
 }
 
 impl HarmonicOscillator {
+    /// Oscillator with angular frequency `omega`.
     pub fn new(omega: f64) -> Self {
         Self { omega }
     }
 }
 
 impl OdeSystem for HarmonicOscillator {
+    /// `dy/dt = −ω²y` (second-order form flattened to first-order).
     fn derivative(&self, _t: f64, y: f64) -> f64 {
-        // For simplicity, treat y as position x only
-        // dy/dt = v (we'll use a simplified model)
-        // This is a placeholder - full 2D system requires different state representation
         -self.omega * self.omega * y
+    }
+}
+
+/// Fully-coupled 2D Harmonic Oscillator:
+/// - State: [x, v] packed into f64 via `pack_f32_pair`
+/// - dx/dt = v
+/// - dv/dt = -ω²x
+#[derive(Clone)]
+pub struct CoupledHarmonicOscillator {
+    pub omega: f64,
+}
+
+impl CoupledHarmonicOscillator {
+    /// Coupled 2D oscillator at angular frequency `omega`.
+    pub fn new(omega: f64) -> Self {
+        Self { omega }
+    }
+
+    /// Explicit 2D derivative evaluation
+    pub fn derivative_2d(&self, _t: f64, x: f64, v: f64) -> (f64, f64) {
+        (v, -self.omega * self.omega * x)
+    }
+}
+
+impl OdeSystem for CoupledHarmonicOscillator {
+    /// 2D derivative on the packed-f32 pair state
+    /// `(dx/dt, dv/dt) = (v, −ω²x)`, repacked into the f64 bits.
+    fn derivative(&self, _t: f64, y: f64) -> f64 {
+        let (x, v) = crate::modalities::calculus::unpack_f32_pair(y.to_bits());
+        let dx_dt = v;
+        let dv_dt = (-self.omega * self.omega * (x as f64)) as f32;
+        let packed = crate::modalities::calculus::pack_f32_pair(dx_dt, dv_dt);
+        f64::from_bits(packed)
     }
 }
 
@@ -506,12 +548,14 @@ pub struct ExponentialDecay {
 }
 
 impl ExponentialDecay {
+    /// Exponential decay `dy/dt = −λy`.
     pub fn new(lambda: f64) -> Self {
         Self { lambda }
     }
 }
 
 impl OdeSystem for ExponentialDecay {
+    /// `dy/dt = −λy`.
     fn derivative(&self, _t: f64, y: f64) -> f64 {
         -self.lambda * y
     }

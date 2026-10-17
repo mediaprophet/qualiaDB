@@ -44,7 +44,7 @@ pub const LOGIC_MODALITY_SHAPES: [&str; 42] = [
     "JuridicalCapacityConfigurationShape",
     "DelegationChainConfigurationShape",
     "ContractFormationConfigurationShape",
-    "ValueFlowConfigurationShape",
+    "SocioeconomicsConfigurationShape",
     "CapabilityGapConfigurationShape",
     "ResilientIdentityConfigurationShape",
     "ZkGatedConfigurationShape",
@@ -278,8 +278,8 @@ q42:ContractFormationConfigurationShape a sh:NodeShape ;
     sh:property [ sh:path q42:formationStage ; sh:in ( "None" "Offer" "Binding" ) ;
         sh:message "Binding needs offer + assent AND both parties' capacity Intact (composes §18)." ] .
 
-# ── §23 Value-flow / Permissive Commons (capped ROI, threshold discharge) ────
-q42:ValueFlowConfigurationShape a sh:NodeShape ;
+# ── §23 Socioeconomics / Permissive Commons (capped ROI, threshold discharge) ─
+q42:SocioeconomicsConfigurationShape a sh:NodeShape ;
     sh:property [ sh:path q42:roiCapPercent ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
         sh:message "Commons cost = production cost + a legally CAPPED ROI margin (extraction guard); pool ≥ cost → Discharged, freed globally." ] .
 
@@ -415,7 +415,7 @@ mod tests {
             "JuridicalCapacityConfigurationShape",
             "DelegationChainConfigurationShape",
             "ContractFormationConfigurationShape",
-            "ValueFlowConfigurationShape",
+            "SocioeconomicsConfigurationShape",
             "CapabilityGapConfigurationShape",
             "ResilientIdentityConfigurationShape",
             "ZkGatedConfigurationShape",

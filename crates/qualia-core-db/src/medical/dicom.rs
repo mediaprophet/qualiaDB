@@ -41,6 +41,7 @@ const ITEM_DELIMITER: u32 = tag(0xFFFE, 0xE000);
 const ITEM_END_DELIMITER: u32 = tag(0xFFFE, 0xE00D);
 const SEQ_DELIMITER: u32 = tag(0xFFFE, 0xE0DD);
 
+/// Pack a (group, element) pair into the u32 DICOM tag key.
 const fn tag(group: u16, element: u16) -> u32 {
     ((group as u32) << 16) | element as u32
 }
@@ -56,6 +57,7 @@ pub enum DicomError {
 }
 
 impl std::fmt::Display for DicomError {
+    /// Human-readable `DicomError` rendering.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::TooShort => write!(f, "DICOM file too short"),
@@ -159,6 +161,8 @@ enum TransferSyntax {
     EncapsulatedExplicitVr,
 }
 
+/// Locate the dataset start: standard 128-byte preamble + `DICM`
+/// magic, with a scan fallback when the preamble is absent.
 fn find_dataset_offset(data: &[u8]) -> Result<usize, DicomError> {
     if data.len() < 132 {
         return Err(DicomError::TooShort);
@@ -174,6 +178,7 @@ fn find_dataset_offset(data: &[u8]) -> Result<usize, DicomError> {
     Err(DicomError::MissingDicmMagic)
 }
 
+/// Bounds-checked little-endian u16 read at `offset`.
 fn read_u16_le(data: &[u8], offset: usize) -> Result<u16, DicomError> {
     let end = offset + 2;
     if end > data.len() {
@@ -182,6 +187,7 @@ fn read_u16_le(data: &[u8], offset: usize) -> Result<u16, DicomError> {
     Ok(u16::from_le_bytes([data[offset], data[offset + 1]]))
 }
 
+/// Bounds-checked little-endian u32 read at `offset`.
 fn read_u32_le(data: &[u8], offset: usize) -> Result<u32, DicomError> {
     let end = offset + 4;
     if end > data.len() {
@@ -195,6 +201,8 @@ fn read_u32_le(data: &[u8], offset: usize) -> Result<u32, DicomError> {
     ]))
 }
 
+/// `true` for VRs whose explicit header carries a 32-bit length at
+/// offset +8 (OB/OW/OF/SQ/UT/UN/SV/UV).
 fn vr_is_long(vr: &[u8; 2]) -> bool {
     matches!(
         vr,
@@ -202,6 +210,8 @@ fn vr_is_long(vr: &[u8; 2]) -> bool {
     )
 }
 
+/// Lossy-UTF8 decode of a NUL-terminated, whitespace-trimmed DICOM
+/// text value.
 fn decode_dicom_string(bytes: &[u8]) -> String {
     let trimmed = bytes
         .iter()
@@ -211,6 +221,7 @@ fn decode_dicom_string(bytes: &[u8]) -> String {
     String::from_utf8_lossy(&trimmed).trim().to_string()
 }
 
+/// Parse the first `\`-separated component of a DS/IS value as f64.
 fn decode_numeric_string(bytes: &[u8]) -> Option<f64> {
     let text = decode_dicom_string(bytes);
     text.split('\\')
@@ -218,10 +229,13 @@ fn decode_numeric_string(bytes: &[u8]) -> Option<f64> {
         .and_then(|part| part.trim().parse::<f64>().ok())
 }
 
+/// Numeric-string decode to i32 (0 on failure).
 fn decode_i32(bytes: &[u8]) -> i32 {
     decode_numeric_string(bytes).map(|v| v as i32).unwrap_or(0)
 }
 
+/// Numeric-string decode to u16, falling back to a raw LE u16 read
+/// for binary-valued elements.
 fn decode_u16(bytes: &[u8]) -> u16 {
     decode_numeric_string(bytes)
         .map(|v| v as u16)
@@ -241,6 +255,10 @@ struct ElementHeader {
     header_size: usize,
 }
 
+/// Parse one element header: delimiter tags are fixed 8-byte;
+/// explicit-VR headers add the VR code (long VRs extend to 12-byte);
+/// implicit-VR is 8-byte with a 32-bit length. `meta_group` forces
+/// explicit VR per Part 10.
 fn read_element_header(
     data: &[u8],
     offset: usize,
@@ -299,6 +317,8 @@ fn read_element_header(
     }
 }
 
+/// Advance the cursor past one element's value — handles
+/// undefined-length items/sequences by scanning for delimiters.
 fn skip_element(
     data: &[u8],
     offset: usize,
@@ -360,6 +380,7 @@ fn skip_undefined_length_item(
     }
 }
 
+/// Advance past a sequence to its sequence-delimitation item.
 fn skip_sequence(
     data: &[u8],
     mut offset: usize,
@@ -380,6 +401,9 @@ fn skip_sequence(
     }
 }
 
+/// Walk the group-0x0002 file-meta elements (always explicit-VR LE)
+/// to extract the transfer-syntax UID; returns it plus the dataset
+/// cursor.
 fn parse_meta_information(data: &[u8], offset: usize) -> Result<(String, usize), DicomError> {
     let mut transfer_syntax = TS_EXPLICIT_VR_LITTLE_ENDIAN.to_string();
     let mut cursor = offset;
@@ -413,6 +437,9 @@ fn parse_meta_information(data: &[u8], offset: usize) -> Result<(String, usize),
     Ok((transfer_syntax, cursor))
 }
 
+/// Map a transfer-syntax UID to the `TransferSyntax` variant;
+/// encapsulated syntaxes (JPEG/JPEG2000/RLE) fold into
+/// `EncapsulatedExplicitVr`. Unknown UIDs fail closed.
 fn transfer_syntax_from_uid(uid: &str) -> Result<TransferSyntax, DicomError> {
     match uid {
         TS_IMPLICIT_VR_LITTLE_ENDIAN => Ok(TransferSyntax::ImplicitVrLittleEndian),
@@ -453,6 +480,8 @@ fn encapsulated_pixel_end(data: &[u8], start: usize) -> Result<usize, DicomError
     }
 }
 
+/// Decode `value` into the matching `DicomMetadata` field for each
+/// recognized tag; unrecognized tags are skipped.
 fn apply_value(meta: &mut DicomMetadata, tag: u32, value: &[u8]) {
     match tag {
         TAG_MODALITY => meta.modality = decode_dicom_string(value),
@@ -498,7 +527,8 @@ pub fn pack_volume_metadata(rows: u16, cols: u16, byte_length: u32) -> u64 {
     ((rows as u64) << 48) | ((cols as u64) << 32) | (byte_length as u64)
 }
 
-#[inline]
+/// Inverse of `pack_volume_metadata` — (rows, cols, pixel byte
+/// length).
 pub fn unpack_volume_metadata(metadata: u64) -> (u16, u16, u32) {
     let rows = ((metadata >> 48) & 0xFFFF) as u16;
     let cols = ((metadata >> 32) & 0xFFFF) as u16;
@@ -506,6 +536,9 @@ pub fn unpack_volume_metadata(metadata: u64) -> (u16, u16, u32) {
     (rows, cols, byte_length)
 }
 
+/// Sequential element walk: applies recognized tags into `meta` and,
+/// when `capture_pixels`, returns the Pixel Data element's byte
+/// slice (offset+length — no copy, zero-copy ingest seam).
 fn walk_dataset(
     data: &[u8],
     mut cursor: usize,
@@ -603,6 +636,8 @@ pub fn parse_dicom_file(path: &Path) -> Result<DicomMetadata, DicomError> {
     parse_dicom_metadata_bytes(&bytes)
 }
 
+/// Lowercase, alphanumeric-only, whitespace-collapsed form of `value`
+/// — the keyword-matching normal form.
 pub fn normalize_dicom_token(value: &str) -> String {
     value
         .to_lowercase()
@@ -614,6 +649,8 @@ pub fn normalize_dicom_token(value: &str) -> String {
         .join(" ")
 }
 
+/// Built-in token→organ matcher table (heart, lung, liver, brain,
+/// kidney, ovary, …) for DICOM text fields.
 pub fn default_organ_matchers() -> Vec<DicomTagMatcher> {
     vec![
         DicomTagMatcher {
@@ -678,6 +715,8 @@ pub fn default_organ_matchers() -> Vec<DicomTagMatcher> {
     ]
 }
 
+/// Infer the organ from the file's text fields (body part, series/
+/// study descriptions, protocol name) via `matchers`.
 pub fn infer_organ_from_metadata(
     meta: &DicomMetadata,
     matchers: &[DicomTagMatcher],
@@ -699,6 +738,7 @@ pub fn infer_organ_from_metadata(
     infer_organ_from_haystack(&haystack, matchers)
 }
 
+/// First-matching-token organ inference over normalized `haystack`.
 pub fn infer_organ_from_haystack(haystack: &str, matchers: &[DicomTagMatcher]) -> Option<String> {
     let normalized = normalize_dicom_token(haystack);
     for matcher in matchers {
@@ -712,6 +752,8 @@ pub fn infer_organ_from_haystack(haystack: &str, matchers: &[DicomTagMatcher]) -
     None
 }
 
+/// Curated 3D torso-overlay placement per organ label (offset/scale/
+/// rotation), with a generic fallback for unlisted organs.
 pub fn default_placement_for_organ(organ: &str) -> DicomPlacement {
     let table: BTreeMap<&str, DicomPlacement> = BTreeMap::from([
         (
@@ -775,6 +817,8 @@ pub fn default_placement_for_organ(organ: &str) -> DicomPlacement {
     })
 }
 
+/// Assemble a `DicomOverlaySpec` from parsed metadata — organ
+/// inferred when not supplied, placement defaulted per organ.
 pub fn build_overlay_spec(
     meta: &DicomMetadata,
     organ: Option<String>,
@@ -811,6 +855,7 @@ pub fn build_overlay_spec(
     }
 }
 
+/// Read `path`, parse its DICOM metadata, and build the overlay spec.
 pub fn overlay_spec_from_file(path: &Path) -> Result<DicomOverlaySpec, DicomError> {
     let meta = parse_dicom_file(path)?;
     Ok(build_overlay_spec(
@@ -820,11 +865,14 @@ pub fn overlay_spec_from_file(path: &Path) -> Result<DicomOverlaySpec, DicomErro
     ))
 }
 
+/// `overlay_spec_from_file` serialized to a JSON string (WASM/FFI
+/// seam).
 pub fn overlay_spec_json_from_file(path: &Path) -> Result<String, String> {
     let spec = overlay_spec_from_file(path).map_err(|e| e.to_string())?;
     serde_json::to_string(&spec).map_err(|e| e.to_string())
 }
 
+/// Parsed `DicomMetadata` from `path` serialized to JSON.
 pub fn metadata_json_from_file(path: &Path) -> Result<String, String> {
     let meta = parse_dicom_file(path).map_err(|e| e.to_string())?;
     serde_json::to_string(&meta).map_err(|e| e.to_string())
@@ -848,6 +896,8 @@ const IMAGING_CHAT_MARKERS: &[&str] = &[
     "hounsfield",
 ];
 
+/// `true` when `text` mentions imaging (marker-substring scan over
+/// `IMAGING_CHAT_MARKERS`).
 pub fn chat_mentions_imaging(text: &str) -> bool {
     let haystack = format!(" {} ", text.to_lowercase());
     IMAGING_CHAT_MARKERS
@@ -855,6 +905,8 @@ pub fn chat_mentions_imaging(text: &str) -> bool {
         .any(|marker| haystack.contains(marker))
 }
 
+/// Build a "chat-inferred" overlay spec when `text` mentions imaging
+/// — organ from keyword match, sensible default opacity/placement.
 pub fn infer_overlay_spec_from_text(
     text: &str,
     matchers: &[DicomTagMatcher],
@@ -958,6 +1010,8 @@ pub fn collect_dicom_image_paths_under(root: &Path, max_files: usize) -> Vec<Pat
     images
 }
 
+/// Bounded depth-first walk collecting paths whose bytes pass the
+/// `DICM` magic check into `out` (stops at `max_files`).
 fn collect_dicom_paths_recursive(dir: &Path, max_files: usize, out: &mut Vec<PathBuf>) {
     if out.len() >= max_files {
         return;

@@ -20,15 +20,21 @@ fn pred_aliases(local: &str) -> Vec<u64> {
     vec![q_hash(&full), q_hash(&short), q_hash(local)]
 }
 
+/// True when `p` is any recognised spelling (full IRI, `sh:` CURIE, or
+/// bare local) of SHACL predicate `local`.
 fn is_pred(p: u64, local: &str) -> bool {
     pred_aliases(local).contains(&p)
 }
 
+/// Hash of the `rdf:type` predicate — the N3 `a` keyword is kept as the
+/// bare `a` token by the parser.
 fn rdf_type() -> u64 {
     // N3 `a` keyword is kept as bare `a` by the parser.
     q_hash("a")
 }
 
+/// True when object `o` denotes `sh:NodeShape`, checked lexically via the
+/// resolver first then by predicate-alias hash.
 fn is_node_shape_type(o: u64, resolve: &HashMap<u64, String>) -> bool {
     if let Some(s) = resolve.get(&o) {
         return s == "sh:NodeShape"
@@ -39,6 +45,8 @@ fn is_node_shape_type(o: u64, resolve: &HashMap<u64, String>) -> bool {
     pred_aliases("NodeShape").contains(&o)
 }
 
+/// Recover the lexical form of hash `h` from the resolver; falls back to
+/// a `node:<hex>` placeholder when the term was never interned.
 fn lexical(h: u64, resolve: &HashMap<u64, String>) -> String {
     resolve
         .get(&h)
@@ -46,6 +54,9 @@ fn lexical(h: u64, resolve: &HashMap<u64, String>) -> String {
         .unwrap_or_else(|| format!("node:{h:016x}"))
 }
 
+/// Coerce an object to `f64`: parse its resolved lexical form as int or
+/// float, else decode inline-tagged numeric objects via the validator's
+/// `object_as_f64`. `None` for non-numeric terms.
 fn object_f64(object: u64, resolve: &HashMap<u64, String>) -> Option<f64> {
     if let Some(s) = resolve.get(&object) {
         if let Ok(i) = s.parse::<i64>() {
@@ -58,6 +69,8 @@ fn object_f64(object: u64, resolve: &HashMap<u64, String>) -> Option<f64> {
     crate::modalities::logic::shacl::validate::object_as_f64(object)
 }
 
+/// All quins whose `subject` matches and whose predicate is any spelling
+/// of `pred_local`.
 fn objects_of<'a>(quins: &'a [NQuin], subject: u64, pred_local: &str) -> Vec<&'a NQuin> {
     quins
         .iter()
@@ -65,12 +78,17 @@ fn objects_of<'a>(quins: &'a [NQuin], subject: u64, pred_local: &str) -> Vec<&'a
         .collect()
 }
 
+/// First object value of predicate `pred_local` on `subject`, or `None`
+/// when the fact is absent.
 fn first_object(quins: &[NQuin], subject: u64, pred_local: &str) -> Option<u64> {
     objects_of(quins, subject, pred_local)
         .first()
         .map(|q| q.object)
 }
 
+/// Collect `ShaclConstraint`s declared on a `sh:property` blank node:
+/// resolves each predicate's lexical local name when available, else
+/// falls back to hash matching against the well-known constraint names.
 fn constraint_from_property(
     quins: &[NQuin],
     prop_node: u64,
@@ -92,6 +110,10 @@ fn constraint_from_property(
     out
 }
 
+/// Hash-only fallback for `constraint_from_property`: match `pred`
+/// against the well-known SHACL constraint predicate hashes and emit the
+/// corresponding constraint for `object`. Unrecognized predicates are
+/// skipped.
 fn push_constraint_by_hash(
     pred: u64,
     object: u64,
@@ -121,6 +143,10 @@ fn push_constraint_by_hash(
     }
 }
 
+/// Emit the `ShaclConstraint` for a resolved predicate local name and
+/// object — numeric locals read `object_f64` (defaulting to 0.0 on
+/// non-numeric objects), text locals read the lexical form. Unknown
+/// locals are ignored.
 fn push_constraint(
     local: &str,
     object: u64,

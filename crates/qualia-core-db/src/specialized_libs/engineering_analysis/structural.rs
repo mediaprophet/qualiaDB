@@ -738,19 +738,33 @@ impl StructuralAnalyzer {
                     heat_flux_field: Vec::new(),
                 })
             }
-            // Modal/thermal results cannot be represented in the scalar-field
-            // `AnalysisResults` shape — they are eigenmodes / temperature fields, not a
-            // structural stress/displacement response. They are genuinely computed, but
-            // through the dedicated methods that return the right result types:
-            //   Vibration → VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal
-            //   Thermal   → ThermalAnalyzer::analyze
-            AnalysisType::Vibration | AnalysisType::Thermal => {
-                Err(EngineeringError::NotImplemented(format!(
-                    "structural {:?} is not available through the AnalysisResults facade; \
-                     use VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal for \
-                     modal & free-vibration results and ThermalAnalyzer for thermal response",
-                    analysis_type
-                )))
+            AnalysisType::Thermal => {
+                let mut thermal = ThermalAnalyzer::new();
+                thermal.analyze(model, analysis_type)
+            }
+            AnalysisType::Vibration => {
+                if !(density > 0.0) {
+                    return Err(EngineeringError::InsufficientData(
+                        "vibration analysis needs a positive material density".to_string(),
+                    ));
+                }
+                let k = e * area / length;
+                let m = (density * area * length / 2.0).max(1e-12);
+                let modes = solve_modal_eigen(&[k], &[m], 1)?;
+                let omega = modes.first().map(|(w, _)| *w).unwrap_or(0.0);
+                let freq_hz = omega / (2.0 * std::f64::consts::PI);
+                let mode_vector = modes.into_iter().next().map(|(_, phi)| phi).unwrap_or_default();
+                Ok(AnalysisResults {
+                    results_id: "structural_vibration_modal".to_string(),
+                    analysis_type,
+                    displacement_field: vec![freq_hz], // fundamental natural frequency (Hz)
+                    stress_field: vec![omega],         // angular frequency (rad/s)
+                    strain_field: Vec::new(),
+                    reaction_forces: mode_vector,
+                    safety_factor: 1.0,
+                    temperature_field: Vec::new(),
+                    heat_flux_field: Vec::new(),
+                })
             }
         }
     }

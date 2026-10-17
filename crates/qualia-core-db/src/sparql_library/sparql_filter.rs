@@ -194,6 +194,10 @@ impl ExpressionEvaluator {
         Self::evaluate_expression(expr, ctx, row, resolver)
     }
 
+    /// Evaluate a FILTER/BIND expression against a binding row —
+    /// variables, literals, unary/binary ops, function calls, and
+    /// subqueries. Iterative dispatch; errors (never fabricates) on
+    /// unsupported builtins without a resolver/sink.
     fn evaluate_expression(
         expr: &Expression,
         ctx: &SparqlQueryContext,
@@ -260,6 +264,8 @@ impl ExpressionEvaluator {
         }
     }
 
+    /// Unary operators: `!` (EBV negation), unary `-`/`+` on
+    /// numerics.
     fn evaluate_unary_op(op: UnaryOp, inner: EvalResult) -> Result<EvalResult, String> {
         match op {
             UnaryOp::Not => match inner {
@@ -274,6 +280,8 @@ impl ExpressionEvaluator {
         }
     }
 
+    /// Binary operators: arithmetic, comparisons (typed + EBV),
+    /// `&&`/`||` with SPARQL error-propagation semantics.
     fn evaluate_binary_op(
         op: BinaryOp,
         left: EvalResult,
@@ -375,6 +383,9 @@ impl ExpressionEvaluator {
         }
     }
 
+    /// Builtin dispatch — string/numeric/logical builtins via the
+    /// lexicon sink, QISP custom predicates inline, Provenance
+    /// filters, and fail-closed residual builtins.
     fn evaluate_function(
         func: Function,
         args_start: u16,
@@ -1117,6 +1128,8 @@ impl ExpressionEvaluator {
         }
     }
 
+    /// Evaluate a subquery expression (EXISTS/NOT EXISTS and scalar
+    /// subqueries) against the current context.
     fn evaluate_subquery(
         query_id: u16,
         ctx: &SparqlQueryContext,
@@ -1439,6 +1452,7 @@ pub enum EvalResult {
 }
 
 impl EvalResult {
+    /// Effective Boolean Value of the result.
     pub fn as_bool(&self) -> bool {
         match self {
             EvalResult::Boolean(b) => *b,
@@ -1467,7 +1481,8 @@ impl EvalResult {
         if let (Some(a), Some(b)) = (self.as_f64(), other.as_f64()) {
             return a.total_cmp(&b);
         }
-        fn rank(e: &EvalResult) -> u8 {
+        /// Numeric-type rank for operator promotion ordering.
+    fn rank(e: &EvalResult) -> u8 {
             match e {
                 EvalResult::Numeric(_) | EvalResult::Float(_) => 0,
                 EvalResult::Boolean(_) => 1,

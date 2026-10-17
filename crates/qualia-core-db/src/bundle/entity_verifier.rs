@@ -506,10 +506,13 @@ pub fn verify_entity_bundle(bytes: &[u8]) -> EntityBundleVerification {
 }
 
 // Backwards compatibility functions
+/// Alias for [`verify_entity_10d`] — verifies a `.10d` digital-twin
+/// container (kept for the original "digital twin" naming).
 pub fn verify_digital_twin_10d(bytes: &[u8]) -> Entity10dVerification {
     verify_entity_10d(bytes)
 }
 
+/// Alias for [`verify_entity_bundle`] — verifies a `.hmc` entity bundle.
 pub fn verify_digital_twin_bundle(bytes: &[u8]) -> EntityBundleVerification {
     verify_entity_bundle(bytes)
 }

@@ -67,6 +67,8 @@ pub enum LifecycleStage {
 }
 
 impl LifecycleStage {
+    /// Decode a `u8` into a lifecycle stage; out-of-range values default to
+    /// `Adult`.
     pub const fn from_u8(raw: u8) -> Self {
         match raw {
             0 => Self::SeedOrSpore,
@@ -104,6 +106,8 @@ pub enum AffordanceCategory {
 }
 
 impl AffordanceCategory {
+    /// Decode a `u8` into an affordance category; out-of-range values
+    /// default to `Biological`.
     pub const fn from_u8(raw: u8) -> Self {
         match raw {
             0 => Self::Biological,
@@ -184,6 +188,8 @@ pub struct ActionAffordance {
 }
 
 impl ActionAffordance {
+    /// Create an affordance with default (permissive) preconditions/effects
+    /// and an empty object input schema; `action_id` is `q_hash(name)`.
     pub fn new(
         name: impl Into<String>,
         description: impl Into<String>,
@@ -230,6 +236,8 @@ pub struct EntityOntology {
 pub type PersonalOntology = EntityOntology;
 
 impl EntityOntology {
+    /// Create a healthy adult `DarwinianTaxon` profile (full energy and
+    /// hydration, no damage/wear, no affordances).
     pub fn new(entity_id: EntityId, taxon_or_system_iri: impl Into<String>) -> Self {
         Self {
             entity_id,

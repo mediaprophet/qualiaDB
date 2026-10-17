@@ -104,13 +104,42 @@ pub trait NodeExecutor {
 ///    lease, executes the node callback, writes outputs, checks constraints.
 /// 4. If any node fails or a deontic breach occurs, the pipeline halts.
 ///
-/// The `phase_leaser` is optional — if `None`, capability checks are skipped
-/// (backward-compatible with existing callers that don't use deontic gating).
+/// Routing policy for pipeline execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoutingPolicy {
+    /// Static topological order (every node is sequentially executed).
+    StaticTopological,
+    /// Autonomous control-unit routing: dynamically resolves branch selections and skips inactive paths.
+    AutonomousControlUnit,
+}
+
+/// Execute a DAG pipeline in static topological order.
 pub fn execute_pipeline<E: NodeExecutor>(
     pipeline: &DagPipeline,
     bus: &mut BlackboardBus,
     leaser: Option<&mut PhaseLeaser>,
     executor: &mut E,
+) -> Result<PipelineResult, DagError> {
+    execute_pipeline_with_policy(pipeline, bus, leaser, executor, RoutingPolicy::StaticTopological)
+}
+
+/// Execute a DAG pipeline with autonomous control-unit dynamic routing.
+pub fn execute_pipeline_autonomous<E: NodeExecutor>(
+    pipeline: &DagPipeline,
+    bus: &mut BlackboardBus,
+    leaser: Option<&mut PhaseLeaser>,
+    executor: &mut E,
+) -> Result<PipelineResult, DagError> {
+    execute_pipeline_with_policy(pipeline, bus, leaser, executor, RoutingPolicy::AutonomousControlUnit)
+}
+
+/// Execute a DAG pipeline with a specified routing policy.
+pub fn execute_pipeline_with_policy<E: NodeExecutor>(
+    pipeline: &DagPipeline,
+    bus: &mut BlackboardBus,
+    leaser: Option<&mut PhaseLeaser>,
+    executor: &mut E,
+    policy: RoutingPolicy,
 ) -> Result<PipelineResult, DagError> {
     // Validate: check for cycles.
     if pipeline.has_cycle() {
@@ -125,6 +154,10 @@ pub fn execute_pipeline<E: NodeExecutor>(
     let mut interrupt: Option<DeonticInterrupt> = None;
     let mut nodes_executed = 0;
 
+    // Track autonomous routing state
+    let mut active_target_nodes: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut routing_directive_issued = false;
+
     // Take the leaser out of the Option so we can use it conditionally.
     let mut leaser = leaser;
 
@@ -133,6 +166,24 @@ pub fn execute_pipeline<E: NodeExecutor>(
             Some(n) => n,
             None => continue,
         };
+
+        // In autonomous routing, if a dynamic branch directive was emitted, check if this node is active
+        if policy == RoutingPolicy::AutonomousControlUnit && routing_directive_issued {
+            let id_str = node_id.to_string();
+            let is_targeted = active_target_nodes.contains(&node.name) || active_target_nodes.contains(&id_str);
+            let has_active_upstream = pipeline.upstream(node_id).iter().any(|&up_id| {
+                if let Some(up_node) = pipeline.get_node(up_id) {
+                    active_target_nodes.contains(&up_node.name) || active_target_nodes.contains(&up_id.to_string())
+                } else {
+                    false
+                }
+            });
+
+            if !is_targeted && !has_active_upstream {
+                // Node belongs to an unselected branch — skip in autonomous mode
+                continue;
+            }
+        }
 
         // Read inputs from the blackboard.
         let inputs = bus.read_inputs(&node.inputs);
@@ -179,9 +230,25 @@ pub fn execute_pipeline<E: NodeExecutor>(
             Err(diag) => (false, Vec::new(), vec![diag]),
         };
 
-        // Write outputs to the blackboard.
+        // Write outputs to the blackboard and inspect dynamic routing directives
         if success && !outputs.is_empty() {
             let _ = bus.write_outputs(&outputs);
+
+            if policy == RoutingPolicy::AutonomousControlUnit {
+                for (channel, quins) in &outputs {
+                    if channel == "__route" || channel == "__branch" {
+                        routing_directive_issued = true;
+                        for q in quins {
+                            // Extract target branch/node token from object or subject
+                            if let Some(bytes) = crate::query::resolver::resolve_hash(q.object) {
+                                active_target_nodes.insert(String::from_utf8_lossy(bytes).into_owned());
+                            } else {
+                                active_target_nodes.insert(format!("{}", q.object));
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Check constraints after writing.
@@ -452,5 +519,51 @@ mod tests {
         let summary = result.summary();
         assert!(summary.contains("success=true"));
         assert!(summary.contains("nodes=1/1"));
+    }
+
+    #[test]
+    fn r3_autonomous_routing_skips_unselected_branch() {
+        let mut pipeline = DagPipeline::new();
+        // Router node 0 branches to node 2 ("branch_b"), leaving node 1 ("branch_a") unselected.
+        pipeline
+            .add_node(DagNode::new(0, "router", NodeEffect::Cold).with_output("__route"))
+            .unwrap();
+        pipeline
+            .add_node(DagNode::new(1, "branch_a", NodeEffect::Cold))
+            .unwrap();
+        pipeline
+            .add_node(DagNode::new(2, "branch_b", NodeEffect::Cold))
+            .unwrap();
+        pipeline.add_edge(DagEdge::new(0, 1)).unwrap();
+        pipeline.add_edge(DagEdge::new(0, 2)).unwrap();
+
+        struct RoutingExecutor;
+        impl NodeExecutor for RoutingExecutor {
+            fn execute(
+                &mut self,
+                node_id: u32,
+                _node_name: &str,
+                _inputs: &[(String, Vec<NQuin>)],
+                _capabilities: &[String],
+            ) -> Result<Vec<(String, Vec<NQuin>)>, Diagnostic> {
+                if node_id == 0 {
+                    // Activate target node 2 only
+                    Ok(vec![("__route".into(), vec![make_quin(0, 0, 2)])])
+                } else {
+                    Ok(vec![("out".into(), vec![make_quin(1, 2, 3)])])
+                }
+            }
+        }
+
+        let mut bus = BlackboardBus::new();
+        let mut executor = RoutingExecutor;
+        let result = execute_pipeline_autonomous(&pipeline, &mut bus, None, &mut executor).unwrap();
+
+        assert!(result.success);
+        // Only 2 nodes executed (router 0, and branch_b 2); branch_a was autonomously skipped!
+        assert_eq!(result.nodes_executed, 2);
+        assert_eq!(result.nodes_total, 3);
+        assert_eq!(result.node_results[0].node_id, 0);
+        assert_eq!(result.node_results[1].node_id, 2);
     }
 }

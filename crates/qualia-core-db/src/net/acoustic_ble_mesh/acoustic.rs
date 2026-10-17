@@ -10,6 +10,7 @@ pub struct AcousticNetwork {
     channel_manager: AcousticChannelManager,
     modem_controller: AcousticModemController,
     protocol_handler: AcousticProtocolHandler,
+    tx_queue: Vec<StoredMessage>,
 }
 
 /// Acoustic node in the network
@@ -283,84 +284,107 @@ pub enum CongestionControlType {
 }
 
 impl AcousticNetwork {
+    /// Construct a `AcousticNetwork` with default field values.
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
             channel_manager: AcousticChannelManager::new(),
             modem_controller: AcousticModemController::new(),
             protocol_handler: AcousticProtocolHandler::new(),
+            tx_queue: Vec::new(),
         }
     }
 
+    /// Register an acoustic node in the node registry.
+    pub fn register_node(&mut self, node: AcousticNode) {
+        self.nodes.insert(node.node_id.clone(), node);
+    }
+
+    /// Initialize channel manager, modem controller, and protocol handler.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         // Initialize acoustic network components
         self.channel_manager.initialize()?;
         self.modem_controller.initialize()?;
         self.protocol_handler.initialize()?;
-        Ok(())
-    }
 
-    pub fn discover_nodes(&mut self) -> Result<Vec<AcousticNode>, MeshError> {
-        let mut discovered_nodes = Vec::new();
-
-        // Simulate node discovery
-        for i in 0..5 {
-            let node = AcousticNode {
-                node_id: format!("acoustic_node_{}", i),
-                node_type: NodeType::Sensor,
+        // Register default local transducer node interface if none registered
+        if self.nodes.is_empty() {
+            let local_transducer = AcousticNode {
+                node_id: "acoustic_local_transducer".to_string(),
+                node_type: NodeType::Gateway,
                 capabilities: AcousticCapabilities {
-                    frequency_range: (20000.0, 50000.0), // 20-50 kHz
-                    bandwidth: 1000.0,                   // 1 kHz
-                    max_range: 1000.0,                   // 1 km
-                    data_rate: 1000.0,                   // 1 kbps
-                    modulation: ModulationType::FSK,
+                    frequency_range: (20000.0, 50000.0),
+                    bandwidth: 5000.0,
+                    max_range: 2000.0,
+                    data_rate: 2400.0,
+                    modulation: ModulationType::OFDM,
                     error_correction: ErrorCorrectionType::ReedSolomon,
                 },
-                location: Some(Location {
-                    latitude: 37.7749 + (i as f64 * 0.01),
-                    longitude: -122.4194 + (i as f64 * 0.01),
-                    altitude: Some(100.0),
-                    accuracy: 10.0,
-                }),
+                location: None,
                 status: NodeStatus::Active,
-                signal_strength: -50.0 + (i as f64 * 5.0),
-                battery_level: 100.0 - (i as f64 * 10.0),
+                signal_strength: -30.0,
+                battery_level: 100.0,
             };
-
-            self.nodes.insert(node.node_id.clone(), node.clone());
-            discovered_nodes.push(node);
+            self.nodes.insert(local_transducer.node_id.clone(), local_transducer);
         }
-
-        Ok(discovered_nodes)
-    }
-
-    pub fn send_message(&mut self, _message: &StoredMessage) -> Result<(), MeshError> {
-        // Send message through acoustic network
-        thread::sleep(Duration::from_millis(500)); // Simulate transmission time
         Ok(())
     }
 
+    /// Return the discovered acoustic nodes from the node registry.
+    pub fn discover_nodes(&mut self) -> Result<Vec<AcousticNode>, MeshError> {
+        Ok(self.nodes.values().cloned().collect())
+    }
+
+    /// Enqueue message into the acoustic modem transmission buffer.
+    pub fn send_message(&mut self, message: &StoredMessage) -> Result<(), MeshError> {
+        self.tx_queue.push(message.clone());
+        Ok(())
+    }
+
+    /// Enqueue payload into the acoustic transmission buffer.
     pub fn send_payload(
         &mut self,
-        _destination: &str,
-        _payload: &[u8],
-        _priority: MessagePriority,
+        destination: &str,
+        payload: &[u8],
+        priority: MessagePriority,
     ) -> Result<(), MeshError> {
-        thread::sleep(Duration::from_millis(500));
+        let message = StoredMessage {
+            message_id: format!("acoustic_{}", self.tx_queue.len() + 1),
+            source: "local_node".to_string(),
+            destination: destination.to_string(),
+            payload: payload.to_vec(),
+            priority,
+            timestamp: Instant::now(),
+            ttl: Duration::from_secs(3600),
+            delivery_attempts: 0,
+            status: MessageStatus::Pending,
+        };
+        self.tx_queue.push(message);
         Ok(())
     }
 
+    /// Inspect the current acoustic transmission queue.
+    pub fn tx_queue(&self) -> &[StoredMessage] {
+        &self.tx_queue
+    }
+
+    /// Number of nodes in the registry.
     pub fn get_node_count(&self) -> u32 {
         self.nodes.len() as u32
     }
 
+    /// Optimize acoustic discovery across available channels.
     pub fn optimize_discovery(&mut self) -> Result<(), MeshError> {
-        // Optimize acoustic discovery
+        if self.channel_manager.active_channel_count() == 0 && self.channel_manager.available_channel_count() > 0 {
+            let ch_id = self.channel_manager.available_channels[0].channel_id.clone();
+            self.channel_manager.allocate_channel(&ch_id);
+        }
         Ok(())
     }
 }
 
 impl AcousticChannelManager {
+    /// Construct a `AcousticChannelManager` with default field values.
     pub fn new() -> Self {
         Self {
             available_channels: Vec::new(),
@@ -369,6 +393,7 @@ impl AcousticChannelManager {
         }
     }
 
+    /// Initialize `AcousticChannelManager`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         // Pre-allocate standard acoustic channels (20-50 kHz range).
         for i in 0..5 {
@@ -386,6 +411,7 @@ impl AcousticChannelManager {
         Ok(())
     }
 
+    /// Allocate `channel_id` if free; `None` when already taken.
     pub fn allocate_channel(&mut self, channel_id: &str) -> Option<&AcousticChannel> {
         if let Some(pos) = self
             .available_channels
@@ -399,26 +425,31 @@ impl AcousticChannelManager {
         self.active_channels.get(channel_id)
     }
 
+    /// Free `channel_id` if allocated.
     pub fn release_channel(&mut self, channel_id: &str) {
         if let Some(channel) = self.active_channels.remove(channel_id) {
             self.available_channels.push(channel);
         }
     }
 
+    /// Channels currently unallocated.
     pub fn available_channel_count(&self) -> usize {
         self.available_channels.len()
     }
 
+    /// Channels currently allocated.
     pub fn active_channel_count(&self) -> usize {
         self.active_channels.len()
     }
 
+    /// The channel allocation strategy.
     pub fn allocation_strategy(&self) -> &ChannelAllocationStrategy {
         &self.channel_allocation
     }
 }
 
 impl AcousticModemController {
+    /// Construct a `AcousticModemController` with default field values.
     pub fn new() -> Self {
         Self {
             modem_type: ModemType::SoftwareDefined,
@@ -434,26 +465,32 @@ impl AcousticModemController {
         }
     }
 
+    /// Initialize `AcousticModemController`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// The modem type.
     pub fn modem_type(&self) -> &ModemType {
         &self.modem_type
     }
 
+    /// Configured transmit power.
     pub fn transmission_power(&self) -> f64 {
         self.transmission_power
     }
 
+    /// Set transmit power.
     pub fn set_transmission_power(&mut self, power: f64) {
         self.transmission_power = power.max(0.0);
     }
 
+    /// Configured receiver sensitivity.
     pub fn receiver_sensitivity(&self) -> f64 {
         self.receiver_sensitivity
     }
 
+    /// The signal-processing configuration.
     pub fn signal_processing(&self) -> &SignalProcessingConfig {
         &self.signal_processing
     }
@@ -467,6 +504,7 @@ impl AcousticModemController {
 }
 
 impl AcousticProtocolHandler {
+    /// Construct a `AcousticProtocolHandler` with default field values.
     pub fn new() -> Self {
         Self {
             protocol_stack: AcousticProtocolStack::new(),
@@ -476,28 +514,34 @@ impl AcousticProtocolHandler {
         }
     }
 
+    /// Initialize `AcousticProtocolHandler`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         Ok(())
     }
 
+    /// The acoustic protocol stack.
     pub fn protocol_stack(&self) -> &AcousticProtocolStack {
         &self.protocol_stack
     }
 
+    /// The packet handler.
     pub fn packet_handler(&self) -> &PacketHandler {
         &self.packet_handler
     }
 
+    /// The flow-control config.
     pub fn flow_control(&self) -> &FlowControl {
         &self.flow_control
     }
 
+    /// The error-handling config.
     pub fn error_handling(&self) -> &ErrorHandling {
         &self.error_handling
     }
 }
 
 impl AcousticProtocolStack {
+    /// Construct a `AcousticProtocolStack` with default field values.
     pub fn new() -> Self {
         Self {
             physical_layer: PhysicalLayer::new(),
@@ -509,6 +553,7 @@ impl AcousticProtocolStack {
 }
 
 impl PhysicalLayer {
+    /// Construct a `PhysicalLayer` with default field values.
     pub fn new() -> Self {
         Self {
             modulation: ModulationType::FSK,
@@ -520,6 +565,7 @@ impl PhysicalLayer {
 }
 
 impl DataLinkLayer {
+    /// Construct a `DataLinkLayer` with default field values.
     pub fn new() -> Self {
         Self {
             mac_protocol: MacProtocol::CSMA,
@@ -531,6 +577,7 @@ impl DataLinkLayer {
 }
 
 impl NetworkLayer {
+    /// Construct a `NetworkLayer` with default field values.
     pub fn new() -> Self {
         Self {
             routing_protocol: RoutingProtocol::Geographic,
@@ -542,6 +589,7 @@ impl NetworkLayer {
 }
 
 impl TransportLayer {
+    /// Construct a `TransportLayer` with default field values.
     pub fn new() -> Self {
         Self {
             transport_protocol: TransportProtocol::DTN,
@@ -553,18 +601,21 @@ impl TransportLayer {
 }
 
 impl PacketHandler {
+    /// Construct a `PacketHandler` with default field values.
     pub fn new() -> Self {
         Self {}
     }
 }
 
 impl FlowControl {
+    /// Construct a `FlowControl` with default field values.
     pub fn new() -> Self {
         Self {}
     }
 }
 
 impl ErrorHandling {
+    /// Construct a `ErrorHandling` with default field values.
     pub fn new() -> Self {
         Self {}
     }

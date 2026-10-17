@@ -28,6 +28,7 @@ pub enum IngestPhase {
 }
 
 impl IngestPhase {
+    /// Stable string tag for the phase.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Starting => "starting",
@@ -76,6 +77,7 @@ pub struct IngestSnapshot {
 }
 
 impl IngestSnapshot {
+    /// Render the snapshot as human-readable text at `verbose` level.
     pub fn format_text(&self, verbose: u8) -> String {
         let rss = self
             .rss_bytes
@@ -130,6 +132,7 @@ impl IngestSnapshot {
         line
     }
 
+    /// Render the snapshot as a JSON object.
     pub fn format_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_else(|_| "{\"phase\":\"failed\"}".into())
     }
@@ -164,10 +167,12 @@ pub struct IngestReport {
 }
 
 impl IngestReport {
+    /// Reporter that drops all output.
     pub fn silent() -> Self {
         Self::new(0, |_| {})
     }
 
+    /// Reporter at `verbose` level invoking `sink` on each snapshot.
     pub fn new(verbose: u8, sink: impl Fn(&IngestSnapshot) + Send + Sync + 'static) -> Self {
         let now = Instant::now();
         Self {
@@ -182,74 +187,91 @@ impl IngestReport {
         }
     }
 
+    /// Human-readable text progress to stderr.
     pub fn text_stderr(verbose: u8) -> Self {
         Self::new(verbose, move |snap| {
             let _ = writeln!(io::stderr(), "{}", snap.format_text(verbose));
         })
     }
 
+    /// Machine-readable JSON progress to stdout.
     pub fn json_stdout(verbose: u8) -> Self {
         Self::new(verbose, move |snap| {
             let _ = writeln!(io::stdout(), "{}", snap.format_json());
         })
     }
 
+    /// Record the configured worker count.
     pub fn set_workers(&mut self, workers: u32) {
         self.workers = workers;
     }
 
+    /// Record total source bytes.
     pub fn set_source_bytes(&self, n: u64) {
         self.counters.source_bytes.store(n, Ordering::Relaxed);
     }
 
+    /// Add `n` to bytes read.
     pub fn add_bytes_read(&self, n: u64) {
         self.counters.bytes_read.fetch_add(n, Ordering::Relaxed);
     }
 
+    /// Record triples produced.
     pub fn set_triples(&self, n: u64) {
         self.counters.triples.store(n, Ordering::Relaxed);
     }
 
+    /// Record interned-term count.
     pub fn set_interned(&self, n: u64) {
         self.counters.interned.store(n, Ordering::Relaxed);
     }
 
+    /// Increment the lex-run counter.
     pub fn add_lex_run(&self) {
         self.counters.lex_runs.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Increment the quin-chunk counter.
     pub fn add_quin_chunk(&self) {
         self.counters.quin_chunks.fetch_add(1, Ordering::Relaxed);
     }
 
+    /// Add `ms` to cumulative sort time.
     pub fn add_sort_ms(&self, ms: u64) {
         self.counters.sort_ms.fetch_add(ms, Ordering::Relaxed);
     }
 
+    /// Record parse time.
     pub fn set_parse_ms(&self, ms: u64) {
         self.counters.parse_ms.store(ms, Ordering::Relaxed);
     }
 
+    /// Record publish time.
     pub fn set_publish_ms(&self, ms: u64) {
         self.counters.publish_ms.store(ms, Ordering::Relaxed);
     }
 
+    /// Record the skip target.
     pub fn set_skip_target(&self, n: u64) {
         self.counters.skip_target.store(n, Ordering::Relaxed);
     }
 
+    /// Set the quin-chunk counter.
     pub fn set_quin_chunks(&self, n: u64) {
         self.counters.quin_chunks.store(n, Ordering::Relaxed);
     }
 
+    /// Set the lex-run counter.
     pub fn set_lex_runs(&self, n: u64) {
         self.counters.lex_runs.store(n, Ordering::Relaxed);
     }
 
+    /// Quin-chunk counter.
     pub fn quin_chunks(&self) -> u64 {
         self.counters.quin_chunks.load(Ordering::Relaxed)
     }
 
+    /// Lex-run counter.
     pub fn lex_runs(&self) -> u64 {
         self.counters.lex_runs.load(Ordering::Relaxed)
     }
@@ -262,10 +284,12 @@ impl IngestReport {
         }
     }
 
+    /// Verbosity level 0–2.
     pub fn verbose(&self) -> u8 {
         self.verbose
     }
 
+    /// Shared callback for free-form note lines.
     pub fn note_sink(&self) -> Arc<dyn Fn(&str) + Send + Sync> {
         let me = self.clone();
         Arc::new(move |msg: &str| {
@@ -294,6 +318,7 @@ impl IngestReport {
         })
     }
 
+    /// Emit a phase event: update counters from `detail`, invoke the sink when verbosity permits, write the progress file.
     pub fn emit(&self, phase: IngestPhase, message: impl Into<String>, detail: Option<String>) {
         let snap = self.snapshot(phase, message.into(), detail);
         (self.sink)(&snap);
@@ -304,6 +329,7 @@ impl IngestReport {
         self.last_triples.store(snap.triples, Ordering::Relaxed);
     }
 
+    /// Persist `snap` to the progress file (when configured).
     fn write_progress_file(&self, snap: &IngestSnapshot) {
         let path = match self.progress_path.lock() {
             Ok(g) => g.clone(),
@@ -357,6 +383,8 @@ impl IngestReport {
         }
     }
 
+    /// Build an `IngestSnapshot` for `phase`/`message` from the live
+    /// counters, computing rates, percent-complete, and ETA.
     pub fn snapshot(
         &self,
         phase: IngestPhase,
@@ -419,12 +447,14 @@ pub struct CountingReader<R: Read> {
 }
 
 impl<R: Read> CountingReader<R> {
+    /// Construct a `CountingReader`.
     pub fn new(inner: R, report: IngestReport) -> Self {
         Self { inner, report }
     }
 }
 
 impl<R: Read> Read for CountingReader<R> {
+    /// `Read` passthrough that accumulates bytes into the report.
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let n = self.inner.read(buf)?;
         if n > 0 {
@@ -434,6 +464,7 @@ impl<R: Read> Read for CountingReader<R> {
     }
 }
 
+/// Human-readable byte count (KiB/MiB/GiB).
 pub fn format_bytes(n: u64) -> String {
     const KIB: f64 = 1024.0;
     const MIB: f64 = 1024.0 * 1024.0;
@@ -450,6 +481,7 @@ pub fn format_bytes(n: u64) -> String {
     }
 }
 
+/// Human-readable integer with thousands separators.
 pub fn format_count(n: u64) -> String {
     if n >= 1_000_000_000 {
         format!("{:.2}B", n as f64 / 1_000_000_000.0)
@@ -462,18 +494,21 @@ pub fn format_count(n: u64) -> String {
     }
 }
 
+/// Extract a trailing `Nms` duration from a log message.
 fn parse_trailing_ms(msg: &str) -> Option<u64> {
     let ms = msg.rsplit_once(' ')?;
     let num = ms.1.strip_suffix("ms")?;
     num.parse().ok()
 }
 
+/// Extract a sort-path token from a log message.
 fn parse_sort_path(msg: &str) -> Option<String> {
     let rest = msg.split("path=").nth(1)?;
     let token = rest.split_whitespace().next()?;
     Some(token.to_string())
 }
 
+/// Human-readable duration in s/ms/µs.
 fn format_secs(secs: f64) -> String {
     if !secs.is_finite() || secs < 0.0 {
         return "—".into();
@@ -491,6 +526,7 @@ fn format_secs(secs: f64) -> String {
     }
 }
 
+/// Resident-set-size in bytes, `None` when unavailable.
 fn sample_rss_bytes() -> Option<u64> {
     use sysinfo::{Pid, ProcessesToUpdate, System};
     let mut sys = System::new();

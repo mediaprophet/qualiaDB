@@ -65,6 +65,9 @@ struct McpToolDescriptor {
 
 // Simple raw-byte slice extractor. This is a very rudimentary byte matcher
 // intended to satisfy the requirement of bypassing generic serde allocation.
+/// Find `"key":"value"` in `payload` and return the value bytes
+/// (unquoted region between the quotes). First match wins; `None` when
+/// the key or its quoted value is absent.
 fn extract_raw_json_string<'a>(payload: &'a [u8], key: &[u8]) -> Option<&'a [u8]> {
     // Look for `"key":"value"`
     let mut i = 0;
@@ -89,6 +92,8 @@ fn extract_raw_json_string<'a>(payload: &'a [u8], key: &[u8]) -> Option<&'a [u8]
     None
 }
 
+/// The curated tool surface advertised by `tools/list` — name,
+/// description, and input-schema literal for each MCP tool.
 fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
     &[
         McpToolDescriptor {
@@ -605,6 +610,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
     }
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::get_pending_tasks`.
 unsafe fn execute_get_pending_tasks(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -614,6 +620,7 @@ unsafe fn execute_get_pending_tasks(
 
 // ── Graph Engine Implementations ───────────────────────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::query_sparql`.
 unsafe fn execute_sparql_query(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -621,6 +628,7 @@ unsafe fn execute_sparql_query(
     mcp_stub_impls::query_sparql(args)
 }
 
+/// Handler for this MCP tool.
 unsafe fn execute_bare_metal_graph_traversal(
     _args: &[u8],
     intent: &McpIntentFrame,
@@ -641,6 +649,7 @@ unsafe fn execute_bare_metal_graph_traversal(
     Ok(fired.max(1).to_string())
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::get_graph_stats`.
 unsafe fn execute_graph_stats(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -648,6 +657,7 @@ unsafe fn execute_graph_stats(
     mcp_stub_impls::get_graph_stats(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::list_ontologies`.
 unsafe fn execute_list_ontologies(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -657,6 +667,7 @@ unsafe fn execute_list_ontologies(
 
 // ── LLM Implementations ─────────────────────────────────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::llm_infer`.
 unsafe fn execute_llm_infer(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -664,6 +675,7 @@ unsafe fn execute_llm_infer(
     mcp_stub_impls::llm_infer(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::llm_chat`.
 unsafe fn execute_llm_chat(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -671,6 +683,7 @@ unsafe fn execute_llm_chat(
     mcp_stub_impls::llm_chat(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::list_models`.
 unsafe fn execute_list_models(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -680,6 +693,7 @@ unsafe fn execute_list_models(
 
 // ── QPU Implementations ─────────────────────────────────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::qpu_optimize`.
 unsafe fn execute_qpu_optimize(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -687,10 +701,12 @@ unsafe fn execute_qpu_optimize(
     mcp_stub_impls::qpu_optimize(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::qpu_dft`.
 unsafe fn execute_qpu_dft(args: &[u8], _intent: &McpIntentFrame) -> Result<String, McpSystemError> {
     mcp_stub_impls::qpu_dft(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::qpu_status`.
 unsafe fn execute_qpu_status(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -700,6 +716,7 @@ unsafe fn execute_qpu_status(
 
 // ── Scientific Computing Implementations ─────────────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::matrix_operation`.
 unsafe fn execute_matrix_operation(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -707,6 +724,7 @@ unsafe fn execute_matrix_operation(
     mcp_tool_impls::matrix_operation(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::ode_solve`.
 unsafe fn execute_ode_solve(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -714,6 +732,7 @@ unsafe fn execute_ode_solve(
     mcp_tool_impls::ode_solve(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::chemical_analysis`.
 unsafe fn execute_chemical_analysis(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -721,6 +740,7 @@ unsafe fn execute_chemical_analysis(
     mcp_tool_impls::chemical_analysis(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::statistical_analysis`.
 unsafe fn execute_statistical_analysis(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -728,6 +748,7 @@ unsafe fn execute_statistical_analysis(
     mcp_tool_impls::statistical_analysis(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::ml_inference`.
 unsafe fn execute_ml_inference(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -735,6 +756,7 @@ unsafe fn execute_ml_inference(
     mcp_tool_impls::ml_inference(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::financial_model`.
 unsafe fn execute_financial_model(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -742,6 +764,7 @@ unsafe fn execute_financial_model(
     mcp_tool_impls::financial_model(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::medical_score`.
 unsafe fn execute_medical_score(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -749,6 +772,7 @@ unsafe fn execute_medical_score(
     mcp_tool_impls::medical_score(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::engineering_analysis`.
 unsafe fn execute_engineering_analysis(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -758,6 +782,7 @@ unsafe fn execute_engineering_analysis(
 
 // ── Identity & Wallet Implementations ─────────────────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::get_wallet_status`.
 unsafe fn execute_wallet_status(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -765,6 +790,7 @@ unsafe fn execute_wallet_status(
     mcp_stub_impls::get_wallet_status(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::get_did_info`.
 unsafe fn execute_did_info(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -774,6 +800,7 @@ unsafe fn execute_did_info(
 
 // ── Ontology Implementations ────────────────────────────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::ingest_ontology`.
 unsafe fn execute_ingest_ontology(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -781,6 +808,7 @@ unsafe fn execute_ingest_ontology(
     mcp_stub_impls::ingest_ontology(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::validate_shacl`.
 unsafe fn execute_shacl_validation(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -788,6 +816,7 @@ unsafe fn execute_shacl_validation(
     mcp_stub_impls::validate_shacl(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::validate_enumerated_identity_tool`.
 unsafe fn execute_validate_enumerated_identity(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -795,6 +824,7 @@ unsafe fn execute_validate_enumerated_identity(
     mcp_stub_impls::validate_enumerated_identity_tool(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::shacl_credential_gate`.
 unsafe fn execute_shacl_credential_gate(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -802,6 +832,7 @@ unsafe fn execute_shacl_credential_gate(
     mcp_stub_impls::shacl_credential_gate(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::shacl_degrade_violations`.
 unsafe fn execute_shacl_degrade_violations(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -809,6 +840,7 @@ unsafe fn execute_shacl_degrade_violations(
     mcp_stub_impls::shacl_degrade_violations(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::shacl_route`.
 unsafe fn execute_shacl_route(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -818,6 +850,7 @@ unsafe fn execute_shacl_route(
 
 // ── Testing & Debugging Implementations ─────────────────────────────────────
 
+/// Handler for this MCP tool.
 unsafe fn execute_paraconsistent_injection(
     _args: &[u8],
     intent: &McpIntentFrame,
@@ -848,6 +881,7 @@ unsafe fn execute_paraconsistent_injection(
     Ok((c + i).to_string())
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::list_qapps`.
 unsafe fn execute_list_qapps(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -855,6 +889,7 @@ unsafe fn execute_list_qapps(
     mcp_stub_impls::list_qapps(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::get_qapp_manifest`.
 unsafe fn execute_get_qapp_manifest(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -867,6 +902,7 @@ unsafe fn execute_get_qapp_manifest(
     mcp_stub_impls::get_qapp_manifest(name)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::inspect_qapp_readiness`.
 unsafe fn execute_inspect_qapp_readiness(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -879,6 +915,7 @@ unsafe fn execute_inspect_qapp_readiness(
     mcp_stub_impls::inspect_qapp_readiness(name)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_stub_impls::list_qapp_updates`.
 unsafe fn execute_list_qapp_updates(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -886,6 +923,7 @@ unsafe fn execute_list_qapp_updates(
     mcp_stub_impls::list_qapp_updates(args)
 }
 
+/// Handler for this MCP tool.
 unsafe fn execute_describe_qapp_surface_schema(
     _args: &[u8],
     _intent: &McpIntentFrame,
@@ -904,6 +942,7 @@ unsafe fn execute_describe_qapp_surface_schema(
     Ok(schema.to_string())
 }
 
+/// Handler for this MCP tool.
 unsafe fn execute_system_status(
     _args: &[u8],
     intent: &McpIntentFrame,
@@ -920,6 +959,7 @@ unsafe fn execute_system_status(
     .to_string())
 }
 
+/// Handler for this MCP tool.
 unsafe fn execute_run_docs_tests(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -972,6 +1012,9 @@ unsafe fn execute_run_docs_tests(
     .to_string())
 }
 
+/// Loopback probe of the resident daemon: `GET /health` on
+/// `127.0.0.1:port` with 2 s timeouts; true on a `200 OK` /
+/// `engine_version` response.
 fn daemon_health_ok(port: u16) -> bool {
     use std::io::{Read, Write};
     use std::net::{SocketAddr, TcpStream};
@@ -1001,6 +1044,8 @@ fn daemon_health_ok(port: u16) -> bool {
     }
 }
 
+/// Locate the repository root: `QUALIA_REPO_ROOT` wins; otherwise walk
+/// up to 8 parents from the CWD looking for `docs/tests/run-headless.mjs`.
 fn resolve_repo_root() -> std::path::PathBuf {
     if let Ok(root) = std::env::var("QUALIA_REPO_ROOT") {
         return std::path::PathBuf::from(root);
@@ -1019,6 +1064,7 @@ fn resolve_repo_root() -> std::path::PathBuf {
 
 // ── Extended Logic & Science Tool Implementations ─────────────────────────
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::evaluate_modality`.
 unsafe fn execute_evaluate_modality(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1026,6 +1072,7 @@ unsafe fn execute_evaluate_modality(
     mcp_tool_impls::evaluate_modality(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::bioinformatics_align`.
 unsafe fn execute_bioinformatics_align(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1033,6 +1080,7 @@ unsafe fn execute_bioinformatics_align(
     mcp_tool_impls::bioinformatics_align(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::chemical_descriptors`.
 unsafe fn execute_chemical_descriptors(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1040,6 +1088,7 @@ unsafe fn execute_chemical_descriptors(
     mcp_tool_impls::chemical_descriptors(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::clinical_risk`.
 unsafe fn execute_clinical_risk(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1047,6 +1096,7 @@ unsafe fn execute_clinical_risk(
     mcp_tool_impls::clinical_risk(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_format_impls::parse_csv`.
 unsafe fn execute_parse_csv(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1054,6 +1104,7 @@ unsafe fn execute_parse_csv(
     mcp_format_impls::parse_csv(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_format_impls::parse_rdf`.
 unsafe fn execute_parse_rdf(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1061,6 +1112,7 @@ unsafe fn execute_parse_rdf(
     mcp_format_impls::parse_rdf(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_format_impls::parse_json`.
 unsafe fn execute_parse_json(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1068,6 +1120,7 @@ unsafe fn execute_parse_json(
     mcp_format_impls::parse_json(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_format_impls::serialize_csv`.
 unsafe fn execute_serialize_csv(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1075,6 +1128,7 @@ unsafe fn execute_serialize_csv(
     mcp_format_impls::serialize_csv(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_format_impls::serialize_json`.
 unsafe fn execute_serialize_json(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1082,6 +1136,7 @@ unsafe fn execute_serialize_json(
     mcp_format_impls::serialize_json(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_format_impls::serialize_rdf`.
 unsafe fn execute_serialize_rdf(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1089,6 +1144,7 @@ unsafe fn execute_serialize_rdf(
     mcp_format_impls::serialize_rdf(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::symbolic_logic_infer`.
 unsafe fn execute_symbolic_logic_infer(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1096,6 +1152,7 @@ unsafe fn execute_symbolic_logic_infer(
     mcp_tool_impls::symbolic_logic_infer(args)
 }
 
+/// Handler for this MCP tool — delegates to `mcp_tool_impls::geometric_algebra_op`.
 unsafe fn execute_geometric_algebra_op(
     args: &[u8],
     _intent: &McpIntentFrame,
@@ -1157,6 +1214,9 @@ fn parse_sanctuary_override(value: &[u8]) -> Option<[u8; 32]> {
     Some(token)
 }
 
+/// Build the `McpIntentFrame` for a tool call: default `purpose:General`
+/// hash, no active constraints, plus the parsed `sanctuary_override`
+/// token and the QPU/LLM feature gates.
 fn build_intent_frame(arguments: &[u8], qpu_enabled: bool, llm_enabled: bool) -> McpIntentFrame {
     let sanctuary_override = extract_raw_json_string(arguments, b"\"sanctuary_override\"")
         .and_then(parse_sanctuary_override);
@@ -1172,9 +1232,27 @@ fn build_intent_frame(arguments: &[u8], qpu_enabled: bool, llm_enabled: bool) ->
     }
 }
 
+/// Serialize [`stable_mcp_tools`] to `tools/list` JSON — name,
+/// description, parsed `inputSchema` (falling back to a bare object
+/// schema when a literal fails to parse).
 fn tool_list_json() -> Vec<Value> {
     stable_mcp_tools()
         .iter()
+        .filter(|tool| {
+            #[cfg(target_arch = "wasm32")]
+            {
+                // Under WASM, filter out tools whose engines (filesystem, mmap, local models, native pre-solver) are unavailable
+                !matches!(
+                    tool.name,
+                    "list_ontologies" | "llm_infer" | "llm_chat" | "list_models" | "qpu_optimize" | "ingest_ontology"
+                )
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let _ = tool;
+                true
+            }
+        })
         .map(|tool| {
             let input_schema = serde_json::from_str::<Value>(tool.input_schema)
                 .unwrap_or_else(|_| json!({"type":"object"}));
@@ -1187,6 +1265,8 @@ fn tool_list_json() -> Vec<Value> {
         .collect()
 }
 
+/// The single MCP resource descriptor (`qualia://qapp-surface-schema`)
+/// advertised by `resources/list`.
 fn system_resource_json() -> Value {
     json!({
         "uri": "qualia://qapp-surface-schema",
@@ -1196,6 +1276,9 @@ fn system_resource_json() -> Value {
     })
 }
 
+/// Map an `McpSystemError` to its `(message, code)` JSON-RPC error
+/// pair — standard `-326xx`/`-32700` codes for protocol errors,
+/// `-3200x` server codes for the fiduciary/tool gates.
 fn error_message(err: McpSystemError) -> (&'static str, i64) {
     match err {
         McpSystemError::SanctuaryGateTriggered => ("Sanctuary gate triggered", -32001),
@@ -1208,6 +1291,9 @@ fn error_message(err: McpSystemError) -> (&'static str, i64) {
     }
 }
 
+/// Build the intent frame from raw arguments and route the call
+/// through `enforce_fiduciary_tool_dispatch` — the gated entry point
+/// for every tool invocation.
 fn dispatch_tool_call(
     tool_name: &[u8],
     arguments_raw: &[u8],
@@ -1231,6 +1317,9 @@ pub unsafe fn parse_and_evaluate_mcp_stream(stream_chunk: &[u8]) -> Result<Strin
     dispatch_tool_call(tool_name, stream_chunk, true, true)
 }
 
+/// Handle one JSON-RPC message — `initialize`, `tools/list`,
+/// `tools/call`, `resources/list` — returning the response text, or
+/// `None` for notifications/unparseable input (which get no reply).
 pub fn handle_jsonrpc_message(
     message: &str,
     qpu_enabled: bool,
@@ -1380,11 +1469,15 @@ pub fn handle_jsonrpc_message(
 // stdio Transport Logic (Allocations permitted only for handshake/metadata)
 // -----------------------------------------------------------------------------
 
+/// Run the stdio MCP server with both optional tool families enabled.
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn start_mcp_listener() {
     start_mcp_listener_with_flags(true, true).await;
 }
 
+/// Run the stdio MCP loop: one JSON-RPC message per stdin line,
+/// responses on stdout, until EOF. `qpu_enabled`/`llm_enabled` gate
+/// the optional tool families advertised/handled.
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn start_mcp_listener_with_flags(qpu_enabled: bool, llm_enabled: bool) {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};

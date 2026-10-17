@@ -9,6 +9,7 @@ use std::collections::HashMap;
 // Supporting implementations
 
 impl ModelManager {
+    /// Empty `ModelManager` (default-constructed state).
     pub fn new() -> Self {
         Self {
             model_storage: ModelStorage::new(),
@@ -18,6 +19,7 @@ impl ModelManager {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.model_storage.initialize()?;
         self.model_loader.initialize()?;
@@ -26,6 +28,7 @@ impl ModelManager {
         Ok(())
     }
 
+    /// Load `model_id` into managed storage.
     pub fn load_model(&mut self, model_id: String, model_path: &str) -> Result<Model, MLError> {
         // Check cache first
         if let Some(cached_model) = self.model_cache.get(&model_id) {
@@ -41,16 +44,19 @@ impl ModelManager {
         Ok(model)
     }
 
+    /// Ids of all models currently in the store.
     pub fn list_models(&self) -> Vec<String> {
         self.model_storage.list_models()
     }
 
+    /// Catalog metadata for `model_id`, if registered.
     pub fn get_model_metadata(&self, model_id: &str) -> Option<ModelMetadata> {
         self.model_storage.get_model_metadata(model_id)
     }
 }
 
 impl ModelStorage {
+    /// Empty `ModelStorage` (default-constructed state).
     pub fn new() -> Self {
         Self {
             zones: HashMap::new(),
@@ -61,6 +67,7 @@ impl ModelStorage {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.create_zones()?;
         self.model_catalog.initialize()?;
@@ -69,6 +76,7 @@ impl ModelStorage {
         Ok(())
     }
 
+    /// Populate the default model zones (llm/cv/audio/multimodal/embedding/transformer/cnn/rnn) with a 10 GiB capacity each.
     fn create_zones(&mut self) -> Result<(), MLError> {
         let zones = vec![
             ("llm", ModelZoneType::LargeLanguage),
@@ -95,6 +103,7 @@ impl ModelStorage {
         Ok(())
     }
 
+    /// Load `model_id` from `model_path`: real GGUF parse for existing .gguf files, **mock scaffold model otherwise** (see STUBS.md F9). Cached on repeat calls.
     pub fn load_model(&mut self, model_id: &str, model_path: &str) -> Result<Model, MLError> {
         if let Some(model) = self.model_store.get(model_id) {
             return Ok(model.clone());
@@ -141,6 +150,11 @@ impl ModelStorage {
 
     /// Build the mock scaffold model used when no real GGUF weights are available.
     fn mock_model(model_id: &str) -> Model {
+        log::warn!(
+            "ModelStorage::mock_model: model '{}' contains scaffold mock weights (1000 zeros), not genuine trained weights. \
+             Real weights require valid GGUF file with tensor metadata.",
+            model_id
+        );
         Model {
             model_id: model_id.to_string(),
             model_type: ModelType::LLM,
@@ -255,6 +269,7 @@ impl ModelStorage {
         )))
     }
 
+    /// Ids of all models currently in the store.
     pub fn list_models(&self) -> Vec<String> {
         let mut models = Vec::new();
         for zone in self.zones.values() {
@@ -263,6 +278,7 @@ impl ModelStorage {
         models
     }
 
+    /// Catalog metadata for `model_id`, if registered.
     pub fn get_model_metadata(&self, model_id: &str) -> Option<ModelMetadata> {
         for zone in self.zones.values() {
             if let Some(metadata) = zone.models.get(model_id) {
@@ -274,6 +290,7 @@ impl ModelStorage {
 }
 
 impl ModelCatalog {
+    /// Empty `ModelCatalog` (default-constructed state).
     pub fn new() -> Self {
         Self {
             models: HashMap::new(),
@@ -283,6 +300,7 @@ impl ModelCatalog {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.search_index.initialize()?;
         Ok(())
@@ -422,6 +440,7 @@ impl ModelCatalog {
 }
 
 impl ModelSearchIndex {
+    /// Empty `ModelSearchIndex` (default-constructed state).
     pub fn new() -> Self {
         Self {
             index_entries: HashMap::new(),
@@ -468,15 +487,22 @@ impl ModelSearchIndex {
 }
 
 impl ModelSearchEngine {
+    /// Empty `ModelSearchEngine` (default-constructed state).
     pub fn new() -> Self {
         Self {
             engine_type: SearchEngineType::Semantic,
             indexing_strategy: IndexingStrategy::Vector,
         }
     }
+
+    /// Search the model index using the engine's query matching policy.
+    pub fn search<'a>(&self, index: &'a ModelSearchIndex, query: &str) -> Vec<&'a ModelIndexEntry> {
+        index.search(query)
+    }
 }
 
 impl ModelCompression {
+    /// Empty `ModelCompression` (default-constructed state).
     pub fn new() -> Self {
         Self {
             compression_algorithms: HashMap::new(),
@@ -485,6 +511,7 @@ impl ModelCompression {
         }
     }
 
+    /// Mark the subsystem initialized (ready flag).
     pub fn initialize(&mut self) -> Result<(), MLError> {
         // Register the standard set of compression algorithms.
         self.register_algorithm("QuantizationInt8", CompressionAlgorithm::Quantization);
@@ -524,6 +551,7 @@ impl ModelCompression {
             .unwrap_or(false)
     }
 
+    /// Set `weight_index` in the packed pruning bitmask.
     fn set_mask_bit(mask: &mut [u8], weight_index: usize) {
         let byte = weight_index / PRUNING_MASK_BITS_PER_BYTE;
         let bit = weight_index % PRUNING_MASK_BITS_PER_BYTE;
@@ -957,6 +985,7 @@ impl ModelCompression {
         })
     }
 
+    /// Mean-squared divergence between teacher and student forward passes over the training inputs — the distillation fidelity metric.
     fn teacher_student_fidelity_mse(
         teacher: &Model,
         student: &Model,
@@ -989,6 +1018,7 @@ impl ModelCompression {
         })
     }
 
+    /// Reject empty/non-finite weights and out-of-range sparsity before pruning.
     fn validate_pruning_input(weights: &[f64], sparsity: f64) -> Result<(), MLError> {
         if weights.is_empty() {
             return Err(MLError::ValidationError(
@@ -1009,6 +1039,7 @@ impl ModelCompression {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Assemble the `PruningReport` — counts, byte sizes, achieved sparsity, compression ratio, and preserved L2 energy.
     fn make_pruning_report(
         total_weights: usize,
         pruned_weights: usize,
@@ -1041,6 +1072,7 @@ impl ModelCompression {
         }
     }
 
+    /// Update compression statistics and running-average quality metrics from a measured compression outcome.
     fn record_measured_compression(
         &mut self,
         original_bytes: usize,
@@ -1137,6 +1169,7 @@ impl ModelCompression {
 }
 
 impl CompressionStatistics {
+    /// Empty `CompressionStatistics` (default-constructed state).
     pub fn new() -> Self {
         Self {
             original_size: 0,
@@ -1149,6 +1182,7 @@ impl CompressionStatistics {
 }
 
 impl CompressionQualityMetrics {
+    /// Empty `CompressionQualityMetrics` (default-constructed state).
     pub fn new() -> Self {
         Self {
             accuracy_preservation: 0.0,

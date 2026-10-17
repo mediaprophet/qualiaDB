@@ -149,6 +149,8 @@ pub enum BackendType {
 // Supporting implementations
 
 impl MatrixStorage {
+    /// Creates an empty storage manager (no zones); call [`Self::initialize`]
+    /// to populate zones and ready the allocator, cache, and backend.
     pub fn new() -> Self {
         Self {
             zones: HashMap::new(),
@@ -158,6 +160,8 @@ impl MatrixStorage {
         }
     }
 
+    /// Creates the five storage zones and initializes the allocator, cache,
+    /// and backend. Must be called before `store_matrix`.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         // Initialize zones
         self.create_zones()?;
@@ -174,6 +178,8 @@ impl MatrixStorage {
         Ok(())
     }
 
+    /// Creates the five fixed zones (dense, sparse, structured, temporary,
+    /// cached). Each zone declares a 1 GiB `capacity`, currently unenforced.
     fn create_zones(&mut self) -> Result<(), LinearAlgebraError> {
         // Create different zone types
         let zones = vec![
@@ -198,6 +204,9 @@ impl MatrixStorage {
         Ok(())
     }
 
+    /// Selects a zone (via [`Self::select_best_zone`]), records the matrix
+    /// metadata there, and stores the data through the storage backend. The
+    /// `allocator` is not consulted — see STUBS.md §4.
     pub fn store_matrix(&mut self, matrix: Matrix) -> Result<(), LinearAlgebraError> {
         // Determine best zone for this matrix
         let zone_id = self.select_best_zone(&matrix)?;
@@ -217,6 +226,8 @@ impl MatrixStorage {
         Ok(())
     }
 
+    /// Returns the cached matrix if present; otherwise loads it from the
+    /// backend and inserts it into the cache (which may evict by policy).
     pub fn get_matrix(&mut self, matrix_id: &str) -> Result<Matrix, LinearAlgebraError> {
         // Check cache first
         if let Some(cached_data) = self.cache.get(matrix_id) {
@@ -232,6 +243,8 @@ impl MatrixStorage {
         Ok(matrix)
     }
 
+    /// Returns the stored metadata for `matrix_id` from whichever zone holds
+    /// it, or `None` if the matrix is not stored.
     pub fn get_matrix_metadata(&self, matrix_id: &str) -> Option<MatrixMetadata> {
         for zone in self.zones.values() {
             if let Some(metadata) = zone.matrices.get(matrix_id) {
@@ -241,6 +254,7 @@ impl MatrixStorage {
         None
     }
 
+    /// Returns the ids of all matrices recorded across every zone.
     pub fn list_matrices(&self) -> Vec<String> {
         let mut matrices = Vec::new();
         for zone in self.zones.values() {
@@ -249,6 +263,8 @@ impl MatrixStorage {
         matrices
     }
 
+    /// Picks the target zone: `dense` when `rows*cols > 10_000`, otherwise
+    /// `temporary`. Fixed heuristic — no sparsity/structure analysis yet.
     fn select_best_zone(&self, matrix: &Matrix) -> Result<String, LinearAlgebraError> {
         // Simple selection logic - in real implementation would be more sophisticated
         if matrix.rows * matrix.cols > 10000 {
@@ -260,6 +276,9 @@ impl MatrixStorage {
 }
 
 impl MatrixAllocator {
+    /// Creates an allocator with no configured memory pool; `initialize`
+    /// seeds it. NOTE: nothing in `MatrixStorage` calls `allocate` today —
+    /// this allocator is currently unwired scaffold (STUBS.md §4).
     pub fn new() -> Self {
         Self {
             allocation_strategy: AllocationStrategy::BestFit,
@@ -271,6 +290,8 @@ impl MatrixAllocator {
         }
     }
 
+    /// Resets the free/allocated block lists and seeds a single free block
+    /// covering the whole pool (`total_pool_size`, address 0).
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         // Initialize with a single free block covering the entire memory pool
         self.free_blocks.clear();
@@ -482,6 +503,8 @@ impl MatrixAllocator {
 }
 
 impl MatrixCache {
+    /// Creates an empty cache: LRU policy, 100 MiB capacity, zeroed
+    /// hit/miss counters and logical clocks.
     pub fn new() -> Self {
         Self {
             cache_entries: HashMap::new(),
@@ -495,6 +518,7 @@ impl MatrixCache {
         }
     }
 
+    /// Clears all cached entries and resets size/hit/miss bookkeeping.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         self.cache_entries.clear();
         self.current_size = 0;
@@ -690,6 +714,11 @@ impl MatrixCache {
 }
 
 impl StorageBackend {
+    /// Constructs the backend, attempting to open the default ZNS zone
+    /// manager: `backend_type` is `Hybrid` on success, `CSD` otherwise.
+    /// WARNING: the ZNS/CSD managers are constructed but never exercised —
+    /// `store_matrix_data`/`get_matrix_data` use only the in-memory map
+    /// (STUBS.md F29).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> Self {
         let zns_manager = crate::zns_storage::ZnsZoneManager::new("default_zone")
@@ -707,6 +736,8 @@ impl StorageBackend {
         }
     }
 
+    /// WASM build: declares `CSD` type but keeps only the in-memory map —
+    /// there is no ZNS/CSD path on wasm (STUBS.md F29).
     #[cfg(target_arch = "wasm32")]
     pub fn new() -> Self {
         Self {
@@ -715,16 +746,21 @@ impl StorageBackend {
         }
     }
 
+    /// No-op readiness hook — the in-memory store needs no setup.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         Ok(())
     }
 
+    /// Inserts a clone of `matrix` into the in-memory map keyed by
+    /// `matrix_id`. Does NOT write to ZNS/CSD or any durable backend.
     pub fn store_matrix_data(&mut self, matrix: &Matrix) -> Result<(), LinearAlgebraError> {
         self.matrix_store
             .insert(matrix.matrix_id.clone(), matrix.clone());
         Ok(())
     }
 
+    /// Returns a clone of the matrix stored under `matrix_id` in the
+    /// in-memory map, or `StorageError` if absent.
     pub fn get_matrix_data(&self, matrix_id: &str) -> Result<Matrix, LinearAlgebraError> {
         self.matrix_store.get(matrix_id).cloned().ok_or_else(|| {
             LinearAlgebraError::StorageError(format!("Matrix not found: {}", matrix_id))

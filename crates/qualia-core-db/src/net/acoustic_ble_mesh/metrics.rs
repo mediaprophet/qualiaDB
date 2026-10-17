@@ -9,6 +9,7 @@ pub struct MeshPerformanceMonitor {
     ble_metrics: BleMetrics,
     routing_metrics: RoutingMetrics,
     global_metrics: MeshGlobalMetrics,
+    start_time: std::time::Instant,
 }
 
 /// Acoustic metrics
@@ -63,6 +64,7 @@ impl MeshPerformanceMonitor {
             ble_metrics: BleMetrics::new(),
             routing_metrics: RoutingMetrics::new(),
             global_metrics: MeshGlobalMetrics::new(),
+            start_time: std::time::Instant::now(),
         }
     }
 
@@ -89,11 +91,13 @@ impl MeshPerformanceMonitor {
     }
 
     pub fn get_uptime(&self) -> Duration {
-        Duration::from_secs(3600) // 1 hour uptime (dummy)
+        self.start_time.elapsed()
     }
 
     pub fn get_global_stats(&self) -> MeshGlobalMetrics {
-        self.global_metrics.clone()
+        let mut stats = self.global_metrics.clone();
+        stats.network_uptime = self.get_uptime();
+        stats
     }
 }
 

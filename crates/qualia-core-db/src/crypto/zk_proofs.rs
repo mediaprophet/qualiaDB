@@ -295,6 +295,9 @@ pub struct ZkGlobalMetrics {
 }
 
 impl ZkProofSystem {
+    /// Create a system with default proving/verifying key metadata and an
+    /// empty circuit builder — real keys are attached per circuit via the
+    /// builder APIs.
     pub fn new() -> Self {
         Self {
             #[cfg(feature = "zk-culling")]
@@ -331,6 +334,8 @@ impl ZkProofSystem {
         }
     }
 
+    /// Register a new named circuit in the builder (fails if the id
+    /// already exists).
     pub fn create_circuit(&mut self, circuit_id: String) -> Result<(), ZkError> {
         self.circuit_builder.create_circuit(circuit_id.clone())?;
         Ok(())
@@ -728,6 +733,8 @@ impl ZkProofSystem {
         Ok((result.is_valid, c))
     }
 
+    /// Always fails with `EngineError` — the real implementation is behind
+    /// the `zk-culling` feature.
     #[cfg(not(feature = "zk-culling"))]
     pub fn prove_matrix_multiply(
         &mut self,
@@ -1712,6 +1719,8 @@ pub mod arkworks_groth16 {
     use ark_relations::gr1cs::{LinearCombination, Variable};
     use std::collections::HashMap;
 
+    /// Convert a `FieldElement`'s little-endian bytes to an ark `Fr` via
+    /// `from_le_bytes_mod_order`.
     pub fn field_element_to_fr(fe: &FieldElement) -> Fr {
         Fr::from_le_bytes_mod_order(&fe.value)
     }
@@ -1841,6 +1850,8 @@ pub mod arkworks_groth16 {
     }
 
     impl TrueZkSystem {
+        /// Run Groth16 circuit-specific setup for `MultiplierCircuit`
+        /// (proves `a × b`) over BLS12-381.
         pub fn setup() -> Result<Self, SynthesisError> {
             let mut rng = super::zk_secure_rng();
             let circuit = MultiplierCircuit::<Fr> { a: None, b: None };
@@ -1848,6 +1859,7 @@ pub mod arkworks_groth16 {
             Ok(Self { pk, vk })
         }
 
+        /// Generate a Groth16 proof for the `a × b` multiplier witness.
         pub fn generate_proof(&self, a: Fr, b: Fr) -> Result<Proof<Bls12_381>, SynthesisError> {
             let mut rng = super::zk_secure_rng();
             let circuit = MultiplierCircuit {
@@ -1857,6 +1869,7 @@ pub mod arkworks_groth16 {
             Groth16::<Bls12_381>::prove(&self.pk, circuit, &mut rng)
         }
 
+        /// Verify a multiplier proof against its public inputs.
         pub fn verify_proof(
             &self,
             proof: &Proof<Bls12_381>,

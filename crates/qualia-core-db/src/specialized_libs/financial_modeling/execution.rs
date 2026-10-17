@@ -279,6 +279,7 @@ pub struct VenuePerformance {
 }
 
 impl ExecutionEngine {
+    /// Create a `ExecutionEngine` with default sub-components.
     pub fn new() -> Self {
         Self {
             execution_strategies: HashMap::new(),
@@ -287,27 +288,32 @@ impl ExecutionEngine {
         }
     }
 
+    /// Initialise the `ExecutionEngine` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.order_manager.initialize()?;
         self.settlement_engine.initialize()?;
         Ok(())
     }
 
+    /// Register `execution_strategy` in the `ExecutionEngine` collection.
     pub fn add_execution_strategy(&mut self, strategy: ExecutionStrategy) {
         self.execution_strategies
             .insert(strategy.strategy_id.clone(), strategy);
     }
 
+    /// Borrow `execution_strategy` by id, or `None` when absent.
     pub fn get_execution_strategy(&self, strategy_id: &str) -> Option<&ExecutionStrategy> {
         self.execution_strategies.get(strategy_id)
     }
 
+    /// Ids of the `execution_strategies` currently registered.
     pub fn list_execution_strategies(&self) -> Vec<String> {
         self.execution_strategies.keys().cloned().collect()
     }
 }
 
 impl OrderManager {
+    /// Create a `OrderManager` with default sub-components.
     pub fn new() -> Self {
         Self {
             orders: HashMap::new(),
@@ -316,40 +322,49 @@ impl OrderManager {
         }
     }
 
+    /// Initialise the `OrderManager` sub-components; propagates the domain error.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Register `order` in the `OrderManager` collection.
     pub fn add_order(&mut self, order: Order) {
         self.orders.insert(order.order_id.clone(), order);
     }
 
+    /// Borrow `order` by id, or `None` when absent.
     pub fn get_order(&self, order_id: &str) -> Option<&Order> {
         self.orders.get(order_id)
     }
 
+    /// Ids of the `orders` currently registered.
     pub fn list_orders(&self) -> Vec<String> {
         self.orders.keys().cloned().collect()
     }
 
+    /// Borrow the `order_validation` component.
     pub fn order_validation(&self) -> &OrderValidation {
         &self.order_validation
     }
 
+    /// Mutable borrow of the `order_validation` component.
     pub fn order_validation_mut(&mut self) -> &mut OrderValidation {
         &mut self.order_validation
     }
 
+    /// Borrow the `order_routing` component.
     pub fn order_routing(&self) -> &OrderRouting {
         &self.order_routing
     }
 
+    /// Mutable borrow of the `order_routing` component.
     pub fn order_routing_mut(&mut self) -> &mut OrderRouting {
         &mut self.order_routing
     }
 }
 
 impl OrderValidation {
+    /// Create a `OrderValidation` with default sub-components.
     pub fn new() -> Self {
         Self {
             validation_rules: Vec::new(),
@@ -357,24 +372,29 @@ impl OrderValidation {
         }
     }
 
+    /// Register `validation_rule` in the `OrderValidation` collection.
     pub fn add_validation_rule(&mut self, rule: OrderValidationRule) {
         self.validation_rules.push(rule);
     }
 
+    /// Ids of the `validation_rules` currently registered.
     pub fn list_validation_rules(&self) -> &[OrderValidationRule] {
         &self.validation_rules
     }
 
+    /// Borrow the `compliance_checker` component.
     pub fn compliance_checker(&self) -> &OrderComplianceChecker {
         &self.compliance_checker
     }
 
+    /// Mutable borrow of the `compliance_checker` component.
     pub fn compliance_checker_mut(&mut self) -> &mut OrderComplianceChecker {
         &mut self.compliance_checker
     }
 }
 
 impl OrderComplianceChecker {
+    /// Create a `OrderComplianceChecker` with default sub-components.
     pub fn new() -> Self {
         Self {
             compliance_rules: Vec::new(),
@@ -382,28 +402,34 @@ impl OrderComplianceChecker {
         }
     }
 
+    /// Register `compliance_rule` in the `OrderComplianceChecker` collection.
     pub fn add_compliance_rule(&mut self, rule: OrderComplianceRule) {
         self.compliance_rules.push(rule);
     }
 
+    /// Ids of the `compliance_rules` currently registered.
     pub fn list_compliance_rules(&self) -> &[OrderComplianceRule] {
         &self.compliance_rules
     }
 
+    /// Register `regulatory_limit` in the `OrderComplianceChecker` collection.
     pub fn add_regulatory_limit(&mut self, limit: RegulatoryLimit) {
         self.regulatory_limits.insert(limit.limit_id.clone(), limit);
     }
 
+    /// Borrow `regulatory_limit` by id, or `None` when absent.
     pub fn get_regulatory_limit(&self, limit_id: &str) -> Option<&RegulatoryLimit> {
         self.regulatory_limits.get(limit_id)
     }
 
+    /// Ids of the `regulatory_limits` currently registered.
     pub fn list_regulatory_limits(&self) -> Vec<String> {
         self.regulatory_limits.keys().cloned().collect()
     }
 }
 
 impl OrderRouting {
+    /// Create a `OrderRouting` with default sub-components.
     pub fn new() -> Self {
         Self {
             routing_strategies: HashMap::new(),
@@ -411,29 +437,35 @@ impl OrderRouting {
         }
     }
 
+    /// Register `routing_strategy` in the `OrderRouting` collection.
     pub fn add_routing_strategy(&mut self, strategy: RoutingStrategy) {
         self.routing_strategies
             .insert(strategy.strategy_id.clone(), strategy);
     }
 
+    /// Borrow `routing_strategy` by id, or `None` when absent.
     pub fn get_routing_strategy(&self, strategy_id: &str) -> Option<&RoutingStrategy> {
         self.routing_strategies.get(strategy_id)
     }
 
+    /// Ids of the `routing_strategies` currently registered.
     pub fn list_routing_strategies(&self) -> Vec<String> {
         self.routing_strategies.keys().cloned().collect()
     }
 
+    /// Borrow the `venue_selector` component.
     pub fn venue_selector(&self) -> &VenueSelector {
         &self.venue_selector
     }
 
+    /// Mutable borrow of the `venue_selector` component.
     pub fn venue_selector_mut(&mut self) -> &mut VenueSelector {
         &mut self.venue_selector
     }
 }
 
 impl VenueSelector {
+    /// Create a `VenueSelector` with default sub-components.
     pub fn new() -> Self {
         Self {
             venues: HashMap::new(),
@@ -441,29 +473,35 @@ impl VenueSelector {
         }
     }
 
+    /// Register `venue` in the `VenueSelector` collection.
     pub fn add_venue(&mut self, venue: TradingVenue) {
         self.venues.insert(venue.venue_id.clone(), venue);
     }
 
+    /// Borrow `venue` by id, or `None` when absent.
     pub fn get_venue(&self, venue_id: &str) -> Option<&TradingVenue> {
         self.venues.get(venue_id)
     }
 
+    /// Ids of the `venues` currently registered.
     pub fn list_venues(&self) -> Vec<String> {
         self.venues.keys().cloned().collect()
     }
 
+    /// Register `venue_performance` in the `VenueSelector` collection.
     pub fn add_venue_performance(&mut self, performance: VenuePerformance) {
         self.venue_performance
             .insert(performance.venue_id.clone(), performance);
     }
 
+    /// Borrow `venue_performance` by id, or `None` when absent.
     pub fn get_venue_performance(&self, venue_id: &str) -> Option<&VenuePerformance> {
         self.venue_performance.get(venue_id)
     }
 }
 
 impl ExecutionStrategy {
+    /// Create a `ExecutionStrategy` with default sub-components.
     pub fn new() -> Self {
         Self {
             strategy_id: "exec_1".to_string(),
@@ -475,6 +513,7 @@ impl ExecutionStrategy {
 }
 
 impl ExecutionParameters {
+    /// Create a `ExecutionParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             order_size: 10000.0,
@@ -486,6 +525,7 @@ impl ExecutionParameters {
 }
 
 impl Order {
+    /// Create a `Order` with default sub-components.
     pub fn new() -> Self {
         Self {
             order_id: "order_1".to_string(),
@@ -504,6 +544,7 @@ impl Order {
 }
 
 impl OrderValidationRule {
+    /// Create a `OrderValidationRule` with default sub-components.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
@@ -515,6 +556,7 @@ impl OrderValidationRule {
 }
 
 impl OrderComplianceCondition {
+    /// Create a `OrderComplianceCondition` with default sub-components.
     pub fn new() -> Self {
         Self {
             condition_id: "cond_1".to_string(),
@@ -526,6 +568,7 @@ impl OrderComplianceCondition {
 }
 
 impl OrderComplianceRule {
+    /// Create a `OrderComplianceRule` with default sub-components.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
@@ -537,6 +580,7 @@ impl OrderComplianceRule {
 }
 
 impl RegulatoryLimit {
+    /// Create a `RegulatoryLimit` with default sub-components.
     pub fn new() -> Self {
         Self {
             limit_id: "limit_1".to_string(),
@@ -548,6 +592,7 @@ impl RegulatoryLimit {
 }
 
 impl RoutingStrategy {
+    /// Create a `RoutingStrategy` with default sub-components.
     pub fn new() -> Self {
         Self {
             strategy_id: "route_1".to_string(),
@@ -559,6 +604,7 @@ impl RoutingStrategy {
 }
 
 impl RoutingParameters {
+    /// Create a `RoutingParameters` with default sub-components.
     pub fn new() -> Self {
         Self {
             venues: vec!["venue_1".to_string()],
@@ -569,6 +615,7 @@ impl RoutingParameters {
 }
 
 impl PriorityFactor {
+    /// Create a `PriorityFactor` with default sub-components.
     pub fn new() -> Self {
         Self {
             factor_name: "Speed".to_string(),
@@ -578,6 +625,7 @@ impl PriorityFactor {
 }
 
 impl CostFactor {
+    /// Create a `CostFactor` with default sub-components.
     pub fn new() -> Self {
         Self {
             factor_name: "Commission".to_string(),
@@ -587,6 +635,7 @@ impl CostFactor {
 }
 
 impl TradingVenue {
+    /// Create a `TradingVenue` with default sub-components.
     pub fn new() -> Self {
         Self {
             venue_id: "venue_1".to_string(),
@@ -599,6 +648,7 @@ impl TradingVenue {
 }
 
 impl FeeStructure {
+    /// Create a `FeeStructure` with default sub-components.
     pub fn new() -> Self {
         Self {
             commission_rate: 0.001,
@@ -610,6 +660,7 @@ impl FeeStructure {
 }
 
 impl VenuePerformance {
+    /// Create a `VenuePerformance` with default sub-components.
     pub fn new() -> Self {
         Self {
             venue_id: "venue_1".to_string(),

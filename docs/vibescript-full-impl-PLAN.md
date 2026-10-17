@@ -842,7 +842,7 @@ Expose existing backend implementations via VibeScript invoke IDs. Each function
 | `revoke-capability` | `governance/coordination.rs` | `Capability.revoke` |
 | `audit-capabilities` | `governance/instrument_trace.rs` | `Capability.audit` |
 | `did.current_user()` | `identity/key_vault.rs` | `Identity.current_user` |
-| Multi-currency conversion | `modalities/value_flow.rs` | `Finance.convert_currency` |
+| Multi-currency conversion | `modalities/socioeconomics.rs` | `Finance.convert_currency` |
 | Multi-sig wallet | `modalities/carrier.rs` | `Finance.multisig_check` |
 | Per-currency ledger | `specialized_libs/computational_economics/accounting.rs` | `Finance.ledger_balance` |
 | `create-scene` / `add-node` | `render/scene.rs` | `Scene.create` / `Scene.add_node` |

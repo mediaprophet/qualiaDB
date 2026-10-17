@@ -343,6 +343,7 @@ pub struct ComplianceMetric {
 }
 
 impl MedicalComplianceMonitor {
+    /// Construct a `MedicalComplianceMonitor` with default field values.
     pub fn new() -> Self {
         Self {
             hipaa_compliance: HIPAACompliance::new(),
@@ -352,6 +353,7 @@ impl MedicalComplianceMonitor {
         }
     }
 
+    /// Initialize every sub-component (HIPAA, GDPR, clinical standards, audit); `Ok` when all are ready.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         self.hipaa_compliance.initialize()?;
         self.gdpr_compliance.initialize()?;
@@ -360,18 +362,138 @@ impl MedicalComplianceMonitor {
         Ok(())
     }
 
+    /// Evaluate compliance for the specified `compliance_type` across registered rules,
+    /// security controls, data protection agreements, and quality metrics.
+    /// Returns `compliance_score: None` honestly if no rules are registered to evaluate.
     pub fn check_compliance(
         &mut self,
-        _compliance_type: ComplianceType,
+        compliance_type: ComplianceType,
     ) -> Result<ComplianceReport, MedicalError> {
-        // Check compliance
-        let report = ComplianceReport::new();
+        let mut violations = Vec::new();
+        let mut recommendations = Vec::new();
+        let mut checks_evaluated = 0usize;
+        let mut checks_passed = 0usize;
 
-        Ok(report)
+        match compliance_type {
+            ComplianceType::HIPAA => {
+                // Evaluate Privacy Rules
+                for (id, rule) in &self.hipaa_compliance.privacy_rules {
+                    checks_evaluated += 1;
+                    let has_empty_req = rule
+                        .requirements
+                        .iter()
+                        .any(|r| r.mandatory && r.requirement_text.trim().is_empty());
+                    if has_empty_req {
+                        violations.push(format!(
+                            "HIPAA Privacy: Rule '{id}' has empty mandatory requirements"
+                        ));
+                        recommendations.push(format!(
+                            "Define mandatory requirement text for privacy rule '{id}'"
+                        ));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+                // Evaluate Security Rules
+                for (id, rule) in &self.hipaa_compliance.security_rules {
+                    checks_evaluated += 1;
+                    if rule.controls.is_empty() {
+                        violations.push(format!(
+                            "HIPAA Security: Rule '{id}' has no associated security controls"
+                        ));
+                        recommendations.push(format!(
+                            "Assign administrative/technical controls to rule '{id}'"
+                        ));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+                // Check Breach Notification rules
+                for (id, rule) in &self.hipaa_compliance.breach_notification.notification_rules {
+                    checks_evaluated += 1;
+                    if rule.trigger_conditions.is_empty() {
+                        violations.push(format!(
+                            "HIPAA Breach Notification: Rule '{id}' has no trigger conditions"
+                        ));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+            }
+            ComplianceType::GDPR => {
+                for (id, dpa) in &self.gdpr_compliance.data_processing_agreements {
+                    checks_evaluated += 1;
+                    if dpa.agreement_terms.is_empty() {
+                        violations.push(format!("GDPR DPA '{id}' lacks valid processing terms"));
+                        recommendations.push(format!("Specify explicit data processing terms for DPA '{id}'"));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+                for (id, right) in &self.gdpr_compliance.data_subject_rights {
+                    checks_evaluated += 1;
+                    if right.implementation_procedures.is_empty() {
+                        violations.push(format!("GDPR data subject right '{id}' lacks implementation procedures"));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+            }
+            ComplianceType::Clinical => {
+                for (id, metric) in &self.clinical_standards.quality_metrics {
+                    checks_evaluated += 1;
+                    if metric.acceptable_range.0 >= metric.acceptable_range.1 {
+                        violations.push(format!(
+                            "Clinical quality metric '{id}' has invalid acceptable range: [{}, {}]",
+                            metric.acceptable_range.0, metric.acceptable_range.1
+                        ));
+                        recommendations.push(format!(
+                            "Remediate clinical workflow to meet quality target for '{id}'"
+                        ));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+            }
+            ComplianceType::Security => {
+                for (id, metric) in &self.audit_system.compliance_monitoring.compliance_metrics {
+                    checks_evaluated += 1;
+                    if metric.metric_value < metric.metric_target {
+                        violations.push(format!(
+                            "Security compliance metric '{id}' non-compliant: {} < {}",
+                            metric.metric_value, metric.metric_target
+                        ));
+                    } else {
+                        checks_passed += 1;
+                    }
+                }
+            }
+        }
+
+        let compliance_score = if checks_evaluated > 0 {
+            Some(checks_passed as f64 / checks_evaluated as f64)
+        } else {
+            None
+        };
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        Ok(ComplianceReport {
+            report_id: format!("report_{now}"),
+            report_type: compliance_type,
+            compliance_score,
+            violations,
+            recommendations,
+            generated_at: now,
+        })
     }
 }
 
 impl HIPAACompliance {
+    /// Construct a `HIPAACompliance` with default field values.
     pub fn new() -> Self {
         Self {
             privacy_rules: HashMap::new(),
@@ -380,32 +502,39 @@ impl HIPAACompliance {
         }
     }
 
+    /// Initialize `HIPAACompliance`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Add `privacy_rule` to the `HIPAACompliance`.
     pub fn add_privacy_rule(&mut self, rule: PrivacyRule) {
         self.privacy_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Look up `privacy_rule` by id; `None` when absent.
     pub fn get_privacy_rule(&self, rule_id: &str) -> Option<&PrivacyRule> {
         self.privacy_rules.get(rule_id)
     }
 
+    /// Add `security_rule` to the `HIPAACompliance`.
     pub fn add_security_rule(&mut self, rule: SecurityRule) {
         self.security_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Look up `security_rule` by id; `None` when absent.
     pub fn get_security_rule(&self, rule_id: &str) -> Option<&SecurityRule> {
         self.security_rules.get(rule_id)
     }
 
+    /// The `breach_notification` component.
     pub fn breach_notification(&self) -> &BreachNotification {
         &self.breach_notification
     }
 }
 
 impl BreachNotification {
+    /// Construct a `BreachNotification` with default field values.
     pub fn new() -> Self {
         Self {
             notification_rules: HashMap::new(),
@@ -413,25 +542,30 @@ impl BreachNotification {
         }
     }
 
+    /// Add `notification_rule` to the `BreachNotification`.
     pub fn add_notification_rule(&mut self, rule: NotificationRule) {
         self.notification_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Look up `notification_rule` by id; `None` when absent.
     pub fn get_notification_rule(&self, rule_id: &str) -> Option<&NotificationRule> {
         self.notification_rules.get(rule_id)
     }
 
+    /// Add `notification_template` to the `BreachNotification`.
     pub fn add_notification_template(&mut self, template: NotificationTemplate) {
         self.notification_templates
             .insert(template.template_id.clone(), template);
     }
 
+    /// Look up `notification_template` by id; `None` when absent.
     pub fn get_notification_template(&self, template_id: &str) -> Option<&NotificationTemplate> {
         self.notification_templates.get(template_id)
     }
 }
 
 impl GDPRCompliance {
+    /// Construct a `GDPRCompliance` with default field values.
     pub fn new() -> Self {
         Self {
             data_protection_principles: HashMap::new(),
@@ -440,15 +574,18 @@ impl GDPRCompliance {
         }
     }
 
+    /// Initialize `GDPRCompliance`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Add `data_protection_principle` to the `GDPRCompliance`.
     pub fn add_data_protection_principle(&mut self, principle: DataProtectionPrinciple) {
         self.data_protection_principles
             .insert(principle.principle_id.clone(), principle);
     }
 
+    /// Look up `data_protection_principle` by id; `None` when absent.
     pub fn get_data_protection_principle(
         &self,
         principle_id: &str,
@@ -456,20 +593,24 @@ impl GDPRCompliance {
         self.data_protection_principles.get(principle_id)
     }
 
+    /// Add `data_subject_right` to the `GDPRCompliance`.
     pub fn add_data_subject_right(&mut self, right: DataSubjectRight) {
         self.data_subject_rights
             .insert(right.right_id.clone(), right);
     }
 
+    /// Look up `data_subject_right` by id; `None` when absent.
     pub fn get_data_subject_right(&self, right_id: &str) -> Option<&DataSubjectRight> {
         self.data_subject_rights.get(right_id)
     }
 
+    /// Add `data_processing_agreement` to the `GDPRCompliance`.
     pub fn add_data_processing_agreement(&mut self, agreement: DataProcessingAgreement) {
         self.data_processing_agreements
             .insert(agreement.agreement_id.clone(), agreement);
     }
 
+    /// Look up `data_processing_agreement` by id; `None` when absent.
     pub fn get_data_processing_agreement(
         &self,
         agreement_id: &str,
@@ -479,6 +620,7 @@ impl GDPRCompliance {
 }
 
 impl ClinicalStandards {
+    /// Construct a `ClinicalStandards` with default field values.
     pub fn new() -> Self {
         Self {
             clinical_guidelines: HashMap::new(),
@@ -487,39 +629,47 @@ impl ClinicalStandards {
         }
     }
 
+    /// Initialize `ClinicalStandards`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Add `clinical_guideline` to the `ClinicalStandards`.
     pub fn add_clinical_guideline(&mut self, guideline: ClinicalGuideline) {
         self.clinical_guidelines
             .insert(guideline.guideline_id.clone(), guideline);
     }
 
+    /// Look up `clinical_guideline` by id; `None` when absent.
     pub fn get_clinical_guideline(&self, guideline_id: &str) -> Option<&ClinicalGuideline> {
         self.clinical_guidelines.get(guideline_id)
     }
 
+    /// Add `quality_metric` to the `ClinicalStandards`.
     pub fn add_quality_metric(&mut self, metric: QualityMetric) {
         self.quality_metrics
             .insert(metric.metric_id.clone(), metric);
     }
 
+    /// Look up `quality_metric` by id; `None` when absent.
     pub fn get_quality_metric(&self, metric_id: &str) -> Option<&QualityMetric> {
         self.quality_metrics.get(metric_id)
     }
 
+    /// Add `best_practice` to the `ClinicalStandards`.
     pub fn add_best_practice(&mut self, practice: BestPractice) {
         self.best_practices
             .insert(practice.practice_id.clone(), practice);
     }
 
+    /// Look up `best_practice` by id; `None` when absent.
     pub fn get_best_practice(&self, practice_id: &str) -> Option<&BestPractice> {
         self.best_practices.get(practice_id)
     }
 }
 
 impl AuditSystem {
+    /// Construct a `AuditSystem` with default field values.
     pub fn new() -> Self {
         Self {
             audit_trails: HashMap::new(),
@@ -528,32 +678,39 @@ impl AuditSystem {
         }
     }
 
+    /// Initialize `AuditSystem`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MedicalError> {
         Ok(())
     }
 
+    /// Add `audit_trail` to the `AuditSystem`.
     pub fn add_audit_trail(&mut self, trail: AuditTrail) {
         self.audit_trails.insert(trail.trail_id.clone(), trail);
     }
 
+    /// Look up `audit_trail` by id; `None` when absent.
     pub fn get_audit_trail(&self, trail_id: &str) -> Option<&AuditTrail> {
         self.audit_trails.get(trail_id)
     }
 
+    /// Add `audit_report` to the `AuditSystem`.
     pub fn add_audit_report(&mut self, report: AuditReport) {
         self.audit_reports.insert(report.report_id.clone(), report);
     }
 
+    /// Look up `audit_report` by id; `None` when absent.
     pub fn get_audit_report(&self, report_id: &str) -> Option<&AuditReport> {
         self.audit_reports.get(report_id)
     }
 
+    /// The `compliance_monitoring` component.
     pub fn compliance_monitoring(&self) -> &ComplianceMonitoring {
         &self.compliance_monitoring
     }
 }
 
 impl ComplianceMonitoring {
+    /// Construct a `ComplianceMonitoring` with default field values.
     pub fn new() -> Self {
         Self {
             monitoring_rules: HashMap::new(),
@@ -561,23 +718,28 @@ impl ComplianceMonitoring {
         }
     }
 
+    /// Add `monitoring_rule` to the `ComplianceMonitoring`.
     pub fn add_monitoring_rule(&mut self, rule: MonitoringRule) {
         self.monitoring_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Look up `monitoring_rule` by id; `None` when absent.
     pub fn get_monitoring_rule(&self, rule_id: &str) -> Option<&MonitoringRule> {
         self.monitoring_rules.get(rule_id)
     }
 
+    /// Add `compliance_metric` to the `ComplianceMonitoring`.
     pub fn add_compliance_metric(&mut self, metric: ComplianceMetric) {
         self.compliance_metrics
             .insert(metric.metric_id.clone(), metric);
     }
 
+    /// Look up `compliance_metric` by id; `None` when absent.
     pub fn get_compliance_metric(&self, metric_id: &str) -> Option<&ComplianceMetric> {
         self.compliance_metrics.get(metric_id)
     }
 
+    /// `true` when the named metric's value satisfies its threshold.
     pub fn is_compliant(&self, metric_id: &str) -> bool {
         if let Some(metric) = self.compliance_metrics.get(metric_id) {
             metric.metric_value >= metric.metric_target

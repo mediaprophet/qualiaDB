@@ -39,10 +39,13 @@ impl Fetch10dService {
         Ok(bytes)
     }
 
-    fn mock_network_fetch(&self, _endpoint: &str, _hash: &str) -> Result<Vec<u8>, String> {
-        // Return a dummy valid 10d container payload
-        // Real implementation would make the network call
-        Ok(vec![0; 64]) // Just returning a mock payload for test structure
+    fn mock_network_fetch(&self, endpoint: &str, _hash: &str) -> Result<Vec<u8>, String> {
+        // If an explicit file or local path is passed, read it directly
+        if let Some(file_path) = endpoint.strip_prefix("file://") {
+            return std::fs::read(file_path).map_err(|e| format!("Failed to read local 10d asset: {e}"));
+        }
+        // Fallback mock payload for test structure when remote network transport is unconfigured
+        Ok(vec![0; 64])
     }
 }
 
@@ -71,10 +74,36 @@ mod tests {
             "User requests asset",
         );
 
-        // Now it should pass the consent check, but the mock payload might fail CRC.
-        // We just assert we don't get the consent error.
+        // Now it should pass the consent check, but the mock payload fails CRC.
         let res2 = fetcher.fetch_10d_by_hash(hash, endpoint, &registry);
         assert!(res2.is_err());
         assert!(res2.unwrap_err().contains("CRC"));
+    }
+
+    #[test]
+    fn test_fetch_10d_file_uri_with_valid_crc() {
+        let fetcher = Fetch10dService::new();
+        let mut registry = NetworkDisclosureRegistry::new();
+
+        let mut buf = [0u8; 64];
+        buf[0..4].copy_from_slice(b"10D\0");
+        buf[4] = 1; // version
+        buf[5] = 0; // flags
+        buf[6..8].copy_from_slice(&0u16.to_le_bytes()); // section count
+        buf[8..16].copy_from_slice(&64u64.to_le_bytes()); // total size
+        crate::container_10d::seal_whole_file_crc32c(&mut buf);
+
+        let temp_dir = std::env::temp_dir();
+        let file_path = temp_dir.join("test_valid.10d");
+        std::fs::write(&file_path, &buf).unwrap();
+
+        let endpoint = format!("file://{}", file_path.display());
+        registry.register_egress("fetch_10d", &endpoint, "Fetch local test asset", "Testing");
+
+        let fetched = fetcher.fetch_10d_by_hash("test_hash", &endpoint, &registry).unwrap();
+        assert_eq!(fetched.len(), 64);
+        assert_eq!(&fetched[0..4], b"10D\0");
+
+        let _ = std::fs::remove_file(&file_path);
     }
 }

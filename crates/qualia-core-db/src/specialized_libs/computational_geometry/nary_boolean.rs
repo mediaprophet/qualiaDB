@@ -206,6 +206,8 @@ pub enum NaryBoolError {
     BinaryFailed(String),
     /// The expression is too complex (too many operands).
     TooManyOperands { count: usize, max: usize },
+    /// Operation is unsupported or geometrically ill-posed.
+    UnsupportedOperation(String),
 }
 
 impl core::fmt::Display for NaryBoolError {
@@ -218,6 +220,9 @@ impl core::fmt::Display for NaryBoolError {
             Self::BinaryFailed(msg) => write!(f, "nary_bool: binary op failed — {msg}"),
             Self::TooManyOperands { count, max } => {
                 write!(f, "nary_bool: {count} operands exceeds max {max}")
+            }
+            Self::UnsupportedOperation(msg) => {
+                write!(f, "nary_bool: unsupported operation — {msg}")
             }
         }
     }
@@ -349,12 +354,12 @@ fn evaluate_tree(
             }
             binary_op(&union, &inter, Boolean3Op::Difference)
         }
-        BoolExpr::Complement(a) => {
-            // Complement requires a universe. Without an explicit universe
-            // mesh, we cannot compute the geometric complement.
-            // Return the operand unchanged — this is a placeholder.
-            // A proper implementation would require a bounding volume mesh.
-            evaluate_tree(inputs, a)
+        BoolExpr::Complement(_a) => {
+            // Complement requires an explicit bounding universe volume.
+            // Unbounded geometric complement in R^3 is ill-posed and fails closed.
+            Err(NaryBoolError::UnsupportedOperation(
+                "Complement requires an explicit bounding universe volume; unbounded 3D geometric complement is ill-posed".into(),
+            ))
         }
     }
 }

@@ -19,6 +19,7 @@ pub mod execute;
 pub mod graph_ops;
 pub mod ir;
 pub mod manifest;
+pub mod observer_kernels;
 pub mod oracle;
 pub mod physics;
 pub mod roofline;
@@ -76,6 +77,7 @@ pub use tune::{
     tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,
 };
 pub use validate::{validate_native, validate_wgsl, ValidationReport};
+pub use observer_kernels::*;
 
 pub const FORGE_SCHEMA_VERSION: u32 = 2;
 pub const WGPU_API_VERSION: &str = "30.0.0";

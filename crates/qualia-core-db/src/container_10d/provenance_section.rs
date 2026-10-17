@@ -109,6 +109,9 @@ pub struct ProvenanceSidecar {
 }
 
 impl ProvenanceSidecar {
+    /// Create a sidecar recording the source payload, its media type, and
+    /// the licence it is available under (licence is required — a provenance
+    /// record with no licence is a stripped context).
     pub fn new(
         source_bytes: impl Into<Vec<u8>>,
         source_media_type: impl Into<String>,
@@ -125,11 +128,16 @@ impl ProvenanceSidecar {
         }
     }
 
+    /// Attach a verifiable credential (CBOR / JWT bytes) attesting the
+    /// derivation chain.
     pub fn with_vc(mut self, vc: impl Into<Vec<u8>>) -> Self {
         self.vc = vc.into();
         self
     }
 
+    /// Attach semantic CBOR-LD metadata, the creation/harvest timestamp
+    /// (epoch seconds), and a version-control hash (e.g. SHA256 of the
+    /// source commit or asset).
     pub fn with_metadata(
         mut self,
         metadata: impl Into<Vec<u8>>,

@@ -11,15 +11,22 @@ use crate::q_hash;
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum MaturityClass {
+    /// Recently established; little accumulated time-depth.
     #[default]
     Juvenile = 0,
+    /// Reached reproductive/functional maturity.
     Mature = 1,
+    /// Old-growth depth — centuries-scale structure present.
     OldGrowth = 2,
+    /// Multi-century continuous presence.
     Centennial = 3,
+    /// Millennial or longer accrual (e.g. ancient soil, custodial lineage).
     DeepTime = 4,
 }
 
 impl MaturityClass {
+    /// Decode a `u8` into the maturity class; out-of-range values map to
+    /// `Juvenile`.
     pub const fn from_u8(val: u8) -> Self {
         match val {
             0 => Self::Juvenile,
@@ -48,6 +55,8 @@ pub enum IrreversibilityClass {
 }
 
 impl IrreversibilityClass {
+    /// Decode a `u8` into the irreversibility class; out-of-range values map
+    /// to `Reversible` (the least-severe default).
     pub const fn from_u8(val: u8) -> Self {
         match val {
             0 => Self::Reversible,
@@ -104,14 +113,19 @@ impl AccrualProfile {
 /// A standing ecological or social stock entity (`AC-AX-1`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct StockEntity {
+    /// Identity of the stock (subject hash).
     pub entity_id: u64,
+    /// Temporal-depth classification.
     pub maturity: MaturityClass,
+    /// Observed age of continuous accrual in years.
     pub accrual_age_years: f32,
     /// Declared formation timescale in seconds (e.g. 30 years).
     pub formation_time_s: u64,
     /// Destruction vulnerability timescale in seconds (e.g. 2 nights).
     pub destruction_time_s: u64,
+    /// Current multi-dimensional accrual state.
     pub profile: AccrualProfile,
+    /// Baseline irreversibility class for losses to this stock.
     pub irreversibility: IrreversibilityClass,
 }
 
@@ -128,23 +142,37 @@ pub fn asymmetry_ratio(formation_time_s: u64, destruction_time_s: u64) -> f64 {
 /// An acute loss or destruction event (`AC-AX-6`).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LossEvent {
+    /// Identity of the event.
     pub event_id: u64,
+    /// Stock the event applies to.
     pub stock_id: u64,
+    /// `q_hash` of the cause IRI (e.g. `event:bushfire`).
     pub cause_hash: u64,
+    /// Event time (seconds since epoch).
     pub timestamp_epoch: u32,
     /// Extent of destruction in percentage `[0.0, 100.0]`.
     pub extent_loss_pct: f32,
+    /// Overrides the stock's baseline irreversibility when the event itself
+    /// changes the recovery class (e.g. topsoil sterilisation).
     pub irreversibility_override: Option<IrreversibilityClass>,
 }
 
 /// Outcome report of an accrual loss event.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AccrualLossReport {
+    /// Stock the report describes.
     pub stock_id: u64,
+    /// Irreversibility applied (event override or stock baseline).
     pub effective_irreversibility: IrreversibilityClass,
+    /// Profile before the event.
     pub pre_loss_profile: AccrualProfile,
+    /// Profile magnitude destroyed by the event.
     pub lost_profile: AccrualProfile,
+    /// Profile remaining after the event.
     pub residual_profile: AccrualProfile,
+    /// True when the loss crosses a critical slow-variable threshold
+    /// (≥20% HorizonExceeding/Absolute loss, or ≥50% depletion of structural
+    /// complexity or genetic distinctness).
     pub is_critical_stock_breached: bool,
 }
 

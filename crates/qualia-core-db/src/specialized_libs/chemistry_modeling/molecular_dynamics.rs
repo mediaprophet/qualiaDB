@@ -170,16 +170,14 @@ fn init_velocities(
         return v;
     }
 
-    // Wire statistical_computing handle instead of Lcg placeholder
-    let mut rng = Lcg(0x9E3779B97F4A7C15);
+    let mut fallback_rng = Lcg(0x9E3779B97F4A7C15);
     for (i, m) in masses.iter().enumerate() {
         let s = (K_B * target_temp / m).sqrt(); // per-component σ of MB distribution
         for d in 0..3 {
             let z = if let Some(ref stat) = statistical_computing {
-                let _metrics = stat.lock().unwrap().get_performance_stats();
-                rng.next_gaussian()
+                stat.lock().unwrap().sample_standard_normal()
             } else {
-                rng.next_gaussian()
+                fallback_rng.next_gaussian()
             };
             v[i][d] = s * z;
         }

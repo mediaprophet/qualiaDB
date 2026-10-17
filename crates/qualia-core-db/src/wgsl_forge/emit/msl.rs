@@ -787,10 +787,11 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
                 )
                 .map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
-            Op::Intrinsic(_) => {
-                return Err(ForgeError::Emission(
-                    "Intrinsics not implemented for MSL yet".to_string(),
-                ));
+            Op::Intrinsic(intrinsic) => {
+                return Err(ForgeError::Emission(format!(
+                    "Intrinsic {:?} lowering requires dedicated MSL simdgroup shader template or Metal capability",
+                    intrinsic.class()
+                )));
             }
         }
     }

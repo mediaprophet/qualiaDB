@@ -391,8 +391,8 @@ pub(super) fn logic_request(
     }
     if matches!(
         normalized.as_str(),
-        "value-flow"
-            | "value-flow-royalty"
+        "socioeconomics"
+            | "socioeconomics-royalty"
             | "interaction-governance"
             | "identity-fabric"
             | "identity-fabric-survive"
@@ -601,7 +601,7 @@ mod tests {
             Some(("data-capability-id", "AdvancedLogic.compute"))
         );
         assert_eq!(
-            capability_contract_for_button("value-flow-evaluate"),
+            capability_contract_for_button("socioeconomics-evaluate"),
             Some(("data-capability-id", "GovernanceLogic.compute"))
         );
         assert_eq!(

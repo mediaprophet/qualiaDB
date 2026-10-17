@@ -725,10 +725,11 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
                 writeln!(source, "{indent}GroupMemoryBarrierWithGroupSync();")
                     .map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
-            Op::Intrinsic(_) => {
-                return Err(ForgeError::Emission(
-                    "Intrinsics not implemented for HLSL yet".to_string(),
-                ));
+            Op::Intrinsic(intrinsic) => {
+                return Err(ForgeError::Emission(format!(
+                    "Intrinsic {:?} lowering requires dedicated HLSL SM6.8+ shader template or wave intrinsic capability",
+                    intrinsic.class()
+                )));
             }
         }
     }

@@ -34,6 +34,8 @@ pub enum LicenceClass {
 }
 
 impl LicenceClass {
+    /// Decode a class tag (1–6); out-of-range values become `Unknown`
+    /// (fail-closed).
     pub fn from_u8(value: u8) -> Self {
         match value {
             1 => Self::Community,
@@ -59,6 +61,7 @@ impl LicenceClass {
         }
     }
 
+    /// Canonical lowercase token for the class (inverse of `parse`).
     pub fn token(self) -> &'static str {
         match self {
             Self::Unknown => "unknown",
@@ -97,6 +100,8 @@ pub enum AgentKind {
 }
 
 impl AgentKind {
+    /// Parse an agent-kind token (accepts common synonyms); unrecognised
+    /// strings become `Unknown` (fail-closed).
     pub fn parse(tag: &str) -> Self {
         match tag.trim().to_ascii_lowercase().as_str() {
             "person" | "natural-person" => Self::NaturalPerson,
@@ -109,6 +114,7 @@ impl AgentKind {
         }
     }
 
+    /// Canonical token for the agent kind (inverse of `parse`).
     pub fn token(self) -> &'static str {
         match self {
             Self::Unknown => "unknown",

@@ -125,11 +125,13 @@ mod range_q42_exec {
     }
 
     impl Q42RangeNestedLoopJoinPlan {
+        /// Snapshot the join plan from the plan's root operator.
         pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
             Self::from_join_root(plan, plan.root_operator)
         }
 
-        pub fn from_join_root(plan: &ExecutionPlan, root: OperatorId) -> Result<Self, String> {
+        /// Snapshot the operator subtree reachable from `root`.
+    pub fn from_join_root(plan: &ExecutionPlan, root: OperatorId) -> Result<Self, String> {
             if plan.operator_count == 0 || root as usize >= plan.operator_count as usize {
                 return Err("range join requires a non-empty execution plan".to_string());
             }
@@ -387,6 +389,8 @@ mod range_q42_exec {
     }
 
     impl Q42RangeTripleSelectPlan {
+        /// Build a range triple-scan plan; requires a non-empty
+        /// execution plan with a valid root operator.
         pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
             if plan.operator_count == 0
                 || plan.root_operator as usize >= plan.operator_count as usize
@@ -730,6 +734,8 @@ mod range_q42_exec {
 #[cfg(not(target_arch = "wasm32"))]
 pub use range_q42_exec::*;
 
+/// Resolve a term id to a `VariableId` when it names a query
+/// variable; `None` for constants.
 #[inline]
 fn term_is_var(term: u64, ctx: &SparqlQueryContext) -> Option<VariableId> {
     let id = term as usize;
@@ -740,6 +746,8 @@ fn term_is_var(term: u64, ctx: &SparqlQueryContext) -> Option<VariableId> {
     }
 }
 
+/// Bind `value` into `row` when `term` is a variable; verify
+/// equality when it's a constant. `false` on binding conflict.
 #[inline]
 fn bind_var(row: &mut BindingRow, term: u64, value: u64, ctx: &SparqlQueryContext) -> bool {
     if let Some(var) = term_is_var(term, ctx) {
@@ -765,6 +773,7 @@ pub struct QueryExecutor<'a> {
 }
 
 impl<'a> QueryExecutor<'a> {
+    /// Executor over an in-memory Quin slice.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
@@ -955,6 +964,9 @@ impl<'a> QueryExecutor<'a> {
         Ok(out)
     }
 
+    /// Dispatch one plan operator: scans, joins, filters, and
+    /// solution modifiers. Returns `false` when the operator yields
+    /// no rows.
     fn execute_operator(
         &self,
         op_id: OperatorId,
@@ -1098,6 +1110,7 @@ impl<'a> QueryExecutor<'a> {
         }
     }
 
+    /// Scan quins by subject term; bind remaining pattern variables.
     fn execute_subject_scan(
         &self,
         subject: u64,
@@ -1120,6 +1133,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// Scan quins by predicate term; bind remaining pattern
+    /// variables.
     fn execute_predicate_scan(
         &self,
         predicate: u64,
@@ -1139,6 +1154,7 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// Scan quins by object term; bind remaining pattern variables.
     fn execute_object_scan(
         &self,
         object: u64,
@@ -1158,6 +1174,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// Full triple-pattern scan — match s/p/o constants, bind
+    /// variables, honour context constraints.
     fn execute_triple_scan(
         &self,
         subject: u64,
@@ -1183,6 +1201,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// RDF-Star triple scan — resolve embedded-triple virtual ids
+    /// via the lexicon before binding.
     fn execute_star_triple_scan(
         &self,
         inner_subject: u64,
@@ -1246,6 +1266,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// Look up the [s,p,o] components of an embedded-triple virtual
+    /// id in the Q42 lexicon.
     fn lookup_star_components(&self, virtual_id: u64) -> Option<[u64; 3]> {
         for quin in self.quins {
             let candidate = generate_embedded_triple_id(quin.subject, quin.predicate, quin.object);
@@ -1256,6 +1278,8 @@ impl<'a> QueryExecutor<'a> {
         None
     }
 
+    /// Hash join on shared variable slots — build side hashed, probe
+    /// side streamed.
     fn execute_hash_join(
         &self,
         left: OperatorId,
@@ -1340,6 +1364,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// Nested-loop join — for each left row, re-execute the right
+    /// operand under its bindings (supports range-page resume).
     fn execute_nested_loop_join(
         &self,
         left: OperatorId,
@@ -1384,6 +1410,7 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// FILTER — evaluate the expression per row, keep passing rows.
     fn execute_filter(
         &self,
         input: OperatorId,
@@ -1492,6 +1519,8 @@ impl<'a> QueryExecutor<'a> {
         }
     }
 
+    /// BIND — evaluate the expression and assign it to the target
+    /// variable slot in each row.
     fn execute_bind(
         &self,
         input: OperatorId,
@@ -1536,6 +1565,7 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// PROJECT — keep only the listed variable slots in each row.
     fn execute_project(
         &self,
         input: OperatorId,
@@ -1566,6 +1596,7 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// LIMIT/OFFSET — truncate the result set.
     fn execute_limit(
         &self,
         input: OperatorId,
@@ -1594,6 +1625,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// ORDER BY — sort rows on the sort-key slots (stable,
+    /// deterministic tie-break).
     fn execute_sort(
         &self,
         input: OperatorId,
@@ -1634,6 +1667,7 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// UNION — concatenate both operands' result rows.
     fn execute_union(
         &self,
         left: OperatorId,
@@ -1656,6 +1690,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// OPTIONAL / left join — emit left rows with right-side
+    /// bindings where they join, unbound otherwise.
     fn execute_optional(
         &self,
         left: OperatorId,
@@ -1774,6 +1810,7 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// DISTINCT — deduplicate rows by bound-slot equality.
     fn execute_distinct(
         &self,
         input: OperatorId,
@@ -1802,6 +1839,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// GROUP BY — partition rows by key slots and evaluate
+    /// aggregates per group.
     fn execute_group_by(
         &self,
         input: OperatorId,
@@ -1854,6 +1893,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// HAVING — filter grouped rows by the post-aggregation
+    /// expression.
     fn execute_having(
         &self,
         input: OperatorId,
@@ -1876,6 +1917,8 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
+    /// Property-path traversal — sequence/alternative/one-or-more
+    /// over the quin graph (bounded visited set).
     fn execute_property_path(
         &self,
         subject: u64,
@@ -2007,6 +2050,8 @@ impl<'a> QueryExecutor<'a> {
         }
     }
 
+    /// GRAPH — execute the inner pattern constrained to the named
+    /// graph's context field.
     fn execute_graph(
         &self,
         graph_var_or_id: u64,
@@ -2074,6 +2119,11 @@ impl<'a> QueryExecutor<'a> {
         temp_executor.execute_operator(inner, plan, ctx, row, results)
     }
 
+    /// SERVICE — execute federated SPARQL pattern.
+    ///
+    /// Validates the endpoint DID. If the endpoint targets the local node context,
+    /// it evaluates against local quins. For remote endpoints, it fails closed with an
+    /// honest error unless dispatched through a configured `FederatedQueryHandler`.
     fn execute_service(
         &self,
         endpoint_did_id: u64,
@@ -2083,30 +2133,33 @@ impl<'a> QueryExecutor<'a> {
         row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
-        // Zero-allocation federated query execution
-        // Use fixed-size network buffer instead of allocating per request
-        let _network_buffer = [0u8; 4096];
-
         // Check if DID has 0x8 prefix (identity recognition)
-        let is_did = (endpoint_did_id & 0x8000000000000000) != 0;
+        let is_did = (endpoint_did_id & 0x8000_0000_0000_0000) != 0;
 
         if !is_did {
             return Err("Invalid DID: missing 0x8 prefix".to_string());
         }
 
-        // In production, this would:
-        // 1. Resolve DID to get endpoint URL (using cached DID Document)
-        // 2. Check connection pool for existing connection to endpoint
-        // 3. Format SPARQL query request using zero-copy stack formatting
-        // 4. Add DID-based authentication header (DID-LD/DID-JWT/DID-VC)
-        // 5. Stream network response into network_buffer iteratively
-        // 6. Parse response bytes directly to populate row slots
-        // 7. Verify response signature using server DID
+        // Check if endpoint is local node selfhood / default graph context
+        let is_local = endpoint_did_id == 0x8000_0000_0000_0000
+            || self
+                .quins
+                .first()
+                .is_some_and(|q| q.context == (endpoint_did_id & 0x7FFF_FFFF_FFFF_FFFF));
 
-        // Simplified: execute inner pattern locally for now
-        self.execute_operator(inner, plan, ctx, row, results)
+        if is_local {
+            self.execute_operator(inner, plan, ctx, row, results)
+        } else {
+            Err(format!(
+                "SPARQL SERVICE federation to remote endpoint DID 0x{:016x} is not wired to local executor (fails closed; use FederatedQueryHandler with configured endpoint URL)",
+                endpoint_did_id
+            ))
+        }
     }
 
+    /// AS OF / AT TIME — execute the inner pattern, then keep rows
+    /// whose subject satisfies the PROV-O temporal constraint at
+    /// `timestamp_ms` (open-world: unannotated subjects pass).
     fn execute_as_of(
         &self,
         input: OperatorId,

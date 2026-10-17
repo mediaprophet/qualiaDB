@@ -129,9 +129,9 @@ pub fn entity_view_capability_report() -> Value {
             },
             {
                 "id": "zk_enumerated_states",
-                "status": "planned",
-                "summary": "Privacy engine HE/DP present elsewhere; ZK not wired to entity_view states",
-                "design_use": "Do not claim ZK UI yet"
+                "status": "ready",
+                "summary": "Privacy engine HE/DP and ZK predicate disclosures wired to entity_view states via verify_entity_zk_state and rights_filter",
+                "design_use": "Verified ZK predicate disclosures available in entity_view UI"
             }
         ],
         "desktop_commands": [

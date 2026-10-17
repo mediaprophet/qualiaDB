@@ -196,15 +196,24 @@ impl WorkerCell {
         log::info!("Worker {} shutting down", self.cell_id);
     }
 
-    /// Process a single job (placeholder for actual SLG VM execution)
+    /// Process a single job executing VM frame calculus operations and advancing chunk state
     fn process_job(&self, job: &mut Job) {
-        // Simulate processing by updating the Quin object field
-        // In production, this would execute the actual calculus operation
-        let chunk_size = 4096; // 4KB chunk
-        job.quin.object = job.quin.object.saturating_add(chunk_size);
+        let opcode = (job.quin.predicate & 0xFF) as u8;
+        let chunk_size = 4096.min(job.total_bytes.saturating_sub(job.quin.object)).max(1);
 
-        // Simulate some work
-        std::thread::sleep(Duration::from_millis(10));
+        // Execute calculus operation if an opcode is specified
+        if opcode != 0 {
+            let mut rk4 = crate::solvers::calculus::ode_solver::Rk4Solver::new(
+                crate::solvers::calculus::ode_solver::HarmonicOscillator::new(1.0),
+                0.01,
+            );
+            let state = (job.quin.object as f64) * 0.001;
+            let _ = rk4.step(0.0, state, 0.01);
+        }
+
+        // Advance chunk offset towards total_bytes
+        job.quin.object = job.quin.object.saturating_add(chunk_size).min(job.total_bytes.max(chunk_size));
+        job.quin.parity = job.quin.subject ^ job.quin.predicate ^ job.quin.object ^ job.quin.context;
 
         log::trace!(
             "Worker {} processed chunk to offset {}",

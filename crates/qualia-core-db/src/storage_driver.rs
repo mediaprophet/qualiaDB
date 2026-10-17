@@ -97,6 +97,7 @@ pub enum StorageError {
 }
 
 impl std::fmt::Display for StorageError {
+    /// Render the variant tag followed by its message payload.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StorageError::Io(m) => write!(f, "I/O: {m}"),
@@ -135,19 +136,39 @@ pub struct DriverCapabilities {
 // Trait
 // ──────────────────────────────────────────────────────────────────────────────
 
+/// Key/value storage backend contract — flat `key → bytes` semantics
+/// with snapshot and cache-hint hooks. Implementations range from the
+/// portable `MmapDriver` through APFS/ZNS/NVMe-passthrough variants;
+/// callers pick by `capabilities()`.
 pub trait StorageDriver: Send + Sync {
+    /// Backend capability flags (kind, zone-append, snapshot cost,
+    /// CSD dispatch, max concurrent writers).
     fn capabilities(&self) -> DriverCapabilities;
+    /// Store `data` under `key`, replacing any existing value.
     fn write(&self, key: &str, data: &[u8]) -> Result<(), StorageError>;
+    /// Append `data` to the value under `key` (created if absent).
     fn append(&self, key: &str, data: &[u8]) -> Result<(), StorageError>;
+    /// Read the full value under `key`; `NotFound` when absent.
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError>;
+    /// Read `len` bytes starting at `offset` within the value under
+    /// `key`; result is truncated at the value end, `Err` when
+    /// `offset` is past it.
     fn read_range(&self, key: &str, offset: usize, len: usize) -> Result<Vec<u8>, StorageError>;
+    /// Remove `key`; idempotent — deleting an absent key is `Ok`.
     fn delete(&self, key: &str) -> Result<(), StorageError>;
     /// Create a point-in-time snapshot named `snapshot_id`.
     /// On APFS this calls `clonefile(2)` and is O(1), zero-cost on disk.
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError>;
+    /// Durability barrier — flush driver-level buffering to stable
+    /// storage (no-op for write-through backends).
     fn flush(&self) -> Result<(), StorageError>;
+    /// Advisory hint that `key` will be read soon (e.g. `MADV_WILLNEED`
+    /// on Darwin); free to be a no-op.
     fn prefetch_hint(&self, key: &str);
+    /// Advisory hint that `key`'s pages may be reclaimed (e.g.
+    /// `MADV_FREE` on Darwin); free to be a no-op.
     fn eviction_hint(&self, key: &str);
+    /// One-line backend description for diagnostics.
     fn describe(&self) -> &str;
 }
 
@@ -155,6 +176,8 @@ pub trait StorageDriver: Send + Sync {
 // Helpers: path sanitisation
 // ──────────────────────────────────────────────────────────────────────────────
 
+/// Sanitize a storage key into a flat filename — alphanumerics, `-`,
+/// and `.` pass through; everything else becomes `_`.
 fn key_to_filename(key: &str) -> String {
     key.chars()
         .map(|c| {
@@ -167,10 +190,13 @@ fn key_to_filename(key: &str) -> String {
         .collect()
 }
 
+/// `root/<sanitized key>` — the flat-file path a key maps to.
 fn key_path(root: &Path, key: &str) -> PathBuf {
     root.join(key_to_filename(key))
 }
 
+/// `root/.snap_<sanitized id>` — the directory a snapshot is written
+/// into.
 fn snap_dir(root: &Path, snapshot_id: &str) -> PathBuf {
     root.join(format!(".snap_{}", key_to_filename(snapshot_id)))
 }
@@ -189,6 +215,7 @@ pub struct MmapDriver {
 }
 
 impl MmapDriver {
+    /// Create a file-backed driver rooted at `root` (created if absent).
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
         let root = root.as_ref().to_path_buf();
         let _ = std::fs::create_dir_all(&root);
@@ -200,6 +227,7 @@ impl MmapDriver {
 }
 
 impl StorageDriver for MmapDriver {
+    /// Report `DriverKind::Mmap` — no zone-append, no free snapshots, single writer.
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::Mmap,
@@ -210,10 +238,12 @@ impl StorageDriver for MmapDriver {
         }
     }
 
+    /// Write `data` as a flat file under the root.
     fn write(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         std::fs::write(key_path(&self.root, key), data).map_err(|e| StorageError::Io(e.to_string()))
     }
 
+    /// Append `data` via `OpenOptions` (create if absent).
     fn append(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         use std::io::Write;
         let mut f = std::fs::OpenOptions::new()
@@ -225,6 +255,7 @@ impl StorageDriver for MmapDriver {
             .map_err(|e| StorageError::Io(e.to_string()))
     }
 
+    /// Read via `memmap2` — `NotFound` when absent, empty `Vec` for a zero-length file.
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError> {
         let path = key_path(&self.root, key);
         let f = std::fs::File::open(&path).map_err(|_| StorageError::NotFound(key.to_string()))?;
@@ -237,6 +268,7 @@ impl StorageDriver for MmapDriver {
         Ok(mmap.to_vec())
     }
 
+    /// Read the full value then slice `[offset, offset+len)` clamped at end.
     fn read_range(&self, key: &str, offset: usize, len: usize) -> Result<Vec<u8>, StorageError> {
         let data = self.read(key)?;
         let end = (offset + len).min(data.len());
@@ -249,6 +281,7 @@ impl StorageDriver for MmapDriver {
         Ok(data[offset..end].to_vec())
     }
 
+    /// Remove the key's file; idempotent on absent keys.
     fn delete(&self, key: &str) -> Result<(), StorageError> {
         let path = key_path(&self.root, key);
         if path.exists() {
@@ -257,6 +290,7 @@ impl StorageDriver for MmapDriver {
         Ok(())
     }
 
+    /// Copy every file under the root into `.snap_<id>` (no CoW — full copy).
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         let dst = snap_dir(&self.root, snapshot_id);
         std::fs::create_dir_all(&dst).map_err(|e| StorageError::Io(e.to_string()))?;
@@ -271,11 +305,15 @@ impl StorageDriver for MmapDriver {
         Ok(())
     }
 
+    /// No-op — writes go straight through `std::fs`.
     fn flush(&self) -> Result<(), StorageError> {
         Ok(())
     }
+    /// No-op — the OS page cache handles prefetch.
     fn prefetch_hint(&self, _key: &str) {}
+    /// No-op — the OS page cache handles eviction.
     fn eviction_hint(&self, _key: &str) {}
+    /// `"MmapDriver (file-backed memmap2, portable)"`.
     fn describe(&self) -> &str {
         "MmapDriver (file-backed memmap2, portable)"
     }
@@ -296,6 +334,7 @@ pub struct MmapApfsDriver {
 }
 
 impl MmapApfsDriver {
+    /// Create an APFS-enhanced driver rooted at `root` — wraps `MmapDriver`.
     pub fn new<P: AsRef<Path>>(root: P) -> Self {
         Self {
             inner: MmapDriver::new(root),
@@ -304,6 +343,7 @@ impl MmapApfsDriver {
 }
 
 impl StorageDriver for MmapApfsDriver {
+    /// Report `DriverKind::MmapApfs` — `free_snapshots` on macOS/iOS only, 4 writers.
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::MmapApfs,
@@ -314,10 +354,12 @@ impl StorageDriver for MmapApfsDriver {
         }
     }
 
+    /// Delegate to the inner `MmapDriver`.
     fn write(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         self.inner.write(key, data)
     }
 
+    /// Append under `F_NOCACHE` on macOS so sequential WAL writes bypass the UBC; delegates off-platform.
     fn append(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         // Open with F_NOCACHE so sequential WAL appends bypass the unified
         // buffer cache and do not evict hot inference data.
@@ -344,6 +386,7 @@ impl StorageDriver for MmapApfsDriver {
         self.inner.append(key, data)
     }
 
+    /// Inner read plus `MADV_WILLNEED` on the mapped region (macOS) to prefetch the next pages.
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError> {
         let data = self.inner.read(key)?;
         // Issue MADV_WILLNEED hint for the mapped region so Darwin prefetches
@@ -361,15 +404,18 @@ impl StorageDriver for MmapApfsDriver {
         Ok(data)
     }
 
+    /// Delegate to the inner `MmapDriver`.
     fn read_range(&self, key: &str, offset: usize, len: usize) -> Result<Vec<u8>, StorageError> {
         self.inner.read_range(key, offset, len)
     }
 
+    /// Issue `eviction_hint` first, then delegate the delete.
     fn delete(&self, key: &str) -> Result<(), StorageError> {
         self.eviction_hint(key);
         self.inner.delete(key)
     }
 
+    /// `clonefile(2)` CoW clone of the root into `.snap_<id>` on macOS (removes an existing dst first); falls back to a full copy elsewhere.
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         let src = &self.inner.root;
         let dst = snap_dir(src, snapshot_id);
@@ -392,6 +438,7 @@ impl StorageDriver for MmapApfsDriver {
         }
     }
 
+    /// `fcntl(F_FULLFSYNC)` on a sentinel file (macOS) to drain the ANS write queue; no-op elsewhere.
     fn flush(&self) -> Result<(), StorageError> {
         #[cfg(target_os = "macos")]
         {
@@ -414,6 +461,7 @@ impl StorageDriver for MmapApfsDriver {
         Ok(())
     }
 
+    /// `MADV_WILLNEED` on the key's mapped data (macOS); no-op elsewhere.
     fn prefetch_hint(&self, key: &str) {
         #[cfg(target_os = "macos")]
         {
@@ -433,6 +481,7 @@ impl StorageDriver for MmapApfsDriver {
         let _ = key;
     }
 
+    /// `MADV_FREE` on the key's mapped data (macOS); no-op elsewhere.
     fn eviction_hint(&self, key: &str) {
         #[cfg(target_os = "macos")]
         {
@@ -454,6 +503,7 @@ impl StorageDriver for MmapApfsDriver {
         let _ = key;
     }
 
+    /// `"MmapApfsDriver (Darwin UMA + APFS clonefile + madvise + F_NOCACHE)"`.
     fn describe(&self) -> &str {
         "MmapApfsDriver (Darwin UMA + APFS clonefile + madvise + F_NOCACHE)"
     }
@@ -472,6 +522,8 @@ pub struct ZnsDriver {
 }
 
 impl ZnsDriver {
+    /// Create a ZNS driver: `manager` handles zone bookkeeping; small
+    /// values and metadata go to the file-backed `overlay_dir`.
     pub fn new<P: AsRef<Path>>(
         manager: crate::zns_storage::ZnsZoneManager,
         overlay_dir: P,
@@ -484,6 +536,7 @@ impl ZnsDriver {
 }
 
 impl StorageDriver for ZnsDriver {
+    /// Report `DriverKind::Zns` — zone-append capable, 8 writers, no free snapshots.
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::Zns,
@@ -494,12 +547,14 @@ impl StorageDriver for ZnsDriver {
         }
     }
 
+    /// All writes go to the overlay; the ZNS manager keeps zone bookkeeping.
     fn write(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         // Small values → overlay; large values would use zone-append via the
         // ZnsZoneManager.  For portability across machines without ZNS hardware,
         // all writes go to the overlay and the ZNS manager handles zone bookkeeping.
         self.overlay.write(key, data)
     }
+    /// Try a real zone append via `ZnsZoneManager::allocate_zone`/`write_zone`; fall back to the overlay on failure.
     fn append(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         // Zone append: allocate a zone and append; fall back to overlay.
         let zone_type = crate::zns_storage::ZoneType::Sequential;
@@ -519,23 +574,31 @@ impl StorageDriver for ZnsDriver {
             self.overlay.append(key, data)
         }
     }
+    /// Delegate to the overlay.
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError> {
         self.overlay.read(key)
     }
+    /// Delegate to the overlay.
     fn read_range(&self, key: &str, offset: usize, len: usize) -> Result<Vec<u8>, StorageError> {
         self.overlay.read_range(key, offset, len)
     }
+    /// Delegate to the overlay.
     fn delete(&self, key: &str) -> Result<(), StorageError> {
         self.overlay.delete(key)
     }
+    /// Delegate to the overlay (full copy).
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         self.overlay.snapshot(snapshot_id)
     }
+    /// No-op.
     fn flush(&self) -> Result<(), StorageError> {
         Ok(())
     }
+    /// No-op.
     fn prefetch_hint(&self, _key: &str) {}
+    /// No-op.
     fn eviction_hint(&self, _key: &str) {}
+    /// `"ZnsDriver (Linux ZNS NVMe zone-append + overlay)"`.
     fn describe(&self) -> &str {
         "ZnsDriver (Linux ZNS NVMe zone-append + overlay)"
     }
@@ -570,6 +633,8 @@ impl WinNvmeDriver {
         &self.device_path
     }
 
+    /// Probe `\\.\PhysicalDrive0..7` for NVMe passthrough and create
+    /// the driver with a file-backed `overlay_dir` fallback.
     pub fn new<P: AsRef<Path>>(overlay_dir: P) -> Self {
         let (hw, path) = Self::probe_devices();
         Self {
@@ -579,6 +644,8 @@ impl WinNvmeDriver {
         }
     }
 
+    /// Scan `\\.\PhysicalDrive0..7`, returning `(true, path)` for the
+    /// first drive answering the storage-property query.
     fn probe_devices() -> (bool, String) {
         for i in 0..8u32 {
             let path = format!(r"\\.\PhysicalDrive{}", i);
@@ -589,6 +656,9 @@ impl WinNvmeDriver {
         (false, String::new())
     }
 
+    /// Open `device_path` and issue `IOCTL_STORAGE_QUERY_PROPERTY`;
+    /// true when the device exists and is accessible. Always false
+    /// off Windows-x86_64.
     fn probe_nvme(#[allow(unused_variables)] device_path: &str) -> bool {
         #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
         {
@@ -657,6 +727,7 @@ impl WinNvmeDriver {
 }
 
 impl StorageDriver for WinNvmeDriver {
+    /// Report `DriverKind::WinNvme` — zone-append and CSD flags reflect `hardware_present`.
     fn capabilities(&self) -> DriverCapabilities {
         DriverCapabilities {
             kind: DriverKind::WinNvme,
@@ -667,30 +738,40 @@ impl StorageDriver for WinNvmeDriver {
         }
     }
 
+    /// Delegate to the overlay (passthrough scaffold).
     fn write(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         self.overlay.write(key, data)
     }
+    /// Delegate to the overlay.
     fn append(&self, key: &str, data: &[u8]) -> Result<(), StorageError> {
         self.overlay.append(key, data)
     }
+    /// Delegate to the overlay.
     fn read(&self, key: &str) -> Result<Vec<u8>, StorageError> {
         self.overlay.read(key)
     }
+    /// Delegate to the overlay.
     fn read_range(&self, key: &str, offset: usize, len: usize) -> Result<Vec<u8>, StorageError> {
         self.overlay.read_range(key, offset, len)
     }
+    /// Delegate to the overlay.
     fn delete(&self, key: &str) -> Result<(), StorageError> {
         self.overlay.delete(key)
     }
+    /// Delegate to the overlay (full copy).
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         self.overlay.snapshot(snapshot_id)
     }
+    /// Delegate to the overlay (no-op).
     fn flush(&self) -> Result<(), StorageError> {
         self.overlay.flush()
     }
+    /// No-op.
     fn prefetch_hint(&self, _key: &str) {}
+    /// No-op.
     fn eviction_hint(&self, _key: &str) {}
 
+    /// `"WinNvmeDriver (...)"` — the string reports whether hardware was found or the overlay fallback is active.
     fn describe(&self) -> &str {
         if self.hardware_present {
             "WinNvmeDriver (Windows DeviceIoControl NVMe passthrough — hardware found)"
@@ -827,28 +908,41 @@ pub enum NetworkFilterKind {
     Noop,
 }
 
+/// Host network-filter backend contract (eBPF on Linux, WFP on
+/// Windows, NetworkExtension on macOS, VpnService on Android) — the
+/// allow/deny rule set applied to storage-adjacent traffic.
 pub trait NetworkFilter: Send + Sync {
+    /// Which backend implements this filter.
     fn kind(&self) -> NetworkFilterKind;
+    /// Install an allow rule.
     fn allow(&self, rule: &str) -> Result<(), StorageError>;
+    /// Install a deny rule.
     fn deny(&self, rule: &str) -> Result<(), StorageError>;
+    /// Remove a previously installed rule.
     fn remove(&self, rule: &str) -> Result<(), StorageError>;
+    /// One-line backend description for diagnostics.
     fn describe(&self) -> &str;
 }
 
 pub struct NoopFilter;
 impl NetworkFilter for NoopFilter {
+    /// `NetworkFilterKind::Noop`.
     fn kind(&self) -> NetworkFilterKind {
         NetworkFilterKind::Noop
     }
+    /// Always `Ok` — no filtering performed.
     fn allow(&self, _: &str) -> Result<(), StorageError> {
         Ok(())
     }
+    /// Always `Ok` — no filtering performed.
     fn deny(&self, _: &str) -> Result<(), StorageError> {
         Ok(())
     }
+    /// Always `Ok` — nothing installed to remove.
     fn remove(&self, _: &str) -> Result<(), StorageError> {
         Ok(())
     }
+    /// `"NoopFilter (no kernel packet filtering on this platform)"`.
     fn describe(&self) -> &str {
         "NoopFilter (no kernel packet filtering on this platform)"
     }

@@ -609,6 +609,82 @@ impl crate::wgsl_forge::ir::graph::Lowerer for WgslGraphLowerer<'_> {
             ))
         }
     }
+
+    fn gather_dequant(
+        &mut self,
+        node: &crate::wgsl_forge::ir::graph::GraphNode,
+    ) -> Result<(), ForgeError> {
+        self.source
+            .push_str(&crate::wgsl_forge::graph_ops::gather_dequant::gather_dequant_ternary_wgsl(
+                node.sched.workgroup_size,
+            ));
+        Ok(())
+    }
+
+    fn scatter_accum(
+        &mut self,
+        node: &crate::wgsl_forge::ir::graph::GraphNode,
+    ) -> Result<(), ForgeError> {
+        self.source
+            .push_str(&crate::wgsl_forge::graph_ops::scatter::scatter_wgsl(
+                node.sched.workgroup_size,
+            ));
+        Ok(())
+    }
+
+    fn slice(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+        self.source
+            .push_str(&crate::wgsl_forge::graph_ops::slice::slice_wgsl(
+                node.sched.workgroup_size,
+            ));
+        Ok(())
+    }
+
+    fn stencil(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+        use crate::wgsl_forge::ir::graph::OpNode;
+        if let OpNode::Stencil { kind, .. } = node.op {
+            let src = crate::wgsl_forge::graph_ops::stencil::stencil_wgsl(
+                kind,
+                node.sched.workgroup_size,
+            )?;
+            self.source.push_str(&src);
+            Ok(())
+        } else {
+            Err(ForgeError::Emission(
+                "WgslGraphLowerer::stencil received a non-Stencil node".to_string(),
+            ))
+        }
+    }
+
+    fn rope(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+        let src = crate::wgsl_forge::graph_ops::stencil::rope_wgsl(node.sched.workgroup_size)?;
+        self.source.push_str(&src);
+        Ok(())
+    }
+
+    fn pool2d(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+        self.source
+            .push_str(&crate::wgsl_forge::graph_ops::vision::max_pool2d_wgsl(
+                node.sched.workgroup_size,
+            ));
+        Ok(())
+    }
+
+    fn resize2d(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+        self.source
+            .push_str(&crate::wgsl_forge::graph_ops::vision::resize2d_wgsl(
+                node.sched.workgroup_size,
+            ));
+        Ok(())
+    }
+
+    fn conv2d(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+        self.source
+            .push_str(&crate::wgsl_forge::graph_ops::vision::conv2d_wgsl(
+                node.sched.workgroup_size,
+            ));
+        Ok(())
+    }
 }
 
 /// Emit a complete WGSL module for a **pure compute-graph** (no backing `KernelSpec`) —
@@ -978,10 +1054,11 @@ fn emit_ops(source: &mut String, ops: &[Op], indent: &str) -> Result<(), ForgeEr
                     .map_err(|error| ForgeError::Emission(error.to_string()))?;
                 writeln!(source, "{indent}if (committed.kind != RAY_QUERY_INTERSECTION_NONE) {{ {destination} = committed.t; }}").map_err(|error| ForgeError::Emission(error.to_string()))?;
             }
-            Op::Intrinsic(_) => {
-                return Err(ForgeError::Emission(
-                    "Intrinsics not implemented for WGSL yet".to_string(),
-                ));
+            Op::Intrinsic(intrinsic) => {
+                return Err(ForgeError::Emission(format!(
+                    "Intrinsic {:?} lowering requires dedicated shader template or adapter intrinsic capability",
+                    intrinsic.class()
+                )));
             }
         }
     }
@@ -1062,6 +1139,102 @@ mod tests {
         assert!(
             shader.source.ends_with(&reduce_wgsl(RedKind::Sum, 256)),
             "native graph emission must equal the reduce template"
+        );
+    }
+
+    #[test]
+    fn graph_native_slice_lowers_to_template() {
+        use crate::wgsl_forge::graph_ops::slice::{slice_wgsl, SLICE_ENTRY};
+        use crate::wgsl_forge::ir::graph::{
+            ComputeGraph, DType, OpNode, Shape, TensorRef,
+        };
+
+        let sched = Schedule {
+            workgroup_size: 64,
+            ..Default::default()
+        };
+        let mut g = ComputeGraph::new();
+        let inp = TensorRef::external(Shape::new(&[1024]), DType::F32);
+        g.push(
+            OpNode::Slice {
+                offset: 128,
+                len: 64,
+            },
+            &[inp],
+            Shape::new(&[64]),
+            DType::F32,
+            sched,
+        )
+        .unwrap();
+        let shader = emit_graph_wgsl(&g, sched).unwrap();
+        assert!(shader.source.contains(SLICE_ENTRY));
+        assert!(
+            shader.source.ends_with(&slice_wgsl(64)),
+            "native graph emission must equal the slice template"
+        );
+    }
+
+    #[test]
+    fn graph_native_gather_dequant_lowers_to_template() {
+        use crate::wgsl_forge::graph_ops::gather_dequant::{
+            gather_dequant_ternary_wgsl, GATHER_DEQUANT_ENTRY,
+        };
+        use crate::wgsl_forge::ir::graph::{
+            ComputeGraph, DType, OpNode, Shape, TensorRef,
+        };
+
+        let sched = Schedule {
+            workgroup_size: 128,
+            ..Default::default()
+        };
+        let mut g = ComputeGraph::new();
+        let inp = TensorRef::external(Shape::new(&[16, 64]), DType::F32);
+        g.push(
+            OpNode::GatherDequant {
+                scheme: DType::F32,
+                block: 16,
+            },
+            &[inp],
+            Shape::new(&[16, 64]),
+            DType::F32,
+            sched,
+        )
+        .unwrap();
+        let shader = emit_graph_wgsl(&g, sched).unwrap();
+        assert!(shader.source.contains(GATHER_DEQUANT_ENTRY));
+        assert!(
+            shader.source.ends_with(&gather_dequant_ternary_wgsl(128)),
+            "native graph emission must equal the gather_dequant template"
+        );
+    }
+
+    #[test]
+    fn graph_native_scatter_lowers_to_template() {
+        use crate::wgsl_forge::graph_ops::scatter::{scatter_wgsl, SCATTER_ENTRY};
+        use crate::wgsl_forge::ir::graph::{
+            AccumKind, ComputeGraph, DType, OpNode, Shape, TensorRef,
+        };
+
+        let sched = Schedule {
+            workgroup_size: 64,
+            ..Default::default()
+        };
+        let mut g = ComputeGraph::new();
+        let src = TensorRef::external(Shape::new(&[128]), DType::F32);
+        let idx = TensorRef::external(Shape::new(&[128]), DType::U32);
+        g.push(
+            OpNode::ScatterAccum { op: AccumKind::Add },
+            &[src, idx],
+            Shape::new(&[256]),
+            DType::F32,
+            sched,
+        )
+        .unwrap();
+        let shader = emit_graph_wgsl(&g, sched).unwrap();
+        assert!(shader.source.contains(SCATTER_ENTRY));
+        assert!(
+            shader.source.ends_with(&scatter_wgsl(64)),
+            "native graph emission must equal the scatter template"
         );
     }
 

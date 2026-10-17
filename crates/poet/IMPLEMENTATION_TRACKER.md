@@ -505,7 +505,7 @@ Core P0 reasoning tools — DONE (9 panels):
 
 P1 panels — DONE (31 panels):
 - P1 Legal (8): STIT, Causal, Responsibility, Capacity, Delegation, Contract, Consensus, Meta-Deontic
-- P1 Governance (6): Value Flow, Interaction Gov, Identity Fabric, Capability Gap, Legal Compose, Deontic Compose
+- P1 Governance (6): Socioeconomics, Interaction Gov, Identity Fabric, Capability Gap, Legal Compose, Deontic Compose
 - P1 Formal Logic (9): Epistemic, Paraconsistent, LTL, CTL, ASP, Defeasible, Linear, Description, Dialectical
 - P1 Advanced (8): Abductive, Fuzzy, Probabilistic, Graph Theory, Interval, Manifold 10D, Epistemic Boundaries, Modal
 

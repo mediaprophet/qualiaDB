@@ -327,6 +327,7 @@ pub struct ScreeningEntry {
 }
 
 impl AssetManager {
+    /// Construct a `AssetManager` with default field values.
     pub fn new() -> Self {
         Self {
             asset_catalog: AssetCatalog::new(),
@@ -337,6 +338,7 @@ impl AssetManager {
         }
     }
 
+    /// Initialize `AssetManager`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.asset_catalog.initialize()?;
         self.asset_validator.initialize()?;
@@ -363,23 +365,24 @@ impl AssetManager {
         self.price_histories.get(asset_id)
     }
 
-    /// Simulate fetching data from a registered price feed for `asset_id` and
-    /// populate the manager's price-history cache. If the feed carries
-    /// `cached_prices`, those are used directly; otherwise a deterministic series
-    /// (seeded from `feed_id`, so the same feed always yields the same history)
-    /// is generated — there is no real network in this scaffold. Returns
-    /// `DataError` when no feed is registered for the asset.
+    /// Fetch data from a registered price feed for `asset_id` and populate the manager's
+    /// price-history cache.
+    ///
+    /// Requires non-empty `cached_prices` on the registered feed. If no prices are cached,
+    /// fails closed with `DataError` rather than silently fabricating a synthetic market feed.
     pub fn ingest_from_feed(&mut self, asset_id: &str) -> Result<(), FinancialError> {
         let feed = self.price_feeds.get(asset_id).cloned().ok_or_else(|| {
             FinancialError::DataError(format!("no price feed registered for asset '{}'", asset_id))
         })?;
 
-        let prices = if !feed.cached_prices.is_empty() {
-            feed.cached_prices.clone()
-        } else {
-            deterministic_price_series(&feed.feed_id, 30)
-        };
-        self.price_histories.insert(asset_id.to_string(), prices);
+        if feed.cached_prices.is_empty() {
+            return Err(FinancialError::DataError(format!(
+                "price feed '{}' for asset '{}' has no cached prices and real network feed transport is not configured (fails closed)",
+                feed.feed_id, asset_id
+            )));
+        }
+
+        self.price_histories.insert(asset_id.to_string(), feed.cached_prices);
         Ok(())
     }
 
@@ -396,10 +399,12 @@ impl AssetManager {
         }
     }
 
+    /// The `market_data` component.
     pub fn market_data(&self) -> &MarketData {
         &self.market_data
     }
 
+    /// The `market_data` component (mutable).
     pub fn market_data_mut(&mut self) -> &mut MarketData {
         &mut self.market_data
     }
@@ -436,6 +441,7 @@ fn deterministic_price_series(seed: &str, len: usize) -> Vec<f64> {
 }
 
 impl AssetCatalog {
+    /// Construct a `AssetCatalog` with default field values.
     pub fn new() -> Self {
         Self {
             assets: HashMap::new(),
@@ -628,6 +634,7 @@ impl AssetCatalog {
 }
 
 impl MarketData {
+    /// Construct a `MarketData` with default field values.
     pub fn new() -> Self {
         Self {
             price_data: HashMap::new(),
@@ -666,25 +673,30 @@ impl MarketData {
         self.price_data.insert(data.asset_id.clone(), data);
     }
 
+    /// Insert or replace `volume_data` keyed by `asset_id`.
     pub fn upsert_volume_data(&mut self, data: VolumeData) {
         self.volume_data.insert(data.asset_id.clone(), data);
     }
 
+    /// Look up `volume_data` by id; `None`/`Err` when absent.
     pub fn get_volume_data(&self, asset_id: &str) -> Option<&VolumeData> {
         self.volume_data.get(asset_id)
     }
 
+    /// Insert or replace `technical_indicators` keyed by `asset_id`.
     pub fn upsert_technical_indicators(&mut self, indicators: TechnicalIndicators) {
         self.technical_indicators
             .insert(indicators.asset_id.clone(), indicators);
     }
 
+    /// Look up `technical_indicators` by id; `None`/`Err` when absent.
     pub fn get_technical_indicators(&self, asset_id: &str) -> Option<&TechnicalIndicators> {
         self.technical_indicators.get(asset_id)
     }
 }
 
 impl AssetValidator {
+    /// Construct a `AssetValidator` with default field values.
     pub fn new() -> Self {
         Self {
             validation_rules: Vec::new(),
@@ -693,26 +705,31 @@ impl AssetValidator {
         }
     }
 
+    /// Initialize `AssetValidator`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.compliance_checker.initialize()?;
         self.risk_assessor.initialize()?;
         Ok(())
     }
 
+    /// Add `validation_rule` to the `AssetValidator`.
     pub fn add_validation_rule(&mut self, rule: ValidationRule) {
         self.validation_rules.push(rule);
     }
 
+    /// Ids of every registered `validation_rule`.
     pub fn list_validation_rules(&self) -> &[ValidationRule] {
         &self.validation_rules
     }
 
+    /// Number of registered `validation rules`.
     pub fn validation_rule_count(&self) -> usize {
         self.validation_rules.len()
     }
 }
 
 impl ComplianceChecker {
+    /// Construct a `ComplianceChecker` with default field values.
     pub fn new() -> Self {
         Self {
             compliance_rules: Vec::new(),
@@ -721,34 +738,42 @@ impl ComplianceChecker {
         }
     }
 
+    /// Initialize `ComplianceChecker`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Add `compliance_rule` to the `ComplianceChecker`.
     pub fn add_compliance_rule(&mut self, rule: ComplianceRule) {
         self.compliance_rules.push(rule);
     }
 
+    /// Ids of every registered `compliance_rule`.
     pub fn list_compliance_rules(&self) -> &[ComplianceRule] {
         &self.compliance_rules
     }
 
+    /// Add `regulatory_framework` to the `ComplianceChecker`.
     pub fn add_regulatory_framework(&mut self, framework: RegulatoryFramework) {
         self.regulatory_frameworks.push(framework);
     }
 
+    /// Ids of every registered `regulatory_framework`.
     pub fn list_regulatory_frameworks(&self) -> &[RegulatoryFramework] {
         &self.regulatory_frameworks
     }
 
+    /// Add `screening_list` to the `ComplianceChecker`.
     pub fn add_screening_list(&mut self, list: ScreeningList) {
         self.screening_lists.insert(list.list_id.clone(), list);
     }
 
+    /// Look up `screening_list` by id; `None`/`Err` when absent.
     pub fn get_screening_list(&self, list_id: &str) -> Option<&ScreeningList> {
         self.screening_lists.get(list_id)
     }
 
+    /// Ids of every registered `screening_list`.
     pub fn list_screening_lists(&self) -> Vec<String> {
         self.screening_lists.keys().cloned().collect()
     }
@@ -769,6 +794,7 @@ impl ComplianceRule {
 }
 
 impl AssetInfo {
+    /// Construct a `AssetInfo` with default field values.
     pub fn new() -> Self {
         Self {
             asset_id: "asset_1".to_string(),
@@ -786,6 +812,7 @@ impl AssetInfo {
 }
 
 impl AssetClass {
+    /// Construct a `AssetClass` with default field values.
     pub fn new() -> Self {
         Self {
             class_id: "class_1".to_string(),
@@ -798,6 +825,7 @@ impl AssetClass {
 }
 
 impl AssetRelationship {
+    /// Construct a `AssetRelationship` with default field values.
     pub fn new() -> Self {
         Self {
             relationship_id: "rel_1".to_string(),
@@ -810,6 +838,7 @@ impl AssetRelationship {
 }
 
 impl PriceFeed {
+    /// Construct a `PriceFeed` with default field values.
     pub fn new() -> Self {
         Self {
             feed_id: "feed_1".to_string(),
@@ -825,6 +854,7 @@ impl PriceFeed {
 }
 
 impl DataQuality {
+    /// Construct a `DataQuality` with default field values.
     pub fn new() -> Self {
         Self {
             // not measured (scaffold defaults; no data-quality assessment is performed)
@@ -837,6 +867,7 @@ impl DataQuality {
 }
 
 impl PriceData {
+    /// Construct a `PriceData` with default field values.
     pub fn new() -> Self {
         Self {
             asset_id: "asset_1".to_string(),
@@ -852,6 +883,7 @@ impl PriceData {
 }
 
 impl VolumeData {
+    /// Construct a `VolumeData` with default field values.
     pub fn new() -> Self {
         Self {
             asset_id: "asset_1".to_string(),
@@ -864,6 +896,7 @@ impl VolumeData {
 }
 
 impl TechnicalIndicators {
+    /// Construct a `TechnicalIndicators` with default field values.
     pub fn new() -> Self {
         Self {
             asset_id: "asset_1".to_string(),
@@ -876,6 +909,7 @@ impl TechnicalIndicators {
 }
 
 impl ValidationRule {
+    /// Construct a `ValidationRule` with default field values.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
@@ -887,6 +921,7 @@ impl ValidationRule {
 }
 
 impl ComplianceCondition {
+    /// Construct a `ComplianceCondition` with default field values.
     pub fn new() -> Self {
         Self {
             condition_id: "cond_1".to_string(),
@@ -898,6 +933,7 @@ impl ComplianceCondition {
 }
 
 impl ComplianceRule {
+    /// Construct a `ComplianceRule` with default field values.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
@@ -910,6 +946,7 @@ impl ComplianceRule {
 }
 
 impl RegulatoryFramework {
+    /// Construct a `RegulatoryFramework` with default field values.
     pub fn new() -> Self {
         Self {
             framework_id: "framework_1".to_string(),
@@ -921,6 +958,7 @@ impl RegulatoryFramework {
 }
 
 impl RegulatoryRequirement {
+    /// Construct a `RegulatoryRequirement` with default field values.
     pub fn new() -> Self {
         Self {
             requirement_id: "req_1".to_string(),
@@ -932,6 +970,7 @@ impl RegulatoryRequirement {
 }
 
 impl ScreeningList {
+    /// Construct a `ScreeningList` with default field values.
     pub fn new() -> Self {
         Self {
             list_id: "list_1".to_string(),
@@ -943,6 +982,7 @@ impl ScreeningList {
 }
 
 impl ScreeningEntry {
+    /// Construct a `ScreeningEntry` with default field values.
     pub fn new() -> Self {
         Self {
             entry_id: "entry_1".to_string(),

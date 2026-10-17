@@ -1,4 +1,4 @@
-//! P1 governance panels: value flow, interaction governance, identity fabric,
+//! P1 governance panels: socioeconomics, interaction governance, identity fabric,
 //! capability gap, legal compose, deontic compose.
 
 use super::helpers::{
@@ -9,18 +9,18 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
-pub(super) fn build_value_flow_panel(document: &Document) -> Element {
-    let panel = make_tool_panel(document, "value_flow", false);
+pub(super) fn build_socioeconomics_panel(document: &Document) -> Element {
+    let panel = make_tool_panel(document, "socioeconomics", false);
     panel
         .append_child(&make_section_label(
             document,
-            "Value Flow / Commons \u{2014} commons cost, royalty, outstanding obligations, pool state",
+            "Socioeconomics \u{2014} commons cost, royalty, outstanding obligations, pool state",
         ))
         .unwrap();
     panel
         .append_child(&make_textarea(
             document,
-            "value-flow-editor",
+            "socioeconomics-editor",
             "# Native Permissive Commons contract\nproduction_cost=1000\nroi_cap_percent=20\nmax_roi_percent=20\npool=400\nenergy_returned=12\nenergy_invested=10\nmin_ratio=1.0\n\n# Royalty split\nbase=100\nagent_multiplier_percent=150\ngenerations=3\nshare_percent=50",
             "140px",
         ))
@@ -31,7 +31,7 @@ pub(super) fn build_value_flow_panel(document: &Document) -> Element {
     actions
         .append_child(&make_button(
             document,
-            "value-flow-evaluate",
+            "socioeconomics-evaluate",
             "\u{1F4B0} Compute Flow",
             true,
         ))
@@ -39,7 +39,7 @@ pub(super) fn build_value_flow_panel(document: &Document) -> Element {
     actions
         .append_child(&make_button(
             document,
-            "value-flow-royalty",
+            "socioeconomics-royalty",
             "\u{1F4B3} Royalty Split",
             false,
         ))
@@ -48,27 +48,27 @@ pub(super) fn build_value_flow_panel(document: &Document) -> Element {
     panel
         .append_child(&make_results_area(
             document,
-            "value-flow-results",
-            "Compute commons cost, outstanding balance, discharge, and E-ROI against the native value-flow kernel.",
+            "socioeconomics-results",
+            "Compute commons cost, outstanding balance, discharge, and E-ROI against the native socioeconomics kernel.",
         ))
         .unwrap();
     panel
 }
 
-pub(super) fn wire_value_flow_panel(document: &Document) {
-    if let Some(btn) = document.get_element_by_id("value-flow-evaluate") {
+pub(super) fn wire_socioeconomics_panel(document: &Document) {
+    if let Some(btn) = document.get_element_by_id("socioeconomics-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_mock_results(&doc, "value-flow-results", "value-flow");
+            show_mock_results(&doc, "socioeconomics-results", "socioeconomics");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();
         closure.forget();
     }
-    if let Some(btn) = document.get_element_by_id("value-flow-royalty") {
+    if let Some(btn) = document.get_element_by_id("socioeconomics-royalty") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
             let doc = web_sys::window().unwrap().document().unwrap();
-            show_mock_results(&doc, "value-flow-results", "value-flow-royalty");
+            show_mock_results(&doc, "socioeconomics-results", "socioeconomics-royalty");
         }) as Box<dyn FnMut(MouseEvent)>);
         btn.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
             .unwrap();

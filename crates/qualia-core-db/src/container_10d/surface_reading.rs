@@ -9,6 +9,8 @@
 /// Magic `SRD1`.
 pub const SURFACE_READING_MAGIC: &[u8; 4] = b"SRD1";
 
+/// Byte size of an `SRD1` section for `vertex_count` readings
+/// (8-byte header + 4 bytes per RGBA8 vertex).
 pub fn encoded_len(vertex_count: usize) -> usize {
     8 + vertex_count * 4
 }

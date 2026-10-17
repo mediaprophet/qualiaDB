@@ -171,6 +171,8 @@ pub struct GeometricAlgebraConfiguration {
 // ── Opcode Generation Functions ───────────────────────────────────────────────
 
 impl BiologicalDomainConfiguration {
+    /// Lower the biological-domain bounds to SHACL `CheckMaxInclusive`
+    /// opcodes (sequence length, gene count).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_sequence_length as f64),
@@ -180,6 +182,8 @@ impl BiologicalDomainConfiguration {
 }
 
 impl ChemicalDomainConfiguration {
+    /// Lower the chemical-domain bounds to `CheckMaxInclusive` opcodes
+    /// (molecular weight, atom count).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_molecular_weight),
@@ -189,6 +193,8 @@ impl ChemicalDomainConfiguration {
 }
 
 impl PhysicalDomainConfiguration {
+    /// Lower the physical-domain bounds to `CheckMaxInclusive` opcodes
+    /// (temperature K, pressure Pa).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_temperature_kelvin),
@@ -198,6 +204,8 @@ impl PhysicalDomainConfiguration {
 }
 
 impl FinancialDomainConfiguration {
+    /// Lower the financial-domain bounds to `CheckMaxInclusive` opcodes
+    /// (transaction value, portfolio size).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_transaction_value),
@@ -207,6 +215,8 @@ impl FinancialDomainConfiguration {
 }
 
 impl MathematicalDomainConfiguration {
+    /// Lower the mathematical-domain bounds to `CheckMaxInclusive`
+    /// opcodes (precision bits, expression depth).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_precision_bits as f64),
@@ -216,6 +226,8 @@ impl MathematicalDomainConfiguration {
 }
 
 impl GeospatialDomainConfiguration {
+    /// Lower the geospatial-domain bounds to `CheckMaxInclusive` opcodes
+    /// (coordinate precision, area km²).
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_coordinate_precision as f64),
@@ -225,6 +237,8 @@ impl GeospatialDomainConfiguration {
 }
 
 impl ObfuscationConfiguration {
+    /// Lower obfuscation limits to opcodes: `CheckMaxInclusive` on depth,
+    /// `CheckMinInclusive` on entropy bits.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_obfuscation_depth as f64),
@@ -234,6 +248,7 @@ impl ObfuscationConfiguration {
 }
 
 impl PolynomialObfuscationConfiguration {
+    /// Lower the max polynomial degree to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(
             self.max_polynomial_degree as f64,
@@ -242,12 +257,15 @@ impl PolynomialObfuscationConfiguration {
 }
 
 impl SemanticStripperConfiguration {
+    /// Lower the max context-strip depth to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_context_depth as f64)]
     }
 }
 
 impl DomainTransformerConfiguration {
+    /// Lower the max transformation-chain length to a
+    /// `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(
             self.max_transformation_chain_length as f64,
@@ -256,6 +274,8 @@ impl DomainTransformerConfiguration {
 }
 
 impl HybridStateConfiguration {
+    /// Lower the max hybrid-state size (bytes) to a `CheckMaxInclusive`
+    /// opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(
             self.max_state_size_bytes as f64,
@@ -264,6 +284,8 @@ impl HybridStateConfiguration {
 }
 
 impl SolverConfiguration {
+    /// Lower solver bounds to opcodes: max on iterations / convergence
+    /// tolerance / step size, min on step size.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_iterations as f64),
@@ -275,12 +297,14 @@ impl SolverConfiguration {
 }
 
 impl CalculusSolverConfiguration {
+    /// Lower the max ODE order to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_ode_order as f64)]
     }
 }
 
 impl LinearAlgebraSolverConfiguration {
+    /// Lower the max matrix dimension to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(
             self.max_matrix_dimension as f64,
@@ -289,18 +313,21 @@ impl LinearAlgebraSolverConfiguration {
 }
 
 impl OptimizationSolverConfiguration {
+    /// Lower the max variable count to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_variables as f64)]
     }
 }
 
 impl QuantumOptimizerConfiguration {
+    /// Lower the max qubit count to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_qubits as f64)]
     }
 }
 
 impl SymbolicLogicSolverConfiguration {
+    /// Lower the clause/variable bounds to `CheckMaxInclusive` opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_clause_count as f64),
@@ -310,6 +337,7 @@ impl SymbolicLogicSolverConfiguration {
 }
 
 impl GeometricAlgebraConfiguration {
+    /// Lower the max algebra dimension to a `CheckMaxInclusive` opcode.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_dimension as f64)]
     }

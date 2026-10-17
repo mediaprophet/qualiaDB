@@ -44,6 +44,7 @@ fn mode_from_str(s: &str) -> EpistemicMode {
 
 // ── Research enquiry ─────────────────────────────────────────────────────────
 
+/// `Research.new` invoke seam.
 pub fn research_new(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Research.new needs id"))?;
     let purpose = args::rec_str(args, "purpose").unwrap_or("");
@@ -63,6 +64,7 @@ pub fn research_new(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// `Research.set_purpose` invoke seam.
 pub fn research_set_purpose(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_purpose needs id"))?;
@@ -75,6 +77,7 @@ pub fn research_set_purpose(args: &Value, span: Span) -> Result<Value, Diagnosti
     ]))
 }
 
+/// `Research.define_scope` invoke seam.
 pub fn research_define_scope(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.define_scope needs id"))?;
@@ -90,6 +93,7 @@ pub fn research_define_scope(args: &Value, span: Span) -> Result<Value, Diagnost
     ]))
 }
 
+/// `Research.add_constraint` invoke seam.
 pub fn research_add_constraint(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.add_constraint needs id"))?;
@@ -108,6 +112,7 @@ pub fn research_add_constraint(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Research.add_question` invoke seam.
 pub fn research_add_question(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.add_question needs id"))?;
@@ -123,6 +128,7 @@ pub fn research_add_question(args: &Value, span: Span) -> Result<Value, Diagnost
     ]))
 }
 
+/// `Research.link_questions` invoke seam.
 pub fn research_link_questions(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.link_questions needs id"))?;
@@ -140,6 +146,7 @@ pub fn research_link_questions(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Corpus ───────────────────────────────────────────────────────────────────
 
+/// `Research.add_corpus_item` invoke seam.
 pub fn research_add_corpus_item(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.add_corpus_item needs id"))?;
@@ -154,6 +161,7 @@ pub fn research_add_corpus_item(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Research.import_literature` invoke seam.
 pub fn research_import_literature(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.import_literature needs id"))?;
@@ -167,6 +175,7 @@ pub fn research_import_literature(args: &Value, span: Span) -> Result<Value, Dia
     ]))
 }
 
+/// `Research.import_dataset` invoke seam.
 pub fn research_import_dataset(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.import_dataset needs id"))?;
@@ -180,6 +189,7 @@ pub fn research_import_dataset(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Research.set_corpus_confidence` invoke seam.
 pub fn research_set_corpus_confidence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_corpus_confidence needs id"))?;
@@ -194,6 +204,7 @@ pub fn research_set_corpus_confidence(args: &Value, span: Span) -> Result<Value,
     ]))
 }
 
+/// `Research.extract_from_corpus` invoke seam.
 pub fn research_extract_from_corpus(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let keyword = args::rec_str(args, "keyword")
         .ok_or_else(|| args::bad(span, "Research.extract_from_corpus needs keyword"))?;
@@ -208,6 +219,7 @@ pub fn research_extract_from_corpus(args: &Value, span: Span) -> Result<Value, D
 
 // ── Dark links ───────────────────────────────────────────────────────────────
 
+/// `Research.infer_dark_link` invoke seam.
 pub fn research_infer_dark_link(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.infer_dark_link needs id"))?;
@@ -227,6 +239,7 @@ pub fn research_infer_dark_link(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Research.detect_provenance_gaps` invoke seam.
 pub fn research_detect_provenance_gaps(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     // Takes items as list of records with id, content, source.
     let items_val = args::rec(args, "items")
@@ -262,6 +275,7 @@ pub fn research_detect_provenance_gaps(args: &Value, span: Span) -> Result<Value
     ]))
 }
 
+/// `Research.detect_concealment` invoke seam.
 pub fn research_detect_concealment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let items_val = args::rec(args, "items")
         .ok_or_else(|| args::bad(span, "Research.detect_concealment needs items"))?;
@@ -292,6 +306,7 @@ pub fn research_detect_concealment(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.confirm_dark_link` invoke seam.
 pub fn research_confirm_dark_link(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.confirm_dark_link needs id"))?;
@@ -302,6 +317,7 @@ pub fn research_confirm_dark_link(args: &Value, span: Span) -> Result<Value, Dia
     ]))
 }
 
+/// `Research.refute_dark_link` invoke seam.
 pub fn research_refute_dark_link(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.refute_dark_link needs id"))?;
@@ -314,6 +330,7 @@ pub fn research_refute_dark_link(args: &Value, span: Span) -> Result<Value, Diag
 
 // ── Inference chain ──────────────────────────────────────────────────────────
 
+/// `Research.make_inference` invoke seam.
 pub fn research_make_inference(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.make_inference needs id"))?;
@@ -331,6 +348,7 @@ pub fn research_make_inference(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Research.chain_inference` invoke seam.
 pub fn research_chain_inference(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.chain_inference needs id"))?;
@@ -345,6 +363,7 @@ pub fn research_chain_inference(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Research.set_inference_confidence` invoke seam.
 pub fn research_set_inference_confidence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_inference_confidence needs id"))?;
@@ -357,6 +376,7 @@ pub fn research_set_inference_confidence(args: &Value, span: Span) -> Result<Val
     ]))
 }
 
+/// `Research.validate_inference` invoke seam.
 pub fn research_validate_inference(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.validate_inference needs id"))?;
@@ -369,6 +389,7 @@ pub fn research_validate_inference(args: &Value, span: Span) -> Result<Value, Di
 
 // ── Investigation ────────────────────────────────────────────────────────────
 
+/// `Research.new_investigation` invoke seam.
 pub fn research_new_investigation(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.new_investigation needs id"))?;
@@ -381,6 +402,7 @@ pub fn research_new_investigation(args: &Value, span: Span) -> Result<Value, Dia
     ]))
 }
 
+/// `Research.collect_evidence` invoke seam.
 pub fn research_collect_evidence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.collect_evidence needs id"))?;
@@ -395,6 +417,7 @@ pub fn research_collect_evidence(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.set_reliability` invoke seam.
 pub fn research_set_reliability(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_reliability needs id"))?;
@@ -409,6 +432,7 @@ pub fn research_set_reliability(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Research.propose_hypothesis` invoke seam.
 pub fn research_propose_hypothesis(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.propose_hypothesis needs id"))?;
@@ -422,6 +446,7 @@ pub fn research_propose_hypothesis(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.evaluate_evidence` invoke seam.
 pub fn research_evaluate_evidence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.evaluate_evidence needs id"))?;
@@ -435,6 +460,7 @@ pub fn research_evaluate_evidence(args: &Value, span: Span) -> Result<Value, Dia
     ]))
 }
 
+/// `Research.create_timeline` invoke seam.
 pub fn research_create_timeline(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.create_timeline needs id"))?;
@@ -450,6 +476,7 @@ pub fn research_create_timeline(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Research.add_link` invoke seam.
 pub fn research_add_link(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Research.add_link needs id"))?;
@@ -467,6 +494,7 @@ pub fn research_add_link(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Research.find_path` invoke seam.
 pub fn research_find_path(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Research.find_path needs id"))?;
@@ -486,6 +514,7 @@ pub fn research_find_path(args: &Value, span: Span) -> Result<Value, Diagnostic>
 
 // ── Hypothesis graph ─────────────────────────────────────────────────────────
 
+/// `Research.create_hypothesis_graph` invoke seam.
 pub fn research_create_hypothesis_graph(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _ = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.create_hypothesis_graph needs id"))?;
@@ -495,6 +524,7 @@ pub fn research_create_hypothesis_graph(args: &Value, span: Span) -> Result<Valu
     ]))
 }
 
+/// `Research.contribute_evaluation` invoke seam.
 pub fn research_contribute_evaluation(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.contribute_evaluation needs node_id"))?;
@@ -509,6 +539,7 @@ pub fn research_contribute_evaluation(args: &Value, span: Span) -> Result<Value,
     ]))
 }
 
+/// `Research.bridge_dark_link` invoke seam.
 pub fn research_bridge_dark_link(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.bridge_dark_link needs node_id"))?;
@@ -521,6 +552,7 @@ pub fn research_bridge_dark_link(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.reframe_hypothesis` invoke seam.
 pub fn research_reframe_hypothesis(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.reframe_hypothesis needs node_id"))?;
@@ -533,6 +565,7 @@ pub fn research_reframe_hypothesis(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.merge_hypotheses` invoke seam.
 pub fn research_merge_hypotheses(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node1 = args::rec_str(args, "node1_id")
         .ok_or_else(|| args::bad(span, "Research.merge_hypotheses needs node1_id"))?;
@@ -547,6 +580,7 @@ pub fn research_merge_hypotheses(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.flag_gap` invoke seam.
 pub fn research_flag_gap(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.flag_gap needs node_id"))?;
@@ -559,6 +593,7 @@ pub fn research_flag_gap(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Research.close_gap` invoke seam.
 pub fn research_close_gap(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.close_gap needs node_id"))?;
@@ -571,6 +606,7 @@ pub fn research_close_gap(args: &Value, span: Span) -> Result<Value, Diagnostic>
     ]))
 }
 
+/// `Research.create_revision` invoke seam.
 pub fn research_create_revision(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.create_revision needs node_id"))?;
@@ -584,6 +620,7 @@ pub fn research_create_revision(args: &Value, span: Span) -> Result<Value, Diagn
     ]))
 }
 
+/// `Research.diff_revisions` invoke seam.
 pub fn research_diff_revisions(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rev1 = args::rec_str(args, "rev1_id")
         .ok_or_else(|| args::bad(span, "Research.diff_revisions needs rev1_id"))?;
@@ -596,6 +633,7 @@ pub fn research_diff_revisions(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Research.subscribe_updates` invoke seam.
 pub fn research_subscribe_updates(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let node_id = args::rec_str(args, "node_id")
         .ok_or_else(|| args::bad(span, "Research.subscribe_updates needs node_id"))?;
@@ -610,6 +648,7 @@ pub fn research_subscribe_updates(args: &Value, span: Span) -> Result<Value, Dia
 
 // ── Epistemic assessment ─────────────────────────────────────────────────────
 
+/// `Research.create_assessment` invoke seam.
 pub fn research_create_assessment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.create_assessment needs id"))?;
@@ -626,6 +665,7 @@ pub fn research_create_assessment(args: &Value, span: Span) -> Result<Value, Dia
     ]))
 }
 
+/// `Research.set_epistemic_mode` invoke seam.
 pub fn research_set_epistemic_mode(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_epistemic_mode needs id"))?;
@@ -639,6 +679,7 @@ pub fn research_set_epistemic_mode(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.set_reality_category` invoke seam.
 pub fn research_set_reality_category(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_reality_category needs id"))?;
@@ -651,6 +692,7 @@ pub fn research_set_reality_category(args: &Value, span: Span) -> Result<Value, 
     ]))
 }
 
+/// `Research.classify_reality` invoke seam.
 pub fn research_classify_reality(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let content = args::rec_str(args, "content")
         .ok_or_else(|| args::bad(span, "Research.classify_reality needs content"))?;
@@ -661,6 +703,7 @@ pub fn research_classify_reality(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.detect_blended` invoke seam.
 pub fn research_detect_blended(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let content = args::rec_str(args, "content")
         .ok_or_else(|| args::bad(span, "Research.detect_blended needs content"))?;
@@ -671,6 +714,7 @@ pub fn research_detect_blended(args: &Value, span: Span) -> Result<Value, Diagno
     ]))
 }
 
+/// `Research.detect_deceptive_fiction` invoke seam.
 pub fn research_detect_deceptive_fiction(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let content = args::rec_str(args, "content")
         .ok_or_else(|| args::bad(span, "Research.detect_deceptive_fiction needs content"))?;
@@ -688,6 +732,7 @@ pub fn research_detect_deceptive_fiction(args: &Value, span: Span) -> Result<Val
     ]))
 }
 
+/// `Research.trace_fiction` invoke seam.
 pub fn research_trace_fiction(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let fiction = args::rec_str(args, "fiction_content")
         .ok_or_else(|| args::bad(span, "Research.trace_fiction needs fiction_content"))?;
@@ -718,6 +763,7 @@ pub fn research_trace_fiction(args: &Value, span: Span) -> Result<Value, Diagnos
 
 // ── Sentiment ────────────────────────────────────────────────────────────────
 
+/// `Research.assess_sentiment` invoke seam.
 pub fn research_assess_sentiment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let text = args::rec_str(args, "text")
         .ok_or_else(|| args::bad(span, "Research.assess_sentiment needs text"))?;
@@ -728,6 +774,8 @@ pub fn research_assess_sentiment(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.detect_sentiment_manipulation` invoke seam — delegates to
+/// `SentimentAssessment::detect_sentiment_manipulation`.
 pub fn research_detect_sentiment_manipulation(
     args: &Value,
     span: Span,
@@ -759,6 +807,7 @@ pub fn research_detect_sentiment_manipulation(
     ]))
 }
 
+/// `Research.detect_performed_sentiment` invoke seam.
 pub fn research_detect_performed_sentiment(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let text = args::rec_str(args, "text")
         .ok_or_else(|| args::bad(span, "Research.detect_performed_sentiment needs text"))?;
@@ -769,6 +818,7 @@ pub fn research_detect_performed_sentiment(args: &Value, span: Span) -> Result<V
     ]))
 }
 
+/// `Research.map_sentiment_network` invoke seam.
 pub fn research_map_sentiment_network(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mentions_val = args::rec(args, "mentions")
         .ok_or_else(|| args::bad(span, "Research.map_sentiment_network needs mentions"))?;
@@ -813,6 +863,7 @@ pub fn research_map_sentiment_network(args: &Value, span: Span) -> Result<Value,
     ]))
 }
 
+/// `Research.analyse_sentiment_trends` invoke seam.
 pub fn research_analyse_sentiment_trends(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values_val = args::rec(args, "values")
         .ok_or_else(|| args::bad(span, "Research.analyse_sentiment_trends needs values"))?;
@@ -842,6 +893,7 @@ pub fn research_analyse_sentiment_trends(args: &Value, span: Span) -> Result<Val
 
 // ── N10: Perspective analysis ────────────────────────────────────────────────
 
+/// `Research.register_perspective` invoke seam.
 pub fn research_register_perspective(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.register_perspective needs id"))?;
@@ -858,6 +910,7 @@ pub fn research_register_perspective(args: &Value, span: Span) -> Result<Value, 
     ]))
 }
 
+/// `Research.add_bias` invoke seam.
 pub fn research_add_bias(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id =
         args::rec_str(args, "id").ok_or_else(|| args::bad(span, "Research.add_bias needs id"))?;
@@ -871,6 +924,7 @@ pub fn research_add_bias(args: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// `Research.compare_perspectives` invoke seam.
 pub fn research_compare_perspectives(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let viewpoint_a = args::rec_str(args, "viewpoint_a")
         .ok_or_else(|| args::bad(span, "Research.compare_perspectives needs viewpoint_a"))?;
@@ -885,6 +939,7 @@ pub fn research_compare_perspectives(args: &Value, span: Span) -> Result<Value, 
     ]))
 }
 
+/// `Research.detect_perspective_conflict` invoke seam.
 pub fn research_detect_perspective_conflict(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let viewpoint_a = args::rec_str(args, "viewpoint_a").ok_or_else(|| {
         args::bad(
@@ -915,6 +970,7 @@ pub fn research_detect_perspective_conflict(args: &Value, span: Span) -> Result<
     ]))
 }
 
+/// `Research.reconcile_perspectives` invoke seam.
 pub fn research_reconcile_perspectives(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let viewpoint_a = args::rec_str(args, "viewpoint_a")
         .ok_or_else(|| args::bad(span, "Research.reconcile_perspectives needs viewpoint_a"))?;
@@ -932,6 +988,9 @@ pub fn research_reconcile_perspectives(args: &Value, span: Span) -> Result<Value
 
 // ── N10: Intentionality ──────────────────────────────────────────────────────
 
+/// `Research.assess_intentionality` invoke seam — delegates to
+/// `research::assess_intentionality` (knew/could-prevent/repeated/benefited
+/// booleans → intentionality grade).
 pub fn research_assess_intentionality(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let knew = args::rec_bool(args, "knew_outcome").unwrap_or(false);
     let could_prevent = args::rec_bool(args, "could_prevent").unwrap_or(false);
@@ -945,6 +1004,9 @@ pub fn research_assess_intentionality(args: &Value, _span: Span) -> Result<Value
     ]))
 }
 
+/// `Research.classify_mistake` invoke seam — delegates to
+/// `research::classify_mistake` (occurrence/pattern/feedback/systemic
+/// factors → mistake type).
 pub fn research_classify_mistake(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let first = args::rec_bool(args, "first_occurrence").unwrap_or(true);
     let pattern_matches = args::rec_u64(args, "pattern_matches").unwrap_or(0) as usize;
@@ -959,6 +1021,7 @@ pub fn research_classify_mistake(args: &Value, _span: Span) -> Result<Value, Dia
 
 // ── N10: Dynamics analysis ───────────────────────────────────────────────────
 
+/// `Research.define_social_dynamics` invoke seam.
 pub fn research_define_social_dynamics(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.define_social_dynamics needs id"))?;
@@ -970,6 +1033,7 @@ pub fn research_define_social_dynamics(args: &Value, span: Span) -> Result<Value
     ]))
 }
 
+/// `Research.define_economic_dynamics` invoke seam.
 pub fn research_define_economic_dynamics(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.define_economic_dynamics needs id"))?;
@@ -979,6 +1043,8 @@ pub fn research_define_economic_dynamics(args: &Value, span: Span) -> Result<Val
     ]))
 }
 
+/// `Research.define_spatiotemporal_dynamics` invoke seam — registers a
+/// dynamics definition with a `diffusion_rate` parameter.
 pub fn research_define_spatiotemporal_dynamics(
     args: &Value,
     span: Span,
@@ -993,6 +1059,7 @@ pub fn research_define_spatiotemporal_dynamics(
     ]))
 }
 
+/// `Research.analyse_social_network` invoke seam.
 pub fn research_analyse_social_network(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let agents_val = args::rec(args, "agents")
         .ok_or_else(|| args::bad(span, "Research.analyse_social_network needs agents"))?;
@@ -1057,6 +1124,7 @@ pub fn research_analyse_social_network(args: &Value, span: Span) -> Result<Value
     ]))
 }
 
+/// `Research.analyse_inequality` invoke seam.
 pub fn research_analyse_inequality(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let values = args::rec_f64_list(args, "values")
         .ok_or_else(|| args::bad(span, "Research.analyse_inequality needs values"))?;
@@ -1069,6 +1137,7 @@ pub fn research_analyse_inequality(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.analyse_diffusion` invoke seam.
 pub fn research_analyse_diffusion(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let initial = args::rec_f64_list(args, "initial_values")
         .ok_or_else(|| args::bad(span, "Research.analyse_diffusion needs initial_values"))?;
@@ -1087,6 +1156,7 @@ pub fn research_analyse_diffusion(args: &Value, span: Span) -> Result<Value, Dia
 
 // ── N10: Grounding & UG diagnosis (expose existing backend) ──────────────────
 
+/// `Research.assess_grounding` invoke seam.
 pub fn research_assess_grounding(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let content = args::rec_str(args, "content")
         .ok_or_else(|| args::bad(span, "Research.assess_grounding needs content"))?;
@@ -1101,6 +1171,7 @@ pub fn research_assess_grounding(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.verify_grounding` invoke seam.
 pub fn research_verify_grounding(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _content = args::rec_str(args, "content")
         .ok_or_else(|| args::bad(span, "Research.verify_grounding needs content"))?;
@@ -1110,6 +1181,7 @@ pub fn research_verify_grounding(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.detect_ungrounded_behaviour` invoke seam.
 pub fn research_detect_ungrounded_behaviour(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let content = args::rec_str(args, "content")
         .ok_or_else(|| args::bad(span, "Research.detect_ungrounded_behaviour needs content"))?;
@@ -1130,6 +1202,7 @@ pub fn research_detect_ungrounded_behaviour(args: &Value, span: Span) -> Result<
     ]))
 }
 
+/// `Research.create_ug_instance` invoke seam.
 pub fn research_create_ug_instance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.create_ug_instance needs id"))?;
@@ -1139,6 +1212,7 @@ pub fn research_create_ug_instance(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.set_ug_cause` invoke seam.
 pub fn research_set_ug_cause(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_ug_cause needs id"))?;
@@ -1150,6 +1224,7 @@ pub fn research_set_ug_cause(args: &Value, span: Span) -> Result<Value, Diagnost
     ]))
 }
 
+/// `Research.set_ug_consequence` invoke seam.
 pub fn research_set_ug_consequence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_ug_consequence needs id"))?;
@@ -1161,6 +1236,7 @@ pub fn research_set_ug_consequence(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.set_ug_detection` invoke seam.
 pub fn research_set_ug_detection(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_ug_detection needs id"))?;
@@ -1172,6 +1248,7 @@ pub fn research_set_ug_detection(args: &Value, span: Span) -> Result<Value, Diag
     ]))
 }
 
+/// `Research.set_ug_mitigation` invoke seam.
 pub fn research_set_ug_mitigation(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_ug_mitigation needs id"))?;
@@ -1183,6 +1260,7 @@ pub fn research_set_ug_mitigation(args: &Value, span: Span) -> Result<Value, Dia
     ]))
 }
 
+/// `Research.set_ug_calibration` invoke seam.
 pub fn research_set_ug_calibration(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.set_ug_calibration needs id"))?;
@@ -1193,6 +1271,7 @@ pub fn research_set_ug_calibration(args: &Value, span: Span) -> Result<Value, Di
     ]))
 }
 
+/// `Research.detect_ug_patterns` invoke seam.
 pub fn research_detect_ug_patterns(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let _id = args::rec_str(args, "id")
         .ok_or_else(|| args::bad(span, "Research.detect_ug_patterns needs id"))?;

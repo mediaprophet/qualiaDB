@@ -413,7 +413,7 @@ Finalize changes in `crates/qualia-core-db/src/q42_lex_ns.rs` to guarantee deter
   - In contrast, living biosphere entities ("World of God", `DarwinianTaxon`, `AbioticEnvironment`) and foundational knowledge necessary for life and freedom of thought belong to the inalienable permissive commons and fail closed against private monopolies or perpetual royalties (`GateError::BiosphereCannotHavePerpetualFees`, `GateError::BiosphereRequiresPermissiveCommons`).
 - **Finite Production Obligation & Carriage Cost Accounting (`bundle/cbor_ld_manifest.rs`, `bundle/entity_verifier.rs`):**
   - Implemented `CommonsObligation` in CBOR-LD manifests recording finite production costs (`production_cost_cents`), legal ROI caps (`roi_cap_percent`), accumulated compensation pool (`accumulated_pool_cents`), and allowed at-cost carriage bandwidth recovery (`transaction_cost_per_mib_cents`).
-  - Implemented `is_discharged()` and `outstanding_obligation()` using `modalities::value_flow::commons_cost` threshold logic. Once discharged, assets transition into zero-toll permissive commons with perpetual fees prohibited.
+  - Implemented `is_discharged()` and `outstanding_obligation()` using `modalities::socioeconomics::commons_cost` threshold logic. Once discharged, assets transition into zero-toll permissive commons with perpetual fees prohibited.
   - Exposed structured `CommonsObligationSummary` across `qualia-cli entity-verify` and WASM bindings (`entity_verify_bundle_wasm`).
 
 

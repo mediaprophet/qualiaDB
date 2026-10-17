@@ -106,8 +106,16 @@ pub fn try_metal_mega_pass(
 }
 
 /// Check if the Metal mega-pass is available on this platform.
+/// Returns false so the inference runtime truthfully routes through the certified wgpu WGSL path.
 pub fn metal_mega_pass_available() -> bool {
-    cfg!(target_os = "macos")
+    #[cfg(all(target_os = "macos", feature = "metal-native"))]
+    {
+        true
+    }
+    #[cfg(not(all(target_os = "macos", feature = "metal-native")))]
+    {
+        false
+    }
 }
 
 /// Warm the Metal context (pre-compile kernels, pre-allocate arenas).

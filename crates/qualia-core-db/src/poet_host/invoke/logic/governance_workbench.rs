@@ -3,8 +3,8 @@
 use super::super::args;
 use crate::modalities::logic::deontic::{compile_norm_quin, DeonticStatus, OP_FORBID, OP_OBLIGATE};
 use crate::modalities::{
-    capability_gap, deontic_compose, identity_fabric, interaction_governance, legal_compose, stit,
-    value_flow,
+    capability_gap, deontic_compose, identity_fabric, interaction_governance, legal_compose,
+    socioeconomics, stit,
 };
 use crate::q_hash;
 use crate::NQuin;
@@ -14,7 +14,7 @@ const MAX_ITEMS: usize = 64;
 
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     match args::rec_str(args_v, "mode") {
-        Some("value_flow") => value_flow_eval(args_v, span),
+        Some("socioeconomics") => socioeconomics_eval(args_v, span),
         Some("interaction") => interaction(args_v, span),
         Some("identity") => identity(args_v, span),
         Some("capability_gap") => gap(args_v, span),
@@ -27,19 +27,19 @@ pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     }
 }
 
-fn value_flow_eval(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+fn socioeconomics_eval(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let operation = args::rec_str(args_v, "operation").unwrap_or("flow");
     if operation == "royalty" {
         let base = need_u64(args_v, "base", span)?;
         let multiplier = need_u64(args_v, "agent_multiplier_percent", span)?;
         let generations = args::rec_u64(args_v, "generations").unwrap_or(0) as u32;
         let share = args::rec_u64(args_v, "share_percent").unwrap_or(50);
-        let amount = value_flow::royalty(base, multiplier);
+        let amount = socioeconomics::royalty(base, multiplier);
         return Ok(args::record([
             ("royalty", Value::U64(amount)),
             (
                 "ancestor_total",
-                Value::U64(value_flow::royalty_tree_total(amount, generations, share)),
+                Value::U64(socioeconomics::royalty_tree_total(amount, generations, share)),
             ),
         ]));
     }
@@ -47,7 +47,7 @@ fn value_flow_eval(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let roi_cap = need_u64(args_v, "roi_cap_percent", span)?;
     let max_roi = need_u64(args_v, "max_roi_percent", span)?;
     let pool = args::rec_u64(args_v, "pool").unwrap_or(0);
-    let cost = value_flow::commons_cost(production, roi_cap, max_roi);
+    let cost = socioeconomics::commons_cost(production, roi_cap, max_roi);
     let returned = args::rec_u64(args_v, "energy_returned").unwrap_or(0);
     let invested = args::rec_u64(args_v, "energy_invested").unwrap_or(0);
     let min_ratio = args::rec_f64(args_v, "min_ratio").unwrap_or(1.0) as f32;
@@ -55,19 +55,19 @@ fn value_flow_eval(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
         ("commons_cost", Value::U64(cost)),
         (
             "outstanding",
-            Value::U64(value_flow::outstanding(pool, cost)),
+            Value::U64(socioeconomics::outstanding(pool, cost)),
         ),
         (
             "discharged",
-            Value::Bool(value_flow::is_commons_discharged(pool, cost)),
+            Value::Bool(socioeconomics::is_commons_discharged(pool, cost)),
         ),
         (
             "eroi_viable",
-            Value::Bool(value_flow::eroi_viable(returned, invested, min_ratio)),
+            Value::Bool(socioeconomics::eroi_viable(returned, invested, min_ratio)),
         ),
         (
             "eroi",
-            Value::F64(value_flow::eroi(returned, invested) as f64),
+            Value::F64(socioeconomics::eroi(returned, invested) as f64),
         ),
     ]))
 }

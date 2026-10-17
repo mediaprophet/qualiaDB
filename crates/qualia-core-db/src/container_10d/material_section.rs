@@ -121,6 +121,8 @@ impl TextureSampler {
             + self.min_filter as usize
     }
 
+    /// True when any filtering stage is non-nearest (requires a filtered
+    /// sampler rather than a point-sampling one).
     pub const fn needs_filtering(self) -> bool {
         matches!(self.mag_filter, TextureFilterMode::Linear)
             || matches!(
@@ -132,6 +134,8 @@ impl TextureSampler {
             )
     }
 
+    /// Copy with mag/min filters forced to nearest (point sampling);
+    /// wrap modes are preserved.
     pub const fn nearest_variant(self) -> Self {
         Self {
             mag_filter: TextureFilterMode::Nearest,
@@ -140,6 +144,8 @@ impl TextureSampler {
         }
     }
 
+    /// Copy with mag/min filters forced to linear + trilinear mipmapping;
+    /// wrap modes are preserved.
     pub const fn filtering_variant(self) -> Self {
         Self {
             mag_filter: TextureFilterMode::Linear,
@@ -326,6 +332,15 @@ pub fn validate_material_bindings(
     validate_records(materials, ranges, mesh_index_count)
 }
 
+/// Shared record/range validator behind `validate_material_bindings`.
+///
+/// Fails closed on: empty inputs, counts above `MAX_MATERIALS` /
+/// `MAX_SUBMESH_RANGES`, `id == 0` or non-monotonic material ordering,
+/// non-finite or out-of-bounds scalar fields (colour 0–1, emissive
+/// 0–`MAX_EMISSIVE_FACTOR`, normal scale 0–8, etc.), unsupported
+/// `tex_coord` values, and submesh ranges that are non-triangle-aligned,
+/// out of `mesh_index_count`, reference an unknown material, or do not
+/// tile `[0, mesh_index_count)` contiguously in declared order.
 pub(super) fn validate_records(
     materials: &[MaterialRecord],
     ranges: &[SubmeshRange],
@@ -419,6 +434,9 @@ pub(super) fn validate_records(
     Ok(())
 }
 
+/// Serialise the MAT1-compatible 256-byte record: `id`, shading/opacity
+/// tags, the packed flag word, 13 LE `f32` PBR scalars, then six 32-byte
+/// texture digests. `out` must be at least `MATERIAL_V1_RECORD_SIZE`.
 pub(super) fn encode_material(material: &MaterialRecord, out: &mut [u8]) {
     out[..8].copy_from_slice(&material.id.to_le_bytes());
     out[8] = material.shading_model as u8;
@@ -456,6 +474,11 @@ pub(super) fn encode_material(material: &MaterialRecord, out: &mut [u8]) {
     }
 }
 
+/// Decode one MAT1-compatible record. Fails on unknown shading/opacity
+/// tags, flag bits outside `KNOWN_FLAGS`, or `id == 0` (reported as
+/// `InvalidMaterial { index }` using the caller's record position).
+/// Fields beyond the v1 layout (transforms, samplers, `wind_animated`)
+/// come back as defaults for the versioned wrapper to overwrite.
 pub(super) fn decode_material(
     bytes: &[u8],
     index: usize,
@@ -511,9 +534,12 @@ fn write_f32(out: &mut [u8], offset: &mut usize, value: f32) {
     out[*offset..*offset + 4].copy_from_slice(&value.to_le_bytes());
     *offset += 4;
 }
+/// Little-endian `u16` at `offset`; panics if `bytes[offset..offset+2]`
+/// is out of range (callers pre-validate record bounds).
 pub(super) fn read_u16(bytes: &[u8], offset: usize) -> u16 {
     u16::from_le_bytes([bytes[offset], bytes[offset + 1]])
 }
+/// Little-endian `u32` at `offset`; panics on out-of-range slice.
 pub(super) fn read_u32(bytes: &[u8], offset: usize) -> u32 {
     u32::from_le_bytes(
         bytes[offset..offset + 4]
@@ -521,6 +547,7 @@ pub(super) fn read_u32(bytes: &[u8], offset: usize) -> u32 {
             .expect("checked record bounds"),
     )
 }
+/// Little-endian `u64` at `offset`; panics on out-of-range slice.
 pub(super) fn read_u64(bytes: &[u8], offset: usize) -> u64 {
     u64::from_le_bytes(
         bytes[offset..offset + 8]

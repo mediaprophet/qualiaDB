@@ -72,6 +72,8 @@ struct FrameSectionHeader {
     reserved: u32,
 }
 
+/// Byte size of a normals-only (NRM1) section for `count` vertices
+/// (header + 4 bytes per vertex); `None` on overflow.
 #[inline]
 pub const fn encoded_len(count: usize) -> Option<usize> {
     match count.checked_mul(4) {
@@ -80,6 +82,9 @@ pub const fn encoded_len(count: usize) -> Option<usize> {
     }
 }
 
+/// Byte size of an interleaved FRM1 frame section for `count` vertices,
+/// with 4-byte normals and/or 8-byte tangents per vertex. `None` when
+/// neither stream is present or on overflow.
 pub const fn frame_encoded_len(
     count: usize,
     has_normals: bool,

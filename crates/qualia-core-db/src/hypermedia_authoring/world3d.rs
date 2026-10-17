@@ -24,6 +24,7 @@ pub struct Transform3D {
 }
 
 impl Default for Object3D {
+    /// Default 3D object (identity transform, no mesh/material).
     fn default() -> Self {
         Self {
             id: String::new(),
@@ -38,6 +39,7 @@ impl Default for Object3D {
 }
 
 impl Object3D {
+    /// Named object with `id` (identity transform).
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -46,26 +48,32 @@ impl Object3D {
         }
     }
 
+    /// Set world-space position.
     pub fn set_position(&mut self, x: f32, y: f32, z: f32) {
         self.transform.position = [x, y, z];
     }
 
+    /// Set rotation quaternion (x, y, z, w).
     pub fn set_rotation(&mut self, x: f32, y: f32, z: f32, w: f32) {
         self.transform.rotation = [x, y, z, w];
     }
 
+    /// Set per-axis scale.
     pub fn set_scale(&mut self, x: f32, y: f32, z: f32) {
         self.transform.scale = [x, y, z];
     }
 
+    /// Assign a mesh by asset id.
     pub fn set_mesh(&mut self, mesh_id: &str) {
         self.mesh_id = Some(mesh_id.to_string());
     }
 
+    /// Assign a material by asset id.
     pub fn set_material(&mut self, material_id: &str) {
         self.material_id = Some(material_id.to_string());
     }
 
+    /// Parent a child object id.
     pub fn add_child(&mut self, child_id: &str) {
         self.children.push(child_id.to_string());
     }
@@ -86,6 +94,7 @@ pub struct Material3D {
 }
 
 impl Material3D {
+    /// Named material with `id` (default PBR factors).
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -100,15 +109,18 @@ impl Material3D {
         }
     }
 
+    /// Set RGBA base colour.
     pub fn set_base_colour(&mut self, r: f32, g: f32, b: f32, a: f32) {
         self.base_colour = [r, g, b, a];
     }
 
+    /// Set metallic/roughness PBR factors.
     pub fn set_metallic_roughness(&mut self, metallic: f32, roughness: f32) {
         self.metallic = metallic.clamp(0.0, 1.0);
         self.roughness = roughness.clamp(0.0, 1.0);
     }
 
+    /// Set emissive colour.
     pub fn set_emissive(&mut self, r: f32, g: f32, b: f32) {
         self.emissive = [r, g, b];
     }
@@ -133,6 +145,7 @@ pub enum ProjectionType {
 }
 
 impl Camera3D {
+    /// Perspective camera, default 60° FOV and clip planes.
     pub fn new(id: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -145,10 +158,13 @@ impl Camera3D {
         }
     }
 
+    /// Set vertical field-of-view (radians or degrees per the
+    /// scene convention).
     pub fn set_fov(&mut self, fov: f32) {
         self.fov = fov.clamp(1.0, 179.0);
     }
 
+    /// Set near/far clip distances.
     pub fn set_clip_planes(&mut self, near: f32, far: f32) {
         self.near_plane = near.max(0.001);
         self.far_plane = far.max(self.near_plane + 0.001);
@@ -174,6 +190,7 @@ pub enum LightType3D {
 }
 
 impl Light3D {
+    /// Light of `light_type` with default intensity/colour.
     pub fn new(id: &str, light_type: LightType3D) -> Self {
         Self {
             id: id.to_string(),
@@ -205,6 +222,7 @@ pub struct Bone {
 }
 
 impl Rig {
+    /// Empty skeletal rig.
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -214,6 +232,7 @@ impl Rig {
         }
     }
 
+    /// Append a bone to the rig.
     pub fn add_bone(&mut self, bone: Bone) {
         if self.root_bone.is_none() && bone.parent.is_none() {
             self.root_bone = Some(bone.id.clone());
@@ -221,10 +240,12 @@ impl Rig {
         self.bones.push(bone);
     }
 
+    /// Number of bones in the rig.
     pub fn bone_count(&self) -> usize {
         self.bones.len()
     }
 
+    /// Bone lookup by id.
     pub fn find_bone(&self, id: &str) -> Option<&Bone> {
         self.bones.iter().find(|b| b.id == id)
     }
@@ -260,6 +281,7 @@ pub struct Keyframe {
 }
 
 impl AnimationClip {
+    /// Empty animation clip of `duration` seconds.
     pub fn new(id: &str, name: &str, duration: f64) -> Self {
         Self {
             id: id.to_string(),
@@ -269,10 +291,12 @@ impl AnimationClip {
         }
     }
 
+    /// Append an animation track.
     pub fn add_track(&mut self, track: AnimationTrack) {
         self.tracks.push(track);
     }
 
+    /// Number of tracks in the clip.
     pub fn track_count(&self) -> usize {
         self.tracks.len()
     }
@@ -290,34 +314,42 @@ pub struct Scene3D {
 }
 
 impl Scene3D {
+    /// Empty scene.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Add an object to the scene.
     pub fn add_object(&mut self, obj: Object3D) {
         self.objects.insert(obj.id.clone(), obj);
     }
 
+    /// Add a material asset.
     pub fn add_material(&mut self, mat: Material3D) {
         self.materials.insert(mat.id.clone(), mat);
     }
 
+    /// Add a camera.
     pub fn add_camera(&mut self, cam: Camera3D) {
         self.cameras.insert(cam.id.clone(), cam);
     }
 
+    /// Add a light.
     pub fn add_light(&mut self, light: Light3D) {
         self.lights.insert(light.id.clone(), light);
     }
 
+    /// Add a skeletal rig.
     pub fn add_rig(&mut self, rig: Rig) {
         self.rigs.insert(rig.id.clone(), rig);
     }
 
+    /// Add an animation clip.
     pub fn add_animation(&mut self, clip: AnimationClip) {
         self.animations.insert(clip.id.clone(), clip);
     }
 
+    /// Number of objects in the scene.
     pub fn object_count(&self) -> usize {
         self.objects.len()
     }

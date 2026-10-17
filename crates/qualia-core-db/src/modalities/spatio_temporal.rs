@@ -251,6 +251,8 @@ pub fn unpack_point(packed: u64) -> (f64, f64) {
     (xi as f64 / POINT_SCALE, yi as f64 / POINT_SCALE)
 }
 
+/// Axis-aligned bounding box `(min_x, max_x, min_y, max_y)` of a
+/// vertex slice; empty input yields infinities (never overlaps).
 fn bbox(poly: &[(f64, f64)]) -> (f64, f64, f64, f64) {
     let mut mnx = f64::INFINITY;
     let mut mxx = f64::NEG_INFINITY;
@@ -265,6 +267,8 @@ fn bbox(poly: &[(f64, f64)]) -> (f64, f64, f64, f64) {
     (mnx, mxx, mny, mxy)
 }
 
+/// Cheap broad-phase reject: true when the two polygons' bounding
+/// boxes intersect.
 fn bbox_overlap(a: &[(f64, f64)], b: &[(f64, f64)]) -> bool {
     let (amnx, amxx, amny, amxy) = bbox(a);
     let (bmnx, bmxx, bmny, bmxy) = bbox(b);
@@ -313,19 +317,26 @@ fn point_on_boundary(p: (f64, f64), poly: &[(f64, f64)]) -> bool {
     false
 }
 
+/// Point in the closed polygon (interior or boundary).
 #[inline]
 fn inside_or_on(p: (f64, f64), poly: &[(f64, f64)]) -> bool {
     point_in_interior(p, poly) || point_on_boundary(p, poly)
 }
 
+/// True when `pts` is non-empty and every point is inside or on `poly`.
 fn all_inside_or_on(pts: &[(f64, f64)], poly: &[(f64, f64)]) -> bool {
     !pts.is_empty() && pts.iter().all(|&p| inside_or_on(p, poly))
 }
 
+/// True when at least one point of `pts` lies on `poly`'s boundary —
+/// the tangential-vs-non-tangential discriminator for RCC-8.
 fn any_on_boundary(pts: &[(f64, f64)], poly: &[(f64, f64)]) -> bool {
     pts.iter().any(|&p| point_on_boundary(p, poly))
 }
 
+/// True when either polygon has a vertex in the other's interior —
+/// the vertex-projection overlap test used by RCC-8 (correct for the
+/// convex/typical cases the engine targets).
 fn interiors_overlap(a: &[(f64, f64)], b: &[(f64, f64)]) -> bool {
     a.iter().any(|&p| point_in_interior(p, b)) || b.iter().any(|&p| point_in_interior(p, a))
 }

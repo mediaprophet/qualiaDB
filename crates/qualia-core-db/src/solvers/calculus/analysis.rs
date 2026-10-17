@@ -18,14 +18,17 @@ pub struct Vector<const N: usize> {
 }
 
 impl<const N: usize> Vector<N> {
+    /// Wrap a raw array (unvalidated — call `validate` before use).
     pub const fn new(data: [f64; N]) -> Self {
         Self { data }
     }
 
+    /// The zero vector.
     pub const fn zero() -> Self {
         Self { data: [0.0; N] }
     }
 
+    /// Reject non-finite components.
     pub fn validate(&self) -> Result<(), AnalysisError> {
         if self.data.iter().all(|value| value.is_finite()) {
             Ok(())
@@ -34,6 +37,7 @@ impl<const N: usize> Vector<N> {
         }
     }
 
+    /// Inner product; errors on non-finite inputs.
     pub fn dot(self, other: Self) -> Result<f64, AnalysisError> {
         self.validate()?;
         other.validate()?;
@@ -45,14 +49,17 @@ impl<const N: usize> Vector<N> {
             .sum())
     }
 
+    /// Euclidean norm ‖v‖₂.
     pub fn norm(self) -> Result<f64, AnalysisError> {
         Ok(self.dot(self)?.sqrt())
     }
 
+    /// Euclidean distance ‖self − other‖.
     pub fn distance(self, other: Self) -> Result<f64, AnalysisError> {
         self.sub(other).norm()
     }
 
+    /// Component-wise addition.
     pub fn add(self, other: Self) -> Self {
         let mut result = [0.0; N];
         for (index, value) in result.iter_mut().enumerate() {
@@ -61,6 +68,7 @@ impl<const N: usize> Vector<N> {
         Self::new(result)
     }
 
+    /// Component-wise subtraction.
     pub fn sub(self, other: Self) -> Self {
         let mut result = [0.0; N];
         for (index, value) in result.iter_mut().enumerate() {
@@ -69,6 +77,7 @@ impl<const N: usize> Vector<N> {
         Self::new(result)
     }
 
+    /// Scalar multiplication; errors on non-finite scalar.
     pub fn scale(self, scalar: f64) -> Result<Self, AnalysisError> {
         if !scalar.is_finite() {
             return Err(AnalysisError::NonFinite);
@@ -81,6 +90,8 @@ impl<const N: usize> Vector<N> {
         Ok(result)
     }
 
+    /// Orthogonal projection onto `direction`; errors on a zero
+    /// direction vector.
     pub fn project_onto(self, direction: Self) -> Result<Self, AnalysisError> {
         let denominator = direction.dot(direction)?;
         if denominator <= f64::MIN_POSITIVE {
@@ -97,10 +108,12 @@ pub struct LinearMap<const R: usize, const C: usize> {
 }
 
 impl<const R: usize, const C: usize> LinearMap<R, C> {
+    /// Wrap a row-major coefficient array (unvalidated).
     pub const fn new(coefficients: [[f64; C]; R]) -> Self {
         Self { coefficients }
     }
 
+    /// Reject non-finite coefficients.
     pub fn validate(&self) -> Result<(), AnalysisError> {
         if self
             .coefficients
@@ -114,6 +127,7 @@ impl<const R: usize, const C: usize> LinearMap<R, C> {
         }
     }
 
+    /// Matrix-vector product `A·x` (validates both sides).
     pub fn apply(&self, input: Vector<C>) -> Result<Vector<R>, AnalysisError> {
         self.validate()?;
         input.validate()?;
@@ -128,6 +142,7 @@ impl<const R: usize, const C: usize> LinearMap<R, C> {
         Ok(Vector::new(output))
     }
 
+    /// The transposed map `Aᵀ : R → C`.
     pub fn transpose(&self) -> LinearMap<C, R> {
         let mut result = [[0.0; R]; C];
         for (row, coefficients) in self.coefficients.iter().enumerate() {
@@ -140,6 +155,7 @@ impl<const R: usize, const C: usize> LinearMap<R, C> {
 }
 
 impl<const N: usize> LinearMap<N, N> {
+    /// The N×N identity map.
     pub const fn identity() -> Self {
         let mut coefficients = [[0.0; N]; N];
         let mut index = 0;
@@ -150,11 +166,13 @@ impl<const N: usize> LinearMap<N, N> {
         Self::new(coefficients)
     }
 
+    /// Sum of diagonal entries.
     pub fn trace(&self) -> Result<f64, AnalysisError> {
         self.validate()?;
         Ok((0..N).map(|index| self.coefficients[index][index]).sum())
     }
 
+    /// Determinant via LU decomposition with partial pivoting.
     pub fn determinant(&self) -> Result<f64, AnalysisError> {
         self.validate()?;
         let mut matrix = self.coefficients;
@@ -186,6 +204,8 @@ impl<const N: usize> LinearMap<N, N> {
         Ok(sign * determinant)
     }
 
+    /// Solve `A·x = rhs` by Gaussian elimination with partial
+    /// pivoting; errors on a singular matrix.
     pub fn solve(&self, rhs: Vector<N>) -> Result<Vector<N>, AnalysisError> {
         self.validate()?;
         rhs.validate()?;
@@ -234,6 +254,8 @@ pub struct Basis<const N: usize> {
 }
 
 impl<const N: usize> Basis<N> {
+    /// Basis from a change-of-basis matrix — requires invertibility
+    /// (nonzero determinant).
     pub fn new(matrix: LinearMap<N, N>) -> Result<Self, AnalysisError> {
         if matrix.determinant()?.abs() <= 64.0 * f64::EPSILON {
             return Err(AnalysisError::Singular);
@@ -241,10 +263,12 @@ impl<const N: usize> Basis<N> {
         Ok(Self { matrix })
     }
 
+    /// Map basis coordinates to ambient-space vectors (`B·c`).
     pub fn from_coordinates(&self, coordinates: Vector<N>) -> Result<Vector<N>, AnalysisError> {
         self.matrix.apply(coordinates)
     }
 
+    /// Solve for `v`'s coordinates in this basis (`B⁻¹·v`).
     pub fn to_coordinates(&self, vector: Vector<N>) -> Result<Vector<N>, AnalysisError> {
         self.matrix.solve(vector)
     }
@@ -258,6 +282,8 @@ pub struct Interval {
 }
 
 impl Interval {
+    /// Closed interval `[lower, upper]`; errors on non-finite or
+    /// inverted bounds.
     pub fn new(lower: f64, upper: f64) -> Result<Self, AnalysisError> {
         if !lower.is_finite() || !upper.is_finite() || lower > upper {
             return Err(AnalysisError::InvalidDomain);
@@ -265,10 +291,13 @@ impl Interval {
         Ok(Self { lower, upper })
     }
 
+    /// `lower ≤ value ≤ upper`.
     pub fn contains(self, value: f64) -> bool {
         value.is_finite() && value >= self.lower && value <= self.upper
     }
 
+    /// Partition the interval into `parts` equal sub-intervals
+    /// (caller-buffered).
     pub fn uniform_cover(
         self,
         radius: f64,
@@ -299,6 +328,9 @@ pub struct FixedPointCertificate<const N: usize> {
     pub a_posteriori_error_bound: f64,
 }
 
+/// Banach fixed-point iteration on ℝⁿ — iterates `f` from `x0`
+/// until step norm < tolerance or `max_iterations`; errors when
+/// `f`'s Lipschitz constant ≥ 1 or convergence fails.
 pub fn contraction_fixed_point<const N: usize, F>(
     map: F,
     initial: Vector<N>,
@@ -348,18 +380,22 @@ pub struct Complex64 {
 impl Complex64 {
     pub const I: Self = Self { re: 0.0, im: 1.0 };
 
+    /// Complex number `re + im·i`.
     pub const fn new(re: f64, im: f64) -> Self {
         Self { re, im }
     }
 
+    /// Complex modulus |z|.
     pub fn norm(self) -> f64 {
         self.re.hypot(self.im)
     }
 
+    /// Component-wise complex addition.
     pub fn add(self, other: Self) -> Self {
         Self::new(self.re + other.re, self.im + other.im)
     }
 
+    /// Complex multiplication.
     pub fn mul(self, other: Self) -> Self {
         Self::new(
             self.re * other.re - self.im * other.im,
@@ -367,6 +403,7 @@ impl Complex64 {
         )
     }
 
+    /// Complex exponential `e^z = e^re·(cos im + i·sin im)`.
     pub fn exp(self) -> Self {
         let magnitude = self.re.exp();
         Self::new(magnitude * self.im.cos(), magnitude * self.im.sin())

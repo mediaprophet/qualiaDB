@@ -24,6 +24,8 @@ pub struct AkaEntry {
 }
 
 impl AkaEntry {
+    /// Copy `s` into the fixed-size entry; `BufferTooSmall` when it
+    /// exceeds `MAX_AKA_LEN`.
     pub fn from_slice(s: &[u8]) -> Result<Self, QiError> {
         if s.len() > MAX_AKA_LEN {
             return Err(QiError::BufferTooSmall);
@@ -54,6 +56,8 @@ pub struct QiDocument {
 }
 
 impl QiDocument {
+    /// Empty document: zeroed keys/digests, no services or aliases,
+    /// `created_unix` set to the canonical test vector.
     pub const fn empty() -> Self {
         Self {
             controller_pk: [0u8; 32],
@@ -78,10 +82,13 @@ impl QiDocument {
         }
     }
 
+    /// The live services (`service_count` prefix of the fixed array).
     pub fn services_slice(&self) -> &[CscpMailbox] {
         &self.services[..self.service_count as usize]
     }
 
+    /// Bounds check on counts plus the relay-only disclosure policy
+    /// on every service.
     pub fn validate(&self) -> Result<(), QiError> {
         if self.aka_count as usize > MAX_AKA || self.service_count as usize > MAX_SERVICES {
             return Err(QiError::MalformedDocument);
@@ -90,10 +97,13 @@ impl QiDocument {
     }
 }
 
+/// SHA-256 of `bytes` as a fixed array.
 pub fn sha256_32(bytes: &[u8]) -> [u8; 32] {
     Sha256::digest(bytes).into()
 }
 
+/// Build the proof signing message — `PROOF_PREFIX` || unsigned
+/// digest — into `out`.
 pub fn proof_message(unsigned_digest: &[u8; 32], out: &mut [u8]) -> Result<usize, QiError> {
     let n = PROOF_PREFIX.len() + 32;
     if out.len() < n {
@@ -104,6 +114,8 @@ pub fn proof_message(unsigned_digest: &[u8; 32], out: &mut [u8]) -> Result<usize
     Ok(n)
 }
 
+/// Multibase-encode an Ed25519 key: `0xed01` multicodec prefix +
+/// base58btc with the `z` marker.
 pub fn encode_pk_multibase(pk: &[u8; 32], out: &mut [u8]) -> Result<usize, QiError> {
     let mut raw = [0u8; 34];
     raw[0] = 0xed;
@@ -119,6 +131,8 @@ pub fn encode_pk_multibase(pk: &[u8; 32], out: &mut [u8]) -> Result<usize, QiErr
     Ok(1 + n)
 }
 
+/// Multibase-encode a raw 32-byte digest (base58btc + `z`, no
+/// multicodec prefix).
 pub fn encode_mb32(raw32: &[u8; 32], out: &mut [u8]) -> Result<usize, QiError> {
     let mut digits = [0u8; 64];
     let n = encode_b58(raw32, &mut digits)?;
@@ -130,6 +144,7 @@ pub fn encode_mb32(raw32: &[u8; 32], out: &mut [u8]) -> Result<usize, QiError> {
     Ok(1 + n)
 }
 
+/// Append `bytes` at cursor `n`; `BufferTooSmall` on overflow.
 fn push(out: &mut [u8], n: usize, bytes: &[u8]) -> Result<usize, QiError> {
     if n + bytes.len() > out.len() {
         return Err(QiError::BufferTooSmall);
@@ -138,6 +153,7 @@ fn push(out: &mut [u8], n: usize, bytes: &[u8]) -> Result<usize, QiError> {
     Ok(n + bytes.len())
 }
 
+/// Append a decimal u32 at cursor `n`.
 fn push_u32(out: &mut [u8], n: usize, v: u32) -> Result<usize, QiError> {
     let mut tmp = [0u8; 10];
     let mut x = v;
@@ -153,6 +169,7 @@ fn push_u32(out: &mut [u8], n: usize, v: u32) -> Result<usize, QiError> {
     push(out, n, &tmp[i..])
 }
 
+/// Lowercase-hex encode `bytes` into `out`.
 fn hex_lower(bytes: &[u8], out: &mut [u8]) -> Result<usize, QiError> {
     const H: &[u8; 16] = b"0123456789abcdef";
     if out.len() < bytes.len() * 2 {
@@ -167,6 +184,7 @@ fn hex_lower(bytes: &[u8], out: &mut [u8]) -> Result<usize, QiError> {
     Ok(bytes.len() * 2)
 }
 
+/// Emit `"did:qi:<hash><suffix>"` — the quoted DID URL form.
 fn emit_did_url(
     out: &mut [u8],
     n: usize,
@@ -184,6 +202,7 @@ fn emit_did_url(
     push(out, n, b"\"")
 }
 
+/// Emit one `service` object (id, type, serviceEndpoint, hints).
 fn emit_service(
     out: &mut [u8],
     mut n: usize,
@@ -227,6 +246,7 @@ fn emit_service(
     Ok(n)
 }
 
+/// Emit the hostname-alias service entry (`did:web`-style locator).
 fn emit_hostname_alias(
     out: &mut [u8],
     mut n: usize,
@@ -240,6 +260,8 @@ fn emit_hostname_alias(
     push(out, n, b"\"},\"type\":\"HostnameAlias\"}")
 }
 
+/// Emit the `verificationMethod` entry — controller DID, Ed25519
+/// multibase public key.
 fn emit_vm(
     out: &mut [u8],
     mut n: usize,
@@ -262,6 +284,8 @@ fn emit_vm(
     push(out, n, b"\",\"type\":\"Ed25519VerificationKey2020\"}")
 }
 
+/// Emit the `authentication`/`assertionMethod`/`capabilityInvocation`
+/// relationship arrays referencing `#key-0`.
 fn emit_relationships(out: &mut [u8], mut n: usize, id: Option<&DidQi>) -> Result<usize, QiError> {
     for key in [
         b"\"assertionMethod\":[" as &[u8],
@@ -274,6 +298,8 @@ fn emit_relationships(out: &mut [u8], mut n: usize, id: Option<&DidQi>) -> Resul
     push(out, n, b"]")
 }
 
+/// Encode the genesis form (no `id`/`controller` — those are derived
+/// from this document's digest). Caller-buffered canonical JSON-LD.
 pub fn encode_genesis(doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError> {
     doc.validate()?;
     let mut n = push(out, 0, b"{\"@context\":")?;
@@ -288,10 +314,13 @@ pub fn encode_genesis(doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError
     finish_encode(out, n, false)
 }
 
+/// Canonical unsigned JSON-LD encoding of the document for `id`.
 pub fn encode_unsigned(id: &DidQi, doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError> {
     encode_document(id, doc, None, out)
 }
 
+/// Canonical signed encoding — adds the `proof` block with the
+/// multibase-encoded Ed25519 `signature`.
 pub fn encode_signed(
     id: &DidQi,
     doc: &QiDocument,
@@ -301,6 +330,9 @@ pub fn encode_signed(
     encode_document(id, doc, Some(signature), out)
 }
 
+/// Shared encoder for `encode_unsigned`/`encode_signed` — validates
+/// `doc`, emits the canonical key order, optional `proof` block,
+/// then the `qi` metadata object.
 fn encode_document(
     id: &DidQi,
     doc: &QiDocument,
@@ -368,6 +400,8 @@ fn encode_document(
     finish_encode(out, n, signature.is_some())
 }
 
+/// Post-encode gate: reject forbidden locators and enforce the
+/// signed/unsigned canonical-size ceiling.
 fn finish_encode(out: &[u8], n: usize, signed: bool) -> Result<usize, QiError> {
     super::document_decode::reject_forbidden_locators(&out[..n])?;
     let cap = if signed { MAX_SIGNED } else { MAX_UNSIGNED };
@@ -377,6 +411,8 @@ fn finish_encode(out: &[u8], n: usize, signed: bool) -> Result<usize, QiError> {
     Ok(n)
 }
 
+/// Emit the `service` array — all mailboxes plus the optional
+/// hostname alias.
 fn emit_service_array(
     out: &mut [u8],
     mut n: usize,
@@ -402,6 +438,7 @@ fn emit_service_array(
     Ok(n)
 }
 
+/// Multibase-encode the 64-byte proof signature (base58btc + `z`).
 fn encode_mb32_sig(sig: &[u8; 64], out: &mut [u8]) -> Result<usize, QiError> {
     let mut digits = [0u8; 96];
     let n = encode_b58(sig, &mut digits)?;
@@ -413,30 +450,38 @@ fn encode_mb32_sig(sig: &[u8; 64], out: &mut [u8]) -> Result<usize, QiError> {
     Ok(1 + n)
 }
 
+/// SHA-256 of the canonical unsigned encoding — the value the proof
+/// signs.
 pub fn unsigned_digest(id: &DidQi, doc: &QiDocument) -> Result<[u8; 32], QiError> {
     let mut buf = [0u8; MAX_CANONICAL];
     let n = encode_unsigned(id, doc, &mut buf)?;
     Ok(sha256_32(&buf[..n]))
 }
 
+/// SHA-256 of the genesis encoding — the digest that names the DID.
 pub fn genesis_digest(doc: &QiDocument) -> Result<[u8; 32], QiError> {
     let mut buf = [0u8; MAX_CANONICAL];
     let n = encode_genesis(doc, &mut buf)?;
     Ok(sha256_32(&buf[..n]))
 }
 
+/// Alias for `encode_genesis` — the canonical self-describing form.
 pub fn encode_canonical(doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError> {
     encode_genesis(doc, out)
 }
 
+/// Alias for `genesis_digest`.
 pub fn canonical_digest(doc: &QiDocument) -> Result<[u8; 32], QiError> {
     genesis_digest(doc)
 }
 
+/// Alias for `encode_unsigned` — the cold-path JSON-LD export form.
 pub fn encode_jsonld_cold(id: &DidQi, doc: &QiDocument, out: &mut [u8]) -> Result<usize, QiError> {
     encode_unsigned(id, doc, out)
 }
 
+/// Git blob object-id of the canonical signed encoding — the
+/// content-addressed identity used for provenance chains.
 pub fn signed_git_object_id(
     id: &DidQi,
     doc: &QiDocument,

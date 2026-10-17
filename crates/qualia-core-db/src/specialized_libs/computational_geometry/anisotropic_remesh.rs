@@ -28,6 +28,8 @@ pub struct FeatureEdge {
 
 impl FeatureEdge {
     #[inline]
+    /// Canonical feature edge with `a < b` (order-normalized for
+    /// binary search).
     pub fn new(a: u32, b: u32) -> Self {
         if a <= b {
             Self { a, b }
@@ -50,6 +52,8 @@ pub struct AnisotropicRemeshOptions {
 }
 
 impl Default for AnisotropicRemeshOptions {
+    /// Default limits: conservative iteration bounds for the
+    /// deterministic remesh loop.
     fn default() -> Self {
         Self {
             iterations: 4,
@@ -87,12 +91,14 @@ pub enum AnisotropicRemeshError {
 }
 
 impl From<MeshQualityError> for AnisotropicRemeshError {
+        /// Wrap a `MeshQualityError` into `AnisotropicRemeshError`.
     fn from(err: MeshQualityError) -> Self {
         Self::Metric(err)
     }
 }
 
 impl From<BvhError> for AnisotropicRemeshError {
+        /// Wrap a `BvhError` into `AnisotropicRemeshError`.
     fn from(err: BvhError) -> Self {
         Self::Bvh(err)
     }
@@ -185,6 +191,8 @@ pub fn required_anisotropic_output_capacity(
     (v, f)
 }
 
+/// Input contract check: finite coordinates, in-bounds triangle and
+/// feature indices, no degenerate faces.
 fn validate_input(
     vertices: &[Point3],
     triangles: &[[u32; 3]],
@@ -225,6 +233,9 @@ fn validate_input(
     Ok(())
 }
 
+/// `true` when every undirected edge is shared by exactly two
+/// triangles (half-edge build succeeds; empty input counts as
+/// manifold).
 fn validate_manifold(vertex_count: u32, triangles: &[[u32; 3]]) -> bool {
     if triangles.is_empty() {
         return true;
@@ -250,6 +261,8 @@ struct AnisoMesh {
 }
 
 impl AnisoMesh {
+    /// Working mesh: copies of `vertices`/`triangles` plus a `fixed`
+    /// mask seeded from `fixed_vertices` and sorted `feature_edges`.
     fn new(
         vertices: &[Point3],
         triangles: &[[u32; 3]],
@@ -284,6 +297,10 @@ impl AnisoMesh {
         }
     }
 
+    /// Split every edge whose metric length exceeds `high` at its
+    /// midpoint (deterministic descending-length order); feature-edge
+    /// splits preserve the feature flag on both halves. Returns the
+    /// split count.
     fn split_metric_long_edges(
         &mut self,
         field: &AnisotropyField,
@@ -343,6 +360,10 @@ impl AnisoMesh {
         Ok(splits)
     }
 
+    /// Laplacian smoothing in the anisotropy metric: each free vertex
+    /// blends toward the 1/metric-length-weighted centroid of its
+    /// neighbours, then snaps back onto the surface via `projector`.
+    /// Returns (moved, projected) counts.
     fn metric_relax(
         &mut self,
         field: &AnisotropyField,
@@ -386,6 +407,8 @@ impl AnisoMesh {
         Ok((moved, projected))
     }
 
+    /// Deduplicated edge list with each edge's metric length under
+    /// `field` — the split/sort candidate pool.
     fn edge_candidates(
         &self,
         field: &AnisotropyField,
@@ -410,6 +433,7 @@ impl AnisoMesh {
         Ok(out)
     }
 
+    /// Metric length of edge `(a,b)` by index.
     fn metric_edge_len(
         &self,
         field: &AnisotropyField,
@@ -419,6 +443,8 @@ impl AnisoMesh {
         self.metric_edge_len_points(field, self.vertices[a as usize], self.vertices[b as usize])
     }
 
+    /// Metric length of segment `a→b` evaluated at the segment
+    /// midpoint under `field`.
     fn metric_edge_len_points(
         &self,
         field: &AnisotropyField,
@@ -429,10 +455,13 @@ impl AnisoMesh {
         Ok(field.metric_at(mid)?.length_of(a, b))
     }
 
+    /// `true` when some triangle still contains edge `(a,b)` —
+    /// staleness check after prior splits.
     fn edge_exists(&self, a: u32, b: u32) -> bool {
         self.triangles.iter().any(|&t| contains_edge(t, a, b))
     }
 
+    /// `true` when `(a,b)` is in the sorted feature-edge list.
     fn is_feature_edge(&self, a: u32, b: u32) -> bool {
         let e = FeatureEdge::new(a, b);
         self.feature_edges
@@ -440,6 +469,8 @@ impl AnisoMesh {
             .is_ok()
     }
 
+    /// Remove unreferenced vertices, remapping triangle and feature
+    /// indices.
     fn compact(&mut self) {
         let mut used = vec![false; self.vertices.len()];
         for tri in &self.triangles {
@@ -477,6 +508,8 @@ struct BvhSurfaceProjector {
 }
 
 impl BvhSurfaceProjector {
+    /// Build the BVH over `triangles` for surface projection;
+    /// `boundary_vertices` are excluded from snapping targets.
     fn new(vertices: &[Point3], triangles: &[[u32; 3]]) -> Result<Self, AnisotropicRemeshError> {
         let tris: Vec<[Point3; 3]> = triangles
             .iter()
@@ -522,6 +555,8 @@ impl BvhSurfaceProjector {
         })
     }
 
+    /// Closest point on the BVH-accelerated triangle surface to `p`
+    /// (boundary vertices snap to nearest boundary point instead).
     fn project(&self, p: Point3) -> Point3 {
         if self.node_count == 0 {
             return p;
@@ -579,6 +614,8 @@ impl BvhSurfaceProjector {
     }
 }
 
+/// Boolean mask of vertices incident on a single-triangle edge —
+/// the mesh boundary set.
 fn boundary_vertices(triangles: &[[u32; 3]], vertex_count: usize) -> Vec<bool> {
     let mut edges = Vec::with_capacity(triangles.len() * 3);
     for tri in triangles {
@@ -604,6 +641,7 @@ fn boundary_vertices(triangles: &[[u32; 3]], vertex_count: usize) -> Vec<bool> {
     out
 }
 
+/// Per-vertex one-ring neighbour lists (deduplicated).
 fn vertex_neighbours(triangles: &[[u32; 3]], vertex_count: usize) -> Vec<Vec<u32>> {
     let mut out = vec![Vec::<u32>::new(); vertex_count];
     for tri in triangles {
@@ -618,6 +656,8 @@ fn vertex_neighbours(triangles: &[[u32; 3]], vertex_count: usize) -> Vec<Vec<u32
     out
 }
 
+/// Append `x` if not already present (linear check — neighbour lists
+/// are small).
 fn push_unique(xs: &mut Vec<u32>, x: u32) {
     if !xs.contains(&x) {
         xs.push(x);
@@ -625,11 +665,13 @@ fn push_unique(xs: &mut Vec<u32>, x: u32) {
 }
 
 #[inline]
+/// The three edges of a triangle.
 fn tri_edges(tri: [u32; 3]) -> [(u32, u32); 3] {
     [(tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])]
 }
 
 #[inline]
+/// Order-normalize an edge to (min, max) for dedup/search.
 fn canon_edge(a: u32, b: u32) -> (u32, u32) {
     if a <= b {
         (a, b)
@@ -638,12 +680,15 @@ fn canon_edge(a: u32, b: u32) -> (u32, u32) {
     }
 }
 
+/// `true` when `tri` contains both `a` and `b` as a shared edge.
 fn contains_edge(tri: [u32; 3], a: u32, b: u32) -> bool {
     tri_edges(tri)
         .iter()
         .any(|&(x, y)| (x == a && y == b) || (x == b && y == a))
 }
 
+/// Replace `tri` with the two triangles formed by inserting `mid`
+/// on edge `(a,b)`.
 fn split_triangle_on_edge(tri: [u32; 3], a: u32, b: u32, mid: u32) -> [[u32; 3]; 2] {
     for k in 0..3 {
         let x = tri[k];
@@ -656,6 +701,7 @@ fn split_triangle_on_edge(tri: [u32; 3], a: u32, b: u32, mid: u32) -> [[u32; 3];
     [tri, tri]
 }
 
+/// Tight axis-aligned bounding box of a triangle (BVH leaf bounds).
 fn tri_aabb(t: [Point3; 3]) -> Aabb {
     let min = Point3::new(
         t[0].x.min(t[1].x).min(t[2].x),
@@ -670,6 +716,8 @@ fn tri_aabb(t: [Point3; 3]) -> Aabb {
     Aabb::new(min, max)
 }
 
+/// Closest point on the closed triangle `(a,b,c)` to `p` — standard
+/// region-case projection.
 fn closest_point_on_triangle(p: Point3, a: Point3, b: Point3, c: Point3) -> Point3 {
     let ab = sub(b, a);
     let ac = sub(c, a);
@@ -710,31 +758,37 @@ fn closest_point_on_triangle(p: Point3, a: Point3, b: Point3, c: Point3) -> Poin
 }
 
 #[inline]
+/// Midpoint of `a` and `b`.
 fn midpoint(a: Point3, b: Point3) -> Point3 {
     Point3::new((a.x + b.x) * 0.5, (a.y + b.y) * 0.5, (a.z + b.z) * 0.5)
 }
 
 #[inline]
+/// Component-wise vector subtraction (a − b).
 fn sub(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 
 #[inline]
+/// Component-wise vector addition.
 fn add(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
 #[inline]
+/// Scalar multiplication of a point vector.
 fn scale(a: Point3, s: f64) -> Point3 {
     Point3::new(a.x * s, a.y * s, a.z * s)
 }
 
 #[inline]
+/// Dot product of two point vectors.
 fn dot(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
 }
 
 #[inline]
+/// Squared Euclidean distance between two `Point3`s.
 fn distance_sq(a: Point3, b: Point3) -> f64 {
     let d = sub(a, b);
     dot(d, d)

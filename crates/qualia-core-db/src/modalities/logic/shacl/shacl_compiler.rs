@@ -13,6 +13,8 @@ use crate::webizen::SlgOpcode;
 pub struct ShaclCompiler;
 
 impl ShaclCompiler {
+    /// Stateless compiler — `new` exists for API symmetry; all lowering
+    /// is deterministic and holds no state.
     pub fn new() -> Self {
         ShaclCompiler
     }
@@ -42,6 +44,8 @@ impl ShaclCompiler {
         shape
     }
 
+    /// Convenience wrapper: compile a `sh:targetClass` shape — delegates
+    /// to [`ShaclCompiler::compile`].
     pub fn compile_class(
         &self,
         target_class: &str,
@@ -95,6 +99,13 @@ impl ShaclCompiler {
         opcodes
     }
 
+    /// Lower one `ShaclConstraint` to its `SlgOpcode`(s): numeric/count/
+    /// length ranges → `Check*` variants, structural kinds (class,
+    /// nodeKind, datatype, pattern, `in`, logical combinators, property
+    /// pairs, language) → their dedicated opcodes, and the Qualia
+    /// extension constraints (deontic/epistemic/paraconsistent/LTL/
+    /// temporal/spatial/fuzzy/econ/values) → `NativeEval` carrying the
+    /// constraint tag. Constraints without an opcode mapping are skipped.
     fn push_constraint(constraint: &ShaclConstraint, opcodes: &mut Vec<SlgOpcode>) {
         match constraint {
             ShaclConstraint::MinInclusive(min) => {
@@ -287,6 +298,9 @@ impl ShaclCompiler {
         }
     }
 
+    /// Append the terminal opcode for a compiled constraint sequence:
+    /// `Violation` → `Halt` (hard stop), `Warning`/`Info` → `WarnOnly`
+    /// (record but continue).
     fn push_terminal(severity: ShaclSeverity, opcodes: &mut Vec<SlgOpcode>) {
         match severity {
             ShaclSeverity::Violation => opcodes.push(SlgOpcode::Halt),
@@ -294,6 +308,10 @@ impl ShaclCompiler {
         }
     }
 
+    /// Backward-compat string→constraint parse for `compile_shape`;
+    /// **falls back to `MinInclusive`** for unrecognized names — kept for
+    /// the legacy API only, new callers should construct
+    /// `ShaclConstraint` directly.
     fn parse_str(constraint_type: &str, value: f32) -> ShaclConstraint {
         match constraint_type {
             "minInclusive" => ShaclConstraint::MinInclusive(value as f64),
@@ -309,6 +327,8 @@ impl ShaclCompiler {
     }
 }
 
+/// `NodeKindType` → compact tag byte (0–5) packed into
+    /// `CheckNodeKind`.
 fn node_kind_to_tag(kind: NodeKindType) -> u8 {
     match kind {
         NodeKindType::BlankNode => 0,
@@ -320,6 +340,9 @@ fn node_kind_to_tag(kind: NodeKindType) -> u8 {
     }
 }
 
+/// XSD datatype name → compact tag for `CheckDatatype`
+/// (0=string, 1=integer/dateTime, 2=decimal/double, 3=boolean);
+/// `None` for unmapped datatypes.
 fn datatype_to_tag(dt: &str) -> Option<u8> {
     let h = crate::q_hash(dt);
     if h == crate::q_hash("xsd:string") {

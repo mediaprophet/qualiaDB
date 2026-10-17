@@ -89,6 +89,7 @@ pub enum ExpansionError {
 }
 
 impl core::fmt::Display for ExpansionError {
+    /// Formats the expansion-arithmetic error as a human-readable message.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             ExpansionError::OutputTooSmall => {
@@ -420,6 +421,8 @@ pub enum Sign {
 }
 
 impl Sign {
+    /// Classifies an `f64` as `Negative`, `Zero`, or `Positive`. NaN maps to
+    /// `Zero` (it fails both comparisons); `-0.0` also maps to `Zero`.
     #[inline]
     pub fn from_f64(x: f64) -> Self {
         if x > 0.0 {

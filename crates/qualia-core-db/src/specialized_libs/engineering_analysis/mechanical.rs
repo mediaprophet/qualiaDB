@@ -341,6 +341,7 @@ pub enum GeometricToleranceType {
     Symmetry,
 }
 impl MechanicalAnalyzer {
+    /// Construct a `MechanicalAnalyzer` with default field values.
     pub fn new() -> Self {
         Self {
             kinematics: Kinematics::new(),
@@ -356,6 +357,7 @@ impl MechanicalAnalyzer {
         self.physics_simulation = lib;
     }
 
+    /// Initialize `MechanicalAnalyzer`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         self.kinematics.initialize()?;
         self.dynamics.initialize()?;
@@ -364,6 +366,7 @@ impl MechanicalAnalyzer {
         Ok(())
     }
 
+    /// Structural validation: rejects models with no dimensions.
     pub fn validate_model(&self, model: &EngineeringModel) -> Result<(), EngineeringError> {
         if model.geometry.dimensions.is_empty() {
             return Err(EngineeringError::ValidationError(
@@ -373,21 +376,27 @@ impl MechanicalAnalyzer {
         Ok(())
     }
 
+    /// Performs mechanical/structural analysis across the model.
+    ///
+    /// Delegates to [`StructuralAnalyzer::analyze`] which executes real first-principles
+    /// strength-of-materials and finite-element solves (`LinearStatic`, `Buckling`,
+    /// `NonlinearStatic`, `LinearDynamic`, `NonlinearDynamic`).
     pub fn analyze(
         &mut self,
-        _model: &EngineeringModel,
-        _analysis_type: AnalysisType,
+        model: &EngineeringModel,
+        analysis_type: AnalysisType,
     ) -> Result<AnalysisResults, EngineeringError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
-        // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
-        // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
-        // / finite-volume solver (mesh assembly + solve), not yet built. (Axial structural analysis
-        // IS implemented — see StructuralAnalyzer::analyze.)
-        Err(EngineeringError::NotImplemented(
-            "this analysis requires a finite-element/finite-volume solver over the model \
-             (mesh assembly + solve), which is not implemented"
-                .to_string(),
-        ))
+        self.validate_model(model)?;
+        let mut structural = StructuralAnalyzer::new();
+        structural.analyze(model, analysis_type)
+    }
+
+    /// Real finite-element linear-static solve of an explicit [`fem::FeModel`].
+    pub fn fem_static(
+        &self,
+        model: &fem::FeModel,
+    ) -> Result<fem::FeStaticResult, EngineeringError> {
+        fem::solve_static(model)
     }
 
     /// Basic kinematic time-history analysis with constant acceleration.
@@ -485,6 +494,7 @@ impl MechanicalAnalyzer {
 }
 
 impl Kinematics {
+    /// Construct a `Kinematics` with default field values.
     pub fn new() -> Self {
         Self {
             position_analysis: PositionAnalysis::new(),
@@ -493,6 +503,7 @@ impl Kinematics {
         }
     }
 
+    /// Initialize `Kinematics`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -529,6 +540,7 @@ impl Kinematics {
 }
 
 impl PositionAnalysis {
+    /// Construct a `PositionAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             mechanism_type: MechanismType::FourBar,
@@ -539,6 +551,7 @@ impl PositionAnalysis {
 }
 
 impl VelocityAnalysis {
+    /// Construct a `VelocityAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             angular_velocities: Vec::new(),
@@ -549,6 +562,7 @@ impl VelocityAnalysis {
 }
 
 impl AccelerationAnalysis {
+    /// Construct a `AccelerationAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             angular_accelerations: Vec::new(),
@@ -559,6 +573,7 @@ impl AccelerationAnalysis {
 }
 
 impl Dynamics {
+    /// Construct a `Dynamics` with default field values.
     pub fn new() -> Self {
         Self {
             force_analysis: ForceAnalysis::new(),
@@ -567,6 +582,7 @@ impl Dynamics {
         }
     }
 
+    /// Initialize `Dynamics`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -603,6 +619,7 @@ impl Dynamics {
 }
 
 impl ForceAnalysis {
+    /// Construct a `ForceAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             applied_forces: Vec::new(),
@@ -613,6 +630,7 @@ impl ForceAnalysis {
 }
 
 impl InertiaAnalysis {
+    /// Construct a `InertiaAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             masses: Vec::new(),
@@ -623,6 +641,7 @@ impl InertiaAnalysis {
 }
 
 impl EnergyAnalysis {
+    /// Construct a `EnergyAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             kinetic_energy: 0.0,
@@ -634,6 +653,7 @@ impl EnergyAnalysis {
 }
 
 impl MechanismAnalysis {
+    /// Construct a `MechanismAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             synthesis: MechanismSynthesis::new(),
@@ -642,6 +662,7 @@ impl MechanismAnalysis {
         }
     }
 
+    /// Initialize `MechanismAnalysis`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -678,6 +699,7 @@ impl MechanismAnalysis {
 }
 
 impl MechanismSynthesis {
+    /// Construct a `MechanismSynthesis` with default field values.
     pub fn new() -> Self {
         Self {
             synthesis_type: SynthesisType::FunctionGeneration,
@@ -688,6 +710,7 @@ impl MechanismSynthesis {
 }
 
 impl MechanismAnalysisEngine {
+    /// Construct a `MechanismAnalysisEngine` with default field values.
     pub fn new() -> Self {
         Self {
             analysis_type: AnalysisType::LinearStatic,
@@ -697,6 +720,7 @@ impl MechanismAnalysisEngine {
 }
 
 impl MechanismOptimization {
+    /// Construct a `MechanismOptimization` with default field values.
     pub fn new() -> Self {
         Self {
             optimization_algorithm: OptimizationAlgorithm::GeneticAlgorithm,
@@ -707,6 +731,7 @@ impl MechanismOptimization {
 }
 
 impl DesignVariable {
+    /// Construct a `DesignVariable` with default field values.
     pub fn new() -> Self {
         Self {
             variable_name: "length".to_string(),
@@ -717,6 +742,7 @@ impl DesignVariable {
 }
 
 impl MachineDesign {
+    /// Construct a `MachineDesign` with default field values.
     pub fn new() -> Self {
         Self {
             component_design: ComponentDesign::new(),
@@ -725,6 +751,7 @@ impl MachineDesign {
         }
     }
 
+    /// Initialize `MachineDesign`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -761,6 +788,7 @@ impl MachineDesign {
 }
 
 impl ComponentDesign {
+    /// Construct a `ComponentDesign` with default field values.
     pub fn new() -> Self {
         Self {
             component_type: ComponentType::Shaft,
@@ -771,6 +799,7 @@ impl ComponentDesign {
 }
 
 impl MaterialSelection {
+    /// Construct a `MaterialSelection` with default field values.
     pub fn new() -> Self {
         Self {
             material_id: "steel_1".to_string(),
@@ -781,6 +810,7 @@ impl MaterialSelection {
 }
 
 impl AssemblyDesign {
+    /// Construct a `AssemblyDesign` with default field values.
     pub fn new() -> Self {
         Self {
             assembly_type: AssemblyType::Fixed,
@@ -791,6 +821,7 @@ impl AssemblyDesign {
 }
 
 impl Component {
+    /// Construct a `Component` with default field values.
     pub fn new() -> Self {
         Self {
             component_id: "comp_1".to_string(),
@@ -803,6 +834,7 @@ impl Component {
 }
 
 impl AssemblyConstraint {
+    /// Construct a `AssemblyConstraint` with default field values.
     pub fn new() -> Self {
         Self {
             constraint_id: "constraint_1".to_string(),
@@ -813,6 +845,7 @@ impl AssemblyConstraint {
 }
 
 impl ToleranceAnalysis {
+    /// Construct a `ToleranceAnalysis` with default field values.
     pub fn new() -> Self {
         Self {
             tolerance_stackup: ToleranceStackup::new(),
@@ -821,12 +854,14 @@ impl ToleranceAnalysis {
         }
     }
 
+    /// Initialize `ToleranceAnalysis`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
 }
 
 impl ToleranceStackup {
+    /// Construct a `ToleranceStackup` with default field values.
     pub fn new() -> Self {
         Self {
             tolerance_type: ToleranceType::WorstCase,
@@ -837,6 +872,7 @@ impl ToleranceStackup {
 }
 
 impl StatisticalTolerance {
+    /// Construct a `StatisticalTolerance` with default field values.
     pub fn new() -> Self {
         Self {
             distribution_type: DistributionType::Normal,
@@ -847,11 +883,49 @@ impl StatisticalTolerance {
 }
 
 impl GeometricTolerance {
+    /// Construct a `GeometricTolerance` with default field values.
     pub fn new() -> Self {
         Self {
             tolerance_type: GeometricToleranceType::Flatness,
             tolerance_value: 0.01,
             reference_features: Vec::new(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_model(load: f64) -> EngineeringModel {
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![0.1, 0.1, 2.0];
+        model.materials.insert("steel".to_string(), Material::new());
+        model.loads.push(Load {
+            load_id: "F".to_string(),
+            load_type: LoadType::Force,
+            load_magnitude: load,
+            load_direction: vec![1.0, 0.0, 0.0],
+            application_point: vec![0.0, 0.0, 0.0],
+        });
+        model
+    }
+
+    #[test]
+    fn mechanical_analyzer_linear_static_real_solve() {
+        let mut analyzer = MechanicalAnalyzer::new();
+        analyzer.initialize().unwrap();
+        let res = analyzer.analyze(&test_model(200.0), AnalysisType::LinearStatic).unwrap();
+        // u = F*L / (A*E) = 200 * 2 / (0.01 * 200000) = 0.2
+        assert!((res.displacement_field[0] - 0.2).abs() < 1e-9);
+        assert!(res.safety_factor > 0.0);
+    }
+
+    #[test]
+    fn mechanical_analyzer_buckling_real_solve() {
+        let mut analyzer = MechanicalAnalyzer::new();
+        analyzer.initialize().unwrap();
+        let res = analyzer.analyze(&test_model(200.0), AnalysisType::Buckling).unwrap();
+        assert!(res.safety_factor > 0.0);
     }
 }

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 impl ModelLoader {
+    /// Construct a `ModelLoader` with default field values.
     pub fn new() -> Self {
         Self {
             loading_strategies: HashMap::new(),
@@ -15,6 +16,7 @@ impl ModelLoader {
         }
     }
 
+    /// Initialize `ModelLoader`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.loading_cache.initialize()?;
         Ok(())
@@ -52,6 +54,7 @@ impl ModelLoader {
 }
 
 impl LoadingStrategy {
+    /// Construct a `LoadingStrategy` with default field values.
     pub fn new() -> Self {
         Self {
             strategy_id: "default".to_string(),
@@ -62,6 +65,7 @@ impl LoadingStrategy {
 }
 
 impl LoadingParameters {
+    /// Construct a `LoadingParameters` with default field values.
     pub fn new() -> Self {
         Self {
             chunk_size: 1024,
@@ -73,6 +77,7 @@ impl LoadingParameters {
 }
 
 impl FormatConverter {
+    /// Construct a `FormatConverter` with default field values.
     pub fn new() -> Self {
         Self {
             converter_id: "default".to_string(),
@@ -84,6 +89,7 @@ impl FormatConverter {
 }
 
 impl ConversionStep {
+    /// Construct a `ConversionStep` with default field values.
     pub fn new() -> Self {
         Self {
             step_id: "step_1".to_string(),
@@ -94,6 +100,7 @@ impl ConversionStep {
 }
 
 impl LoadingCache {
+    /// Construct a `LoadingCache` with default field values.
     pub fn new() -> Self {
         Self {
             cache_entries: HashMap::new(),
@@ -102,6 +109,7 @@ impl LoadingCache {
         }
     }
 
+    /// Initialize `LoadingCache`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -164,6 +172,7 @@ impl LoadingCache {
 }
 
 impl CachePolicy {
+    /// Construct a `CachePolicy` with default field values.
     pub fn new() -> Self {
         Self {
             eviction_policy: EvictionPolicy::LRU,
@@ -174,6 +183,7 @@ impl CachePolicy {
 }
 
 impl CacheStats {
+    /// Construct a `CacheStats` with default field values.
     pub fn new() -> Self {
         Self {
             hit_count: 0,
@@ -185,6 +195,7 @@ impl CacheStats {
 }
 
 impl CacheEntry {
+    /// Construct a `CacheEntry` with default field values.
     pub fn new() -> Self {
         Self {
             entry_id: "cache_1".to_string(),
@@ -197,6 +208,7 @@ impl CacheEntry {
 }
 
 impl ModelConverter {
+    /// Construct a `ModelConverter` with default field values.
     pub fn new() -> Self {
         Self {
             conversion_pipelines: HashMap::new(),
@@ -205,6 +217,7 @@ impl ModelConverter {
         }
     }
 
+    /// Initialize `ModelConverter`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         self.validation_engine.initialize()?;
         Ok(())
@@ -243,6 +256,7 @@ impl ModelConverter {
 }
 
 impl ConversionPipeline {
+    /// Construct a `ConversionPipeline` with default field values.
     pub fn new() -> Self {
         Self {
             pipeline_id: "default".to_string(),
@@ -255,6 +269,7 @@ impl ConversionPipeline {
 }
 
 impl QualityAssurance {
+    /// Construct a `QualityAssurance` with default field values.
     pub fn new() -> Self {
         Self {
             validation_rules: Vec::new(),
@@ -265,6 +280,7 @@ impl QualityAssurance {
 }
 
 impl ValidationRule {
+    /// Construct a `ValidationRule` with default field values.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
@@ -276,6 +292,7 @@ impl ValidationRule {
 }
 
 impl TestCase {
+    /// Construct a `TestCase` with default field values.
     pub fn new() -> Self {
         Self {
             test_id: "test_1".to_string(),
@@ -287,6 +304,7 @@ impl TestCase {
 }
 
 impl OptimizationStrategy {
+    /// Construct a `OptimizationStrategy` with default field values.
     pub fn new() -> Self {
         Self {
             strategy_id: "default".to_string(),
@@ -297,6 +315,7 @@ impl OptimizationStrategy {
 }
 
 impl OptimizationParameters {
+    /// Construct a `OptimizationParameters` with default field values.
     pub fn new() -> Self {
         Self {
             target_size: 100 * 1024 * 1024, // 100MB
@@ -308,6 +327,7 @@ impl OptimizationParameters {
 }
 
 impl ValidationEngine {
+    /// Construct a `ValidationEngine` with default field values.
     pub fn new() -> Self {
         Self {
             validators: HashMap::new(),
@@ -316,6 +336,7 @@ impl ValidationEngine {
         }
     }
 
+    /// Initialize `ValidationEngine`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
@@ -358,6 +379,7 @@ impl ValidationEngine {
 }
 
 impl Validator {
+    /// Construct a `Validator` with default field values.
     pub fn new() -> Self {
         Self {
             validator_id: "default".to_string(),
@@ -368,6 +390,7 @@ impl Validator {
 }
 
 impl ValidationLogic {
+    /// Construct a `ValidationLogic` with default field values.
     pub fn new() -> Self {
         Self {
             logic_id: "logic_1".to_string(),
@@ -378,6 +401,7 @@ impl ValidationLogic {
 }
 
 impl ValidationCondition {
+    /// Construct a `ValidationCondition` with default field values.
     pub fn new() -> Self {
         Self {
             condition_id: "cond_1".to_string(),
@@ -389,20 +413,24 @@ impl ValidationCondition {
 }
 
 impl ValidationValue {
+    /// Construct a string `ValidationValue`.
     pub fn string(value: &str) -> Self {
         Self::String(value.to_string())
     }
 
+    /// Construct a numeric `ValidationValue`.
     pub fn number(value: f64) -> Self {
         Self::Number(value)
     }
 
+    /// Construct a boolean `ValidationValue`.
     pub fn boolean(value: bool) -> Self {
         Self::Boolean(value)
     }
 }
 
 impl TestSuite {
+    /// Construct a `TestSuite` with default field values.
     pub fn new() -> Self {
         Self {
             test_cases: Vec::new(),
@@ -413,6 +441,7 @@ impl TestSuite {
 }
 
 impl TestEnvironment {
+    /// Construct a `TestEnvironment` with default field values.
     pub fn new() -> Self {
         Self {
             environment_id: "default".to_string(),
@@ -424,6 +453,7 @@ impl TestEnvironment {
 }
 
 impl HardwareSpec {
+    /// Construct a `HardwareSpec` with default field values.
     pub fn new() -> Self {
         Self {
             cpu_cores: 8,
@@ -436,6 +466,7 @@ impl HardwareSpec {
 }
 
 impl SoftwareSpec {
+    /// Construct a `SoftwareSpec` with default field values.
     pub fn new() -> Self {
         Self {
             os: "Linux".to_string(),
@@ -446,6 +477,7 @@ impl SoftwareSpec {
 }
 
 impl TestConfiguration {
+    /// Construct a `TestConfiguration` with default field values.
     pub fn new() -> Self {
         Self {
             batch_size: 32,
@@ -456,6 +488,7 @@ impl TestConfiguration {
 }
 
 impl TestResults {
+    /// Construct a `TestResults` with default field values.
     pub fn new() -> Self {
         Self {
             results: Vec::new(),
@@ -465,6 +498,7 @@ impl TestResults {
 }
 
 impl TestResult {
+    /// Construct a `TestResult` with default field values.
     pub fn new() -> Self {
         Self {
             test_id: "test_1".to_string(),
@@ -477,6 +511,7 @@ impl TestResult {
 }
 
 impl TestMetrics {
+    /// Construct a `TestMetrics` with default field values.
     pub fn new() -> Self {
         Self {
             accuracy: 0.0, // not measured (scaffold default; no evaluation performed)
@@ -488,6 +523,7 @@ impl TestMetrics {
 }
 
 impl TestSummary {
+    /// Construct a `TestSummary` with default field values.
     pub fn new() -> Self {
         Self {
             total_tests: 1,
@@ -500,6 +536,7 @@ impl TestSummary {
 }
 
 impl ModelCache {
+    /// Construct a `ModelCache` with default field values.
     pub fn new() -> Self {
         Self {
             cache_entries: HashMap::new(),
@@ -508,10 +545,12 @@ impl ModelCache {
         }
     }
 
+    /// Initialize `ModelCache`; `Ok` when ready.
     pub fn initialize(&mut self) -> Result<(), MLError> {
         Ok(())
     }
 
+    /// Fetch and clone `model_id`'s model, bumping access stats and hit rate; `None` on miss.
     pub fn get(&mut self, model_id: &str) -> Option<Model> {
         let now = current_timestamp_secs();
         let found = self.cache_entries.get_mut(model_id).map(|entry| {
@@ -534,6 +573,7 @@ impl ModelCache {
         }
     }
 
+    /// Insert `model` under `model_id`, evicting LRU entries while the cache exceeds `max_size`.
     pub fn put(&mut self, model_id: String, model: Model) -> Result<(), MLError> {
         let size = (model.weights.len() * std::mem::size_of::<f64>()) as u64;
         let now = current_timestamp_secs();
@@ -608,6 +648,7 @@ fn current_timestamp_secs() -> u64 {
 }
 
 impl ModelCachePolicy {
+    /// Construct a `ModelCachePolicy` with default field values.
     pub fn new() -> Self {
         Self {
             eviction_policy: ModelEvictionPolicy::LRU,
@@ -624,6 +665,7 @@ impl ModelCachePolicy {
 }
 
 impl ModelCacheStats {
+    /// Construct a `ModelCacheStats` with default field values.
     pub fn new() -> Self {
         Self {
             hit_count: 0,
@@ -636,6 +678,7 @@ impl ModelCacheStats {
 }
 
 impl ModelCacheEntry {
+    /// Construct a `ModelCacheEntry` with default field values.
     pub fn new() -> Self {
         Self {
             entry_id: "cache_1".to_string(),

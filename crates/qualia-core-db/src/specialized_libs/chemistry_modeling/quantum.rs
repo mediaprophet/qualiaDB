@@ -486,14 +486,14 @@ impl QuantumCalculator {
                         }
                     )+
                     _ => Err(ChemistryError::NotImplemented(format!(
-                        "electronic structure: STO-3G RHF currently supports 1–8 s-type basis \
-                         functions (H/He atoms); this molecule needs {}",
+                        "electronic structure: STO-3G RHF currently supports 1–16 s-type basis \
+                         functions (H/He atoms) within the zero-heap 4-index stack budget; this molecule needs {}",
                         n_bf
                     ))),
                 }
             };
         }
-        dispatch!(1, 2, 3, 4, 5, 6, 7, 8)
+        dispatch!(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16)
     }
 }
 

@@ -107,6 +107,25 @@ impl PacketProtection {
         Ok(need)
     }
 
+    /// Encrypt `plaintext` in place with transmission pacing and idle-watch validation.
+    pub fn seal_paced(
+        &mut self,
+        aad: &[u8],
+        plaintext: &mut [u8],
+        out: &mut [u8],
+        pacer: &mut crate::net::qdnf::session::pacing::Pacer,
+        idle: &mut crate::net::qdnf::session::pacing::IdleWatch,
+        now_us: u64,
+    ) -> Result<usize, QdnfError> {
+        idle.on_send(now_us)?;
+        let need = plaintext
+            .len()
+            .checked_add(OVERHEAD)
+            .ok_or(QdnfError::Range)?;
+        crate::net::qdnf::session::pacing::on_paced_send(pacer, need as u64, now_us)?;
+        self.seal(aad, plaintext, out)
+    }
+
     /// Decrypt into `out`. Replay/window updates happen only after AEAD success.
     /// Tries current recv key first; on AEAD failure only, tries previous.
     pub fn open(&mut self, aad: &[u8], sealed: &[u8], out: &mut [u8]) -> Result<usize, QdnfError> {

@@ -80,6 +80,13 @@ impl LawPackage {
         self.signature = signature;
     }
 
+    /// Sign the package with the author's Ed25519 signing key.
+    pub fn sign(&mut self, signing_key: &ed25519_dalek::SigningKey) {
+        use ed25519_dalek::Signer;
+        let sig = signing_key.sign(self.signature_message());
+        self.signature = sig.to_bytes().to_vec();
+    }
+
     /// Verify the Ed25519 signature against the author's public key.
     ///
     /// Returns `true` if the signature is valid for this package's
@@ -273,5 +280,24 @@ mod tests {
             !pkg.verify_signature(&verifying_key.to_bytes()),
             "tampered content hash should fail verification"
         );
+    }
+
+    #[test]
+    fn sign_and_verify_roundtrip() {
+        let signing_key = test_signing_key(42);
+        let verifying_key = signing_key.verifying_key();
+
+        let mut pkg = LawPackage::new(
+            "law:dissolve:001",
+            "Dissolve Rate Law",
+            "did:example:curator",
+            "Apache-2.0",
+            LawNature::Physical,
+            "sha256:fedcba9876543210",
+            1710000000,
+        );
+        pkg.sign(&signing_key);
+        assert!(!pkg.signature.is_empty());
+        assert!(pkg.verify_signature(&verifying_key.to_bytes()));
     }
 }

@@ -77,6 +77,7 @@ pub enum FieldTypeKind {
 }
 
 impl FieldTypeKind {
+    /// Decode a field-type tag; `None` for values outside 0–3.
     pub const fn from_u8(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::Scalar),
@@ -103,6 +104,7 @@ pub enum FieldSupportKind {
 }
 
 impl FieldSupportKind {
+    /// Decode a field-support tag; `None` for values outside 0–3.
     pub const fn from_u8(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::Region),
@@ -131,6 +133,7 @@ pub enum FieldRepresentationKind {
 }
 
 impl FieldRepresentationKind {
+    /// Decode a field-representation tag; `None` for values outside 0–4.
     pub const fn from_u8(raw: u8) -> Option<Self> {
         match raw {
             0 => Some(Self::Grid),
@@ -265,6 +268,8 @@ pub struct FieldEntry {
 }
 
 impl FieldEntry {
+    /// Create a field descriptor to encode into a Field section.
+    /// `unit_hash` is 0 when the field is unitless.
     pub fn new(
         name_hash: u64,
         unit_hash: u64,

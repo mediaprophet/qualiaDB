@@ -1037,7 +1037,7 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
             "delegation/revocation",
             "responsibility",
             "jural chains",
-            "value flow",
+            "socioeconomics",
             "identity fabric",
             "BFT quorum",
             "Lamport/vector clocks",
