@@ -11,7 +11,9 @@ pub mod atmosphere;
 pub mod camera;
 pub mod character;
 pub mod differential_codec;
+pub mod fire_ecology;
 pub mod flora_archetype;
+pub mod geomechanics;
 pub mod ground_cover;
 pub mod hydro;
 pub mod input;
@@ -21,7 +23,24 @@ pub mod metamer_fspm;
 pub mod navmesh;
 pub mod optics;
 pub mod ripple;
+pub mod space_weather;
 pub mod time;
+
+pub use space_weather::{
+    evaluate_solar_cycle_phase, evaluate_space_weather_coupling, AtmosphericElectricCircuit,
+    GeomagneticStormState, HaleMagneticCycle, SchwabeSolarCycle, SolarWindState,
+    BASELINE_TSI_W_M2, HALE_CYCLE_YEARS, SCHWABE_CYCLE_YEARS,
+};
+
+pub use fire_ecology::{
+    evaluate_dead_fine_fuel_moisture, evaluate_fireline_intensity, FirelineRegime, FirelineVerdict,
+    ForestFuelStratum, FuelMoistureState, DEAD_FUEL_EXTINCTION_MOISTURE, EUCALYPT_HEAT_YIELD_KJ_KG,
+};
+
+pub use geomechanics::{
+    critical_trench_depth_m, evaluate_excavation_pass, evaluate_soil_compaction,
+    ExcavationVerdict, SoilMechanicsProfile, ToolEffector, ToolKind,
+};
 
 pub use differential_codec::{
     DisocclusionForecaster, EntitySpatialBounds, KinematicExtrapolator,
