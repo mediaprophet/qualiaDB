@@ -11,6 +11,7 @@ pub struct MatrixStorage {
     pub allocator: MatrixAllocator,
     pub cache: MatrixCache,
     pub storage_backend: StorageBackend,
+    pub matrix_allocations: HashMap<String, usize>,
 }
 
 /// Matrix zone in ZNS storage
@@ -21,6 +22,27 @@ pub struct MatrixZone {
     pub capacity: u64,
     pub matrices: HashMap<String, MatrixMetadata>,
     pub access_pattern: AccessPattern,
+}
+
+impl MatrixZone {
+    /// Calculate current used capacity in bytes across all matrices stored in this zone.
+    pub fn used_capacity(&self) -> u64 {
+        self.matrices
+            .values()
+            .map(|m| {
+                let elem_size = match m.data_type {
+                    DataType::Float32 | DataType::Integer32 => 4,
+                    _ => 8,
+                };
+                (m.rows * m.cols * elem_size).max(8) as u64
+            })
+            .sum()
+    }
+
+    /// Calculate available capacity remaining in this zone.
+    pub fn available_capacity(&self) -> u64 {
+        self.capacity.saturating_sub(self.used_capacity())
+    }
 }
 
 /// Zone types for different matrix workloads
@@ -158,6 +180,7 @@ impl MatrixStorage {
             allocator: MatrixAllocator::new(),
             cache: MatrixCache::new(),
             storage_backend: StorageBackend::new(),
+            matrix_allocations: HashMap::new(),
         }
     }
 
@@ -176,11 +199,13 @@ impl MatrixStorage {
         // Initialize storage backend
         self.storage_backend.initialize()?;
 
+        self.matrix_allocations.clear();
+
         Ok(())
     }
 
     /// Creates the five fixed zones (dense, sparse, structured, temporary,
-    /// cached). Each zone declares a 1 GiB `capacity`, currently unenforced.
+    /// cached). Each zone declares a 1 GiB `capacity`, enforced on store.
     fn create_zones(&mut self) -> Result<(), LinearAlgebraError> {
         // Create different zone types
         let zones = vec![
@@ -205,26 +230,103 @@ impl MatrixStorage {
         Ok(())
     }
 
-    /// Selects a zone (via [`Self::select_best_zone`]), records the matrix
-    /// metadata there, and stores the data through the storage backend. The
-    /// `allocator` is not consulted — see STUBS.md §4.
+    /// Selects a zone (via [`Self::select_best_zone`]), enforces zone capacity,
+    /// allocates a memory block in [`MatrixAllocator`], records the matrix
+    /// metadata in the zone, and stores the data through the storage backend.
     pub fn store_matrix(&mut self, matrix: Matrix) -> Result<(), LinearAlgebraError> {
+        // Calculate the in-memory byte size of the matrix
+        let elem_size = match matrix.metadata.data_type {
+            DataType::Float32 | DataType::Integer32 => 4,
+            _ => 8,
+        };
+        let matrix_bytes = (matrix.data.len() * elem_size)
+            .max(matrix.rows * matrix.cols * elem_size)
+            .max(8) as u64;
+
         // Determine best zone for this matrix
         let zone_id = self.select_best_zone(&matrix)?;
+
+        // Enforce zone capacity: calculate projected usage after replacing or adding matrix
+        {
+            let zone = self
+                .zones
+                .get(&zone_id)
+                .ok_or_else(|| LinearAlgebraError::StorageError(format!("Zone '{}' not found", zone_id)))?;
+
+            let old_bytes = if let Some(old_meta) = zone.matrices.get(&matrix.matrix_id) {
+                let old_elem_size = match old_meta.data_type {
+                    DataType::Float32 | DataType::Integer32 => 4,
+                    _ => 8,
+                };
+                (old_meta.rows * old_meta.cols * old_elem_size).max(8) as u64
+            } else {
+                0
+            };
+
+            let current_used = zone.used_capacity();
+            let projected_used = current_used - old_bytes + matrix_bytes;
+            if projected_used > zone.capacity {
+                return Err(LinearAlgebraError::StorageError(format!(
+                    "Zone '{}' capacity exceeded: required {} bytes, projected usage {} bytes exceeds capacity {} bytes",
+                    zone_id, matrix_bytes, projected_used, zone.capacity
+                )));
+            }
+        }
+
+        // Allocate memory block in MatrixAllocator for production tracking
+        if let Some(prev_addr) = self.matrix_allocations.remove(&matrix.matrix_id) {
+            let _ = self.allocator.deallocate(prev_addr);
+        }
+        let allocated_addr = self.allocator.allocate(matrix_bytes as usize)?;
+        self.matrix_allocations.insert(matrix.matrix_id.clone(), allocated_addr);
 
         // Store in zone
         let zone = self
             .zones
             .get_mut(&zone_id)
-            .ok_or_else(|| LinearAlgebraError::StorageError("Zone not found".to_string()))?;
+            .ok_or_else(|| LinearAlgebraError::StorageError(format!("Zone '{}' not found", zone_id)))?;
 
         zone.matrices
             .insert(matrix.matrix_id.clone(), matrix.metadata.clone());
 
-        // Store actual data
+        // Store actual data in backend
         self.storage_backend.store_matrix_data(&matrix)?;
 
         Ok(())
+    }
+
+    /// Removes a matrix from storage, freeing its allocated memory block in MatrixAllocator,
+    /// removing its metadata from the zone, evicting it from the cache, and deleting it from
+    /// the storage backend.
+    pub fn remove_matrix(&mut self, matrix_id: &str) -> Result<(), LinearAlgebraError> {
+        // Deallocate memory block if tracked
+        if let Some(addr) = self.matrix_allocations.remove(matrix_id) {
+            let _ = self.allocator.deallocate(addr);
+        }
+
+        // Remove from zone metadata
+        for zone in self.zones.values_mut() {
+            zone.matrices.remove(matrix_id);
+        }
+
+        // Evict from cache
+        self.cache.cache_entries.remove(matrix_id);
+
+        // Remove from storage backend
+        self.storage_backend.matrix_store.remove(matrix_id);
+
+        Ok(())
+    }
+
+    /// Returns the allocated memory address for `matrix_id`, if allocated.
+    pub fn get_matrix_address(&self, matrix_id: &str) -> Option<usize> {
+        self.matrix_allocations.get(matrix_id).copied()
+    }
+
+    /// Returns a reference to the `MemoryBlock` allocated for `matrix_id`, if present.
+    pub fn get_allocated_block(&self, matrix_id: &str) -> Option<&MemoryBlock> {
+        let addr = self.matrix_allocations.get(matrix_id)?;
+        self.allocator.allocated_blocks.get(&addr.to_string())
     }
 
     /// Returns the cached matrix if present; otherwise loads it from the
@@ -264,10 +366,22 @@ impl MatrixStorage {
         matrices
     }
 
-    /// Picks the target zone: `dense` when `rows*cols > 10_000`, otherwise
-    /// `temporary`. Fixed heuristic — no sparsity/structure analysis yet.
+    /// Picks the target zone: `sparse` for sparse formats, `structured` for
+    /// blocked format, `dense` when `rows*cols > 10_000`, otherwise `temporary`.
     fn select_best_zone(&self, matrix: &Matrix) -> Result<String, LinearAlgebraError> {
-        // Simple selection logic - in real implementation would be more sophisticated
+        match matrix.storage_format {
+            StorageFormat::CompressedSparseRow | StorageFormat::CompressedSparseColumn => {
+                if self.zones.contains_key("sparse") {
+                    return Ok("sparse".to_string());
+                }
+            }
+            StorageFormat::Blocked => {
+                if self.zones.contains_key("structured") {
+                    return Ok("structured".to_string());
+                }
+            }
+            _ => {}
+        }
         if matrix.rows * matrix.cols > 10000 {
             Ok("dense".to_string())
         } else {
@@ -278,8 +392,7 @@ impl MatrixStorage {
 
 impl MatrixAllocator {
     /// Creates an allocator with no configured memory pool; `initialize`
-    /// seeds it. NOTE: nothing in `MatrixStorage` calls `allocate` today —
-    /// this allocator is currently unwired scaffold (STUBS.md §4).
+    /// seeds it. Consulted during [`MatrixStorage::store_matrix`] and [`MatrixStorage::remove_matrix`].
     pub fn new() -> Self {
         Self {
             allocation_strategy: AllocationStrategy::BestFit,
@@ -1401,5 +1514,73 @@ mod tests {
         // First fit for 500 should use the first available block (the 2000-byte hole at addr2)
         let addr = allocator.allocate(500).unwrap();
         assert_eq!(addr, 1000); // First fit picks the first block that's large enough
+    }
+
+    // === MatrixStorage zone capacity & allocator integration tests ===
+
+    #[test]
+    fn test_matrix_storage_allocator_integration() {
+        let mut storage = MatrixStorage::new();
+        storage.initialize().unwrap();
+
+        let m1 = make_test_matrix("m1", 2, 2); // 4 * 8 = 32 bytes
+        storage.store_matrix(m1).unwrap();
+
+        // Must allocate a block in MatrixAllocator
+        assert_eq!(storage.allocator.allocated_blocks.len(), 1);
+        let addr = storage.get_matrix_address("m1");
+        assert!(addr.is_some());
+        let block = storage.get_allocated_block("m1");
+        assert!(block.is_some());
+        assert_eq!(block.unwrap().size, 32);
+
+        // Store a second matrix
+        let m2 = make_test_matrix("m2", 4, 4); // 16 * 8 = 128 bytes
+        storage.store_matrix(m2).unwrap();
+        assert_eq!(storage.allocator.allocated_blocks.len(), 2);
+
+        // Remove m1: block must be deallocated and coalesced in allocator
+        storage.remove_matrix("m1").unwrap();
+        assert_eq!(storage.allocator.allocated_blocks.len(), 1);
+        assert!(storage.get_matrix_address("m1").is_none());
+
+        // Remove m2: all blocks should be deallocated
+        storage.remove_matrix("m2").unwrap();
+        assert_eq!(storage.allocator.allocated_blocks.len(), 0);
+        assert_eq!(storage.allocator.free_blocks.len(), 1);
+    }
+
+    #[test]
+    fn test_matrix_storage_zone_capacity_enforcement() {
+        let mut storage = MatrixStorage::new();
+        storage.initialize().unwrap();
+
+        // Restrict temporary zone capacity to 64 bytes
+        if let Some(zone) = storage.zones.get_mut("temporary") {
+            zone.capacity = 64;
+        }
+
+        // Store 2x2 matrix (32 bytes) -> fits in 64 bytes
+        let m1 = make_test_matrix("m1", 2, 2);
+        storage.store_matrix(m1).unwrap();
+
+        let temp_zone = storage.zones.get("temporary").unwrap();
+        assert_eq!(temp_zone.used_capacity(), 32);
+        assert_eq!(temp_zone.available_capacity(), 32);
+
+        // Store 3x3 matrix (72 bytes) -> exceeds 64 byte limit, must fail closed
+        let m2 = make_test_matrix("m2", 3, 3);
+        let result = storage.store_matrix(m2);
+        assert!(result.is_err());
+        match result {
+            Err(LinearAlgebraError::StorageError(msg)) => {
+                assert!(msg.contains("capacity exceeded"));
+            }
+            _ => panic!("Expected StorageError with capacity exceeded"),
+        }
+
+        // Re-storing m1 with same size should succeed (replaces m1)
+        let m1_updated = make_test_matrix("m1", 2, 2);
+        assert!(storage.store_matrix(m1_updated).is_ok());
     }
 }

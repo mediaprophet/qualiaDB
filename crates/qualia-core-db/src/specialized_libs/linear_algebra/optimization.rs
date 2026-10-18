@@ -173,9 +173,10 @@ impl OptimizationEngine {
     }
 
     /// Analyzes left and right operands to dynamically select the optimal multiplication
-    /// strategy (AlgorithmSelection for sparse, Parallelization for large compute,
-    /// CacheOptimization for tiled blocks, Vectorization for SIMD) and computes a genuine
-    /// expected speedup factor based on operand properties, recording the optimization in history.
+    /// strategy (AlgorithmSelection for sparse/structural patterns, Parallelization for large compute,
+    /// CacheOptimization for tiled blocks, Vectorization for SIMD) consulting the PatternLibrary hints,
+    /// enforcing the enabled `optimization_strategies` registry, and computing an expected speedup factor
+    /// recorded in optimization history.
     pub fn optimize_multiplication(
         &mut self,
         left: &Matrix,
@@ -187,7 +188,40 @@ impl OptimizationEngine {
         let max_sparsity = left_analysis.sparsity.max(right_analysis.sparsity);
         let total_flops = (left.rows * left.cols * right.cols) as f64;
 
-        let (strategy, expected_gain) = if max_sparsity >= 0.70 {
+        // Check if any detected structural pattern in left or right operands has a specialized hint
+        let mut best_hint: Option<(MatrixPattern, OptimizationHint)> = None;
+        for pat in left_analysis
+            .detected_patterns
+            .iter()
+            .chain(right_analysis.detected_patterns.iter())
+        {
+            if *pat != MatrixPattern::Dense {
+                if let Some(hint) = self
+                    .analyzer
+                    .pattern_recognition
+                    .pattern_library
+                    .get_optimization_hint(pat)
+                {
+                    if let Some((_, ref current_best)) = best_hint {
+                        if hint.estimated_speedup > current_best.estimated_speedup {
+                            best_hint = Some((pat.clone(), hint.clone()));
+                        }
+                    } else {
+                        best_hint = Some((pat.clone(), hint.clone()));
+                    }
+                }
+            }
+        }
+
+        let (candidate_strategy, candidate_gain) = if let Some((pattern, hint)) = best_hint {
+            // Specialized algorithm selection driven by detected structural pattern
+            let gain = if pattern == MatrixPattern::Sparse {
+                (1.0 / (1.0 - max_sparsity)).max(hint.estimated_speedup).min(15.0)
+            } else {
+                hint.estimated_speedup
+            };
+            (OptimizationStrategy::AlgorithmSelection, gain)
+        } else if max_sparsity >= 0.70 {
             // Highly sparse: select sparse traversal algorithm
             let gain = (1.0 / (1.0 - max_sparsity)).min(15.0);
             (OptimizationStrategy::AlgorithmSelection, gain)
@@ -207,6 +241,32 @@ impl OptimizationEngine {
                 _ => 2.0,
             };
             (OptimizationStrategy::Vectorization, simd_width)
+        };
+
+        // Resolve candidate against registered/enabled strategies in MatrixOptimizer
+        let fallbacks = [
+            OptimizationStrategy::CacheOptimization,
+            OptimizationStrategy::Vectorization,
+            OptimizationStrategy::Parallelization,
+            OptimizationStrategy::AlgorithmSelection,
+            OptimizationStrategy::MemoryLayoutOptimization,
+        ];
+        let strategy = self
+            .optimizer
+            .resolve_strategy(candidate_strategy.clone(), &fallbacks)?;
+
+        let expected_gain = if strategy == candidate_strategy {
+            candidate_gain
+        } else {
+            // Strategy was downgraded because candidate is not enabled in optimizer registry
+            match strategy {
+                OptimizationStrategy::AlgorithmSelection => 3.0,
+                OptimizationStrategy::Parallelization => (num_cpus::get().min(8) as f64 * 0.75).max(1.5),
+                OptimizationStrategy::CacheOptimization => 2.5,
+                OptimizationStrategy::Vectorization => 2.0,
+                OptimizationStrategy::MemoryLayoutOptimization => 1.8,
+                OptimizationStrategy::Fusion => 2.0,
+            }
         };
 
         // Record the optimization in history
@@ -239,15 +299,16 @@ impl OptimizationEngine {
 }
 
 impl MatrixOptimizer {
-    /// Registers the three strategy variants and an empty history. **Scaffold**:
-    /// no method ever reads `optimization_strategies` or writes
-    /// `optimization_history` (STUBS.md §4).
+    /// Registers enabled optimization strategies and an empty history.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
+                OptimizationStrategy::AlgorithmSelection,
                 OptimizationStrategy::Vectorization,
                 OptimizationStrategy::CacheOptimization,
                 OptimizationStrategy::Parallelization,
+                OptimizationStrategy::MemoryLayoutOptimization,
+                OptimizationStrategy::Fusion,
             ],
             optimization_history: Vec::new(),
         }
@@ -256,6 +317,47 @@ impl MatrixOptimizer {
     /// No-op — there is no optimizer state to prepare.
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         Ok(())
+    }
+
+    /// Register an optimization strategy if not already present.
+    pub fn register_strategy(&mut self, strategy: OptimizationStrategy) {
+        if !self.optimization_strategies.contains(&strategy) {
+            self.optimization_strategies.push(strategy);
+        }
+    }
+
+    /// Unregister / disable an optimization strategy.
+    pub fn unregister_strategy(&mut self, strategy: &OptimizationStrategy) {
+        self.optimization_strategies.retain(|s| s != strategy);
+    }
+
+    /// Check if a specific optimization strategy is currently enabled.
+    pub fn is_strategy_enabled(&self, strategy: &OptimizationStrategy) -> bool {
+        self.optimization_strategies.contains(strategy)
+    }
+
+    /// Resolves an optimization strategy by checking if `preferred` is enabled,
+    /// otherwise trying each fallback in order, or returning the first enabled strategy.
+    /// Fails closed if no strategies are enabled.
+    pub fn resolve_strategy(
+        &self,
+        preferred: OptimizationStrategy,
+        fallbacks: &[OptimizationStrategy],
+    ) -> Result<OptimizationStrategy, LinearAlgebraError> {
+        if self.is_strategy_enabled(&preferred) {
+            return Ok(preferred);
+        }
+        for fallback in fallbacks {
+            if self.is_strategy_enabled(fallback) {
+                return Ok(fallback.clone());
+            }
+        }
+        if let Some(first) = self.optimization_strategies.first() {
+            return Ok(first.clone());
+        }
+        Err(LinearAlgebraError::OptimizationError(
+            "No optimization strategies are enabled in MatrixOptimizer".to_string(),
+        ))
     }
 }
 
@@ -287,6 +389,13 @@ impl MatrixAnalyzer {
     ) -> Result<MatrixAnalysis, LinearAlgebraError> {
         let detected = self.detect_structure(matrix);
         let sparsity = self.calculate_sparsity(matrix);
+
+        // Record recognized patterns into the PatternRecognition registry
+        for pattern in &detected {
+            if !self.pattern_recognition.recognized_patterns.contains(pattern) {
+                self.pattern_recognition.recognized_patterns.push(pattern.clone());
+            }
+        }
 
         // Determine recommended algorithms from optimization hints
         let mut recommended_algorithms = Vec::new();
@@ -682,9 +791,8 @@ impl MatrixAnalyzer {
 }
 
 impl PatternRecognition {
-    /// Creates the registry with an empty `recognized_patterns` list.
-    /// **Scaffold**: `recognized_patterns` is never populated — only the inner
-    /// `pattern_library` is used, by `MatrixAnalyzer` (STUBS.md §4).
+    /// Creates the registry with an empty `recognized_patterns` list, actively
+    /// populated during matrix analysis to record detected structural patterns.
     pub fn new() -> Self {
         Self {
             recognized_patterns: Vec::new(),
@@ -1577,5 +1685,94 @@ mod tests {
         assert_eq!(result.storage_format, StorageFormat::ColumnMajor);
         // Column-major reorganisation: [1, 4, 2, 5, 3, 6].
         assert_eq!(result.data, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+    }
+
+    // === Strategy registry and PatternRecognition tests ===
+
+    #[test]
+    fn test_pattern_recognition_accumulates_patterns() {
+        let mut analyzer = make_analyzer();
+        assert!(analyzer.pattern_recognition.recognized_patterns.is_empty());
+
+        // Analyze diagonal matrix
+        let m_diag = make_matrix("d", 3, 3, vec![1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 3.0]);
+        analyzer.analyze_matrix(&m_diag).unwrap();
+        assert!(analyzer
+            .pattern_recognition
+            .recognized_patterns
+            .contains(&MatrixPattern::Diagonal));
+
+        // Analyze Toeplitz matrix
+        let m_toep = make_matrix(
+            "t",
+            3,
+            3,
+            vec![1.0, 2.0, 3.0, 4.0, 1.0, 2.0, 5.0, 4.0, 1.0],
+        );
+        analyzer.analyze_matrix(&m_toep).unwrap();
+        assert!(analyzer
+            .pattern_recognition
+            .recognized_patterns
+            .contains(&MatrixPattern::Toeplitz));
+    }
+
+    #[test]
+    fn test_optimizer_strategy_registry_and_resolution() {
+        let mut opt = MatrixOptimizer::new();
+        assert!(opt.is_strategy_enabled(&OptimizationStrategy::AlgorithmSelection));
+        assert!(opt.is_strategy_enabled(&OptimizationStrategy::Parallelization));
+
+        // Unregister Parallelization
+        opt.unregister_strategy(&OptimizationStrategy::Parallelization);
+        assert!(!opt.is_strategy_enabled(&OptimizationStrategy::Parallelization));
+
+        // Resolving Parallelization should fall back to CacheOptimization
+        let fallbacks = [
+            OptimizationStrategy::CacheOptimization,
+            OptimizationStrategy::Vectorization,
+        ];
+        let chosen = opt
+            .resolve_strategy(OptimizationStrategy::Parallelization, &fallbacks)
+            .unwrap();
+        assert_eq!(chosen, OptimizationStrategy::CacheOptimization);
+
+        // Register it back
+        opt.register_strategy(OptimizationStrategy::Parallelization);
+        assert!(opt.is_strategy_enabled(&OptimizationStrategy::Parallelization));
+        let chosen2 = opt
+            .resolve_strategy(OptimizationStrategy::Parallelization, &fallbacks)
+            .unwrap();
+        assert_eq!(chosen2, OptimizationStrategy::Parallelization);
+    }
+
+    #[test]
+    fn test_optimize_multiplication_consults_hints_and_strategies() {
+        let mut engine = OptimizationEngine::new();
+        engine.initialize().unwrap();
+
+        // 1. Diagonal matrix operand should trigger AlgorithmSelection with ~10.0x gain
+        let m_diag = make_matrix("d", 3, 3, vec![2.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0]);
+        let m_dense = make_matrix("dn", 3, 3, vec![1.0; 9]);
+
+        let opt_mult = engine.optimize_multiplication(&m_diag, &m_dense).unwrap();
+        assert_eq!(
+            opt_mult.optimization_strategy,
+            OptimizationStrategy::AlgorithmSelection
+        );
+        assert!(opt_mult.expected_performance_gain >= 10.0);
+        assert_eq!(engine.optimizer.optimization_history.len(), 1);
+
+        // 2. If AlgorithmSelection is unregistered, optimizer should fall back to an enabled strategy
+        engine
+            .optimizer
+            .unregister_strategy(&OptimizationStrategy::AlgorithmSelection);
+        let opt_mult_fallback = engine.optimize_multiplication(&m_diag, &m_dense).unwrap();
+        assert_ne!(
+            opt_mult_fallback.optimization_strategy,
+            OptimizationStrategy::AlgorithmSelection
+        );
+        assert!(engine
+            .optimizer
+            .is_strategy_enabled(&opt_mult_fallback.optimization_strategy));
     }
 }
