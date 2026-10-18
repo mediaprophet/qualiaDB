@@ -37,6 +37,8 @@ fn test_all_viewport_shaders_naga_parse() {
         ("CLUSTER_LIGHT", CLUSTER_LIGHT_WGSL),
         ("SGGX_MICROFLAKE", SGGX_MICROFLAKE_WGSL),
         ("FOLIAGE_LOD", FOLIAGE_LOD_WGSL),
+        ("TEMPORAL_WARP", TEMPORAL_WARP_WGSL),
+        ("TILE_COMPACTION", TILE_COMPACTION_WGSL),
     ];
 
     for (name, source) in shaders {

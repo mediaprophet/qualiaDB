@@ -45,3 +45,5 @@ pub const PRECIPITATION_WGSL: &str = include_str!("precipitation.wgsl");
 pub const CLUSTER_LIGHT_WGSL: &str = include_str!("cluster_light.wgsl");
 pub const SGGX_MICROFLAKE_WGSL: &str = include_str!("sggx_microflake.wgsl");
 pub const FOLIAGE_LOD_WGSL: &str = include_str!("foliage_lod.wgsl");
+pub const TEMPORAL_WARP_WGSL: &str = include_str!("temporal_warp.wgsl");
+pub const TILE_COMPACTION_WGSL: &str = include_str!("tile_compaction.wgsl");
