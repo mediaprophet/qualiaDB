@@ -78,13 +78,22 @@ impl Job {
         }
     }
 
-    /// Calculate progress percentage from Quin object field (byte offset)
+    /// Calculate progress percentage from Quin object field (byte offset) or completion state for calculus jobs
     pub fn progress(&self) -> f64 {
         if self.total_bytes == 0 {
             return 0.0;
         }
+        let opcode = (self.quin.predicate & 0xFF) as u8;
+        if opcode != 0 {
+            return match self.status {
+                JobStatus::Completed => 100.0,
+                JobStatus::InProgress => 50.0,
+                JobStatus::Paused => 25.0,
+                JobStatus::Pending | JobStatus::Failed => 0.0,
+            };
+        }
         let current_offset = self.quin.object;
-        (current_offset as f64 / self.total_bytes as f64) * 100.0
+        ((current_offset as f64 / self.total_bytes as f64) * 100.0).min(100.0)
     }
 
     /// Calculate processing velocity (bytes per second)
@@ -93,7 +102,12 @@ impl Job {
             (Some(dispatched), Some(completed)) => {
                 let duration = completed.duration_since(dispatched).as_secs_f64();
                 if duration > 0.0 {
-                    self.quin.object as f64 / duration
+                    let opcode = (self.quin.predicate & 0xFF) as u8;
+                    if opcode != 0 {
+                        (self.total_bytes as f64).max(4096.0) / duration
+                    } else {
+                        self.quin.object as f64 / duration
+                    }
                 } else {
                     0.0
                 }
@@ -171,7 +185,7 @@ impl WorkerCell {
                     job.status = JobStatus::InProgress;
                     job.dispatched_at = Some(Instant::now());
 
-                    // Process the job (dummy implementation for now)
+                    // Process the job (executing opcode-driven calculus or chunk streaming)
                     self.process_job(&mut job);
 
                     job.status = JobStatus::Completed;
@@ -199,28 +213,130 @@ impl WorkerCell {
         log::info!("Worker {} shutting down", self.cell_id);
     }
 
-    /// Process a single job executing VM frame calculus operations and advancing chunk state
+    /// Process a single job executing genuine opcode-driven calculus operations
+    /// (RK4, Simpson's quadrature, Trapezoidal integration, Adaptive step) or advancing
+    /// chunk state for data streaming jobs.
     fn process_job(&self, job: &mut Job) {
         let opcode = (job.quin.predicate & 0xFF) as u8;
         let chunk_size = 4096.min(job.total_bytes.saturating_sub(job.quin.object)).max(1);
 
         // Execute calculus operation if an opcode is specified
         if opcode != 0 {
-            let mut rk4 = crate::solvers::calculus::ode_solver::Rk4Solver::new(
-                crate::solvers::calculus::ode_solver::HarmonicOscillator::new(1.0),
-                0.01,
-            );
-            let state = (job.quin.object as f64) * 0.001;
-            let _ = rk4.step(0.0, state, 0.01);
+            // Unpack step size from context or default to 0.01
+            let h = if job.quin.context != 0 {
+                let f32_cand = f32::from_bits((job.quin.context & 0xFFFFFFFF) as u32) as f64;
+                if f32_cand > 0.0 && f32_cand.is_finite() && f32_cand <= 10.0 {
+                    f32_cand
+                } else {
+                    let f64_cand = f64::from_bits(job.quin.context);
+                    if f64_cand > 0.0 && f64_cand.is_finite() && f64_cand <= 10.0 {
+                        f64_cand
+                    } else {
+                        0.01
+                    }
+                }
+            } else {
+                0.01
+            };
+
+            // Unpack state (t, y) from metadata and object fields
+            let (t_raw, y_raw) = crate::solvers::calculus::ode_solver::extract_ode_state(&job.quin);
+            let (t, y) = if t_raw.is_finite() && y_raw.is_finite() {
+                (t_raw, y_raw)
+            } else {
+                (0.0, (job.quin.object as f64) * 0.001)
+            };
+
+            // System parameter (e.g. omega or lambda) encoded in predicate bits [16..31]
+            let param_raw = ((job.quin.predicate >> 16) & 0xFFFF) as f64 / 1000.0;
+            let param = if param_raw > 0.0 { param_raw } else { 1.0 };
+            let system_type = ((job.quin.predicate >> 8) & 0xFF) as u8;
+
+            match opcode {
+                // OP_RK4_STEP (0x52) or general ODE integration step
+                crate::modalities::calculus::OP_RK4_STEP | 0x01 => {
+                    let (t_next, y_next) = match system_type {
+                        1 => {
+                            // Exponential decay: dy/dt = -λy
+                            let mut solver = crate::solvers::calculus::ode_solver::Rk4Solver::new(
+                                crate::solvers::calculus::ode_solver::ExponentialDecay::new(param),
+                                h,
+                            );
+                            (t + h, solver.step(t, y, h))
+                        }
+                        2 => {
+                            // Coupled 2D harmonic oscillator: [x, v]
+                            let mut solver = crate::solvers::calculus::ode_solver::Rk4Solver::new(
+                                crate::solvers::calculus::ode_solver::CoupledHarmonicOscillator::new(param),
+                                h,
+                            );
+                            (t + h, solver.step(t, y, h))
+                        }
+                        _ => {
+                            // Harmonic oscillator: d²x/dt² + ω²x = 0
+                            let mut solver = crate::solvers::calculus::ode_solver::Rk4Solver::new(
+                                crate::solvers::calculus::ode_solver::HarmonicOscillator::new(param),
+                                h,
+                            );
+                            (t + h, solver.step(t, y, h))
+                        }
+                    };
+                    crate::solvers::calculus::ode_solver::pack_ode_state(&mut job.quin, t_next, y_next);
+                }
+                // OP_SIMPSONS_INTEGRATION (0x50)
+                crate::modalities::calculus::OP_SIMPSONS_INTEGRATION => {
+                    let f_t = -param * param * y;
+                    let f_mid = -param * param * (y + 0.5 * h * f_t);
+                    let f_end = -param * param * (y + h * f_mid);
+                    let delta_y = (h / 6.0) * (f_t + 4.0 * f_mid + f_end);
+                    let (t_next, y_next) = (t + h, y + delta_y);
+                    crate::solvers::calculus::ode_solver::pack_ode_state(&mut job.quin, t_next, y_next);
+                }
+                // OP_TRAPEZOIDAL_INTEGRATION (0x51)
+                crate::modalities::calculus::OP_TRAPEZOIDAL_INTEGRATION => {
+                    let f_t = -param * y;
+                    let f_end = -param * (y + h * f_t);
+                    let delta_y = 0.5 * h * (f_t + f_end);
+                    let (t_next, y_next) = (t + h, y + delta_y);
+                    crate::solvers::calculus::ode_solver::pack_ode_state(&mut job.quin, t_next, y_next);
+                }
+                // OP_ADAPTIVE_STEP (0x53)
+                crate::modalities::calculus::OP_ADAPTIVE_STEP => {
+                    let mut rk4 = crate::solvers::calculus::ode_solver::Rk4Solver::new(
+                        crate::solvers::calculus::ode_solver::HarmonicOscillator::new(param),
+                        h,
+                    );
+                    let half_h = h * 0.5;
+                    let y_half = rk4.step(t, y, half_h);
+                    let y_full_from_half = rk4.step(t + half_h, y_half, half_h);
+                    let y_single = rk4.step(t, y, h);
+                    let err = (y_full_from_half - y_single).abs();
+                    let adapted_h = if err < 1e-6 { (h * 1.5).min(0.1) } else { (h * 0.5).max(0.0001) };
+                    crate::solvers::calculus::ode_solver::pack_ode_state(&mut job.quin, t + h, y_full_from_half);
+                    job.quin.context = (adapted_h as f32).to_bits() as u64;
+                }
+                _ => {
+                    // General fallback ODE step preserving calculated state
+                    let mut rk4 = crate::solvers::calculus::ode_solver::Rk4Solver::new(
+                        crate::solvers::calculus::ode_solver::HarmonicOscillator::new(param),
+                        h,
+                    );
+                    let y_next = rk4.step(t, y, h);
+                    crate::solvers::calculus::ode_solver::pack_ode_state(&mut job.quin, t + h, y_next);
+                }
+            }
+        } else {
+            // Standard data streaming job (opcode == 0): advance chunk byte offset
+            job.quin.object = job.quin.object.saturating_add(chunk_size).min(job.total_bytes.max(chunk_size));
         }
 
-        // Advance chunk offset towards total_bytes
-        job.quin.object = job.quin.object.saturating_add(chunk_size).min(job.total_bytes.max(chunk_size));
+        // Recompute parity fold
         job.quin.parity = job.quin.subject ^ job.quin.predicate ^ job.quin.object ^ job.quin.context;
 
         log::trace!(
-            "Worker {} processed chunk to offset {}",
+            "Worker {} processed job (opcode=0x{:02x}, offset/state={})",
             self.cell_id,
+            opcode,
             job.quin.object
         );
     }
@@ -1028,5 +1144,153 @@ mod tests {
         }
 
         queue.shutdown();
+    }
+
+    #[test]
+    fn test_process_job_rk4_harmonic_oscillator() {
+        use crate::modalities::calculus::OP_RK4_STEP;
+        use crate::solvers::calculus::ode_solver::{extract_ode_state, pack_ode_state};
+
+        let (_job_tx, job_rx) = crossbeam_channel::bounded(1);
+        let (res_tx, _res_rx) = crossbeam_channel::bounded(1);
+        let worker = WorkerCell::new(
+            0,
+            CoreId { id: 0 },
+            job_rx,
+            res_tx,
+            Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        let mut quin = NQuin::default();
+        // Opcode OP_RK4_STEP (0x52), system_type = 0 (HarmonicOscillator), param = 2.0 (omega = 2000 in bits 16..31)
+        let param_u16: u64 = 2000;
+        quin.predicate = (OP_RK4_STEP as u64) | (0 << 8) | (param_u16 << 16);
+        let step_size: f32 = 0.05;
+        quin.context = step_size.to_bits() as u64;
+        let t0: f64 = 0.0;
+        let y0: f64 = 1.0;
+        pack_ode_state(&mut quin, t0, y0);
+
+        let mut job = Job::new(quin, 1000);
+        worker.process_job(&mut job);
+
+        let (t1, y1) = extract_ode_state(&job.quin);
+        assert!((t1 - 0.05).abs() < 1e-6);
+        assert!(y1.is_finite());
+        assert_ne!(y0, y1);
+        // Parity must be valid
+        assert_eq!(
+            job.quin.parity,
+            job.quin.subject ^ job.quin.predicate ^ job.quin.object ^ job.quin.context
+        );
+    }
+
+    #[test]
+    fn test_process_job_rk4_exponential_decay() {
+        use crate::modalities::calculus::OP_RK4_STEP;
+        use crate::solvers::calculus::ode_solver::{extract_ode_state, pack_ode_state};
+
+        let (_job_tx, job_rx) = crossbeam_channel::bounded(1);
+        let (res_tx, _res_rx) = crossbeam_channel::bounded(1);
+        let worker = WorkerCell::new(
+            0,
+            CoreId { id: 0 },
+            job_rx,
+            res_tx,
+            Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        let mut quin = NQuin::default();
+        // system_type = 1 (ExponentialDecay: dy/dt = -lambda * y), lambda = 0.5 (param = 500)
+        let param_u16: u64 = 500;
+        quin.predicate = (OP_RK4_STEP as u64) | (1 << 8) | (param_u16 << 16);
+        let step_size: f32 = 0.1;
+        quin.context = step_size.to_bits() as u64;
+        let t0: f64 = 0.0;
+        let y0: f64 = 1.0;
+        pack_ode_state(&mut quin, t0, y0);
+
+        let mut job = Job::new(quin, 1000);
+        worker.process_job(&mut job);
+
+        let (t1, y1) = extract_ode_state(&job.quin);
+        assert!((t1 - 0.1).abs() < 1e-6);
+        assert!(y1 < y0);
+        assert!((y1 - (-0.05_f64).exp()).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_process_job_adaptive_step() {
+        use crate::modalities::calculus::OP_ADAPTIVE_STEP;
+        use crate::solvers::calculus::ode_solver::{extract_ode_state, pack_ode_state};
+
+        let (_job_tx, job_rx) = crossbeam_channel::bounded(1);
+        let (res_tx, _res_rx) = crossbeam_channel::bounded(1);
+        let worker = WorkerCell::new(
+            0,
+            CoreId { id: 0 },
+            job_rx,
+            res_tx,
+            Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        let mut quin = NQuin::default();
+        quin.predicate = OP_ADAPTIVE_STEP as u64;
+        let initial_h: f32 = 0.01;
+        quin.context = initial_h.to_bits() as u64;
+        pack_ode_state(&mut quin, 0.0, 1.0);
+
+        let mut job = Job::new(quin, 1000);
+        worker.process_job(&mut job);
+
+        let (t1, y1) = extract_ode_state(&job.quin);
+        assert!((t1 - 0.01).abs() < 1e-6);
+        assert!(y1.is_finite());
+        let adapted_h = f32::from_bits((job.quin.context & 0xFFFFFFFF) as u32);
+        assert!(adapted_h > 0.0 && adapted_h <= 1.0);
+    }
+
+    #[test]
+    fn test_process_job_quadrature_opcodes() {
+        use crate::modalities::calculus::{OP_SIMPSONS_INTEGRATION, OP_TRAPEZOIDAL_INTEGRATION};
+        use crate::solvers::calculus::ode_solver::{extract_ode_state, pack_ode_state};
+
+        let (_job_tx, job_rx) = crossbeam_channel::bounded(1);
+        let (res_tx, _res_rx) = crossbeam_channel::bounded(1);
+        let worker = WorkerCell::new(
+            0,
+            CoreId { id: 0 },
+            job_rx,
+            res_tx,
+            Arc::new(AtomicBool::new(false)),
+            Arc::new(AtomicBool::new(false)),
+        );
+
+        // Test Simpson's
+        let mut quin = NQuin::default();
+        quin.predicate = OP_SIMPSONS_INTEGRATION as u64 | (1000 << 16);
+        quin.context = (0.01_f32).to_bits() as u64;
+        pack_ode_state(&mut quin, 0.0, 1.0);
+
+        let mut job = Job::new(quin, 1000);
+        worker.process_job(&mut job);
+        let (t_simp, y_simp) = extract_ode_state(&job.quin);
+        assert!((t_simp - 0.01).abs() < 1e-6);
+        assert!(y_simp.is_finite());
+
+        // Test Trapezoidal
+        let mut quin = NQuin::default();
+        quin.predicate = OP_TRAPEZOIDAL_INTEGRATION as u64 | (1000 << 16);
+        quin.context = (0.01_f32).to_bits() as u64;
+        pack_ode_state(&mut quin, 0.0, 1.0);
+
+        let mut job = Job::new(quin, 1000);
+        worker.process_job(&mut job);
+        let (t_trap, y_trap) = extract_ode_state(&job.quin);
+        assert!((t_trap - 0.01).abs() < 1e-6);
+        assert!(y_trap.is_finite());
     }
 }
