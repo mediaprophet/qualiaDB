@@ -10,6 +10,7 @@ pub mod animation;
 pub mod atmosphere;
 pub mod camera;
 pub mod character;
+pub mod differential_codec;
 pub mod flora_archetype;
 pub mod ground_cover;
 pub mod hydro;
@@ -21,6 +22,11 @@ pub mod navmesh;
 pub mod optics;
 pub mod ripple;
 pub mod time;
+
+pub use differential_codec::{
+    DisocclusionForecaster, EntitySpatialBounds, KinematicExtrapolator,
+    ProgressiveMonteCarloGovernor, SaliencePerceptualGovernor, MAX_PREDICTED_DISOCCLUSIONS,
+};
 
 pub use animation::{
     AnimationStateMachine, Transform3D, TransitionMode, ZeroHeapSkeleton, MAX_BONES,
