@@ -8,6 +8,7 @@ pub const PROJECTOR_WGSL: &str = concat!(
 );
 pub const MESH_WGSL: &str = include_str!("mesh.wgsl");
 pub const WATER_WGSL: &str = include_str!("water.wgsl");
+pub const HYDROLOGIC_OPTICS_WGSL: &str = include_str!("hydrologic_optics.wgsl");
 pub const SUN_SHADOW_WGSL: &str = include_str!("sun_shadow.wgsl");
 pub const AO_PREPASS_WGSL: &str = include_str!("ao_prepass.wgsl");
 pub const AO_GENERATE_WGSL: &str = include_str!("ao_generate.wgsl");
@@ -39,3 +40,8 @@ pub const HOLOGRAPHIC_WGSL: &str = concat!(
     include_str!("spectral.wgsl"),
     include_str!("holographic.wgsl")
 );
+pub const SWE_SOLVER_WGSL: &str = include_str!("swe_solver.wgsl");
+pub const PRECIPITATION_WGSL: &str = include_str!("precipitation.wgsl");
+pub const CLUSTER_LIGHT_WGSL: &str = include_str!("cluster_light.wgsl");
+pub const SGGX_MICROFLAKE_WGSL: &str = include_str!("sggx_microflake.wgsl");
+pub const FOLIAGE_LOD_WGSL: &str = include_str!("foliage_lod.wgsl");

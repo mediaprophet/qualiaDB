@@ -31,7 +31,7 @@ struct VertexOutput {
     @location(1) world_normal: vec3<f32>,
     @location(2) spectral_coeffs: vec3<f32>,
     @location(3) roughness: f32,
-    @location(4) flags: u32,
+    @location(4) @interpolate(flat) flags: u32,
 };
 
 struct GBufferOutput {

@@ -1,0 +1,15 @@
+[package]
+name = "qualia-sim"
+version = "0.0.40"
+edition = "2021"
+authors = ["QualiaDB Project Team"]
+description = "QualiaDB deterministic simulation engine: 64 Hz fixed timestep accumulator, zero-heap bitset input, touch controls, and camera unprojection"
+license = "Apache-2.0"
+
+[dependencies]
+bytemuck = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+qualia-core-db = { workspace = true }
+
+[dev-dependencies]

@@ -179,5 +179,20 @@ pub mod spatiotemporal_predicates;
 pub use spatiotemporal_predicates::*;
 pub mod spatiotemporal_linguistics;
 pub use spatiotemporal_linguistics::*;
+pub mod hydrology;
+pub use hydrology::{
+    evaluate_hydrological_frame, pack_hydro_barometric_quin, pack_hydro_submersion_quin,
+    pack_hydro_wetness_quin, unpack_hydro_submersion_quin, unpack_hydro_wetness_quin, HydroError,
+    HydroVerdict, OP_HYDRO_BAROMETRIC, OP_HYDRO_CURRENT, OP_HYDRO_PRECIPITATION,
+    OP_HYDRO_SUBMERSION, OP_HYDRO_THERMAL, OP_HYDRO_WETNESS, SUBMERSION_DIVING, SUBMERSION_DRY,
+    SUBMERSION_SWIMMING, SUBMERSION_WADING,
+};
+pub mod botany;
+pub use botany::{
+    evaluate_botanical_frame, pack_botany_metamer_quin, pack_botany_phenology_quin,
+    pack_botany_turgor_quin, unpack_botany_metamer_quin, unpack_botany_turgor_quin, BotanyError,
+    BotanyVerdict, OP_BOTANY_ECOTOPE, OP_BOTANY_METAMER, OP_BOTANY_PHENOLOGY,
+    OP_BOTANY_RAUNKIAER, OP_BOTANY_TURGOR, OP_BOTANY_VASCULAR,
+};
 
 
