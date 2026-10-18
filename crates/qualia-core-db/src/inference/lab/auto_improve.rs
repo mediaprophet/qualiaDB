@@ -38,6 +38,7 @@ pub struct LabConfig {
 }
 
 impl LabConfig {
+    /// Serializes toggles to JSON for the experiment log.
     pub fn toggles_json(&self) -> String {
         format!(
             "{{\"resident\":{},\"coop\":{},\"ffn_fusion\":{},\"kv_int8\":{},\"mode\":\"{}\",\"backend\":\"{}\"}}",
@@ -50,6 +51,7 @@ impl LabConfig {
         )
     }
 
+    /// Applies the lab config globally.
     pub fn apply(&self) {
         set_resident_decode(self.resident);
         set_resident_prefill(self.resident);
@@ -550,6 +552,7 @@ fn build_methodology(
     s
 }
 
+/// Renders a lock-in package summary.
 pub fn format_lockin_summary(pkg: &LockInPackage) -> String {
     format!(
         "LOCK-IN SUMMARY\n  out_dir:     {}\n  trials:      {}\n  generations: {}\n  elapsed_s:   {:.1}\n  best_tok_s:  {:?}\n  best_label:  {}\n  ollama_tok_s:{:?}\n  a_gap:       {:?}\n",

@@ -29,6 +29,7 @@ pub struct Provenance {
 
 impl Provenance {
     #[allow(clippy::too_many_arguments)]
+    /// Creates `Provenance` with the given state.
     pub fn new(
         kind: ArtifactKind,
         corpus_hash: u64,

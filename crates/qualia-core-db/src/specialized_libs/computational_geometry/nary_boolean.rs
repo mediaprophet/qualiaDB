@@ -128,14 +128,17 @@ impl BoolExpr {
 pub struct RegionMask(pub u64);
 
 impl RegionMask {
+    /// Empty value.
     pub fn empty() -> Self {
         Self(0)
     }
 
+    /// Builder: sets the operand bit.
     pub fn with(self, operand: usize) -> Self {
         Self(self.0 | (1u64 << operand))
     }
 
+    /// `true` when operand `operand` is in the mask.
     pub fn contains(self, operand: usize) -> bool {
         if operand >= 64 {
             return false;
@@ -143,26 +146,32 @@ impl RegionMask {
         (self.0 & (1u64 << operand)) != 0
     }
 
+    /// `true` when no operands are set.
     pub fn is_empty(self) -> bool {
         self.0 == 0
     }
 
+    /// Bitwise union of two masks.
     pub fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
     }
 
+    /// Bitwise intersection.
     pub fn intersection(self, other: Self) -> Self {
         Self(self.0 & other.0)
     }
 
+    /// Bitwise complement within the operand universe.
     pub fn complement(self) -> Self {
         Self(!self.0)
     }
 
+    /// `self` minus `other`.
     pub fn difference(self, other: Self) -> Self {
         Self(self.0 & !other.0)
     }
 
+    /// Symmetric difference.
     pub fn xor(self, other: Self) -> Self {
         Self(self.0 ^ other.0)
     }

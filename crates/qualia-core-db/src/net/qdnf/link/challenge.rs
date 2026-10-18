@@ -31,6 +31,7 @@ pub struct ChallengeTable {
 }
 
 impl ChallengeTable {
+    /// Creates a default `ChallengeTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_PENDING_CHALLENGES],
@@ -66,6 +67,7 @@ impl ChallengeTable {
         Ok(challenge)
     }
 
+    /// Verifies integrity; fails closed on mismatch.
     pub fn verify(
         &self,
         tag: &[u8; CHALLENGE_TAG_LEN],

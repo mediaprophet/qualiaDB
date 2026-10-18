@@ -47,6 +47,7 @@ pub fn enable(n_layer: u32, n_chan: u32) -> Result<(), String> {
     Ok(())
 }
 
+/// Disables AWQ globally.
 pub fn disable() {
     ENABLED.store(false, Ordering::Relaxed);
 }
@@ -110,6 +111,7 @@ pub fn snapshot() -> Vec<Vec<f32>> {
 }
 
 #[inline]
+/// `true` when enabled.
 pub fn is_enabled() -> bool {
     ENABLED.load(Ordering::Relaxed)
 }

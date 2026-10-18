@@ -51,6 +51,7 @@ pub(crate) struct SsmLayerStateLayout {
 }
 
 impl SsmLayerStateLayout {
+    /// Creates `SsmLayerStateLayout` with the given state.
     pub(crate) fn new(inner_dim: usize, d_state: usize, d_head: usize, n_heads: usize) -> Self {
         let conv_len = CONV_HISTORY_DEPTH * inner_dim;
         let delta_len = d_state * d_head * n_heads;

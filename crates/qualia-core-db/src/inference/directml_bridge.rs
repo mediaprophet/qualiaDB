@@ -49,6 +49,7 @@ pub enum DmlStatus {
 }
 
 impl DmlStatus {
+    /// Stable human-readable status string.
     pub fn message(self) -> &'static str {
         match self {
             Self::Success => "success",
@@ -342,11 +343,13 @@ pub struct AdapterMemoryInfo {
 }
 
 impl AdapterMemoryInfo {
+    /// Available local (dedicated) VRAM.
     pub fn available_local_bytes(&self) -> u64 {
         self.local_budget_bytes
             .saturating_sub(self.local_usage_bytes)
     }
 
+    /// Available shared system memory.
     pub fn available_shared_bytes(&self) -> u64 {
         self.shared_budget_bytes
             .saturating_sub(self.shared_usage_bytes)
@@ -484,6 +487,7 @@ impl DmlDevice {
     }
 }
 
+/// Probes the best DML adapter's memory; `Err` when none.
 pub fn probe_best_adapter_memory() -> windows::core::Result<AdapterMemoryInfo> {
     unsafe {
         let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))?;
@@ -492,6 +496,7 @@ pub fn probe_best_adapter_memory() -> windows::core::Result<AdapterMemoryInfo> {
     }
 }
 
+/// Probes the NPU adapter's memory; `Err` when none.
 pub fn probe_npu_adapter_memory() -> windows::core::Result<AdapterMemoryInfo> {
     unsafe {
         let factory: IDXGIFactory4 = CreateDXGIFactory2(DXGI_CREATE_FACTORY_FLAGS(0))?;

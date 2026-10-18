@@ -48,15 +48,19 @@ impl ActivityCue {
     }
 }
 impl ActivityTimeline {
+    /// Current timeline position.
     pub fn time(&self) -> f64 {
         self.time
     }
+    /// All scheduled cues.
     pub fn cues(&self) -> impl Iterator<Item = &ActivityCue> {
         self.cues.iter().flatten()
     }
+    /// Cue for joint `joint`.
     pub fn cue(&self, joint: u64) -> Option<ActivityCue> {
         self.cues().find(|cue| cue.joint == joint).copied()
     }
+    /// Validates the timeline; `ActivityError` on violation.
     pub fn validate(&self) -> Result<(), ActivityError> {
         if !self.time.is_finite() || !(0.0..=1e12).contains(&self.time) {
             return Err(ActivityError::InvalidInput);

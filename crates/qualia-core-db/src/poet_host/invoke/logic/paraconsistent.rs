@@ -9,6 +9,7 @@ use vibe::{DiagCode, Diagnostic, Span, Value};
 
 const MAX: usize = 64;
 
+/// VibeScript seam: paraconsistent-logic route.
 pub fn route(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let extra = extra_quins(args);
     snap.with_live_quins(|quins| {

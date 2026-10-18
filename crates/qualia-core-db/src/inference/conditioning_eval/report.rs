@@ -10,6 +10,7 @@ pub struct PairedComparison {
 }
 
 impl PairedComparison {
+    /// Paired delta between baseline and candidate.
     pub fn delta(&self) -> f32 {
         self.compiled_score.composite_score() - self.baseline_score.composite_score()
     }
@@ -22,6 +23,7 @@ pub struct EvaluationReport {
 }
 
 impl EvaluationReport {
+    /// Creates a default `EvaluationReport`.
     pub fn new(run_id: impl Into<String>) -> Self {
         Self {
             run_id: run_id.into(),
@@ -29,6 +31,7 @@ impl EvaluationReport {
         }
     }
 
+    /// Mean improvement across comparisons.
     pub fn average_improvement(&self) -> f32 {
         if self.comparisons.is_empty() {
             return 0.0;

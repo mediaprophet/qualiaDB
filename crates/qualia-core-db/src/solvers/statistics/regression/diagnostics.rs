@@ -79,6 +79,7 @@ pub struct ArchLmResult {
     pub q: usize,
 }
 
+/// ARCH Lagrange-multiplier test on `residuals` at lag `q`.
 pub fn arch_lm(residuals: &[f64], q: usize) -> Option<ArchLmResult> {
     let n = residuals.len();
     if q == 0 || n <= q + 2 {
@@ -112,6 +113,7 @@ pub struct DurbinWatsonResult {
     pub approx_p_value: f64,
 }
 
+/// `?::durbin_watson`.
 pub fn durbin_watson(residuals: &[f64]) -> Option<DurbinWatsonResult> {
     let n = residuals.len();
     if n < 3 {
@@ -148,6 +150,7 @@ pub struct BoxPearceResult {
     pub p_value: f64,
 }
 
+/// Box-Pierce autocorrelation test on `residuals`.
 pub fn box_pearce_ac(residuals: &[f64]) -> Option<BoxPearceResult> {
     let n = residuals.len();
     if n < 4 {
@@ -252,6 +255,7 @@ pub struct ChowResult {
     pub df_den: f64,
 }
 
+/// Chow structural-break test between two subsamples.
 pub fn chow_test(
     x: &[f64],
     y: &[f64],
@@ -301,6 +305,7 @@ pub struct SymmetryResult {
     pub p_value: f64,
 }
 
+/// Symmetry diagnostic on residuals.
 pub fn residual_symmetry(residuals: &[f64]) -> Option<SymmetryResult> {
     let n = residuals.len();
     if n < 5 {
@@ -337,6 +342,7 @@ pub struct RunsResult {
     pub p_value: f64,
 }
 
+/// Runs test on residual signs.
 pub fn residual_runs(residuals: &[f64]) -> Option<RunsResult> {
     let n = residuals.len();
     if n < 8 {

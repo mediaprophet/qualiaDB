@@ -18,6 +18,9 @@ pub struct JsonLdFlatTriple {
     pub o: String,
 }
 
+/// Parses a JSON array of flat `{s,p,o}` triples and returns them as a JS
+/// array of `{subject,predicate,object}` objects; `JsValue::NULL` on parse
+/// failure.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_json_wasm(payload: &str) -> JsValue {
@@ -74,6 +77,8 @@ pub struct CsvFieldMapping {
     pub datatype: String, // "integer", "float", "datetime", "string"
 }
 
+/// Parses CSV text per `CsvParseParams` field mappings into Quins via
+/// `csv_parser::parse_csv_to_quins`, returning them as a JS value.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -157,6 +162,8 @@ pub struct JsonFieldMapping {
     pub datatype: String, // "integer", "float", "datetime", "string"
 }
 
+/// Parses JSON records per a mapping profile (JSONPath-ish field → predicate)
+/// into Quins, returned as a JS value.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn parse_json_mapping_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -231,6 +238,8 @@ pub struct CsvSerializeParams {
     pub datatypes: Vec<String>,
 }
 
+/// Serializes the given Quins to CSV text following the provided column
+/// profile, returned as a JS string.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn serialize_csv_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -293,6 +302,8 @@ pub struct JsonSerializeParams {
     pub datatypes: Vec<String>,
 }
 
+/// Serializes the given Quins to a JSON payload following the provided
+/// mapping profile, returned as a JS value.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn serialize_json_wasm(val: JsValue) -> Result<JsValue, JsValue> {
@@ -408,6 +419,8 @@ pub struct HmcEntryInfo {
     pub length: u64,
 }
 
+/// Lists the entries (key, kind, offset, length) of an HMC bundle as a JS
+/// array; errors when the bundle fails to parse.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn list_hmc_bundle_entries_wasm(bundle_bytes: &[u8]) -> Result<JsValue, JsValue> {
@@ -426,6 +439,9 @@ pub fn list_hmc_bundle_entries_wasm(bundle_bytes: &[u8]) -> Result<JsValue, JsVa
     Ok(serde_wasm_bindgen::to_value(&entries)?)
 }
 
+/// Reads entry `key` from an HMC bundle, verifying its checksum before
+/// returning the raw bytes; errors on parse failure, missing key, or checksum
+/// mismatch.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn read_hmc_bundle_entry_wasm(bundle_bytes: &[u8], key: &str) -> Result<Vec<u8>, JsValue> {
@@ -453,6 +469,9 @@ pub struct WasmQ42Session {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl WasmQ42Session {
+    /// Creates a new durable Q42 session for `world_did_hash` over an
+    /// in-memory journal; `base_digest_bytes` supplies the 32-byte base digest
+    /// (shorter inputs error).
     #[wasm_bindgen(constructor)]
     pub fn new(world_did_hash: u64, base_digest_bytes: &[u8]) -> Result<WasmQ42Session, JsValue> {
         if base_digest_bytes.len() < 32 {
@@ -495,6 +514,8 @@ impl WasmQ42Session {
         Ok(WasmQ42Session { inner: session })
     }
 
+    /// Stages an add of the quin built from `(s,p,o,c,m)` — parity is computed
+    /// as the XOR fold — into the current transaction.
     pub fn stage_add_quin(&mut self, s: u64, p: u64, o: u64, c: u64, m: u64) {
         let parity = s ^ p ^ o ^ c ^ m;
         self.inner.stage_add(crate::NQuin {
@@ -507,6 +528,8 @@ impl WasmQ42Session {
         });
     }
 
+    /// Stages a remove of the quin built from `(s,p,o,c,m)` (XOR-fold parity
+    /// computed) in the current transaction.
     pub fn stage_remove_quin(&mut self, s: u64, p: u64, o: u64, c: u64, m: u64) {
         let parity = s ^ p ^ o ^ c ^ m;
         self.inner.stage_remove(crate::NQuin {
@@ -519,10 +542,13 @@ impl WasmQ42Session {
         });
     }
 
+    /// Discards all staged adds/removes in the open transaction.
     pub fn rollback_staged(&mut self) {
         self.inner.rollback_staged();
     }
 
+    /// Commits staged mutations to the journal under `command_hash`/`actor_did`
+    /// provenance; returns the committed tick/sequence.
     pub fn commit_transaction(
         &mut self,
         command_hash: u64,
@@ -533,10 +559,12 @@ impl WasmQ42Session {
             .map_err(|e| JsValue::from_str(&format!("Commit error: {e}")))
     }
 
+    /// Number of quins in the session's active state.
     pub fn active_quin_count(&self) -> usize {
         self.inner.active_state.len()
     }
 
+    /// Exports the underlying journal's raw bytes (durable serialization).
     pub fn export_journal_bytes(&self) -> Vec<u8> {
         self.inner.journal.storage.get_ref().clone()
     }
@@ -592,10 +620,12 @@ impl WasmQ42Session {
             .map_err(|e| JsValue::from_str(&format!("Rewind error: {e}")))
     }
 
+    /// The session's current logical tick.
     pub fn current_tick(&self) -> u64 {
         self.inner.current_tick()
     }
 
+    /// Advances the session clock to `tick` (Lamport-style; must be monotone).
     pub fn advance_tick(&mut self, tick: u64) {
         self.inner.advance_tick(tick);
     }
@@ -612,6 +642,7 @@ pub struct WasmSimulationWorld {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 impl WasmSimulationWorld {
+    /// Creates a deterministic fixed-tick simulation world with RNG `seed`.
     #[wasm_bindgen(constructor)]
     pub fn new(seed: u64) -> WasmSimulationWorld {
         WasmSimulationWorld {
@@ -619,10 +650,14 @@ impl WasmSimulationWorld {
         }
     }
 
+    /// Registers `entity_id` at position `(x_mm, y_mm)`; `false` if the entity
+    /// table is full.
     pub fn register_agent(&mut self, entity_id: u64, x_mm: i64, y_mm: i64) -> bool {
         self.inner.register_agent(entity_id, x_mm, y_mm)
     }
 
+    /// Queues a `SimulationCommand` for `target_tick`; rejected commands
+    /// return a JS error describing the rejection reason.
     pub fn submit_command(
         &mut self,
         target_tick: u64,
@@ -647,6 +682,8 @@ impl WasmSimulationWorld {
             .map_err(|e| JsValue::from_str(&format!("Command rejected: {e:?}")))
     }
 
+    /// Advances the simulation one tick, draining the command queue; returns
+    /// the number of receipts produced.
     pub fn step_tick(&mut self) -> usize {
         let mut receipts = [crate::simulation::fixed_tick::CommandReceipt::Rejected {
             tick: 0,
@@ -656,18 +693,22 @@ impl WasmSimulationWorld {
         self.inner.step_tick(&mut receipts)
     }
 
+    /// Deterministic hash of the world state (for replay verification).
     pub fn compute_state_hash(&self) -> u64 {
         self.inner.compute_state_hash()
     }
 
+    /// The current simulation tick.
     pub fn current_tick(&self) -> u64 {
         self.inner.current_tick
     }
 
+    /// X position of `entity_id` in millimetres, or `None` if unregistered.
     pub fn get_agent_pos_x_mm(&self, entity_id: u64) -> Option<i64> {
         self.inner.get_agent_position(entity_id).map(|(x, _)| x)
     }
 
+    /// Y position of `entity_id` in millimetres, or `None` if unregistered.
     pub fn get_agent_pos_y_mm(&self, entity_id: u64) -> Option<i64> {
         self.inner.get_agent_position(entity_id).map(|(_, y)| y)
     }
@@ -750,6 +791,8 @@ impl WasmSimulationWorld {
 
 // ─── Ontological Entity Verification (.10d & .hmc) ───────────────────────────
 
+/// Runs ontological entity verification over a `.10d` container and returns
+/// the report as a JS value (`NULL` on serialization failure).
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn entity_verify_10d_wasm(bytes: &[u8]) -> JsValue {
@@ -757,6 +800,8 @@ pub fn entity_verify_10d_wasm(bytes: &[u8]) -> JsValue {
     serde_wasm_bindgen::to_value(&report).unwrap_or(JsValue::NULL)
 }
 
+/// Runs ontological entity verification over an `.hmc` bundle and returns
+/// the report as a JS value (`NULL` on serialization failure).
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn entity_verify_bundle_wasm(bytes: &[u8]) -> JsValue {

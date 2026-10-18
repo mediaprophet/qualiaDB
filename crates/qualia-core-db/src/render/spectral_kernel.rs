@@ -203,6 +203,7 @@ pub struct Xyz {
 
 impl Xyz {
     #[inline]
+    /// Creates `Xyz` with the given state.
     pub fn new(x: f32, y: f32, z: f32) -> Self {
         Self { x, y, z }
     }
@@ -219,6 +220,7 @@ pub struct LinearRgb {
 
 impl LinearRgb {
     #[inline]
+    /// Creates the type.
     pub fn new(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b }
     }

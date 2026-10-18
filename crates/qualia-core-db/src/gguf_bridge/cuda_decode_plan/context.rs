@@ -5,6 +5,7 @@
 
 use crate::gguf_bridge::{KvCacheLayout, KV_CACHE_MAX_BYTES, MAX_CUDA_CONTEXT_WINDOW};
 
+/// Configured dense layout.
 pub(super) fn configured_dense_layout(base: KvCacheLayout) -> Option<KvCacheLayout> {
     let mut layout = base.dense_device_layout()?;
     let requested = std::env::var("QUALIA_CUDA_CONTEXT")

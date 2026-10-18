@@ -92,6 +92,7 @@ pub enum CompressionType {
 }
 
 impl MeshDataStore {
+    /// Creates a store with fresh message store, buffer manager, priority queue, and persistence manager.
     pub fn new() -> Self {
         Self {
             message_store: MessageStore::new(),
@@ -101,36 +102,44 @@ impl MeshDataStore {
         }
     }
 
+    /// No-op returning `Ok(())` — the in-memory store needs no setup.
     pub fn initialize(&mut self) -> Result<(), MeshError> {
         // Initialize data store
         Ok(())
     }
 
+    /// Delegates to the inner `MessageStore`; `MeshError` propagates.
     pub fn store_message(&mut self, message: StoredMessage) -> Result<(), MeshError> {
         self.message_store.store_message(message)?;
         Ok(())
     }
 
+    /// Count of messages held in the store.
     pub fn get_pending_message_count(&self) -> u32 {
         self.message_store.get_pending_count()
     }
 
+    /// Shared access to the buffer manager.
     pub fn buffer_manager(&self) -> &BufferManager {
         &self.buffer_manager
     }
 
+    /// Mutable access to the buffer manager.
     pub fn buffer_manager_mut(&mut self) -> &mut BufferManager {
         &mut self.buffer_manager
     }
 
+    /// Shared access to the priority queue.
     pub fn priority_queue(&self) -> &PriorityQueue {
         &self.priority_queue
     }
 
+    /// Shared access to the persistence manager.
     pub fn persistence_manager(&self) -> &PersistenceManager {
         &self.persistence_manager
     }
 
+    /// **Scaffold** — sets `used_capacity` to 0 labeled "compaction" without actually freeing or compacting buffers; desyncs accounting if real buffers back the counter.
     pub fn optimize_buffers(&mut self) -> Result<(), MeshError> {
         // Reset buffer usage to zero (compaction).
         self.buffer_manager.used_capacity = 0;
@@ -139,6 +148,7 @@ impl MeshDataStore {
 }
 
 impl MessageStore {
+    /// Creates an empty store (HashMap keyed by message ID).
     pub fn new() -> Self {
         Self {
             stored_messages: HashMap::new(),
@@ -146,12 +156,14 @@ impl MessageStore {
         }
     }
 
+    /// Inserts/updates `message` keyed by `message_id`.
     pub fn store_message(&mut self, message: StoredMessage) -> Result<(), MeshError> {
         self.stored_messages
             .insert(message.message_id.clone(), message);
         Ok(())
     }
 
+    /// Number of stored messages.
     pub fn get_pending_count(&self) -> u32 {
         self.stored_messages
             .values()
@@ -161,6 +173,7 @@ impl MessageStore {
 }
 
 impl MessageIndex {
+    /// Creates an empty message index.
     pub fn new() -> Self {
         Self {
             source_index: HashMap::new(),
@@ -172,6 +185,7 @@ impl MessageIndex {
 }
 
 impl BufferManager {
+    /// Creates a buffer manager with zeroed usage.
     pub fn new() -> Self {
         Self {
             total_capacity: 10 * 1024 * 1024, // 10MB
@@ -182,6 +196,7 @@ impl BufferManager {
 }
 
 impl BufferPool {
+    /// Creates an empty buffer pool.
     pub fn new() -> Self {
         Self {
             pool_size: 100,
@@ -193,6 +208,7 @@ impl BufferPool {
 }
 
 impl PriorityQueue {
+    /// Creates an empty priority queue.
     pub fn new() -> Self {
         Self {
             queues: HashMap::new(),
@@ -202,6 +218,7 @@ impl PriorityQueue {
 }
 
 impl PersistenceManager {
+    /// Creates a persistence manager (in-memory scaffolding — no durable backend wired).
     pub fn new() -> Self {
         Self {
             storage_backend: StorageBackend::Memory,

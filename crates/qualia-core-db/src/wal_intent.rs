@@ -115,6 +115,7 @@ pub struct IntentTable {
 }
 
 impl IntentTable {
+    /// Creates a default `IntentTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {
@@ -160,10 +161,12 @@ impl IntentTable {
         Ok(authority_generation)
     }
 
+    /// Commits `tx` at `authority_generation`; error when stale/unknown.
     pub fn commit(&mut self, tx: TxId, authority_generation: Generation) -> Result<(), QdnfError> {
         self.transition(tx, authority_generation, MarkerKind::Commit)
     }
 
+    /// Aborts `tx`.
     pub fn abort(&mut self, tx: TxId, authority_generation: Generation) -> Result<(), QdnfError> {
         self.transition(tx, authority_generation, MarkerKind::Abort)
     }
@@ -223,10 +226,12 @@ impl IntentTable {
         Ok(produced)
     }
 
+    /// Honest probe: `false` — a local pin does not imply remote custody.
     pub fn local_pin_implies_remote_custody() -> bool {
         false
     }
 
+    /// Honest probe: `false` — local commit is not remote-atomic.
     pub fn local_commit_is_remote_atomic() -> bool {
         false
     }

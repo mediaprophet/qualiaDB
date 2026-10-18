@@ -8,6 +8,7 @@ pub struct Fetch10dService {
 }
 
 impl Fetch10dService {
+    /// Creates a default `Fetch10dService`.
     pub fn new() -> Self {
         Self {}
     }

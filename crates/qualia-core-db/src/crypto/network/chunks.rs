@@ -46,6 +46,7 @@ pub struct ChunkTable {
 }
 
 impl ChunkTable {
+    /// Creates a default `ChunkTable`.
     pub const fn new() -> Self {
         Self {
             slots: [
@@ -137,6 +138,7 @@ impl ChunkTable {
         Ok(())
     }
 
+    /// Expiry timestamp for in-flight `flight`; `CryptoError` when unknown.
     pub fn expiry(&self, flight: u8) -> Result<u64, CryptoError> {
         Ok(self.slot(flight)?.meta.expiry_unix)
     }

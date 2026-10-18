@@ -12,12 +12,14 @@ pub struct LocationTriggerRegistry {
 }
 
 impl LocationTriggerRegistry {
+    /// Creates an empty trigger registry.
     pub fn new() -> Self {
         Self {
             region_rules: HashMap::new(),
         }
     }
 
+    /// Registers `rule_quin` to fire in `region_hash`.
     pub fn register_trigger(&mut self, region_hash: u64, rule_quin: NQuin) {
         self.region_rules
             .entry(region_hash)
@@ -25,6 +27,7 @@ impl LocationTriggerRegistry {
             .push(rule_quin);
     }
 
+    /// All rule quins registered for `location_hash`.
     pub fn evaluate_triggers_at(&self, location_hash: u64) -> Vec<NQuin> {
         let mut triggers = Vec::new();
         if let Some(rules) = self.region_rules.get(&location_hash) {
@@ -47,12 +50,14 @@ pub struct LocationTriggerEngine {
 }
 
 impl LocationTriggerEngine {
+    /// Creates a trigger engine with an empty registry.
     pub fn new() -> Self {
         Self {
             registry: LocationTriggerRegistry::new(),
         }
     }
 
+    /// Registers a trigger rule in `region_hash`.
     pub fn register_trigger(&mut self, region_hash: u64, rule_quin: NQuin) {
         self.registry.register_trigger(region_hash, rule_quin);
     }

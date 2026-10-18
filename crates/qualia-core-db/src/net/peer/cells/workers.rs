@@ -22,6 +22,7 @@ pub struct WorkerFence {
 }
 
 impl WorkerFence {
+    /// `WorkerFence::vacant`.
     pub const fn vacant() -> Self {
         Self {
             generation: Generation::ZERO,
@@ -35,21 +36,25 @@ impl WorkerFence {
     }
 
     #[inline]
+    /// `WorkerFence::epoch`.
     pub const fn epoch(&self) -> Generation {
         self.epoch
     }
 
     #[inline]
+    /// `WorkerFence::cancelled`.
     pub const fn cancelled(&self) -> bool {
         self.cancelled
     }
 
     #[inline]
+    /// `true` when failed.
     pub const fn failed(&self) -> bool {
         self.failed
     }
 
     #[inline]
+    /// `true` when writer.
     pub const fn is_writer(&self) -> bool {
         self.writer
     }

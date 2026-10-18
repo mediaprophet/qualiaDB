@@ -84,6 +84,7 @@ impl AoQualitySettings {
         }
     }
 
+    /// `AoQualitySettings::disabled`.
     pub const fn disabled() -> Self {
         Self {
             tier: AoQualityTier::Disabled,

@@ -126,6 +126,7 @@ impl QTensorEngine {
     }
 
     #[cfg(feature = "gpu-runtime")]
+    /// Writes `weight-words`.
     pub(crate) fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
         let weight_buf = self.gemm_weight_buf.as_ref().expect("gemm weight buf");
         let upload = if raw.len() <= max_bytes {

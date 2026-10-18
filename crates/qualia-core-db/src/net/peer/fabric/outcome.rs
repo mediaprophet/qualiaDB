@@ -5,6 +5,7 @@ use super::evidence::PathEvidence;
 use super::kernel::{FabricError, FabricState, Kernel};
 use super::wire::{decode_accept, encode_accept, encode_reject, RejectReason};
 
+/// Maps a `FabricError` to a `RejectReason`.
 pub fn reject_reason(err: FabricError) -> RejectReason {
     match err {
         FabricError::StaleDescriptor => RejectReason::Stale,
@@ -36,6 +37,7 @@ pub fn encode_outcome(
     }
 }
 
+/// Decodes `outcome_accept`; fails closed on malformed input.
 pub fn decode_outcome_accept(
     bytes: &[u8],
 ) -> Result<(super::carrier::PathClass, u32), FabricError> {

@@ -2,6 +2,7 @@
 use super::super::*;
 
 impl QTensorEngine {
+    /// Dynamic-offset uniform binding for `buf`.
     pub(crate) fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {
         wgpu::BindingResource::Buffer(wgpu::BufferBinding {
             buffer: buf,
@@ -10,6 +11,7 @@ impl QTensorEngine {
         })
     }
 
+    /// Packs GEMM dispatch params for the MC8 kernel.
     pub(crate) fn mc8_gemm_params(
         info: &GgufTensorInfo,
         raw_len: usize,
@@ -31,6 +33,7 @@ impl QTensorEngine {
         }
     }
 
+    /// Uploads attention params; returns the binding offset.
     pub(crate) fn mc8_upload_attn_param(&self, params: &AttentionGpuParams) -> u32 {
         let mut arena = Mc8UniformArena {
             bytes: [0u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
@@ -44,6 +47,7 @@ impl QTensorEngine {
         off
     }
 
+    /// Packs elementwise-op dispatch params.
     pub(crate) fn mc8_elem_params(
         op: u32,
         n: u32,
@@ -70,6 +74,7 @@ impl QTensorEngine {
         }
     }
 
+    /// A bounded slice of a buffer for a dispatch.
     pub(crate) fn mc8_buf_slice(
         buf: &wgpu::Buffer,
         byte_off: wgpu::BufferAddress,
@@ -82,15 +87,18 @@ impl QTensorEngine {
         })
     }
 
+    /// Byte offset of prefill row `t` given `row_stride_floats`.
     pub(crate) fn mc8_prefill_row_off(t: u32, row_stride_floats: usize) -> wgpu::BufferAddress {
         (t as usize * row_stride_floats * 4) as wgpu::BufferAddress
     }
 
+    /// Byte offset of embedding `t` in an `n_embd`-wide matrix.
     pub(crate) fn mc8_emb_off(t: u32, n_embd: usize) -> wgpu::BufferAddress {
         (t as usize * n_embd * 4) as wgpu::BufferAddress
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// MC8 helper: `prefill-row-stride`.
     pub(crate) fn mc8_prefill_row_stride(
         n_embd: usize,
         n_ffn_est: usize,

@@ -30,6 +30,7 @@ pub struct HostAdmission {
 }
 
 impl HostAdmission {
+    /// Creates a default `HostAdmission`.
     pub fn new(host_bytes: u64) -> Result<Self, QdnfError> {
         if host_bytes == 0 || host_bytes > MAX_HOST_BYTES {
             return Err(QdnfError::Capacity);
@@ -50,15 +51,18 @@ impl HostAdmission {
     }
 
     #[inline]
+    /// `HostAdmission::host_bytes`.
     pub const fn host_bytes(&self) -> u64 {
         self.host_bytes
     }
 
     #[inline]
+    /// `HostAdmission::remaining_host_bytes`.
     pub fn remaining_host_bytes(&self) -> u64 {
         self.ledger.host_remaining_bytes()
     }
 
+    /// `HostAdmission::profile_for_bytes`.
     pub fn profile_for_bytes(bytes: u64) -> Result<CellProfile, QdnfError> {
         if bytes == 0 || bytes > MAX_ORDINARY_CELL {
             return Err(QdnfError::Capacity);
@@ -77,11 +81,13 @@ impl HostAdmission {
             .reserve(&mut self.leases, &mut self.ledger, profile, bytes)
     }
 
+    /// Releases a cell slot.
     pub fn release_cell(&mut self, slot: CellSlot) -> Result<(), QdnfError> {
         self.cells.release(&mut self.leases, &mut self.ledger, slot)
     }
 
     #[inline]
+    /// `HostAdmission::occupied_cells`.
     pub fn occupied_cells(&self) -> usize {
         self.cells.occupied()
     }
@@ -101,6 +107,7 @@ impl HostAdmission {
         self.ledger.reserve(add, verified_peer)
     }
 
+    /// Releases a charge reservation.
     pub fn release_charge(&mut self, handle: ReservationHandle) -> Result<(), QdnfError> {
         self.ledger.release(handle)
     }
@@ -123,6 +130,7 @@ impl HostAdmission {
     }
 
     #[inline]
+    /// `HostAdmission::tracked_identities`.
     pub const fn tracked_identities(&self) -> u8 {
         self.identity_count
     }

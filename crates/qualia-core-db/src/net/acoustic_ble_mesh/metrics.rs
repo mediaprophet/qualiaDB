@@ -58,6 +58,7 @@ pub struct MeshGlobalMetrics {
 }
 
 impl MeshPerformanceMonitor {
+    /// Creates a monitor with zeroed per-domain metrics and a fresh start time.
     pub fn new() -> Self {
         Self {
             acoustic_metrics: AcousticMetrics::new(),
@@ -68,6 +69,7 @@ impl MeshPerformanceMonitor {
         }
     }
 
+    /// Records one received message — latency, hop count, route stats.
     pub fn update_receive_metrics(&mut self, message: &StoredMessage) {
         self.global_metrics.total_messages += 1;
         // Route to the appropriate metrics based on message source.
@@ -78,22 +80,27 @@ impl MeshPerformanceMonitor {
         }
     }
 
+    /// Acoustic-channel metrics.
     pub fn acoustic_metrics(&self) -> &AcousticMetrics {
         &self.acoustic_metrics
     }
 
+    /// BLE-channel metrics.
     pub fn ble_metrics(&self) -> &BleMetrics {
         &self.ble_metrics
     }
 
+    /// Routing metrics.
     pub fn routing_metrics(&self) -> &RoutingMetrics {
         &self.routing_metrics
     }
 
+    /// Elapsed time since monitor creation.
     pub fn get_uptime(&self) -> Duration {
         self.start_time.elapsed()
     }
 
+    /// Aggregated cross-channel metrics snapshot.
     pub fn get_global_stats(&self) -> MeshGlobalMetrics {
         let mut stats = self.global_metrics.clone();
         stats.network_uptime = self.get_uptime();
@@ -102,6 +109,7 @@ impl MeshPerformanceMonitor {
 }
 
 impl AcousticMetrics {
+    /// Creates zeroed acoustic metrics.
     pub fn new() -> Self {
         Self {
             nodes_discovered: 0,
@@ -116,6 +124,7 @@ impl AcousticMetrics {
 }
 
 impl BleMetrics {
+    /// Creates zeroed BLE metrics.
     pub fn new() -> Self {
         Self {
             nodes_discovered: 0,
@@ -130,6 +139,7 @@ impl BleMetrics {
 }
 
 impl RoutingMetrics {
+    /// Creates zeroed routing metrics.
     pub fn new() -> Self {
         Self {
             routes_discovered: 0,
@@ -142,6 +152,7 @@ impl RoutingMetrics {
 }
 
 impl MeshGlobalMetrics {
+    /// Creates zeroed global metrics.
     pub fn new() -> Self {
         Self {
             total_nodes: 0,

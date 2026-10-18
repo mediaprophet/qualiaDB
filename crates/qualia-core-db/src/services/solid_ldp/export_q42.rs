@@ -45,6 +45,7 @@ impl SolidExporter {
         )
     }
 
+    /// Exports with a choice.
     pub fn export_with_choice(
         input_q42_path: &str,
         output_dir_path: &str,
@@ -61,6 +62,7 @@ impl SolidExporter {
         )
     }
 
+    /// Exports with options.
     pub fn export_with_options(
         input_q42_path: &str,
         output_dir_path: &str,

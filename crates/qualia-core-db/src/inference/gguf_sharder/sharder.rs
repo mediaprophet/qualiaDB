@@ -9,6 +9,7 @@ pub struct GGufSharder {
 }
 
 impl GGufSharder {
+    /// Creates a default `GGufSharder`.
     pub fn new(source_gguf_path: String) -> Self {
         Self { source_gguf_path }
     }
@@ -43,6 +44,7 @@ impl GGufSharder {
         self.generate_bidx_pointer_map_with_flag(flag)
     }
 
+    /// Builds the bidx pointer map; `flag` controls a variant.
     pub fn generate_bidx_pointer_map_with_flag(&self, modality_flag: u8) -> Vec<NQuin> {
         let mut pointers = Vec::new();
 

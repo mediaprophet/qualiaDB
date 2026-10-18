@@ -30,6 +30,7 @@ pub struct StatusRegistry {
 }
 
 impl StatusRegistry {
+    /// Creates a default `StatusRegistry`.
     pub fn new() -> Self {
         Self {
             revoked: BTreeMap::new(),
@@ -52,6 +53,7 @@ impl StatusRegistry {
         self.revoked.keys().map(String::as_str)
     }
 
+    /// `StatusRegistry::status`.
     pub fn status(&self, attestation: &InstrumentAttestation, now: u32) -> AttestationStatus {
         if let Some(record) = self.revoked.get(&attestation.claim_id()) {
             return AttestationStatus::Revoked {

@@ -8,6 +8,7 @@ pub struct AstrometryAdapter {
 }
 
 impl AstrometryAdapter {
+    /// Creates a default `AstrometryAdapter`.
     pub fn new(id: &'static str, endpoint: &str) -> Self {
         Self {
             id,

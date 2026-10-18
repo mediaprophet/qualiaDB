@@ -249,6 +249,7 @@ impl Default for EncryptionPolicyEngine {
 }
 
 impl EncryptionAtRest {
+    /// Creates a default `EncryptionAtRest`.
     pub fn new() -> Self {
         Self {
             encryption_algorithm: EncryptionAlgorithm::AES256GCM,
@@ -265,6 +266,7 @@ impl EncryptionAtRest {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         // Generate a default master key encryption key (KEK) if none exists
         if !self.key_encryption_keys.contains_key("master_kek") {

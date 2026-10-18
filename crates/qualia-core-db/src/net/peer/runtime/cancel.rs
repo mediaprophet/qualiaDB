@@ -22,6 +22,7 @@ impl CancelEpoch {
     pub const ZERO: Self = Self(0);
 
     #[inline]
+    /// Next item.
     pub const fn next(self) -> Result<Self, QdnfError> {
         match self.0.checked_add(1) {
             Some(n) => Ok(Self(n)),
@@ -54,6 +55,7 @@ pub struct OperationTable {
 }
 
 impl OperationTable {
+    /// Creates a default `OperationTable`.
     pub const fn new() -> Self {
         Self {
             slots: [OpSlot {
@@ -68,6 +70,7 @@ impl OperationTable {
         }
     }
 
+    /// Admits an operation; error at capacity.
     pub fn admit(
         &mut self,
         id: OperationId,
@@ -104,6 +107,7 @@ impl OperationTable {
         Err(QdnfError::Capacity)
     }
 
+    /// Cancels `id`, returning the epoch.
     pub fn cancel(&mut self, id: OperationId) -> Result<CancelEpoch, QdnfError> {
         let slot = self.find_mut(id).ok_or(QdnfError::Closed)?;
         if slot.cancelled {
@@ -114,6 +118,7 @@ impl OperationTable {
         Ok(slot.cancel_epoch)
     }
 
+    /// `true` when `cancelled`.
     pub fn is_cancelled(&self, id: OperationId) -> bool {
         self.find(id).map(|s| s.cancelled).unwrap_or(false)
     }

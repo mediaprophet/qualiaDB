@@ -37,6 +37,7 @@ pub enum PrefillOutcome {
 }
 
 impl PrefillOutcome {
+    /// `true` when completed.
     pub fn is_completed(&self) -> bool {
         matches!(self, Self::Completed { .. })
     }

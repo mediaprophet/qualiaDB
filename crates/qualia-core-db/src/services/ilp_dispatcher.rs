@@ -188,6 +188,7 @@ pub struct IlpDispatcher<T: IlpTransport> {
 }
 
 impl<T: IlpTransport> IlpDispatcher<T> {
+    /// Creates a default `IlpDispatcher`.
     pub fn new(transport: T) -> Self {
         Self { transport }
     }

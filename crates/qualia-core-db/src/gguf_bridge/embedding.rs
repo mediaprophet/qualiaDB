@@ -176,6 +176,7 @@ impl QTensorEngine {
     }
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    /// Async dispatch: fused-transformer-block.
     pub fn dispatch_fused_transformer_block(
         &self,
         tensor: &QTensor,

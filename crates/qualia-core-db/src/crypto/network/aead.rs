@@ -6,6 +6,7 @@ use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce, Tag};
 use super::errors::CryptoError;
 use super::types::{AEAD_KEY_LEN, AEAD_NONCE_LEN, AEAD_TAG_LEN};
 
+/// ChaCha20-Poly1305 encrypts `buffer` in place under `(key, nonce, aad)`, writing the tag to `tag_out`. Caller-buffered, no allocation.
 pub fn encrypt_in_place(
     key: &[u8; AEAD_KEY_LEN],
     nonce: &[u8; AEAD_NONCE_LEN],
@@ -27,6 +28,7 @@ pub fn encrypt_in_place(
     Ok(())
 }
 
+/// Verifies `tag` and decrypts `buffer` in place; fails closed `CryptoFailure` on tag mismatch — buffer contents are unspecified on failure.
 pub fn decrypt_in_place(
     key: &[u8; AEAD_KEY_LEN],
     nonce: &[u8; AEAD_NONCE_LEN],

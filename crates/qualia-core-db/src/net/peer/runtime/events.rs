@@ -51,6 +51,7 @@ pub struct EffectQueue {
 }
 
 impl EffectQueue {
+    /// Creates a default `EffectQueue`.
     pub const fn new() -> Self {
         Self {
             slots: [None; 16],
@@ -58,6 +59,7 @@ impl EffectQueue {
         }
     }
 
+    /// Pushes an event.
     pub fn push(&mut self, effect: KernelEffect) -> Result<(), QdnfError> {
         if self.len >= self.slots.len() {
             return Err(QdnfError::Capacity);
@@ -107,6 +109,7 @@ impl EffectQueue {
         }
     }
 
+    /// Number of elements.
     pub fn len(&self) -> usize {
         self.len
     }

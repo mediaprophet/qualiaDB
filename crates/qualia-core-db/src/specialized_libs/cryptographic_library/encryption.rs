@@ -124,6 +124,7 @@ pub struct EncryptionPerformanceMetrics {
     pub cache_hit_rate: f64,
 }
 impl EncryptionEngine {
+    /// Creates an encryption engine with default derivation/optimizer components.
     pub fn new() -> Self {
         Self {
             encryption_algorithms: HashMap::new(),
@@ -133,6 +134,7 @@ impl EncryptionEngine {
         }
     }
 
+    /// Initializes key derivation and optimizer; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.key_derivation.initialize()?;
         self.performance_optimizer.initialize()?;
@@ -188,6 +190,7 @@ impl EncryptionEngine {
         self.key_derivation.derive_hkdf(ikm, info)
     }
 
+    /// `EncryptionEngine::encrypt_data`.
     pub fn encrypt_data(
         &mut self,
         key: &Key,
@@ -251,6 +254,7 @@ impl EncryptionEngine {
         Ok(encrypted_data)
     }
 
+    /// Dispatches AEAD decryption by the ciphertext's recorded algorithm, verifies the tag, and records latency metrics.
     pub fn decrypt_data(
         &mut self,
         key: &Key,
@@ -452,6 +456,7 @@ impl EncryptionEngine {
 }
 
 impl KeyDerivation {
+    /// Creates a key-derivation component.
     pub fn new() -> Self {
         Self {
             derivation_functions: HashMap::new(),
@@ -465,6 +470,7 @@ impl KeyDerivation {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -502,6 +508,7 @@ impl KeyDerivation {
 }
 
 impl EncryptionPerformanceOptimizer {
+    /// Creates an encryption performance optimizer.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
@@ -518,6 +525,7 @@ impl EncryptionPerformanceOptimizer {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -564,6 +572,7 @@ impl EncryptionPerformanceOptimizer {
 }
 
 impl EncryptionPerformanceMetrics {
+    /// Creates zeroed encryption metrics.
     pub fn new() -> Self {
         Self {
             average_encryption_time: 0.0,

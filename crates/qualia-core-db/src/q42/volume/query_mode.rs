@@ -11,6 +11,7 @@ pub enum Q42QueryMode {
 }
 
 impl Q42QueryMode {
+    /// `for-file` size in bytes.
     pub fn for_file_bytes(file_bytes: u64) -> Self {
         if file_bytes <= RESIDENT_QUERY_MAX_BYTES {
             Self::Resident
@@ -19,6 +20,7 @@ impl Q42QueryMode {
         }
     }
 
+    /// `true` when the mode permits reading all quins.
     pub fn allows_read_all_quins(self) -> bool {
         matches!(self, Self::Resident)
     }

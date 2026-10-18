@@ -190,6 +190,7 @@ async fn pull_handler(
     }
 }
 
+/// Chat-relay route table.
 pub fn chat_relay_routes(
     storage_path: String,
     vault: Arc<Mutex<crate::key_vault::KeyVault>>,

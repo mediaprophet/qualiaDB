@@ -177,6 +177,7 @@ pub fn rows() -> Vec<Row> {
     out
 }
 
+/// Coverage report as a Vibe `Value`.
 pub fn as_value() -> Value {
     let rs = rows();
     let bound = rs.iter().filter(|r| r.bind == Bind::Bound).count() as u64;
@@ -210,6 +211,7 @@ pub fn as_value() -> Value {
     Value::Record(out)
 }
 
+/// Coverage report as Markdown.
 pub fn markdown() -> String {
     let rs = rows();
     let mut s = String::from(
@@ -634,10 +636,12 @@ pub const SCHEMAS: &[MachineSchema] = &[
     },
 ];
 
+/// Machine schema for invoke `id`.
 pub fn schema_for(id: &str) -> Option<&'static MachineSchema> {
     SCHEMAS.iter().find(|s| s.id == id)
 }
 
+/// All registered machine schemas.
 pub fn all_schemas() -> &'static [MachineSchema] {
     SCHEMAS
 }

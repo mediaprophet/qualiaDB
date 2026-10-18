@@ -58,6 +58,7 @@ pub struct CellularLogicGraph {
 }
 
 impl CellularLogicGraph {
+    /// Creates a default `CellularLogicGraph`.
     pub fn new() -> Self {
         Self {
             cells: Vec::new(),

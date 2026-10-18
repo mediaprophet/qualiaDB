@@ -16,22 +16,27 @@ pub struct Complex {
 }
 
 impl Complex {
+    /// Creates a default `Complex`.
     pub const fn new(re: f64, im: f64) -> Self {
         Self { re, im }
     }
+    /// `Complex::real`.
     pub const fn real(re: f64) -> Self {
         Self { re, im: 0.0 }
     }
 
     #[inline]
+    /// `Complex::add`.
     pub fn add(self, o: Complex) -> Complex {
         Complex::new(self.re + o.re, self.im + o.im)
     }
     #[inline]
+    /// `Complex::sub`.
     pub fn sub(self, o: Complex) -> Complex {
         Complex::new(self.re - o.re, self.im - o.im)
     }
     #[inline]
+    /// `Complex::mul`.
     pub fn mul(self, o: Complex) -> Complex {
         Complex::new(
             self.re * o.re - self.im * o.im,
@@ -39,6 +44,7 @@ impl Complex {
         )
     }
     #[inline]
+    /// `Complex::div`.
     pub fn div(self, o: Complex) -> Complex {
         let d = o.re * o.re + o.im * o.im;
         Complex::new(

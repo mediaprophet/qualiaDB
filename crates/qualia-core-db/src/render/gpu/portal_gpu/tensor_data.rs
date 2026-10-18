@@ -10,6 +10,7 @@ use crate::tensor::buffer_export::TENSOR_HEADER_BYTES;
 use wgpu::util::DeviceExt;
 
 impl PortalGpu {
+    /// Uploads a tensor buffer.
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
         let (header, _) =
             crate::tensor::buffer_export::parse_header(bytes).map_err(|e| e.to_string())?;
@@ -106,10 +107,12 @@ impl PortalGpu {
         Ok(count)
     }
 
+    /// `tensor-node` count.
     pub fn tensor_node_count(&self) -> u32 {
         self.tensor_node_count
     }
 
+    /// `true` when `tensor_buffer` present.
     pub fn has_tensor_buffer(&self) -> bool {
         self.tensor_raw_buf.is_some()
     }

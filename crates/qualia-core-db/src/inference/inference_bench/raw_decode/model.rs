@@ -14,6 +14,7 @@ pub(super) struct RawModel {
 }
 
 impl RawModel {
+    /// Loads a raw model from `model_path`.
     pub fn load(model_path: &str) -> Result<Self, String> {
         let mut engine = QTensorEngine::new();
         // The checked activation path parses the format and eagerly uploads resident layer
@@ -71,6 +72,7 @@ impl RawModel {
         })
     }
 
+    /// Tokenizes and prepares the prompt state.
     pub fn prepare_prompt(
         &mut self,
         prompt_tokens: &[u32],
@@ -135,6 +137,7 @@ impl RawModel {
         ))
     }
 
+    /// Loads the embedding row for `token_id`.
     pub fn load_embedding(&mut self, token_id: u32) -> Result<(), String> {
         let emb_dim = self.index.emb_dim();
         let written = self.index.dequantize_token_embedding_into(

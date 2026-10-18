@@ -23,6 +23,7 @@ pub struct OperatorMemoryBreakdown {
 }
 
 impl OperatorMemoryBreakdown {
+    /// Creates `OperatorMemoryBreakdown` with the given state.
     pub fn new(
         stored_bytes: u64,
         mapped_bytes: u64,
@@ -66,6 +67,7 @@ pub struct OperatorExperimentReceipt {
 }
 
 impl OperatorExperimentReceipt {
+    /// Creates the receipt.
     pub fn new(
         experiment_id: impl Into<String>,
         operator_digest: u64,

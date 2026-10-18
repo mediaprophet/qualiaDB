@@ -6,6 +6,7 @@ use crate::foundation::crdt::CrdtResolver;
 use crate::NQuin;
 use vibe::{Diagnostic, Span, Value};
 
+/// Merges another value into `self`.
 pub fn merge(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let mut local = quin_at(args_v, "local", span)?;
     let mut remote = quin_at(args_v, "remote", span)?;

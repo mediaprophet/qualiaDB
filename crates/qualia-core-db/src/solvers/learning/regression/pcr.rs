@@ -54,12 +54,14 @@ impl PcrModel {
         self.ols.predict_row(&scores)
     }
 
+    /// PCR predictions.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
             .collect()
     }
 
+    /// Component count.
     pub fn n_components(&self) -> usize {
         self.n_components
     }

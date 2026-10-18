@@ -42,6 +42,7 @@ pub enum RdfFormat {
 }
 
 impl RdfFormat {
+    /// Builds `RdfFormat` from `str`.
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_ascii_lowercase().as_str() {
             "nt" | "ntriples" | "n-triples" | "application/n-triples" => Some(Self::NTriples),
@@ -57,6 +58,7 @@ impl RdfFormat {
         }
     }
 
+    /// Stable string form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::NTriples => "ntriples",
@@ -69,6 +71,7 @@ impl RdfFormat {
         }
     }
 
+    /// `true` when the format supports quads.
     pub fn supports_quads(self) -> bool {
         matches!(
             self,

@@ -24,6 +24,7 @@ thread_local! {
     static ENGINE: RefCell<Option<StickyEngine>> = const { RefCell::new(None) };
 }
 
+/// Single-threaded rayon pool for sticky decode.
 pub fn pool() -> &'static rayon::ThreadPool {
     static POOL: OnceLock<rayon::ThreadPool> = OnceLock::new();
     POOL.get_or_init(|| {
@@ -95,6 +96,7 @@ impl Default for StickyAdmissionDriver {
 }
 
 impl StickyAdmissionDriver {
+    /// Creates a default `StickyAdmissionDriver`.
     pub fn new() -> Self {
         Self {
             queue: Mutex::new(BoundedIntakeQueue::new()),

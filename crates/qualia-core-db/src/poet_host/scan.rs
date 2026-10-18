@@ -4,6 +4,7 @@ use crate::lexicon::generate_60bit_token;
 use crate::NQuin;
 use vibe::Value;
 
+/// Collects matches.
 pub fn collect_matches(
     quins: &[NQuin],
     s: Option<&Value>,
@@ -34,6 +35,7 @@ pub fn collect_matches(
     }
 }
 
+/// `true` when `subject` is present.
 pub fn subject_present(quins: &[NQuin], id: u64, predicate: Option<u64>) -> bool {
     quins
         .iter()

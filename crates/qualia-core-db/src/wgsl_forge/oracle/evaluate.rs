@@ -18,6 +18,7 @@ use super::params::*;
 use super::reference::*;
 use super::report::*;
 
+/// Evaluates a WGSL builtin on host for oracle checking.
 pub fn evaluate_builtin(
     context: &mut WgpuComputeContext,
     builtin: BuiltinKernel,
@@ -401,6 +402,7 @@ pub fn evaluate_matmul_tc_cuda() -> Result<ComparisonReport, ForgeError> {
     ))
 }
 
+/// Certifies a builtin oracle against expected outputs.
 pub fn certify_builtin(
     context: &mut WgpuComputeContext,
     builtin: BuiltinKernel,
@@ -448,6 +450,7 @@ pub fn certify_builtin(
     })
 }
 
+/// Evaluates a candidate WGSL expression.
 pub fn candidate_evaluation(
     context: &mut WgpuComputeContext,
     builtin: BuiltinKernel,

@@ -10,6 +10,7 @@ pub struct OpendapAdapter {
 }
 
 impl OpendapAdapter {
+    /// Creates a default `OpendapAdapter`.
     pub fn new(id: &'static str, endpoint: &str, dataset_id: &str) -> Self {
         Self {
             id,

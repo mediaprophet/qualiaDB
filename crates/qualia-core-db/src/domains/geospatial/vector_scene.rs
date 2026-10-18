@@ -31,6 +31,7 @@ pub struct VectorSceneFrame {
 }
 
 impl VectorSceneFrame {
+    /// Creates `VectorSceneFrame` with the given state.
     pub fn new(origin_lat: f64, origin_lon: f64, origin_alt_m: f64) -> Self {
         Self {
             origin_lat,

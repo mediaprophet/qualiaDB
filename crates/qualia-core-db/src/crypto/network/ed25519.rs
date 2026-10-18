@@ -22,6 +22,7 @@ pub fn sign_with_context(
     Ok(())
 }
 
+/// Verifies an Ed25519 signature over `message`+`context`; fails closed on bad signature.
 pub fn verify_with_context(
     public: &[u8; ED25519_PK_LEN],
     message: &[u8],
@@ -36,6 +37,7 @@ pub fn verify_with_context(
         .map_err(|_| CryptoError::Unauthorized)
 }
 
+/// Derives the Ed25519 public key from a 32-byte seed.
 pub fn public_from_seed(seed: &[u8; 32]) -> [u8; 32] {
     SigningKey::from_bytes(seed).verifying_key().to_bytes()
 }

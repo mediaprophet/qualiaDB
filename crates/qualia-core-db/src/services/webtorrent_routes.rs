@@ -206,6 +206,7 @@ async fn webseed_handler(
     r
 }
 
+/// WebTorrent route table.
 pub fn webtorrent_routes(daemon_port: u16) -> Router {
     let state = TorrentState { daemon_port };
     Router::new()

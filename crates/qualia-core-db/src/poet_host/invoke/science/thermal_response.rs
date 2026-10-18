@@ -2,6 +2,7 @@
 use super::super::args;
 use crate::render::physics::response::{step_thermal, ThermalTargets};
 use vibe::{Diagnostic, Span, Value};
+/// Computes the result.
 pub fn compute(payload: &Value, span: Span) -> Result<Value, Diagnostic> {
     let field = |key: &str| {
         args::rec_f64(payload, key)

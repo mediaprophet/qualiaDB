@@ -21,6 +21,7 @@ impl Default for Schedule {
 }
 
 impl Schedule {
+    /// Validates internal consistency; error on violation.
     pub fn validate(
         self,
         kernel: &KernelSpec,
@@ -57,15 +58,18 @@ impl Schedule {
         Ok(())
     }
 
+    /// `Schedule::elements_per_workgroup`.
     pub const fn elements_per_workgroup(self) -> u32 {
         self.workgroup_size * self.items_per_invocation * self.vector_width
     }
 
+    /// Dispatches compute workgroups.
     pub fn dispatch_workgroups(self, element_count: usize) -> u32 {
         let width = self.elements_per_workgroup().max(1) as usize;
         element_count.div_ceil(width).max(1) as u32
     }
 
+    /// `Schedule::sort_key`.
     pub const fn sort_key(self) -> (u32, u32, u32) {
         (
             self.workgroup_size,
@@ -91,6 +95,7 @@ pub struct AdapterConstraints {
 }
 
 impl AdapterConstraints {
+    /// `AdapterConstraints::portable`.
     pub const fn portable() -> Self {
         Self {
             max_workgroup_size_x: 256,
@@ -130,6 +135,7 @@ impl AdapterConstraints {
     }
 
     #[cfg(feature = "gpu-runtime")]
+    /// `AdapterConstraints::from_wgpu_limits`.
     pub fn from_wgpu_limits(limits: &wgpu::Limits) -> Self {
         // Intrinsic-capability flags default to false here and are populated from
         // the adapter's feature set at device creation (see WgpuComputeContext).

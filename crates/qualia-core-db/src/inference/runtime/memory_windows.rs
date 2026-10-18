@@ -84,6 +84,7 @@ pub struct WindowsLowMemoryNotification {
 }
 
 impl WindowsLowMemoryNotification {
+    /// Creates the resource.
     pub fn create() -> Result<Self, WindowsMemoryError> {
         // SAFETY: `LOW_MEMORY_RESOURCE_NOTIFICATION` is the documented enum
         // value; the returned handle is owned by this RAII wrapper.

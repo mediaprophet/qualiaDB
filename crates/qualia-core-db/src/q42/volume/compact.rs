@@ -17,6 +17,7 @@ use super::publication::quin_requires_sanctuary;
 use super::publish::{Q42RolloverPublisher, DEFAULT_SEGMENT_MAX_BYTES};
 use crate::{NQuin, QUINS_PER_BLOCK};
 
+/// Wraps `message` as an `InvalidInput` io error (malformed/empty input).
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, message.into())
 }
@@ -38,6 +39,11 @@ pub fn compact_volume_set(root: &Path, out_dir: &Path) -> io::Result<PathBuf> {
     }
 }
 
+/// Rewrites a logical volume set: merges all segment lexicons, scans every
+/// segment for Sanctuary-classified quins (a set declaring Commons that
+/// contains sanctuary data is NOT written as Commons), then rewrites via the
+/// streaming writer (all-Commons) or the rollover publisher, and publishes the
+/// incremented-generation root catalog atomically.
 fn compact_logical_set(root: &Path, out_dir: &Path) -> io::Result<PathBuf> {
     let set = Q42VolumeSet::open_root(root)?;
     if set.segments().is_empty() {
@@ -84,6 +90,9 @@ fn compact_logical_set(root: &Path, out_dir: &Path) -> io::Result<PathBuf> {
     Ok(root_path)
 }
 
+/// Rewrites a single-file volume through the streaming writer, preserving
+/// the Commons flag only when no sanctuary quins are found. Errors on an
+/// empty volume.
 fn compact_single_volume(volume: &Q42Volume, root: &Path, out_dir: &Path) -> io::Result<PathBuf> {
     if volume.block_count() == 0 {
         return Err(invalid("Q42 volume has no SuperBlocks to compact"));
@@ -103,6 +112,10 @@ fn compact_single_volume(volume: &Q42Volume, root: &Path, out_dir: &Path) -> io:
     Ok(out)
 }
 
+/// Streams the set through `Q42RolloverPublisher` (which auto-splits at the
+/// segment byte cap), then returns the child-segment paths and removes the
+/// publisher's provisional root catalog (the caller rewrites it at the next
+/// generation).
 fn rewrite_set_through_publisher(
     set: &Q42VolumeSet,
     out_dir: &Path,
@@ -131,6 +144,8 @@ fn rewrite_set_through_publisher(
     Ok(children)
 }
 
+/// Streams the set through `CompactRollover` (local rollover split with a
+/// publication flag) and returns the produced child paths.
 fn rewrite_set_through_streaming_writer(
     set: &Q42VolumeSet,
     out_dir: &Path,
@@ -156,6 +171,8 @@ struct CompactRollover {
 }
 
 impl CompactRollover {
+    /// Creates a rollover splitter writing `stem-NNNN.q42` children into `dir`,
+    /// honouring `declare_commons` on each child.
     fn new(
         dir: impl Into<PathBuf>,
         stem: impl Into<String>,
@@ -176,6 +193,8 @@ impl CompactRollover {
         })
     }
 
+    /// Pushes one SuperBlock; rolls to a new child file first when the
+    /// projected final length would exceed the segment cap.
     fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) -> io::Result<()> {
         let projected = self.writer.maximum_final_length_after_next_block()?;
         if self.writer.block_count() > 0 && projected > self.max_bytes {
@@ -184,6 +203,7 @@ impl CompactRollover {
         self.writer.push_block(seq_id, quins)
     }
 
+    /// Finalizes the current child writer to disk and swaps in a fresh one.
     fn roll(&mut self) -> io::Result<()> {
         let path = self.child_path(self.next_index);
         let writer = std::mem::replace(
@@ -196,10 +216,13 @@ impl CompactRollover {
         Ok(())
     }
 
+    /// Path for child segment `index` (`stem-0000.q42` pattern).
     fn child_path(&self, index: u32) -> PathBuf {
         self.dir.join(format!("{}-{:04}.q42", self.stem, index))
     }
 
+    /// Flushes the last child (if it has blocks, or none were produced) and
+    /// returns all child paths in write order.
     fn finish_children(mut self) -> io::Result<Vec<PathBuf>> {
         if self.writer.block_count() > 0 || self.child_paths.is_empty() {
             let path = self.child_path(self.next_index);
@@ -210,6 +233,8 @@ impl CompactRollover {
     }
 }
 
+/// Opens a `StreamingQ42VolumeWriter` over `lex`, setting the Permissive
+/// Commons declaration when `declare_commons`.
 fn new_streaming_writer(
     lex: &HashMap<u64, String>,
     declare_commons: bool,
@@ -221,6 +246,8 @@ fn new_streaming_writer(
     Ok(writer)
 }
 
+/// Writes the root catalog to `<name>.tmp` then renames it over `root_path` —
+    /// atomic publish so readers never see a partial catalog.
 fn publish_root_atomically(
     root_path: &Path,
     lex: &HashMap<u64, String>,
@@ -240,6 +267,8 @@ fn publish_root_atomically(
     std::fs::rename(&tmp, root_path)
 }
 
+/// Streams every SuperBlock of every set segment in order, renumbering
+    /// `seq_id` densely; errors when the set has no blocks.
 fn stream_set_blocks(
     set: &Q42VolumeSet,
     mut push: impl FnMut(u64, &[NQuin]) -> io::Result<()>,
@@ -258,6 +287,8 @@ fn stream_set_blocks(
     Ok(())
 }
 
+/// Reads each SuperBlock into a fixed stack buffer, decodes the live quins,
+    /// and pushes them through `push` keyed by block index.
 fn stream_volume_blocks(
     volume: &Q42Volume,
     mut push: impl FnMut(u64, &[NQuin]) -> io::Result<()>,
@@ -272,6 +303,8 @@ fn stream_volume_blocks(
     Ok(())
 }
 
+/// Decodes the live-quin prefix of a SuperBlock into `out` (zero-copy
+    /// `pod_read_unaligned`); fails closed on a zero/oversized live count.
 fn decode_live_quins(
     decoded: &[u8; SUPERBLOCK_SIZE],
     out: &mut [NQuin; QUINS_PER_BLOCK],
@@ -290,6 +323,8 @@ fn decode_live_quins(
     Ok(live)
 }
 
+/// Merges a volume's Q42LEX hash→string entries into `dest` (first writer
+    /// wins on hash collisions).
 fn merge_lexicon(volume: &Q42Volume, dest: &mut HashMap<u64, String>) -> io::Result<()> {
     let view = volume.lex_view().map_err(|error| {
         io::Error::new(
@@ -311,10 +346,13 @@ fn merge_lexicon(volume: &Q42Volume, dest: &mut HashMap<u64, String>) -> io::Res
     Ok(())
 }
 
+/// `true` when the volume header declares `FLAG_PERMISSIVE_COMMONS`.
 fn volume_declares_commons(volume: &Q42Volume) -> bool {
     volume.header().flags & FLAG_PERMISSIVE_COMMONS != 0
 }
 
+/// `true` when any segment carries `FLAG_SANCTUARY` or contains a quin
+    /// requiring sanctuary handling — prevents wrongly declaring Commons.
 fn scan_set_for_sanctuary(set: &Q42VolumeSet) -> io::Result<bool> {
     for segment in set.segments() {
         if segment.header().flags & FLAG_SANCTUARY != 0 || scan_volume_for_sanctuary(segment)? {
@@ -324,6 +362,8 @@ fn scan_set_for_sanctuary(set: &Q42VolumeSet) -> io::Result<bool> {
     Ok(false)
 }
 
+/// Scans every live quin in the volume for `quin_requires_sanctuary` — `true`
+    /// on first hit.
 fn scan_volume_for_sanctuary(volume: &Q42Volume) -> io::Result<bool> {
     let mut decoded = [0u8; SUPERBLOCK_SIZE];
     let mut block = [NQuin::default(); QUINS_PER_BLOCK];
@@ -337,6 +377,8 @@ fn scan_volume_for_sanctuary(volume: &Q42Volume) -> io::Result<bool> {
     Ok(false)
 }
 
+/// Output filename stem: the input's file stem minus any `-root` suffix
+    /// (`"volume"` fallback).
 fn output_stem(root: &Path) -> String {
     let stem = root
         .file_stem()

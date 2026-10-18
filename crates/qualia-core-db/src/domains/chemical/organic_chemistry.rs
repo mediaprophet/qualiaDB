@@ -1573,6 +1573,7 @@ pub struct GreenMetrics {
     pub carbon_efficiency_pct: f64,
 }
 
+/// `?::green_metrics`.
 pub fn green_metrics(
     reactant_mws: &[f64],
     product_mw: f64,

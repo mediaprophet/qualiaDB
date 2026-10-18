@@ -3,6 +3,7 @@
 use crate::specialized_libs::computer_vision::types::VisionError;
 
 #[allow(clippy::too_many_arguments)]
+/// `?::max_pool2d_nchw_f32`.
 pub fn max_pool2d_nchw_f32(
     input: &[f32],
     c: usize,
@@ -18,6 +19,7 @@ pub fn max_pool2d_nchw_f32(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// `?::avg_pool2d_nchw_f32`.
 pub fn avg_pool2d_nchw_f32(
     input: &[f32],
     c: usize,

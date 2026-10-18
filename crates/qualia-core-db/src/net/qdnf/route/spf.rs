@@ -118,6 +118,7 @@ pub fn compute_spf(origin: u8, links: &[LinkMetric], out: &mut SpfTable) -> Resu
     Ok(())
 }
 
+/// DNI node marker.
 pub fn dni_node(coord: DniCoordinate) -> u8 {
     (coord.node_id & 0xff) as u8
 }

@@ -56,6 +56,7 @@ pub struct KeyIndexEntry {
 }
 
 impl KeyCatalog {
+    /// Creates a default `KeyCatalog`.
     pub fn new() -> Self {
         Self {
             keys: HashMap::new(),
@@ -65,6 +66,7 @@ impl KeyCatalog {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.search_index.initialize()?;
         Ok(())
@@ -220,6 +222,7 @@ impl KeyCatalog {
 }
 
 impl KeySearchIndex {
+    /// Creates a default `KeySearchIndex`.
     pub fn new() -> Self {
         Self {
             index_entries: HashMap::new(),
@@ -227,6 +230,7 @@ impl KeySearchIndex {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         // Actually configure the search engine rather than returning Ok(()) blindly.
         self.search_engine.engine_type = SearchEngineType::Hybrid;

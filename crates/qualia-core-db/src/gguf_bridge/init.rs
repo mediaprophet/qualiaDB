@@ -14,6 +14,7 @@ impl QTensorEngine {
         }
     }
     #[cfg(feature = "gpu-runtime")]
+    /// wgpu device.
     pub(crate) fn gpu_device(&self) -> &wgpu::Device {
         #[cfg(target_arch = "wasm32")]
         {
@@ -27,6 +28,7 @@ impl QTensorEngine {
 
     #[inline]
     #[cfg(feature = "gpu-runtime")]
+    /// wgpu queue.
     pub(crate) fn gpu_queue(&self) -> &wgpu::Queue {
         #[cfg(target_arch = "wasm32")]
         {
@@ -53,6 +55,7 @@ impl QTensorEngine {
     }
 
     #[cfg(feature = "gpu-runtime")]
+    /// Tries to build the engine; error when GPU init fails.
     pub async fn try_new() -> Result<Self, String> {
         #[cfg(not(target_arch = "wasm32"))]
         log::info!(
@@ -1318,6 +1321,7 @@ impl QTensorEngine {
     }
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    /// Builds the engine; panics when GPU init fails.
     pub fn new() -> Self {
         let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
             let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
@@ -1373,6 +1377,7 @@ impl QTensorEngine {
     }
 
     #[cfg(not(feature = "gpu-runtime"))]
+    /// Tries to build the engine; error when GPU init fails.
     pub async fn try_new() -> Result<Self, String> {
         log::info!(
             "LLM_LOAD|engine-init|0.10|Initializing CPU-only GGUF runtime (gpu-runtime off)"
@@ -1381,11 +1386,13 @@ impl QTensorEngine {
     }
 
     #[cfg(not(feature = "gpu-runtime"))]
+    /// Builds the engine; panics when GPU init fails.
     pub fn new() -> Self {
         Self::cpu_runtime()
     }
 
     #[cfg(feature = "gpu-runtime")]
+    /// Ensures the KV cache is allocated.
     pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
         let layout = match KvCacheLayout::from_hyperparams(h) {
             Some(l) => l,
@@ -1560,10 +1567,12 @@ impl QTensorEngine {
         }
     }
 
+    /// Returns `kv_cache_cpu`.
     pub fn get_kv_cache_cpu(&self) -> Option<&[f32]> {
         self.kv_cache_cpu.as_deref()
     }
 
+    /// Sets `kv_cache_cpu`.
     pub fn set_kv_cache_cpu(&mut self, data: &[f32]) -> bool {
         let Some(layout) = self.kv_layout.as_ref() else {
             return false;
@@ -1690,6 +1699,7 @@ impl QTensorEngine {
     }
 
     #[cfg(feature = "gpu-runtime")]
+    /// Ensures the GEMM buffers are allocated.
     pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).

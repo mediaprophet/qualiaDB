@@ -68,6 +68,7 @@ impl ScenarioId {
     pub const MAX: u8 = 40;
     pub const COUNT: usize = 40;
 
+    /// Builds `ScenarioId` from `u8`.
     pub const fn from_u8(n: u8) -> Option<Self> {
         match n {
             1 => Some(Self::S01),
@@ -115,15 +116,18 @@ impl ScenarioId {
     }
 
     #[inline]
+    /// Encodes as u8.
     pub const fn as_u8(self) -> u8 {
         self as u8
     }
 }
 
+/// Status of a scenario.
 pub fn scenario_status(id: ScenarioId) -> ScenarioStatus {
     TABLE[(id as u8 as usize) - 1]
 }
 
+/// Full scenario table.
 pub fn scenario_table() -> &'static [ScenarioStatus; 40] {
     &TABLE
 }

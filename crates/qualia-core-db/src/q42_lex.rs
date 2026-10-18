@@ -264,6 +264,7 @@ impl<'a> Q42LexMmap<'a> {
     }
 
     #[inline]
+    /// Lexicon entry count.
     pub fn entry_count(&self) -> usize {
         self.entry_count
     }
@@ -869,6 +870,7 @@ pub struct Q42LexFile {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl Q42LexFile {
+    /// Opens a lexicon file.
     pub fn open(path: &Path) -> std::io::Result<Self> {
         let file = File::open(path)?;
         let mmap = unsafe { Mmap::map(&file)? };
@@ -878,6 +880,7 @@ impl Q42LexFile {
     }
 
     #[inline]
+    /// Zero-copy lexicon view.
     pub fn view(&self) -> Q42LexMmap<'_> {
         Q42LexMmap::from_bytes(&self.mmap).expect("validated at open")
     }
@@ -891,6 +894,7 @@ pub struct Q42LexFile;
 
 #[cfg(target_arch = "wasm32")]
 impl Q42LexFile {
+    /// Opens a lexicon file.
     pub fn open(_path: &std::path::Path) -> std::io::Result<Self> {
         Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,
@@ -899,6 +903,7 @@ impl Q42LexFile {
     }
 
     #[inline]
+    /// Zero-copy lexicon view.
     pub fn view(&self) -> Q42LexMmap<'_> {
         Q42LexMmap {
             data: &[],
@@ -961,6 +966,7 @@ impl Q42Lexicon {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Loads the lexicon.
     pub fn load(path: &Path) -> std::io::Result<Self> {
         let mut file = File::open(path)?;
         let mut header = [0u8; 32];
@@ -1001,6 +1007,7 @@ impl Q42Lexicon {
         Ok(Self { entries })
     }
 
+    /// Looks up an entry; `None` when absent.
     pub fn lookup(&self, hash: u64) -> Option<&str> {
         self.entries.get(&hash).map(|s| s.as_str())
     }

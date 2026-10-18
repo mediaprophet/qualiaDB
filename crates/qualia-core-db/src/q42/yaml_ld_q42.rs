@@ -23,6 +23,7 @@ pub struct YamlStreamingLexer<'a> {
 }
 
 impl<'a> YamlStreamingLexer<'a> {
+    /// Creates a default `YamlStreamingLexer`.
     pub fn new(buffer: &'a [u8]) -> Self {
         Self { buffer, cursor: 0 }
     }

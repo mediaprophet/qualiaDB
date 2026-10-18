@@ -149,6 +149,7 @@ pub struct SparqlMmHandler<'a> {
 }
 
 impl<'a> SparqlMmHandler<'a> {
+    /// Creates a handler over `quins` — the NQuin slice all mm/ma predicates scan.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,
@@ -208,6 +209,7 @@ impl<'a> SparqlMmHandler<'a> {
     }
 
     #[inline]
+    /// `SparqlMmHandler::unpack_spatial_u64`.
     pub fn unpack_spatial_u64(v: u64) -> (u32, u32, u32, u32) {
         (
             (v & 0xFFFF) as u32,
@@ -748,6 +750,7 @@ pub fn mm_duration(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bo
     }
 }
 
+/// `mm:dimensions` predicate — binds the media dimension fields of a matched quin.
 pub fn mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -765,6 +768,7 @@ pub fn mm_dimensions(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> 
     }
 }
 
+/// `mm:temporalFragment` predicate — binds temporal-fragment fields.
 pub fn mm_temporal_fragment(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.len() < 2 {
         return false;
@@ -811,6 +815,7 @@ pub fn ma_format(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool
     }
 }
 
+/// `ma:mimeType` predicate — binds the MIME type.
 pub fn ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -827,6 +832,7 @@ pub fn ma_mime_type(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> b
     }
 }
 
+/// `ma:codec` predicate — binds the codec field.
 pub fn ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -843,6 +849,7 @@ pub fn ma_codec(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     }
 }
 
+/// `ma:bitrate` predicate — binds the bitrate field.
 pub fn ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;
@@ -858,6 +865,7 @@ pub fn ma_bitrate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
         Err(_) => false,
     }
 }
+/// `ma:framerate` predicate — binds the framerate field.
 pub fn ma_framerate(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool {
     if args.is_empty() {
         return false;

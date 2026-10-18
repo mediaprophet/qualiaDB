@@ -40,6 +40,7 @@ pub struct Q42Context {
 }
 
 impl Q42Context {
+    /// Creates the default JSON-LD context vocabulary (rdf/rdfs/owl/xsd/hcai/qualia).
     pub fn new() -> Self {
         let mut vocabulary = HashMap::new();
         vocabulary.insert(
@@ -75,10 +76,12 @@ impl Q42Context {
         }
     }
 
+    /// Currently ignores `volume` and returns the default context — does not read per-volume vocabulary.
     pub fn from_volume(_volume: &Q42Volume) -> Result<Self, io::Error> {
         Ok(Self::new())
     }
 
+    /// Resolves a vocabulary prefix to its base IRI.
     pub fn resolve_semantic_term(&self, term: &str) -> Option<String> {
         self.vocabulary.get(term).cloned()
     }
@@ -125,10 +128,12 @@ pub struct Q42CborLdParser {
 }
 
 impl Q42CborLdParser {
+    /// Creates a parser over `lexicon`.
     pub fn new(lexicon: Q42Lexicon) -> Self {
         Self { lexicon }
     }
 
+    /// Builds a parser from the volume's `Q42Lexicon`.
     pub fn from_volume(volume: &Q42Volume) -> Result<Self, io::Error> {
         let lexicon = Q42Lexicon::from_volume(volume).map_err(|_| {
             io::Error::new(
@@ -145,6 +150,7 @@ impl Q42CborLdParser {
         &self.lexicon
     }
 
+    /// `Q42CborLdParser::parse`.
     pub fn parse(&self, data: &[u8]) -> Result<SemanticPayload, CborLdError> {
         Ok(SemanticPayload {
             data: data.to_vec(),
@@ -157,6 +163,7 @@ impl Q42CborLdParser {
         })
     }
 
+    /// Decodes a CBOR-LD payload, expanding compact IRIs via the lexicon.
     pub fn parse_semantic_payload(&self, data: &[u8]) -> Result<SemanticPayload, CborLdError> {
         self.parse(data)
     }
@@ -183,6 +190,7 @@ pub enum LexiconVersion {
 }
 
 impl LexiconVersion {
+    /// Lexicon format v2 (page-directory layout).
     pub fn v2() -> Self {
         LexiconVersion::V2
     }

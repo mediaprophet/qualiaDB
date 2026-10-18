@@ -6,11 +6,13 @@ use super::{RMS_NORM_EPS, VOCAB_CHUNK_ROWS};
 use crate::gguf_sharder::GgufTensorInfo;
 
 #[inline]
+/// Bytes → GiB.
 pub(crate) fn bytes_to_gib(bytes: u64) -> f64 {
     bytes as f64 / (1024.0 * 1024.0 * 1024.0)
 }
 
 #[inline]
+/// Volatile-clears `buf`.
 pub(crate) fn scrub_f32_volatile(buf: &mut [f32], n: usize) {
     for v in buf.iter_mut().take(n) {
         // Prevent logits residue from surviving across decode frames.
@@ -19,6 +21,7 @@ pub(crate) fn scrub_f32_volatile(buf: &mut [f32], n: usize) {
 }
 
 #[inline]
+/// Updates the streaming argmax.
 pub(crate) fn update_streaming_argmax(
     chunk_logits: &[f32],
     chunk_rows: usize,
@@ -62,6 +65,7 @@ pub(crate) fn update_streaming_argmax_sieved(
 }
 
 #[inline]
+/// In-place ReLU.
 pub(crate) fn relu_inplace(buf: &mut [f32], n: usize) {
     for v in buf.iter_mut().take(n) {
         if *v < 0.0 {
@@ -92,6 +96,7 @@ pub(crate) fn silu_inplace(x: &mut [f32], n: usize) {
 }
 
 #[inline]
+/// In-place residual add.
 pub(crate) fn add_residual_inplace(dst: &mut [f32], src: &[f32], n: usize) {
     for i in 0..n.min(dst.len()).min(src.len()) {
         dst[i] += src[i];
@@ -99,6 +104,7 @@ pub(crate) fn add_residual_inplace(dst: &mut [f32], src: &[f32], n: usize) {
 }
 
 #[inline]
+/// In-place RMSNorm.
 pub(crate) fn rms_norm_inplace(x: &mut [f32], weight: &[f32], eps: f32) {
     let n = x.len().min(weight.len());
     if n == 0 {

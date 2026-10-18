@@ -107,6 +107,7 @@ pub fn run_decode_timeline(model: &Path, tokens: u32) -> DecodeTimeline {
 }
 
 impl DecodeTimeline {
+    /// Formats `report`.
     pub fn format_report(&self) -> String {
         format!(
             "Decode timeline\n  model:     {}\n  tokens:    {}\n  tok_s:     {}\n  wall_ms:   {:.2}\n  resident:  hits={} fallbacks={}\n  host_ns:   {}\n  gpu_ns:    {}\n  notes:     {}\n",

@@ -101,6 +101,7 @@ fn dot_f32(a: &[f32], b: &[f32]) -> f32 {
 }
 
 impl TrunkNvmeReader {
+    /// Opens the resource.
     pub fn open(source: &Path, tensor_data_start: u64) -> Result<Self, TrunkNvmeError> {
         let file = File::open(source).map_err(|_| TrunkNvmeError::Io)?;
         Ok(Self {

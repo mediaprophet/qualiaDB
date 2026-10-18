@@ -26,6 +26,7 @@ pub enum SegmentKind {
 }
 
 impl SegmentKind {
+    /// Decodes from u8.
     pub fn from_u8(v: u8) -> Option<Self> {
         match v {
             1 => Some(Self::SourcePayload),
@@ -106,6 +107,7 @@ pub struct SegmentDescriptor {
 }
 
 impl SegmentDescriptor {
+    /// Creates a segment descriptor with name/offset/len/kind.
     pub fn new(
         segment_id: u32,
         kind: SegmentKind,
@@ -204,18 +206,22 @@ impl<'a> SegmentView<'a> {
         Ok(Self { descriptor, data })
     }
 
+    /// The segment's descriptor.
     pub fn descriptor(&self) -> &SegmentDescriptor {
         &self.descriptor
     }
 
+    /// Zero-copy payload slice.
     pub fn as_slice(&self) -> &'a [u8] {
         self.data
     }
 
+    /// Payload length.
     pub fn len(&self) -> usize {
         self.data.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }

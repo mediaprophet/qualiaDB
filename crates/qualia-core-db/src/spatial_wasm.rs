@@ -125,6 +125,7 @@ fn vertices_to_tensors(verts: &[[f32; 3]]) -> Vec<Tensor10D> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM: encodes a spatial payload.
 pub fn spatial_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
     let req: SpatialEncodeRequest =
         serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -268,6 +269,7 @@ fn point_in_polygon(x: f64, y: f64, ring: &[(f64, f64)]) -> bool {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM: runs a GeoSPARQL op.
 pub fn geosparql_operation_wasm(json: &str) -> Result<JsValue, JsValue> {
     let req: GeosparqlRequest =
         serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -317,6 +319,7 @@ pub fn geosparql_operation_wasm(json: &str) -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM: samples browser telemetry.
 pub fn sample_browser_telemetry_wasm() -> Result<JsValue, JsValue> {
     let samples = sample_ambient_telemetry();
     #[derive(Serialize)]
@@ -351,6 +354,7 @@ pub fn sample_browser_telemetry_wasm() -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM: exports a tensor slice.
 pub fn export_tensor_slice_wasm(max_nodes: u32) -> Result<JsValue, JsValue> {
     use crate::tensor::buffer_export::write_tensor_slice_from_resident;
     use crate::tensor::resident_substrate::{global_resident_substrate, MAX_RESIDENT_NODES};
@@ -404,6 +408,7 @@ struct DesignEncodeWasmResponse {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM: encodes a design.
 pub fn design_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
     let doc: crate::design_encode::DesignDocument =
         serde_json::from_str(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
@@ -468,6 +473,7 @@ pub fn design_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM: exports a tensor buffer.
 pub fn export_tensor_buffer_wasm(json: &str) -> Result<JsValue, JsValue> {
     let tensors = tensors_from_encode_json(json)?;
     let need = crate::tensor::buffer_export::TensorBufferHeader::total_bytes(tensors.len());

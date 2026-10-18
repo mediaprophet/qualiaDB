@@ -12,10 +12,12 @@ use super::grant::ProviderGrant;
 pub struct HardwareBackend;
 
 impl HardwareBackend {
+    /// Reserved no-arg sign entry point — always `PlatformUnsupported`; use `sign_ed25519`/`sign_mldsa`.
     pub fn sign() -> Result<(), CryptoError> {
         Err(CryptoError::PlatformUnsupported)
     }
 
+    /// Ed25519 signs `message`+`context` into `sig_out`, delegating to the hardware layer; grant fields accepted for interface parity. Fails closed `PlatformUnsupported` where no hardware backend exists.
     pub fn sign_ed25519(
         grant: &ProviderGrant,
         seed: &[u8; 32],
@@ -30,6 +32,7 @@ impl HardwareBackend {
         hardware::sign_ed25519(seed, message, context, sig_out)
     }
 
+    /// ML-DSA-65 signs `message`+`context` into `sig_out` via the hardware layer; `PlatformUnsupported` on platforms without one.
     pub fn sign_mldsa(
         secret: &[u8; ML_DSA_65_SK_LEN],
         message: &[u8],
@@ -39,10 +42,12 @@ impl HardwareBackend {
         hardware::sign_mldsa(secret, message, context, sig_out)
     }
 
+    /// Derives the X25519 public key for `secret` via the hardware layer; `PlatformUnsupported` where unavailable.
     pub fn x25519_public(secret: &[u8; X25519_LEN]) -> Result<[u8; X25519_LEN], CryptoError> {
         hardware::x25519_public(secret)
     }
 
+    /// X25519 Diffie-Hellman of `secret`×`peer` via the hardware layer; `PlatformUnsupported` where unavailable.
     pub fn x25519_dh(
         secret: &[u8; X25519_LEN],
         peer: &[u8; X25519_LEN],
@@ -50,14 +55,17 @@ impl HardwareBackend {
         hardware::x25519_dh(secret, peer)
     }
 
+    /// Reserved ephemeral-keygen entry point — always `PlatformUnsupported`.
     pub fn generate_ephemeral() -> Result<(), CryptoError> {
         Err(CryptoError::PlatformUnsupported)
     }
 
+    /// Fills `out` with hardware entropy; `PlatformUnsupported` where no entropy source exists.
     pub fn fill_entropy(out: &mut [u8]) -> Result<(), CryptoError> {
         hardware::fill_entropy(out)
     }
 
+    /// ML-KEM-768 decapsulates `ciphertext` under `secret` via the hardware layer; `PlatformUnsupported` where unavailable.
     pub fn mlkem_decaps(
         secret: &[u8; ML_KEM_768_SK_LEN],
         ciphertext: &[u8; ML_KEM_768_CT_LEN],
@@ -65,6 +73,7 @@ impl HardwareBackend {
         hardware::mlkem_decaps(secret, ciphertext)
     }
 
+    /// AEAD-encrypts `buffer` in place under `(key, nonce, aad)`, emitting `tag_out`; `PlatformUnsupported` where unavailable.
     pub fn aead_encrypt(
         key: &[u8; AEAD_KEY_LEN],
         nonce: &[u8; AEAD_NONCE_LEN],
@@ -75,6 +84,7 @@ impl HardwareBackend {
         hardware::aead_encrypt(key, nonce, aad, buffer, tag_out)
     }
 
+    /// AEAD-decrypts `buffer` in place, verifying `tag`; `PlatformUnsupported`/tag-failure errors fail closed.
     pub fn aead_decrypt(
         key: &[u8; AEAD_KEY_LEN],
         nonce: &[u8; AEAD_NONCE_LEN],

@@ -181,6 +181,7 @@ pub fn computer_vision(args: &[u8]) -> Result<String, McpSystemError> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// `?::computer_vision`.
 pub fn computer_vision(_args: &[u8]) -> Result<String, McpSystemError> {
     Err(McpSystemError::ToolNotFound)
 }

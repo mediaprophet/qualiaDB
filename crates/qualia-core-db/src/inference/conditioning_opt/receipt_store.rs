@@ -60,6 +60,7 @@ struct SigningPayload<'a> {
 }
 
 impl SignedModelOptimizationReceipt {
+    /// Signs an optimization receipt under the given key.
     pub fn new_signed(
         model_sha256: impl Into<String>,
         receipt: ModelOptimizationReceipt,
@@ -226,10 +227,12 @@ pub struct ModelOptimizationReceiptStore {
 }
 
 impl ModelOptimizationReceiptStore {
+    /// Creates a receipt store rooted at `root`.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
     }
 
+    /// Filesystem path for a receipt id.
     pub fn path_for(
         &self,
         receipt: &SignedModelOptimizationReceipt,
@@ -281,6 +284,7 @@ impl ModelOptimizationReceiptStore {
         }
     }
 
+    /// Loads the receipt at `path`.
     pub fn load_path(
         &self,
         path: &Path,

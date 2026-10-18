@@ -17,6 +17,7 @@ pub struct PrefixPageSet<const PAGES: usize> {
 }
 
 impl<const PAGES: usize> PrefixPageSet<PAGES> {
+    /// Empty value.
     pub const fn empty() -> Self {
         Self {
             identity: PrefixIdentity { words: [0; 4] },
@@ -26,6 +27,7 @@ impl<const PAGES: usize> PrefixPageSet<PAGES> {
         }
     }
 
+    /// Builds a set from `identity`+`pages`; errors on empty/oversized input.
     pub fn new(
         identity: PrefixIdentity,
         pages: &[u32],
@@ -45,6 +47,7 @@ impl<const PAGES: usize> PrefixPageSet<PAGES> {
         Ok(set)
     }
 
+    /// Live page slice.
     pub fn page_slice(&self) -> &[u32] {
         &self.pages[..self.page_count as usize]
     }
@@ -58,6 +61,7 @@ pub struct PrefixPageRegistry<const ENTRIES: usize, const PAGES: usize> {
 }
 
 impl<const ENTRIES: usize, const PAGES: usize> PrefixPageRegistry<ENTRIES, PAGES> {
+    /// Creates a default `PrefixPageRegistry`.
     pub const fn new() -> Self {
         Self {
             entries: [PrefixPageSet::empty(); ENTRIES],
@@ -66,6 +70,7 @@ impl<const ENTRIES: usize, const PAGES: usize> PrefixPageRegistry<ENTRIES, PAGES
         }
     }
 
+    /// Entry for `identity`, or `None`.
     pub fn get(&self, identity: PrefixIdentity) -> Option<&PrefixPageSet<PAGES>> {
         self.entries
             .iter()
@@ -109,6 +114,7 @@ impl<const ENTRIES: usize, const PAGES: usize> PrefixPageRegistry<ENTRIES, PAGES
         Ok(replaced)
     }
 
+    /// Removes `identity`; `true` when present.
     pub fn remove(&mut self, identity: PrefixIdentity) -> bool {
         self.remove_entry(identity).is_some()
     }

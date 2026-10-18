@@ -15,20 +15,24 @@ impl<T, const ROWS: usize, const COLS: usize> ZeroHeapMatrix<T, ROWS, COLS>
 where
     T: Copy + Default,
 {
+    /// Creates a default `ZeroHeapMatrix`.
     pub fn new(data: [[T; COLS]; ROWS]) -> Self {
         Self { data }
     }
 
+    /// `ZeroHeapMatrix::zeros`.
     pub fn zeros() -> Self {
         Self {
             data: [[T::default(); COLS]; ROWS],
         }
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(&self, row: usize, col: usize) -> T {
         self.data[row][col]
     }
 
+    /// `ZeroHeapMatrix::set`.
     pub fn set(&mut self, row: usize, col: usize, value: T) {
         self.data[row][col] = value;
     }

@@ -14,6 +14,7 @@ pub fn fill_entropy(_out: &mut [u8]) -> Result<(), CryptoError> {
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// `?::sign_ed25519`.
 pub fn sign_ed25519(
     _seed: &[u8; 32],
     _message: &[u8],
@@ -23,6 +24,7 @@ pub fn sign_ed25519(
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// Hardware ML-DSA-65 sign — `PlatformUnsupported`.
 pub fn sign_mldsa(
     _secret: &[u8; ML_DSA_65_SK_LEN],
     _message: &[u8],
@@ -32,10 +34,12 @@ pub fn sign_mldsa(
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// Hardware X25519 public-key derivation — `PlatformUnsupported`.
 pub fn x25519_public(_secret: &[u8; X25519_LEN]) -> Result<[u8; X25519_LEN], CryptoError> {
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// Hardware X25519 DH — `PlatformUnsupported`.
 pub fn x25519_dh(
     _secret: &[u8; X25519_LEN],
     _peer: &[u8; X25519_LEN],
@@ -43,6 +47,7 @@ pub fn x25519_dh(
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// Hardware ML-KEM-768 decapsulation — `PlatformUnsupported`.
 pub fn mlkem_decaps(
     _secret: &[u8; ML_KEM_768_SK_LEN],
     _ciphertext: &[u8; ML_KEM_768_CT_LEN],
@@ -50,6 +55,7 @@ pub fn mlkem_decaps(
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// Hardware AEAD encrypt — `PlatformUnsupported`.
 pub fn aead_encrypt(
     _key: &[u8; AEAD_KEY_LEN],
     _nonce: &[u8; AEAD_NONCE_LEN],
@@ -60,6 +66,7 @@ pub fn aead_encrypt(
     Err(CryptoError::PlatformUnsupported)
 }
 
+/// Hardware AEAD decrypt — `PlatformUnsupported`.
 pub fn aead_decrypt(
     _key: &[u8; AEAD_KEY_LEN],
     _nonce: &[u8; AEAD_NONCE_LEN],

@@ -27,6 +27,7 @@ impl BackendId {
     pub const CPU: BackendId = BackendId("cpu");
     pub const WGPU: BackendId = BackendId("wgpu");
 
+    /// Stable string form.
     pub fn as_str(self) -> &'static str {
         self.0
     }
@@ -135,6 +136,7 @@ pub struct BackendRegistry {
 }
 
 impl BackendRegistry {
+    /// Creates a default `BackendRegistry`.
     pub fn new() -> Self {
         Self {
             backends: Vec::new(),
@@ -161,10 +163,12 @@ impl BackendRegistry {
             .filter(|b| b.available())
     }
 
+    /// Number of elements.
     pub fn len(&self) -> usize {
         self.backends.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.backends.is_empty()
     }

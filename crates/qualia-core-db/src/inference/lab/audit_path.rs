@@ -115,6 +115,7 @@ pub fn audit_hot_path() -> HotPathAudit {
 }
 
 impl HotPathAudit {
+    /// Formats `report`.
     pub fn format_report(&self) -> String {
         let yn = |b: bool| if b { "yes" } else { "NO " };
         let mut s = String::from("Hot-path wiring audit\n");

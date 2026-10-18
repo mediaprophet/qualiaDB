@@ -21,6 +21,7 @@ pub struct SpatiotemporalQuadTree {
 }
 
 impl SpatiotemporalQuadTree {
+    /// Creates a default `SpatiotemporalQuadTree`.
     pub fn new(bounds: (f64, f64, f64, f64)) -> Self {
         Self {
             root_bounds: bounds,
@@ -32,6 +33,7 @@ impl SpatiotemporalQuadTree {
         }
     }
 
+    /// Inserts an entry; error at capacity.
     pub fn insert(&mut self, element: SpatialElement) {
         Self::insert_into(
             &mut self.root,

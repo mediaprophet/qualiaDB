@@ -201,6 +201,7 @@ pub struct AnatomyWebGl2 {
 }
 
 impl AnatomyWebGl2 {
+    /// Initializes the WebGL2 context on `canvas`, compiling shaders and allocating buffers; `JsValue` error on failure.
     pub fn try_new(canvas: &HtmlCanvasElement) -> Result<Self, JsValue> {
         let options = js_sys::Object::new();
         js_sys::Reflect::set(&options, &"alpha".into(), &false.into())?;
@@ -311,12 +312,14 @@ impl AnatomyWebGl2 {
         self.sky_enabled = false;
     }
 
+    /// Selects a procedural sky preset.
     pub fn set_sky_preset(&mut self, preset: u32) {
         self.atmosphere = AtmospherePreset::from_id(preset);
         self.clear = self.atmosphere.clear_rgba;
         self.sky_enabled = self.sky.is_some();
     }
 
+    /// Selects an atmosphere preset.
     pub fn set_atmosphere_preset(&mut self, preset: u32) {
         self.atmosphere = AtmospherePreset::from_id(preset);
     }
@@ -326,6 +329,7 @@ impl AnatomyWebGl2 {
         self.gl.is_context_lost()
     }
 
+    /// Uploads mesh vertex/index buffers to the GL context.
     pub fn upload_mesh(
         &mut self,
         positions: &[[f32; 3]],
@@ -441,6 +445,7 @@ impl AnatomyWebGl2 {
         Ok(())
     }
 
+    /// Renders one frame: camera, lighting, mesh draw, tone-mapping.
     pub fn render(
         &mut self,
         yaw: f32,
@@ -554,21 +559,25 @@ impl AnatomyWebGl2 {
         Ok(())
     }
 
+    /// Frames rendered since init.
     pub fn frame_count(&self) -> u32 {
         self.frame_count
     }
+    /// Sets the camera near plane.
     pub fn set_near_plane(&mut self, near: f32) {
         if near.is_finite() && (0.00001..=1.0).contains(&near) {
             self.near_plane = near;
         }
     }
 
+    /// Sets exposure compensation in EV; `false` when out of range.
     pub fn set_exposure_compensation(&mut self, ev: f32) -> bool {
         self.output
             .as_mut()
             .is_some_and(|output| output.set_exposure(ev))
     }
 
+    /// Sets temperature/tint compensation in EV; `false` when out of range.
     pub fn set_white_balance(&mut self, temperature_ev: f32, tint_ev: f32) -> bool {
         let Some(gains) =
             crate::render::output::white_balance_gains_from_stops(temperature_ev, tint_ev)
@@ -582,12 +591,14 @@ impl AnatomyWebGl2 {
         true
     }
 
+    /// `true` when the exposure-transform shader path is compiled.
     pub fn exposure_transform_available(&self) -> bool {
         self.output
             .as_ref()
             .is_some_and(WebGl2Output::transform_available)
     }
 
+    /// `true` when HDR scene rendering is available.
     pub fn hdr_scene_available(&self) -> bool {
         self.output
             .as_ref()
@@ -615,6 +626,7 @@ impl AnatomyWebGl2 {
     }
 }
 
+/// Compiles a shader.
 pub(super) fn compile_shader(
     gl: &WebGl2RenderingContext,
     shader_type: u32,
@@ -639,6 +651,7 @@ pub(super) fn compile_shader(
     }
 }
 
+/// Links a program.
 pub(super) fn link_program(
     gl: &WebGl2RenderingContext,
     vertex: &WebGlShader,

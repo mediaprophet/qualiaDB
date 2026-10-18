@@ -25,6 +25,7 @@ fn grant_until(audience: StrongDigest, exp: u64) -> crate::net::qdnf::authority:
     }
 }
 
+/// Scenario S07: revoking a grant before delivery must block receipt.
 pub fn s07_revoke_before_deliver() -> Result<(), QdnfError> {
     let mut mb = Mailbox::new();
     let slot = mb.store(b"pending-ct", clinician(), 1)?;
@@ -32,6 +33,7 @@ pub fn s07_revoke_before_deliver() -> Result<(), QdnfError> {
     expect_err(mb.deliver(slot, clinician(), 1), QdnfError::Revoked)
 }
 
+/// Scenario S08: a blocked request must not count as a grant.
 pub fn s08_blocked_is_not_grant() -> Result<(), QdnfError> {
     let mut grants = GrantTable::new();
     grants.add(CareGrant {
@@ -52,6 +54,7 @@ pub fn s08_blocked_is_not_grant() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S09: ordinary (non-clinical) bytes flow without gating.
 pub fn s09_ordinary_bytes() -> Result<(), QdnfError> {
     let label = verified(Confidentiality::C2Sensitive, digest(1))?;
     let mut grants = GrantTable::new();
@@ -78,12 +81,14 @@ pub fn s09_ordinary_bytes() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S10: clinical keys rotate by generation.
 pub fn s10_key_generation() -> Result<(), QdnfError> {
     let mut mb = Mailbox::new();
     let slot = mb.store(b"sealed-ct", clinician(), 1)?;
     expect_err(mb.deliver(slot, clinician(), 2), QdnfError::StaleGeneration)
 }
 
+/// Scenario S11: confidential requests route through the help lane.
 pub fn s11_confidential_help() -> Result<(), QdnfError> {
     expect_err(
         notify_guardian(
@@ -100,14 +105,17 @@ pub fn s11_confidential_help() -> Result<(), QdnfError> {
     )
 }
 
+/// Scenario S28: stale-generation keys are rejected.
 pub fn s28_stale_generation() -> Result<(), QdnfError> {
     s10_key_generation()
 }
 
+/// Scenario S38: revocation before consume blocks the consume.
 pub fn s38_revoke_before_consume() -> Result<(), QdnfError> {
     s07_revoke_before_deliver()
 }
 
+/// Scenario S39: revocation mid-transfer halts remaining chunks.
 pub fn s39_revoke_after_chunk() -> Result<(), QdnfError> {
     let mut mb = Mailbox::new();
     let first = mb.store(b"chunk-one", clinician(), 1)?;

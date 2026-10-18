@@ -9,6 +9,7 @@ use wgpu::util::DeviceExt;
 mod alpha_coverage;
 use alpha_coverage::alpha_coverage_plan as build_alpha_coverage_plan;
 
+/// `alpha_coverage_plan`.
 pub(super) fn alpha_coverage_plan(
     rgba8: &[u8],
     width: u32,
@@ -52,6 +53,7 @@ pub enum TextureMipSemantic {
 }
 
 impl TextureMipSemantic {
+    /// Alpha mask of the texture.
     pub fn alpha_mask(cutoff: f32) -> Option<Self> {
         (cutoff.is_finite() && (0.0..=1.0).contains(&cutoff)).then_some(Self::AlphaMask {
             cutoff_bits: if cutoff == 0.0 {
@@ -62,6 +64,7 @@ impl TextureMipSemantic {
         })
     }
 
+    /// `alpha_cutoff`.
     pub(super) fn alpha_cutoff(self) -> Option<f32> {
         match self {
             Self::AlphaMask { cutoff_bits } => {
@@ -87,6 +90,7 @@ pub(super) struct MipGenerator {
 }
 
 impl MipGenerator {
+    /// Creates a default `MipGenerator`.
     pub fn new(device: &wgpu::Device) -> Self {
         let bind_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("qualia-texture-mip-source-layout"),
@@ -174,6 +178,7 @@ impl MipGenerator {
         }
     }
 
+    /// Generates mip levels.
     pub fn generate(
         &self,
         device: &wgpu::Device,

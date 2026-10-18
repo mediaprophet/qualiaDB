@@ -4,6 +4,7 @@ use super::*;
 
 impl QTensorEngine {
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: prefill-chunk.
     pub async fn dispatch_prefill_chunk_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -826,6 +827,7 @@ impl QTensorEngine {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: prefill-chunk-mc8-gpu.
     pub(crate) async fn dispatch_prefill_chunk_async_mc8_gpu(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -1129,6 +1131,7 @@ impl QTensorEngine {
         true
     }
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: fused-transformer-block.
     pub async fn dispatch_fused_transformer_block_async(
         &self,
         tensor: &QTensor,
@@ -1310,6 +1313,7 @@ impl QTensorEngine {
         result
     }
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: output-argmax-chunked.
     pub async fn dispatch_output_argmax_chunked_async(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -1573,6 +1577,7 @@ impl QTensorEngine {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// `QTensorEngine::new_async`.
     pub async fn new_async() -> Self {
         Self::try_new()
             .await

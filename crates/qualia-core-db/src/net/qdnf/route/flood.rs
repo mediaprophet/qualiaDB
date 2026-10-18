@@ -22,6 +22,7 @@ pub struct FloodTable {
 }
 
 impl FloodTable {
+    /// Creates a default `FloodTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
@@ -69,10 +70,12 @@ impl FloodTable {
         self.count_live_origin(origin, now_unix) > 0
     }
 
+    /// `FloodTable::missing_record_invents_reachability`.
     pub const fn missing_record_invents_reachability() -> bool {
         false
     }
 
+    /// `true` when `default_route` present.
     pub const fn has_default_route() -> bool {
         false
     }

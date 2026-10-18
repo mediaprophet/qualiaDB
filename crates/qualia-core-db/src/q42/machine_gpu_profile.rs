@@ -73,6 +73,7 @@ pub struct MachineGpuProfile {
 }
 
 impl MachineGpuProfile {
+    /// Current time in ms.
     pub fn now_ms() -> u64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -80,10 +81,12 @@ impl MachineGpuProfile {
             .unwrap_or(0)
     }
 
+    /// Default profile path under `out_dir`.
     pub fn default_path(out_dir: &Path) -> PathBuf {
         out_dir.join(MACHINE_GPU_PROFILE_NAME)
     }
 
+    /// Serializes the profile to `path`.
     pub fn write_json(&self, path: &Path) -> Result<(), String> {
         let json = serde_json::to_string_pretty(self).map_err(|e| format!("serialize: {e}"))?;
         if let Some(parent) = path.parent() {
@@ -92,6 +95,7 @@ impl MachineGpuProfile {
         std::fs::write(path, json).map_err(|e| format!("write {}: {e}", path.display()))
     }
 
+    /// Loads a profile from `path`; `None` when absent.
     pub fn load_json(path: &Path) -> Result<Option<Self>, String> {
         if !path.is_file() {
             return Ok(None);
@@ -128,6 +132,7 @@ impl MachineGpuProfile {
         }
     }
 
+    /// Renders a PowerShell env script for this profile.
     pub fn apply_env_script_ps1(&self) -> String {
         // ASCII only: Windows PowerShell 5.1 reads BOM-less files as ANSI.
         let mut s = String::from(

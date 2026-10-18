@@ -10,6 +10,7 @@ use super::grant::ProviderGrant;
 pub struct SoftwareBackend;
 
 impl SoftwareBackend {
+    /// Software Ed25519 sign under `grant`+`seed`.
     pub fn sign_ed25519(
         grant: &ProviderGrant,
         seed: &[u8; 32],
@@ -29,10 +30,12 @@ impl SoftwareBackend {
         ed25519::sign_with_context(seed, message, context, sig_out)
     }
 
+    /// Software X25519 public derivation.
     pub fn x25519_public(secret: &[u8; 32]) -> [u8; 32] {
         X25519Secret::from_bytes(*secret).public()
     }
 
+    /// Always `PlatformUnsupported` — software backend refuses hardware ops.
     pub fn hardware_sign() -> Result<(), CryptoError> {
         super::hardware::HardwareBackend::sign()
     }

@@ -35,12 +35,14 @@ pub struct PrefixKvStore<const ENTRIES: usize, const PAGES: usize> {
 }
 
 impl<const ENTRIES: usize, const PAGES: usize> PrefixKvStore<ENTRIES, PAGES> {
+    /// Creates a default `PrefixKvStore`.
     pub const fn new() -> Self {
         Self {
             registry: PrefixPageRegistry::new(),
         }
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(&self, identity: PrefixIdentity) -> Option<PrefixPageSet<PAGES>> {
         self.registry.get(identity).copied()
     }

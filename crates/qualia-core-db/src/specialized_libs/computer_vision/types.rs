@@ -28,6 +28,7 @@ pub struct ImageView<'a> {
 
 impl<'a> ImageView<'a> {
     #[inline]
+    /// `ImageView::bytes_per_pixel`.
     pub fn bytes_per_pixel(self) -> u32 {
         match self.format {
             PixelFormat::Gray8 => 1,
@@ -72,6 +73,7 @@ impl Detection {
     pub const FLAG_LOW_ASSURANCE: u32 = 2;
 
     #[inline]
+    /// Empty value.
     pub fn empty() -> Self {
         Self {
             class_hash: 0,
@@ -88,6 +90,7 @@ impl Detection {
     }
 
     #[inline]
+    /// `Detection::score_f32`.
     pub fn score_f32(self) -> f32 {
         self.score_u16 as f32 / 65535.0
     }
@@ -119,8 +122,10 @@ pub enum VisionError {
 
 /// Backend-agnostic visual model.
 pub trait VisualModel {
+    /// Visual capabilities.
     fn capabilities(&self) -> VisualCapabilities;
 
+    /// Runs inference.
     fn infer(
         &mut self,
         image: ImageView<'_>,

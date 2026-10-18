@@ -48,6 +48,7 @@ pub(super) struct ParameterSpec {
     pub lm_head_out: usize,
 }
 
+/// Prepares parameter packs.
 pub(super) fn prepare_parameter_packs(
     dev: &mut MultiWeightDevice,
     views: ParameterViews,

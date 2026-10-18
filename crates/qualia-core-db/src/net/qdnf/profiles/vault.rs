@@ -65,6 +65,7 @@ pub struct LocalVault {
 }
 
 impl LocalVault {
+    /// Creates a default `LocalVault`.
     pub const fn new() -> Self {
         Self {
             slots: [VaultSlot::EMPTY; VAULT_SLOTS],
@@ -76,11 +77,13 @@ impl LocalVault {
     }
 
     #[inline]
+    /// `true` when locked.
     pub const fn is_locked(&self) -> bool {
         self.locked
     }
 
     #[inline]
+    /// Slot.
     pub fn slot(&self, index: u8) -> Result<&VaultSlot, QdnfError> {
         let i = index as usize;
         if i >= VAULT_SLOTS {
@@ -90,6 +93,7 @@ impl LocalVault {
     }
 
     #[inline]
+    /// `LocalVault::issued_ref`.
     pub fn issued_ref(&self, slot: u8) -> Result<KeyRef, QdnfError> {
         let i = slot as usize;
         if i >= VAULT_SLOTS || !self.slots[i].occupied {
@@ -175,6 +179,7 @@ pub fn load_ref(vault: &mut LocalVault, slot: u8, now: u64) -> Result<StrongDige
     )
 }
 
+/// Loads `key_ref`; error when absent/invalid.
 pub fn load_key_ref(
     vault: &mut LocalVault,
     key_ref: KeyRef,
@@ -224,6 +229,7 @@ pub fn crash_dump_redacted(vault: &LocalVault) -> bool {
     true
 }
 
+/// `notification-preview-max` size in bytes.
 pub fn notification_preview_max_bytes() -> usize {
     NOTIFICATION_PREVIEW_MAX_BYTES
 }

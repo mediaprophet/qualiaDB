@@ -53,6 +53,7 @@ pub struct TuningResult {
     pub finalists: Vec<CandidateResult>,
 }
 
+/// Tunes with the given config.
 pub fn tune_with<F>(
     kernel: &KernelSpec,
     constraints: &AdapterConstraints,

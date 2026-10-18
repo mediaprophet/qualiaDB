@@ -15,6 +15,7 @@ const PREAMBLE: &str = r#"@prefix vibe: <https://qualiadb.org/schema/vibe#> .
 # Language: vibe-0.1. Quin overlay literals are illegal.
 "#;
 
+/// Turtle serialization of the catalog.
 pub fn vibe_catalog_ttl() -> String {
     let mut out = String::from(PREAMBLE);
     for b in VIBE_0_1 {

@@ -13,6 +13,7 @@ pub enum EvidenceReliability {
 }
 
 impl EvidenceReliability {
+    /// Numeric reliability score in `[0,1]`.
     pub fn as_f64(&self) -> f64 {
         match self {
             Self::Confirmed => 1.0,
@@ -37,6 +38,7 @@ pub struct Evidence {
 }
 
 impl Evidence {
+    /// Creates evidence with `id`, `description`, `source`.
     pub fn new(id: &str, description: &str, source: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -49,6 +51,7 @@ impl Evidence {
         }
     }
 
+    /// Sets this evidence's reliability rating.
     pub fn set_reliability(&mut self, reliability: EvidenceReliability) {
         self.reliability = reliability;
     }
@@ -75,6 +78,7 @@ pub enum HypothesisStatus {
 }
 
 impl Hypothesis {
+    /// Creates a hypothesis with `id` and `statement`.
     pub fn new(id: &str, statement: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -125,6 +129,7 @@ pub struct Investigation {
 }
 
 impl Investigation {
+    /// Creates an empty investigation with `id`.
     pub fn new(id: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -135,10 +140,12 @@ impl Investigation {
         }
     }
 
+    /// Adds evidence to the investigation.
     pub fn collect_evidence(&mut self, evidence: Evidence) {
         self.evidence.insert(evidence.id.clone(), evidence);
     }
 
+    /// Updates reliability of `evidence_id`; `false` when not found.
     pub fn set_reliability(&mut self, evidence_id: &str, reliability: EvidenceReliability) -> bool {
         if let Some(ev) = self.evidence.get_mut(evidence_id) {
             ev.set_reliability(reliability);
@@ -148,6 +155,7 @@ impl Investigation {
         }
     }
 
+    /// Adds a hypothesis.
     pub fn propose_hypothesis(&mut self, hypothesis: Hypothesis) {
         self.hypotheses.insert(hypothesis.id.clone(), hypothesis);
     }
@@ -181,6 +189,7 @@ impl Investigation {
         }
     }
 
+    /// Adds a timeline event, optionally linked to `evidence_id`.
     pub fn create_timeline(&mut self, timestamp: &str, event: &str, evidence_id: Option<&str>) {
         self.timeline.push(TimelineEntry {
             timestamp: timestamp.to_string(),
@@ -189,6 +198,7 @@ impl Investigation {
         });
     }
 
+    /// Adds a typed link between two evidence/hypothesis ids.
     pub fn add_link(&mut self, source: &str, target: &str, link_type: &str) {
         self.links.push((
             source.to_string(),

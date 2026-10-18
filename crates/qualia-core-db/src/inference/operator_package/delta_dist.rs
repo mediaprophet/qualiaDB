@@ -217,6 +217,7 @@ impl DistributionResolver {
         }
     }
 
+    /// `invalidation` count.
     pub fn invalidation_count(&self) -> u32 {
         self.kv_invalidations
     }

@@ -61,6 +61,7 @@ pub struct SkeletalPlayer {
     fit_bytes: usize,
 }
 impl SkeletalPlayer {
+    /// Builds a player from a skeletal section + mesh attributes with the default 42 MiB resident budget; validates vertex/index/normal inputs and fails closed (`InvalidInput`/`BudgetExceeded`).
     pub fn from_section(
         section: &SkeletalSection<'_>,
         positions: &[[f32; 3]],
@@ -70,6 +71,7 @@ impl SkeletalPlayer {
     ) -> Result<Self, PlayerError> {
         Self::from_section_with_budget(section, positions, normals, uv, indices, 42 * 1024 * 1024)
     }
+    /// As `from_section` with an explicit caller byte budget — the admission pass counts borrowed inputs plus encoded section size and refuses before allocating beyond either bound.
     pub fn from_section_with_budget(
         section: &SkeletalSection<'_>,
         positions: &[[f32; 3]],
@@ -195,21 +197,27 @@ impl SkeletalPlayer {
         result.advance(0.0, false)?;
         Ok(result)
     }
+    /// Estimated resident bytes for joints, clips, tracks, keys, fit data — tracked against the 42 MiB budget.
     pub fn allocated_bytes(&self) -> usize {
         self.allocated_bytes
     }
+    /// Vertex positions slice.
     pub fn positions(&self) -> &[[f32; 3]] {
         &self.positions
     }
+    /// Vertex normals slice.
     pub fn normals(&self) -> &[[f32; 3]] {
         &self.normals
     }
+    /// Vertex tangents slice.
     pub fn tangents(&self) -> &[[f32; 4]] {
         &self.tangents
     }
+    /// `true` when a clip with `id` is registered.
     pub fn has_clip(&self, id: u64) -> bool {
         self.clips.iter().any(|c| c.id == id)
     }
+    /// Applies an `AnatomyBodyFit` inside `[min,max]` bounds; validates all scale fields are finite (≤100) and hidden-key payloads bounded (128 keys / 4 KiB); identity fit clears the override. Fails closed on `BudgetExceeded`.
     pub fn set_body_fit(
         &mut self,
         fit: &crate::render::body_fit::AnatomyBodyFit,
@@ -259,6 +267,7 @@ impl SkeletalPlayer {
         self.fit_bytes = bytes;
         Ok(())
     }
+    /// Sets world `origin`/`scale`; rejects non-finite or out-of-range values.
     pub fn set_output_frame(&mut self, origin: [f32; 3], scale: f32) -> Result<(), PlayerError> {
         if origin.iter().any(|v| !v.is_finite() || v.abs() > 1e8)
             || !scale.is_finite()
@@ -271,6 +280,7 @@ impl SkeletalPlayer {
         self.scale = scale;
         Ok(())
     }
+    /// Sets the root `Motor` transform; `InvalidInput` on a non-unit/invalid motor.
     pub fn set_root(&mut self, root: Motor) -> Result<(), PlayerError> {
         if !valid_motor(&root) {
             return Err(PlayerError::InvalidInput);
@@ -278,6 +288,7 @@ impl SkeletalPlayer {
         self.root = root;
         Ok(())
     }
+    /// `true` when `id` is a known joint.
     pub fn has_joint(&self, id: u64) -> bool {
         self.joint_ids.contains(&id)
     }
@@ -295,6 +306,7 @@ impl SkeletalPlayer {
         self.joint_deltas[joint] = delta;
         Ok(())
     }
+    /// Switches to clip `id` with `fade_seconds` blend; no-op when already active (still validates fade range); delegates to `restart_clip` otherwise.
     pub fn select_clip(&mut self, id: u64, fade_seconds: f64) -> Result<(), PlayerError> {
         if self.clips[self.clip].id == id {
             if !fade_seconds.is_finite() || !(0.0..=10.0).contains(&fade_seconds) {
@@ -304,6 +316,7 @@ impl SkeletalPlayer {
         }
         self.restart_clip(id, fade_seconds)
     }
+    /// Restarts clip `id` at t=0, snapshotting current pose for the `fade_seconds` transition (≤10 s); `UnknownClip` when `id` is not registered.
     pub fn restart_clip(&mut self, id: u64, fade_seconds: f64) -> Result<(), PlayerError> {
         if !fade_seconds.is_finite() || !(0.0..=10.0).contains(&fade_seconds) {
             return Err(PlayerError::InvalidInput);

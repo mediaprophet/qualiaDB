@@ -1,6 +1,7 @@
 use super::{Records, SkeletalSectionError};
 use crate::render::skeletal::{valid_motor, Motor, MAX_JOINTS};
 
+/// Validates.
 pub(super) fn validate(data: &impl Records) -> Result<(), SkeletalSectionError> {
     let counts = data.counts();
     counts

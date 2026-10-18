@@ -21,6 +21,7 @@ pub enum Ktx2Supercompression {
 }
 
 impl Ktx2Supercompression {
+    /// Builds `Ktx2Supercompression` from `id`.
     pub const fn from_id(id: u32) -> Self {
         match id {
             0 => Self::None,
@@ -294,6 +295,7 @@ impl<'a> Ktx2Document<'a> {
         self.level_count
     }
 
+    /// `Ktx2Document::supercompression`.
     pub const fn supercompression(&self) -> Ktx2Supercompression {
         Ktx2Supercompression::from_id(self.supercompression_scheme)
     }
@@ -312,6 +314,7 @@ impl<'a> Ktx2Document<'a> {
         None
     }
 
+    /// `Ktx2Document::color_space`.
     pub const fn color_space(&self) -> Ktx2ColorSpace {
         if is_srgb_format(self.vk_format) {
             Ktx2ColorSpace::Srgb

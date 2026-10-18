@@ -29,6 +29,7 @@ pub struct PublishInspection {
 pub const WASM_Q42_HELD: &str =
     "held / not yet — native Q42 v3 volumes are not loadable on this WASM profile; N3/HCF remain inspectable";
 
+/// `?::inspect_for_publish`.
 pub fn inspect_for_publish(bytes: &[u8]) -> Result<PublishInspection, InstrumentError> {
     let opened = open_collectable(bytes)?;
     let labelled = opened.manifest.content_category.requires_seed_label();
@@ -46,6 +47,7 @@ pub fn inspect_for_publish(bytes: &[u8]) -> Result<PublishInspection, Instrument
     })
 }
 
+/// `Ok(())` when publishable.
 pub fn assert_can_publish(inspection: &PublishInspection) -> Result<(), InstrumentError> {
     if !inspection.has_source_n3 {
         return Err(InstrumentError::MissingField(

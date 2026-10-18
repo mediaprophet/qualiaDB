@@ -11,6 +11,7 @@ pub struct Pacer {
 }
 
 impl Pacer {
+    /// Creates a default `Pacer`.
     pub const fn new(rate_bytes_per_s: u64) -> Self {
         Self {
             next_send_us: 0,
@@ -60,6 +61,7 @@ pub struct IdleWatch {
 }
 
 impl IdleWatch {
+    /// Creates a default `IdleWatch`.
     pub const fn new(idle_us: u64, generation: u64) -> Self {
         Self {
             last_activity_us: 0,
@@ -69,6 +71,7 @@ impl IdleWatch {
         }
     }
 
+    /// Pacing hook on send.
     pub fn on_send(&mut self, now_us: u64) -> Result<(), QdnfError> {
         if self.closed {
             return Err(QdnfError::Closed);
@@ -82,6 +85,7 @@ impl IdleWatch {
         Ok(())
     }
 
+    /// Reopens the pacing window.
     pub fn reopen(&mut self, generation: u64) -> Result<(), QdnfError> {
         if generation == self.generation {
             return Err(QdnfError::Replay);

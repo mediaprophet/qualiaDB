@@ -14,6 +14,7 @@ pub struct ControllerIdentity {
 }
 
 impl ControllerIdentity {
+    /// Builds `ControllerIdentity` from `controller`.
     pub fn from_controller(bytes: &[u8]) -> Result<Self, QdnfError> {
         if bytes.is_empty() {
             return Err(QdnfError::Range);
@@ -24,6 +25,7 @@ impl ControllerIdentity {
     }
 
     #[inline]
+    /// Digest.
     pub const fn digest(self) -> StrongDigest {
         self.digest
     }

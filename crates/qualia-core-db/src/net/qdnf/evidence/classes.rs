@@ -19,6 +19,7 @@ pub enum EvidenceClass {
 }
 
 impl EvidenceClass {
+    /// Builds `EvidenceClass` from `wire`.
     pub fn from_wire(value: u8) -> Result<Self, QdnfError> {
         match value {
             1 => Ok(Self::EphemeralDiagnostic),

@@ -47,6 +47,7 @@ pub struct TemporalProducersGpu {
 
 #[allow(dead_code)]
 impl TemporalProducersGpu {
+    /// Tries `new`.
     pub fn try_new(
         device: &wgpu::Device,
         scene_depth_view: &wgpu::TextureView,
@@ -332,6 +333,7 @@ impl TemporalProducersGpu {
         })
     }
 
+    /// Reallocates producer targets at a new extent.
     pub fn resize(
         &mut self,
         device: &wgpu::Device,
@@ -363,6 +365,7 @@ impl TemporalProducersGpu {
         self.height = height;
     }
 
+    /// Points the pass at a new scene-depth view.
     pub fn update_scene_depth_view(
         &mut self,
         device: &wgpu::Device,
@@ -377,6 +380,7 @@ impl TemporalProducersGpu {
         );
     }
 
+    /// Records the motion/reactive mask pass into `encoder`.
     pub fn record_producers(
         &self,
         encoder: &mut wgpu::CommandEncoder,
@@ -455,14 +459,17 @@ impl TemporalProducersGpu {
         }
     }
 
+    /// Motion-vector texture view.
     pub fn motion_view(&self) -> &wgpu::TextureView {
         &self.motion_view
     }
 
+    /// Reactive-mask texture view.
     pub fn reactive_view(&self) -> &wgpu::TextureView {
         &self.reactive_view
     }
 
+    /// Current render extent.
     pub fn extent(&self) -> (u32, u32) {
         (self.width, self.height)
     }

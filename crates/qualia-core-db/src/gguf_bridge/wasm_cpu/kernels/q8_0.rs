@@ -7,6 +7,7 @@
 const BLOCK_ELEMS: usize = 32;
 const BLOCK_BYTES: usize = 34;
 
+/// q8_0 GEMV into `out`; `false` on shape/alignment mismatch.
 pub(crate) fn q8_0_gemv_into(
     raw: &[u8],
     input: &[f32],

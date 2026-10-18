@@ -290,6 +290,7 @@ impl AmbientOrchestrationManager {
         self.devices.keys().cloned().collect()
     }
 
+    /// `AmbientOrchestrationManager::list_devices_into`.
     pub fn list_devices_into(
         &self,
         out: &mut [AmbientDeviceHandle],
@@ -313,6 +314,7 @@ impl AmbientOrchestrationManager {
         self.task_scheduler.get_pending_tasks()
     }
 
+    /// Gets `pending-tasks-into`.
     pub fn get_pending_tasks_into(&self, out: &mut [TaskHandle]) -> Result<usize, AmbientError> {
         self.task_scheduler.get_pending_tasks_into(out)
     }

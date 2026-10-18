@@ -12,6 +12,7 @@ pub(super) struct AtmosphereUniform {
 }
 
 impl AtmosphereUniform {
+    /// `AtmosphereUniform::from_profile`.
     pub fn from_profile(profile: AtmospherePreset) -> Self {
         Self {
             fog_color_density: [

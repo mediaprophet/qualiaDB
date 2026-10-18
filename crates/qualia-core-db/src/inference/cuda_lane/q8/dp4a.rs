@@ -43,6 +43,7 @@ extern "C" __global__ void quantize_q8_activation(
 }
 "#;
 
+/// CUDA source for the Q8 DP4A SwiGLU kernel.
 pub(crate) fn q8_dp4a_swiglu_source() -> &'static str {
     static SOURCE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     SOURCE

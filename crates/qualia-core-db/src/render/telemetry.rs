@@ -42,6 +42,7 @@ pub struct SystemTelemetry {
 
 impl SystemTelemetry {
     #[inline]
+    /// Telemetry from an 11-float sample array.
     pub fn from_samples(samples: &[f32; 11]) -> Self {
         Self {
             memory_pressure: samples[0],
@@ -59,11 +60,13 @@ impl SystemTelemetry {
     }
 
     #[inline]
+    /// Refreshes from the ledger.
     pub fn refresh_from_ledger(&mut self) {
         *self = Self::from_samples(&sample_ambient_telemetry());
     }
 
     #[inline]
+    /// Applies a float slice.
     pub fn apply_floats(&mut self, floats: &[f32]) {
         let mut samples = sample_ambient_telemetry();
         for (i, slot) in samples.iter_mut().enumerate() {
@@ -147,6 +150,7 @@ pub struct ObserverStandpoint {
 
 impl ObserverStandpoint {
     #[inline]
+    /// Builds an observer standpoint.
     pub const fn new(
         standpoint_hash: u64,
         session_nonce: u64,
@@ -171,6 +175,7 @@ impl ObserverStandpoint {
     }
 
     #[inline]
+    /// Builder: temporal slice.
     pub fn with_temporal(mut self, t_slice: f32, t_window: f32) -> Self {
         self.t_slice = t_slice;
         self.t_window = t_window.max(0.0);
@@ -178,6 +183,7 @@ impl ObserverStandpoint {
     }
 
     #[inline]
+    /// `true` when `tensor_t` is visible.
     pub fn temporal_visible(&self, tensor_t: f32) -> bool {
         (tensor_t - self.t_slice).abs() <= self.t_window
     }

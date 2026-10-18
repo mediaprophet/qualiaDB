@@ -12,6 +12,7 @@ pub struct DmxUniverse {
 }
 
 impl DmxUniverse {
+    /// Creates universe `id` with all 512 channels at 0.
     pub fn new(id: u16) -> Self {
         Self {
             id,
@@ -19,6 +20,7 @@ impl DmxUniverse {
         }
     }
 
+    /// Sets `channel` (1-512) to `value`; `false` when out of DMX range.
     pub fn set_channel(&mut self, channel: u16, value: u8) -> bool {
         if channel < 512 {
             self.channels[channel as usize] = value;
@@ -28,6 +30,7 @@ impl DmxUniverse {
         }
     }
 
+    /// Channel value, or `None` when out of range.
     pub fn get_channel(&self, channel: u16) -> Option<u8> {
         if channel < 512 {
             Some(self.channels[channel as usize])
@@ -36,6 +39,7 @@ impl DmxUniverse {
         }
     }
 
+    /// Zeroes all 512 channels.
     pub fn clear(&mut self) {
         self.channels = [0; 512];
     }
@@ -66,6 +70,7 @@ pub enum FixtureType {
 }
 
 impl DmxFixture {
+    /// Creates a fixture with a start address and channel map.
     pub fn new(
         id: &str,
         name: &str,
@@ -85,6 +90,7 @@ impl DmxFixture {
         }
     }
 
+    /// Maps a fixture `function` name to a channel `offset`.
     pub fn map_channel(&mut self, function: &str, offset: u16) {
         self.channel_map.insert(function.to_string(), offset);
     }
@@ -135,6 +141,7 @@ pub struct Cue {
 }
 
 impl Cue {
+    /// Creates an empty cue.
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -147,15 +154,18 @@ impl Cue {
         }
     }
 
+    /// Sets `channel` in `universe` to `value` in this cue.
     pub fn set_channel(&mut self, universe: u16, channel: u16, value: u8) {
         self.channel_values.insert((universe, channel), value);
     }
 
+    /// Sets fade-in/fade-out times in seconds.
     pub fn set_fade(&mut self, fade_in: f64, fade_out: f64) {
         self.fade_in = fade_in.max(0.0);
         self.fade_out = fade_out.max(0.0);
     }
 
+    /// Adds a trigger label to the cue.
     pub fn add_trigger(&mut self, trigger: &str) {
         self.triggers.push(trigger.to_string());
     }
@@ -198,6 +208,7 @@ pub struct CueStack {
 }
 
 impl CueStack {
+    /// Creates an empty cue stack positioned before the first cue.
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -208,10 +219,12 @@ impl CueStack {
         }
     }
 
+    /// Appends `cue` to the stack.
     pub fn add_cue(&mut self, cue: Cue) {
         self.cues.push(cue);
     }
 
+    /// Advances to the next cue and applies its channel values to `universes`; `false` at the end.
     pub fn go(&mut self, universes: &mut BTreeMap<u16, DmxUniverse>) -> bool {
         if self.current_index < self.cues.len() {
             self.cues[self.current_index].apply(universes);
@@ -222,6 +235,7 @@ impl CueStack {
         }
     }
 
+    /// Steps back one cue (does not re-apply values); `false` at the start.
     pub fn go_back(&mut self) -> bool {
         if self.current_index > 0 {
             self.current_index -= 1;
@@ -231,14 +245,17 @@ impl CueStack {
         }
     }
 
+    /// Resets the stack position to before the first cue.
     pub fn reset(&mut self) {
         self.current_index = 0;
     }
 
+    /// The cue at the current position, or `None`.
     pub fn current_cue(&self) -> Option<&Cue> {
         self.cues.get(self.current_index)
     }
 
+    /// Number of cues in the stack.
     pub fn cue_count(&self) -> usize {
         self.cues.len()
     }

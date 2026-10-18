@@ -6,6 +6,7 @@ use vibe::{Diagnostic, Span, Value};
 
 // Real presentation morphism (promoted from stub T27).
 // Transforms scene coordinates according to observer presentation level P0-P6.
+/// VibeScript seam: manifold projection.
 pub fn project(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let x = args::rec_f64(args_v, "x").unwrap_or(0.0);
     let y = args::rec_f64(args_v, "y").unwrap_or(0.0);

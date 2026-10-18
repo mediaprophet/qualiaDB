@@ -34,6 +34,7 @@ pub struct Assumptions {
 }
 
 impl Assumptions {
+    /// Creates a default `Assumptions`.
     pub fn new() -> Self {
         Self {
             signs: HashMap::new(),

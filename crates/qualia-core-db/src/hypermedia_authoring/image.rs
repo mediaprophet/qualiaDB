@@ -37,6 +37,7 @@ pub struct ImageLayer {
 }
 
 impl ImageLayer {
+    /// Creates a `width`x`height` layer with transparent pixels, full opacity, Normal blend, and zero offset.
     pub fn new(id: &str, name: &str, width: u32, height: u32) -> Self {
         Self {
             id: id.to_string(),
@@ -53,6 +54,7 @@ impl ImageLayer {
         }
     }
 
+    /// Sets the RGBA pixel at `(x,y)` — no-op when out of bounds.
     pub fn set_pixel(&mut self, x: u32, y: u32, rgba: [u8; 4]) {
         if x < self.width && y < self.height {
             let idx = (y as usize) * (self.width as usize) + (x as usize);
@@ -60,6 +62,7 @@ impl ImageLayer {
         }
     }
 
+    /// RGBA pixel at `(x,y)`; transparent `[0;4]` when out of bounds.
     pub fn get_pixel(&self, x: u32, y: u32) -> [u8; 4] {
         if x < self.width && y < self.height {
             let idx = (y as usize) * (self.width as usize) + (x as usize);
@@ -69,24 +72,29 @@ impl ImageLayer {
         }
     }
 
+    /// Fills the whole layer with `rgba`.
     pub fn fill(&mut self, rgba: [u8; 4]) {
         for px in &mut self.pixels {
             *px = rgba;
         }
     }
 
+    /// Sets layer opacity (callers supply 0..1).
     pub fn set_opacity(&mut self, opacity: f32) {
         self.opacity = opacity.clamp(0.0, 1.0);
     }
 
+    /// Sets the layer blend mode.
     pub fn set_blend_mode(&mut self, mode: BlendMode) {
         self.blend_mode = mode;
     }
 
+    /// Toggles layer visibility.
     pub fn set_visible(&mut self, visible: bool) {
         self.visible = visible;
     }
 
+    /// Sets the layer pixel offset within the document.
     pub fn set_offset(&mut self, x: i32, y: i32) {
         self.offset_x = x;
         self.offset_y = y;
@@ -104,6 +112,7 @@ impl ImageLayer {
         self.mask = Some(mask);
     }
 
+    /// Removes the layer mask.
     pub fn clear_mask(&mut self) {
         self.mask = None;
     }
@@ -120,6 +129,7 @@ pub struct BrushStroke {
 }
 
 impl BrushStroke {
+    /// Creates a stroke with `size` and `colour` and an empty point list.
     pub fn new(size: f32, colour: [u8; 4]) -> Self {
         Self {
             points: Vec::new(),
@@ -130,6 +140,7 @@ impl BrushStroke {
         }
     }
 
+    /// Appends a point to the stroke path.
     pub fn add_point(&mut self, x: f32, y: f32) {
         self.points.push((x, y));
     }
@@ -307,6 +318,7 @@ pub struct ImageDocument {
 }
 
 impl ImageDocument {
+    /// Creates a `width`x`height` document with one default layer.
     pub fn new(id: &str, width: u32, height: u32) -> Self {
         Self {
             id: id.to_string(),
@@ -318,6 +330,7 @@ impl ImageDocument {
         }
     }
 
+    /// Appends a layer named `name` and makes it active; returns it mutably.
     pub fn add_layer(&mut self, name: &str) -> &mut ImageLayer {
         let id = format!("layer_{}", self.layers.len());
         let layer = ImageLayer::new(&id, name, self.width, self.height);
@@ -326,6 +339,7 @@ impl ImageDocument {
         self.layers.last_mut().unwrap()
     }
 
+    /// Removes layer `index`; `false` when out of range.
     pub fn remove_layer(&mut self, index: usize) -> bool {
         if index < self.layers.len() {
             self.layers.remove(index);
@@ -338,10 +352,12 @@ impl ImageDocument {
         }
     }
 
+    /// Mutable access to the active layer, or `None`.
     pub fn active_layer_mut(&mut self) -> Option<&mut ImageLayer> {
         self.layers.get_mut(self.active_layer)
     }
 
+    /// Number of layers.
     pub fn layer_count(&self) -> usize {
         self.layers.len()
     }
@@ -365,10 +381,12 @@ impl ImageDocument {
         result
     }
 
+    /// Adds a selection region.
     pub fn add_selection(&mut self, selection: Selection) {
         self.selections.insert(selection.id.clone(), selection);
     }
 
+    /// Clears all selection regions.
     pub fn clear_selections(&mut self) {
         self.selections.clear();
     }

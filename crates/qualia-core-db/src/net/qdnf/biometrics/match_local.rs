@@ -35,41 +35,49 @@ pub struct MatchResult {
 
 impl MatchResult {
     #[inline]
+    /// Biometric object kind.
     pub const fn kind(self) -> BiometricObjectKind {
         BiometricObjectKind::MatchResult
     }
 
     #[inline]
+    /// Match decision.
     pub const fn decision(self) -> MatchDecision {
         self.decision
     }
 
     #[inline]
+    /// Match score.
     pub const fn score(self) -> u16 {
         self.score
     }
 
     #[inline]
+    /// Uncertainty margin.
     pub const fn uncertainty(self) -> u16 {
         self.uncertainty
     }
 
     #[inline]
+    /// Template quality.
     pub const fn quality(self) -> u16 {
         self.quality
     }
 
     #[inline]
+    /// Spoof indicator.
     pub const fn spoof_indicator(self) -> u16 {
         self.spoof_indicator
     }
 
     #[inline]
+    /// Purpose digest.
     pub const fn purpose(self) -> StrongDigest {
         self.purpose
     }
 
     #[inline]
+    /// Expiry epoch.
     pub const fn expires_unix(self) -> u64 {
         self.expires_unix
     }

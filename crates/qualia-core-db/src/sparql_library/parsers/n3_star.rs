@@ -338,6 +338,7 @@ pub fn parse_n3_star_into<R: std::io::Read, S: crate::sparql_library::quin_sink:
     Ok(count)
 }
 
+/// Parses `n3-star-stream`.
 pub fn parse_n3_star_stream<R: std::io::Read>(
     reader: R,
     context_hash: u64,

@@ -48,6 +48,7 @@ pub enum AgentBackend {
 
 // NOTE: `pub(super)` widening (was a private module-level fn) so `local_agent.rs`
 // can call it from the constructor across the new submodule boundary.
+/// Default local modality.
 pub(super) fn default_local_modality() -> String {
     "text".to_string()
 }

@@ -31,6 +31,7 @@ pub struct ConnSlot {
 }
 
 impl ConnSlot {
+    /// Creates a default `ConnSlot`.
     pub const fn new(attempt: u32) -> Self {
         Self {
             attempt,
@@ -39,6 +40,7 @@ impl ConnSlot {
         }
     }
 
+    /// Restarts the connection slot.
     pub fn restart(&mut self) {
         self.generation = self.generation.wrapping_add(1);
         if self.generation == 0 {
@@ -74,6 +76,7 @@ impl ConnSlot {
         )
     }
 
+    /// Transitions to `to` at generation `gen`.
     pub fn transition(&mut self, gen: u32, to: ConnState) -> Result<(), ConnError> {
         if gen != self.generation {
             return Err(ConnError::StaleGeneration);

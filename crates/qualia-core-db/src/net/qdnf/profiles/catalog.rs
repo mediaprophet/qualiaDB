@@ -22,10 +22,12 @@ pub enum ProtectionProfile {
 }
 
 impl ProtectionProfile {
+    /// Converts to `u8`.
     pub const fn to_u8(self) -> u8 {
         self as u8
     }
 
+    /// Builds `ProtectionProfile` from `u8`.
     pub const fn from_u8(value: u8) -> Result<Self, QdnfError> {
         match value {
             0 => Ok(Self::P0),
@@ -42,6 +44,7 @@ impl ProtectionProfile {
         self as u8
     }
 
+    /// Raises the floor to `other`.
     pub const fn raise_floor(self, other: Self) -> Self {
         if self.floor_rank() >= other.floor_rank() {
             self
@@ -50,6 +53,7 @@ impl ProtectionProfile {
         }
     }
 
+    /// Next-stronger profile.
     pub const fn one_stronger(self) -> Self {
         match self {
             Self::P0 => Self::P1,
@@ -124,11 +128,13 @@ pub struct ControlId(pub StrongDigest);
 impl ControlId {
     pub const ZERO: Self = Self(StrongDigest::ZERO);
 
+    /// Maps a control predicate to its catalog id.
     pub fn from_predicate(predicate: ControlPredicate) -> Self {
         Self(sha384(predicate.canonical_name()))
     }
 
     #[inline]
+    /// 48-byte control id.
     pub const fn as_bytes(&self) -> &[u8; 48] {
         self.0.as_bytes()
     }
@@ -146,6 +152,7 @@ pub struct ControlSet {
 }
 
 impl ControlSet {
+    /// Creates an empty control set for `profile`.
     pub fn blank(profile: ProtectionProfile) -> Result<Self, QdnfError> {
         let controls = [ControlId::ZERO; MAX_CONTROLS];
         Ok(Self {
@@ -157,10 +164,12 @@ impl ControlSet {
     }
 
     #[inline]
+    /// Control ids.
     pub fn controls(&self) -> &[ControlId] {
         &self.controls[..self.control_count as usize]
     }
 
+    /// `true` when `id` is in the set.
     pub fn contains(&self, id: ControlId) -> bool {
         let mut i = 0usize;
         while i < self.control_count as usize {
@@ -173,6 +182,7 @@ impl ControlSet {
     }
 
     #[inline]
+    /// `true` when a matching control is in the set.
     pub fn contains_predicate(&self, predicate: ControlPredicate) -> bool {
         self.contains(ControlId::from_predicate(predicate))
     }
@@ -189,6 +199,7 @@ impl ControlSet {
         true
     }
 
+    /// Appends `id`; `QdnfError` at capacity.
     pub fn try_push(&mut self, id: ControlId) -> Result<(), QdnfError> {
         if self.contains(id) {
             return Ok(());
@@ -202,6 +213,7 @@ impl ControlSet {
         Ok(())
     }
 
+    /// Appends the id for `predicate`; error at capacity.
     pub fn try_push_predicate(&mut self, predicate: ControlPredicate) -> Result<(), QdnfError> {
         self.try_push(ControlId::from_predicate(predicate))
     }
@@ -222,6 +234,7 @@ pub fn digest_control_list(
     Ok(t.digest())
 }
 
+/// Builds a set from a predicate slice.
 pub fn control_set_from_predicates(
     profile: ProtectionProfile,
     predicates: &[ControlPredicate],
@@ -338,6 +351,7 @@ fn predicates_for(profile: ProtectionProfile) -> &'static [ControlPredicate] {
     }
 }
 
+/// The catalog's predefined set for `profile`.
 pub fn catalog_entry(profile: ProtectionProfile) -> ControlSet {
     control_set_from_predicates(profile, predicates_for(profile))
         .expect("static catalog fits MAX_CONTROLS")

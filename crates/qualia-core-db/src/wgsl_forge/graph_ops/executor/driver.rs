@@ -226,6 +226,7 @@ impl ResidentWeights {
     pub fn len(&self) -> usize {
         self.views.len()
     }
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.views.is_empty()
     }

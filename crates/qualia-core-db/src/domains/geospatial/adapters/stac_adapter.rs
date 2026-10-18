@@ -24,6 +24,7 @@ fn quin(s: u64, p: u64, o: u64) -> crate::NQuin {
 }
 
 impl StacAdapter {
+    /// Creates a default `StacAdapter`.
     pub fn new(id: &'static str, endpoint: &str, collection: Option<&str>) -> Self {
         Self {
             id,

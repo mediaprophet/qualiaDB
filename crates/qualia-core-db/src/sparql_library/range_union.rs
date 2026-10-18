@@ -45,6 +45,7 @@ pub struct Q42RangeVolumeSetUnionState {
 }
 
 impl Q42RangeUnionPlan {
+    /// Builds `Q42RangeUnionPlan` from `execution_plan`.
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
             return Err("range UNION requires a non-empty execution plan".into());
@@ -133,6 +134,7 @@ fn triple_scan(plan: &ExecutionPlan, operator: u16) -> Result<Q42RangeTriplePatt
     }
 }
 
+/// Executes a range-union into `out`.
 pub fn execute_range_union_page_into<S: crate::q42_volume::Q42RangeSource>(
     volume: &crate::q42_volume::Q42RangeVolume<S>,
     plan: Q42RangeUnionPlan,
@@ -214,6 +216,7 @@ pub fn execute_range_union_page_into<S: crate::q42_volume::Q42RangeSource>(
     }
 }
 
+/// Executes a volume-set range-union into `out`.
 pub fn execute_range_volume_set_union_page_into<S: crate::q42_volume::Q42RangeSource>(
     volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
     plan: Q42RangeUnionPlan,

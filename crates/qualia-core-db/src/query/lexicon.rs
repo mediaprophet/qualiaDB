@@ -66,6 +66,7 @@ pub struct LexiconManager {
 }
 
 impl LexiconManager {
+    /// Creates a default `LexiconManager`.
     pub fn new() -> Self {
         Self {}
     }
@@ -131,6 +132,7 @@ pub struct LexiconInterner {
 }
 
 impl LexiconInterner {
+    /// Creates `LexiconInterner` with the given state.
     pub fn new() -> Self {
         Self::default()
     }

@@ -57,6 +57,7 @@ pub fn pad_to_next_bucket(size: u64, bucket: u64) -> Result<u64, QdnfError> {
         .ok_or(QdnfError::Range)
 }
 
+/// Records `bucket`.
 pub fn record_bucket(profile: ProtectionProfile) -> u64 {
     match profile {
         ProtectionProfile::P0 => 0,
@@ -89,6 +90,7 @@ impl OverheadBudget {
         crypto_work: 0,
     };
 
+    /// `total` size in bytes.
     pub fn total_bytes(&self) -> Result<u64, QdnfError> {
         self.padding_bytes
             .checked_add(self.relay_copies)
@@ -99,6 +101,7 @@ impl OverheadBudget {
             .ok_or(QdnfError::Range)
     }
 
+    /// Converts to `resource_budget`.
     pub fn to_resource_budget(&self) -> Result<ResourceBudget, QdnfError> {
         Ok(ResourceBudget {
             bytes: self.total_bytes()?,
@@ -138,6 +141,7 @@ pub fn crypto_work_units(profile: ProtectionProfile) -> u64 {
     1u64 << profile.floor_rank()
 }
 
+/// `OverheadBudget::estimate_overhead`.
 pub fn estimate_overhead(
     profile: ProtectionProfile,
     controls: &ControlSet,

@@ -17,6 +17,7 @@ pub struct FuzzySolution {
 }
 
 impl FuzzySolution {
+    /// Creates a solution row with membership `degree`.
     pub fn new(row: BindingRow, degree: f64) -> Self {
         Self {
             row,
@@ -55,24 +56,29 @@ pub struct FuzzyResultSet {
 }
 
 impl FuzzyResultSet {
+    /// Creates an empty result set.
     pub fn new() -> Self {
         Self {
             solutions: Vec::new(),
         }
     }
 
+    /// Creates a result set from `solutions`.
     pub fn from_solutions(solutions: Vec<FuzzySolution>) -> Self {
         Self { solutions }
     }
 
+    /// Appends a solution.
     pub fn push(&mut self, sol: FuzzySolution) {
         self.solutions.push(sol);
     }
 
+    /// Result count.
     pub fn len(&self) -> usize {
         self.solutions.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.solutions.is_empty()
     }

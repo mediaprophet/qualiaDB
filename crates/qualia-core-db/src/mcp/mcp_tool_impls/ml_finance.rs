@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: dispatches ML inference.
 pub fn ml_inference(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::machine_learning::{
         InferenceParameters, MachineLearningLibrary, Precision,
@@ -66,6 +67,7 @@ pub fn ml_inference(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// MCP tool: dispatches a financial model.
 pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::financial_modeling::{
         Asset, AssetType, FinancialModelingLibrary, OptionParameters, OptionType, Portfolio,

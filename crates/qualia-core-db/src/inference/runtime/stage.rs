@@ -74,6 +74,7 @@ impl Default for StageTrace {
 }
 
 impl StageTrace {
+    /// Creates a default `StageTrace`.
     pub const fn new() -> Self {
         Self {
             receipts: [None; STAGE_TRACE_CAPACITY],
@@ -81,6 +82,7 @@ impl StageTrace {
         }
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -189,6 +191,7 @@ pub struct ThinkingTracker {
 }
 
 impl ThinkingTracker {
+    /// Creates a default `ThinkingTracker`.
     pub const fn new() -> Self {
         Self {
             open_progress: 0,
@@ -198,6 +201,7 @@ impl ThinkingTracker {
         }
     }
 
+    /// `true` while in the thinking stage.
     pub fn in_thinking(&self) -> bool {
         self.in_thinking
     }

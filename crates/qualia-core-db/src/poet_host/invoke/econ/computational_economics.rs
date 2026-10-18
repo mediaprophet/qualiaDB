@@ -1061,6 +1061,7 @@ pub fn econ_ols(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 // ── Agent-based ──────────────────────────────────────────────────────────────
 
+/// Aggregates a wealth/values list into sum/mean/percentiles.
 pub fn econ_aggregate_wealth(args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     let mut wealths = Vec::new();
     if let Some(list) =
@@ -2249,6 +2250,7 @@ pub fn econ_output_multipliers(args: &Value, span: Span) -> Result<Value, Diagno
 
 // ── Agent-based: zero intelligence, aggregate wealth ──────────────────────────
 
+/// Availability metadata only — agent-based aggregate wealth needs `Agent` structs not exposed here.
 pub fn econ_agent_based_aggregate_wealth(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     // Agent-based aggregate wealth requires Agent structs — expose as metadata.
     Ok(args::record([(
@@ -2273,6 +2275,7 @@ pub fn econ_validate_scalar_constraint(args: &Value, span: Span) -> Result<Value
 
 // ── Paper trading: aggregate fills ────────────────────────────────────────────
 
+/// Availability metadata only — paper-fill aggregation needs `Fill` structs not exposed here.
 pub fn econ_aggregate_paper_fills(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     // Paper trading fill aggregation requires Fill structs — expose as metadata.
     Ok(args::record([(

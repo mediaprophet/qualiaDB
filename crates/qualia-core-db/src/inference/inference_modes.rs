@@ -38,6 +38,7 @@ impl InferenceMode {
         InferenceMode::FastVerify,
     ];
 
+    /// Stable string form.
     pub fn as_str(self) -> &'static str {
         match self {
             InferenceMode::Portable => "portable",
@@ -47,6 +48,7 @@ impl InferenceMode {
         }
     }
 
+    /// Parses input; error on malformed data.
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
             "portable" | "wgpu" | "default" | "0" => Some(Self::Portable),
@@ -60,6 +62,7 @@ impl InferenceMode {
         }
     }
 
+    /// Human-readable description of the mode.
     pub fn description(self) -> &'static str {
         match self {
             InferenceMode::Portable => {

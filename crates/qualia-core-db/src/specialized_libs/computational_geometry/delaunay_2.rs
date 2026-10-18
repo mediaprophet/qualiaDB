@@ -94,6 +94,7 @@ impl Tri {
     }
 
     #[inline]
+    /// `Tri::contains`.
     pub fn contains(&self, idx: u32) -> bool {
         self.v[0] == idx || self.v[1] == idx || self.v[2] == idx
     }

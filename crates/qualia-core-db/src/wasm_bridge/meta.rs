@@ -186,6 +186,7 @@ pub async fn init_shared_webgpu() -> Result<(), JsValue> {
     not(feature = "wasm-llm")
 ))]
 #[wasm_bindgen]
+/// Gets `webgpu-init-status`.
 pub fn get_webgpu_init_status() -> String {
     crate::gguf_bridge::wasm_yield::init_status()
 }

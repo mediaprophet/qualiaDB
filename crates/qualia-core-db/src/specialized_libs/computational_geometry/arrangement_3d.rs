@@ -83,6 +83,7 @@ pub struct EdgeKey {
 }
 
 impl EdgeKey {
+    /// Creates a default `EdgeKey`.
     pub fn new(v0: u32, v1: u32) -> Self {
         Self {
             a: v0.min(v1),

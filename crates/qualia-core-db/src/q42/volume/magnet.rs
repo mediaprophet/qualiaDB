@@ -38,10 +38,12 @@ pub struct Q42VolumeSetMagnets {
 }
 
 impl Q42Magnet {
+    /// Builds a magnet for the volume at `path` with optional webseed.
     pub fn for_path(path: &Path, webseed: Option<&str>) -> io::Result<Self> {
         Self::for_path_with_intent(path, webseed, PublicationIntent::Default)
     }
 
+    /// Builds a magnet for `path` under an explicit display name.
     pub fn for_path_named(
         path: &Path,
         display_name: &str,
@@ -50,6 +52,7 @@ impl Q42Magnet {
         Self::for_path_named_with_intent(path, display_name, webseed, PublicationIntent::Default)
     }
 
+    /// Builds a magnet for `path` with an intent tag.
     pub fn for_path_with_intent(
         path: &Path,
         webseed: Option<&str>,
@@ -63,6 +66,7 @@ impl Q42Magnet {
         Self::for_path_named_with_intent(path, &display, webseed, intent)
     }
 
+    /// Builds a named magnet with an intent tag.
     pub fn for_path_named_with_intent(
         path: &Path,
         display_name: &str,
@@ -98,6 +102,7 @@ impl Q42Magnet {
         )
     }
 
+    /// Builds a magnet referencing a daemon seed with intent.
     pub fn for_daemon_seed_with_intent(
         path: &Path,
         display_name: &str,
@@ -111,10 +116,12 @@ impl Q42Magnet {
 }
 
 impl Q42VolumeSetMagnets {
+    /// Builds per-volume magnets for every volume under `root`.
     pub fn for_root(path: &Path, webseed_base: Option<&str>) -> io::Result<Self> {
         Self::for_root_with_intent(path, webseed_base, PublicationIntent::Default)
     }
 
+    /// Builds per-volume magnets under `root` with an intent tag.
     pub fn for_root_with_intent(
         path: &Path,
         webseed_base: Option<&str>,
@@ -145,6 +152,7 @@ impl Q42VolumeSetMagnets {
     }
 }
 
+/// Composes a magnet URI from components.
 pub fn compose_magnet(
     info_hash_sha1: &str,
     display_name: &str,
@@ -163,6 +171,7 @@ pub fn compose_magnet(
     uri
 }
 
+/// Streaming SHA-1 hex digest of a file.
 pub fn sha1_hex_file(path: &Path) -> io::Result<String> {
     let mut file = fs::File::open(path)?;
     let mut hasher = Sha1::new();

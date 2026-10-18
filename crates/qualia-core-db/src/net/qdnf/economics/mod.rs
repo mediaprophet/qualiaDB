@@ -40,6 +40,7 @@ pub struct Quantity {
 }
 
 impl Quantity {
+    /// Adds an entry.
     pub fn add(self, other: Self) -> Result<Self, QdnfError> {
         if self.kind != other.kind {
             return Err(QdnfError::Malformed);

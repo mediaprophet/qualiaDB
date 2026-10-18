@@ -31,6 +31,7 @@ pub struct BackendCapabilities {
 }
 
 impl BackendCapabilities {
+    /// `BackendCapabilities::native_gguf_baseline`.
     pub const fn native_gguf_baseline() -> Self {
         Self {
             role_separation: SupportLevel::Supported,
@@ -50,6 +51,7 @@ impl BackendCapabilities {
         }
     }
 
+    /// `BackendCapabilities::mcp_tool_baseline`.
     pub const fn mcp_tool_baseline() -> Self {
         Self {
             role_separation: SupportLevel::Unsupported,

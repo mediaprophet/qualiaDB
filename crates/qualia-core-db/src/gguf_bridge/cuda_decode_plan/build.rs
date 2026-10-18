@@ -10,6 +10,7 @@ use crate::inference::cuda_lane::{
 };
 
 impl CudaDecodePlan {
+    /// Builds.
     pub(super) fn build(
         engine: &crate::gguf_bridge::QTensorEngine,
         index: &crate::gguf_sharder::GgufTensorIndex,

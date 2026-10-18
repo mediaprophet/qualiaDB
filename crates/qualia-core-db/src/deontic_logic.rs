@@ -113,6 +113,7 @@ pub enum DeonticResult {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl DeonticResult {
+    /// `true` when permitted.
     pub fn is_permitted(&self) -> bool {
         matches!(self, Self::KeyRelease(_))
     }

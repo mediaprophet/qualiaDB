@@ -66,6 +66,7 @@ impl<const MAX_NODES: usize> Default for RadixPrefixIndex<MAX_NODES> {
 }
 
 impl<const MAX_NODES: usize> RadixPrefixIndex<MAX_NODES> {
+    /// Creates a default `RadixPrefixIndex`.
     pub const fn new() -> Self {
         Self {
             nodes: [RadixNode {
@@ -83,6 +84,7 @@ impl<const MAX_NODES: usize> RadixPrefixIndex<MAX_NODES> {
         }
     }
 
+    /// `node` count.
     pub fn node_count(&self) -> usize {
         self.node_count
     }

@@ -128,6 +128,7 @@ pub fn run_q4k_soa_microbench(n_in: usize, n_out: usize) -> MicrobenchResult {
 }
 
 impl MicrobenchResult {
+    /// Formats `report`.
     pub fn format_report(&self) -> String {
         format!(
             "Q4_K SoA GEMV microbench\n  shape:     {} x {}\n  cpu_ms:    {:.4}  ({:.2} GFLOP/s)\n  cuda_ms:   {}\n  cuda_ok:   {}\n  max_abs:   {:.6e}\n  max_ulp:   {}\n  {}\n",

@@ -84,9 +84,11 @@ pub fn recommend_convert_layout(source_bytes: u64, vram_budget_bytes: u64) -> P6
 }
 
 impl P64TensorIndex {
+    /// Parses a tensor index from a `.q42` volume blob; `Err` on malformed header/directory.
     pub fn from_q42(data: &[u8]) -> Result<Self, String> {
         Self::from_p64(data)
     }
+    /// Parses a tensor index from raw `.p64` bytes.
     pub fn from_p64(data: &[u8]) -> Result<Self, String> {
         Self::from_p64_with_integrity(data, IntegrityMode::from_env())
     }
@@ -254,6 +256,7 @@ impl P64TensorIndex {
         })
     }
 
+    /// Model hyperparameters decoded from the index header.
     pub fn hyperparams(&self) -> GgufHyperparams {
         GgufHyperparams {
             n_layer: self.hparams.n_layer,
@@ -278,11 +281,13 @@ impl P64TensorIndex {
         }
     }
 
+    /// Zero-copy tensor byte slice for `entry` within `data`.
     pub fn blob<'a>(&self, data: &'a [u8], entry: &P64TensorEntry) -> &'a [u8] {
         let start = entry.blob_offset as usize;
         &data[start..start + entry.blob_size as usize]
     }
 
+    /// Zero-copy tokenizer blob within `data`.
     pub fn tokenizer_bytes<'a>(&self, data: &'a [u8]) -> &'a [u8] {
         let start = self.header.tokenizer_offset as usize;
         let end = self.header.checksum_offset as usize;
@@ -293,6 +298,7 @@ impl P64TensorIndex {
         }
     }
 
+    /// Manifold coordinate for a tensor entry.
     pub fn manifold_coordinate(
         &self,
         data: &[u8],

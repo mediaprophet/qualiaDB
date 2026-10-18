@@ -64,6 +64,7 @@ struct ModelLifecycleRequest {
     model_path: String,
 }
 
+/// HTTP `activate-model` handler.
 pub async fn activate_model_handler(body: Bytes) -> Response {
     if body.len() > 4096 {
         return failure(
@@ -121,6 +122,7 @@ pub async fn activate_model_handler(body: Bytes) -> Response {
     }
 }
 
+/// HTTP `evict-model` handler.
 pub async fn evict_model_handler() -> Response {
     if super::poet_llm_jobs::has_active_jobs() {
         return failure(
@@ -296,6 +298,7 @@ fn failure(status: StatusCode, code: &'static str, message: impl Into<String>) -
         .into_response()
 }
 
+/// Decodes `request`; fails closed on malformed input.
 pub(crate) fn decode_request(body: &Bytes) -> Result<PoetLlmRequest, Response> {
     if body.len() > LLM_REQUEST_LIMIT_BYTES {
         return Err(failure(
@@ -370,6 +373,7 @@ pub(crate) fn decode_request(body: &Bytes) -> Result<PoetLlmRequest, Response> {
     Ok(request)
 }
 
+/// Generates `handler`.
 pub async fn generate_handler(body: Bytes) -> Response {
     let request = match decode_request(&body) {
         Ok(request) => request,

@@ -58,27 +58,32 @@ thread_local! {
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// Resets portal-GPU init flags.
 pub(crate) fn reset_portal_gpu_init_flags() {
     PORTAL_GPU_INIT_ABORTED.with(|c| c.set(false));
     PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(false));
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// Aborts portal-GPU init.
 pub(crate) fn abort_portal_gpu_init() {
     PORTAL_GPU_INIT_ABORTED.with(|c| c.set(true));
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// `true` when init was aborted.
 pub(crate) fn portal_gpu_init_aborted() -> bool {
     PORTAL_GPU_INIT_ABORTED.with(|c| c.get())
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// `true` when the canvas is claimed.
 pub(crate) fn portal_gpu_canvas_claimed() -> bool {
     PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.get())
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+/// Marks the canvas claimed.
 pub(crate) fn mark_portal_gpu_canvas_claimed() {
     PORTAL_GPU_CANVAS_CLAIMED.with(|c| c.set(true));
 }
@@ -86,6 +91,7 @@ pub(crate) fn mark_portal_gpu_canvas_claimed() {
 /// Static ambient SSBO capacity — draw count is throttled per `VramLedger` mode.
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
 
+/// Creates `ao-prepass-camera-layout`.
 pub(super) fn create_ao_prepass_camera_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("qualia-ao-prepass-camera-layout"),
@@ -108,6 +114,7 @@ pub(super) fn create_ao_prepass_camera_layout(device: &wgpu::Device) -> wgpu::Bi
     })
 }
 
+/// Creates `ao-prepass-camera-bind`.
 pub(super) fn create_ao_prepass_camera_bind(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -135,6 +142,7 @@ pub(super) fn create_ao_prepass_camera_bind(
     })
 }
 
+/// Creates `mesh-frame-layout`.
 pub(super) fn create_mesh_frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     let uniform_entry = |binding, visibility, size| wgpu::BindGroupLayoutEntry {
         binding,
@@ -202,6 +210,7 @@ pub(super) fn create_mesh_frame_layout(device: &wgpu::Device) -> wgpu::BindGroup
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Creates `mesh-frame-bind`.
 pub(super) fn create_mesh_frame_bind(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -263,6 +272,7 @@ pub(super) fn create_mesh_frame_bind(
     })
 }
 
+/// `portal_fixed_buffer_bytes`.
 pub(super) fn portal_fixed_buffer_bytes() -> Option<u64> {
     [
         std::mem::size_of::<AmbientUniforms>(),
@@ -534,10 +544,12 @@ pub struct PortalGpu {
 
 impl PortalGpu {
     #[cfg(test)]
+    /// Writes `data` to the uniform belt and unmaps.
     pub(crate) fn uniform_belt_write_and_unmap(&mut self, data: &[u8]) {
         self.uniform_belt.write_and_unmap(data);
     }
     #[cfg(test)]
+    /// Records a belt copy.
     pub(crate) fn uniform_belt_record_copy(
         &self,
         encoder: &mut wgpu::CommandEncoder,
@@ -547,14 +559,17 @@ impl PortalGpu {
         self.uniform_belt.record_copy(encoder, target, offset);
     }
     #[cfg(test)]
+    /// Advances the belt write head.
     pub(crate) fn uniform_belt_advance(&mut self) {
         self.uniform_belt.advance(&self.device);
     }
     #[cfg(test)]
+    /// Uniform buffer for tests.
     pub(crate) fn uniform_buf_test(&self) -> wgpu::Buffer {
         self.uniform_buf.clone()
     }
 
+    /// Resizes to `width`×`height`.
     pub fn resize(&mut self, width: u32, height: u32) -> Result<(u32, u32), String> {
         if width == 0 || height == 0 {
             return Ok((self.width, self.height));

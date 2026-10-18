@@ -114,12 +114,15 @@ pub struct SolverState {
 }
 
 impl SolverState {
+    /// `SolverState::cost_value`.
     pub fn cost_value(&self) -> f64 {
         f64::from_bits(self.solver_data[0])
     }
+    /// Sets the current best cost.
     pub fn set_cost_value(&mut self, val: f64) {
         self.solver_data[0] = val.to_bits();
     }
+    /// Current satisfiability verdict, or `None` when undetermined.
     pub fn satisfiable(&self) -> Option<bool> {
         match self.solver_data[1] {
             0 => None,
@@ -127,6 +130,7 @@ impl SolverState {
             _ => Some(true),
         }
     }
+    /// Sets the satisfiability verdict.
     pub fn set_satisfiable(&mut self, val: Option<bool>) {
         self.solver_data[1] = match val {
             None => 0,
@@ -134,12 +138,15 @@ impl SolverState {
             Some(true) => 2,
         };
     }
+    /// QPU submissions made so far.
     pub fn quantum_calls(&self) -> u32 {
         self.solver_data[2] as u32
     }
+    /// Sets the QPU call counter.
     pub fn set_quantum_calls(&mut self, val: u32) {
         self.solver_data[2] = val as u64;
     }
+    /// Increments the QPU call counter.
     pub fn add_quantum_calls(&mut self, val: u32) {
         self.solver_data[2] += val as u64;
     }

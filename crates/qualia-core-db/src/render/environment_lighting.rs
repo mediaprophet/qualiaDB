@@ -68,6 +68,7 @@ impl Default for EnvironmentProbeSet {
 }
 
 impl EnvironmentProbeSet {
+    /// Creates a default `EnvironmentProbeSet`.
     pub const fn new() -> Self {
         Self {
             probes: [EnvironmentProbe {
@@ -93,14 +94,17 @@ impl EnvironmentProbeSet {
         true
     }
 
+    /// Number of elements.
     pub const fn len(&self) -> usize {
         self.count as usize
     }
 
+    /// `true` when empty.
     pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 
+    /// Slice view.
     pub fn as_slice(&self) -> &[EnvironmentProbe] {
         &self.probes[..self.count as usize]
     }
@@ -183,6 +187,7 @@ impl EnvironmentLightingGpu {
         Self::from_probe_set(None, fallback_radiance)
     }
 
+    /// `true` when `usable-probes` present.
     pub const fn has_usable_probes(&self) -> bool {
         self.metadata[1] != 0
     }

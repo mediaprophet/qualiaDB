@@ -41,6 +41,7 @@ pub enum RaggedBackendError {
 /// `items` and `block_tables` are immutable caller storage. `out` has at least `items.len()`
 /// entries. Implementations may not retain any slice after returning.
 pub trait RaggedDecodeBackend {
+    /// Executes a ragged batch.
     fn execute_ragged(
         &mut self,
         items: &[RaggedBatchItem],

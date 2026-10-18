@@ -48,6 +48,7 @@ impl Default for PortalGraphicsState {
 }
 
 impl PortalGraphicsState {
+    /// Toggles auto temporal accumulation; returns whether the state actually changed.
     pub(crate) fn set_auto_temporal_enabled(&mut self, enabled: bool) -> bool {
         if self.auto_temporal_enabled == enabled {
             return false;
@@ -57,6 +58,7 @@ impl PortalGraphicsState {
         true
     }
 
+    /// Flags temporal history reset on the GPU state so accumulation restarts clean.
     pub(crate) fn invalidate_temporal_history(&mut self, gpu: Option<&mut PortalGpu>) {
         self.last_temporal_execution_observed = false;
         if let Some(gpu) = gpu {
@@ -64,6 +66,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Toggles shadow rendering and updates the GPU when present.
     pub(crate) fn set_shadows_enabled(&mut self, enabled: bool, gpu: Option<&mut PortalGpu>) {
         self.shadows_enabled = enabled;
         if let Some(gpu) = gpu {
@@ -71,10 +74,12 @@ impl PortalGraphicsState {
         }
     }
 
+    /// `true` when the GPU has shadow-map support allocated.
     pub(crate) fn shadows_available(gpu: Option<&PortalGpu>) -> bool {
         gpu.map(PortalGpu::shadows_enabled).unwrap_or(false)
     }
 
+    /// Toggles the SSAO pass and applies to GPU when present.
     pub(crate) fn set_screen_space_ao_enabled(
         &mut self,
         enabled: bool,
@@ -86,6 +91,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Sets SSAO radius/strength/bias on state and GPU.
     pub(crate) fn set_screen_space_ao(
         &mut self,
         radius: f32,
@@ -99,6 +105,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Sets the bounded SSAO tap count (4/8/12).
     pub(crate) fn set_screen_space_ao_sample_count(
         &mut self,
         samples: u32,
@@ -110,11 +117,13 @@ impl PortalGraphicsState {
         }
     }
 
+    /// `true` when SSAO targets exist on the GPU.
     pub(crate) fn screen_space_ao_available(gpu: Option<&PortalGpu>) -> bool {
         gpu.map(PortalGpu::screen_space_ao_available)
             .unwrap_or(false)
     }
 
+    /// Stores environment probe (IBL) data on state.
     pub(crate) fn set_environment_probe_data(
         &mut self,
         packed_probes: &[f32],
@@ -172,6 +181,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Pushes the stored environment probe data to the GPU.
     pub(crate) fn apply_environment_to_gpu(&self, gpu: &mut PortalGpu) {
         gpu.set_environment_probes(
             self.environment_probes.as_ref(),
@@ -179,6 +189,7 @@ impl PortalGraphicsState {
         );
     }
 
+    /// Stores water-geometry buffers on state for the water pass.
     pub(crate) fn set_water_geometry(
         &mut self,
         positions_xyz: &[f32],
@@ -217,6 +228,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Stores the water surface descriptor.
     pub(crate) fn set_water_surface(
         &mut self,
         surface: [f32; 6],
@@ -244,6 +256,7 @@ impl PortalGraphicsState {
         gpu.set_water_quality(self.water_quality);
     }
 
+    /// Applies the full graphics state (camera, lighting, AO, shadows, water, environment) to `gpu`.
     pub(crate) fn apply_to_gpu(&self, gpu: &mut PortalGpu) {
         gpu.set_shadows_enabled(self.shadows_enabled);
         gpu.set_screen_space_ao_enabled(self.screen_space_ao_enabled);
@@ -260,6 +273,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Records whether the temporal pass executed this frame for receipt reporting.
     pub(crate) fn record_temporal_execution(&mut self, executed: bool) {
         self.last_temporal_execution_observed = executed;
         if executed {
@@ -267,6 +281,7 @@ impl PortalGraphicsState {
         }
     }
 
+    /// Builds a `JsValue` receipt describing the temporal execution state.
     pub(crate) fn temporal_receipt(&self, gpu: Option<&PortalGpu>) -> JsValue {
         let (
             scene_color,

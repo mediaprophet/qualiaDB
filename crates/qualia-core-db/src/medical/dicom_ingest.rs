@@ -118,6 +118,7 @@ pub struct DicomBlobStore {
 }
 
 impl DicomBlobStore {
+    /// Opens/creates the pixel blob store at `path`.
     pub fn open(path: &Path) -> Result<Self, std::io::Error> {
         let file = OpenOptions::new()
             .read(true)
@@ -131,6 +132,7 @@ impl DicomBlobStore {
         })
     }
 
+    /// Appends pixel bytes; returns the byte offset.
     pub fn append_pixels(&mut self, pixels: &[u8]) -> Result<u64, std::io::Error> {
         let offset = self.write_offset;
         self.file.seek(SeekFrom::Start(offset))?;
@@ -140,6 +142,7 @@ impl DicomBlobStore {
         Ok(offset)
     }
 
+    /// Memory-maps the store at `path`.
     pub fn path_mmap(&self) -> Result<Mmap, std::io::Error> {
         unsafe { memmap2::MmapOptions::new().map(&self.file) }
     }
@@ -151,6 +154,7 @@ pub struct DicomBlobReader {
 }
 
 impl DicomBlobReader {
+    /// Opens a DICOM blob reader at `path`.
     pub fn open(path: &Path) -> Result<Self, DicomIngestError> {
         let file = File::open(path).map_err(|e| DicomIngestError::Io(e.to_string()))?;
         let mmap = unsafe { memmap2::MmapOptions::new().map(&file) }
@@ -159,6 +163,7 @@ impl DicomBlobReader {
     }
 
     #[inline]
+    /// `DicomBlobReader::slice`.
     pub fn slice(&self, offset: usize, length: usize) -> Result<&[u8], DicomIngestError> {
         let end = offset
             .checked_add(length)
@@ -473,6 +478,7 @@ pub fn split_ingest_sync(
 }
 
 #[cfg(test)]
+/// `DicomBlobReader::reset_ingest_registry_for_tests`.
 pub fn reset_ingest_registry_for_tests() {
     SERIES_COUNT.store(0, Ordering::Release);
 }
@@ -501,6 +507,7 @@ fn split_ingest_sync_via_worker(
     Ok(unsafe { *SERIES_RECORDS.0[idx - 1].get() })
 }
 
+/// Copies up to `out.len()` series records into `out`; returns count copied.
 pub fn series_records_snapshot(out: &mut [DicomSeriesRecord]) -> usize {
     let count = SERIES_COUNT.load(Ordering::Acquire).min(MAX_SERIES_RECORDS);
     for (i, slot) in out.iter_mut().enumerate().take(count) {
@@ -510,6 +517,7 @@ pub fn series_records_snapshot(out: &mut [DicomSeriesRecord]) -> usize {
     count
 }
 
+/// Finds the series record for `(patient_did_hash, series_hash)`.
 pub fn find_series_record(patient_did_hash: u64, series_hash: u64) -> Option<DicomSeriesRecord> {
     let count = SERIES_COUNT.load(Ordering::Acquire);
     for i in 0..count.min(MAX_SERIES_RECORDS) {

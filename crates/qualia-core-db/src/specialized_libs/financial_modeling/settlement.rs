@@ -133,6 +133,7 @@ pub enum SettlementComplianceAction {
 }
 
 impl SettlementEngine {
+    /// Creates a `SettlementEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             settlement_methods: HashMap::new(),
@@ -141,41 +142,50 @@ impl SettlementEngine {
         }
     }
 
+    /// Readies the `SettlementEngine` sub-components; registers/populates any built-in defaults.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Registers `settlement method` in the registry (keyed by its id).
     pub fn add_settlement_method(&mut self, method: SettlementMethod) {
         self.settlement_methods
             .insert(method.method_id.clone(), method);
     }
 
+    /// Looks up `settlement method` by id; `None` if not registered.
     pub fn get_settlement_method(&self, method_id: &str) -> Option<&SettlementMethod> {
         self.settlement_methods.get(method_id)
     }
 
+    /// Iterates over all registered `settlement methods` entries.
     pub fn list_settlement_methods(&self) -> Vec<String> {
         self.settlement_methods.keys().cloned().collect()
     }
 
+    /// Returns a reference to the inner `clearing_house` sub-component.
     pub fn clearing_house(&self) -> &ClearingHouse {
         &self.clearing_house
     }
 
+    /// Mutable access to the inner `clearing_house` sub-component.
     pub fn clearing_house_mut(&mut self) -> &mut ClearingHouse {
         &mut self.clearing_house
     }
 
+    /// Returns a reference to the inner `settlement_validator` sub-component.
     pub fn settlement_validator(&self) -> &SettlementValidator {
         &self.settlement_validator
     }
 
+    /// Mutable access to the inner `settlement_validator` sub-component.
     pub fn settlement_validator_mut(&mut self) -> &mut SettlementValidator {
         &mut self.settlement_validator
     }
 }
 
 impl ClearingHouse {
+    /// Creates a `ClearingHouse` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             house_id: "default".to_string(),
@@ -187,6 +197,7 @@ impl ClearingHouse {
 }
 
 impl MarginRequirements {
+    /// Creates a `MarginRequirements` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             initial_margin: 0.5,
@@ -197,6 +208,7 @@ impl MarginRequirements {
 }
 
 impl RiskManagement {
+    /// Creates a `RiskManagement` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             position_limits: HashMap::new(),
@@ -207,6 +219,7 @@ impl RiskManagement {
 }
 
 impl CollateralRequirements {
+    /// Creates a `CollateralRequirements` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             haircuts: HashMap::new(),
@@ -217,6 +230,7 @@ impl CollateralRequirements {
 }
 
 impl SettlementValidator {
+    /// Creates a `SettlementValidator` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             validation_rules: Vec::new(),
@@ -224,24 +238,29 @@ impl SettlementValidator {
         }
     }
 
+    /// Registers `validation rule` in the registry (keyed by its id).
     pub fn add_validation_rule(&mut self, rule: SettlementValidationRule) {
         self.validation_rules.push(rule);
     }
 
+    /// Iterates over all registered `validation rules` entries.
     pub fn list_validation_rules(&self) -> &[SettlementValidationRule] {
         &self.validation_rules
     }
 
+    /// Returns a reference to the inner `compliance_checker` sub-component.
     pub fn compliance_checker(&self) -> &SettlementComplianceChecker {
         &self.compliance_checker
     }
 
+    /// Mutable access to the inner `compliance_checker` sub-component.
     pub fn compliance_checker_mut(&mut self) -> &mut SettlementComplianceChecker {
         &mut self.compliance_checker
     }
 }
 
 impl SettlementComplianceChecker {
+    /// Creates a `SettlementComplianceChecker` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             compliance_rules: Vec::new(),
@@ -249,24 +268,29 @@ impl SettlementComplianceChecker {
         }
     }
 
+    /// Registers `compliance rule` in the registry (keyed by its id).
     pub fn add_compliance_rule(&mut self, rule: SettlementComplianceRule) {
         self.compliance_rules.push(rule);
     }
 
+    /// Iterates over all registered `compliance rules` entries.
     pub fn list_compliance_rules(&self) -> &[SettlementComplianceRule] {
         &self.compliance_rules
     }
 
+    /// Registers `regulatory requirement` in the registry (keyed by its id).
     pub fn add_regulatory_requirement(&mut self, requirement: RegulatoryRequirement) {
         self.regulatory_requirements.push(requirement);
     }
 
+    /// Iterates over all registered `regulatory requirements` entries.
     pub fn list_regulatory_requirements(&self) -> &[RegulatoryRequirement] {
         &self.regulatory_requirements
     }
 }
 
 impl SettlementMethod {
+    /// Creates a `SettlementMethod` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             method_id: "settle_1".to_string(),
@@ -278,6 +302,7 @@ impl SettlementMethod {
 }
 
 impl SettlementValidationRule {
+    /// Creates a `SettlementValidationRule` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),
@@ -289,6 +314,7 @@ impl SettlementValidationRule {
 }
 
 impl SettlementComplianceCondition {
+    /// Creates a `SettlementComplianceCondition` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             condition_id: "cond_1".to_string(),
@@ -300,6 +326,7 @@ impl SettlementComplianceCondition {
 }
 
 impl SettlementComplianceRule {
+    /// Creates a `SettlementComplianceRule` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             rule_id: "rule_1".to_string(),

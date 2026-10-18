@@ -12,6 +12,7 @@ pub struct ElectronDensity {
 }
 
 impl ElectronDensity {
+    /// Creates a default `ElectronDensity`.
     pub fn new(resolution: usize) -> Self {
         Self {
             grid_resolution: resolution,

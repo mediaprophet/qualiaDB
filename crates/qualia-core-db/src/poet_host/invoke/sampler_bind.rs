@@ -39,22 +39,27 @@ mod llm_bench {
         static MASKER: RefCell<Option<DominoMasker>> = const { RefCell::new(None) };
     }
 
+    /// Installs the global sampler config.
     pub fn set_sampler_config(cfg: Option<SamplerConfig>) {
         CONFIG.with(|slot| *slot.borrow_mut() = cfg);
     }
 
+    /// Current sampler config, or `None`.
     pub fn sampler_config() -> Option<SamplerConfig> {
         CONFIG.with(|slot| *slot.borrow())
     }
 
+    /// Installs the domino masker.
     pub fn set_domino_masker(masker: Option<DominoMasker>) {
         MASKER.with(|slot| *slot.borrow_mut() = masker);
     }
 
+    /// `true` when a domino masker is installed.
     pub fn domino_active() -> bool {
         MASKER.with(|slot| slot.borrow().as_ref().is_some_and(DominoMasker::is_active))
     }
 
+    /// Resets domino-masker state.
     pub fn domino_reset() {
         MASKER.with(|slot| {
             if let Some(masker) = slot.borrow_mut().as_mut() {
@@ -63,6 +68,7 @@ mod llm_bench {
         });
     }
 
+    /// Samples via the domino masker.
     pub fn domino_sample(
         state: &mut SamplerState,
         logits: &mut [f32],

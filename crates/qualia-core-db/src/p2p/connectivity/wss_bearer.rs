@@ -21,6 +21,7 @@ pub struct WssBearer<S> {
 }
 
 impl<S> WssBearer<S> {
+    /// Creates a default `WssBearer`.
     pub fn new(
         stream: S,
         local: ObservedLocator,

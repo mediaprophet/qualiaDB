@@ -73,6 +73,7 @@ pub struct QwenCheckpointRegistry {
 }
 
 impl QwenCheckpointRegistry {
+    /// Creates a default `QwenCheckpointRegistry`.
     pub fn new(max_checkpoints: usize) -> Self {
         Self {
             checkpoints: Vec::with_capacity(max_checkpoints),

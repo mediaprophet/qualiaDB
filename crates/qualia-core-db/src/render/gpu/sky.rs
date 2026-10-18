@@ -1,5 +1,6 @@
 //! Low-cost analytic fullscreen sky for negotiated HDR/SDR colour targets.
 
+/// Creates `pipeline`.
 pub(super) fn create_pipeline(
     device: &wgpu::Device,
     camera_layout: &wgpu::BindGroupLayout,

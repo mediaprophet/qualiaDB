@@ -47,12 +47,14 @@ pub struct CrashLog {
 }
 
 impl CrashLog {
+    /// Creates a default `CrashLog`.
     pub const fn new() -> Self {
         Self {
             slots: [EMPTY_SLOT; MAX_RECEIPTS],
         }
     }
 
+    /// Takes a state snapshot.
     pub const fn snapshot(&self) -> Self {
         *self
     }
@@ -79,6 +81,7 @@ impl CrashLog {
         None
     }
 
+    /// Live entries in the crash log.
     pub fn occupied_count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -102,6 +105,7 @@ pub struct CrashHarness {
 }
 
 impl CrashHarness {
+    /// Creates a default `CrashHarness`.
     pub const fn new() -> Self {
         Self {
             receipts: ReceiptTable::new(),
@@ -117,20 +121,24 @@ impl CrashHarness {
         self.pending = Some(boundary);
     }
 
+    /// Restores the harness state from the crash log (crash-recovery path).
     pub fn restore(&mut self) {
         self.live = self.saved.snapshot();
         self.pending = None;
         self.rebuild_tables();
     }
 
+    /// Occupied log slots.
     pub fn occupied_count(&self) -> usize {
         self.live.occupied_count()
     }
 
+    /// `true` when identity `id` is bound in the log.
     pub fn identity_present(&self, id: StrongDigest) -> bool {
         self.live.find_id(&id).is_some()
     }
 
+    /// `true` when effect `id` is recorded.
     pub fn effect_present(&self, id: StrongDigest) -> bool {
         match self.live.find_id(&id) {
             Some(i) => {
@@ -141,6 +149,7 @@ impl CrashHarness {
         }
     }
 
+    /// `true` when `id` is marked durable.
     pub fn durable_present(&self, id: StrongDigest) -> bool {
         match self.live.find_id(&id) {
             Some(i) => self.live.slots[i].boundary == CrashBoundary::DurableReceipt,
@@ -148,6 +157,7 @@ impl CrashHarness {
         }
     }
 
+    /// Number of recorded applications of `id` (u8 saturating).
     pub fn apply_count(&self, id: StrongDigest) -> u8 {
         match self.live.find_id(&id) {
             Some(i) => self.live.slots[i].apply_count,
@@ -155,6 +165,7 @@ impl CrashHarness {
         }
     }
 
+    /// Binds `id` as an identity in the crash log; `QdnfError` on failure.
     pub fn bind_identity(&mut self, id: StrongDigest) -> Result<(), QdnfError> {
         reject_zero(id)?;
         if self.live.find_id(&id).is_some() {
@@ -178,6 +189,7 @@ impl CrashHarness {
         Ok(())
     }
 
+    /// Records application of effect `id`.
     pub fn apply_effect(&mut self, id: StrongDigest) -> Result<(), QdnfError> {
         reject_zero(id)?;
         if self.is_deleted(id) {
@@ -196,6 +208,7 @@ impl CrashHarness {
         Ok(())
     }
 
+    /// Acknowledges `id` — marks it durably received.
     pub fn acknowledge(
         &mut self,
         id: StrongDigest,
@@ -219,6 +232,7 @@ impl CrashHarness {
         Ok(class)
     }
 
+    /// The durability level advertised for `id`.
     pub fn advertised_durability(
         &mut self,
         id: StrongDigest,
@@ -227,6 +241,7 @@ impl CrashHarness {
         self.acknowledge(id, stage)
     }
 
+    /// Tombstones `id` in the crash log.
     pub fn tombstone(&mut self, id: StrongDigest) -> Result<(), QdnfError> {
         reject_zero(id)?;
         self.tombstones.retain(Tombstone {

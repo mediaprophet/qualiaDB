@@ -57,6 +57,7 @@ impl VisionVramBudget {
         in_b.saturating_add(out_b)
     }
 
+    /// `true` when the policy allows the op.
     pub fn allows(&self, estimate: u64) -> bool {
         estimate <= self.max_bytes
     }

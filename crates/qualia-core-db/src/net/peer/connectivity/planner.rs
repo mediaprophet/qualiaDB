@@ -25,6 +25,7 @@ pub struct Schedule {
 }
 
 impl Schedule {
+    /// Creates a default `Schedule`.
     pub const fn new() -> Self {
         Self {
             now_ms: 0,
@@ -36,6 +37,7 @@ impl Schedule {
         }
     }
 
+    /// `true` when IPv4 is eligible under `policy`.
     pub fn ipv4_eligible(&self, policy: PathPolicy) -> bool {
         match self.first_v6_ms {
             None => true,
@@ -43,6 +45,7 @@ impl Schedule {
         }
     }
 
+    /// `true` when the setup window expired.
     pub fn setup_expired(&self, policy: PathPolicy) -> bool {
         self.now_ms >= u64::from(policy.setup_deadline_ms)
     }

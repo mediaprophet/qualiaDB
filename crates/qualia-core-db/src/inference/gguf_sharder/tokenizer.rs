@@ -94,6 +94,7 @@ pub enum ChatFamily {
 }
 
 impl ChatFamily {
+    /// Static string.
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::ChatMl => "chatml",
@@ -923,6 +924,7 @@ impl GgufTokenizer {
         out
     }
 
+    /// `vocab` length.
     pub fn vocab_len(&self) -> u32 {
         self.vocab.len() as u32
     }

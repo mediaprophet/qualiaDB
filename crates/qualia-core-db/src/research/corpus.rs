@@ -12,6 +12,7 @@ pub enum CorpusConfidence {
 }
 
 impl CorpusConfidence {
+    /// Numeric confidence in 0..1 for the qualitative level.
     pub fn as_f64(&self) -> f64 {
         match self {
             Self::High => 0.9,
@@ -35,6 +36,7 @@ pub struct CorpusItem {
 }
 
 impl CorpusItem {
+    /// Creates a corpus item with `source_type`, `title`, `content`, and default confidence.
     pub fn new(id: &str, source_type: &str, title: &str, content: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -47,14 +49,17 @@ impl CorpusItem {
         }
     }
 
+    /// Sets the item's confidence level.
     pub fn set_confidence(&mut self, confidence: CorpusConfidence) {
         self.confidence = confidence;
     }
 
+    /// Appends an extracted fact string.
     pub fn add_fact(&mut self, fact: &str) {
         self.extracted_facts.push(fact.to_string());
     }
 
+    /// Sets a `key`/`value` metadata pair.
     pub fn add_metadata(&mut self, key: &str, value: &str) {
         self.metadata.insert(key.to_string(), value.to_string());
     }
@@ -67,26 +72,31 @@ pub struct Corpus {
 }
 
 impl Corpus {
+    /// Creates an empty corpus.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Adds `item` to the corpus.
     pub fn add_item(&mut self, item: CorpusItem) {
         self.items.push(item);
     }
 
+    /// Imports a literature item and returns it mutably.
     pub fn import_literature(&mut self, id: &str, title: &str, content: &str) -> &mut CorpusItem {
         let item = CorpusItem::new(id, "literature", title, content);
         self.items.push(item);
         self.items.last_mut().unwrap()
     }
 
+    /// Imports a dataset item and returns it mutably.
     pub fn import_dataset(&mut self, id: &str, title: &str, content: &str) -> &mut CorpusItem {
         let item = CorpusItem::new(id, "dataset", title, content);
         self.items.push(item);
         self.items.last_mut().unwrap()
     }
 
+    /// Sets confidence on item `item_id`; `false` when unknown.
     pub fn set_confidence(&mut self, item_id: &str, confidence: CorpusConfidence) -> bool {
         if let Some(item) = self.items.iter_mut().find(|i| i.id == item_id) {
             item.set_confidence(confidence);
@@ -110,14 +120,17 @@ impl Corpus {
         results
     }
 
+    /// Number of items in the corpus.
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
+    /// `true` when the corpus has no items.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
 
+    /// Mean confidence across items (0.0 when empty).
     pub fn average_confidence(&self) -> f64 {
         if self.items.is_empty() {
             return 0.0;

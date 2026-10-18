@@ -14,6 +14,7 @@ pub struct TextSpan {
 }
 
 impl TextSpan {
+    /// Builds `TextSpan` from `source`.
     pub fn from_source(source: &str, start_utf8: u32, end_utf8: u32) -> Option<Self> {
         let start = start_utf8 as usize;
         let end = end_utf8 as usize;
@@ -30,6 +31,7 @@ impl TextSpan {
         })
     }
 
+    /// Slice view.
     pub fn slice<'a>(&self, source: &'a str) -> Option<&'a str> {
         let start = self.start_utf8 as usize;
         let end = self.end_utf8 as usize;

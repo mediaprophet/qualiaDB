@@ -2,6 +2,7 @@
 
 use crate::specialized_libs::computer_vision::cv::error::CvError;
 
+/// Draws a rect on a u8 image.
 pub fn draw_rect_u8(
     img: &mut [u8],
     stride: u32,

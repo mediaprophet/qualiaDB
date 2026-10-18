@@ -25,6 +25,7 @@ impl Default for SpectralPayload {
 }
 
 impl SpectralPayload {
+    /// Creates a default `SpectralPayload`.
     pub fn new(alpha: f32, mu: f32, sigma: f32) -> Self {
         Self { alpha, mu, sigma }
     }

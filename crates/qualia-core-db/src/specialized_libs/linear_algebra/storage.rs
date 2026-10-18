@@ -144,6 +144,7 @@ pub enum BackendType {
     ZNS,
     CSD,
     Hybrid,
+    Memory,
 }
 
 // Supporting implementations
@@ -715,33 +716,31 @@ impl MatrixCache {
 
 impl StorageBackend {
     /// Constructs the backend, attempting to open the default ZNS zone
-    /// manager: `backend_type` is `Hybrid` on success, `CSD` otherwise.
-    /// WARNING: the ZNS/CSD managers are constructed but never exercised —
-    /// `store_matrix_data`/`get_matrix_data` use only the in-memory map
-    /// (STUBS.md F29).
+    /// manager: `backend_type` is `Hybrid` on success, or `Memory` when hardware
+    /// storage is absent.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new() -> Self {
         let zns_manager = crate::zns_storage::ZnsZoneManager::new("default_zone")
             .ok()
             .map(|m| Arc::new(Mutex::new(m)));
+        let backend_type = if zns_manager.is_some() {
+            BackendType::Hybrid
+        } else {
+            BackendType::Memory
+        };
         Self {
-            backend_type: if zns_manager.is_some() {
-                BackendType::Hybrid
-            } else {
-                BackendType::CSD
-            },
+            backend_type,
             zns_manager,
             csd_manager: Arc::new(Mutex::new(crate::csd_storage::CsdManager::new())),
             matrix_store: HashMap::new(),
         }
     }
 
-    /// WASM build: declares `CSD` type but keeps only the in-memory map —
-    /// there is no ZNS/CSD path on wasm (STUBS.md F29).
+    /// WASM build: honestly reports `BackendType::Memory` and stores in-memory.
     #[cfg(target_arch = "wasm32")]
     pub fn new() -> Self {
         Self {
-            backend_type: BackendType::CSD,
+            backend_type: BackendType::Memory,
             matrix_store: HashMap::new(),
         }
     }
@@ -751,11 +750,27 @@ impl StorageBackend {
         Ok(())
     }
 
-    /// Inserts a clone of `matrix` into the in-memory map keyed by
-    /// `matrix_id`. Does NOT write to ZNS/CSD or any durable backend.
+    /// Stores the matrix in memory, and additionally persists serialized matrix dimensions
+    /// and binary float data to an allocated ZNS zone when a hardware ZNS manager is active.
     pub fn store_matrix_data(&mut self, matrix: &Matrix) -> Result<(), LinearAlgebraError> {
         self.matrix_store
             .insert(matrix.matrix_id.clone(), matrix.clone());
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(ref zns) = self.zns_manager {
+            if let Ok(mut zns_guard) = zns.lock() {
+                // Serialize raw matrix header and payload into bytes for zone persistence
+                let mut payload = Vec::with_capacity(16 + matrix.data.len() * 8);
+                payload.extend_from_slice(&(matrix.rows as u64).to_le_bytes());
+                payload.extend_from_slice(&(matrix.cols as u64).to_le_bytes());
+                for &val in &matrix.data {
+                    payload.extend_from_slice(&val.to_le_bytes());
+                }
+                if let Ok(handle) = zns_guard.allocate_zone(crate::zns_storage::ZoneType::Sequential, payload.len() as u64) {
+                    let _ = zns_guard.write_zone(&handle, &payload);
+                }
+            }
+        }
         Ok(())
     }
 

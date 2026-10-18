@@ -40,6 +40,7 @@ pub struct MergeSet {
 }
 
 impl MergeSet {
+    /// Creates a default `MergeSet`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {
@@ -72,6 +73,7 @@ impl MergeSet {
         Ok(())
     }
 
+    /// Number of elements.
     pub fn len(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -84,6 +86,7 @@ impl MergeSet {
         n
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

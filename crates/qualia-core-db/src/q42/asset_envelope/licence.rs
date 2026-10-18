@@ -27,6 +27,7 @@ pub enum LicenceClass {
 }
 
 impl LicenceClass {
+    /// Decodes from u8.
     pub fn from_u8(value: u8) -> Self {
         match value {
             1 => Self::Cc0,
@@ -73,6 +74,7 @@ pub enum UseClass {
 }
 
 impl UseClass {
+    /// Builds `UseClass` from `u8`.
     pub fn from_u8(value: u8) -> Self {
         match value {
             1 => Self::Research,
@@ -114,6 +116,7 @@ pub enum RedistributionClass {
 }
 
 impl RedistributionClass {
+    /// Builds `RedistributionClass` from `u8`.
     pub fn from_u8(value: u8) -> Self {
         match value {
             1 => Self::FreelyRedistributable,
@@ -161,18 +164,22 @@ impl LicenceObligations {
     /// Permissive commons dischargeable: converts to unencumbered commons once pool >= cost.
     pub const COMMONS_DISCHARGEABLE: u16 = 1 << 7;
 
+    /// Empty value.
     pub const fn empty() -> Self {
         Self(0)
     }
 
+    /// `true` when the key exists.
     pub const fn contains(self, flag: u16) -> bool {
         self.0 & flag != 0
     }
 
+    /// `LicenceObligations::union`.
     pub const fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
     }
 
+    /// Builds `LicenceObligations` from `licence`.
     pub fn from_licence(class: LicenceClass) -> Self {
         match class {
             LicenceClass::Cc0 => Self::empty(),

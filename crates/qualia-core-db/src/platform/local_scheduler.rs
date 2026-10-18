@@ -54,6 +54,7 @@ pub struct Job {
 }
 
 impl Job {
+    /// Creates a job from a quin with `total_bytes` of work.
     pub fn new(quin: NQuin, total_bytes: u64) -> Self {
         Self {
             quin,
@@ -65,6 +66,7 @@ impl Job {
         }
     }
 
+    /// Creates a job pinned to `compute_target`.
     pub fn with_target(quin: NQuin, total_bytes: u64, compute_target: ComputeTarget) -> Self {
         Self {
             quin,
@@ -113,6 +115,7 @@ pub struct WorkerCell {
 }
 
 impl WorkerCell {
+    /// Creates a worker cell bound to its channels/target.
     pub fn new(
         cell_id: usize,
         core_id: CoreId,
@@ -584,6 +587,7 @@ pub struct HardwareVelocity {
 }
 
 impl HardwareVelocity {
+    /// Creates a velocity record for `target`.
     pub fn new(target: ComputeTarget) -> Self {
         Self {
             target,
@@ -655,6 +659,7 @@ pub struct JobEstimator {
 }
 
 impl JobEstimator {
+    /// Creates an empty job estimator.
     pub fn new() -> Self {
         Self {
             cpu_velocity: HardwareVelocity::new(ComputeTarget::Cpu),

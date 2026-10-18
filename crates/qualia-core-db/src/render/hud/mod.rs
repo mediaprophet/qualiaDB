@@ -52,6 +52,7 @@ pub struct QualiaHud {
 #[wasm_bindgen]
 impl QualiaHud {
     #[wasm_bindgen(constructor)]
+    /// Creates `QualiaHud` with the given state.
     pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaHud, JsValue> {
         let ctx = canvas
             .get_context("2d")?
@@ -115,6 +116,7 @@ impl QualiaHud {
             .clamped();
         self.paint();
     }
+    /// Sets `camera_near_plane`.
     pub fn set_camera_near_plane(&mut self, near: f32) -> Result<(), JsValue> {
         if !near.is_finite() || !(0.00001..=1.0).contains(&near) {
             return Err(JsValue::from_str("HUD near plane invalid"));
@@ -244,6 +246,7 @@ impl QualiaHud {
         String::new()
     }
 
+    /// Focused HUD action.
     pub fn focused_action(&self) -> String {
         self.focus
             .and_then(|i| self.items.get(i))

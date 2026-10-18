@@ -54,11 +54,13 @@ pub fn enable(n_layer: usize, max_per_layer: usize) {
     ENABLED.store(true, Ordering::Relaxed);
 }
 
+/// Disables KV capture globally.
 pub fn disable() {
     ENABLED.store(false, Ordering::Relaxed);
 }
 
 #[inline]
+/// `true` when enabled.
 pub fn is_enabled() -> bool {
     ENABLED.load(Ordering::Relaxed)
 }

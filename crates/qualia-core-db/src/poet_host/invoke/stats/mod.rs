@@ -59,6 +59,7 @@ pub use more::*;
 pub use regression::linear_regression;
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::arithmetic_mean`.
 pub fn arithmetic_mean(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -67,11 +68,13 @@ pub fn arithmetic_mean(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::pearson_r`.
 pub fn pearson_r(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     arithmetic_mean(args, span)
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::linear_regression`.
 pub fn linear_regression(
     _args: &vibe::Value,
     span: vibe::Span,

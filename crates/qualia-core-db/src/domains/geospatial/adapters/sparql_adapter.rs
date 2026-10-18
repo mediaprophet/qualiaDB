@@ -20,6 +20,7 @@ fn quin(s: u64, p: u64, o: u64) -> crate::NQuin {
 }
 
 impl SparqlAdapter {
+    /// Creates a default `SparqlAdapter`.
     pub fn new(id: &'static str, endpoint: &str) -> Self {
         Self {
             id,

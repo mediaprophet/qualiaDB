@@ -65,6 +65,7 @@ pub struct VegetationInstanceState {
 }
 
 impl VegetationInstanceState {
+    /// Creates a default `VegetationInstanceState`.
     pub fn new(base_transform: [[f32; 4]; 4], height: f32, semantic_id: u64) -> Self {
         Self {
             base_transform,

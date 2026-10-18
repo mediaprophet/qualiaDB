@@ -28,12 +28,15 @@ pub(super) const DEST_SLOT: usize = 2;
 
 #[inline]
 #[rustfmt::skip]
+/// Honest capability probe — transport ACKs are not yet durable (`false`).
 pub fn transport_ack_is_durable() -> bool { false }
 #[inline]
 #[rustfmt::skip]
+/// Honest capability probe — no OS-isolation evidence (`false`).
 pub fn os_isolation_evidence() -> bool { false }
 #[inline]
 #[rustfmt::skip]
+/// Honest capability probe — Ethernet transport not demonstrated (`false`).
 pub fn ethernet_demonstrated() -> bool { false }
 
 #[derive(Clone, Copy, Debug)]
@@ -85,6 +88,7 @@ pub struct MultiHop {
 }
 
 impl MultiHop {
+    /// Creates a 3-generation multihop harness in the unpublished state (empty forwarding gens, fault pipe, fresh path race).
     pub fn unpublished() -> Self {
         let mut paths = PathTable::new();
         let active_path = paths.start_race(1).expect("race");
@@ -110,39 +114,50 @@ impl MultiHop {
         }
     }
 
+    /// Creates the harness then publishes the 1→2→3 line topology.
     pub fn line() -> Self {
         let mut s = Self::unpublished();
         s.publish_line().expect("plan");
         s
     }
 
+    /// A published line harness whose middle link runs the given `FaultSchedule`.
     pub fn line_with_schedule(schedule: crate::net::qdnf::harness::faults::FaultSchedule) -> Self {
         let mut s = Self::line();
         s.middle = FaultPipe::with_schedule(schedule);
         s
     }
 
+    /// Publishes the line topology into the forwarding generations.
     pub fn publish_line(&mut self) -> Result<(), QdnfError> {
         topology::publish_line(self)
     }
 
     #[rustfmt::skip]
+    /// Looks up the next hop for `DEST_NODE` in the origin generation.
     pub fn lookup_dest(&self) -> Result<u8, QdnfError> {
         self.gens[ORIGIN_SLOT].lookup_next(DEST_NODE)
     }
     #[rustfmt::skip]
+    /// Messages queued in the middle fault pipe.
     pub fn queued(&self) -> usize { self.middle.queued() }
     #[rustfmt::skip]
+    /// Current stream state.
     pub fn stream(&self) -> StreamState { self.stream }
     #[rustfmt::skip]
+    /// Shared access to the path table.
     pub fn paths(&self) -> &PathTable { &self.paths }
     #[rustfmt::skip]
+    /// Mutable access to the path table.
     pub fn paths_mut(&mut self) -> &mut PathTable { &mut self.paths }
     #[rustfmt::skip]
+    /// The last delivery stage reached.
     pub fn last_stage(&self) -> DeliveryStage { self.last_stage }
     #[rustfmt::skip]
+    /// Hops the last plan computed.
     pub fn planned_hop_count(&self) -> u8 { self.planned_hops }
     #[rustfmt::skip]
+    /// Advances the middle pipe one tick.
     pub fn tick(&mut self) { self.middle.tick(); }
 
     /// Withdraw the 1→2 next hop and start the hold-down timer.
@@ -156,10 +171,12 @@ impl MultiHop {
     }
 
     #[inline]
+    /// `true` when the next hop is inside its hold-down window at `now_unix`.
     pub fn next_hop_held_down(&self, now_unix: u64) -> bool {
         hop_is_held_down(&self.held, now_unix, &self.policy)
     }
 
+    /// Races a new path (`active+2`), activates it, and cleans up the previous path; returns the new path id.
     pub fn handoff(&mut self) -> Result<u8, QdnfError> {
         let next = self.paths.start_race(self.active_path as u64 + 2)?;
         self.paths.mark_active(next)?;

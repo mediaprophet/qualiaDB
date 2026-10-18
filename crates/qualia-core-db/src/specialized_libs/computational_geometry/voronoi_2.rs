@@ -469,6 +469,7 @@ mod tests {
 
 // Default values for test initialization.
 impl VoronoiVertex {
+    /// Default config for the site count.
     pub fn default_for(idx: u32) -> Self {
         VoronoiVertex {
             triangle_index: idx,

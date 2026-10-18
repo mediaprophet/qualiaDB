@@ -16,6 +16,7 @@ pub struct SuperBlockWriter {
 }
 
 impl SuperBlockWriter {
+    /// Opens the resource.
     pub fn open<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let mut file = OpenOptions::new()
             .create(true)
@@ -164,6 +165,7 @@ pub trait VirtualFileSystem {
         path: &str,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>> + Send>>;
     #[cfg(target_arch = "wasm32")]
+    /// Reads a chunk from `path`.
     fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>>>>;
 
     /// Writes a chunk of data to the local storage hierarchy
@@ -174,6 +176,7 @@ pub trait VirtualFileSystem {
         data: &[u8],
     ) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>>;
     #[cfg(target_arch = "wasm32")]
+    /// Writes a chunk to `path`.
     fn write_chunk(
         &self,
         path: &str,
@@ -186,6 +189,7 @@ pub struct NativeVfs;
 
 #[cfg(not(target_arch = "wasm32"))]
 impl VirtualFileSystem for NativeVfs {
+    /// Reads a chunk from `path`.
     fn read_chunk(
         &self,
         path: &str,
@@ -194,6 +198,7 @@ impl VirtualFileSystem for NativeVfs {
         Box::pin(async move { std::fs::read(&path).map_err(|e| e.to_string()) })
     }
 
+    /// Writes a chunk to `path`.
     fn write_chunk(
         &self,
         path: &str,
@@ -210,6 +215,7 @@ pub struct OpfsVfs;
 
 #[cfg(target_arch = "wasm32")]
 impl VirtualFileSystem for OpfsVfs {
+    /// Reads a chunk from `path`.
     fn read_chunk(&self, path: &str) -> Pin<Box<dyn Future<Output = Result<Vec<u8>, String>>>> {
         let path = path.to_string();
         Box::pin(async move {
@@ -245,6 +251,7 @@ impl VirtualFileSystem for OpfsVfs {
         })
     }
 
+    /// Writes a chunk to `path`.
     fn write_chunk(
         &self,
         path: &str,

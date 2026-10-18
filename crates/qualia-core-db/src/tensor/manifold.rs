@@ -25,6 +25,7 @@ impl Default for ManifoldDomain {
 }
 
 impl ManifoldDomain {
+    /// Builds `ManifoldDomain` from `index`.
     pub fn from_index(index: f32) -> Self {
         match index as u32 {
             0 => ManifoldDomain::Medical,
@@ -36,6 +37,7 @@ impl ManifoldDomain {
         }
     }
 
+    /// Converts to `index`.
     pub fn to_index(&self) -> f32 {
         *self as u32 as f32
     }

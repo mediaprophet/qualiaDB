@@ -189,6 +189,7 @@ pub fn sign_graph_mutation(signing_key: &SigningKey, quin: &NQuin) -> Signature 
 const LANE_KEY_LENGTH: usize = 32;
 
 #[cfg(all(feature = "sanctuary-crypto", not(target_arch = "wasm32")))]
+/// `?::derive_lane_key`.
 pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; LANE_KEY_LENGTH] {
     crate::sanctuary_crypto::derive_lane_cipher_key(
         pin.as_bytes(),

@@ -61,6 +61,7 @@ pub struct PipelineResult {
 }
 
 impl PipelineResult {
+    /// Summary.
     pub fn summary(&self) -> String {
         format!(
             "dag_pipeline: success={} nodes={}/{} interrupt={}",
@@ -86,6 +87,7 @@ impl PipelineResult {
 /// - `Ok(outputs)`: the outputs to write to the blackboard
 /// - `Err(diagnostic)`: a diagnostic that halts the node
 pub trait NodeExecutor {
+    /// Executes the DAG.
     fn execute(
         &mut self,
         node_id: u32,
@@ -323,6 +325,7 @@ mod tests {
     }
 
     impl NodeExecutor for FixedExecutor {
+        /// Executes the DAG.
         fn execute(
             &mut self,
             _node_id: u32,
@@ -338,6 +341,7 @@ mod tests {
     struct FailingExecutor;
 
     impl NodeExecutor for FailingExecutor {
+        /// Executes the DAG.
         fn execute(
             &mut self,
             _node_id: u32,
@@ -539,6 +543,7 @@ mod tests {
 
         struct RoutingExecutor;
         impl NodeExecutor for RoutingExecutor {
+            /// Executes the DAG.
             fn execute(
                 &mut self,
                 node_id: u32,

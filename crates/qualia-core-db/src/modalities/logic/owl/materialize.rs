@@ -64,6 +64,7 @@ pub struct RdfTriple {
 }
 
 impl RdfTriple {
+    /// Creates a default `RdfTriple`.
     pub const fn new(s: u64, p: u64, o: u64) -> Self {
         Self { s, p, o }
     }

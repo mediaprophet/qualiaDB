@@ -706,6 +706,7 @@ pub mod tests {
     use crate::modalities::logic::n3_compiler::N3OutputMode;
 
     #[test]
+    /// `TaskOrchestrator::qualia_validate_ring_buffer`.
     pub fn qualia_validate_ring_buffer() {}
 
     #[test]

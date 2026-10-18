@@ -507,6 +507,7 @@ pub enum SourceDomain {
 }
 
 impl SourceDomain {
+    /// Builds `SourceDomain` from `u64`.
     pub fn from_u64(value: u64) -> Self {
         match value {
             0x01 => SourceDomain::ClinicalEngine,

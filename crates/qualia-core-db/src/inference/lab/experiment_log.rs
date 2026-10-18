@@ -31,6 +31,7 @@ pub struct ExperimentRun {
 }
 
 impl ExperimentRun {
+    /// Timestamp-derived run id (`run-<ms>`).
     pub fn new_id() -> String {
         use std::time::{SystemTime, UNIX_EPOCH};
         let t = SystemTime::now()
@@ -40,6 +41,7 @@ impl ExperimentRun {
         format!("run-{t}")
     }
 
+    /// Current unix-seconds timestamp string.
     pub fn utc_now() -> String {
         // ISO-ish without chrono dep: unix ms is enough for lab correlation.
         use std::time::{SystemTime, UNIX_EPOCH};
@@ -50,6 +52,7 @@ impl ExperimentRun {
         format!("{t}")
     }
 
+    /// Computes the Ollama/Qualia decode ratio `a_gap` when both samples exist.
     pub fn compute_a_gap(&mut self) {
         if let (Some(q), Some(o)) = (self.qualia_decode_tok_s, self.ollama_decode_tok_s) {
             if q > 0.0 {
@@ -66,6 +69,7 @@ impl ExperimentRun {
         }
     }
 
+    /// Serializes the run to one CSV row.
     pub fn to_csv_line(&self) -> String {
         let fopt = |o: Option<f64>| o.map(|v| format!("{v:.6}")).unwrap_or_default();
         let uopt = |o: Option<u64>| o.map(|v| v.to_string()).unwrap_or_default();

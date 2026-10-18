@@ -10,6 +10,7 @@ use crate::net::qdnf::policy_labels::{
 };
 use crate::net::qdnf::types::{Generation, StrongDigest};
 
+/// Scenario: unlabelled content must be refused with `Incomplete`.
 pub fn s01_missing_label() -> Result<(), QdnfError> {
     match require_labelled_content(true, None) {
         Err(QdnfError::Incomplete) => Ok(()),
@@ -18,6 +19,7 @@ pub fn s01_missing_label() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario: mutating an encoded label byte, or mismatched confidentiality vs a stored digest, must fail `Conflict`/`Malformed`/`Unsupported`.
 pub fn s02_unsigned_mutation() -> Result<(), QdnfError> {
     let fields = LabelFields::request(Confidentiality::C1Private, digest(1));
     let mut buf = [0u8; 256];
@@ -48,6 +50,7 @@ pub fn s02_unsigned_mutation() -> Result<(), QdnfError> {
     })
 }
 
+/// Scenario: a derived summary inherits C2 confidentiality and NO_TRAINING bits — downgrade/denial errors propagate.
 pub fn s03_summary_inherits() -> Result<(), QdnfError> {
     let mut fields = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     fields.audience = digest(1);
@@ -63,6 +66,7 @@ pub fn s03_summary_inherits() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario: joining two C2 items with disjoint audiences is a `Conflict`.
 pub fn s04_disjoint_audience() -> Result<(), QdnfError> {
     let mut a = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     a.audience = digest(1);
@@ -71,6 +75,7 @@ pub fn s04_disjoint_audience() -> Result<(), QdnfError> {
     expect_err(join_one(&mut a, &b), QdnfError::Conflict)
 }
 
+/// Scenario: labels support up to 17 compartments.
 pub fn s05_seventeen_compartments() -> Result<(), QdnfError> {
     let mut acc = LabelFields::request(Confidentiality::C1Private, digest(1));
     acc.compartment_count = MAX_COMPARTMENTS as u8;
@@ -85,6 +90,7 @@ pub fn s05_seventeen_compartments() -> Result<(), QdnfError> {
     expect_err(join_one(&mut acc, &extra), QdnfError::Capacity)
 }
 
+/// Scenario: stale consent timestamps are rejected.
 pub fn s06_stale_consent() -> Result<(), QdnfError> {
     let bound = BoundGenerations::new(Generation(1), Generation(1), Generation(1));
     let live = LiveGenerations {
@@ -99,6 +105,7 @@ pub fn s06_stale_consent() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario: worker reset preserves label semantics.
 pub fn s15_worker_reset() -> Result<(), QdnfError> {
     expect_err(
         admit_cache_insert(Confidentiality::C1Private, Confidentiality::C3Compartmented),
@@ -115,6 +122,7 @@ pub fn s15_worker_reset() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario: restricted-labelled data cannot egress without authorization.
 pub fn s16_restricted_egress() -> Result<(), QdnfError> {
     let mut fields = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     fields.audience = digest(9);
@@ -134,6 +142,7 @@ pub fn s16_restricted_egress() -> Result<(), QdnfError> {
     )
 }
 
+/// Scenario: embeddings inherit the source label's restrictions.
 pub fn s17_embedding_inherits() -> Result<(), QdnfError> {
     let mut fields = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     fields.audience = digest(1);
@@ -146,6 +155,7 @@ pub fn s17_embedding_inherits() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario: user-edited markings are handled correctly.
 pub fn s32_user_edited_marking() -> Result<(), QdnfError> {
     let mut fields = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     fields.audience = digest(1);
@@ -161,6 +171,7 @@ pub fn s32_user_edited_marking() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario: a single redacted release applies only the redaction scope.
 pub fn s33_single_redacted_release() -> Result<(), QdnfError> {
     let original = verified(Confidentiality::C2Sensitive, digest(1))?;
     let record = declassify_to(&original, digest(1), 100, Confidentiality::C0Public)?;
@@ -176,6 +187,7 @@ pub fn s33_single_redacted_release() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario: combined-authority release requires all constituent approvals.
 pub fn s36_combined_authority() -> Result<(), QdnfError> {
     let mut a_fields = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     a_fields.audience = digest(1);
@@ -214,6 +226,7 @@ pub fn s36_combined_authority() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario: releases with omitted dependencies are rejected.
 pub fn s37_omitted_dependencies() -> Result<(), QdnfError> {
     let mut fields = LabelFields::request(Confidentiality::C2Sensitive, digest(1));
     fields.audience = digest(1);

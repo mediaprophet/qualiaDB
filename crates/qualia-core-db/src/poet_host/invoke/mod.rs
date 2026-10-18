@@ -48,6 +48,7 @@ mod vision;
 use super::PoetSnapshot;
 use vibe::{DiagCode, Diagnostic, Span, Value};
 
+/// Dispatches a VibeScript call by name.
 pub fn dispatch(
     snap: &mut PoetSnapshot,
     id: &str,

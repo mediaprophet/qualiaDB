@@ -70,6 +70,7 @@ pub struct MarginMethodParameters {
 }
 
 impl TradingEngine {
+    /// Creates a `TradingEngine` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             order_manager: OrderManager::new(),
@@ -78,12 +79,15 @@ impl TradingEngine {
         }
     }
 
+    /// Readies the `TradingEngine` sub-components; registers/populates any built-in defaults.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.order_manager.initialize()?;
         self.execution_engine.initialize()?;
         Ok(())
     }
 
+    /// Validates order quantity (must be positive) and price (positive when
+    /// present); errors with `ValidationError` on violations.
     pub fn validate_order(&self, order: &Order) -> Result<(), FinancialError> {
         if order.quantity <= 0.0 {
             return Err(FinancialError::ValidationError(
@@ -100,6 +104,9 @@ impl TradingEngine {
         Ok(())
     }
 
+    /// **Intentionally refuses to execute.** There is no broker/exchange
+    /// connection and this system must not place orders or move money; it
+    /// returns `NotImplemented` rather than reporting a fabricated fill.
     pub fn execute_trade(&mut self, _order: &Order) -> Result<TradeResult, FinancialError> {
         // NOT IMPLEMENTED — and this one must never fabricate. The previous body returned a
         // `TradeResult { status: Filled, executed_price: order.price.unwrap_or(100.0) }` — a
@@ -114,16 +121,19 @@ impl TradingEngine {
         ))
     }
 
+    /// Returns a reference to the inner `position_manager` sub-component.
     pub fn position_manager(&self) -> &PositionManager {
         &self.position_manager
     }
 
+    /// Mutable access to the inner `position_manager` sub-component.
     pub fn position_manager_mut(&mut self) -> &mut PositionManager {
         &mut self.position_manager
     }
 }
 
 impl PositionManager {
+    /// Creates a `PositionManager` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             positions: HashMap::new(),
@@ -132,37 +142,45 @@ impl PositionManager {
         }
     }
 
+    /// Registers `position` in the registry (keyed by its id).
     pub fn add_position(&mut self, position: Position) {
         self.positions
             .insert(position.position_id.clone(), position);
     }
 
+    /// Looks up `position` by id; `None` if not registered.
     pub fn get_position(&self, position_id: &str) -> Option<&Position> {
         self.positions.get(position_id)
     }
 
+    /// Iterates over all registered `positions` entries.
     pub fn list_positions(&self) -> Vec<String> {
         self.positions.keys().cloned().collect()
     }
 
+    /// Registers `position limit` in the registry (keyed by its id).
     pub fn add_position_limit(&mut self, limit: PositionLimit) {
         self.position_limits.insert(limit.limit_id.clone(), limit);
     }
 
+    /// Looks up `position limit` by id; `None` if not registered.
     pub fn get_position_limit(&self, limit_id: &str) -> Option<&PositionLimit> {
         self.position_limits.get(limit_id)
     }
 
+    /// Returns a reference to the inner `margin_calculator` sub-component.
     pub fn margin_calculator(&self) -> &MarginCalculator {
         &self.margin_calculator
     }
 
+    /// Mutable access to the inner `margin_calculator` sub-component.
     pub fn margin_calculator_mut(&mut self) -> &mut MarginCalculator {
         &mut self.margin_calculator
     }
 }
 
 impl MarginCalculator {
+    /// Creates a `MarginCalculator` with empty registries / default configuration.
     pub fn new() -> Self {
         Self {
             margin_methods: HashMap::new(),
@@ -170,18 +188,22 @@ impl MarginCalculator {
         }
     }
 
+    /// Registers `margin method` in the registry (keyed by its id).
     pub fn add_margin_method(&mut self, method: MarginMethod) {
         self.margin_methods.insert(method.method_id.clone(), method);
     }
 
+    /// Looks up `margin method` by id; `None` if not registered.
     pub fn get_margin_method(&self, method_id: &str) -> Option<&MarginMethod> {
         self.margin_methods.get(method_id)
     }
 
+    /// Iterates over all registered `margin methods` entries.
     pub fn list_margin_methods(&self) -> Vec<String> {
         self.margin_methods.keys().cloned().collect()
     }
 
+    /// Returns the configured margin requirements for the calculator.
     pub fn margin_requirements(&self) -> &MarginRequirements {
         &self.margin_requirements
     }

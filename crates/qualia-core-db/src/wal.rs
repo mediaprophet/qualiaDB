@@ -182,6 +182,7 @@ impl WriteAheadLog {
 
 #[cfg(target_arch = "wasm32")]
 impl WriteAheadLog {
+    /// Opens.
     pub fn open<P: AsRef<Path>>(_path: P) -> std::io::Result<Self> {
         let mut file = Vec::with_capacity(1024);
         file.extend_from_slice(&[0u8; 32]);
@@ -191,17 +192,20 @@ impl WriteAheadLog {
         })
     }
 
+    /// Appends a durable mutation record for `quin`.
     pub fn append_mutation(&mut self, quin: &NQuin) -> std::io::Result<()> {
         self.file.extend_from_slice(quin_as_bytes(quin));
         Ok(())
     }
 
+    /// Appends a mutation flagged volatile (not expected to survive crash recovery).
     pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> std::io::Result<()> {
         self.file.extend_from_slice(quin_as_bytes(quin));
         scrub_quin_volatile(quin);
         Ok(())
     }
 
+    /// Replays the log, returning all durable mutations in order.
     pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> {
         if self.file.len() < WAL_HEADER_SIZE as usize {
             return Ok(Vec::new());
@@ -218,11 +222,13 @@ impl WriteAheadLog {
         Ok(recovered)
     }
 
+    /// Clears the log after successful checkpoint.
     pub fn truncate(&mut self) -> std::io::Result<()> {
         self.file.truncate(WAL_HEADER_SIZE as usize);
         Ok(())
     }
 
+    /// Checkpoints buffered mutations into the DAG store.
     pub fn checkpoint_to_dag(
         &mut self,
         dag_store: &mut crate::git_bridge::DagStore,
@@ -253,6 +259,7 @@ impl WriteAheadLog {
         Ok(new_hash)
     }
 
+    /// Mutations buffered but not yet checkpointed.
     pub fn buffered_count(&mut self) -> std::io::Result<usize> {
         let data_len = self.file.len().saturating_sub(WAL_HEADER_SIZE as usize);
         Ok(data_len / std::mem::size_of::<NQuin>())

@@ -25,6 +25,7 @@ pub struct Joint {
 
 impl Joint {
     #[inline]
+    /// `Joint::revolute`.
     pub fn revolute(axis: [f32; 3], rate: f32) -> Self {
         Joint {
             kind: JointKind::Revolute { axis },
@@ -33,6 +34,7 @@ impl Joint {
     }
 
     #[inline]
+    /// `Joint::prismatic`.
     pub fn prismatic(axis: [f32; 3], rate: f32) -> Self {
         Joint {
             kind: JointKind::Prismatic { axis },

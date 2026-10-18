@@ -16,6 +16,7 @@ pub struct AuthorityBinding {
 }
 
 impl AuthorityBinding {
+    /// Builds `AuthorityBinding` from `bytes`.
     pub fn from_bytes(
         principal: &[u8],
         recipient: &[u8],
@@ -61,6 +62,7 @@ impl AuthorityBinding {
     }
 }
 
+/// Binds authority digests.
 pub fn bind_authority_digests(
     principal: &[u8],
     recipient: &[u8],

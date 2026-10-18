@@ -1,5 +1,6 @@
 //! Canvas2D fallback painters — the non-WebGPU 2.5D field (background, ambient, tensor, HUD).
 use super::*;
+/// `paint_background`.
 pub(super) fn paint_background(
     ctx: &CanvasRenderingContext2d,
     w: f64,
@@ -16,6 +17,7 @@ pub(super) fn paint_background(
     ctx.fill_rect(0.0, 0.0, w, h);
 }
 
+/// `paint_ambient_field`.
 pub(super) fn paint_ambient_field(
     ctx: &CanvasRenderingContext2d,
     w: f64,
@@ -55,6 +57,7 @@ pub(super) fn paint_ambient_field(
     }
 }
 
+/// `paint_tensor_projection`.
 pub(super) fn paint_tensor_projection(
     ctx: &CanvasRenderingContext2d,
     w: f64,
@@ -148,6 +151,7 @@ pub(super) fn paint_tensor_projection(
     }
 }
 
+/// `stroke_segment`.
 pub(super) fn stroke_segment(
     ctx: &CanvasRenderingContext2d,
     a: ProjectedNode,
@@ -161,6 +165,7 @@ pub(super) fn stroke_segment(
     ctx.stroke();
 }
 
+/// `project_xyz`.
 pub(super) fn project_xyz(x: f32, y: f32, z: f32, w: f64, h: f64, yaw: f64) -> (f64, f64, f32) {
     let cx = yaw.cos() as f32;
     let sx = yaw.sin() as f32;
@@ -173,6 +178,7 @@ pub(super) fn project_xyz(x: f32, y: f32, z: f32, w: f64, h: f64, yaw: f64) -> (
     (px, py, depth)
 }
 
+/// `paint_hud`.
 pub(super) fn paint_hud(
     ctx: &CanvasRenderingContext2d,
     portal: &QualiaPortal,
@@ -209,6 +215,7 @@ pub(super) fn paint_hud(
     }
 }
 
+/// `append_parsed_dom`.
 pub(super) fn append_parsed_dom(
     document: &Document,
     panel: &Element,
@@ -224,6 +231,7 @@ pub(super) fn append_parsed_dom(
     append_triple_dom(document, panel, parsed)
 }
 
+/// `append_triple_dom`.
 pub(super) fn append_triple_dom(
     document: &Document,
     panel: &Element,
@@ -249,6 +257,7 @@ pub(super) fn append_triple_dom(
     Ok(())
 }
 
+/// `field_as_string`.
 pub(super) fn field_as_string(value: &JsValue, key: &str) -> Option<String> {
     Reflect::get(value, &JsValue::from_str(key))
         .ok()
@@ -256,6 +265,7 @@ pub(super) fn field_as_string(value: &JsValue, key: &str) -> Option<String> {
         .and_then(|v| v.as_string())
 }
 
+/// `ontology_tag`.
 pub(super) fn ontology_tag(predicate: &str) -> &'static str {
     let p = predicate.to_ascii_lowercase();
     if p.contains("title") || p.contains("label") || p.contains("name") {
@@ -273,6 +283,7 @@ pub(super) fn ontology_tag(predicate: &str) -> &'static str {
     }
 }
 
+/// `html_escape`.
 pub(super) fn html_escape(raw: &str) -> String {
     raw.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -281,6 +292,7 @@ pub(super) fn html_escape(raw: &str) -> String {
 }
 
 #[inline]
+/// `acoustic_uniform_to_floats`.
 pub(super) fn acoustic_uniform_to_floats(
     u: &AcousticUniform,
 ) -> [f32; ACOUSTIC_UNIFORM_FLOAT_COUNT] {

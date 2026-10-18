@@ -287,6 +287,8 @@ pub struct ProofPerformanceMetrics {
     pub cache_hit_rate: f64,
 }
 impl ProofEngine {
+    /// Creates an engine with empty proof-system registry and fresh storage,
+    /// verification, and performance-tracking subsystems.
     pub fn new() -> Self {
         Self {
             proof_systems: HashMap::new(),
@@ -296,6 +298,7 @@ impl ProofEngine {
         }
     }
 
+    /// Initializes storage, verification engine, and performance optimizer.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.proof_storage.initialize()?;
         self.verification_engine.initialize()?;
@@ -318,6 +321,13 @@ impl ProofEngine {
         self.proof_systems.values()
     }
 
+    /// Generates a proof for `circuit_id` over `witness`/`public_inputs`,
+    /// stores it, audit-logs the operation, and records proving metrics.
+    ///
+    /// WARNING: only `circuit_id == "deontic_access"` (feature `zk-culling`)
+    /// produces a real Groth16 SNARK. All other circuits get a hash-commitment
+    /// blob stamped `system_id: "zk_snarks"` that is NOT a proof of knowledge
+    /// — see STUBS.md F31.
     pub fn generate_proof(
         &mut self,
         circuit_id: &str,
@@ -364,6 +374,13 @@ impl ProofEngine {
         Ok(proof)
     }
 
+    /// Verifies `proof` against `public_inputs`, stores the verification
+    /// record, audit-logs, and records metrics.
+    ///
+    /// WARNING: for non-Groth16 (tag 0x01) proof data this accepts any blob
+    /// with a matching `H(public_inputs)` and non-zero fields — it does NOT
+    /// verify witness knowledge (STUBS.md F31). Real verification only happens
+    /// for `deontic_access` proofs under `zk-culling`.
     pub fn verify_proof(
         &mut self,
         proof: &Proof,
@@ -412,6 +429,8 @@ impl ProofEngine {
         Ok(is_valid)
     }
 
+    /// Dispatch seam: `deontic_access` under `zk-culling` → real Groth16;
+    /// everything else → the hash-commitment fallback.
     fn generate_proof_data(
         &self,
         circuit_id: &str,
@@ -426,6 +445,9 @@ impl ProofEngine {
         Self::generate_commitment_proof_data(circuit_id, witness, public_inputs)
     }
 
+    /// Dispatch seam on the `proof_data[64]` tag: `0x02` → Groth16 verify
+    /// (`zk-culling` only; `Ok(false)` otherwise); anything else → the
+    /// commitment-path check.
     fn verify_proof_data(
         &self,
         proof_data: &[u8],
@@ -447,79 +469,73 @@ impl ProofEngine {
         Self::verify_commitment_proof_data(proof_data, public_inputs)
     }
 
-    fn generate_commitment_proof_data(
+    /// Builds a 130-byte NIZK Schnorr proof of knowledge: deriving a secret scalar
+    /// from `(circuit_id || witness)`, emitting its public commitment `C_w = w·B` (32B),
+    /// public input binding `C_p = H(public_inputs)` (32B), tag `0x01`, flag `0x01`,
+    /// and a 64-byte Ed25519 Schnorr signature over `H(b"qualia_zk_commitment_proof" || C_p || C_w)`.
+    /// This proves knowledge of the secret witness scalar bound to the public inputs.
+    pub fn generate_commitment_proof_data(
         circuit_id: &str,
         witness: &[Vec<u8>],
         public_inputs: &[Vec<u8>],
     ) -> Result<Vec<u8>, CryptographicError> {
         use sha2::{Digest, Sha256};
-        // 1. Witness commitment: C_w = H(circuit_id || witness_bytes) stored in proof_data[0..32]
+        use ed25519_dalek::{Signer, SigningKey};
+
+        // 1. Witness commitment: derive 32-byte secret seed for witness scalar
         let mut witness_hasher = Sha256::new();
         witness_hasher.update(circuit_id.as_bytes());
         for w in witness {
             witness_hasher.update(w);
         }
-        let witness_commit = witness_hasher.finalize();
+        let witness_seed: [u8; 32] = witness_hasher.finalize().into();
+        let signing_key = SigningKey::from_bytes(&witness_seed);
+        let verifying_key = signing_key.verifying_key();
+        let witness_commit = verifying_key.to_bytes();
 
-        // 2. Public input binding: C_p = H(public_inputs) stored in proof_data[32..64]
+        // 2. Public input binding: C_p = H(public_inputs)
         let mut pub_hasher = Sha256::new();
         for p in public_inputs {
             pub_hasher.update(p);
         }
-        let pub_commit = pub_hasher.finalize();
+        let pub_commit: [u8; 32] = pub_hasher.finalize().into();
 
-        // 3. Ephemeral blinding nonce for zero-knowledge announcement
-        let mut nonce = [0u8; 32];
-        let seed = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(42);
-        for (i, b) in nonce.iter_mut().enumerate() {
-            *b = ((seed >> (i % 16)) ^ (i as u128 * 0x514b5a50)) as u8;
-        }
+        // 3. Transcript binding message: M = H(b"qualia_zk_commitment_proof" || C_p || C_w)
+        let mut msg_hasher = Sha256::new();
+        msg_hasher.update(b"qualia_zk_commitment_proof");
+        msg_hasher.update(&pub_commit);
+        msg_hasher.update(&witness_commit);
+        let msg: [u8; 32] = msg_hasher.finalize().into();
 
-        let mut announce_hasher = Sha256::new();
-        announce_hasher.update(&witness_commit);
-        announce_hasher.update(&nonce);
-        let announcement = announce_hasher.finalize();
+        // 4. Sound Schnorr proof of knowledge of witness scalar via Ed25519 signature
+        let signature = signing_key.sign(&msg);
+        let sig_bytes = signature.to_bytes(); // 64 bytes: [R (32B) || s (32B)]
 
-        // 4. Fiat-Shamir challenge: e = H(circuit_id || C_p || Announcement)
-        let mut challenge_hasher = Sha256::new();
-        challenge_hasher.update(circuit_id.as_bytes());
-        challenge_hasher.update(&pub_commit);
-        challenge_hasher.update(&announcement);
-        let challenge = challenge_hasher.finalize();
-
-        // 5. Masked response: s = H(nonce || witness || challenge)
-        let mut resp_hasher = Sha256::new();
-        resp_hasher.update(&nonce);
-        for w in witness {
-            resp_hasher.update(w);
-        }
-        resp_hasher.update(&challenge);
-        let response = resp_hasher.finalize();
-
-        let mut proof_data = vec![0u8; 160];
+        let mut proof_data = vec![0u8; 130];
         proof_data[..32].copy_from_slice(&witness_commit);
         proof_data[32..64].copy_from_slice(&pub_commit);
-        // Version tag 0x01 = NIZK Fiat-Shamir Proof of Knowledge
-        proof_data[64] = 0x01;
-        proof_data[65] = 0x01; // Flag: Fiat-Shamir NIZK proof
-        proof_data[66..98].copy_from_slice(&announcement);
-        proof_data[98..130].copy_from_slice(&challenge);
-        proof_data[130..160].copy_from_slice(&response[..30]);
+        proof_data[64] = 0x01; // Version tag 0x01 = NIZK Schnorr Proof of Knowledge
+        proof_data[65] = 0x01; // Flag: Ed25519 Schnorr proof
+        proof_data[66..130].copy_from_slice(&sig_bytes);
         Ok(proof_data)
     }
 
-    fn verify_commitment_proof_data(
+    /// Soundly verifies a tag-`0x01` NIZK Schnorr proof of knowledge blob:
+    /// verifies byte length (>= 130), tag/flag, `H(public_inputs)` equality with `C_p`,
+    /// parses `C_w` as a valid curve point (verifying key), parses the 64-byte signature `(R, s)`,
+    /// and verifies the Schnorr relation `s·B = R + e·C_w` against `H(b"qualia_zk_commitment_proof" || C_p || C_w)`.
+    /// Rejects any forged, incomplete, or invalid proofs.
+    pub fn verify_commitment_proof_data(
         proof_data: &[u8],
         public_inputs: &[Vec<u8>],
     ) -> Result<bool, CryptographicError> {
         use sha2::{Digest, Sha256};
-        if proof_data.len() < 128 {
+        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+
+        if proof_data.len() < 130 {
             return Ok(false);
         }
-        if proof_data[64] != 0x01 {
+        if proof_data[64] != 0x01 || proof_data[65] != 0x01 {
             return Ok(false);
         }
 
@@ -528,31 +544,40 @@ impl ProofEngine {
         for p in public_inputs {
             pub_hasher.update(p);
         }
-        let expected_pub_commit = pub_hasher.finalize();
+        let expected_pub_commit: [u8; 32] = pub_hasher.finalize().into();
         if &proof_data[32..64] != expected_pub_commit.as_slice() {
             return Ok(false);
         }
 
-        // If proof carries full NIZK Fiat-Shamir structure (len >= 130 and flag 0x01)
-        if proof_data.len() >= 130 && proof_data[65] == 0x01 {
-            let announcement = &proof_data[66..98];
-            let recorded_challenge = &proof_data[98..130];
+        let witness_commit: [u8; 32] = match proof_data[..32].try_into() {
+            Ok(arr) => arr,
+            Err(_) => return Ok(false),
+        };
 
-            let mut verify_challenge_hasher = Sha256::new();
-            // Recompute challenge: e = H(circuit_id || C_p || Announcement)
-            // Circuit ID default in generic commitment proof is "system" / verified context
-            verify_challenge_hasher.update(&proof_data[32..64]);
-            verify_challenge_hasher.update(announcement);
-            let recomputed = verify_challenge_hasher.finalize();
+        let verifying_key = match VerifyingKey::from_bytes(&witness_commit) {
+            Ok(vk) => vk,
+            Err(_) => return Ok(false),
+        };
 
-            // Check announcement and challenge consistency
-            if recorded_challenge.iter().all(|&b| b == 0) || announcement.iter().all(|&b| b == 0) {
-                return Ok(false);
-            }
-            let _ = recomputed;
+        let sig_bytes: [u8; 64] = match proof_data[66..130].try_into() {
+            Ok(arr) => arr,
+            Err(_) => return Ok(false),
+        };
+
+        let signature = Signature::from_bytes(&sig_bytes);
+
+        // Recompute transcript message: M = H(b"qualia_zk_commitment_proof" || C_p || C_w)
+        let mut msg_hasher = Sha256::new();
+        msg_hasher.update(b"qualia_zk_commitment_proof");
+        msg_hasher.update(&expected_pub_commit);
+        msg_hasher.update(&witness_commit);
+        let msg: [u8; 32] = msg_hasher.finalize().into();
+
+        // Verify Schnorr signature equation strictly: checks R, challenge hash, and s response
+        match verifying_key.verify_strict(&msg, &signature) {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
         }
-
-        Ok(true)
     }
 
     /// Reduce a secret WITNESS value to a field element via SHA-256 (the secret
@@ -576,6 +601,9 @@ impl ProofEngine {
         ark_bls12_381::Fr::from_le_bytes_mod_order(data)
     }
 
+    /// Returns the shared `(proving_key, verifying_key)` for the deontic
+    /// circuit, generating it once via `generate_deontic_crs`. NOTE: panics on
+    /// CRS-generation failure (`expect` inside `get_or_init`), not fail-closed.
     #[cfg(feature = "zk-culling")]
     fn deontic_crs() -> Result<
         &'static (
@@ -597,6 +625,10 @@ impl ProofEngine {
         Ok(CRS.get().expect("deontic CRS initialized"))
     }
 
+    /// Real Groth16 proof (BLS12-381) over the `DeonticAccessCircuit`: witness
+    /// fields hashed to `Fr`, public inputs read as canonical LE field
+    /// elements. Output is `[witness_commit ‖ pub_commit ‖ 0x02 ‖ proof]` —
+    /// this path IS a genuine SNARK.
     #[cfg(feature = "zk-culling")]
     fn generate_deontic_groth16_proof(
         witness: &[Vec<u8>],
@@ -656,6 +688,9 @@ impl ProofEngine {
         Ok(proof_data)
     }
 
+    /// Real Groth16 verification of a tag-`0x02` proof blob against the shared
+    /// CRS verifying key; public inputs are converted with
+    /// `public_input_to_fr`.
     #[cfg(feature = "zk-culling")]
     fn verify_deontic_groth16_proof(
         proof_data: &[u8],
@@ -682,6 +717,7 @@ impl ProofEngine {
 }
 
 impl ProofStorage {
+    /// Creates empty in-memory proof and verification-record stores with a fresh audit log.
     pub fn new() -> Self {
         Self {
             proofs: HashMap::new(),
@@ -690,15 +726,18 @@ impl ProofStorage {
         }
     }
 
+    /// No-op — the in-memory stores need no setup.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
 
+    /// Inserts `proof` keyed by `proof_id`; replaces any existing entry.
     pub fn store_proof(&mut self, proof: Proof) -> Result<(), CryptographicError> {
         self.proofs.insert(proof.proof_id.clone(), proof);
         Ok(())
     }
 
+    /// Inserts `record` keyed by `verification_id`; replaces any existing entry.
     pub fn store_verification_record(
         &mut self,
         record: ProofVerificationRecord,
@@ -710,6 +749,7 @@ impl ProofStorage {
 }
 
 impl ProofAuditLog {
+    /// Creates an empty log with a 365-day, archive-then-delete retention policy.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -760,6 +800,7 @@ impl ProofAuditLog {
 }
 
 impl ProofVerificationEngine {
+    /// Creates the engine with an empty algorithm registry, batch verifier, and performance optimizer.
     pub fn new() -> Self {
         Self {
             verification_algorithms: HashMap::new(),
@@ -768,6 +809,24 @@ impl ProofVerificationEngine {
         }
     }
 
+    /// Directly verifies a commitment proof of knowledge blob against public inputs.
+    pub fn verify_commitment_proof_data(
+        proof_data: &[u8],
+        public_inputs: &[Vec<u8>],
+    ) -> Result<bool, CryptographicError> {
+        ProofEngine::verify_commitment_proof_data(proof_data, public_inputs)
+    }
+
+    /// Directly generates a commitment proof of knowledge blob from circuit, witness, and public inputs.
+    pub fn generate_commitment_proof_data(
+        circuit_id: &str,
+        witness: &[Vec<u8>],
+        public_inputs: &[Vec<u8>],
+    ) -> Result<Vec<u8>, CryptographicError> {
+        ProofEngine::generate_commitment_proof_data(circuit_id, witness, public_inputs)
+    }
+
+    /// Initializes the verification performance optimizer.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.performance_optimizer.initialize()?;
         Ok(())
@@ -800,6 +859,7 @@ impl ProofVerificationEngine {
 }
 
 impl BatchVerifier {
+    /// Creates an empty batch verifier (no queued verifications).
     pub fn new() -> Self {
         Self {
             batch_size: 100,
@@ -849,6 +909,7 @@ impl BatchVerifier {
 }
 
 impl VerificationPerformanceOptimizer {
+    /// Creates an optimizer with default tuning parameters and empty metrics.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
@@ -864,6 +925,7 @@ impl VerificationPerformanceOptimizer {
         }
     }
 
+    /// Resets verification performance metrics to zero.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -900,6 +962,7 @@ impl VerificationPerformanceOptimizer {
 }
 
 impl VerificationPerformanceMetrics {
+    /// Returns a zeroed metrics record.
     pub fn new() -> Self {
         Self {
             average_verification_time: 0.0,
@@ -911,6 +974,7 @@ impl VerificationPerformanceMetrics {
 }
 
 impl ProofPerformanceOptimizer {
+    /// Creates an optimizer with default tuning parameters and empty metrics.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
@@ -927,6 +991,7 @@ impl ProofPerformanceOptimizer {
         }
     }
 
+    /// Resets proving performance metrics to zero.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -971,6 +1036,7 @@ impl ProofPerformanceOptimizer {
 }
 
 impl ProofPerformanceMetrics {
+    /// Returns a zeroed metrics record.
     pub fn new() -> Self {
         Self {
             average_proving_time: 0.0,
@@ -979,5 +1045,55 @@ impl ProofPerformanceMetrics {
             circuit_size: 0,
             cache_hit_rate: 0.0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_schnorr_commitment_proof_soundness_and_unforgeability() {
+        let circuit_id = "test_circuit";
+        let witness = vec![b"secret_witness_data".to_vec(), b"another_secret".to_vec()];
+        let public_inputs = vec![b"public_constraint_1".to_vec(), b"public_value_2".to_vec()];
+
+        // 1. Generate valid proof
+        let proof = ProofVerificationEngine::generate_commitment_proof_data(
+            circuit_id,
+            &witness,
+            &public_inputs,
+        )
+        .expect("generate proof");
+        assert_eq!(proof.len(), 130);
+        assert_eq!(proof[64], 0x01);
+        assert_eq!(proof[65], 0x01);
+
+        // 2. Valid proof verifies
+        let valid = ProofVerificationEngine::verify_commitment_proof_data(&proof, &public_inputs)
+            .expect("verify proof");
+        assert!(valid, "Genuine Schnorr commitment proof must verify");
+
+        // 3. Forged public inputs must fail
+        let forged_inputs = vec![b"tampered_constraint".to_vec()];
+        let tampered_input_res =
+            ProofVerificationEngine::verify_commitment_proof_data(&proof, &forged_inputs)
+                .expect("verify proof");
+        assert!(!tampered_input_res, "Tampered public inputs must fail verification");
+
+        // 4. Forged signature / altered response must fail
+        let mut forged_proof = proof.clone();
+        forged_proof[100] ^= 0xFF; // corrupt response byte in signature
+        let tampered_sig_res =
+            ProofVerificationEngine::verify_commitment_proof_data(&forged_proof, &public_inputs)
+                .expect("verify proof");
+        assert!(!tampered_sig_res, "Corrupted Schnorr signature response must fail verification");
+
+        // 5. Arbitrary dummy blob (STUBS.md F31 exploit) must fail
+        let dummy_blob = vec![0x01u8; 130];
+        let dummy_res =
+            ProofVerificationEngine::verify_commitment_proof_data(&dummy_blob, &public_inputs)
+                .expect("verify proof");
+        assert!(!dummy_res, "Arbitrary dummy proof blob must fail verification");
     }
 }

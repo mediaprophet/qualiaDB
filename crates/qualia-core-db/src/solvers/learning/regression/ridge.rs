@@ -21,6 +21,7 @@ pub struct RidgeModel {
 }
 
 impl RidgeModel {
+    /// Prediction for one row.
     pub fn predict_row(&self, x_row: &[f64]) -> f64 {
         self.intercept
             + self
@@ -30,6 +31,7 @@ impl RidgeModel {
                 .map(|(b, x)| b * x)
                 .sum::<f64>()
     }
+    /// Predictions for rows.
     pub fn predict(&self, x: &[f64], n: usize, p: usize) -> Vec<f64> {
         (0..n)
             .map(|i| self.predict_row(&x[i * p..(i + 1) * p]))

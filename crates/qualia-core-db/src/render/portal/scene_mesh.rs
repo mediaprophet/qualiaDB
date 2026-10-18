@@ -55,6 +55,7 @@ pub(crate) struct SceneMeshAccum {
 pub(crate) type BodyMeshAccum = SceneMeshAccum;
 
 impl SceneMeshAccum {
+    /// Creates `SceneMeshAccum` with the given state.
     pub(crate) fn new() -> Self {
         Self {
             positions: Vec::new(),

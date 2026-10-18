@@ -10,6 +10,7 @@ use crate::container_10d::{
     TextureSampler,
 };
 
+/// Default glTF material.
 pub(super) fn gltf_default_material() -> MaterialRecord {
     let mut material = MaterialRecord::legacy_default();
     // glTF's implicit metallic-roughness material defaults both factors to 1.
@@ -18,6 +19,7 @@ pub(super) fn gltf_default_material() -> MaterialRecord {
     material
 }
 
+/// Parses glTF materials.
 pub(super) fn parse_gltf_materials(
     gltf: &Value,
     buffer_views: &[Value],

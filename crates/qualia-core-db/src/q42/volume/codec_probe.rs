@@ -13,6 +13,7 @@ pub struct LexiconCodecProbe {
 }
 
 impl LexiconCodecProbe {
+    /// Codec ratio estimate.
     pub fn ratio(self) -> f64 {
         if self.raw_bytes == 0 {
             1.0

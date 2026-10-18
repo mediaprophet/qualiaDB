@@ -26,6 +26,7 @@ pub struct PageWindow {
 }
 
 impl PageWindow {
+    /// Creates a default `PageWindow`.
     pub const fn new() -> Self {
         Self {
             buf: [0u8; PAGE_BYTES],
@@ -36,11 +37,13 @@ impl PageWindow {
     }
 
     #[inline]
+    /// `PageWindow::capacity`.
     pub const fn capacity(&self) -> usize {
         PAGE_BYTES
     }
 
     #[inline]
+    /// `PageWindow::filled`.
     pub fn filled(&self) -> usize {
         self.filled
     }
@@ -52,11 +55,13 @@ impl PageWindow {
     }
 
     #[inline]
+    /// `PageWindow::pages_seen`.
     pub fn pages_seen(&self) -> u32 {
         self.pages_seen
     }
 
     #[inline]
+    /// Slice view.
     pub fn as_slice(&self) -> &[u8] {
         &self.buf[..self.filled]
     }
@@ -85,6 +90,7 @@ pub struct PagedFile {
 }
 
 impl PagedFile {
+    /// Opens the resource.
     pub fn open(path: impl AsRef<Path>) -> Result<Self, QdnfError> {
         let file = File::open(path.as_ref()).map_err(|_| QdnfError::Incomplete)?;
         let len = file.metadata().map_err(|_| QdnfError::Incomplete)?.len();
@@ -92,6 +98,7 @@ impl PagedFile {
     }
 
     #[inline]
+    /// `PagedFile::logical_len`.
     pub fn logical_len(&self) -> u64 {
         self.len
     }

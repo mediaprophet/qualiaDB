@@ -61,6 +61,7 @@ fn sampled_integral(args_v: &Value, span: Span, simpson: bool) -> Result<Value, 
     ]))
 }
 
+/// Computes the result.
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     match args::rec_str(args_v, "operation")
         .ok_or_else(|| args::bad(span, "CalculusWorkbench.compute needs `operation`"))?

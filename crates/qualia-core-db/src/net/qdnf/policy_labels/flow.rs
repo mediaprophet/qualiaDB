@@ -10,6 +10,7 @@ pub struct JobLabelContext {
 }
 
 impl JobLabelContext {
+    /// Creates a default `JobLabelContext`.
     pub fn new(request: LabelFields) -> Result<Self, QdnfError> {
         if request.confidentiality.is_unknown() {
             return Err(QdnfError::Conflict);
@@ -20,6 +21,7 @@ impl JobLabelContext {
         })
     }
 
+    /// Joins a label dependency.
     pub fn join_dependency(&mut self, dep: &VerifiedLabel) -> Result<(), QdnfError> {
         if self.sealed {
             return Err(QdnfError::StaleGeneration);
@@ -27,16 +29,19 @@ impl JobLabelContext {
         join_one(&mut self.label, dep.fields())
     }
 
+    /// Seals the label flow.
     pub fn seal(&mut self) {
         self.sealed = true;
     }
 
     #[inline]
+    /// `true` when sealed.
     pub const fn is_sealed(&self) -> bool {
         self.sealed
     }
 
     #[inline]
+    /// `JobLabelContext::current`.
     pub const fn current(&self) -> &LabelFields {
         &self.label
     }

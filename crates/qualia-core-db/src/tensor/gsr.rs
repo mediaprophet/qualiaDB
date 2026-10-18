@@ -46,6 +46,7 @@ impl Default for QuboProblem {
 }
 
 impl QuboProblem {
+    /// Adds quadratic coefficient `(i,j)`; `GsrError` on bad index.
     pub fn add_coefficient(&mut self, i: usize, j: usize, coeff: f32) -> Result<(), GsrError> {
         if self.coefficient_count >= self.coefficients.len() {
             return Err(GsrError::CoefficientCapacityExceeded);
@@ -56,6 +57,7 @@ impl QuboProblem {
         Ok(())
     }
 
+    /// Adds a linear coefficient for `i`.
     pub fn add_linear_term(&mut self, i: usize, coeff: f32) -> Result<(), GsrError> {
         if self.linear_term_count >= self.linear_terms.len() {
             return Err(GsrError::LinearTermCapacityExceeded);
@@ -262,14 +264,17 @@ impl GroundStateResolver {
         Ok(context as f32)
     }
 
+    /// Marks whether QPU hardware is reachable.
     pub fn set_qpu_available(&mut self, available: bool) {
         self.qpu_available = available;
     }
 
+    /// `true` when QPU is reachable.
     pub fn is_qpu_available(&self) -> bool {
         self.qpu_available
     }
 
+    /// Enables/disables the classical fallback solver.
     pub fn set_classical_solver_enabled(&mut self, enabled: bool) {
         self.classical_solver_enabled = enabled;
     }

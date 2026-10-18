@@ -36,6 +36,7 @@ pub enum MemoryPolicyError {
 }
 
 impl MemoryPressurePolicy {
+    /// Creates a default `MemoryPressurePolicy`.
     pub const fn new(
         stop_admission_available_bytes: u64,
         drain_available_bytes: u64,
@@ -71,10 +72,12 @@ pub enum MemoryPressureAction {
 }
 
 impl MemoryPressureAction {
+    /// `MemoryPressureAction::blocks_admission`.
     pub const fn blocks_admission(self) -> bool {
         !matches!(self, Self::Continue)
     }
 
+    /// `MemoryPressureAction::requires_drain`.
     pub const fn requires_drain(self) -> bool {
         matches!(self, Self::DrainAndCheckpoint)
     }
@@ -87,14 +90,17 @@ pub struct MemoryPressureGuard {
 }
 
 impl MemoryPressureGuard {
+    /// Creates a default `MemoryPressureGuard`.
     pub const fn new(policy: MemoryPressurePolicy) -> Self {
         Self { policy }
     }
 
+    /// `MemoryPressureGuard::policy`.
     pub const fn policy(&self) -> MemoryPressurePolicy {
         self.policy
     }
 
+    /// Evaluates and returns the result.
     pub const fn evaluate(&self, sample: HostMemorySample) -> MemoryPressureAction {
         if sample.available_host_bytes <= self.policy.drain_available_bytes
             || sample.inference_commit_bytes >= self.policy.max_inference_commit_bytes

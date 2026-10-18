@@ -75,6 +75,7 @@ impl Lcg {
 }
 
 impl Bandit {
+    /// Creates a default `Bandit`.
     pub fn new(k: usize, policy: Policy, seed: u64) -> Self {
         Self {
             policy,
@@ -144,9 +145,11 @@ impl Bandit {
         self.beta[arm] += 1.0 - reward.clamp(0.0, 1.0);
     }
 
+    /// Arm pull counts.
     pub fn counts(&self) -> &[u64] {
         &self.counts
     }
+    /// All values.
     pub fn values(&self) -> &[f64] {
         &self.values
     }

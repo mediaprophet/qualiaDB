@@ -53,6 +53,7 @@ pub struct PacketProtection {
 }
 
 impl PacketProtection {
+    /// Builds `PacketProtection` from `keys`.
     pub fn from_keys(
         send_key: [u8; AEAD_KEY_LEN],
         recv_key: [u8; AEAD_KEY_LEN],
@@ -74,6 +75,7 @@ impl PacketProtection {
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(&self) -> Generation {
         self.current.generation
     }

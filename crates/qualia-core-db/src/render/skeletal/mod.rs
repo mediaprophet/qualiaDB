@@ -52,6 +52,7 @@ pub struct Clip<'a> {
     pub keys: &'a [Key],
 }
 
+/// `true` when the motor is valid.
 pub(crate) fn valid_motor(m: &Motor) -> bool {
     let real = [m.r_w, m.r_x, m.r_y, m.r_z];
     let dual = [m.d_w, m.d_x, m.d_y, m.d_z];
@@ -62,6 +63,7 @@ pub(crate) fn valid_motor(m: &Motor) -> bool {
         && real.iter().zip(dual).map(|(r, d)| r * d).sum::<f64>().abs() < 1e-5
 }
 
+/// Validates `joints`.
 pub(crate) fn validate_joints(joints: &[Joint]) -> Result<(), SkeletalError> {
     if joints.len() > MAX_JOINTS {
         return Err(SkeletalError::BudgetExceeded);

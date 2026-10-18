@@ -4,6 +4,7 @@ use super::super::args;
 use crate::specialized_libs::computational_geometry::{convex_hull_2, Point2};
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: 2D convex hull.
 pub fn hull2(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rows = args::list(args_v)
         .or_else(|| args::rec(args_v, "points").and_then(args::list))

@@ -56,6 +56,7 @@ fn validate_config(config: &RawDecodeConfig) -> Result<(), String> {
     Ok(())
 }
 
+/// Blocking raw-decode bench run.
 pub fn run_raw_decode_blocking(config: &RawDecodeConfig) -> Result<RawDecodeResult, String> {
     validate_config(config)?;
     let config = config.clone();

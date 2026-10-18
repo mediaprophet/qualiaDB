@@ -108,6 +108,7 @@ unsafe impl Send for CapturedCudaGraph {}
 
 #[cfg(feature = "cuda")]
 impl CudaComputeContext {
+    /// Creates `CudaComputeContext` with the given state.
     pub fn new(capacity_bytes: usize) -> Result<Self, ForgeError> {
         let ctx = CudaContext::new(0)
             .map_err(|e| ForgeError::GpuUnavailable(format!("CUDA init failed: {:?}", e)))?;
@@ -209,6 +210,7 @@ impl CudaComputeContext {
             .map_err(|e| ForgeError::GpuValidation(format!("CUDA graph launch: {e:?}")))
     }
 
+    /// Allocates a device buffer and uploads host data.
     pub fn allocate_and_write(
         &mut self,
         data: &[u8],
@@ -303,6 +305,7 @@ impl CudaComputeContext {
         Ok(())
     }
 
+    /// Allocates a scratch device buffer tracked for later release.
     pub fn allocate_transient(
         &mut self,
         size_bytes: usize,
@@ -317,10 +320,12 @@ impl CudaComputeContext {
         )
     }
 
+    /// Advances the transient read head by `offset`.
     pub fn advance_read_head(&mut self, offset: usize) {
         self.allocator.advance_read_head(offset);
     }
 
+    /// Releases all transient allocations.
     pub fn clear_transient_allocations(&mut self) {
         self.allocator.clear();
     }
@@ -335,6 +340,7 @@ impl CudaComputeContext {
         self.allocator.restore_checkpoint(write_count);
     }
 
+    /// Reads `buffer-f32`.
     pub fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
         let src = self
             .slab

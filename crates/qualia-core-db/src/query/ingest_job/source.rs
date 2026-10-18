@@ -35,6 +35,7 @@ pub enum IngestRdfFormat {
 }
 
 impl IngestRdfFormat {
+    /// Canonical file extension for this RDF format.
     pub fn file_extension(self) -> &'static str {
         match self {
             Self::NTriples => "nt",
@@ -59,6 +60,7 @@ pub enum IngestSourceKind {
 }
 
 impl IngestSourceKind {
+    /// The source locator string (path or URL).
     pub fn locator(&self) -> &str {
         match self {
             Self::File { path } => path,
@@ -66,6 +68,7 @@ impl IngestSourceKind {
         }
     }
 
+    /// `true` when the source is a seekable local file with identity (uncompressed) encoding.
     pub fn is_seekable_identity(&self, encoding: IngestEncoding) -> bool {
         matches!(self, Self::File { .. }) && encoding == IngestEncoding::Identity
     }
@@ -91,10 +94,12 @@ pub struct DigestingReader<R: Read> {
 }
 
 impl<R: Read> DigestingReader<R> {
+    /// Wraps `inner` recording bytes + 16 MiB window hashes to `windows_path`.
     pub fn new(inner: R, windows_path: Option<PathBuf>) -> Self {
         Self::with_outcome(inner, windows_path, None)
     }
 
+    /// As `new`, plus an outcome sink that receives the final digest result.
     pub fn with_outcome(
         inner: R,
         windows_path: Option<PathBuf>,
@@ -113,14 +118,17 @@ impl<R: Read> DigestingReader<R> {
         }
     }
 
+    /// Bytes seen so far after decompression.
     pub fn uncompressed_bytes(&self) -> u64 {
         self.uncompressed_bytes
     }
 
+    /// Complete 16 MiB windows hashed so far.
     pub fn window_count(&self) -> u64 {
         self.window_count
     }
 
+    /// Finalizes: returns `(sha256, bytes, window_count, window_commitment)`.
     pub fn finish(mut self) -> io::Result<([u8; 32], u64, u64, Option<[u8; 32]>)> {
         self.flush_tail()?;
         let full: [u8; 32] = std::mem::replace(&mut self.hasher, Sha256::new())
@@ -200,6 +208,7 @@ impl<R: Read> Read for DigestingReader<R> {
     }
 }
 
+/// Detects ingest encoding from filename, `Content-Encoding`, and magic bytes.
 pub fn detect_encoding(name: &str, content_encoding: Option<&str>, magic: &[u8]) -> IngestEncoding {
     if let Some(ce) = content_encoding {
         let ce = ce.to_ascii_lowercase();
@@ -231,6 +240,7 @@ pub fn detect_encoding(name: &str, content_encoding: Option<&str>, magic: &[u8])
     IngestEncoding::Identity
 }
 
+/// Infers RDF format from the filename extension.
 pub fn infer_rdf_format(name: &str) -> IngestRdfFormat {
     let lower = name.to_ascii_lowercase();
     let stem = lower.trim_end_matches(".gz").trim_end_matches(".zst");
@@ -271,6 +281,7 @@ pub struct OpenedSource {
     pub resumable: bool,
 }
 
+/// Opens and wraps the source (decompression + digesting reader) per kind/encoding.
 pub fn open_ingest_source(
     kind: &IngestSourceKind,
     encoding_hint: Option<IngestEncoding>,

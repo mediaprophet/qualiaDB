@@ -23,6 +23,7 @@ pub enum ModelFamily {
 }
 
 impl ModelFamily {
+    /// Stable string form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Llama => "llama",
@@ -34,6 +35,7 @@ impl ModelFamily {
         }
     }
 
+    /// Default chat-template family for the model target.
     pub fn default_template_family(&self) -> ChatFamily {
         match self {
             Self::Llama => ChatFamily::Llama3,
@@ -62,6 +64,7 @@ pub struct ModelPrecisionTarget {
 }
 
 impl ModelPrecisionTarget {
+    /// Creates `ModelPrecisionTarget` with the given state.
     pub fn new(
         model_id: impl Into<String>,
         family: ModelFamily,
@@ -121,6 +124,7 @@ pub struct ModelPrecisionRegistry {
 }
 
 impl ModelPrecisionRegistry {
+    /// Creates a default `ModelPrecisionRegistry`.
     pub fn new() -> Self {
         Self::default()
     }

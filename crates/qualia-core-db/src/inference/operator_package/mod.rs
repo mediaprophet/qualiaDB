@@ -72,10 +72,12 @@ impl OperatorPackage {
         })
     }
 
+    /// The package manifest.
     pub fn manifest(&self) -> &OperatorPackageManifest {
         &self.manifest
     }
 
+    /// Raw package bytes.
     pub fn raw_bytes(&self) -> &[u8] {
         &self.data
     }
@@ -101,6 +103,7 @@ pub struct PackageBuilder {
 }
 
 impl PackageBuilder {
+    /// Creates a builder with the given manifest metadata.
     pub fn new(
         source_digest: u64,
         representation_digest: u64,
@@ -116,10 +119,12 @@ impl PackageBuilder {
         }
     }
 
+    /// Registers an operator record; `PackageError` on conflict.
     pub fn add_operator(&mut self, record: OperatorRecord) -> Result<(), PackageError> {
         self.manifest.add_operator(record)
     }
 
+    /// Attaches payload bytes to a segment.
     pub fn add_segment_payload(
         &mut self,
         segment_id: u32,

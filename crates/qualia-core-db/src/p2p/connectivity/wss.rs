@@ -30,6 +30,7 @@ pub enum FrameType {
     Close = 2,
 }
 
+/// RFC 6455 Sec-WebSocket-Accept: base64(SHA-1(key + GUID)).
 pub fn accept_key(sec_key: &str) -> String {
     let mut h = Sha1::new();
     h.update(sec_key.as_bytes());
@@ -37,6 +38,7 @@ pub fn accept_key(sec_key: &str) -> String {
     STANDARD.encode(h.finalize())
 }
 
+/// HMAC-SHA256 over `(circuit, gen)` under `secret` — per-circuit auth token.
 pub fn hmac_auth(secret: &[u8], circuit: u32, gen: u32) -> [u8; 32] {
     let mut mac = HmacSha256::new_from_slice(secret).expect("hmac key");
     mac.update(&circuit.to_be_bytes());
@@ -47,6 +49,7 @@ pub fn hmac_auth(secret: &[u8], circuit: u32, gen: u32) -> [u8; 32] {
     a
 }
 
+/// Encodes a versioned frame envelope `(type, circuit, gen, len, payload)` into `out`; fails closed on capacity.
 pub fn encode_envelope(
     typ: FrameType,
     circuit: u32,
@@ -70,6 +73,7 @@ pub fn encode_envelope(
     Ok(n)
 }
 
+/// Decodes a frame envelope; fails closed on bad version/obsolete format/truncation.
 pub fn decode_envelope(buf: &[u8]) -> Result<(FrameType, u32, u32, &[u8]), &'static str> {
     if buf.len() < ENVELOPE_HDR {
         return Err("envelope");
@@ -174,6 +178,7 @@ fn read_ws_binary<R: Read>(r: &mut R) -> std::io::Result<Vec<u8>> {
     Ok(body)
 }
 
+/// Drives the client-side WSS handshake on `stream` with `key_b64`.
 pub fn client_handshake<S: Read + Write>(stream: &mut S, key_b64: &str) -> std::io::Result<()> {
     let req = format!(
         "GET /relay HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: {key_b64}\r\nSec-WebSocket-Version: 13\r\n\r\n"
@@ -199,6 +204,7 @@ pub fn client_handshake<S: Read + Write>(stream: &mut S, key_b64: &str) -> std::
     Ok(())
 }
 
+/// Drives the server-side handshake — reads the request, responds with the computed accept key.
 pub fn server_handshake<S: Read + Write>(stream: &mut S) -> std::io::Result<()> {
     let mut buf = [0u8; 1024];
     let n = stream.read(&mut buf)?;
@@ -233,6 +239,7 @@ pub fn loopback_pair() -> std::io::Result<(TcpStream, TcpStream)> {
     Ok((client, server))
 }
 
+/// Sends a datagram frame on the circuit.
 pub fn send_datagram<W: Write>(
     stream: &mut W,
     circuit: u32,
@@ -247,6 +254,7 @@ pub fn send_datagram<W: Write>(
     write_ws_binary(stream, &env[..n], mask)
 }
 
+/// Receives a datagram frame; returns `(circuit, gen, payload)`.
 pub fn recv_datagram<R: Read>(stream: &mut R) -> std::io::Result<(u32, u32, Vec<u8>)> {
     let body = read_ws_binary(stream)?;
     let (typ, c, g, p) = decode_envelope(&body)
@@ -260,6 +268,7 @@ pub fn recv_datagram<R: Read>(stream: &mut R) -> std::io::Result<(u32, u32, Vec<
     Ok((c, g, p.to_vec()))
 }
 
+/// Sends the HMAC auth frame for `(circuit, gen)`.
 pub fn send_auth<W: Write>(
     stream: &mut W,
     secret: &[u8],
@@ -273,6 +282,7 @@ pub fn send_auth<W: Write>(
     write_ws_binary(stream, &env[..n], Some([9, 8, 7, 6]))
 }
 
+/// Reads and verifies the peer's auth frame; fails closed on mismatch.
 pub fn expect_auth<R: Read>(
     stream: &mut R,
     secret: &[u8],
@@ -333,6 +343,7 @@ pub fn serve_pair(listener: TcpListener, secret: &[u8]) -> std::io::Result<()> {
     Ok(())
 }
 
+/// TCP-connects to `addr` then performs client handshake + auth exchange under `secret`.
 pub fn dial(addr: std::net::SocketAddr, secret: &[u8]) -> std::io::Result<TcpStream> {
     let mut s = TcpStream::connect(addr)?;
     s.set_read_timeout(Some(Duration::from_secs(5)))?;

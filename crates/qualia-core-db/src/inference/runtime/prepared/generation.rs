@@ -12,6 +12,7 @@ pub struct ResidencyGenerationTracker {
 }
 
 impl ResidencyGenerationTracker {
+    /// Creates a default `ResidencyGenerationTracker`.
     pub const fn new(initial_generation: u64) -> Self {
         Self {
             current_generation: AtomicU64::new(initial_generation),
@@ -43,6 +44,7 @@ pub struct ModelResidencyIdentity {
 }
 
 impl ModelResidencyIdentity {
+    /// Creates `ModelResidencyIdentity` with the given state.
     pub fn new(
         model_path: impl Into<String>,
         content_hash: u64,

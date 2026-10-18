@@ -19,6 +19,7 @@ use crate::poet_host::PoetSnapshot;
 use crate::q_hash;
 use vibe::{Diagnostic, Span, Value};
 
+/// Computes the result.
 pub fn compute(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     match args::rec_str(args_v, "mode") {
         Some("jural") => jural(snap, args_v),

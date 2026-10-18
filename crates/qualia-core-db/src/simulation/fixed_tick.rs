@@ -24,6 +24,7 @@ pub struct DeterministicPrng {
 }
 
 impl DeterministicPrng {
+    /// Creates a default `DeterministicPrng`.
     pub fn new(seed: u64) -> Self {
         // Ensure non-zero initial state
         let s = if seed == 0 {
@@ -35,6 +36,7 @@ impl DeterministicPrng {
     }
 
     #[inline]
+    /// `DeterministicPrng::next_u64`.
     pub fn next_u64(&mut self) -> u64 {
         let mut x = self.state;
         x ^= x >> 12;
@@ -45,6 +47,7 @@ impl DeterministicPrng {
     }
 
     #[inline]
+    /// `DeterministicPrng::next_bounded`.
     pub fn next_bounded(&mut self, bound: u64) -> u64 {
         if bound == 0 {
             0
@@ -67,6 +70,7 @@ pub struct SimulationCommand {
 }
 
 impl SimulationCommand {
+    /// Hash of the tick commands.
     pub fn command_hash(&self) -> u64 {
         let mut h = 0xcbf29ce484222325u64; // FNV-1a
         for &b in &self.target_tick.to_le_bytes() {
@@ -144,6 +148,7 @@ pub struct FixedTickWorld<const MAX_AGENTS: usize, const MAX_QUEUE: usize> {
 }
 
 impl<const MAX_AGENTS: usize, const MAX_QUEUE: usize> FixedTickWorld<MAX_AGENTS, MAX_QUEUE> {
+    /// Creates a default `FixedTickWorld`.
     pub fn new(seed: u64) -> Self {
         Self {
             seed,

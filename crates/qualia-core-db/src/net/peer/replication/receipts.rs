@@ -44,6 +44,7 @@ pub struct ReceiptTable {
 }
 
 impl ReceiptTable {
+    /// Creates a default `ReceiptTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {

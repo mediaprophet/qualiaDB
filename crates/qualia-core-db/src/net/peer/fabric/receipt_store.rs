@@ -15,6 +15,7 @@ use super::wire::{decode_receipt, encode_receipt};
 const MAGIC: &[u8; 8] = b"CSCPRC1\0";
 pub const MAX_STORED: usize = 8;
 
+/// Persists receipts to `path`.
 pub fn persist_receipts(receipts: &[OpReceipt], path: &Path) -> Result<(), FabricError> {
     if receipts.len() > MAX_STORED {
         return Err(FabricError::Capacity);
@@ -37,6 +38,7 @@ pub fn persist_receipts(receipts: &[OpReceipt], path: &Path) -> Result<(), Fabri
     fs::rename(&tmp, path).map_err(|_| FabricError::Capacity)
 }
 
+/// Recovers up to `MAX_STORED` receipts from `path`.
 pub fn recover_receipts(path: &Path) -> Result<[Option<OpReceipt>; MAX_STORED], FabricError> {
     let mut bytes = Vec::new();
     File::open(path)

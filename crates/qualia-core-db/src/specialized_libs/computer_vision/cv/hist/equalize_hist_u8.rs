@@ -4,6 +4,7 @@ use crate::specialized_libs::computer_vision::cv::buffer::GrayView;
 use crate::specialized_libs::computer_vision::cv::error::CvError;
 use crate::specialized_libs::computer_vision::cv::hist::histogram_u8::histogram_u8;
 
+/// Histogram equalization on a u8 image.
 pub fn equalize_hist_u8(src: GrayView<'_>, out: &mut [u8]) -> Result<(), CvError> {
     let n = (src.width * src.height) as usize;
     if out.len() < n || n == 0 {

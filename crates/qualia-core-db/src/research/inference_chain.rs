@@ -11,6 +11,7 @@ pub struct InferenceStep {
 }
 
 impl InferenceStep {
+    /// Creates a step `premise`→`conclusion` with `confidence`.
     pub fn new(id: &str, premise: &str, conclusion: &str, confidence: f64) -> Self {
         Self {
             id: id.to_string(),
@@ -21,6 +22,7 @@ impl InferenceStep {
         }
     }
 
+    /// Marks the step validated.
     pub fn validate(&mut self) {
         self.validated = true;
     }
@@ -34,6 +36,7 @@ pub struct InferenceChain {
 }
 
 impl InferenceChain {
+    /// Creates an empty chain with `id`.
     pub fn new(id: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -41,6 +44,7 @@ impl InferenceChain {
         }
     }
 
+    /// Appends a step.
     pub fn make_inference(&mut self, step: InferenceStep) {
         self.steps.push(step);
     }
@@ -57,6 +61,7 @@ impl InferenceChain {
         }
     }
 
+    /// Updates confidence of `step_id`; `false` when not found.
     pub fn set_confidence(&mut self, step_id: &str, confidence: f64) -> bool {
         if let Some(step) = self.steps.iter_mut().find(|s| s.id == step_id) {
             step.confidence = confidence.clamp(0.0, 1.0);
@@ -66,6 +71,7 @@ impl InferenceChain {
         }
     }
 
+    /// Marks `step_id` validated; `false` when not found.
     pub fn validate(&mut self, step_id: &str) -> bool {
         if let Some(step) = self.steps.iter_mut().find(|s| s.id == step_id) {
             step.validate();
@@ -83,10 +89,12 @@ impl InferenceChain {
         self.steps.iter().map(|s| s.confidence).product()
     }
 
+    /// Chain length.
     pub fn len(&self) -> usize {
         self.steps.len()
     }
 
+    /// `true` when no steps exist.
     pub fn is_empty(&self) -> bool {
         self.steps.is_empty()
     }

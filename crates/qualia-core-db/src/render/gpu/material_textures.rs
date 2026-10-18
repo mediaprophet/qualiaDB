@@ -6,6 +6,7 @@ use crate::container_10d::{
 
 pub(super) const SAMPLER_VARIANTS: usize = 3 * 3 * 2 * 6;
 
+/// Creates `sampler`.
 pub(super) fn create_sampler(device: &wgpu::Device, state: TextureSampler) -> wgpu::Sampler {
     let address = |mode| match mode {
         TextureAddressMode::ClampToEdge => wgpu::AddressMode::ClampToEdge,
@@ -51,14 +52,17 @@ pub(super) struct MaterialTextureDefaults {
 }
 
 impl MaterialTextureDefaults {
+    /// Default texture view for `slot`.
     pub fn view(&self, slot: usize) -> &wgpu::TextureView {
         &self.views[slot]
     }
 
+    /// Default sampler for `state`.
     pub fn sampler(&self, state: TextureSampler) -> &wgpu::Sampler {
         &self.samplers[state.cache_index()]
     }
 
+    /// Filtering sampler for `state`.
     pub fn filtering_sampler(&self, state: TextureSampler) -> &wgpu::Sampler {
         self.sampler(if state.needs_filtering() {
             state
@@ -68,6 +72,7 @@ impl MaterialTextureDefaults {
     }
 }
 
+/// Creates `layout`.
 pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     let entries = layout_entries(0);
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -103,6 +108,7 @@ pub(super) fn layout_entries(binding_offset: u32) -> Vec<wgpu::BindGroupLayoutEn
     entries
 }
 
+/// Creates `defaults`.
 pub(super) fn create_defaults(
     device: &wgpu::Device,
     queue: &wgpu::Queue,

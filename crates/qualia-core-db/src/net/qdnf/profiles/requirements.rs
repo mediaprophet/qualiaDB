@@ -62,6 +62,7 @@ pub struct RequirementContext {
 }
 
 impl RequirementContext {
+    /// Creates a requirement context.
     pub fn new(
         confidentiality: Confidentiality,
         task: TaskClass,
@@ -78,10 +79,12 @@ impl RequirementContext {
         }
     }
 
+    /// Extra controls beyond the profile baseline.
     pub fn extra_controls(&self) -> &[ControlId] {
         &self.extra_controls[..self.extra_control_count as usize]
     }
 
+    /// Adds an extra control; error at capacity.
     pub fn push_extra(&mut self, id: ControlId) -> Result<(), QdnfError> {
         let mut i = 0usize;
         while i < self.extra_control_count as usize {
@@ -99,6 +102,7 @@ impl RequirementContext {
     }
 }
 
+/// Minimum profile covering a confidentiality level.
 pub fn min_profile_for_confidentiality(
     confidentiality: Confidentiality,
     compartment_count: u8,
@@ -144,6 +148,7 @@ fn environment_floor(
     }
 }
 
+/// Computed required control set for `ctx`.
 pub fn required_control_set(ctx: &RequirementContext) -> Result<ControlSet, QdnfError> {
     let conf_floor = min_profile_for_confidentiality(ctx.confidentiality, ctx.compartment_count)?;
     let mut floor = conf_floor

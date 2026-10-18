@@ -151,6 +151,7 @@ pub struct ExecutionReceipt {
 }
 
 impl ExecutionReceipt {
+    /// Creates a default `ExecutionReceipt`.
     pub fn new(
         requested_backend: BackendKind,
         executed_backend: BackendKind,
@@ -207,14 +208,17 @@ impl ExecutionReceipt {
         }
     }
 
+    /// Sets measured flag `flag`.
     pub fn mark_measured(&mut self, flag: u64) {
         self.counter_coverage |= flag;
     }
 
+    /// `true` when `flag` measured.
     pub fn is_measured(&self, flag: u64) -> bool {
         (self.counter_coverage & flag) == flag
     }
 
+    /// `true` when the used backend matched the request.
     pub fn backend_matches_request(&self) -> bool {
         self.requested_backend == self.executed_backend && self.counters.fallback_count == 0
     }

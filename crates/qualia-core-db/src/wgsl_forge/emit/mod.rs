@@ -77,6 +77,7 @@ pub struct GeneratedShader {
     pub source: String,
 }
 
+/// Emits `shader`.
 pub fn emit_shader(
     kernel: &KernelSpec,
     schedule: Schedule,

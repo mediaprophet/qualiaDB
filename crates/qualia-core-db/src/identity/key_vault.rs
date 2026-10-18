@@ -127,15 +127,18 @@ impl KeyVault {
         }
     }
 
+    /// `true` when `locked`.
     pub fn is_locked(&self) -> bool {
         self.master_key.is_none()
     }
 
+    /// Locks the vault.
     pub fn lock(&mut self) {
         self.master_key = None;
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Unlocks the vault.
     pub fn unlock(&mut self) -> Result<(), String> {
         let dir = self
             .storage_dir
@@ -147,6 +150,7 @@ impl KeyVault {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Unlocks the vault.
     pub fn unlock(&mut self) -> Result<(), String> {
         let temp = Self::load_or_generate("")?;
         self.master_key = temp.master_key;
@@ -154,6 +158,7 @@ impl KeyVault {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Loads an existing vault or generates one.
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");
         let entry = keyring_entry_for(storage_dir).ok();
@@ -210,6 +215,7 @@ impl KeyVault {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Loads an existing vault or generates one.
     pub fn load_or_generate(storage_dir: &str) -> Result<Self, String> {
         let vault_path = Path::new(storage_dir).join("keystore.bin");
 
@@ -604,6 +610,7 @@ impl SubgraphKey {
         &self.key_bytes
     }
 
+    /// Subgraph layer.
     pub fn layer(&self) -> SubgraphLayer {
         self.layer
     }

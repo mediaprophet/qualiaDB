@@ -41,6 +41,7 @@ pub(super) struct AoTargets {
 }
 
 impl AoTargets {
+    /// Allocates AO/normal targets at `extent`; `Err` on device failure.
     pub fn try_new(
         device: &wgpu::Device,
         width: u32,
@@ -296,6 +297,7 @@ impl AoTargets {
         })
     }
 
+    /// Records the AO pass into `encoder`.
     pub fn record(
         &self,
         encoder: &mut wgpu::CommandEncoder,
@@ -379,17 +381,21 @@ impl AoTargets {
         ao.draw(0..3, 0..1);
     }
 
+    /// AO texture view.
     pub fn ao_view(&self) -> &wgpu::TextureView {
         &self.ao_view
     }
+    /// Normal-buffer texture view.
     pub fn normal_view(&self) -> &wgpu::TextureView {
         &self.normal_view
     }
+    /// Current target extent.
     pub fn extent(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
     #[cfg(all(test, not(target_arch = "wasm32")))]
+    /// Test-only normal texture.
     pub(super) fn normal_texture_for_test(&self) -> &wgpu::Texture {
         &self._normal_texture
     }

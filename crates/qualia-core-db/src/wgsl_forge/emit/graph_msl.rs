@@ -347,6 +347,7 @@ kernel void {entry}(
     Ok(())
 }
 
+/// Emits `graph-msl`.
 pub fn emit_graph_msl(
     graph: &ComputeGraph,
     schedule: Schedule,

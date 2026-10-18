@@ -191,6 +191,7 @@ fn guess_layout(name: &str) -> String {
     }
 }
 
+/// Formats `ablation-report`.
 pub fn format_ablation_report(rows: &[AblationRow]) -> String {
     let mut s = String::from("Ablation matrix (decode-proxy tok/s)\n");
     for r in rows {

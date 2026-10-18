@@ -6,6 +6,7 @@ use vibe::{Diagnostic, Span, Value};
 
 const MAX_FACTS: usize = 128;
 
+/// Computes the result.
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     match args::rec_str(args_v, "mode") {
         Some("ctl") => ctl(args_v, span),

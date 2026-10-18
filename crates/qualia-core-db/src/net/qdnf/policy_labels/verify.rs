@@ -36,6 +36,7 @@ pub fn verify_label(
     Ok(VerifiedLabel::from_verified(decoded, digest))
 }
 
+/// Verifies `label-digest`.
 pub fn verify_label_digest(
     fields: LabelFields,
     original_bytes: &[u8],

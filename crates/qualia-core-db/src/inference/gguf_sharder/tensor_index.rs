@@ -260,6 +260,7 @@ impl GgufTensorIndex {
         }
     }
 
+    /// Builds `GgufTensorIndex` from `gguf`.
     pub fn from_gguf(mmap: &[u8]) -> Self {
         Self::try_build(mmap).unwrap_or_else(|| Self {
             entries: vec![],
@@ -918,6 +919,7 @@ impl GgufTensorIndex {
         }
     }
 
+    /// Output-norm tensor info.
     pub fn output_norm_info(&self) -> Option<&GgufTensorInfo> {
         self.output_norm.as_ref()
     }
@@ -927,6 +929,7 @@ impl GgufTensorIndex {
         self.ple_ngram_embedding.as_ref()
     }
 
+    /// `GgufTensorIndex::output_weight_info`.
     pub fn output_weight_info(&self) -> Option<&GgufTensorInfo> {
         self.output_weight.as_ref()
     }

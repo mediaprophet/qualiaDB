@@ -14,6 +14,7 @@ pub struct SecretLease {
 }
 
 impl SecretLease {
+    /// Leases `secret` for `purpose`.
     pub fn new(purpose: KeyPurpose, secret: &[u8]) -> Result<Self, CryptoError> {
         if secret.len() > SECRET_LEASE_BYTES {
             return Err(CryptoError::Capacity);
@@ -28,6 +29,7 @@ impl SecretLease {
         })
     }
 
+    /// The lease purpose.
     pub fn purpose(&self) -> Result<KeyPurpose, CryptoError> {
         if !self.live {
             return Err(CryptoError::Revoked);
@@ -35,6 +37,7 @@ impl SecretLease {
         Ok(self.purpose)
     }
 
+    /// Exposes the secret only when `expected` matches the lease purpose.
     pub fn expose(&self, expected: KeyPurpose) -> Result<&[u8], CryptoError> {
         if !self.live {
             return Err(CryptoError::Revoked);
@@ -45,6 +48,7 @@ impl SecretLease {
         Ok(&self.bytes[..self.len as usize])
     }
 
+    /// Zeroizes the leased secret.
     pub fn destroy(&mut self) {
         self.live = false;
         self.bytes.zeroize();

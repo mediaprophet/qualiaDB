@@ -283,6 +283,7 @@ impl ScratchAlloc {
 }
 
 impl Qwen4ExpDecodeScratch {
+    /// Creates a default `Qwen4ExpDecodeScratch`.
     pub fn new(hidden: usize) -> Self {
         let mut alloc = ScratchAlloc { bytes: 0 };
         let wide = QWEN4EXP_HYPER_STREAMS * hidden;

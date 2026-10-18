@@ -125,6 +125,7 @@ pub struct WgpuComputeContext {
 }
 
 impl WgpuComputeContext {
+    /// Creates `WgpuComputeContext` with the given state.
     pub fn new(capacity_bytes: usize) -> Result<Self, ForgeError> {
         // Respect QUALIA_WGPU_BACKEND so the forge can use Vulkan (which exposes
         // cooperative matrix on NVIDIA) instead of the Windows DX12 default.
@@ -644,6 +645,7 @@ impl WgpuComputeContext {
         self.weight_cursor
     }
 
+    /// `WgpuComputeContext::allocate_transient`.
     pub fn allocate_transient(
         &mut self,
         size_bytes: usize,
@@ -655,10 +657,12 @@ impl WgpuComputeContext {
             .allocate_transient(size_bytes, binding, group, usage)
     }
 
+    /// Advances the transient read head by `offset`.
     pub fn advance_read_head(&mut self, offset: usize) {
         self.allocator.advance_read_head(offset);
     }
 
+    /// Releases all transient allocations.
     pub fn clear_transient_allocations(&mut self) {
         self.allocator.clear();
     }
@@ -965,6 +969,7 @@ impl WgpuComputeContext {
         Ok(())
     }
 
+    /// Reads back a buffer as f32s via `view`.
     pub fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
         let size = view.length_bytes as u64;
         let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -1081,6 +1086,7 @@ pub struct WgpuPipeline<'a> {
 }
 
 impl<'a> WgpuPipeline<'a> {
+    /// Compiles a compute pipeline from a WGSL module.
     pub fn compile(
         context: &'a WgpuComputeContext,
         source: &str,

@@ -172,6 +172,7 @@ pub fn encode_server_hello_with_certs(
     sign_hello_body(&share_wire, mldsa_sk, ed_seed, mldsa_pk, &ed_pk, out)
 }
 
+/// Decodes `client_hello`; fails closed on malformed input.
 pub fn decode_client_hello(src: &[u8]) -> Result<InitiatorShare, QdnfError> {
     if src.len() < INITIATOR_SHARE_WIRE_LEN {
         return Err(QdnfError::Truncated);
@@ -180,6 +181,7 @@ pub fn decode_client_hello(src: &[u8]) -> Result<InitiatorShare, QdnfError> {
     decode_initiator_share(&src[..INITIATOR_SHARE_WIRE_LEN])
 }
 
+/// Decodes `server_hello`; fails closed on malformed input.
 pub fn decode_server_hello(src: &[u8]) -> Result<ResponderShare, QdnfError> {
     if src.len() < RESPONDER_SHARE_WIRE_LEN {
         return Err(QdnfError::Truncated);

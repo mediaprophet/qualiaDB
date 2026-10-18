@@ -37,16 +37,19 @@ fn pair(args: &Value, span: Span) -> Result<(u64, u64), Diagnostic> {
     Ok((a, b))
 }
 
+/// VibeScript seam: greatest common divisor.
 pub fn gcd(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (a, b) = pair(args, span)?;
     Ok(Value::U64(nt_gcd(a, b)))
 }
 
+/// VibeScript seam: least common multiple.
 pub fn lcm(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (a, b) = pair(args, span)?;
     Ok(Value::U64(nt_lcm(a, b)))
 }
 
+/// `true` when `prime`.
 pub fn is_prime(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = match args {
         Value::U64(n) => *n,

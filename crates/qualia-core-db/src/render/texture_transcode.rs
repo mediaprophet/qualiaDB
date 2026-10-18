@@ -17,6 +17,7 @@ pub enum CompressedBlockFormat {
 }
 
 impl CompressedBlockFormat {
+    /// `CompressedBlockFormat::bytes_per_block`.
     pub const fn bytes_per_block(&self) -> usize {
         match self {
             Self::Bc1Rgba => 8,
@@ -27,6 +28,7 @@ impl CompressedBlockFormat {
         }
     }
 
+    /// Builds `CompressedBlockFormat` from `vk_format`.
     pub const fn from_vk_format(vk_format: u32) -> Option<Self> {
         match vk_format {
             131 | 132 | 133 | 134 => Some(Self::Bc1Rgba),

@@ -9,6 +9,7 @@ use super::attention_stage::{AttentionSpec, AttentionViews};
 use crate::wgsl_forge::execute::CudaPipeline;
 use crate::wgsl_forge::Schedule;
 
+/// Dispatches SDPA.
 pub(super) fn dispatch_sdpa(
     dev: &mut MultiWeightDevice,
     mut views: AttentionViews,

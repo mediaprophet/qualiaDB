@@ -21,6 +21,7 @@ __device__ __forceinline__ float warp_sum(float value) {
 }
 "#;
 
+/// CUDA source for the fused Q8 GEMV+residual kernel.
 pub(crate) fn q8_gemv_resid_source() -> &'static str {
     static SOURCE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     SOURCE
@@ -145,6 +146,7 @@ extern "C" __global__ void q8_0_swiglu(
         .as_str()
 }
 
+/// CUDA source for fused RMSNorm+SwiGLU.
 pub(crate) fn q8_rmsnorm_swiglu_source() -> &'static str {
     static SOURCE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     SOURCE
@@ -196,6 +198,7 @@ extern "C" __global__ void q8_0_rmsnorm_swiglu(
         .as_str()
 }
 
+/// CUDA source for fused RMSNorm+QKV+RoPE.
 pub(crate) fn q8_rmsnorm_qkv_rope_source() -> &'static str {
     static SOURCE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     SOURCE.get_or_init(|| format!(

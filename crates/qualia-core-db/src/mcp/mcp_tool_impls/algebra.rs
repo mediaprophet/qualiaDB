@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: dispatches a matrix operation to the linear-algebra lib.
 pub fn matrix_operation(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::linear_algebra::{DataType, LinearAlgebraLibrary};
 
@@ -184,6 +185,7 @@ pub fn algebra_matrix_analyze(args: &[u8]) -> Result<String, McpSystemError> {
     }
 }
 
+/// MCP tool: dispatches a CAS operation.
 pub fn cas(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::symbolic_algebra as sym;
     let v = parse_tool_args(args)?;

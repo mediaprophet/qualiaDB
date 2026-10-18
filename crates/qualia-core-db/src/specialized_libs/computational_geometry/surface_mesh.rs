@@ -359,6 +359,7 @@ pub struct FaceLoopCirculator<'a> {
 }
 
 impl<'a> FaceLoopCirculator<'a> {
+    /// Empty surface mesh.
     pub fn empty(half_edges: &'a [HalfEdge]) -> Self {
         Self {
             half_edges,
@@ -368,6 +369,7 @@ impl<'a> FaceLoopCirculator<'a> {
         }
     }
 
+    /// Creates a default `FaceLoopCirculator`.
     pub fn new(half_edges: &'a [HalfEdge], start: u32) -> Self {
         Self {
             half_edges,
@@ -406,6 +408,7 @@ pub struct BoundaryLoopWalker<'a> {
 }
 
 impl<'a> BoundaryLoopWalker<'a> {
+    /// Creates a default `BoundaryLoopWalker`.
     pub fn new(half_edges: &'a [HalfEdge], start: u32) -> Self {
         Self {
             half_edges,

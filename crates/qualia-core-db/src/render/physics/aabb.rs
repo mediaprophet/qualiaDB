@@ -15,6 +15,7 @@ pub struct Aabb {
 
 impl Aabb {
     #[inline]
+    /// Creates `Aabb` with the given state.
     pub fn new(min: [f32; 3], max: [f32; 3]) -> Self {
         Aabb { min, max }
     }
@@ -38,6 +39,7 @@ impl Aabb {
     }
 
     #[inline]
+    /// `Aabb::center`.
     pub fn center(&self) -> [f32; 3] {
         [
             0.5 * (self.min[0] + self.max[0]),
@@ -64,6 +66,7 @@ impl Aabb {
     }
 
     #[inline]
+    /// `Aabb::contains_point`.
     pub fn contains_point(&self, p: [f32; 3]) -> bool {
         (0..3).all(|k| p[k] >= self.min[k] && p[k] <= self.max[k])
     }

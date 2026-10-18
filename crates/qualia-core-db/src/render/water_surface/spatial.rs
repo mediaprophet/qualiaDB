@@ -96,6 +96,7 @@ fn nearest(
     }
     Ok((best.sqrt(), evaluated))
 }
+/// Accelerated shore-distance field into `out`.
 pub fn shore_distance_accelerated_into(
     positions: &[[f32; 3]],
     topology: &ShoreTopology<'_>,

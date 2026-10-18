@@ -30,6 +30,7 @@ pub struct ConditioningRegistry {
 }
 
 impl ConditioningRegistry {
+    /// Creates a default `ConditioningRegistry`.
     pub fn new() -> Self {
         Self::default()
     }
@@ -138,6 +139,7 @@ impl ConditioningRegistry {
 
 static GLOBAL_REGISTRY: OnceLock<RwLock<ConditioningRegistry>> = OnceLock::new();
 
+/// Global conditioning registry.
 pub fn global_registry() -> &'static RwLock<ConditioningRegistry> {
     GLOBAL_REGISTRY.get_or_init(|| RwLock::new(ConditioningRegistry::new()))
 }

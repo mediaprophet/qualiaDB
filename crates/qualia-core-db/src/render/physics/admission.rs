@@ -34,6 +34,7 @@ pub struct Admission {
 
 impl Admission {
     #[inline]
+    /// Creates `Admission` with the given state.
     pub fn new(min_extent: f32, world: Option<Aabb>) -> Self {
         Admission { min_extent, world }
     }

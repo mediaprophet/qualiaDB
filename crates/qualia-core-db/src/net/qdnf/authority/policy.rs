@@ -31,6 +31,7 @@ pub enum PolicyOutcome {
 
 impl PolicyOutcome {
     #[inline]
+    /// `PolicyOutcome::admits_service`.
     pub const fn admits_service(self) -> bool {
         matches!(self, Self::Allow)
     }
@@ -125,6 +126,7 @@ pub struct TemporalGrant {
 }
 
 impl TemporalGrant {
+    /// Policy current at `unix_ts`.
     pub fn current_at(&self, now_unix: u64) -> Result<(), QdnfError> {
         if now_unix < self.not_before_unix {
             return Err(QdnfError::Unauthorized);

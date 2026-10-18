@@ -42,6 +42,7 @@ pub struct CompressionStatistics {
 }
 
 impl DataCompressionEngine {
+    /// Creates `DataCompressionEngine` with the given state.
     pub fn new() -> Self {
         Self {
             compression_algorithms: vec![CompressionAlgorithm::LZ4, CompressionAlgorithm::ZSTD],
@@ -49,6 +50,7 @@ impl DataCompressionEngine {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }

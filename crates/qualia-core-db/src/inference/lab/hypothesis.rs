@@ -39,6 +39,7 @@ pub struct Hypothesis {
 }
 
 impl Hypothesis {
+    /// Creates `Hypothesis` with the given state.
     pub fn new(
         id: impl Into<String>,
         statement: impl Into<String>,
@@ -61,11 +62,13 @@ impl Hypothesis {
         }
     }
 
+    /// Builder: sets `dependency`.
     pub fn with_dependency(mut self, dep: impl Into<String>) -> Self {
         self.depends_on.push(dep.into());
         self
     }
 
+    /// Builder: expects a regression.
     pub fn expects_regression(mut self) -> Self {
         self.expects_improvement = false;
         self
@@ -143,6 +146,7 @@ pub struct BeliefGraph {
 }
 
 impl BeliefGraph {
+    /// Creates a default `BeliefGraph`.
     pub fn new() -> Self {
         Self::default()
     }

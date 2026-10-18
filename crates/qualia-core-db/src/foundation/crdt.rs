@@ -183,6 +183,7 @@ pub struct SuspendedTransactionQueue {
 }
 
 impl SuspendedTransactionQueue {
+    /// Creates a default `SuspendedTransactionQueue`.
     pub const fn new() -> Self {
         // Explicitly initialize the fixed array without vectors
         Self { queue: [None; 32] }

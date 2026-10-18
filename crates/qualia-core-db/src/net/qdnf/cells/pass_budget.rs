@@ -68,6 +68,7 @@ pub struct PassGuard {
 }
 
 impl PassGuard {
+    /// Enters the pass budget.
     pub fn enter(charge: &PassCharge) -> Result<Self, QdnfError> {
         Ok(Self {
             charged: charge_pass(charge)?,
@@ -76,11 +77,13 @@ impl PassGuard {
     }
 
     #[inline]
+    /// `PassGuard::charged`.
     pub const fn charged(&self) -> u64 {
         self.charged
     }
 
     #[inline]
+    /// `PassGuard::success`.
     pub fn success(&mut self) {
         self.outcome = PassOutcome::Success;
     }

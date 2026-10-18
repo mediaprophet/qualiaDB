@@ -73,6 +73,7 @@ pub(super) struct WebGl2Sky {
 }
 
 impl WebGl2Sky {
+    /// Attempts `new`; error/`None` on failure.
     pub fn try_new(gl: &WebGl2RenderingContext) -> Result<Self, JsValue> {
         let vertex =
             super::webgl2::compile_shader(gl, WebGl2RenderingContext::VERTEX_SHADER, SKY_VERTEX)?;
@@ -111,6 +112,7 @@ impl WebGl2Sky {
         })
     }
 
+    /// Renders the sky.
     pub fn render(
         &self,
         gl: &WebGl2RenderingContext,

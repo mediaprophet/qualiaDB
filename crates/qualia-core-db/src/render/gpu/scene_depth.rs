@@ -15,6 +15,7 @@ pub(super) struct SceneDepthOwner {
 }
 
 impl SceneDepthOwner {
+    /// Creates with the given state.
     pub(super) fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
         let (width, height) = normalized_extent(width, height);
         let (texture, view) = create_depth_texture(device, width, height);
@@ -27,6 +28,7 @@ impl SceneDepthOwner {
         }
     }
 
+    /// `replace`.
     pub(super) fn replace(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         let (width, height) = normalized_extent(width, height);
         // Resize notifications can repeat while a browser canvas settles. Keep
@@ -43,21 +45,25 @@ impl SceneDepthOwner {
         self.generation = self.generation.wrapping_add(1);
     }
 
+    /// `view`.
     pub(super) fn view(&self) -> &wgpu::TextureView {
         &self.view
     }
 
     #[allow(dead_code)]
+    /// `texture`.
     pub(super) fn texture(&self) -> &wgpu::Texture {
         &self.texture
     }
 
     #[allow(dead_code)]
+    /// `extent`.
     pub(super) fn extent(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
     #[allow(dead_code)]
+    /// `generation`.
     pub(super) fn generation(&self) -> u64 {
         self.generation
     }

@@ -31,6 +31,7 @@ pub struct ResumeTable {
 }
 
 impl ResumeTable {
+    /// Creates a default `ResumeTable`.
     pub const fn new() -> Self {
         Self {
             slots: [PinSlot {

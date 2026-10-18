@@ -15,6 +15,7 @@ pub enum AccountType {
 }
 
 impl AccountType {
+    /// `true` when `debit_normal`.
     pub const fn is_debit_normal(self) -> bool {
         matches!(self, AccountType::Asset | AccountType::Expense)
     }

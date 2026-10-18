@@ -54,6 +54,7 @@ impl AlgorithmSpec {
         length: ML_KEM_768_PK_LEN as u16,
     };
 
+    /// Asserts `actual_len` equals the declared length; `Range` error otherwise.
     pub fn check(self, actual_len: usize) -> Result<(), QdnfError> {
         if actual_len != self.length as usize {
             return Err(QdnfError::Range);

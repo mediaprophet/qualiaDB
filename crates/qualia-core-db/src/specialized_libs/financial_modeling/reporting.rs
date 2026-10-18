@@ -268,6 +268,7 @@ pub struct DeliveryStatus {
 }
 
 impl ReportingEngine {
+    /// Creates an engine with an empty template registry. **Scaffold** — no `generate`/`render` path consumes the registered templates.
     pub fn new() -> Self {
         Self {
             report_templates: HashMap::new(),
@@ -276,27 +277,32 @@ impl ReportingEngine {
         }
     }
 
+    /// No-op returning `Ok(())` — the in-memory template store needs no setup.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.report_generator.initialize()?;
         self.report_distributor.initialize()?;
         Ok(())
     }
 
+    /// Registers `template` by `template_id` (overwrites silently).
     pub fn add_report_template(&mut self, template: ReportTemplate) {
         self.report_templates
             .insert(template.template_id.clone(), template);
     }
 
+    /// Registered template for `template_id`, or `None`.
     pub fn get_report_template(&self, template_id: &str) -> Option<&ReportTemplate> {
         self.report_templates.get(template_id)
     }
 
+    /// All registered template IDs.
     pub fn list_report_templates(&self) -> Vec<String> {
         self.report_templates.keys().cloned().collect()
     }
 }
 
 impl ReportGenerator {
+    /// Creates a generator with an empty strategy registry. **Scaffold** — strategies are stored but no generation path consumes them.
     pub fn new() -> Self {
         Self {
             generation_strategies: HashMap::new(),
@@ -304,26 +310,31 @@ impl ReportGenerator {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         self.data_aggregator.initialize()?;
         Ok(())
     }
 
+    /// Registers `strategy` by `strategy_id`.
     pub fn add_generation_strategy(&mut self, strategy: GenerationStrategy) {
         self.generation_strategies
             .insert(strategy.strategy_id.clone(), strategy);
     }
 
+    /// Registered strategy for `strategy_id`, or `None`.
     pub fn get_generation_strategy(&self, strategy_id: &str) -> Option<&GenerationStrategy> {
         self.generation_strategies.get(strategy_id)
     }
 
+    /// All registered strategy IDs.
     pub fn list_generation_strategies(&self) -> Vec<String> {
         self.generation_strategies.keys().cloned().collect()
     }
 }
 
 impl DataAggregator {
+    /// Creates an aggregator with empty rule/source registries. **Scaffold** — no aggregation pass executes the registered rules.
     pub fn new() -> Self {
         Self {
             aggregation_rules: HashMap::new(),
@@ -331,30 +342,37 @@ impl DataAggregator {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
 
+    /// Registers `rule` by `rule_id`.
     pub fn add_aggregation_rule(&mut self, rule: AggregationRule) {
         self.aggregation_rules.insert(rule.rule_id.clone(), rule);
     }
 
+    /// Registered rule for `rule_id`, or `None`.
     pub fn get_aggregation_rule(&self, rule_id: &str) -> Option<&AggregationRule> {
         self.aggregation_rules.get(rule_id)
     }
 
+    /// All registered rule IDs.
     pub fn list_aggregation_rules(&self) -> Vec<String> {
         self.aggregation_rules.keys().cloned().collect()
     }
 
+    /// Registers `source` by `source_id`.
     pub fn add_data_source(&mut self, source: DataSource) {
         self.data_sources.insert(source.source_id.clone(), source);
     }
 
+    /// Registered source for `source_id`, or `None`.
     pub fn get_data_source(&self, source_id: &str) -> Option<&DataSource> {
         self.data_sources.get(source_id)
     }
 
+    /// All registered source IDs.
     pub fn list_data_sources(&self) -> Vec<String> {
         self.data_sources.keys().cloned().collect()
     }
@@ -369,6 +387,7 @@ impl ReportDistributor {
         }
     }
 
+    /// No-op returning `Ok(())` — channels are configured lazily via `add_channel`.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         Ok(())
     }
@@ -558,6 +577,7 @@ impl DeliveryTracker {
 }
 
 impl DeliveryStatus {
+    /// Creates a default `DeliveryStatus`.
     pub fn new() -> Self {
         Self {
             total_deliveries: 0,

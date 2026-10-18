@@ -30,6 +30,7 @@ pub struct ParentTable {
 }
 
 impl ParentTable {
+    /// Creates a default `ParentTable`.
     pub const fn new() -> Self {
         Self {
             parent: [NO_PARENT; 8],
@@ -37,6 +38,7 @@ impl ParentTable {
     }
 
     #[inline]
+    /// `ParentTable::parent_of`.
     pub const fn parent_of(&self, node: u8) -> Option<u8> {
         if node >= PARENT_CAP {
             return None;

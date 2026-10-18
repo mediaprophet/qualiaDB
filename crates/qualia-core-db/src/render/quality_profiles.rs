@@ -66,18 +66,22 @@ impl GraphicsCapabilitySnapshot {
         }
     }
 
+    /// `GraphicsCapabilitySnapshot::temporal_gate`.
     pub const fn temporal_gate(self) -> CapabilityEvidence {
         self.acceptance.temporal_gate()
     }
 
+    /// `GraphicsCapabilitySnapshot::environment_probe_gate`.
     pub const fn environment_probe_gate(self) -> CapabilityEvidence {
         self.acceptance.environment_probe_gate()
     }
 
+    /// `GraphicsCapabilitySnapshot::browser_webgpu_gate`.
     pub const fn browser_webgpu_gate(self) -> CapabilityEvidence {
         self.acceptance.browser_webgpu_gate()
     }
 
+    /// `GraphicsCapabilitySnapshot::pixel_readback_gate`.
     pub const fn pixel_readback_gate(self) -> CapabilityEvidence {
         self.acceptance.pixel_readback_gate()
     }

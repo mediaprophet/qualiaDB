@@ -91,11 +91,13 @@ pub struct SurfaceParameters {
 // ---------------------------------------------------------------------------
 
 #[inline]
+/// `Default::dot3`.
 pub fn dot3(a: [f32; 3], b: [f32; 3]) -> f32 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
 #[inline]
+/// `Default::normalize3`.
 pub fn normalize3(v: [f32; 3]) -> [f32; 3] {
     let len_sq = dot3(v, v);
     if len_sq > 1e-12 {
@@ -189,6 +191,7 @@ pub const PCF_3X3_OFFSETS: [[f32; 2]; 9] = [
     [1.0, 1.0],
 ];
 
+/// Sum of PCF kernel weights.
 pub fn pcf_kernel_weight_sum(samples: &[f32; 9]) -> f32 {
     samples.iter().sum::<f32>() / 9.0
 }

@@ -76,18 +76,22 @@ impl AppRegistry {
         reg
     }
 
+    /// Registered engine version.
     pub fn engine_version(&self) -> &str {
         &self.engine_version
     }
 
+    /// Maximum capacity.
     pub fn capacity(&self) -> usize {
         MAX_INSTALLED_APPS
     }
 
+    /// Number of elements.
     pub fn len(&self) -> usize {
         self.slots.iter().filter(|s| s.is_some()).count()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

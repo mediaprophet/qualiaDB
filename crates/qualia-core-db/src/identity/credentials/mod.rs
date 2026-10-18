@@ -27,7 +27,7 @@ pub enum VcError {
 }
 
 /// W3C Verifiable Credential Data Model.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Credential {
     #[serde(rename = "@context")]
     pub context: Vec<String>,
@@ -44,7 +44,7 @@ pub struct Credential {
 }
 
 /// W3C Verifiable Presentation Data Model.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Presentation {
     #[serde(rename = "@context")]
     pub context: Vec<String>,
@@ -57,7 +57,7 @@ pub struct Presentation {
 }
 
 /// Proof object (Data Integrity Proof) carrying the ML-DSA signature.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Proof {
     #[serde(rename = "type")]
     pub proof_type: String,
@@ -72,26 +72,31 @@ pub struct Proof {
 
 /// Selective-disclosure interface (BBS-style); not yet implemented.
 pub trait SelectiveDisclosure {
+    /// Generates a selective presentation.
     fn generate_selective_presentation(
         &self,
         credential: &Credential,
         disclosed_fields: &[String],
     ) -> Result<Presentation, VcError>;
+    /// Verifies a selective presentation.
     fn verify_selective_presentation(&self, presentation: &Presentation) -> Result<bool, VcError>;
 }
 
 /// Zero-knowledge predicate-disclosure interface; not yet implemented.
 pub trait ZkDisclosure {
+    /// Generates a ZK proof.
     fn generate_zk_proof(
         &self,
         credential: &Credential,
         predicates: &[String],
     ) -> Result<Presentation, VcError>;
+    /// Verifies a ZK proof.
     fn verify_zk_proof(&self, presentation: &Presentation) -> Result<bool, VcError>;
 }
 
 /// Credential status (revocation/suspension) interface.
 pub trait CredentialStatus {
+    /// Checks credential status.
     fn check_status(&self, credential_id: &str) -> Result<StatusResult, VcError>;
 }
 
@@ -109,6 +114,7 @@ pub struct VcRuntime {
 }
 
 impl VcRuntime {
+    /// Creates a default `VcRuntime`.
     pub fn new(crypto: FiduciaryCrypto) -> Self {
         Self {
             crypto,
@@ -262,6 +268,7 @@ impl VcRuntime {
 }
 
 impl CredentialStatus for VcRuntime {
+    /// Checks credential status.
     fn check_status(&self, credential_id: &str) -> Result<StatusResult, VcError> {
         let reg = self
             .revocation_registry
@@ -272,6 +279,7 @@ impl CredentialStatus for VcRuntime {
 }
 
 impl SelectiveDisclosure for VcRuntime {
+    /// Generates a selective presentation.
     fn generate_selective_presentation(
         &self,
         credential: &Credential,
@@ -332,12 +340,14 @@ impl SelectiveDisclosure for VcRuntime {
         self.present(vec![signed_cred], key_id)
     }
 
+    /// Verifies a selective presentation.
     fn verify_selective_presentation(&self, presentation: &Presentation) -> Result<bool, VcError> {
         self.verify_presentation(presentation)
     }
 }
 
 impl ZkDisclosure for VcRuntime {
+    /// Generates a ZK proof.
     fn generate_zk_proof(
         &self,
         credential: &Credential,
@@ -393,6 +403,7 @@ impl ZkDisclosure for VcRuntime {
         self.present(vec![signed_cred], key_id)
     }
 
+    /// Verifies a ZK proof.
     fn verify_zk_proof(&self, presentation: &Presentation) -> Result<bool, VcError> {
         self.verify_presentation(presentation)?;
         use sha2::{Digest, Sha256};

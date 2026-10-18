@@ -21,6 +21,7 @@ pub fn canonical_manifest_bytes(manifest: &InstrumentManifest) -> Result<Vec<u8>
     serde_json::to_vec(manifest).map_err(|e| InstrumentError::Canonical(e.to_string()))
 }
 
+/// `?::manifest_digest`.
 pub fn manifest_digest(manifest: &InstrumentManifest) -> Result<String, InstrumentError> {
     let bytes = canonical_manifest_bytes(manifest)?;
     Ok(sha256_prefixed(&bytes))

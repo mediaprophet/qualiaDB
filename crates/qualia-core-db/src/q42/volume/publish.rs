@@ -23,6 +23,7 @@ pub struct Q42RolloverPublisher {
 }
 
 impl Q42RolloverPublisher {
+    /// Creates a default `Q42RolloverPublisher`.
     pub fn new(
         dir: impl Into<PathBuf>,
         stem: impl Into<String>,
@@ -31,6 +32,7 @@ impl Q42RolloverPublisher {
         Self::with_limit(dir, stem, lex, DEFAULT_SEGMENT_MAX_BYTES)
     }
 
+    /// Builder: sets `limit`.
     pub fn with_limit(
         dir: impl Into<PathBuf>,
         stem: impl Into<String>,
@@ -56,6 +58,7 @@ impl Q42RolloverPublisher {
         })
     }
 
+    /// Pushes `block`; error at capacity.
     pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) -> io::Result<()> {
         let projected = self.writer.maximum_final_length_after_next_block()?;
         if self.writer.block_count() > 0 && projected > self.max_bytes {

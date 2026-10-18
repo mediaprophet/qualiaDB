@@ -312,6 +312,7 @@ pub fn load_expert_tile_descriptor(
 }
 
 impl QwenExpertTileReader {
+    /// Opens the resource.
     pub fn open(path: &Path) -> Result<Self, QwenExpertTileError> {
         let file = File::open(path).map_err(|_| QwenExpertTileError::InvalidPackage)?;
         let mapped = unsafe { memmap2::MmapOptions::new().map(&file) }

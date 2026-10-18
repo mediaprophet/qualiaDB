@@ -46,6 +46,7 @@ pub struct ReplicaGate {
 }
 
 impl TombstoneTable {
+    /// Creates a default `TombstoneTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {
@@ -63,6 +64,7 @@ impl TombstoneTable {
         }
     }
 
+    /// Retains a tombstone entry; `QdnfError` at capacity or on duplicates.
     pub fn retain(&mut self, ts: Tombstone) -> Result<(), QdnfError> {
         if ts.op_id == StrongDigest::ZERO {
             return Err(QdnfError::Malformed);
@@ -75,6 +77,7 @@ impl TombstoneTable {
         Ok(())
     }
 
+    /// Number of live tombstone slots.
     pub fn occupied_count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -110,6 +113,7 @@ impl TombstoneTable {
         Ok(self.compact())
     }
 
+    /// `true` when `op_id` has a tombstone.
     pub fn contains(&self, op_id: &StrongDigest) -> bool {
         self.find_id(op_id).is_some()
     }
@@ -164,18 +168,21 @@ impl Default for TombstoneTable {
 }
 
 impl ReplicaGate {
+    /// `ReplicaGate::authorized`.
     pub const fn authorized() -> Self {
         Self {
             status: ReplicaStatus::Authorized,
         }
     }
 
+    /// `ReplicaGate::stale`.
     pub const fn stale() -> Self {
         Self {
             status: ReplicaStatus::Stale,
         }
     }
 
+    /// Contributes this replica's gate state; `QdnfError` when stale/unauthorized.
     pub fn contribute(&self) -> Result<(), QdnfError> {
         match self.status {
             ReplicaStatus::Authorized => Ok(()),
@@ -183,19 +190,23 @@ impl ReplicaGate {
         }
     }
 
+    /// Marks the gate stale — contributions rejected until reauthorized.
     pub fn mark_stale(&mut self) {
         self.status = ReplicaStatus::Stale;
     }
 
+    /// Clears the stale flag after re-authorization.
     pub fn reauthorize(&mut self) {
         self.status = ReplicaStatus::Authorized;
     }
 }
 
+/// Honest capability probe: `false` — per-replica tombstones do not imply global completeness.
 pub fn tombstone_implies_global_completeness() -> bool {
     false
 }
 
+/// Honest capability probe: `false` — transport acks are not compaction frontiers.
 pub fn transport_ack_is_compaction_frontier() -> bool {
     false
 }

@@ -114,6 +114,7 @@ pub struct ObjectiveScores {
 }
 
 impl ExecutionProfile {
+    /// `ExecutionProfile::path_for_p64`.
     pub fn path_for_p64(p64_path: &Path) -> PathBuf {
         let parent = p64_path.parent().unwrap_or_else(|| Path::new("."));
         let stem = p64_path
@@ -123,6 +124,7 @@ impl ExecutionProfile {
         parent.join(format!("{stem}.{EXECUTION_PROFILE_SUFFIX}"))
     }
 
+    /// Current time in ms.
     pub fn now_ms() -> u64 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -144,6 +146,7 @@ impl ExecutionProfile {
         Ok(path)
     }
 
+    /// Loads `beside_p64`; error when absent/invalid.
     pub fn load_beside_p64(p64_path: &Path) -> Result<Option<Self>, String> {
         let path = Self::path_for_p64(p64_path);
         if !path.is_file() {

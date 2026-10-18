@@ -83,9 +83,11 @@ impl KalmanFilter {
         })
     }
 
+    /// Current state.
     pub fn state(&self) -> &[f64] {
         &self.x
     }
+    /// `KalmanFilter::covariance`.
     pub fn covariance(&self) -> &[f64] {
         &self.p
     }

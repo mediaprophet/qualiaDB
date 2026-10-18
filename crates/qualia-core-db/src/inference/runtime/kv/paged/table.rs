@@ -46,16 +46,19 @@ pub struct GpuBlockTablePlan {
 }
 
 impl GpuBlockTablePlan {
+    /// Builds a 1:1 logical→physical block-table plan for `config`.
     pub fn identity(config: PagedKvConfig) -> Result<Self, TableError> {
         let mut entries = vec![INVALID_BLOCK; config.required_single_sequence_blocks() as usize];
         fill_identity_block_table(&config, &mut entries)?;
         Ok(Self { config, entries })
     }
 
+    /// The paged-KV config this plan was built from.
     pub fn config(&self) -> PagedKvConfig {
         self.config
     }
 
+    /// The raw block-table entries.
     pub fn entries(&self) -> &[u32] {
         &self.entries
     }
@@ -68,20 +71,24 @@ pub struct SequenceBlockTable {
 }
 
 impl SequenceBlockTable {
+    /// Allocates a block table for `logical_pages` pages.
     pub fn new(logical_pages: u32) -> Self {
         Self {
             entries: vec![INVALID_BLOCK; logical_pages as usize],
         }
     }
 
+    /// Logical→physical mapping entries.
     pub fn entries(&self) -> &[u32] {
         &self.entries
     }
 
+    /// Mutable mapping entries.
     pub fn entries_mut(&mut self) -> &mut [u32] {
         &mut self.entries
     }
 
+    /// Repoints every entry `from` to `to`; returns the count repointed.
     pub fn repoint_block(&mut self, from: u32, to: u32) -> usize {
         let mut count = 0;
         for entry in &mut self.entries {
@@ -93,6 +100,7 @@ impl SequenceBlockTable {
         count
     }
 
+    /// Physical block for `logical_page`, or `None` when unmapped.
     pub fn get(&self, logical_page: u32) -> Option<u32> {
         self.entries
             .get(logical_page as usize)
@@ -100,6 +108,7 @@ impl SequenceBlockTable {
             .filter(|block| *block != INVALID_BLOCK)
     }
 
+    /// Copy-on-write: allocates a fresh block when the entry is shared.
     pub fn ensure_writable(
         &mut self,
         logical_page: u32,
@@ -117,6 +126,7 @@ impl SequenceBlockTable {
         Ok(action)
     }
 
+    /// Copies this table into `target`, bumping pool refcounts.
     pub fn fork_into(&self, target: &mut Self, pool: &mut BlockPool) -> Result<(), TableError> {
         if self.entries.len() != target.entries.len() {
             return Err(TableError::OutOfRange);
@@ -169,6 +179,7 @@ impl SequenceBlockTable {
         Ok(())
     }
 
+    /// Releases every held block back to `pool`.
     pub fn release_all(&mut self, pool: &mut BlockPool) -> Result<(), TableError> {
         for entry in &mut self.entries {
             if *entry != INVALID_BLOCK {

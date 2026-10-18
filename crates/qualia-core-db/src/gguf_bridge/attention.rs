@@ -8,6 +8,7 @@ mod fused_tail;
 mod preproject;
 
 impl QTensorEngine {
+    /// `QTensorEngine::matmul_dims`.
     pub(crate) fn matmul_dims(info: &GgufTensorInfo) -> (usize, usize) {
         let n_in = info.dims[0] as usize;
         let n_out = if info.n_dims > 1 && info.dims[1] > 0 {
@@ -18,6 +19,7 @@ impl QTensorEngine {
         (n_in, n_out)
     }
 
+    /// Builds WGSL attention params from the KV layout.
     pub(crate) fn attention_gpu_params(
         h: &crate::gguf_sharder::GgufHyperparams,
         layout: &KvCacheLayout,
@@ -66,6 +68,7 @@ impl QTensorEngine {
     }
 
     #[inline]
+    /// `QTensorEngine::attention_kv_mask_for_dispatch`.
     pub(crate) fn attention_kv_mask_for_dispatch(
         layout: &KvCacheLayout,
         token_idx: u32,

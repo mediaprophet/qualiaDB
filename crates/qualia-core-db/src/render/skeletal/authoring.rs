@@ -84,6 +84,7 @@ pub fn weights_from_segments_into(
     Ok(positions.len())
 }
 
+/// Remaps skin weights into `out`.
 pub fn remap_skin_weights_into(
     source: &[SkinWeight],
     lineage: &[u32],

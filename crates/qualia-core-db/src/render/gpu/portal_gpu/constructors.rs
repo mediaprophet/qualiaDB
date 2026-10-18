@@ -210,6 +210,7 @@ impl PortalGpu {
     }
 
     #[cfg(all(target_arch = "wasm32", feature = "portal"))]
+    /// Tries `new-async`.
     pub async fn try_new_async(
         canvas: &web_sys::HtmlCanvasElement,
         particle_cap: usize,

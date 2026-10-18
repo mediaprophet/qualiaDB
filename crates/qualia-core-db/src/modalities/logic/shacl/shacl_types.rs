@@ -315,6 +315,7 @@ pub struct CompiledShape {
 }
 
 impl CompiledShape {
+    /// Creates a default `CompiledShape`.
     pub fn new(
         shape_class: String,
         constraints: Vec<ShaclConstraint>,
@@ -331,6 +332,7 @@ impl CompiledShape {
         }
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.constraints.is_empty()
     }

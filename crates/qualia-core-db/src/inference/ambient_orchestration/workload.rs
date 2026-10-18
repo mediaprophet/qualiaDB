@@ -44,6 +44,7 @@ pub struct AdaptationEngine {
 }
 
 impl WorkloadAnalyzer {
+    /// Creates a workload analyzer.
     pub fn new() -> Self {
         Self {
             workload_history: Vec::new(),
@@ -128,6 +129,7 @@ impl WorkloadAnalyzer {
 }
 
 impl ResourceAllocator {
+    /// Creates a resource allocator.
     pub fn new() -> Self {
         Self {
             allocation_strategy: AllocationStrategy::PowerAware,
@@ -206,6 +208,7 @@ impl ResourceAllocator {
 }
 
 impl AdaptationEngine {
+    /// Creates an adaptation engine.
     pub fn new() -> Self {
         Self {
             adaptation_strategy: AdaptationStrategy::MachineLearning,
@@ -305,6 +308,7 @@ impl AdaptationEngine {
 }
 
 impl PredictionModel {
+    /// Creates a workload prediction model.
     pub fn new() -> Self {
         Self {
             model_type: ModelType::LinearRegression,
@@ -319,6 +323,7 @@ impl PredictionModel {
 }
 
 impl ResourcePool {
+    /// Creates an empty resource pool.
     pub fn new() -> Self {
         Self {
             total_compute_units: 32,

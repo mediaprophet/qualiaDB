@@ -15,6 +15,7 @@ pub struct RttEstimator {
 }
 
 impl RttEstimator {
+    /// Creates a default `RttEstimator`.
     pub const fn new() -> Self {
         Self {
             latest_us: 0,

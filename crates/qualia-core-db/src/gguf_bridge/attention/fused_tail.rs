@@ -11,6 +11,7 @@ use crate::gguf_bridge::*;
 
 impl QTensorEngine {
     #[cfg(not(target_arch = "wasm32"))]
+    /// Async dispatch: attention-q-o-fused.
     pub(crate) fn dispatch_attention_q_o_fused(
         &self,
         hidden: &[f32],

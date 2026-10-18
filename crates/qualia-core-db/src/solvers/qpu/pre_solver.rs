@@ -76,6 +76,7 @@ pub struct QuboFormulation {
 }
 
 impl QuboFormulation {
+    /// Creates an empty QUBO formulation with `num_variables`.
     pub fn new(num_variables: u32) -> Self {
         Self {
             num_variables,
@@ -85,14 +86,17 @@ impl QuboFormulation {
         }
     }
 
+    /// Adds a linear coefficient for `variable`.
     pub fn add_linear_term(&mut self, variable: u32, coefficient: f64) {
         self.linear_terms.push((variable, coefficient));
     }
 
+    /// Adds a quadratic coupler `(var_a, var_b)`.
     pub fn add_quadratic_term(&mut self, var_a: u32, var_b: u32, coefficient: f64) {
         self.quadratic_terms.push((var_a, var_b, coefficient));
     }
 
+    /// Serializes the formulation into QPU `JobParameters`.
     pub fn to_job_parameters(&self) -> JobParameters {
         JobParameters {
             num_qubits: self.num_variables,
@@ -152,6 +156,7 @@ pub enum MeasurementBasis {
 }
 
 impl CircuitFormulation {
+    /// Creates an empty gate-model formulation with `num_qubits`.
     pub fn new(num_qubits: u32) -> Self {
         Self {
             num_qubits,
@@ -160,14 +165,17 @@ impl CircuitFormulation {
         }
     }
 
+    /// Appends a gate to the circuit.
     pub fn add_gate(&mut self, gate: Gate) {
         self.gates.push(gate);
     }
 
+    /// Appends a measurement.
     pub fn add_measurement(&mut self, m: Measurement) {
         self.measurements.push(m);
     }
 
+    /// Serializes the circuit into QPU `JobParameters`.
     pub fn to_job_parameters(&self) -> JobParameters {
         JobParameters {
             num_qubits: self.num_qubits,
@@ -187,12 +195,14 @@ pub struct PreSolver {
 }
 
 impl PreSolver {
+    /// Creates a pre-solver with the default formulation strategy.
     pub fn new() -> Self {
         Self {
             variable_map: HashMap::new(),
         }
     }
 
+    /// Formulates `problem` into executable `JobParameters`; `QpuError` on unsupported problem kinds.
     pub fn formulate(&mut self, problem: &ProblemDescription) -> Result<JobParameters, QpuError> {
         match problem.problem_type {
             ProblemType::Annealing => self.formulate_qubo(problem),

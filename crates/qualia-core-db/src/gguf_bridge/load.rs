@@ -3,10 +3,12 @@
 use super::*;
 
 impl QTensorEngine {
+    /// KV-cache layout when the engine allocates one.
     pub fn kv_layout(&self) -> Option<KvCacheLayout> {
         self.kv_layout
     }
 
+    /// KV-cache size in bytes.
     pub fn kv_cache_bytes(&self) -> u64 {
         self.kv_layout
             .as_ref()
@@ -15,6 +17,7 @@ impl QTensorEngine {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
+    /// Loads `gguf-checked`.
     pub fn load_gguf_checked(&mut self, path: &str) -> Result<GgufLoadReport, String> {
         use std::fs::File;
 
@@ -510,6 +513,7 @@ impl QTensorEngine {
         t.elapsed().as_nanos() as u64
     }
     #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+    /// `QTensorEngine::adopt_resident_mmap`.
     pub fn adopt_resident_mmap(&mut self, mmap: Arc<[u8]>) -> Result<GgufLoadReport, String> {
         let file_size = mmap.len();
         if file_size == 0 {

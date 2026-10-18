@@ -80,6 +80,7 @@ impl TaskScheduler {
         self.task_queue.pending_tasks.clone()
     }
 
+    /// Gets `pending-tasks-into`.
     pub fn get_pending_tasks_into(&self, out: &mut [TaskHandle]) -> Result<usize, AmbientError> {
         if out.len() < self.task_queue.pending_tasks.len() {
             return Err(AmbientError::InsufficientResources(
@@ -177,6 +178,7 @@ impl TaskScheduler {
 }
 
 impl TaskQueue {
+    /// Creates a default `TaskQueue`.
     pub fn new() -> Self {
         Self {
             pending_tasks: Vec::new(),

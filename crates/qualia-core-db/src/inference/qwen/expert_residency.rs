@@ -43,6 +43,7 @@ pub struct QwenExpertResidency {
 }
 
 impl QwenExpertResidency {
+    /// Creates a default `QwenExpertResidency`.
     pub fn new(capacity: usize) -> Self {
         Self {
             slots: [Slot::default(); MAX_QWEN_EXPERT_SLOTS],
@@ -51,6 +52,7 @@ impl QwenExpertResidency {
         }
     }
 
+    /// Maximum capacity.
     pub fn capacity(&self) -> usize {
         self.capacity
     }
@@ -113,6 +115,7 @@ impl QwenExpertResidency {
         }
     }
 
+    /// Pins expert `slot`; `false` on failure.
     pub fn pin(&mut self, slot: usize) -> bool {
         if slot >= self.capacity || self.slots[slot].key.is_none() {
             return false;

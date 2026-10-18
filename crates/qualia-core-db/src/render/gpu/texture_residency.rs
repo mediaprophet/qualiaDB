@@ -45,6 +45,7 @@ impl std::fmt::Display for TextureUploadError {
 
 impl std::error::Error for TextureUploadError {}
 
+/// Validates `upload`.
 pub(super) fn validate_upload(
     width: u32,
     height: u32,
@@ -73,6 +74,7 @@ pub(super) fn validate_upload(
     ))
 }
 
+/// `mip_chain_layout`.
 pub(super) fn mip_chain_layout(width: u32, height: u32) -> Result<(u32, u64), TextureUploadError> {
     if width == 0 || height == 0 {
         return Err(TextureUploadError::InvalidDimensions);
@@ -108,6 +110,7 @@ fn alpha_mip_scratch_bytes(width: u32, height: u32) -> Result<u64, TextureUpload
         .ok_or(TextureUploadError::ByteSizeOverflow)
 }
 
+/// `mip_semantic_matches`.
 pub(super) fn mip_semantic_matches(
     color_space: TextureColorSpace,
     semantic: super::texture_mips::TextureMipSemantic,
@@ -327,6 +330,7 @@ impl PortalGpu {
         self.resident_texture_binding_with_mips(source_digest, color_space, mip_semantic)
     }
 
+    /// Binding for a resident texture with mips.
     pub fn resident_texture_binding_with_mips(
         &self,
         source_digest: &[u8; 32],
@@ -360,6 +364,7 @@ impl PortalGpu {
         self.resident_textures.len() != previous_len
     }
 
+    /// Evicts a resident texture with mips.
     pub fn evict_resident_texture_with_mips(
         &mut self,
         source_digest: &[u8; 32],
@@ -378,6 +383,7 @@ impl PortalGpu {
 
 pub(super) type ResidentTextureMap = BTreeMap<TextureIdentity, ResidentTexture>;
 
+/// `resident_view`.
 pub(super) fn resident_view<'a>(
     textures: &'a ResidentTextureMap,
     digest: &[u8; 32],

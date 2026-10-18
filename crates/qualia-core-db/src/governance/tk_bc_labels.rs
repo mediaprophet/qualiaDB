@@ -32,10 +32,12 @@ impl TkBcLabelFlags {
     /// BC Multiple Community: Multi-custodian shared biological commons.
     pub const BC_MULTIPLE_COMMUNITY: Self = Self(1 << 5);
 
+    /// `TkBcLabelFlags::has`.
     pub const fn has(self, flag: Self) -> bool {
         (self.0 & flag.0) != 0
     }
 
+    /// `TkBcLabelFlags::union`.
     pub const fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
     }

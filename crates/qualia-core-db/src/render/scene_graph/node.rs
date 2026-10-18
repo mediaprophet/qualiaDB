@@ -100,6 +100,7 @@ pub struct SceneGraph {
 }
 
 impl SceneGraph {
+    /// Creates `SceneGraph` with the given state.
     pub fn new() -> Self {
         Self::default()
     }

@@ -511,6 +511,7 @@ pub fn parse_json_ld_star_stream<R: Read, S: crate::sparql_library::quin_sink::Q
     Ok(count)
 }
 
+/// Parses `json-ld-stream`.
 pub fn parse_json_ld_stream<R: Read>(
     reader: R,
     context_hash: u64,
@@ -519,6 +520,7 @@ pub fn parse_json_ld_stream<R: Read>(
     parse_json_ld_into(reader, context_hash, sorter)
 }
 
+/// Parses `json-ld-star-into`.
 pub fn parse_json_ld_star_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
     reader: R,
     context_hash: u64,

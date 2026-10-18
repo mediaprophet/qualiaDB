@@ -19,6 +19,7 @@ pub struct P64GpuWords64 {
 }
 
 impl P64GpuWords64 {
+    /// Packs 8 u64 words into the GPU word record.
     pub fn from_u64_fields(fields: [u64; 8]) -> Self {
         let mut words = [0u32; 16];
         for (index, field) in fields.into_iter().enumerate() {
@@ -35,6 +36,7 @@ impl P64GpuWords64 {
         }
     }
 
+    /// Word at `index`, or `None` when out of range.
     pub fn u64_field(&self, index: usize) -> Option<u64> {
         if index >= 8 {
             return None;
@@ -55,6 +57,7 @@ pub enum ScalarType {
 }
 
 impl ScalarType {
+    /// WGSL type name.
     pub const fn wgsl_name(self) -> &'static str {
         match self {
             Self::F32 => "f32",
@@ -64,6 +67,7 @@ impl ScalarType {
         }
     }
 
+    /// Size in bytes.
     pub const fn size_bytes(self) -> u32 {
         match self {
             Self::F32 | Self::U32 | Self::I32 => 4,
@@ -71,6 +75,7 @@ impl ScalarType {
         }
     }
 
+    /// Alignment in bytes.
     pub const fn alignment_bytes(self) -> u32 {
         self.size_bytes()
     }
@@ -90,6 +95,7 @@ pub enum BufferElement {
 }
 
 impl BufferElement {
+    /// Element size in bytes.
     pub const fn size_bytes(self) -> u32 {
         match self {
             Self::Scalar(value) => value.size_bytes(),
@@ -99,6 +105,7 @@ impl BufferElement {
         }
     }
 
+    /// Element alignment.
     pub const fn alignment_bytes(self) -> u32 {
         match self {
             Self::Scalar(value) => value.alignment_bytes(),
@@ -129,6 +136,7 @@ pub enum SharedLen {
 }
 
 impl SharedLen {
+    /// Resolves to a concrete length at `workgroup_size`.
     pub const fn resolve(self, workgroup_size: u32) -> u32 {
         match self {
             Self::Fixed(value) => value,
@@ -239,6 +247,7 @@ pub struct KernelSpec {
 }
 
 impl KernelSpec {
+    /// Validates the kernel spec.
     pub fn validate(&self) -> Result<(), ForgeError> {
         if self.id.is_empty() || self.entry_point.is_empty() {
             return Err(ForgeError::InvalidKernel(
@@ -291,6 +300,7 @@ impl KernelSpec {
         Ok(())
     }
 
+    /// Content hash of the kernel spec.
     pub fn semantic_hash(&self) -> Result<String, ForgeError> {
         self.validate()?;
         let bytes = serde_json::to_vec(self)?;
@@ -479,6 +489,7 @@ impl BuiltinKernel {
         Self::Fft,
     ];
 
+    /// Display name.
     pub const fn name(self) -> &'static str {
         match self {
             Self::AffineF32 => "affine-f32",
@@ -512,6 +523,7 @@ impl BuiltinKernel {
         )
     }
 
+    /// Kernel spec for a builtin.
     pub fn spec(self) -> KernelSpec {
         match self {
             Self::AffineF32 => KernelSpec {

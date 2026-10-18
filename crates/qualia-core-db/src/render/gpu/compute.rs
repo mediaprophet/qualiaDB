@@ -166,6 +166,7 @@ pub(crate) struct ComputeState {
 }
 
 impl ComputeState {
+    /// Creates `ComputeState` with the given state.
     pub(crate) fn new() -> Self {
         Self {
             cache: HashMap::new(),

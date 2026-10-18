@@ -8,6 +8,7 @@
 pub trait Morphism<A> {
     type Codomain;
 
+    /// Applies the morphism.
     fn apply(&self, input: A) -> Self::Codomain;
 }
 
@@ -18,6 +19,7 @@ impl<A> Morphism<A> for Identity {
     type Codomain = A;
 
     #[inline]
+    /// Applies the morphism.
     fn apply(&self, input: A) -> A {
         input
     }
@@ -30,6 +32,7 @@ pub struct Compose<F, G> {
 }
 
 impl<F, G> Compose<F, G> {
+    /// Creates a default `Compose`.
     pub const fn new(first: F, second: G) -> Self {
         Self { first, second }
     }
@@ -43,6 +46,7 @@ where
     type Codomain = G::Codomain;
 
     #[inline]
+    /// Applies the morphism.
     fn apply(&self, input: A) -> Self::Codomain {
         self.second.apply(self.first.apply(input))
     }
@@ -56,6 +60,7 @@ mod tests {
     struct AddOne;
     impl Morphism<i32> for AddOne {
         type Codomain = i32;
+        /// Applies the morphism.
         fn apply(&self, input: i32) -> i32 {
             input + 1
         }
@@ -65,6 +70,7 @@ mod tests {
     struct Double;
     impl Morphism<i32> for Double {
         type Codomain = i32;
+        /// Applies the morphism.
         fn apply(&self, input: i32) -> i32 {
             input * 2
         }

@@ -26,6 +26,7 @@ pub fn project_sensitivity(fields: &LabelFields) -> Result<u8, QdnfError> {
     fields.confidentiality.lattice_rank()
 }
 
+/// `?::require_labelled`.
 pub fn require_labelled(fields: &LabelFields) -> Result<(), QdnfError> {
     if fields.confidentiality == Confidentiality::Unknown {
         return Err(QdnfError::Denied);

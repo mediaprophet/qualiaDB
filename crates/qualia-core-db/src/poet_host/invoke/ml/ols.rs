@@ -4,6 +4,7 @@ use super::super::args;
 use crate::solvers::learning::regression::linear::fit;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: OLS fit.
 pub fn fit_ols(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let rows = args::rec(args_v, "x")
         .and_then(args::list)

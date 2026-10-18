@@ -6,6 +6,7 @@ use super::errors::CryptoError;
 use super::types::SHA384_LEN;
 use crate::net::qdnf::types::StrongDigest;
 
+/// SHA-384 digest of `data` as a `StrongDigest`.
 pub fn sha384(data: &[u8]) -> StrongDigest {
     let mut hasher = Sha384::new();
     hasher.update(data);
@@ -15,6 +16,7 @@ pub fn sha384(data: &[u8]) -> StrongDigest {
     d
 }
 
+/// SHA-384 into caller `out`; returns digest length.
 pub fn sha384_into(data: &[u8], out: &mut [u8]) -> Result<usize, CryptoError> {
     if out.len() < SHA384_LEN {
         return Err(CryptoError::Capacity);

@@ -12,6 +12,7 @@ use vibe::{Diagnostic, Span, Value};
 
 const MAX_ITEMS: usize = 64;
 
+/// Computes the result.
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     match args::rec_str(args_v, "mode") {
         Some("socioeconomics") => socioeconomics_eval(args_v, span),

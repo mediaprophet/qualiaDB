@@ -42,6 +42,7 @@ pub struct TransferTable {
 }
 
 impl TransferTable {
+    /// Creates a default `TransferTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {
@@ -57,6 +58,7 @@ impl TransferTable {
         }
     }
 
+    /// `occupied` count.
     pub fn occupied_count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;

@@ -52,6 +52,7 @@ impl ScanBudget {
     }
 
     #[inline]
+    /// `true` when finite.
     pub const fn is_finite(self) -> bool {
         self.pages <= MAX_PAGES
     }
@@ -77,6 +78,7 @@ pub struct ScanCursor {
 
 impl ScanCursor {
     #[inline]
+    /// `true` when cancelled.
     pub const fn is_cancelled(self) -> bool {
         self.cancelled
     }

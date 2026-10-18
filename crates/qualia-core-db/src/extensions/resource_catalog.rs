@@ -123,11 +123,13 @@ pub struct LLMResource {
 }
 
 impl LLMResource {
+    /// `true` when multimodal.
     pub fn is_multimodal(&self) -> bool {
         matches!(self.modality.as_deref(), Some("multimodal" | "vision"))
             || self.vision_projector.is_some()
     }
 
+    /// Context window in tokens after policy caps.
     pub fn effective_context_window(&self) -> u32 {
         self.context_window
             .unwrap_or(if self.is_multimodal() { 8192 } else { 4096 })
@@ -275,6 +277,7 @@ impl LLMResource {
         self.to_capability_profile_with_projector(local_path, None)
     }
 
+    /// `LLMResource::to_capability_profile_with_projector`.
     pub fn to_capability_profile_with_projector(
         &self,
         local_path: &str,
@@ -456,6 +459,7 @@ pub struct ResourceCatalog {
 }
 
 impl ResourceCatalog {
+    /// Creates an empty catalog.
     pub fn empty() -> Self {
         Self {
             llms: vec![],
@@ -464,14 +468,17 @@ impl ResourceCatalog {
         }
     }
 
+    /// LLM resource by `id`.
     pub fn find_llm(&self, id: &str) -> Option<&LLMResource> {
         self.llms.iter().find(|r| r.id == id)
     }
 
+    /// Ontology resource by `id`.
     pub fn find_ontology(&self, id: &str) -> Option<&OntologyResource> {
         self.ontologies.iter().find(|r| r.id == id)
     }
 
+    /// SPARQL resource by `id`.
     pub fn find_sparql(&self, id: &str) -> Option<&SPARQLResource> {
         self.sparql_endpoints.iter().find(|r| r.id == id)
     }

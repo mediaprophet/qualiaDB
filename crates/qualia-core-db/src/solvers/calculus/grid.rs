@@ -166,6 +166,7 @@ pub enum SimdWidth {
     Avx2,  // x86 AVX2: 4 f64 per instruction
 }
 
+/// Detected SIMD width.
 pub fn detect_simd_width() -> SimdWidth {
     #[cfg(target_arch = "x86_64")]
     {
@@ -187,6 +188,7 @@ pub fn detect_simd_width() -> SimdWidth {
     }
 }
 
+/// Detected cache-line size.
 pub fn detect_cache_line_size() -> usize {
     #[cfg(target_arch = "x86_64")]
     {

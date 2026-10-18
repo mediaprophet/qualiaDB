@@ -28,6 +28,7 @@ pub struct IntakeRequest {
 }
 
 impl IntakeRequest {
+    /// Creates an intake request with token bounds.
     pub fn new(request_id: u64, prompt_tokens: u32, max_output_tokens: u32) -> Self {
         Self {
             request_id,
@@ -60,20 +61,24 @@ impl<const CAP: usize> Default for BoundedIntakeQueue<CAP> {
 }
 
 impl<const CAP: usize> BoundedIntakeQueue<CAP> {
+    /// Creates an empty bounded intake queue.
     pub fn new() -> Self {
         Self {
             queue: VecDeque::with_capacity(CAP),
         }
     }
 
+    /// Queued requests.
     pub fn len(&self) -> usize {
         self.queue.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.queue.is_empty()
     }
 
+    /// Queue capacity.
     pub fn capacity(&self) -> usize {
         CAP
     }

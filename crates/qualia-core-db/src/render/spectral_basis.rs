@@ -38,6 +38,7 @@ pub struct JakobHanikaCoeffs {
 
 impl JakobHanikaCoeffs {
     #[inline]
+    /// Creates `JakobHanikaCoeffs` with the given state.
     pub const fn new(c0: f32, c1: f32, c2: f32) -> Self {
         Self { c0, c1, c2 }
     }

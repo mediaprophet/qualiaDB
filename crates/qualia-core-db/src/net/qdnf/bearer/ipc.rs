@@ -57,6 +57,7 @@ pub struct IpcEndpoint {
 }
 
 impl IpcEndpoint {
+    /// Bearer capabilities.
     pub fn capabilities(&self) -> BearerCapabilities {
         BearerCapabilities {
             profile: BearerProfile::LocalIpcV1,
@@ -183,6 +184,7 @@ impl Bearer for IpcEndpoint {
 }
 
 impl IpcEndpoint {
+    /// Bearer locator.
     pub fn locator(&self) -> ObservedLocator {
         self.locator
     }

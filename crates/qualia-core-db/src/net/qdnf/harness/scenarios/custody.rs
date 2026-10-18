@@ -18,6 +18,7 @@ use crate::net::qdnf::replication::{
 use crate::net::qdnf::types::{Generation, StrongDigest};
 use crate::wal_intent::{IntentTable, TxId};
 
+/// Scenario S22: kill before receipt acknowledgment.
 pub fn s22_kill_before_receipt() -> Result<(), QdnfError> {
     if os_process_kill_qualified() {
         return Err(QdnfError::Downgrade);
@@ -73,6 +74,7 @@ fn seed_evidence(
     Ok(rec.original_digest)
 }
 
+/// Scenario S23: overlapping custody holds.
 pub fn s23_overlapping_holds() -> Result<(), QdnfError> {
     let mut store = EvidenceStore::new();
     let mut intents = IntentTable::new();
@@ -91,6 +93,7 @@ pub fn s23_overlapping_holds() -> Result<(), QdnfError> {
     Ok(())
 }
 
+/// Scenario S29: restored-backup state consistency.
 pub fn s29_restored_backup() -> Result<(), QdnfError> {
     let stored = verified(Confidentiality::C2Sensitive, digest(1))?;
     let ctx = JobLabelContext::new(*stored.fields())?;
@@ -105,6 +108,7 @@ pub fn s29_restored_backup() -> Result<(), QdnfError> {
     )
 }
 
+/// Scenario S30: independent verifier path.
 pub fn s30_independent_verifier() -> Result<(), QdnfError> {
     let original = b"selected-original";
     let digest = sha384(original);
@@ -119,6 +123,7 @@ pub fn s30_independent_verifier() -> Result<(), QdnfError> {
     }
 }
 
+/// Scenario S31: FHIR export custody.
 pub fn s31_fhir_export() -> Result<(), QdnfError> {
     let label = verified(Confidentiality::C2Sensitive, digest(1))?;
     let dropped = InterchangeAdapter {

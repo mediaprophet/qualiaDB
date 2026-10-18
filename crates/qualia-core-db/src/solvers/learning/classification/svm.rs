@@ -256,6 +256,7 @@ impl Svm {
         self.decision_row(q) >= 0.0
     }
 
+    /// `Svm::n_support_vectors`.
     pub fn n_support_vectors(&self) -> usize {
         self.sv_alpha_y.len()
     }

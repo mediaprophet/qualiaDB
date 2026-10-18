@@ -23,11 +23,13 @@ pub struct BidxBlockRange {
 
 impl BidxBlockRange {
     #[inline]
+    /// `BidxBlockRange::len`.
     pub fn len(self) -> usize {
         self.end - self.start
     }
 
     #[inline]
+    /// `true` when empty.
     pub fn is_empty(self) -> bool {
         self.start == self.end
     }
@@ -112,6 +114,7 @@ pub(crate) fn validate_bidx(bidx: &[u8], expected_blocks: usize) -> io::Result<(
     Ok(())
 }
 
+/// Validates `field-range-index`.
 pub(crate) fn validate_field_range_index(bytes: &[u8], expected_blocks: usize) -> io::Result<()> {
     let expected = FIELD_RANGE_INDEX_HEADER_BYTES
         .checked_add(

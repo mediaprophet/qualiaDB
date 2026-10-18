@@ -47,6 +47,7 @@ pub struct MutationHandle {
 }
 
 impl MutationHandle {
+    /// `Ok` when `permit` authorizes this handle; `QdnfError` otherwise.
     pub fn matches_permit(&self, permit: &ExecutionPermit) -> Result<(), QdnfError> {
         if self.generation != permit.identity_generation() {
             return Err(QdnfError::StaleGeneration);
@@ -65,6 +66,7 @@ pub struct AuthorityOwner {
 }
 
 impl AuthorityOwner {
+    /// Creates a default `AuthorityOwner`.
     pub const fn new() -> Self {
         Self {
             records: [Record::EMPTY; MAX_RECORDS],
@@ -131,6 +133,7 @@ impl AuthorityOwner {
         Ok((cred, authorised, handle))
     }
 
+    /// Revokes `handle`'s grant.
     pub fn revoke(&mut self, handle: MutationHandle) -> Result<(), QdnfError> {
         let rec = self.record_mut(handle)?;
         rec.revoked = true;
@@ -138,6 +141,7 @@ impl AuthorityOwner {
         Ok(())
     }
 
+    /// Issues an `ExecutionPermit` for a handle under the current grant.
     pub fn issue_permit(
         &self,
         handle: MutationHandle,
@@ -175,6 +179,7 @@ impl AuthorityOwner {
         )
     }
 
+    /// Active grant for `handle`; error when none.
     pub fn current_grant(&self, handle: MutationHandle) -> Result<TemporalGrant, QdnfError> {
         let rec = self.record(handle)?;
         if rec.revoked {
@@ -190,6 +195,7 @@ impl AuthorityOwner {
         })
     }
 
+    /// `Ok` when `handle` is live and authorized.
     pub fn validate_handle(&self, handle: MutationHandle) -> Result<(), QdnfError> {
         let _ = self.record(handle)?;
         Ok(())

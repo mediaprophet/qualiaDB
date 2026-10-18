@@ -3,6 +3,7 @@
 use super::super::{padded_bytes_per_row, picking, PortalGpu};
 
 impl PortalGpu {
+    /// Queues a GPU pick.
     pub fn queue_pick(&mut self, x: f32, y: f32) {
         // The staging buffer cannot be copied into while an earlier map is
         // unresolved. A later click can be queued after the next readback.
@@ -22,6 +23,7 @@ impl PortalGpu {
         self.pick_semantic_result = None;
     }
 
+    /// Polls the pick readback.
     pub fn poll_pick_readback(&mut self) -> Option<u32> {
         if let Some(idx) = self.pick_result.take() {
             return Some(idx);
@@ -84,10 +86,12 @@ impl PortalGpu {
         self.pick_semantic_result.take()
     }
 
+    /// `PortalGpu::pick_readback_pending`.
     pub fn pick_readback_pending(&self) -> bool {
         self.pending_pick.is_some() || self.pick_copy_submitted || self.pick_map_rx.is_some()
     }
 
+    /// `record_picking_pass`.
     pub(super) fn record_picking_pass(&mut self, encoder: &mut wgpu::CommandEncoder) {
         if self.pending_pick.is_none() {
             return;
@@ -164,6 +168,7 @@ impl PortalGpu {
         }
     }
 
+    /// `record_pick_copy`.
     pub(super) fn record_pick_copy(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let Some((px, py)) = self.pending_pick.take() else {
             return;

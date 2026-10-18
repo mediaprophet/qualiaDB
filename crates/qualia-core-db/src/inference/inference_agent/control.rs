@@ -24,18 +24,22 @@ impl Default for DecodeControl {
 }
 
 impl DecodeControl {
+    /// Cooperatively cancels the decode job.
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Release);
     }
 
+    /// `true` once cancelled.
     pub fn is_cancelled(&self) -> bool {
         self.cancelled.load(Ordering::Acquire)
     }
 
+    /// Caps decode at `max_tokens` (min 1).
     pub fn set_token_budget(&self, max_tokens: u32) {
         self.max_tokens.store(max_tokens.max(1), Ordering::Release);
     }
 
+    /// Configured token budget.
     pub fn token_budget(&self) -> usize {
         self.max_tokens.load(Ordering::Acquire) as usize
     }

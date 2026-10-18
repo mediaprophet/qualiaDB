@@ -31,6 +31,7 @@ pub const MAX_RETURNED_ROUTES: usize = 8;
 pub const MAX_DIAL_RACES: usize = 3;
 pub const MAX_ALIASES: usize = 16;
 
+/// Selects `routes`.
 pub fn select_routes(
     candidates: &[RouteAdvert],
     now_unix: u64,

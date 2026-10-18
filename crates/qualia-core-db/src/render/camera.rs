@@ -36,11 +36,13 @@ impl Default for CameraState {
 }
 
 impl CameraState {
+    /// Builder: sets `near_plane`.
     pub fn with_near_plane(mut self, near: f32) -> Self {
         self.near_plane = near;
         self.clamped()
     }
     #[inline]
+    /// Creates `CameraState` with the given state.
     pub fn new(yaw: f32, pitch: f32, zoom: f32) -> Self {
         Self {
             near_plane: CAMERA_NEAR_PLANE,
@@ -55,12 +57,14 @@ impl CameraState {
     }
 
     #[inline]
+    /// Builder: `target`.
     pub fn with_target(mut self, target: [f32; 3]) -> Self {
         self.target = target;
         self
     }
 
     #[inline]
+    /// Builder: `lighting`.
     pub fn with_lighting(
         mut self,
         sun_dir: [f32; 3],
@@ -74,6 +78,7 @@ impl CameraState {
     }
 
     #[inline]
+    /// `CameraState::clamped`.
     pub fn clamped(mut self) -> Self {
         self.near_plane = if self.near_plane.is_finite() {
             self.near_plane.clamp(0.00001, 1.0)
@@ -111,6 +116,7 @@ impl CameraState {
             _padding: padding,
         }
     }
+    /// View-projection matrix.
     pub fn view_projection(&self, aspect: f32) -> [[f32; 4]; 4] {
         let state = self.clamped();
         orbit_view_projection_with_near(
@@ -184,6 +190,7 @@ pub fn orbit_view_projection_target(
     orbit_view_projection_with_near(yaw, pitch, zoom, target, aspect, CAMERA_NEAR_PLANE)
 }
 
+/// Orbit view-projection with custom near plane.
 pub fn orbit_view_projection_with_near(
     yaw: f32,
     pitch: f32,

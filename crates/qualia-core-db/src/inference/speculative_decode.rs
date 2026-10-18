@@ -186,6 +186,7 @@ pub struct GrammarStateMachine {
 }
 
 impl GrammarStateMachine {
+    /// Creates `GrammarStateMachine` with the given state.
     pub fn new() -> Self {
         Self {
             state: GrammarState::Start,

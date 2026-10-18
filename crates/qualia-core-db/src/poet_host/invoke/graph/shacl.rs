@@ -26,6 +26,7 @@ pub const EXTENSION_KINDS: &[&str] = &[
     "reifier",
 ];
 
+/// Validates internal consistency; error on violation.
 pub fn validate(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     #[cfg(any(
         not(target_arch = "wasm32"),
@@ -65,6 +66,7 @@ pub fn validate(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value
     }
 }
 
+/// VibeScript seam: SHACL extensions.
 pub fn extensions(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     Ok(Value::List(
         EXTENSION_KINDS

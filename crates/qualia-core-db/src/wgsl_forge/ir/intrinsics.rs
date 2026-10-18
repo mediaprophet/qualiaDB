@@ -53,6 +53,7 @@ pub enum Intrinsic {
 }
 
 impl Intrinsic {
+    /// `Intrinsic::class`.
     pub const fn class(&self) -> IntrinsicClass {
         match self {
             Self::SubgroupReduce { .. } | Self::SubgroupShuffle { .. } | Self::SubgroupBallot => {

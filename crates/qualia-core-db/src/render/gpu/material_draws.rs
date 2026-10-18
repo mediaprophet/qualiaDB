@@ -16,6 +16,7 @@ pub(super) struct MaterialDraw {
     pub sort_depth: f32,
 }
 
+/// Builds `material-draws`.
 pub(super) fn build_material_draws(
     materials: &[MaterialRecord],
     ranges: &[SubmeshRange],
@@ -105,6 +106,7 @@ fn bounds_center(min: [f32; 3], max: [f32; 3]) -> [f32; 3] {
     ]
 }
 
+/// `update_draw_bounds`.
 pub(super) fn update_draw_bounds(
     draws: &mut [MaterialDraw],
     positions: &[[f32; 3]],

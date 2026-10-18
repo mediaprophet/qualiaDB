@@ -16,6 +16,7 @@ impl LeaseHandle {
         generation: Generation::ZERO,
     };
 
+    /// `true` when the handle matches.
     pub fn matches(self, expected: Self) -> Result<(), QdnfError> {
         if self.slot != expected.slot || self.generation != expected.generation {
             Err(QdnfError::StaleGeneration)

@@ -121,6 +121,7 @@ pub struct SecurityConfiguration {
 // ── Opcode Generation for New Constraints ─────────────────────────────────────
 
 impl LogConfiguration {
+    /// Compiles the log configuration to SlgOpcode sequence.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_memory_logs as f64),
@@ -131,6 +132,7 @@ impl LogConfiguration {
 }
 
 impl LogLevel {
+    /// Compiles the log level to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         // Validate that log level is in allowed set
         self.allowed_levels
@@ -141,6 +143,7 @@ impl LogLevel {
 }
 
 impl LogEntry {
+    /// Compiles a log entry to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut opcodes = Vec::new();
         if self.require_timestamp {
@@ -160,6 +163,7 @@ impl LogEntry {
 }
 
 impl LogRetention {
+    /// Compiles retention policy to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_age_days as f64),
@@ -169,6 +173,7 @@ impl LogRetention {
 }
 
 impl LogExportFormat {
+    /// Compiles the export format to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut opcodes = vec![SlgOpcode::CheckMaxInclusive(self.max_export_size_mb as f64)];
         // Add format validation
@@ -180,12 +185,14 @@ impl LogExportFormat {
 }
 
 impl SystemTrayConfiguration {
+    /// Compiles tray configuration to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.max_menu_items as f64)]
     }
 }
 
 impl TrayMenuItem {
+    /// Compiles a tray menu item to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut opcodes = Vec::new();
         if self.require_label {
@@ -202,6 +209,7 @@ impl TrayMenuItem {
 }
 
 impl TrayStatusIndicator {
+    /// Compiles a status indicator to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxLength(self.max_status_length),
@@ -211,12 +219,14 @@ impl TrayStatusIndicator {
 }
 
 impl TrayAction {
+    /// Compiles a tray action to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMaxInclusive(self.timeout_ms as f64)]
     }
 }
 
 impl StorageConfiguration {
+    /// Compiles storage configuration to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut opcodes = vec![
             SlgOpcode::CheckMinInclusive(self.min_quota_gb as f64),
@@ -230,6 +240,7 @@ impl StorageConfiguration {
 }
 
 impl NetworkConfiguration {
+    /// Compiles network configuration to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut opcodes = Vec::new();
         for port in &self.allowed_ports {
@@ -240,6 +251,7 @@ impl NetworkConfiguration {
 }
 
 impl TaxRecipientConfiguration {
+    /// Compiles tax-recipient configuration to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMinInclusive(self.min_share_percent as f64),
@@ -249,6 +261,7 @@ impl TaxRecipientConfiguration {
 }
 
 impl SecurityConfiguration {
+    /// Compiles security configuration to opcodes.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![SlgOpcode::CheckMinInclusive(
             self.min_key_length_bits as f64,

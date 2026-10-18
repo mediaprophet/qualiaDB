@@ -5,6 +5,7 @@ use crate::render::pga::Motor;
 use crate::render::physics::Admission;
 
 impl PortalGpu {
+    /// Writes `camera-uniform`.
     pub(super) fn write_camera_uniform(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
         let aspect = self.width as f32 / self.height.max(1) as f32;
         let mut uniform = self
@@ -18,6 +19,7 @@ impl PortalGpu {
         self.uniform_belt.advance(&self.device);
     }
 
+    /// Writes `observer-uniform`.
     pub(super) fn write_observer_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
         // VC3: Use UniformBelt for zero-alloc buffer writes.
         let bytes = bytemuck::bytes_of(&self.observer);
@@ -71,6 +73,7 @@ impl PortalGpu {
         self.uniform_belt.advance(&self.device);
     }
 
+    /// Writes `shadow-uniform`.
     pub(super) fn write_shadow_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let active = self.shadow_enabled
             && self.shadow_target.is_some()

@@ -64,10 +64,12 @@ pub struct EthernetLoop {
 }
 
 impl EthernetLoop {
+    /// Loopback locator.
     pub fn locator(&self) -> ObservedLocator {
         self.locator
     }
 
+    /// Loopback evidence level.
     pub fn ethernet_evidence_level(&self) -> EthernetEvidence {
         EthernetEvidence::InProcessLoop
     }

@@ -5,6 +5,7 @@ use std::io;
 
 /// Accepts quins from format parsers without mandating heap growth.
 pub trait QuinSink {
+    /// Pushes a quin.
     fn push(&mut self, q: NQuin) -> io::Result<()>;
 
     /// Record a term's `hash → lexical string` so the value can be recovered later
@@ -15,6 +16,7 @@ pub trait QuinSink {
 }
 
 impl QuinSink for crate::external_sort::ExternalSorter {
+    /// Pushes a quin.
     fn push(&mut self, q: NQuin) -> io::Result<()> {
         crate::external_sort::ExternalSorter::push(self, q)
     }

@@ -18,6 +18,7 @@ pub struct WasmOffloadIntent {
 #[wasm_bindgen]
 impl WasmOffloadIntent {
     #[wasm_bindgen(constructor)]
+    /// Creates `WasmOffloadIntent` with the given state.
     pub fn new(opcode: u32, priority: u32, payload_size: usize) -> Self {
         Self {
             opcode,
@@ -28,6 +29,7 @@ impl WasmOffloadIntent {
     }
 
     #[wasm_bindgen]
+    /// Builder: `string-payload`.
     pub fn with_string_payload(opcode: u32, priority: u32, payload: String) -> Self {
         Self {
             opcode,
@@ -57,6 +59,7 @@ pub fn intercept_computational_opcode(
 }
 
 #[wasm_bindgen]
+/// `WasmOffloadIntent::intercept_pharmacogenomics_intent`.
 pub fn intercept_pharmacogenomics_intent(smiles: String) -> WasmOffloadIntent {
     WasmOffloadIntent::with_string_payload(OP_INFER_BINDING_AFFINITY, 1, smiles)
 }
@@ -70,6 +73,7 @@ pub struct FederatedNodeManager {
 #[wasm_bindgen]
 impl FederatedNodeManager {
     #[wasm_bindgen(constructor)]
+    /// Creates the node manager.
     pub fn new() -> Self {
         Self {
             native_daemon_available: false,

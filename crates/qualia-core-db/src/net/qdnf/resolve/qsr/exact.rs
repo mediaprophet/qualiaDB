@@ -61,6 +61,7 @@ impl Qsr {
     }
 }
 
+/// Staged lookup.
 pub(super) fn lookup_staged(
     key: &StrongDigest,
     covers: &[CoverInterval],

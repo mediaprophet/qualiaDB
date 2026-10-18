@@ -195,6 +195,7 @@ pub struct QualityScore {
 }
 
 impl QualityScore {
+    /// `QualityScore::from_verified`.
     pub fn from_verified(v: &VerifiedTurn) -> Self {
         let total = v.checks.len();
         let passed = v.checks.iter().filter(|c| c.ok).count();

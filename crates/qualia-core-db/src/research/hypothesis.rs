@@ -52,14 +52,17 @@ pub struct HypothesisGraph {
 }
 
 impl HypothesisGraph {
+    /// Creates an empty hypothesis graph (nodes, revisions, subscribers).
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Inserts `node` into the graph keyed by its id.
     pub fn create(&mut self, node: HypothesisNode) {
         self.nodes.insert(node.id.clone(), node);
     }
 
+    /// Attaches `evaluation` to node `node_id`; `false` when unknown.
     pub fn add_to_graph(&mut self, node_id: &str, evaluation: Evaluation) -> bool {
         if let Some(node) = self.nodes.get_mut(node_id) {
             node.evaluations.push(evaluation);
@@ -69,10 +72,12 @@ impl HypothesisGraph {
         }
     }
 
+    /// Records a contributed `evaluation` on node `node_id`; `false` when unknown.
     pub fn contribute_evaluation(&mut self, node_id: &str, evaluation: Evaluation) -> bool {
         self.add_to_graph(node_id, evaluation)
     }
 
+    /// Links node `node_id` to a dark-link id; `false` when unknown.
     pub fn bridge_dark_link(&mut self, node_id: &str, dark_link_id: &str) -> bool {
         if let Some(node) = self.nodes.get_mut(node_id) {
             node.dark_links.push(dark_link_id.to_string());
@@ -83,6 +88,7 @@ impl HypothesisGraph {
         }
     }
 
+    /// Rewrites the node statement, marks it `Reframed`, and appends a `HypothesisRevision`; `false` when unknown.
     pub fn reframe_hypothesis(
         &mut self,
         node_id: &str,
@@ -108,6 +114,7 @@ impl HypothesisGraph {
         }
     }
 
+    /// Merges two nodes: `node1` takes `merged_statement`, both marked `Merged`, and a merge revision is appended; `false` when either id is unknown.
     pub fn merge_hypotheses(
         &mut self,
         node1_id: &str,
@@ -139,6 +146,7 @@ impl HypothesisGraph {
         true
     }
 
+    /// Appends `gap` to the node's gap list; `false` when unknown.
     pub fn flag_gap(&mut self, node_id: &str, gap: &str) -> bool {
         if let Some(node) = self.nodes.get_mut(node_id) {
             node.gaps.push(gap.to_string());
@@ -148,6 +156,7 @@ impl HypothesisGraph {
         }
     }
 
+    /// Removes `gap`; marks node `Closed` when no gaps remain; `false` when node or gap unknown.
     pub fn close_gap(&mut self, node_id: &str, gap: &str) -> bool {
         if let Some(node) = self.nodes.get_mut(node_id) {
             if let Some(pos) = node.gaps.iter().position(|g| g == gap) {
@@ -164,6 +173,7 @@ impl HypothesisGraph {
         }
     }
 
+    /// Reframes the node and returns the new revision id; `None` when the node is unknown.
     pub fn create_revision(
         &mut self,
         node_id: &str,
@@ -179,6 +189,7 @@ impl HypothesisGraph {
         }
     }
 
+    /// Looks up two revisions by id, returning both for comparison; `None` when either is missing.
     pub fn diff_revisions(
         &self,
         rev1_id: &str,
@@ -189,6 +200,7 @@ impl HypothesisGraph {
         Some((r1, r2))
     }
 
+    /// Subscribes `agent_id` to updates on node `node_id`.
     pub fn subscribe_updates(&mut self, node_id: &str, agent_id: &str) {
         self.subscribers
             .entry(node_id.to_string())
@@ -196,16 +208,19 @@ impl HypothesisGraph {
             .push(agent_id.to_string());
     }
 
+    /// Number of nodes in the graph.
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
+    /// Number of recorded revisions.
     pub fn revision_count(&self) -> usize {
         self.revisions.len()
     }
 }
 
 impl HypothesisNode {
+    /// Creates a hypothesis node with `statement`, authored by `agent_id`, in `Proposed` status.
     pub fn new(id: &str, statement: &str, agent_id: &str) -> Self {
         Self {
             id: id.to_string(),

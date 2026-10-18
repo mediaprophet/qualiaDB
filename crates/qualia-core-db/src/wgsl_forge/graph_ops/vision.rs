@@ -137,6 +137,7 @@ fn {entry}(@builtin(global_invocation_id) gid: vec3<u32>) {{
 
 // ── CPU oracles (same math as qualia_vision::ops) ────────────────────────────
 
+/// CPU 2D max-pool reference.
 pub fn max_pool2d_cpu(
     input: &[f32],
     c: usize,
@@ -168,6 +169,7 @@ pub fn max_pool2d_cpu(
     Ok(out)
 }
 
+/// CPU 2D resize reference.
 pub fn resize2d_cpu(
     input: &[f32],
     c: usize,
@@ -190,6 +192,7 @@ pub fn resize2d_cpu(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// `?::conv2d_cpu`.
 pub fn conv2d_cpu(
     input: &[f32],
     c_in: usize,

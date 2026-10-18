@@ -14,6 +14,7 @@ const PARAM_SLOT: wgpu::BufferAddress = 256;
 
 impl QTensorEngine {
     #[cfg(not(target_arch = "wasm32"))]
+    /// Async dispatch: attention-kv-preproject-fused.
     pub(crate) fn dispatch_attention_kv_preproject_fused(
         &self,
         hidden: &[f32],

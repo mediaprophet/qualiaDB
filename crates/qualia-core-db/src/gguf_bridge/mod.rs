@@ -50,6 +50,7 @@ pub struct QTensor {
 }
 
 impl QTensor {
+    /// Creates a tensor descriptor from shape, byte offset into the GGUF, and a Q4_K quantization flag.
     pub fn new(shape: Vec<usize>, byte_offset: u64, is_quantized_q4_k: bool) -> Self {
         Self {
             shape,
@@ -58,20 +59,55 @@ impl QTensor {
         }
     }
 
-    /// Maps the exact bytes from the GGUF using the 60-bit pointer.
+    /// Maps the tensor descriptor from a Quin pointer and a parsed `GgufTensorIndex`.
+    /// Resolves the genuine shape, quantization type, and payload offset by looking up
+    /// the tensor by its subject name hash or relative byte offset.
+    pub fn map_from_pointer_with_index(
+        quin: &NQuin,
+        index: &crate::gguf_sharder::GgufTensorIndex,
+    ) -> Option<Self> {
+        use crate::QuinPointerExt;
+
+        let flag = quin.extract_modality_flag();
+        if flag != crate::MODALITY_FLAG_LLM_TENSOR && flag != crate::MODALITY_FLAG_VISION_TENSOR {
+            return None;
+        }
+
+        let offset = quin.extract_byte_offset();
+        let subject_hash = quin.subject;
+
+        for (name_hash, info) in &index.entries {
+            if *name_hash == subject_hash || info.byte_offset == offset {
+                let n_dims = (info.n_dims as usize).min(4);
+                let shape: Vec<usize> = info.dims[..n_dims].iter().map(|&d| d as usize).collect();
+                let is_quantized_q4_k = info.ggml_type == 12 || info.ggml_type == 112;
+                let abs_offset = index.tensor_data_start.saturating_add(info.byte_offset);
+                return Some(Self::new(shape, abs_offset, is_quantized_q4_k));
+            }
+        }
+        None
+    }
+
+    /// Maps the tensor's byte offset from the GGUF via the 60-bit pointer.
+    /// Honestly resolves against the currently mounted resident model if available,
+    /// or fails closed (`None`) if no resident model is loaded or the tensor is not found.
     pub fn map_from_pointer(quin: &NQuin) -> Option<Self> {
         use crate::QuinPointerExt;
 
         let flag = quin.extract_modality_flag();
-        if flag != crate::MODALITY_FLAG_LLM_TENSOR {
-            return None; // Not an LLM tensor
+        if flag != crate::MODALITY_FLAG_LLM_TENSOR && flag != crate::MODALITY_FLAG_VISION_TENSOR {
+            return None;
         }
 
-        let offset = quin.extract_byte_offset();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(mmap) = crate::resident_model::current_resident_mmap() {
+                let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+                return Self::map_from_pointer_with_index(quin, &index);
+            }
+        }
 
-        // Mock parsing the GGUF header at the offset to find shape and quantization
-        // For demonstration, we assume a Q4_K tensor representation.
-        Some(Self::new(vec![4096, 4096], offset, true))
+        None
     }
 }
 
@@ -247,6 +283,7 @@ pub(crate) struct Mc8AttnUniformArena {
 
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 impl Mc8ElemUniformArena {
+    /// Appends `value` to the elementwise uniform arena; returns the assigned slot.
     pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
         debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
         debug_assert!(self.slots < MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS);
@@ -257,6 +294,7 @@ impl Mc8ElemUniformArena {
         byte_off as u32
     }
 
+    /// Uploads the whole arena contents to `buf` via `queue`.
     pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
         if self.slots == 0 {
             return;
@@ -264,6 +302,7 @@ impl Mc8ElemUniformArena {
         queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
 
+    /// Uploads arena contents starting at `base_slot`.
     pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
             return;
@@ -279,6 +318,7 @@ impl Mc8ElemUniformArena {
 
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 impl Mc8AttnUniformArena {
+    /// Appends `value` to the attention uniform arena; returns the assigned slot.
     pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
         debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
         debug_assert!(self.slots < MC8_MAX_ATTN_UNIFORM_SLOTS);
@@ -289,6 +329,7 @@ impl Mc8AttnUniformArena {
         byte_off as u32
     }
 
+    /// Uploads the attention arena to `buf`.
     pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
         if self.slots == 0 {
             return;
@@ -296,6 +337,7 @@ impl Mc8AttnUniformArena {
         queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
 
+    /// Uploads the attention arena starting at `base_slot`.
     pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
             return;
@@ -311,6 +353,7 @@ impl Mc8AttnUniformArena {
 
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 impl Mc8UniformArena {
+    /// Appends `value` to the GEMM uniform arena; returns the assigned slot.
     pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
         debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
         debug_assert!(self.slots < MC8_MAX_GEMM_UNIFORM_SLOTS);
@@ -321,6 +364,7 @@ impl Mc8UniformArena {
         byte_off as u32
     }
 
+    /// Uploads the GEMM arena to `buf`.
     pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
         if self.slots == 0 {
             return;
@@ -328,6 +372,7 @@ impl Mc8UniformArena {
         queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
     }
 
+    /// Uploads the GEMM arena starting at `base_slot`.
     pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
         if self.slots == 0 {
             return;
@@ -339,20 +384,24 @@ impl Mc8UniformArena {
 
 #[cfg(target_arch = "wasm32")]
 impl Mc8ChunkUniformCursors {
+    /// Resets the per-chunk uniform cursor state.
     pub(crate) fn reset(&mut self) {
         self.attn = 0;
         self.elem = 0;
         self.gemm = 0;
     }
 
+    /// Byte offset of the attention uniform region.
     pub(crate) fn attn_base_byte(&self) -> u32 {
         (self.attn * MC8_UNIFORM_ALIGN) as u32
     }
 
+    /// Byte offset of the elementwise uniform region.
     pub(crate) fn elem_base_byte(&self) -> u32 {
         (self.elem * MC8_UNIFORM_ALIGN) as u32
     }
 
+    /// Byte offset of the GEMM uniform region.
     pub(crate) fn gemm_base_byte(&self) -> u32 {
         (self.gemm * MC8_UNIFORM_ALIGN) as u32
     }
@@ -379,6 +428,7 @@ pub(crate) async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
 
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 impl WasmGpuPipeline {
+    /// Starts a WASM compute-pipeline encoding session for `engine`.
     pub(crate) fn begin(engine: &QTensorEngine) -> Self {
         Self {
             encoder: engine
@@ -389,6 +439,7 @@ impl WasmGpuPipeline {
         }
     }
 
+    /// Finishes encoding and returns the command buffer.
     pub(crate) fn finish(self) -> wgpu::CommandBuffer {
         self.encoder.finish()
     }
@@ -429,6 +480,7 @@ pub struct KvCacheLayout {
 }
 
 impl KvCacheLayout {
+    /// Derives the KV-cache ring layout from GGUF hyperparameters; `None` when fields needed are absent/zero.
     pub fn from_hyperparams(h: &crate::gguf_sharder::GgufHyperparams) -> Option<Self> {
         // W5b Phase 4b: sparse-dictionary KV takes precedence over int8/f32 — but only when its toggle is
         // on AND a certified dictionary is installed whose head_dim matches this model. Otherwise it
@@ -529,11 +581,13 @@ impl KvCacheLayout {
     }
 
     #[inline]
+    /// Ring-buffer slot for `token_idx` modulo capacity.
     pub fn ring_slot(&self, token_idx: u32) -> u32 {
         token_idx % self.max_context
     }
 
     #[inline]
+    /// Flat K-cache index for `(layer, slot, kv_head, dim)`.
     pub fn k_index(&self, layer: u32, slot: u32, kv_head: u32, dim: u32) -> usize {
         let base = layer as usize * self.layer_stride as usize
             + slot as usize * self.slot_kv_elems as usize * 2;
@@ -541,6 +595,7 @@ impl KvCacheLayout {
     }
 
     #[inline]
+    /// Flat V-cache index for `(layer, slot, kv_head, dim)`.
     pub fn v_index(&self, layer: u32, slot: u32, kv_head: u32, dim: u32) -> usize {
         let k_base = layer as usize * self.layer_stride as usize
             + slot as usize * self.slot_kv_elems as usize * 2;
@@ -988,11 +1043,13 @@ async fn mc8_cpu_l0_attn_out(
 // --- PHASE 1 WASM OOB DIAGNOSTIC INSTRUMENTATION (remove once the trap is fixed) ---
 #[cfg(target_arch = "wasm32")]
 #[inline]
+/// Emits a log line to the WASM console (or no-op off-wasm).
 pub(crate) fn wlog(s: &str) {
     web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(s));
 }
 #[cfg(not(target_arch = "wasm32"))]
 #[inline]
+/// Emits a log line to the WASM console (or no-op off-wasm).
 pub(crate) fn wlog(s: &str) {
     log::warn!("{s}");
 }

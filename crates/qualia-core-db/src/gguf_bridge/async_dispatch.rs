@@ -123,6 +123,7 @@ impl QTensorEngine {
         }
     }
 
+    /// Decodes `lexicon_bound`; fails closed on malformed input.
     pub fn decode_lexicon_bound(&self, _logits: &[f32], valid_lexicon_ids: &[u64]) -> u64 {
         if valid_lexicon_ids.is_empty() {
             0
@@ -132,6 +133,7 @@ impl QTensorEngine {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: gemm-raw-into.
     pub(crate) async fn dispatch_gemm_raw_into_async(
         &self,
         info: &GgufTensorInfo,
@@ -363,6 +365,7 @@ impl QTensorEngine {
         false
     }
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: gemm-into.
     pub async fn dispatch_gemm_into_async(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -393,6 +396,7 @@ impl QTensorEngine {
             .await
     }
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: attention-layer.
     pub(crate) async fn dispatch_attention_layer_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -531,6 +535,7 @@ impl QTensorEngine {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Async dispatch: attention-pass.
     pub(crate) async fn dispatch_attention_pass_async(
         &self,
         hidden: &[f32],
@@ -717,6 +722,7 @@ impl QTensorEngine {
         false
     }
     #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
+    /// Async dispatch: attention-q-ffn-token.
     pub(crate) async fn dispatch_attention_q_ffn_token_async(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,

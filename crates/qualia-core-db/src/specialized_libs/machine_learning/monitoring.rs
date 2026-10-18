@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 impl MLPerformanceMonitor {
+    /// Creates a monitor with zeroed inference/training/system metrics.
     pub fn new() -> Self {
         Self {
             inference_metrics: InferenceMetrics::new(),
@@ -16,6 +17,7 @@ impl MLPerformanceMonitor {
         }
     }
 
+    /// Snapshot of aggregated `MLPerformanceMetrics`.
     pub fn get_metrics(&self) -> MLPerformanceMetrics {
         MLPerformanceMetrics {
             inference_metrics: self.inference_metrics.clone(),
@@ -31,6 +33,7 @@ impl MLPerformanceMonitor {
 }
 
 impl InferenceMetrics {
+    /// Creates zeroed `InferenceMetrics`.
     pub fn new() -> Self {
         Self {
             total_requests: 0,
@@ -43,6 +46,7 @@ impl InferenceMetrics {
 }
 
 impl SystemTrainingMetrics {
+    /// Creates zeroed `SystemTrainingMetrics`.
     pub fn new() -> Self {
         Self {
             total_training_jobs: 0,
@@ -55,6 +59,7 @@ impl SystemTrainingMetrics {
 }
 
 impl SystemMetrics {
+    /// Creates zeroed `SystemMetrics`.
     pub fn new() -> Self {
         Self {
             cpu_utilization: 0.0,
@@ -67,6 +72,7 @@ impl SystemMetrics {
 }
 
 impl ModelMetrics {
+    /// Creates zeroed `ModelMetrics`.
     pub fn new() -> Self {
         Self {
             total_models: 0,
@@ -79,6 +85,7 @@ impl ModelMetrics {
 }
 
 impl ResourceUtilization {
+    /// Creates zeroed `ResourceUtilization`.
     pub fn new() -> Self {
         Self {
             cpu: 0.0,
@@ -93,6 +100,7 @@ impl ResourceUtilization {
 // Supporting implementations for Model, TrainingJob, etc.
 
 impl Model {
+    /// Creates a default `Model` descriptor.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -106,6 +114,7 @@ impl Model {
 }
 
 impl ModelArchitecture {
+    /// Creates an empty `ModelArchitecture` (no layers).
     pub fn new() -> Self {
         Self {
             layers: vec![LayerInfo::new()],
@@ -118,6 +127,7 @@ impl ModelArchitecture {
 }
 
 impl LayerInfo {
+    /// Creates a default `LayerInfo`.
     pub fn new() -> Self {
         Self {
             layer_id: "layer_1".to_string(),
@@ -131,6 +141,7 @@ impl LayerInfo {
 }
 
 impl LayerConnection {
+    /// Creates a default `LayerConnection`.
     pub fn new() -> Self {
         Self {
             source_layer: "layer_1".to_string(),
@@ -141,6 +152,7 @@ impl LayerConnection {
 }
 
 impl ModelMetadata {
+    /// Creates a default `ModelMetadata`.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -158,6 +170,7 @@ impl ModelMetadata {
 }
 
 impl ModelParameters {
+    /// Creates default `ModelParameters`.
     pub fn new() -> Self {
         Self {
             weight_count: 1000,
@@ -170,6 +183,7 @@ impl ModelParameters {
 }
 
 impl ModelPerformance {
+    /// Creates zeroed `ModelPerformance`.
     pub fn new() -> Self {
         Self {
             inference_latency: 10.0,
@@ -182,6 +196,7 @@ impl ModelPerformance {
 }
 
 impl TrainingJob {
+    /// Creates a default `TrainingJob`.
     pub fn new() -> Self {
         Self {
             job_id: "job_1".to_string(),
@@ -195,6 +210,7 @@ impl TrainingJob {
 }
 
 impl TrainingConfig {
+    /// Creates a default `TrainingConfig`.
     pub fn new() -> Self {
         Self {
             epochs: 10,
@@ -209,6 +225,7 @@ impl TrainingConfig {
 }
 
 impl TrainingMetrics {
+    /// Creates zeroed `TrainingMetrics`.
     pub fn new() -> Self {
         Self {
             total_training_jobs: 0,
@@ -222,6 +239,7 @@ impl TrainingMetrics {
 }
 
 impl ResultMetadata {
+    /// Creates a default `ResultMetadata`.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),

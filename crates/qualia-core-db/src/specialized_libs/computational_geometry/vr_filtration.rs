@@ -99,11 +99,13 @@ impl Ord for VrSimplex {
 
 impl VrSimplex {
     #[inline]
+    /// `VrSimplex::birth_f64`.
     pub fn birth_f64(&self) -> f64 {
         f64::from_bits(self.birth)
     }
 
     #[inline]
+    /// `VrSimplex::vertex`.
     pub fn vertex(&self, i: usize) -> u32 {
         match i {
             0 => self.v0,

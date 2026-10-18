@@ -23,6 +23,7 @@ impl ResourceBudget {
         io: 0,
     };
 
+    /// Checked budget add; `QdnfError` on overflow.
     pub fn saturating_add(self, other: Self) -> Result<Self, QdnfError> {
         Ok(Self {
             bytes: self
@@ -86,10 +87,12 @@ impl ChargeRef {
 
 impl ReservationHandle {
     #[inline]
+    /// Generation.
     pub const fn generation(&self) -> Generation {
         self.generation
     }
 
+    /// `ReservationHandle::as_ref`.
     pub(crate) fn as_ref(&self) -> ChargeRef {
         ChargeRef {
             slot: self.slot,
@@ -97,6 +100,7 @@ impl ReservationHandle {
         }
     }
 
+    /// Wraps a charge reference as a handle.
     pub(crate) fn from_ref(r: ChargeRef) -> Self {
         Self {
             slot: r.slot,
@@ -118,6 +122,7 @@ pub struct ReservationLedger {
 }
 
 impl ReservationLedger {
+    /// Creates a default `ReservationLedger`.
     pub const fn new(
         host_cap: ResourceBudget,
         cell_cap: ResourceBudget,
@@ -202,6 +207,7 @@ impl ReservationLedger {
         })
     }
 
+    /// Releases `handle`'s reservation.
     pub fn release(&mut self, handle: ReservationHandle) -> Result<(), QdnfError> {
         let i = handle.slot as usize;
         if i >= HANDLE_SLOTS {
@@ -249,14 +255,17 @@ impl ReservationLedger {
         Ok(())
     }
 
+    /// Aggregate usage across admission scopes.
     pub fn used(&self) -> AdmissionScopes {
         self.used
     }
 
+    /// Transient-scope usage.
     pub fn transient_used(&self) -> ResourceBudget {
         self.transient_used
     }
 
+    /// Host bytes remaining under budget.
     pub fn host_remaining_bytes(&self) -> u64 {
         self.host_cap.bytes.saturating_sub(self.used.host.bytes)
     }

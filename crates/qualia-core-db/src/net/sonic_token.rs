@@ -24,11 +24,13 @@ pub enum SonicEventType {
 
 impl SonicToken {
     #[inline]
+    /// Empty token.
     pub const fn empty() -> Self {
         Self { raw: 0 }
     }
 
     #[inline]
+    /// Packs fields into a token.
     pub fn pack(
         delta_time: u8,
         event_type: SonicEventType,
@@ -50,11 +52,13 @@ impl SonicToken {
     }
 
     #[inline]
+    /// Delta time.
     pub fn delta_time(self) -> u8 {
         self.raw as u8
     }
 
     #[inline]
+    /// Event type.
     pub fn event_type(self) -> SonicEventType {
         match (self.raw >> 8) & 0x0f {
             1 => SonicEventType::NoteOff,
@@ -65,26 +69,31 @@ impl SonicToken {
     }
 
     #[inline]
+    /// MIDI channel.
     pub fn channel(self) -> u8 {
         ((self.raw >> 12) & 0x0f) as u8
     }
 
     #[inline]
+    /// Note number.
     pub fn note(self) -> u8 {
         ((self.raw >> 16) & 0xff) as u8
     }
 
     #[inline]
+    /// Velocity.
     pub fn velocity(self) -> u8 {
         ((self.raw >> 24) & 0xff) as u8
     }
 
     #[inline]
+    /// Tensor index.
     pub fn tensor_index(self) -> u32 {
         ((self.raw >> 32) & 0xffff) as u32
     }
 
     #[inline]
+    /// Flags.
     pub fn flags(self) -> u16 {
         (self.raw >> 48) as u16
     }
@@ -112,6 +121,7 @@ impl SonicToken {
     }
 
     #[inline]
+    /// Builds a parametric-pulse token.
     pub fn parametric_pulse(tensor_index: u32, velocity: u8) -> Self {
         Self::pack(
             0,

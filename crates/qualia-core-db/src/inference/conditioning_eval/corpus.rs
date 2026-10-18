@@ -24,6 +24,7 @@ pub struct TaskManifest {
 }
 
 impl TaskManifest {
+    /// Creates a default `TaskManifest`.
     pub fn new(manifest_id: impl Into<String>, version: u32) -> Self {
         Self {
             manifest_id: manifest_id.into(),
@@ -32,10 +33,12 @@ impl TaskManifest {
         }
     }
 
+    /// Appends a task to the manifest.
     pub fn add_task(&mut self, task: TaskItem) {
         self.tasks.push(task);
     }
 
+    /// Iterates held-out tasks.
     pub fn held_out_tasks(&self) -> impl Iterator<Item = &TaskItem> {
         self.tasks
             .iter()

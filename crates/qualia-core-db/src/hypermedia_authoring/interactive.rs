@@ -60,6 +60,7 @@ pub enum TriggerEvent {
 }
 
 impl HbbTVApp {
+    /// Creates an HbbTV app shell with no pages.
     pub fn new(id: &str, name: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -70,6 +71,7 @@ impl HbbTVApp {
         }
     }
 
+    /// Appends an interactive page.
     pub fn add_page(&mut self, page: InteractivePage) {
         if self.current_page.is_none() {
             self.current_page = Some(page.id.clone());
@@ -77,6 +79,7 @@ impl HbbTVApp {
         self.pages.insert(page.id.clone(), page);
     }
 
+    /// Switches the active page to `page_id`; `false` when unknown.
     pub fn navigate_to(&mut self, page_id: &str) -> bool {
         if self.pages.contains_key(page_id) {
             self.current_page = Some(page_id.to_string());
@@ -86,14 +89,17 @@ impl HbbTVApp {
         }
     }
 
+    /// Sets an app-level `key`/`value` state pair.
     pub fn set_state(&mut self, key: &str, value: &str) {
         self.state.insert(key.to_string(), value.to_string());
     }
 
+    /// Reads an app-level state value.
     pub fn get_state(&self, key: &str) -> Option<&String> {
         self.state.get(key)
     }
 
+    /// Number of pages.
     pub fn page_count(&self) -> usize {
         self.pages.len()
     }
@@ -110,6 +116,7 @@ pub struct SecondScreen {
 }
 
 impl SecondScreen {
+    /// Creates a second-screen companion for `device_id`.
     pub fn new(id: &str, device_id: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -120,11 +127,13 @@ impl SecondScreen {
         }
     }
 
+    /// Syncs the companion to `content_id` at `offset` seconds.
     pub fn sync_to_content(&mut self, content_id: &str, offset: f64) {
         self.synced_content = content_id.to_string();
         self.sync_offset = offset;
     }
 
+    /// Adds a key/value interactive layer.
     pub fn add_interactive_layer(&mut self, key: &str, value: &str) {
         self.interactive_layer
             .insert(key.to_string(), value.to_string());
@@ -156,6 +165,7 @@ pub struct SocialPost {
 }
 
 impl InteractiveStream {
+    /// Creates a stream bound to `content_id`.
     pub fn new(id: &str, content_id: &str) -> Self {
         Self {
             id: id.to_string(),
@@ -165,14 +175,17 @@ impl InteractiveStream {
         }
     }
 
+    /// Appends a timed `StreamTrigger`.
     pub fn add_trigger(&mut self, trigger: StreamTrigger) {
         self.triggers.push(trigger);
     }
 
+    /// Appends a social post annotation.
     pub fn add_social_post(&mut self, post: SocialPost) {
         self.social_feed.push(post);
     }
 
+    /// Triggers whose time falls within `time` ± `window` seconds.
     pub fn triggers_at(&self, time: f64, window: f64) -> Vec<&StreamTrigger> {
         self.triggers
             .iter()

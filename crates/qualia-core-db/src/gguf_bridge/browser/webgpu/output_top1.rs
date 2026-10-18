@@ -17,6 +17,7 @@ pub(crate) struct BrowserTop1Plan {
 }
 
 impl BrowserTop1Plan {
+    /// Plans chunked top-1 readback for `vocab_size`; `None` when over `max_chunks`.
     pub(crate) fn new(vocab_size: usize, max_chunks: u32) -> Option<Self> {
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let chunks = if max_chunks == 0 {
@@ -39,14 +40,17 @@ impl BrowserTop1Plan {
         })
     }
 
+    /// Number of readback chunks.
     pub(crate) fn chunks(self) -> usize {
         self.chunks
     }
 
+    /// Rows in chunk `chunk`.
     pub(crate) fn rows(self, chunk: usize) -> usize {
         Self::rows_for(self.vocab_size, chunk)
     }
 
+    /// Total readback bytes.
     pub(crate) fn readback_bytes(self) -> u64 {
         (self.total_candidates * 2 * core::mem::size_of::<u32>()) as u64
     }
@@ -69,6 +73,7 @@ impl BrowserTop1Plan {
 }
 
 impl QTensorEngine {
+    /// Readback size for `vocab_size`, or `None` when unplannable.
     pub(crate) fn browser_top1_readback_bytes(&self, vocab_size: usize) -> Option<u32> {
         self.output_topk_pipeline.as_ref()?;
         self.mc8_logits_resident_buf.as_ref()?;
@@ -76,6 +81,7 @@ impl QTensorEngine {
         u32::try_from(plan.readback_bytes()).ok()
     }
 
+    /// Allocates buffers for `plan`; `false` on failure.
     pub(crate) fn prepare_browser_top1(&self, plan: BrowserTop1Plan) -> bool {
         let Some(params) = self.topk_params_buf.as_ref() else {
             return false;
@@ -100,6 +106,7 @@ impl QTensorEngine {
         true
     }
 
+    /// Encodes one chunk of the top-1 pass.
     pub(crate) fn encode_browser_top1_chunk(
         &self,
         encoder: &mut wgpu::CommandEncoder,
@@ -171,6 +178,7 @@ impl QTensorEngine {
         true
     }
 
+    /// Reads `browser-top1`.
     pub(crate) async fn read_browser_top1(
         &self,
         staging: &wgpu::Buffer,

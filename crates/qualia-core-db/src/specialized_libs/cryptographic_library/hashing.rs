@@ -125,6 +125,7 @@ pub struct HashPerformanceMetrics {
     pub cache_hit_rate: f64,
 }
 impl HashEngine {
+    /// Creates a hash engine with default storage/audit components.
     pub fn new() -> Self {
         Self {
             hash_algorithms: HashMap::new(),
@@ -133,6 +134,7 @@ impl HashEngine {
         }
     }
 
+    /// Initializes storage and optimizer; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.hash_storage.initialize()?;
         self.performance_optimizer.initialize()?;
@@ -154,6 +156,7 @@ impl HashEngine {
         self.hash_algorithms.values()
     }
 
+    /// Computes `hash`.
     pub fn compute_hash(
         &mut self,
         algorithm: &str,
@@ -217,6 +220,7 @@ impl HashEngine {
 }
 
 impl HashStorage {
+    /// Creates empty hash-result storage.
     pub fn new() -> Self {
         Self {
             hashes: HashMap::new(),
@@ -225,10 +229,12 @@ impl HashStorage {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
 
+    /// Stores a `HashResult`; error at capacity.
     pub fn store_hash(&mut self, hash: HashResult) -> Result<(), CryptographicError> {
         self.hashes.insert(hash.hash_id.clone(), hash);
         Ok(())
@@ -256,6 +262,7 @@ impl HashStorage {
 }
 
 impl HashAuditLog {
+    /// Creates an empty audit log.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -306,6 +313,7 @@ impl HashAuditLog {
 }
 
 impl HashPerformanceOptimizer {
+    /// Creates a hash performance optimizer.
     pub fn new() -> Self {
         Self {
             optimization_strategies: vec![
@@ -321,6 +329,7 @@ impl HashPerformanceOptimizer {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -357,6 +366,7 @@ impl HashPerformanceOptimizer {
 }
 
 impl HashPerformanceMetrics {
+    /// Creates zeroed performance metrics.
     pub fn new() -> Self {
         Self {
             average_hash_time: 0.0,

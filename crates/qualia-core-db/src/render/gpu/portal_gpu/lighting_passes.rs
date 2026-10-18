@@ -3,6 +3,7 @@
 use super::super::{ao, create_mesh_frame_bind, motor_to_mat4_col, shadows, PortalGpu};
 
 impl PortalGpu {
+    /// `sort_transparent_draws`.
     pub(super) fn sort_transparent_draws(&mut self) {
         let Some(mesh) = self.mesh.as_mut() else {
             return;
@@ -47,6 +48,7 @@ impl PortalGpu {
             });
     }
 
+    /// `record_sun_shadow_pass`.
     pub(super) fn record_sun_shadow_pass(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let (Some(target), Some(mesh)) = (self.shadow_target.as_ref(), self.mesh.as_ref()) else {
             return;
@@ -115,6 +117,7 @@ impl PortalGpu {
         self.shadow_map_dirty = false;
     }
 
+    /// `rebuild_ao_resources`.
     pub(in crate::render::gpu) fn rebuild_ao_resources(&mut self) {
         // Release old extents before admission so a resize can reuse their reserved bytes.
         self.ao_targets = None;
@@ -157,6 +160,7 @@ impl PortalGpu {
         self.ao_targets = targets;
     }
 
+    /// Writes `ao-uniform`.
     pub(super) fn write_ao_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
         let camera = self
             .camera
@@ -180,6 +184,7 @@ impl PortalGpu {
         self.uniform_belt.advance(&self.device);
     }
 
+    /// `record_ao_pass`.
     pub(super) fn record_ao_pass(&self, encoder: &mut wgpu::CommandEncoder) {
         if self.ao_enabled {
             if let (Some(targets), Some(mesh)) = (self.ao_targets.as_ref(), self.mesh.as_ref()) {

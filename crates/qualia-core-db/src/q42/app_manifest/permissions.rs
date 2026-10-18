@@ -53,6 +53,7 @@ impl PermissionKind {
         }
     }
 
+    /// Stable string form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::ReadLocalState => "read_local_state",
@@ -104,6 +105,7 @@ pub struct PermissionGrant {
 }
 
 impl PermissionGrant {
+    /// `true` when the manifest allows the op.
     pub fn allows(&self, kind: PermissionKind) -> bool {
         self.allowed.contains(&kind)
     }

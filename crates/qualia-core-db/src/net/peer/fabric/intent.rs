@@ -21,6 +21,7 @@ pub struct Purpose {
 }
 
 impl Purpose {
+    /// `Purpose::ordinary`.
     pub const fn ordinary() -> Self {
         Self {
             iri_hash: q_hash("q42:purpose/ordinary"),
@@ -28,6 +29,7 @@ impl Purpose {
         }
     }
 
+    /// `Purpose::clinical`.
     pub const fn clinical() -> Self {
         Self {
             iri_hash: q_hash("q42:purpose/clinical"),
@@ -76,6 +78,7 @@ pub struct ConnectionIntent {
 }
 
 impl ConnectionIntent {
+    /// Creates a default `ConnectionIntent`.
     pub const fn new(
         peer: PeerId,
         purpose: Purpose,
@@ -95,6 +98,7 @@ impl ConnectionIntent {
         }
     }
 
+    /// `ConnectionIntent::expired`.
     pub const fn expired(&self, now_ms: u64) -> bool {
         now_ms >= self.deadline_ms
     }

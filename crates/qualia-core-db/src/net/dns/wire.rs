@@ -117,6 +117,7 @@ pub struct DnsHeader {
 impl DnsHeader {
     pub const SIZE: usize = 12;
 
+    /// Builds a query header with `id` and RD flag.
     pub fn new_query(id: u16, recursion_desired: bool) -> Self {
         let mut flags = 0u16;
         if recursion_desired {
@@ -132,6 +133,7 @@ impl DnsHeader {
         }
     }
 
+    /// Encodes the 12-byte header into `out`; error on short buffer.
     pub fn encode(&self, out: &mut [u8]) -> Result<usize, &'static str> {
         if out.len() < Self::SIZE {
             return Err("buffer too small for DNS header");
@@ -145,6 +147,7 @@ impl DnsHeader {
         Ok(Self::SIZE)
     }
 
+    /// Decodes a 12-byte header; error on truncation.
     pub fn decode(src: &[u8]) -> Result<Self, &'static str> {
         if src.len() < Self::SIZE {
             return Err("buffer too short for DNS header");
@@ -159,14 +162,17 @@ impl DnsHeader {
         })
     }
 
+    /// QR flag — `true` for responses.
     pub fn is_response(&self) -> bool {
         (self.flags & FLAG_QR_RESPONSE) != 0
     }
 
+    /// AD flag.
     pub fn is_authenticated_data(&self) -> bool {
         (self.flags & FLAG_AD_AUTHENTICATED_DATA) != 0
     }
 
+    /// Response code field.
     pub fn rcode(&self) -> u8 {
         (self.flags & RCODE_MASK) as u8
     }

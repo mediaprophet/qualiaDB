@@ -69,6 +69,7 @@ impl Obligation {
         })
     }
 
+    /// Slot index of obligation `op_id`, or `None`.
     pub(crate) fn find_op(&self, op_id: StrongDigest) -> Option<usize> {
         let mut i = 0;
         while i < MAX_OPS {
@@ -80,6 +81,7 @@ impl Obligation {
         None
     }
 
+    /// Inserts an obligation; error at capacity.
     pub(crate) fn insert_op(
         &mut self,
         op_id: StrongDigest,
@@ -101,6 +103,7 @@ impl Obligation {
         Err(QdnfError::Capacity)
     }
 
+    /// Bumps the revision counter.
     pub(crate) fn bump_revision(&mut self) -> Result<(), QdnfError> {
         self.revision = self.revision.checked_add(1).ok_or(QdnfError::Range)?;
         Ok(())

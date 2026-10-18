@@ -328,6 +328,7 @@ pub struct DecodeProxyLine {
     pub execution_path: Option<String>,
 }
 
+/// Parses `decode-proxy-record`.
 pub fn parse_decode_proxy_record(stdout: &str) -> Option<DecodeProxyLine> {
     for line in stdout.lines() {
         let line = line.trim();

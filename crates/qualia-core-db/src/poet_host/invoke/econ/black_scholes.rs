@@ -6,6 +6,7 @@ use crate::specialized_libs::computational_economics::derivatives::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: Black-Scholes option price.
 pub fn price(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let kind = match args::rec_str(args_v, "kind").unwrap_or("call") {
         "put" | "Put" => OptionKind::Put,

@@ -423,6 +423,7 @@ fn shapes_compatible(a: Shape, b: Shape) -> bool {
 /// topological order. Op-classes a backend has not implemented yet use the default
 /// methods, which return an explicit `Err` (never a silent no-op).
 pub trait Lowerer {
+    /// Emits an elementwise op.
     fn elementwise(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
         unsupported("elementwise")
     }
@@ -738,6 +739,7 @@ mod tests {
                 self.0.push("matmul");
                 Ok(())
             }
+            /// Emits an elementwise op.
             fn elementwise(&mut self, _: &GraphNode) -> Result<(), ForgeError> {
                 self.0.push("elementwise");
                 Ok(())

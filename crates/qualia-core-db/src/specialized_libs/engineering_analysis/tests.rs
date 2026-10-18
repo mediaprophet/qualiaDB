@@ -1229,16 +1229,14 @@ fn structural_thermal_facade_solves_conduction() {
     let mut model = prismatic_model(100.0);
     model.materials.get_mut("steel").unwrap().material_properties.thermal_conductivity = 50.0;
     model.boundary_conditions.push(BoundaryCondition {
-        boundary_id: "bc_t0".to_string(),
-        boundary_type: BoundaryType::Temperature,
-        boundary_values: vec![300.0],
-        applied_region: "inlet".to_string(),
+        condition_id: "bc_t0".to_string(),
+        condition_type: BoundaryConditionType::Temperature,
+        condition_value: 300.0,
     });
     model.boundary_conditions.push(BoundaryCondition {
-        boundary_id: "bc_t1".to_string(),
-        boundary_type: BoundaryType::Temperature,
-        boundary_values: vec![400.0],
-        applied_region: "outlet".to_string(),
+        condition_id: "bc_t1".to_string(),
+        condition_type: BoundaryConditionType::Temperature,
+        condition_value: 400.0,
     });
 
     let mut library = EngineeringAnalysisLibrary::new();

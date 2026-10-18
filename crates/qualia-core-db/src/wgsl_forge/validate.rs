@@ -13,6 +13,7 @@ pub struct ValidationReport {
     pub native_tool_validated: Option<String>,
 }
 
+/// Validates `wgsl`.
 pub fn validate_wgsl(source: &str) -> Result<ValidationReport, ForgeError> {
     let module = naga::front::wgsl::parse_str(source)
         .map_err(|error| ForgeError::WgslParse(error.emit_to_string(source)))?;

@@ -8,6 +8,7 @@ pub struct PhysicalAnchor {
 }
 
 impl PhysicalAnchor {
+    /// Creates an anchor binding virtual `(vx,vy,vz)` to physical `id`.
     pub fn new(vx: f64, vy: f64, vz: f64, id: String) -> Self {
         Self {
             virtual_position: (vx, vy, vz),
@@ -27,6 +28,7 @@ pub struct ArDeviceState {
 }
 
 impl ArDeviceState {
+    /// Creates a device state with no pose/anchors.
     pub fn new() -> Self {
         Self {
             camera_pose: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
@@ -36,11 +38,13 @@ impl ArDeviceState {
         }
     }
 
+    /// Updates the 6-DoF pose with `confidence`.
     pub fn update_pose(&mut self, pose: (f64, f64, f64, f64, f64, f64), confidence: f64) {
         self.camera_pose = pose;
         self.tracking_confidence = confidence;
     }
 
+    /// Registers a physical anchor.
     pub fn add_anchor(&mut self, anchor: PhysicalAnchor) {
         self.anchors.push(anchor);
     }

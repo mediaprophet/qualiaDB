@@ -110,6 +110,7 @@ pub struct PrivacyBudget {
 }
 
 impl StatisticalPrivacyEngine {
+    /// Creates a privacy engine with the default ε budget.
     pub fn new() -> Self {
         Self {
             fiduciary_crypto: Arc::new(Mutex::new(FiduciaryCrypto::new())),
@@ -127,12 +128,14 @@ impl StatisticalPrivacyEngine {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.differential_privacy.initialize()?;
         self.secure_aggregation.initialize()?;
         Ok(())
     }
 
+    /// Adds Laplace(0, sensitivity/ε) noise with fixed ε=1.0, decrementing the budget. Real OS-entropy noise; fails closed when entropy unavailable. Note: ε composition across queries is tracked separately in `PrivacyAccountant`.
     pub fn add_laplace_noise(
         &mut self,
         value: f64,
@@ -150,6 +153,7 @@ impl StatisticalPrivacyEngine {
         Ok((noisy_value, epsilon))
     }
 
+    /// Adds per-bin Laplace noise to a histogram (fixed ε=1.0, sensitivity 1.0); clamps bins to ≥0.
     pub fn add_histogram_noise(
         &mut self,
         counts: &[u32],
@@ -383,6 +387,7 @@ impl StatisticalPrivacyEngine {
 }
 
 impl DifferentialPrivacy {
+    /// Creates a DP mechanism with default parameters.
     pub fn new() -> Self {
         Self {
             noise_mechanisms: vec![NoiseMechanism::Laplace, NoiseMechanism::Gaussian],
@@ -403,6 +408,7 @@ impl DifferentialPrivacy {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.sensitivity_analyzer.initialize()?;
         Ok(())
@@ -454,6 +460,7 @@ impl DifferentialPrivacy {
 }
 
 impl SensitivityAnalyzer {
+    /// Creates a sensitivity analyzer.
     pub fn new() -> Self {
         Self {
             sensitivity_functions: HashMap::new(),
@@ -461,6 +468,7 @@ impl SensitivityAnalyzer {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
@@ -550,6 +558,7 @@ impl SensitivityAnalyzer {
 }
 
 impl SecureAggregation {
+    /// Creates a secure-aggregation coordinator.
     pub fn new() -> Self {
         Self {
             aggregation_protocols: vec![
@@ -564,6 +573,7 @@ impl SecureAggregation {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }

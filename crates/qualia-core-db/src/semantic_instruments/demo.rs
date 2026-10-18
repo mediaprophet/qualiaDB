@@ -104,6 +104,7 @@ pub fn demo_catalog() -> &'static [DemoSeed] {
     ]
 }
 
+/// Demo seed by slug.
 pub fn seed_by_slug(slug: &str) -> Option<&'static DemoSeed> {
     demo_catalog().iter().find(|s| s.slug == slug)
 }

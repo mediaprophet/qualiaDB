@@ -107,6 +107,7 @@ pub struct SettlementReceipt {
     pub amount: u64,
 }
 
+/// Builds the settlement receipt.
 pub fn settlement_receipt(ob: &Obligation, op_id: StrongDigest, amount: u64) -> SettlementReceipt {
     SettlementReceipt {
         obligation_id: ob.id,

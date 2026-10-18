@@ -36,6 +36,7 @@ pub struct GpuInstanceRecord {
 }
 
 impl GpuInstanceRecord {
+    /// Creates a default `GpuInstanceRecord`.
     pub fn new(world_from_local: [[f32; 4]; 4], semantic_id: u64) -> Self {
         let columns = [
             [
@@ -91,6 +92,7 @@ impl GpuInstanceRecord {
         }
     }
 
+    /// `GpuInstanceRecord::semantic_id`.
     pub const fn semantic_id(self) -> u64 {
         self.semantic_id_words[0] as u64 | ((self.semantic_id_words[1] as u64) << 32)
     }

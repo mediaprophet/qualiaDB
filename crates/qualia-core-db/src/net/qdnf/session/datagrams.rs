@@ -27,6 +27,7 @@ pub enum DeliveryStage {
 }
 
 impl Datagram {
+    /// Live datagrams at `unix_ts`.
     pub fn live_at(&self, now_unix: u64) -> Result<(), QdnfError> {
         if now_unix >= self.expires_unix {
             Err(QdnfError::Expired)
@@ -47,6 +48,7 @@ pub const fn datagrams_are_retransmitted() -> bool {
     false
 }
 
+/// `Datagram::datagram_retransmit_reuses_packet_number`.
 pub const fn datagram_retransmit_reuses_packet_number() -> bool {
     false
 }
@@ -62,12 +64,14 @@ pub struct DatagramInbox {
 }
 
 impl DatagramInbox {
+    /// Creates a default `DatagramInbox`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_DATAGRAMS],
         }
     }
 
+    /// Enqueues a datagram.
     pub fn enqueue(&mut self, d: Datagram, now_unix: u64) -> Result<(), QdnfError> {
         receive(&d, now_unix)?;
         let mut i = 0usize;

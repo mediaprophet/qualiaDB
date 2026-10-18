@@ -35,6 +35,7 @@ impl Drop for BenchmarkDecodeBudgetGuard {
     }
 }
 
+/// RAII guard installing a temporary decode budget; restores the previous value on drop.
 pub fn benchmark_decode_budget_scope(n: u32) -> BenchmarkDecodeBudgetGuard {
     let scope = BENCHMARK_DECODE_SCOPE
         .lock()
@@ -150,11 +151,13 @@ pub fn ternary_ffn_enabled() -> bool {
 static ATTN_PREPROJECT: AtomicBool = AtomicBool::new(true);
 
 #[inline]
+/// Enables/disables the attention pre-projection bench toggle (atomic).
 pub fn set_attention_preproject(on: bool) {
     ATTN_PREPROJECT.store(on, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current attention pre-projection toggle state.
 pub fn attention_preproject_enabled() -> bool {
     // W5b Phase 4b: the dict-coded write happens in `write_kv_head` (the attention pass); the fused
     // pre-projection bypasses it, so force it off in dict mode.
@@ -175,11 +178,13 @@ pub fn attention_preproject_enabled() -> bool {
 static ATTN_O_FUSE: AtomicBool = AtomicBool::new(true);
 
 #[inline]
+/// Enables/disables the attention-o fusion bench toggle.
 pub fn set_attention_o_fuse(on: bool) {
     ATTN_O_FUSE.store(on, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current attention-o fusion state.
 pub fn attention_o_fuse_enabled() -> bool {
     // W5b Phase 4b: the fused Q+O tail reads K/V from the cache on the GPU path; keep the plain
     // read_k/read_v (dict-aware) path in dict mode.
@@ -198,11 +203,13 @@ pub fn attention_o_fuse_enabled() -> bool {
 static FORGE_ATTENTION: AtomicBool = AtomicBool::new(false);
 
 #[inline]
+/// Enables/disables the forge-attention bench toggle.
 pub fn set_forge_attention(on: bool) {
     FORGE_ATTENTION.store(on, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current forge-attention state.
 pub fn forge_attention_enabled() -> bool {
     match std::env::var("QUALIA_LLM_FORGE_ATTENTION").ok().as_deref() {
         Some("1") | Some("true") => true,
@@ -492,6 +499,7 @@ pub fn ffn_fusion_enabled() -> bool {
 static FFN_FUSION_IN_RESIDENT: AtomicBool = AtomicBool::new(false);
 
 #[inline]
+/// Sets `ffn-fusion-in-resident`.
 pub fn set_ffn_fusion_in_resident(on: bool) {
     FFN_FUSION_IN_RESIDENT.store(on, Ordering::Relaxed);
 }
@@ -669,11 +677,13 @@ pub fn cpu_attention_enabled() -> bool {
 static PREFIX_CACHE_ENABLED: AtomicBool = AtomicBool::new(true);
 
 #[inline]
+/// Sets the prefix-cache flag (atomic) — F22: previously a no-op whose getter always read `true`.
 pub fn set_prefix_cache_enabled(on: bool) {
     PREFIX_CACHE_ENABLED.store(on, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current prefix-cache flag — real atomic read since F22 fix.
 pub fn prefix_cache_enabled() -> bool {
     PREFIX_CACHE_ENABLED.load(Ordering::Relaxed)
 }
@@ -682,11 +692,13 @@ pub fn prefix_cache_enabled() -> bool {
 static KV_POOL_BUDGET_MB: AtomicU32 = AtomicU32::new(0);
 
 #[inline]
+/// Sets the KV-pool budget in MiB.
 pub fn set_kv_pool_budget_mb(mb: u32) {
     KV_POOL_BUDGET_MB.store(mb, Ordering::Relaxed);
 }
 
 #[inline]
+/// Configured KV-pool budget in MiB.
 pub fn kv_pool_budget_mb() -> u32 {
     KV_POOL_BUDGET_MB.load(Ordering::Relaxed)
 }
@@ -695,11 +707,13 @@ pub fn kv_pool_budget_mb() -> u32 {
 static PREFILL_CHUNK_SIZE_OVERRIDE: AtomicU32 = AtomicU32::new(0);
 
 #[inline]
+/// Sets the prefill chunk-size override.
 pub fn set_prefill_chunk_size_override(sz: u32) {
     PREFILL_CHUNK_SIZE_OVERRIDE.store(sz, Ordering::Relaxed);
 }
 
 #[inline]
+/// Current prefill chunk-size override.
 pub fn prefill_chunk_size_override() -> u32 {
     PREFILL_CHUNK_SIZE_OVERRIDE.load(Ordering::Relaxed)
 }
@@ -707,6 +721,7 @@ pub fn prefill_chunk_size_override() -> u32 {
 // ── Prompt precision mode setting ─────────────────────────────────────────────
 static PROMPT_PRECISION_MODE: Mutex<String> = Mutex::new(String::new());
 
+/// Sets the prompt precision mode string.
 pub fn set_prompt_precision_mode(mode: &str) {
     if let Ok(mut m) = PROMPT_PRECISION_MODE.lock() {
         m.clear();
@@ -714,6 +729,7 @@ pub fn set_prompt_precision_mode(mode: &str) {
     }
 }
 
+/// Current prompt precision mode.
 pub fn prompt_precision_mode() -> String {
     PROMPT_PRECISION_MODE
         .lock()

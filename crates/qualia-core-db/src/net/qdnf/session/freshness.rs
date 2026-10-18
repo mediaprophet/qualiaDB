@@ -45,6 +45,7 @@ pub struct FreshnessTable {
 }
 
 impl FreshnessTable {
+    /// Creates a default `FreshnessTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_PENDING],

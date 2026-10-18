@@ -2,6 +2,7 @@
 
 use super::analysis::{AnalysisError, Vector};
 
+/// Canonical Poisson bracket of two phase-space functions.
 pub fn canonical_poisson_bracket<const N: usize>(
     df_dq: Vector<N>,
     df_dp: Vector<N>,
@@ -18,6 +19,7 @@ pub struct PhaseState<const N: usize> {
     pub p: Vector<N>,
 }
 
+/// One Stormer-Verlet symplectic step.
 pub fn stormer_verlet_step<const N: usize, F, G>(
     state: &mut PhaseState<N>,
     step: f64,
@@ -50,6 +52,7 @@ pub struct InvariantDrift {
     pub relative_drift: f64,
 }
 
+/// Relative drift of an invariant between `initial` and `final_value`.
 pub fn invariant_drift(initial: f64, final_value: f64) -> Result<InvariantDrift, AnalysisError> {
     if !initial.is_finite() || !final_value.is_finite() {
         return Err(AnalysisError::NonFinite);

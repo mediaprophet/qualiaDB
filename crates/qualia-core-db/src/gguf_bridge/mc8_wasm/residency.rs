@@ -3,11 +3,13 @@ use super::super::*;
 use std::sync::Arc;
 
 impl QTensorEngine {
+    /// Flushes pending writes to the pipeline.
     pub(crate) fn mc8_flush(&self, pipeline: &mut WasmGpuPipeline) {
         let finished = std::mem::replace(pipeline, WasmGpuPipeline::begin(self));
         self.gpu_queue().submit(Some(finished.finish()));
     }
 
+    /// Buffer backing `role`.
     pub(crate) fn mc8_weight_role_buf(&self, role: Mc8WeightRole) -> &wgpu::Buffer {
         let arena = self.mc8_weight_arena.as_ref().expect("mc8 weight arena");
         match role {
@@ -21,6 +23,7 @@ impl QTensorEngine {
         }
     }
 
+    /// Writes `raw` into the `role` buffer, bounded by `max_bytes`.
     pub(crate) fn write_weight_role(&self, role: Mc8WeightRole, raw: &[u8], max_bytes: usize) {
         let weight_buf = self.mc8_weight_role_buf(role);
         let upload = if raw.len() <= max_bytes {
@@ -368,6 +371,7 @@ impl QTensorEngine {
         Ok(())
     }
 
+    /// `true` when all resident weight buffers are allocated.
     pub(crate) fn mc8_buffers_ready(&self) -> bool {
         self.gemm_input_buf.is_some()
             && self.gemm_output_buf.is_some()
@@ -381,6 +385,7 @@ impl QTensorEngine {
             && self.mc8_weight_arena.is_some()
     }
 
+    /// Uploads normalization weights to their resident buffers.
     pub(crate) fn upload_norm_weights(
         &self,
         mmap: &[u8],

@@ -8,6 +8,7 @@ use super::super::{
 use crate::render::telemetry::SystemTelemetry;
 
 impl PortalGpu {
+    /// Renders the frame.
     pub fn render(&mut self, time: f32, telemetry: &SystemTelemetry) -> Result<(), String> {
         self.render_internal(time, telemetry, None).map(|_| ())
     }
@@ -61,6 +62,7 @@ impl PortalGpu {
         self.render_internal(time, telemetry, Some((schedule, None)))
     }
 
+    /// `render_internal`.
     pub(super) fn render_internal(
         &mut self,
         time: f32,

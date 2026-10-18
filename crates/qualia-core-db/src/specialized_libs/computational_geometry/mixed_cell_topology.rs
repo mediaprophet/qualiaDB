@@ -24,6 +24,7 @@ pub struct MixedCell {
 }
 
 impl MixedCell {
+    /// Packs a triangle cell `(a,b,c)` with `material`.
     pub fn triangle(a: u32, b: u32, c: u32, material: u16) -> Self {
         Self {
             kind: CELL_KIND_TRIANGLE,
@@ -33,6 +34,7 @@ impl MixedCell {
         }
     }
 
+    /// Packs a quad cell `(a,b,c,d)` with `material`.
     pub fn quad(a: u32, b: u32, c: u32, d: u32, material: u16) -> Self {
         Self {
             kind: CELL_KIND_QUAD,
@@ -42,6 +44,7 @@ impl MixedCell {
         }
     }
 
+    /// Packs a tetra cell `(a,b,c,d)` with `material`.
     pub fn tetra(a: u32, b: u32, c: u32, d: u32, material: u16) -> Self {
         Self {
             kind: CELL_KIND_TETRA,
@@ -51,6 +54,7 @@ impl MixedCell {
         }
     }
 
+    /// Packs a hexahedral cell from 8 vertices with `material`.
     pub fn hex(vertices: [u32; 8], material: u16) -> Self {
         Self {
             kind: CELL_KIND_HEX,
@@ -92,6 +96,7 @@ pub enum MixedTopologyError {
     OutputTooSmall { required: usize },
 }
 
+/// Converts a triangle soup into mixed cells.
 pub fn triangles_to_mixed(
     triangles: &[[u32; 3]],
     material: u16,
@@ -108,6 +113,7 @@ pub fn triangles_to_mixed(
     Ok(triangles.len())
 }
 
+/// Converts tetrahedra into mixed cells.
 pub fn tets_to_mixed(
     tets: &[[u32; 4]],
     material: u16,
@@ -124,6 +130,7 @@ pub fn tets_to_mixed(
     Ok(tets.len())
 }
 
+/// Splits a quad into 2 triangles; error when the cell is not a quad.
 pub fn quad_to_triangles(cell: MixedCell) -> Result<[[u32; 3]; 2], MixedTopologyError> {
     if cell.kind != CELL_KIND_QUAD || cell.vertex_count != 4 {
         return Err(MixedTopologyError::WrongVertexCount {
@@ -136,6 +143,7 @@ pub fn quad_to_triangles(cell: MixedCell) -> Result<[[u32; 3]; 2], MixedTopology
     Ok([[v[0], v[1], v[2]], [v[0], v[2], v[3]]])
 }
 
+/// Splits a hex into 6 tetrahedra; error when the cell is not a hex.
 pub fn hex_to_tetrahedra(cell: MixedCell) -> Result<[[u32; 4]; 6], MixedTopologyError> {
     if cell.kind != CELL_KIND_HEX || cell.vertex_count != 8 {
         return Err(MixedTopologyError::WrongVertexCount {
@@ -155,6 +163,7 @@ pub fn hex_to_tetrahedra(cell: MixedCell) -> Result<[[u32; 4]; 6], MixedTopology
     ])
 }
 
+/// Validates a cell array — vertex indices, material bounds, topology consistency.
 pub fn validate_mixed_cells(
     vertices: &[Point3],
     cells: &[MixedCell],
@@ -249,6 +258,7 @@ pub fn validate_mixed_cells(
     Ok(report)
 }
 
+/// Extracts boundary faces from a mixed-cell set.
 pub fn extract_boundary_faces(
     cells: &[MixedCell],
     out: &mut [BoundaryFace],

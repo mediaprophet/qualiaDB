@@ -27,6 +27,7 @@ pub struct QueryBudget {
 }
 
 impl QueryBudget {
+    /// `QueryBudget::initial`.
     pub const fn initial() -> Self {
         Self {
             candidates: MAX_CANDIDATES as u8,
@@ -48,6 +49,7 @@ impl QueryBudget {
         take_remaining(&mut self.verifications)
     }
 
+    /// `QueryBudget::return_route`.
     pub fn return_route(&mut self) -> Result<(), QdnfError> {
         take_remaining(&mut self.returned)
     }

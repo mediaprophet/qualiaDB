@@ -22,6 +22,7 @@ pub struct ShaclValidateParams {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: validate-shacl-constraint.
 pub fn validate_shacl_constraint_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ShaclValidateParams = serde_wasm_bindgen::from_value(val)?;
     let passes = match p.constraint_type.as_str() {
@@ -210,6 +211,7 @@ pub fn compile_shacl_turtle_wasm(turtle: &str) -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// Executes `ntriples-query`.
 pub fn execute_ntriples_query(query: &str, db_bytes: &[u8], max_results: usize) -> String {
     let mut program = [0u8; 1024];
     if crate::mini_parser::compile_ntriples_to_bytecode(query.as_bytes(), &mut program).is_err() {
@@ -352,6 +354,7 @@ pub fn compile_query_to_json(query: &str) -> String {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: parse-turtle.
 pub fn parse_turtle_wasm(payload: &str) -> JsValue {
     use rio_api::parser::TriplesParser;
     #[derive(Serialize)]
@@ -381,6 +384,7 @@ pub fn parse_turtle_wasm(payload: &str) -> JsValue {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: parse-n3logic.
 pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
     #[derive(Serialize)]
     struct QOut {
@@ -430,6 +434,7 @@ pub fn parse_n3logic_wasm(payload: &str) -> JsValue {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: parse-cbor-ld.
 pub fn parse_cbor_ld_wasm(payload: &[u8]) -> JsValue {
     // Compact array codec is a Qualia vendor encoding until JSON-LD round-trip
     // is proven. Do not advertise as W3C CBOR-LD.

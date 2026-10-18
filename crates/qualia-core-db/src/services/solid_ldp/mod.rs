@@ -41,6 +41,7 @@ pub use import_rdf::{import_rdf_to_quins, solid_rdf_to_qualia_backup_json};
 pub struct SolidLdpFacade;
 
 impl SolidLdpFacade {
+    /// `SolidLdpFacade::serialize_to_rdf_star`.
     pub fn serialize_to_rdf_star(quin: &crate::NQuin) -> String {
         format!(
             "GRAPH <urn:qualia:context:{}> {{ geo:asWKT qualia:hardwareIntegrity \"VERIFIED_ECC_PASS\" }}",

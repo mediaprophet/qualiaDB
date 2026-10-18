@@ -384,6 +384,7 @@ impl TernaryFfnResident {
         self.map.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }

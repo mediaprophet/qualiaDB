@@ -26,6 +26,7 @@ pub struct BlockPool {
 }
 
 impl BlockPool {
+    /// Creates a pool of `physical_blocks` free blocks.
     pub fn new(physical_blocks: u32) -> Self {
         let mut free = Vec::with_capacity(physical_blocks as usize);
         free.extend((0..physical_blocks).rev());
@@ -35,12 +36,14 @@ impl BlockPool {
         }
     }
 
+    /// Pops a free block; `PoolError` when exhausted.
     pub fn allocate(&mut self) -> Result<u32, PoolError> {
         let block = self.free.pop().ok_or(PoolError::Exhausted)?;
         self.refs[block as usize] = 1;
         Ok(block)
     }
 
+    /// Increments a block's refcount (share).
     pub fn retain(&mut self, block: u32) -> Result<(), PoolError> {
         let count = self
             .refs
@@ -53,6 +56,7 @@ impl BlockPool {
         Ok(())
     }
 
+    /// Decrements refcount, freeing at zero.
     pub fn release(&mut self, block: u32) -> Result<(), PoolError> {
         let count = self
             .refs
@@ -69,14 +73,17 @@ impl BlockPool {
         Ok(())
     }
 
+    /// Current refcount for `block`, or `None`.
     pub fn ref_count(&self, block: u32) -> Option<u32> {
         self.refs.get(block as usize).copied()
     }
 
+    /// Blocks currently free.
     pub fn free_count(&self) -> usize {
         self.free.len()
     }
 
+    /// Copy-on-write gate: returns the block as-writable or a fresh copy when shared.
     pub fn writable(&mut self, current: u32) -> Result<CopyOnWrite, PoolError> {
         if current == INVALID_BLOCK {
             return self.allocate().map(CopyOnWrite::Allocated);

@@ -249,6 +249,7 @@ pub enum IngestMode {
 }
 
 impl IngestMode {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             IngestMode::Complete => "COMPLETE (lossless — all URIs & literals retained)",
@@ -948,6 +949,7 @@ fn streaming_import_rdf_with_mode_inner(
     Ok(total_written)
 }
 
+/// Verifies `integrity`.
 pub fn verify_integrity(
     input_path: std::path::PathBuf,
     dataset_path: std::path::PathBuf,

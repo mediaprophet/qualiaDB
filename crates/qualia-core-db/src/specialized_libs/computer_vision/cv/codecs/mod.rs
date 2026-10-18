@@ -13,6 +13,7 @@ pub mod png_encode;
 #[cfg(not(target_arch = "wasm32"))]
 pub use jpeg_decode::decode_jpeg;
 #[cfg(target_arch = "wasm32")]
+/// Decodes `jpeg`.
 pub fn decode_jpeg(
     _bytes: &[u8],
 ) -> Result<(Vec<u8>, u32, u32), crate::specialized_libs::computer_vision::cv::error::CvError> {

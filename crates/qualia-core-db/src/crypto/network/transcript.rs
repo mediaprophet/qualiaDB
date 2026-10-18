@@ -18,6 +18,7 @@ pub struct Transcript {
 }
 
 impl Transcript {
+    /// Creates a default `Transcript`.
     pub const fn new() -> Self {
         Self {
             buf: [0u8; MAX_TRANSCRIPT],
@@ -25,6 +26,7 @@ impl Transcript {
         }
     }
 
+    /// Appends `label`+`value` into the transcript hash.
     pub fn append(&mut self, label: &[u8], value: &[u8]) -> Result<(), CryptoError> {
         let need = 2usize
             .checked_add(label.len())
@@ -49,6 +51,7 @@ impl Transcript {
         Ok(())
     }
 
+    /// Current transcript digest.
     pub fn digest(&self) -> StrongDigest {
         let mut hasher = Sha384::new();
         hasher.update(DOMAIN);
@@ -59,6 +62,7 @@ impl Transcript {
         d
     }
 
+    /// Raw transcript bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.buf[..self.len]
     }

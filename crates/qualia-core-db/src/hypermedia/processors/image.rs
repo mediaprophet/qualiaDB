@@ -32,6 +32,7 @@ pub struct ImageMetadata {
 }
 
 impl ImageMetadata {
+    /// `true` when `any` present.
     pub fn has_any(&self) -> bool {
         self.datetime_unix.is_some()
             || self.lat.is_some()

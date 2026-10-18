@@ -17,22 +17,27 @@ pub struct Dual {
 }
 
 impl Dual {
+    /// Creates a dual number with value `v` and derivative `d`.
     pub fn new(v: f64, d: f64) -> Self {
         Self { v, d }
     }
 
+    /// Dual addition.
     pub fn add(self, other: Self) -> Self {
         Self::new(self.v + other.v, self.d + other.d)
     }
 
+    /// Dual subtraction.
     pub fn sub(self, other: Self) -> Self {
         Self::new(self.v - other.v, self.d - other.d)
     }
 
+    /// Dual multiplication (product rule).
     pub fn mul(self, other: Self) -> Self {
         Self::new(self.v * other.v, self.d * other.v + self.v * other.d)
     }
 
+    /// Dual division (quotient rule).
     pub fn div(self, other: Self) -> Self {
         Self::new(
             self.v / other.v,
@@ -40,6 +45,7 @@ impl Dual {
         )
     }
 
+    /// Dual `x^p` — derivative scales by `p·x^(p−1)`.
     pub fn powf(self, power: f64) -> Self {
         Self::new(
             self.v.powf(power),
@@ -47,18 +53,22 @@ impl Dual {
         )
     }
 
+    /// Dual cube root — derivative scales by `(1/3)x^(−2/3)`.
     pub fn cbrt(self) -> Self {
         self.powf(1.0 / 3.0)
     }
 
+    /// Scalar multiply — value and derivative both scale.
     pub fn scale(self, scalar: f64) -> Self {
         Self::new(self.v * scalar, self.d * scalar)
     }
 
+    /// Dual natural log — derivative scales by `1/x`.
     pub fn ln(self) -> Self {
         Self::new(self.v.ln(), self.d / self.v)
     }
 
+    /// Dual arctan — derivative scales by `1/(1+x²)`.
     pub fn atan(self) -> Self {
         Self::new(self.v.atan(), self.d / (1.0 + self.v * self.v))
     }
@@ -138,6 +148,7 @@ pub struct DftIntegrator {
 }
 
 impl DftIntegrator {
+    /// Creates a DFT grid integrator with default parameters.
     pub fn new() -> Self {
         Self {
             grid_points: [[0.0; 3]; 500],

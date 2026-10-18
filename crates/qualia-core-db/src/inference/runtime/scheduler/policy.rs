@@ -24,6 +24,7 @@ impl SchedulingPolicy {
         max_consecutive_prefill_chunks: 2,
     };
 
+    /// Creates a policy with prefill-chunk size and consecutive-chunk cap.
     pub fn new(max_prefill_chunk_tokens: u32, max_consecutive_prefill_chunks: u32) -> Self {
         Self {
             max_prefill_chunk_tokens: max_prefill_chunk_tokens.max(1),
@@ -54,6 +55,7 @@ pub struct PrefillProgress {
 }
 
 impl PrefillProgress {
+    /// Tracks prefill for `total_input_tokens`.
     pub fn new(total_input_tokens: u32) -> Self {
         Self {
             total_input_tokens,
@@ -61,15 +63,18 @@ impl PrefillProgress {
         }
     }
 
+    /// Prefill tokens not yet consumed.
     pub fn remaining_tokens(&self) -> u32 {
         self.total_input_tokens
             .saturating_sub(self.processed_tokens)
     }
 
+    /// `true` when prefill finished.
     pub fn is_complete(&self) -> bool {
         self.processed_tokens >= self.total_input_tokens
     }
 
+    /// Consumes `chunk_tokens`; returns tokens consumed.
     pub fn advance(&mut self, chunk_tokens: u32) -> u32 {
         let actual = chunk_tokens.min(self.remaining_tokens());
         self.processed_tokens += actual;

@@ -334,6 +334,7 @@ void {entry}(uint3 gid : SV_DispatchThreadID) {{
     Ok(())
 }
 
+/// Emits `graph-hlsl`.
 pub fn emit_graph_hlsl(
     graph: &ComputeGraph,
     schedule: Schedule,

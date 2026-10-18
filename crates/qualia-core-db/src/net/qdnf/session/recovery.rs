@@ -42,6 +42,7 @@ pub struct RecoveryTable {
 }
 
 impl RecoveryTable {
+    /// Creates a default `RecoveryTable`.
     pub const fn new() -> Self {
         Self {
             durable: [None; MAX_DURABLE],

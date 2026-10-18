@@ -36,6 +36,7 @@ pub struct ExpertResidencyProfile {
 }
 
 impl ExpertResidencyProfile {
+    /// Placement and hardware tier.
     pub fn placement(self) -> (usize, PersonalHardwareTier) {
         compute_principled_slot_capacity(
             self.available_accelerator_bytes,
@@ -386,6 +387,7 @@ impl MoeOffloadManager {
         self.placement_policy = policy;
     }
 
+    /// `MoeOffloadManager::placement_policy`.
     pub fn placement_policy(&self) -> ExpertPlacementPolicy {
         self.placement_policy
     }

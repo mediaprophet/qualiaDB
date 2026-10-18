@@ -7,6 +7,7 @@ use std::f64::consts::TAU;
 
 const POINT_SEGMENTS: usize = 16;
 
+/// Compiles.
 pub(super) fn compile(
     geometry: &OsmGeometry,
     frame: VectorSceneFrame,

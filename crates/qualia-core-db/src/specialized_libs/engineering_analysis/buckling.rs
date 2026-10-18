@@ -36,6 +36,7 @@ pub enum PostBucklingBehavior {
     SnapThrough,
 }
 impl BucklingAnalysis {
+    /// Creates a default `BucklingAnalysis`.
     pub fn new() -> Self {
         Self {
             eigenvalue_buckling: EigenvalueBuckling::new(),
@@ -43,6 +44,7 @@ impl BucklingAnalysis {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
         Ok(())
     }
@@ -156,6 +158,7 @@ impl BucklingAnalysis {
 }
 
 impl EigenvalueBuckling {
+    /// Creates a default `EigenvalueBuckling`.
     pub fn new() -> Self {
         Self {
             critical_loads: Vec::new(),
@@ -165,6 +168,7 @@ impl EigenvalueBuckling {
 }
 
 impl NonlinearBuckling {
+    /// Creates a default `NonlinearBuckling`.
     pub fn new() -> Self {
         Self {
             load_displacement_curve: Vec::new(),

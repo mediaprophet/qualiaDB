@@ -28,6 +28,7 @@ pub struct CandidateRequirement {
 }
 
 impl CandidateRequirement {
+    /// Views `self` as `ref`.
     pub fn as_ref(&self) -> RequirementRef<'_> {
         RequirementRef {
             id: &self.id,

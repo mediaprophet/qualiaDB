@@ -234,6 +234,7 @@ pub struct CachePerformance {
 }
 
 impl PhysicsDataManager {
+    /// Creates a manager with empty data storage, compression, and cache state.
     pub fn new() -> Self {
         Self {
             data_storage: PhysicsDataStorage::new(),
@@ -243,6 +244,7 @@ impl PhysicsDataManager {
         }
     }
 
+    /// Initializes compression and cache subsystems; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.data_storage.initialize()?;
         self.data_compression.initialize()?;
@@ -251,6 +253,7 @@ impl PhysicsDataManager {
         Ok(())
     }
 
+    /// Stores field data through the configured storage path.
     pub fn store_field_data(
         &mut self,
         _simulation: &Simulation,
@@ -265,6 +268,7 @@ impl PhysicsDataManager {
 }
 
 impl StorageBackend {
+    /// Registers a storage backend descriptor (`backend_id`, type, capacity).
     pub fn new(backend_id: &str, backend_type: StorageBackendType, capacity: u64) -> Self {
         Self {
             backend_id: backend_id.to_string(),
@@ -306,6 +310,7 @@ impl StorageBackend {
 }
 
 impl PhysicsDataStorage {
+    /// Creates storage with default layout and access-pattern state.
     pub fn new() -> Self {
         Self {
             storage_backends: HashMap::new(),
@@ -386,6 +391,7 @@ impl PhysicsDataStorage {
 }
 
 impl DataLayout {
+    /// Creates a default data-layout descriptor.
     pub fn new() -> Self {
         Self {
             layout_type: DataLayoutType::RowMajor,
@@ -437,6 +443,7 @@ impl DataLayout {
 }
 
 impl AccessPatterns {
+    /// Creates default access-pattern state.
     pub fn new() -> Self {
         Self {
             read_patterns: HashMap::new(),
@@ -477,6 +484,7 @@ impl AccessPatterns {
 }
 
 impl TemporalPattern {
+    /// Creates a default temporal access pattern.
     pub fn new() -> Self {
         Self {
             pattern_id: "default".to_string(),
@@ -523,6 +531,7 @@ impl TemporalPattern {
 }
 
 impl DataCompression {
+    /// Creates compression state with default ratio/performance records.
     pub fn new() -> Self {
         Self {
             compression_algorithms: HashMap::new(),
@@ -531,6 +540,7 @@ impl DataCompression {
         }
     }
 
+    /// No-op returning `Ok(())` — in-memory compression state needs no setup.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -572,6 +582,7 @@ impl DataCompression {
 }
 
 impl CompressionRatio {
+    /// Creates a zeroed `CompressionRatio`.
     pub fn new() -> Self {
         Self {
             original_size: 0,
@@ -582,6 +593,7 @@ impl CompressionRatio {
 }
 
 impl CompressionPerformance {
+    /// Creates a zeroed `CompressionPerformance`.
     pub fn new() -> Self {
         Self {
             compression_speed: 0.0,
@@ -592,6 +604,7 @@ impl CompressionPerformance {
 }
 
 impl CompressionAlgorithm {
+    /// Creates a default `CompressionAlgorithm`.
     pub fn new() -> Self {
         Self {
             algorithm_id: "default".to_string(),
@@ -627,6 +640,7 @@ impl CompressionAlgorithm {
 }
 
 impl CompressionParameters {
+    /// Creates default `CompressionParameters`.
     pub fn new() -> Self {
         Self {
             compression_level: 6,
@@ -638,6 +652,7 @@ impl CompressionParameters {
 }
 
 impl DataCache {
+    /// Creates a cache with default policy and performance state.
     pub fn new() -> Self {
         Self {
             cache_policy: CachePolicy::new(),
@@ -646,6 +661,7 @@ impl DataCache {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -682,6 +698,7 @@ impl DataCache {
 }
 
 impl CachePolicy {
+    /// Creates a default `CachePolicy`.
     pub fn new() -> Self {
         Self {
             eviction_policy: EvictionPolicy::LRU,
@@ -722,6 +739,7 @@ impl CachePolicy {
 }
 
 impl CachePerformance {
+    /// Creates a zeroed `CachePerformance`.
     pub fn new() -> Self {
         Self {
             hit_rate: 0.0,

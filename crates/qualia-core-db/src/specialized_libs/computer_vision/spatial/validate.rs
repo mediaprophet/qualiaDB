@@ -24,6 +24,7 @@ pub struct MeshValidationReport {
 }
 
 impl MeshValidationReport {
+    /// `true` when the spatial state is valid.
     pub fn ok(self) -> bool {
         self.status == MeshValidationStatus::Valid
     }

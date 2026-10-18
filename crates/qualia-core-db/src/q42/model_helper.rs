@@ -49,6 +49,7 @@ pub struct ModelHelperTokenizer {
 }
 
 impl ModelHelper {
+    /// Creates a default `ModelHelper`.
     pub fn new(
         source_gguf: impl Into<String>,
         p64_path: impl Into<String>,
@@ -115,6 +116,7 @@ impl ModelHelper {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Writes `beside-p64`.
     pub fn write_beside_p64(&self, _p64_path: &Path) -> Result<std::path::PathBuf, String> {
         Err("canonical Q42 model metadata is written by the native conversion tool".into())
     }
@@ -137,6 +139,7 @@ impl ModelHelper {
     }
 
     #[cfg(target_arch = "wasm32")]
+    /// Loads `beside-p64`.
     pub fn load_beside_p64(_p64_path: &Path) -> Result<Option<Self>, String> {
         Ok(None)
     }
@@ -370,6 +373,7 @@ pub fn helper_path_for_p64(p64_path: &Path) -> std::path::PathBuf {
     helper_path_with_ext(p64_path, MODEL_HELPER_EXT)
 }
 
+/// `ModelHelper::legacy_helper_path_for_p64`.
 pub fn legacy_helper_path_for_p64(p64_path: &Path) -> std::path::PathBuf {
     helper_path_with_ext(p64_path, LEGACY_MODEL_HELPER_EXT)
 }

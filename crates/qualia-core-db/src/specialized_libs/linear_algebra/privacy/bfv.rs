@@ -44,10 +44,12 @@ pub struct HeCiphertextRef {
 }
 
 impl HeCiphertextRef {
+    /// Ciphertext slot count.
     pub const fn slot_count(self) -> u32 {
         self.packed as u32
     }
 
+    /// HE scheme.
     pub const fn scheme(self) -> Option<HeScheme> {
         match ((self.packed >> 32) & 0xff) as u8 {
             value if value == HeScheme::Bfv as u8 => Some(HeScheme::Bfv),
@@ -55,6 +57,7 @@ impl HeCiphertextRef {
         }
     }
 
+    /// Ciphertext level.
     pub const fn level(self) -> u8 {
         ((self.packed >> 40) & 0xff) as u8
     }
@@ -95,6 +98,7 @@ pub enum HeError {
 }
 
 impl HeError {
+    /// Stable string form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Backend => "BFV backend operation failed",
@@ -130,6 +134,7 @@ pub struct BfvCiphertext {
 }
 
 impl BfvCiphertext {
+    /// External ciphertext reference.
     pub const fn reference(&self) -> HeCiphertextRef {
         self.reference
     }
@@ -218,22 +223,27 @@ impl BfvEngine {
         Self::from_parameters(key_id_hash, parameters)
     }
 
+    /// Key id hash.
     pub const fn key_id_hash(&self) -> u64 {
         self.key_id_hash
     }
 
+    /// Parameter fingerprint.
     pub const fn parameter_fingerprint(&self) -> u64 {
         self.parameter_fingerprint
     }
 
+    /// Serialized context size.
     pub const fn serialized_context_bytes(&self) -> usize {
         self.serialized_context_bytes
     }
 
+    /// BFV plaintext modulus.
     pub fn plaintext_modulus(&self) -> u64 {
         self.parameters.plaintext()
     }
 
+    /// Max signed plaintext value.
     pub fn signed_plaintext_limit(&self) -> i64 {
         (self.parameters.plaintext() / 2) as i64
     }

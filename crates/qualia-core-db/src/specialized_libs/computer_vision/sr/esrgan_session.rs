@@ -42,6 +42,7 @@ pub fn esrgan_super_resolve(
 }
 
 #[cfg(feature = "vision-onnx")]
+/// `?::esrgan_super_resolve`.
 pub fn esrgan_super_resolve(
     weight_path: &Path,
     rgb: RgbView<'_>,

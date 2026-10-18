@@ -93,6 +93,7 @@ pub struct QualiaSlabAllocator {
 }
 
 impl QualiaSlabAllocator {
+    /// Creates a default `QualiaSlabAllocator`.
     pub fn new(topology: MemoryTopology, capacity_bytes: usize) -> Self {
         Self::new_with_alignment(topology, capacity_bytes, DEFAULT_BINDING_ALIGNMENT)
     }

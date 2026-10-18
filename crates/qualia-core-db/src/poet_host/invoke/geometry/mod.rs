@@ -119,21 +119,25 @@ pub use wave29_host::{
 };
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// VibeScript seam: 2D convex hull.
 pub fn hull2(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputationalGeometry"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// VibeScript seam: 2D distance.
 pub fn distance_2d(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputationalGeometry"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// VibeScript seam: 3D distance.
 pub fn distance_3d(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "ComputationalGeometry"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// VibeScript seam: 2D point-segment distance.
 pub fn point_segment_distance_2d(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -142,6 +146,7 @@ pub fn point_segment_distance_2d(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// VibeScript seam: 3D point-segment distance.
 pub fn point_segment_distance_3d(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -150,6 +155,7 @@ pub fn point_segment_distance_3d(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// VibeScript seam: 3D point-triangle distance.
 pub fn point_triangle_distance_3d(
     _args: &vibe::Value,
     span: vibe::Span,

@@ -22,6 +22,7 @@ pub struct GpuFeatureCaps {
 }
 
 impl GpuFeatureCaps {
+    /// Builds a caps snapshot from the adapter's `wgpu::Features`.
     pub fn from_features(features: wgpu::Features) -> Self {
         Self {
             timestamp_query: features.contains(wgpu::Features::TIMESTAMP_QUERY),
@@ -38,6 +39,7 @@ impl GpuFeatureCaps {
         }
     }
 
+    /// One-line compact flag string of enabled features.
     pub fn compact_flags(&self) -> String {
         let mut out = String::with_capacity(96);
         push_flag(&mut out, "ts", self.timestamp_query);
@@ -54,6 +56,7 @@ impl GpuFeatureCaps {
     }
 }
 
+/// Feature set to request for native LLM inference, intersected with `available` so nothing unsupported is requested.
 pub fn requested_native_llm_features(available: wgpu::Features) -> wgpu::Features {
     let mut desired = wgpu::Features::TIMESTAMP_QUERY
         | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES
@@ -68,6 +71,7 @@ pub fn requested_native_llm_features(available: wgpu::Features) -> wgpu::Feature
     available & desired
 }
 
+/// `true` when experimental GPU features may be requested (build/env policy gate).
 pub fn experimental_features_allowed() -> bool {
     matches!(
         std::env::var("QUALIA_WGPU_EXPERIMENTAL_FEATURES")
@@ -88,6 +92,7 @@ pub struct GpuLimitCaps {
 }
 
 impl GpuLimitCaps {
+    /// Builds a caps snapshot from `wgpu::Limits`.
     pub fn from_limits(limits: &wgpu::Limits) -> Self {
         Self {
             max_buffer_size: limits.max_buffer_size,
@@ -117,6 +122,7 @@ pub struct GpuAdapterCaps {
 }
 
 impl GpuAdapterCaps {
+    /// Collects adapter info + features + limits into a caps record.
     pub fn from_adapter(adapter: &wgpu::Adapter) -> Self {
         let info = adapter.get_info();
         let features = adapter.features();
@@ -148,11 +154,13 @@ impl GpuAdapterCaps {
     }
 
     #[inline]
+    /// `true` when the adapter reports an integrated GPU.
     pub fn is_integrated_gpu(&self) -> bool {
         matches!(self.device_type, wgpu::DeviceType::IntegratedGpu)
     }
 
     #[inline]
+    /// Static name of the wgpu backend (vulkan/dx12/metal/gl/…).
     pub fn backend_label(&self) -> &'static str {
         match self.backend {
             wgpu::Backend::Noop => "noop",
@@ -165,6 +173,7 @@ impl GpuAdapterCaps {
     }
 
     #[inline]
+    /// Static name of the adapter device type.
     pub fn device_type_label(&self) -> &'static str {
         match self.device_type {
             wgpu::DeviceType::Other => "other",
@@ -175,6 +184,7 @@ impl GpuAdapterCaps {
         }
     }
 
+    /// One-line human summary of adapter identity and key limits.
     pub fn summary_line(&self) -> String {
         format!(
             "{} | backend={} | type={} | vendor=0x{:04x} | device=0x{:04x} | driver={} {}",
@@ -188,6 +198,7 @@ impl GpuAdapterCaps {
         )
     }
 
+    /// One-line summary of LLM-relevant features (subgroups, f16, timestamps…).
     pub fn llm_feature_line(&self) -> String {
         format!(
             "features=[{}] subgroup={}..{} coop_tiles={} max_storage_binding={}MiB max_buffer={}MiB",
@@ -277,6 +288,7 @@ pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Picks a recommended inference backend label from the adapter's real capabilities.
 pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
     match caps.backend {
         wgpu::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page (recommended in WASM)",

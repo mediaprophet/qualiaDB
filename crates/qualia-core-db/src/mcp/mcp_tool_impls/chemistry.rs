@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: dispatches chemical analysis.
 pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::chemistry_modeling::{
         Atom, ChemistryModelingLibrary, MolecularProperties, Molecule, PropertyType,
@@ -193,6 +194,7 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
+/// MCP tool: dispatches chemical-descriptor computation.
 pub fn chemical_descriptors(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::domains::chemical::organic_chemistry::{compute_descriptors, parse_smiles};
 

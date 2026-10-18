@@ -75,6 +75,7 @@ fn sync_service_generation(doc: &mut QiDocument) {
     }
 }
 
+/// Creates a `did:qi` document in `store`; returns the new generation.
 pub fn create<S: QiStore>(
     store: &mut S,
     controller_sk: &[u8; 32],
@@ -96,6 +97,7 @@ pub fn create<S: QiStore>(
     Ok(id)
 }
 
+/// Reads the document for `id` into `out`; returns its generation.
 pub fn read<S: QiStore>(store: &S, id: &DidQi, out: &mut QiDocument) -> Result<u64, QiError> {
     let mut rec = [0u8; MAX_RECORD];
     let (slot_gen, n) = store.get(id, &mut rec)?;
@@ -121,6 +123,7 @@ pub fn read_generation<S: QiStore>(
     Ok(gen)
 }
 
+/// Applies an update to `id`, bumping the generation.
 pub fn update<S: QiStore>(
     store: &mut S,
     controller_sk: &[u8; 32],
@@ -152,6 +155,7 @@ pub fn update<S: QiStore>(
     write_signed(store, id, gen + 1, &doc, &sig)
 }
 
+/// Tombstones `id`.
 pub fn deactivate<S: QiStore>(
     store: &mut S,
     controller_sk: &[u8; 32],
@@ -183,6 +187,7 @@ pub fn deactivate<S: QiStore>(
     write_signed(store, id, gen + 1, &current, &sig)
 }
 
+/// Loads the canonical digest for `id` from `store`.
 pub(crate) fn load_canonical_digest<S: QiStore>(
     store: &S,
     id: &DidQi,

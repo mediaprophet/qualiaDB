@@ -21,6 +21,7 @@ pub enum AttestationKind {
 }
 
 impl AttestationKind {
+    /// Views `self` as `iri`.
     pub const fn as_iri(self) -> &'static str {
         match self {
             Self::Authorship => "si:authoredBy",
@@ -34,6 +35,7 @@ impl AttestationKind {
         }
     }
 
+    /// Parses input; error on malformed data.
     pub fn parse(raw: &str) -> Result<Self, InstrumentError> {
         match raw.trim() {
             "si:authoredBy" | "authorship" => Ok(Self::Authorship),
@@ -68,6 +70,7 @@ pub struct InstrumentAttestation {
 }
 
 impl InstrumentAttestation {
+    /// `InstrumentAttestation::validate`.
     pub fn validate(&self) -> Result<(), InstrumentError> {
         if !self.origin_is_not_truth {
             return Err(InstrumentError::SignatureAsTruth);

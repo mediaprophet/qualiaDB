@@ -26,6 +26,7 @@ fn parse_node_effect(s: &str) -> NodeEffect {
     }
 }
 
+/// Parses `dag-node`.
 pub fn parse_dag_node(val: &Value, span: Span) -> Result<(DagNode, Vec<u32>), Diagnostic> {
     match val {
         Value::Record(map) => {
@@ -109,6 +110,7 @@ pub fn parse_dag_node(val: &Value, span: Span) -> Result<(DagNode, Vec<u32>), Di
     }
 }
 
+/// Builds `pipeline-from-value`.
 pub fn build_pipeline_from_value(args: &Value, span: Span) -> Result<DagPipeline, Diagnostic> {
     let mut pipeline = DagPipeline::new();
     let (node_values, edge_values) = match args {

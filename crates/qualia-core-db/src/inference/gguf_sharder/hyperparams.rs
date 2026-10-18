@@ -72,6 +72,7 @@ pub struct GgufHyperparams {
 }
 
 impl GgufHyperparams {
+    /// `GgufHyperparams::effective_rope_freq_base`.
     pub fn effective_rope_freq_base(&self) -> f32 {
         if self.rope_freq_base > 0.0 && self.rope_freq_base.is_finite() {
             self.rope_freq_base
@@ -100,10 +101,12 @@ impl GgufHyperparams {
         }
     }
 
+    /// Attention head dimension.
     pub fn head_dim(&self) -> u32 {
         self.effective_head_dim()
     }
 
+    /// Effective KV-head count after GQA/MQA folding.
     pub fn effective_n_kv_head(&self) -> u32 {
         if self.n_kv_head > 0 {
             self.n_kv_head
@@ -112,6 +115,7 @@ impl GgufHyperparams {
         }
     }
 
+    /// Query heads sharing each KV head.
     pub fn q_heads_per_kv(&self) -> u32 {
         let kv = self.effective_n_kv_head();
         if kv == 0 {
@@ -121,10 +125,12 @@ impl GgufHyperparams {
         }
     }
 
+    /// Grouped-query attention ratio.
     pub fn gqa_ratio(&self) -> u32 {
         self.q_heads_per_kv()
     }
 
+    /// Head dim for sliding-window attention, falling back to `head_dim`.
     pub fn head_dim_swa_or(&self) -> u32 {
         if self.head_dim_swa > 0 {
             self.head_dim_swa

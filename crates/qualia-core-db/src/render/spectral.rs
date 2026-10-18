@@ -9,6 +9,7 @@ fn fract_sigma(sigma: f32) -> f32 {
 }
 
 #[inline]
+/// `?::sigma_to_cie_xyz`.
 pub fn sigma_to_cie_xyz(sigma: f32) -> [f32; 3] {
     let s = fract_sigma(sigma);
     let lambda = 400.0 + s * 300.0;
@@ -35,6 +36,7 @@ pub fn sigma_to_cie_xyz(sigma: f32) -> [f32; 3] {
 }
 
 #[inline]
+/// `?::xyz_to_linear_srgb`.
 pub fn xyz_to_linear_srgb(xyz: [f32; 3]) -> [f32; 3] {
     let r = 3.2404542 * xyz[0] - 1.5371385 * xyz[1] - 0.4985314 * xyz[2];
     let g = -0.9692660 * xyz[0] + 1.8760108 * xyz[1] + 0.0415560 * xyz[2];
@@ -43,6 +45,7 @@ pub fn xyz_to_linear_srgb(xyz: [f32; 3]) -> [f32; 3] {
 }
 
 #[inline]
+/// `?::sigma_to_linear_rgb`.
 pub fn sigma_to_linear_rgb(sigma: f32) -> [f32; 3] {
     xyz_to_linear_srgb(sigma_to_cie_xyz(sigma))
 }

@@ -372,6 +372,7 @@ pub struct MullikenCharges {
 }
 
 impl QuantumCalculator {
+    /// Creates a calculator with default wavefunction/energy/property subsystems.
     pub fn new() -> Self {
         Self {
             wavefunction_calculator: WavefunctionCalculator::new(),
@@ -380,6 +381,7 @@ impl QuantumCalculator {
         }
     }
 
+    /// Initializes the sub-calculators; `ChemistryError` propagates.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.wavefunction_calculator.initialize()?;
         self.energy_calculator.initialize()?;
@@ -387,6 +389,7 @@ impl QuantumCalculator {
         Ok(())
     }
 
+    /// Fails closed on an empty molecule (no atoms).
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
             return Err(ChemistryError::ValidationError(
@@ -498,6 +501,7 @@ impl QuantumCalculator {
 }
 
 impl WavefunctionCalculator {
+    /// Creates a calculator with default basis set and SCF parameters.
     pub fn new() -> Self {
         Self {
             method_type: QuantumMethodType::HartreeFock,
@@ -536,12 +540,14 @@ impl WavefunctionCalculator {
         &mut self.scf_parameters
     }
 
+    /// No-op returning `Ok(())` — in-memory state needs no setup.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl BasisSet {
+    /// Creates an empty basis-set descriptor.
     pub fn new() -> Self {
         Self {
             basis_set_id: "basis_1".to_string(),
@@ -553,6 +559,7 @@ impl BasisSet {
 }
 
 impl BasisFunction {
+    /// Creates a default `BasisFunction`.
     pub fn new() -> Self {
         Self {
             function_id: "func_1".to_string(),
@@ -565,6 +572,7 @@ impl BasisFunction {
 }
 
 impl SCFParameters {
+    /// Creates default SCF convergence parameters.
     pub fn new() -> Self {
         Self {
             convergence_threshold: 1e-8,
@@ -576,6 +584,7 @@ impl SCFParameters {
 }
 
 impl QuantumEnergyCalculator {
+    /// Creates an energy calculator with default electronic/nuclear/total components.
     pub fn new() -> Self {
         Self {
             electronic_energy: ElectronicEnergy::new(),
@@ -614,12 +623,14 @@ impl QuantumEnergyCalculator {
         &mut self.total_energy
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl ElectronicEnergy {
+    /// Creates a zeroed `ElectronicEnergy`.
     pub fn new() -> Self {
         Self {
             kinetic_energy: 0.0,
@@ -631,6 +642,7 @@ impl ElectronicEnergy {
 }
 
 impl NuclearEnergy {
+    /// Creates a zeroed `NuclearEnergy`.
     pub fn new() -> Self {
         Self {
             nuclear_repulsion: 0.0,
@@ -640,6 +652,7 @@ impl NuclearEnergy {
 }
 
 impl QuantumTotalEnergy {
+    /// Creates a zeroed `QuantumTotalEnergy`.
     pub fn new() -> Self {
         Self {
             electronic: 0.0,
@@ -651,6 +664,7 @@ impl QuantumTotalEnergy {
 }
 
 impl QuantumPropertyCalculator {
+    /// Creates a property calculator with default dipole/polarizability/Mulliken descriptors.
     pub fn new() -> Self {
         Self {
             dipole_moment: DipoleMoment::new(),
@@ -689,12 +703,14 @@ impl QuantumPropertyCalculator {
         &mut self.mulliken_charges
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl DipoleMoment {
+    /// Creates a zeroed `DipoleMoment`.
     pub fn new() -> Self {
         Self {
             components: vec![0.0, 0.0, 0.0],
@@ -704,6 +720,7 @@ impl DipoleMoment {
 }
 
 impl Polarizability {
+    /// Creates a zeroed `Polarizability`.
     pub fn new() -> Self {
         Self {
             tensor: vec![vec![0.0; 3]; 3],
@@ -713,6 +730,7 @@ impl Polarizability {
 }
 
 impl MullikenCharges {
+    /// Creates an empty `MullikenCharges`.
     pub fn new() -> Self {
         Self {
             charges: Vec::new(),

@@ -8,6 +8,7 @@ use super::*;
 use crate::render::instance_culling::{compact_visible_records, select_visible_mesh_instances};
 
 impl PortalGpu {
+    /// `update_mesh_instance_visibility`.
     pub(super) fn update_mesh_instance_visibility(&mut self) {
         let view_projection = self
             .camera

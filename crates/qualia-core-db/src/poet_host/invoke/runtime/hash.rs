@@ -3,6 +3,7 @@
 use crate::lexicon::generate_60bit_token;
 use vibe::{DiagCode, Diagnostic, Span, Value};
 
+/// VibeScript seam: IRI from hash.
 pub fn iri(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = match args {
         Value::String(s) | Value::Iri(s) => s.as_str(),

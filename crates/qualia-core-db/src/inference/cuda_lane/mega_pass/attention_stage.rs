@@ -62,6 +62,7 @@ pub(super) struct AttentionSpec {
     pub attention_segments: usize,
 }
 
+/// Dispatches attention.
 pub(super) fn dispatch_attention(
     dev: &mut MultiWeightDevice,
     mut views: AttentionViews,

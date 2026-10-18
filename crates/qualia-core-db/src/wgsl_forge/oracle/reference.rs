@@ -14,6 +14,7 @@ pub struct OracleCase {
 }
 
 impl OracleCase {
+    /// Host affine reference.
     pub fn affine(length: usize, seed: u64, scale: f32, bias: f32) -> Self {
         let length = length.min(u32::MAX as usize);
         let mut state = seed.max(1);
@@ -41,6 +42,7 @@ impl OracleCase {
     }
 }
 
+/// CPU affine reference.
 pub fn affine_cpu(input: &[f32], params: AffineParams) -> Vec<f32> {
     input
         .iter()
@@ -85,6 +87,7 @@ pub fn topk_cpu(input: &[f32], length: usize, k: usize, block_size: usize) -> Ve
     out
 }
 
+/// `gelu`.
 pub(super) fn gelu(x: f32) -> f32 {
     0.5 * x * (1.0 + (0.797_884_56 * (x + 0.044_715 * x * x * x)).tanh())
 }

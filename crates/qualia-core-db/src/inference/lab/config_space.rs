@@ -136,6 +136,7 @@ pub struct ConfigurationSpace {
 }
 
 impl ConfigurationSpace {
+    /// Creates a default `ConfigurationSpace`.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -143,6 +144,7 @@ impl ConfigurationSpace {
         }
     }
 
+    /// Builder: adds a parameter.
     pub fn with(mut self, name: impl Into<String>, def: ParameterDef) -> Self {
         self.params.insert(name.into(), def);
         self

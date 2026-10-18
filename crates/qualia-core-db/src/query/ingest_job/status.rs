@@ -27,6 +27,7 @@ pub struct IngestJobStatus {
     pub summary: String,
 }
 
+/// `?::job_status`.
 pub fn job_status(dir: &Path) -> io::Result<IngestJobStatus> {
     let job = IngestJob::open(dir.to_path_buf())?;
     let live = read_progress_json(&dir.join(JOB_PROGRESS));
@@ -50,6 +51,7 @@ pub fn job_status(dir: &Path) -> io::Result<IngestJobStatus> {
     })
 }
 
+/// Reads `progress-json`.
 pub fn read_progress_json(path: &Path) -> Option<IngestSnapshot> {
     let raw = fs::read(path).ok()?;
     serde_json::from_slice(&raw).ok()

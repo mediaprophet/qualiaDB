@@ -30,6 +30,7 @@ pub struct LowRankDelta {
 }
 
 impl LowRankDelta {
+    /// Creates a default `LowRankDelta`.
     pub fn new(in_dim: usize, out_dim: usize, rank: usize, a: Vec<f32>, b: Vec<f32>) -> Self {
         assert_eq!(a.len(), out_dim * rank);
         assert_eq!(b.len(), rank * in_dim);
@@ -206,10 +207,12 @@ pub struct ClusteredMoEOperator {
 }
 
 impl ClusteredMoEOperator {
+    /// Creates a default `ClusteredMoEOperator`.
     pub fn new(clusters: Vec<ClusterAnchor>) -> Self {
         Self { clusters }
     }
 
+    /// Dispatches.
     pub fn dispatch(
         &self,
         routed_experts: &[RoutedExpert],

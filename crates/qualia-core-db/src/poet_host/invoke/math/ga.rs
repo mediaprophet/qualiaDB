@@ -6,6 +6,7 @@ use crate::solvers::geometric_algebra::utils::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: geometric-algebra dot product.
 pub fn dot(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let a = vec3(args_v, "a", span)?;
     let b = vec3(args_v, "b", span)?;

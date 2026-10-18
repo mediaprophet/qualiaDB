@@ -4,6 +4,7 @@ use super::types::{Confidentiality, LabelFields, MAX_COMPARTMENTS, MAX_JOIN_INPU
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 
+/// Joins labels into `out`.
 pub fn join_labels_into(
     request: &LabelFields,
     deps: &[LabelFields],
@@ -21,6 +22,7 @@ pub fn join_labels_into(
     Ok(())
 }
 
+/// Joins one label.
 pub fn join_one(acc: &mut LabelFields, dep: &LabelFields) -> Result<(), QdnfError> {
     let a = acc.confidentiality.lattice_rank()?;
     let b = dep.confidentiality.lattice_rank()?;

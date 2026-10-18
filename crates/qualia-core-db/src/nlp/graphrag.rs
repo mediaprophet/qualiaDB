@@ -21,6 +21,7 @@ pub struct GraphRagIndex {
 }
 
 impl GraphRagIndex {
+    /// Creates a default `GraphRagIndex`.
     pub fn new() -> Self {
         Self::default()
     }

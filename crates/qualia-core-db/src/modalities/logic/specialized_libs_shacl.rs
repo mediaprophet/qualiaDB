@@ -355,6 +355,7 @@ pub struct QuantumBiologyCalculation {
 // ── Opcode Generation Functions ───────────────────────────────────────────────
 
 impl MatrixConfiguration {
+    /// Emits the SLG opcode sequence configuring matrix ops.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_matrix_size as f64),
@@ -364,6 +365,7 @@ impl MatrixConfiguration {
 }
 
 impl MatrixOperation {
+    /// Emits the SLG opcode sequence for a matrix operation.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_condition_number),
@@ -373,6 +375,7 @@ impl MatrixOperation {
 }
 
 impl ModelConfiguration {
+    /// Emits SLG opcodes configuring an ML model.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_model_size_mb as f64),
@@ -382,6 +385,7 @@ impl ModelConfiguration {
 }
 
 impl TrainingConfiguration {
+    /// Emits SLG opcodes configuring a training run.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_epochs as f64),
@@ -394,6 +398,7 @@ impl TrainingConfiguration {
 }
 
 impl SimulationConfiguration {
+    /// Emits SLG opcodes configuring a simulation.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_time_steps as f64),
@@ -404,6 +409,7 @@ impl SimulationConfiguration {
 }
 
 impl CryptographicConfiguration {
+    /// Emits SLG opcodes configuring cryptography.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMinInclusive(self.min_key_length_bits as f64),
@@ -413,6 +419,7 @@ impl CryptographicConfiguration {
 }
 
 impl QPUConfiguration {
+    /// Emits SLG opcodes configuring a QPU request.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_qubits as f64),
@@ -425,6 +432,7 @@ impl QPUConfiguration {
 macro_rules! generate_simple_opcodes {
     ($struct_name:ident, $field:ident) => {
         impl $struct_name {
+            /// Emits SLG opcodes configuring a QPU request.
             pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
                 vec![SlgOpcode::CheckMaxInclusive(self.$field as f64)]
             }
@@ -438,6 +446,7 @@ generate_simple_opcodes!(DeterminantConfiguration, max_dimension);
 generate_simple_opcodes!(SymbolicExpressionConfiguration, max_depth);
 
 impl PolynomialSolveConfiguration {
+    /// Emits SLG opcodes for polynomial solving.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckMaxInclusive(self.max_degree as f64),
@@ -448,6 +457,7 @@ impl PolynomialSolveConfiguration {
 }
 
 impl SymbolicOperationConfiguration {
+    /// Emits SLG opcodes for symbolic operations.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         vec![
             SlgOpcode::CheckHasValue(crate::q_hash(&self.operation_type)),
@@ -478,6 +488,7 @@ generate_simple_opcodes!(QuantumCircuitConfiguration, max_gates);
 generate_simple_opcodes!(QuantumAnnealingConfiguration, max_annealing_time_us);
 generate_simple_opcodes!(BiomolecularConfiguration, max_atoms);
 impl QuantumBiologyCalculation {
+    /// Emits SLG opcodes for a quantum-biology calculation.
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut ops = vec![SlgOpcode::CheckMaxInclusive(self.max_quantum_states as f64)];
         if self.require_solvent_model {

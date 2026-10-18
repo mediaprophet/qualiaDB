@@ -25,6 +25,7 @@ pub struct IdentityAssertion {
 }
 
 impl IdentityAssertion {
+    /// Builds `IdentityAssertion` from `independent_instrument`.
     pub fn from_independent_instrument(
         issuer: StrongDigest,
         instrument: StrongDigest,
@@ -46,26 +47,31 @@ impl IdentityAssertion {
     }
 
     #[inline]
+    /// Biometric object kind.
     pub const fn kind(self) -> BiometricObjectKind {
         BiometricObjectKind::IdentityAssertion
     }
 
     #[inline]
+    /// Issuer digest.
     pub const fn issuer(self) -> StrongDigest {
         self.issuer
     }
 
     #[inline]
+    /// Instrument digest.
     pub const fn instrument(self) -> StrongDigest {
         self.instrument
     }
 
     #[inline]
+    /// Purpose digest.
     pub const fn purpose(self) -> StrongDigest {
         self.purpose
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
@@ -87,6 +93,7 @@ pub const fn unsalted_reusable_hash_allowed() -> bool {
     false
 }
 
+/// Fail-closed: linkable unsalted hashes are denied.
 pub fn unsalted_reusable_hash(_capture: &RawCapture) -> Result<StrongDigest, QdnfError> {
     Err(QdnfError::Denied)
 }

@@ -125,6 +125,7 @@ pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::ledger_balance`.
 pub fn ledger_balance(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
     Err(args::need_scientific(span, "Finance.ledger_balance"))
 }

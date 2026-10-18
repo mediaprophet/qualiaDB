@@ -9,6 +9,7 @@ pub(super) fn frame_target_vram_bytes(width: u32, height: u32, offscreen: bool) 
     pixels.checked_mul(if offscreen { 12 } else { 8 })
 }
 
+/// `reserve_view_resources`.
 pub(super) fn reserve_view_resources(
     width: u32,
     height: u32,
@@ -70,6 +71,7 @@ pub(super) fn reserve_view_resources(
     ))
 }
 
+/// `checked_padded_bytes_per_row`.
 pub(super) fn checked_padded_bytes_per_row(width: u32) -> Option<u32> {
     let tight = width.max(1).checked_mul(4)?;
     let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
@@ -78,6 +80,7 @@ pub(super) fn checked_padded_bytes_per_row(width: u32) -> Option<u32> {
         .map(|value| value / align * align)
 }
 
+/// `readback_buffer_bytes`.
 pub(super) fn readback_buffer_bytes(width: u32, height: u32) -> Option<u64> {
     u64::from(checked_padded_bytes_per_row(width)?).checked_mul(u64::from(height.max(1)))
 }
@@ -101,6 +104,7 @@ mod tests {
     }
 }
 
+/// Creates `offscreen-texture`.
 pub(super) fn create_offscreen_texture(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,
@@ -123,11 +127,13 @@ pub(super) fn create_offscreen_texture(
     })
 }
 
+/// `padded_bytes_per_row`.
 pub(super) fn padded_bytes_per_row(width: u32) -> u32 {
     checked_padded_bytes_per_row(width)
         .unwrap_or(u32::MAX & !(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT - 1))
 }
 
+/// Creates `readback-buffer`.
 pub(super) fn create_readback_buffer(
     device: &wgpu::Device,
     padded_bytes_per_row: u32,
@@ -141,6 +147,7 @@ pub(super) fn create_readback_buffer(
     })
 }
 
+/// Creates `picking-texture`.
 pub(super) fn create_picking_texture(
     device: &wgpu::Device,
     width: u32,
@@ -164,6 +171,7 @@ pub(super) fn create_picking_texture(
     (texture, view)
 }
 
+/// `picking_color_target_state`.
 pub(super) fn picking_color_target_state() -> wgpu::ColorTargetState {
     wgpu::ColorTargetState {
         format: wgpu::TextureFormat::R32Uint,
@@ -172,6 +180,7 @@ pub(super) fn picking_color_target_state() -> wgpu::ColorTargetState {
     }
 }
 
+/// Creates `depth-texture`.
 pub(super) fn create_depth_texture(
     device: &wgpu::Device,
     width: u32,
@@ -195,6 +204,7 @@ pub(super) fn create_depth_texture(
     (texture, view)
 }
 
+/// `depth_stencil_state`.
 pub(super) fn depth_stencil_state(format: wgpu::TextureFormat) -> wgpu::DepthStencilState {
     wgpu::DepthStencilState {
         format,
@@ -205,6 +215,7 @@ pub(super) fn depth_stencil_state(format: wgpu::TextureFormat) -> wgpu::DepthSte
     }
 }
 
+/// `depth_stencil_state_read_only`.
 pub(super) fn depth_stencil_state_read_only() -> wgpu::DepthStencilState {
     wgpu::DepthStencilState {
         format: wgpu::TextureFormat::Depth32Float,
@@ -215,6 +226,7 @@ pub(super) fn depth_stencil_state_read_only() -> wgpu::DepthStencilState {
     }
 }
 
+/// `color_target_state`.
 pub(super) fn color_target_state(format: wgpu::TextureFormat) -> wgpu::ColorTargetState {
     wgpu::ColorTargetState {
         format,
@@ -234,6 +246,7 @@ pub(super) fn color_target_state(format: wgpu::TextureFormat) -> wgpu::ColorTarg
     }
 }
 
+/// `uniform_128_bind_entry`.
 pub(super) fn uniform_128_bind_entry(
     binding: u32,
     stages: wgpu::ShaderStages,
@@ -250,6 +263,7 @@ pub(super) fn uniform_128_bind_entry(
     }
 }
 
+/// `tensor_storage_bind_entry`.
 pub(super) fn tensor_storage_bind_entry() -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding: 0,
@@ -263,6 +277,7 @@ pub(super) fn tensor_storage_bind_entry() -> wgpu::BindGroupLayoutEntry {
     }
 }
 
+/// `ambient_bind_entries`.
 pub(super) fn ambient_bind_entries() -> [wgpu::BindGroupLayoutEntry; 5] {
     [
         wgpu::BindGroupLayoutEntry {
@@ -300,6 +315,7 @@ pub(super) fn ambient_bind_entries() -> [wgpu::BindGroupLayoutEntry; 5] {
     ]
 }
 
+/// Makes `ambient-bind-group`.
 pub(super) fn make_ambient_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -337,6 +353,7 @@ pub(super) fn make_ambient_bind_group(
     })
 }
 
+/// Makes `projector-tensor-bind-group`.
 pub(super) fn make_projector_tensor_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,

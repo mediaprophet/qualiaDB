@@ -10,6 +10,7 @@ pub struct SparseDictionaryCache {
 }
 
 impl SparseDictionaryCache {
+    /// Creates `SparseDictionaryCache` with the given state.
     pub fn new(dictionary: Tensor3x3x3) -> Self {
         Self { dictionary }
     }

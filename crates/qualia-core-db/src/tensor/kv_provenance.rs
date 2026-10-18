@@ -24,6 +24,7 @@ pub struct KvProvenanceMap {
 }
 
 impl KvProvenanceMap {
+    /// Creates a default `KvProvenanceMap`.
     pub fn new() -> Self {
         Self {
             tensor_to_kv: [KvSlotInfo::UNMAPPED; MAX_KV_PROVENANCE],
@@ -32,6 +33,7 @@ impl KvProvenanceMap {
     }
 
     #[inline]
+    /// Generation.
     pub fn generation(&self) -> u32 {
         self.generation
     }
@@ -71,6 +73,7 @@ impl KvProvenanceMap {
     }
 
     #[inline]
+    /// `KvProvenanceMap::kv_slot_for_tensor`.
     pub fn kv_slot_for_tensor(&self, tensor_index: u32) -> Option<u32> {
         let ti = tensor_index as usize;
         if ti >= MAX_KV_PROVENANCE {
@@ -85,6 +88,7 @@ impl KvProvenanceMap {
     }
 
     #[inline]
+    /// `KvProvenanceMap::page_id_for_tensor`.
     pub fn page_id_for_tensor(&self, tensor_index: u32) -> Option<u64> {
         let ti = tensor_index as usize;
         if ti >= MAX_KV_PROVENANCE {
@@ -106,6 +110,7 @@ fn kv_lock() -> &'static RwLock<KvProvenanceMap> {
 }
 
 #[inline]
+/// `KvProvenanceMap::global_kv_provenance`.
 pub fn global_kv_provenance() -> std::sync::RwLockReadGuard<'static, KvProvenanceMap> {
     kv_lock().read().expect("kv provenance poisoned")
 }
@@ -123,6 +128,7 @@ pub fn rebuild_prompt_provenance(
 }
 
 #[inline]
+/// `KvProvenanceMap::record_kv_provenance`.
 pub fn record_kv_provenance(tensor_index: u32, kv_slot: u32, parent_page_id: u64) {
     kv_lock().write().expect("kv provenance poisoned").record(
         tensor_index,

@@ -159,6 +159,7 @@ impl QueryOperation {
 }
 
 impl DataIndexingEngine {
+    /// Creates a default `DataIndexingEngine`.
     pub fn new() -> Self {
         Self {
             indexes: HashMap::new(),
@@ -167,6 +168,7 @@ impl DataIndexingEngine {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         self.query_optimizer.initialize()?;
         Ok(())
@@ -219,6 +221,7 @@ impl DataIndexingEngine {
 }
 
 impl QueryOptimizer {
+    /// Creates a default `QueryOptimizer`.
     pub fn new() -> Self {
         Self {
             optimization_rules: vec![
@@ -240,6 +243,7 @@ impl QueryOptimizer {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }

@@ -30,6 +30,7 @@ pub struct DnsArchiveHeader {
 impl DnsArchiveHeader {
     pub const SIZE: usize = 64;
 
+    /// Creates a default `DnsArchiveHeader`.
     pub fn new(record_count: u32, clock_start: u32, clock_end: u32) -> Self {
         Self {
             magic: QDNS_MAGIC,
@@ -42,6 +43,7 @@ impl DnsArchiveHeader {
         }
     }
 
+    /// Validates internal consistency; error on violation.
     pub fn validate(&self) -> io::Result<()> {
         if self.magic != QDNS_MAGIC {
             return Err(io::Error::new(

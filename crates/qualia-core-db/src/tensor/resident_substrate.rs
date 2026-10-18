@@ -41,6 +41,7 @@ fn empty_nquin() -> NQuin {
 }
 
 impl ResidentTensorSubstrate {
+    /// Creates a default `ResidentTensorSubstrate`.
     pub fn new() -> Self {
         Self {
             nquins: UnsafeCell::new([empty_nquin(); MAX_RESIDENT_NODES]),
@@ -52,16 +53,19 @@ impl ResidentTensorSubstrate {
     }
 
     #[inline]
+    /// `ResidentTensorSubstrate::node_count`.
     pub fn node_count(&self) -> u32 {
         self.node_count.load(Ordering::Acquire)
     }
 
     #[inline]
+    /// Loads `generation`.
     pub fn load_generation(&self) -> u32 {
         self.load_generation.load(Ordering::Acquire)
     }
 
     #[inline]
+    /// `ResidentTensorSubstrate::subject_hash_at`.
     pub fn subject_hash_at(&self, index: u32) -> u64 {
         let count = self.node_count();
         if index >= count {
@@ -71,6 +75,7 @@ impl ResidentTensorSubstrate {
     }
 
     #[inline]
+    /// `ResidentTensorSubstrate::tensor_at`.
     pub fn tensor_at(&self, index: u32) -> Option<Tensor10D> {
         let count = self.node_count();
         if index >= count {
@@ -191,6 +196,7 @@ fn synthesize_nquin_for_tensor(index: usize, subject: u64, tensor: &Tensor10D) -
 static RESIDENT_SUBSTRATE: OnceLock<Box<ResidentTensorSubstrate>> = OnceLock::new();
 
 #[inline]
+/// `ResidentTensorSubstrate::global_resident_substrate`.
 pub fn global_resident_substrate() -> &'static ResidentTensorSubstrate {
     RESIDENT_SUBSTRATE.get_or_init(|| Box::new(ResidentTensorSubstrate::new()))
 }

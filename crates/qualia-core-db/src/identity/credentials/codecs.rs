@@ -11,7 +11,9 @@ pub enum CodecError {
 
 /// Encode/decode a Verifiable Credential to/from a transport representation.
 pub trait CredentialCodec {
+    /// Encodes a credential.
     fn encode(&self, credential: &Credential) -> Result<Vec<u8>, CodecError>;
+    /// Decodes a credential.
     fn decode(&self, payload: &[u8]) -> Result<Credential, CodecError>;
 }
 
@@ -21,6 +23,7 @@ pub struct OpenBadgeCodec;
 const OB_CONTEXT: &str = "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json";
 
 impl CredentialCodec for OpenBadgeCodec {
+    /// Encodes a credential.
     fn encode(&self, credential: &Credential) -> Result<Vec<u8>, CodecError> {
         let mut c = credential.clone();
         if !c.context.iter().any(|s| s == OB_CONTEXT) {
@@ -33,6 +36,7 @@ impl CredentialCodec for OpenBadgeCodec {
             .map_err(|e| CodecError::SerializationError(format!("OpenBadge encoding failed: {e}")))
     }
 
+    /// Decodes a credential.
     fn decode(&self, payload: &[u8]) -> Result<Credential, CodecError> {
         let credential: Credential = serde_json::from_slice(payload).map_err(|e| {
             CodecError::SerializationError(format!("OpenBadge decoding failed: {e}"))
@@ -50,6 +54,7 @@ impl CredentialCodec for OpenBadgeCodec {
 pub struct PdfCodec;
 
 impl CredentialCodec for PdfCodec {
+    /// Encodes a credential.
     fn encode(&self, credential: &Credential) -> Result<Vec<u8>, CodecError> {
         let json = serde_json::to_string(credential)
             .map_err(|e| CodecError::SerializationError(format!("PDF encoding failed: {e}")))?;
@@ -75,6 +80,7 @@ impl CredentialCodec for PdfCodec {
         Ok(pdf)
     }
 
+    /// Decodes a credential.
     fn decode(&self, payload: &[u8]) -> Result<Credential, CodecError> {
         let s = String::from_utf8_lossy(payload);
         if let Some(start) = s.find("stream\n{") {

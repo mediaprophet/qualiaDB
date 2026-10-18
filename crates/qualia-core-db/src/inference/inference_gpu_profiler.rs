@@ -46,6 +46,7 @@ impl Phase {
     ];
 
     #[inline]
+    /// Phase label.
     pub fn label(self) -> &'static str {
         match self {
             Phase::Embedding => "embedding",
@@ -221,20 +222,25 @@ pub fn accumulate(phase: Phase) {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Timestamp writes for a both-phase pass.
 pub fn pass_writes_both() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
     None
 }
 #[cfg(target_arch = "wasm32")]
+/// Timestamp writes for a begin-phase pass.
 pub fn pass_writes_begin() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
     None
 }
 #[cfg(target_arch = "wasm32")]
+/// Timestamp writes for an end-phase pass.
 pub fn pass_writes_end() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
     None
 }
 #[cfg(target_arch = "wasm32")]
+/// Resolves timestamps on `encoder`.
 pub fn resolve(_encoder: &mut wgpu::CommandEncoder) {}
 #[cfg(target_arch = "wasm32")]
+/// Accumulates `phase` timings.
 pub fn accumulate(_phase: Phase) {}
 
 // ── Snapshot / reset for the bench ────────────────────────────────────────────
@@ -249,6 +255,7 @@ pub struct PhaseTiming {
 
 impl PhaseTiming {
     #[inline]
+    /// Timing in microseconds.
     pub fn micros(&self) -> f64 {
         self.total_ns as f64 / 1000.0
     }

@@ -36,47 +36,56 @@ pub struct PortalControlCommand {
 
 impl PortalControlCommand {
     #[inline]
+    /// Empty value.
     pub const fn empty() -> Self {
         Self { raw: 0 }
     }
 
     #[inline]
+    /// Low-7-bit opcode of the packed command.
     pub fn opcode(self) -> u8 {
         (self.raw as u8) & 0x7f
     }
 
     #[inline]
+    /// `true` when bit 63 (ICP magic) is set — distinguishes packed control words from plain data.
     pub fn has_icp_magic(self) -> bool {
         (self.raw & ICP_MAGIC_BIT) != 0
     }
 
     #[inline]
+    /// 16-bit tensor/menu index field (bits 16..31).
     pub fn tensor_or_menu_index(self) -> u16 {
         ((self.raw >> 16) & 0xffff) as u16
     }
 
     #[inline]
+    /// Signed 16-bit parameter A (bits 32..47).
     pub fn param_a_i16(self) -> i16 {
         ((self.raw >> 32) & 0xffff) as i16
     }
 
     #[inline]
+    /// Signed 8-bit parameter B (bits 48..55).
     pub fn param_b_i8(self) -> i8 {
         ((self.raw >> 48) & 0xff) as i8
     }
 
     #[inline]
+    /// Channel byte (bits 8..15).
     pub fn channel(self) -> u8 {
         ((self.raw >> 8) & 0xff) as u8
     }
 
     #[inline]
+    /// Sets the ICP magic bit, marking this word as a packed control command.
     pub fn with_magic(mut self) -> Self {
         self.raw |= ICP_MAGIC_BIT;
         self
     }
 
     #[inline]
+    /// Packs opcode/channel/index/param_a/param_b into one u64 word with ICP magic set.
     pub fn pack(opcode: u8, channel: u8, index: u16, param_a: i16, param_b: i8) -> Self {
         let raw = (opcode as u64)
             | ((channel as u64) << 8)
@@ -97,6 +106,7 @@ impl PortalControlCommand {
     }
 
     #[inline]
+    /// Unpacks a `set_camera_delta_scaled` command into `(dyaw, dpitch, dzoom)` floats.
     pub fn decode_camera_delta(self) -> (f32, f32, f32) {
         let dyaw = self.param_a_i16() as f32 / 1000.0;
         let dpitch = self.tensor_or_menu_index() as i16 as f32 / 1000.0;
@@ -105,21 +115,25 @@ impl PortalControlCommand {
     }
 
     #[inline]
+    /// Builds an `OP_NAVIGATE_INDEX` command for `index`.
     pub fn navigate_index(index: u16) -> Self {
         Self::pack(OP_NAVIGATE_INDEX, 0, index, 0, 0).with_magic()
     }
 
     #[inline]
+    /// Builds an `OP_COLLAPSE_Q` command for `index`.
     pub fn collapse_q(index: u16) -> Self {
         Self::pack(OP_COLLAPSE_Q, 0, index, 0, 0).with_magic()
     }
 
     #[inline]
+    /// Builds an `OP_MENU_ACTION` command for `menu_id`.
     pub fn menu_action(menu_id: u16) -> Self {
         Self::pack(OP_MENU_ACTION, 0, menu_id, 0, 0).with_magic()
     }
 
     #[inline]
+    /// Builds an `OP_SET_STANDPOINT_SCALAR` command; `delta` is quantized ×1000 into param A.
     pub fn standpoint_scalar(kind: u8, delta: f32) -> Self {
         let scaled = (delta * 1000.0).clamp(-32767.0, 32767.0) as i16;
         Self::pack(OP_SET_STANDPOINT_SCALAR, kind, 0, scaled, 0).with_magic()
@@ -135,6 +149,7 @@ impl PortalControlCommand {
     }
 
     #[inline]
+    /// Extracts the embedded Sonic Token payload (bits 8..62) from a forward command.
     pub fn embedded_sonic_raw(self) -> u64 {
         self.raw & 0x7fff_ffff_ffff_ff00
     }
@@ -150,6 +165,7 @@ pub struct ControlCommandRing {
 unsafe impl Sync for ControlCommandRing {}
 
 impl ControlCommandRing {
+    /// Creates a default `ControlCommandRing`.
     pub const fn new() -> Self {
         Self {
             slots: UnsafeCell::new([0u64; CONTROL_RING_CAP]),
@@ -159,12 +175,14 @@ impl ControlCommandRing {
     }
 
     #[inline]
+    /// Commands currently queued (`write_seq - read_seq`).
     pub fn len(&self) -> usize {
         let w = self.write_seq.load(Ordering::Acquire);
         let r = self.read_seq.load(Ordering::Acquire);
         w.wrapping_sub(r) as usize
     }
 
+    /// Enqueues `cmd` if under capacity; `false` when the ring is full (drop, not block).
     pub fn try_push(&self, cmd: PortalControlCommand) -> bool {
         let w = self.write_seq.load(Ordering::Relaxed);
         let r = self.read_seq.load(Ordering::Acquire);
@@ -179,6 +197,7 @@ impl ControlCommandRing {
         true
     }
 
+    /// Dequeues the oldest command, or `None` when empty.
     pub fn try_pop(&self) -> Option<PortalControlCommand> {
         let r = self.read_seq.load(Ordering::Relaxed);
         let w = self.write_seq.load(Ordering::Acquire);
@@ -195,26 +214,31 @@ impl ControlCommandRing {
 static CONTROL_RING: ControlCommandRing = ControlCommandRing::new();
 
 #[inline]
+/// Process-global control ring instance (static, lock-free SPSC).
 pub fn control_ring() -> &'static ControlCommandRing {
     &CONTROL_RING
 }
 
 #[inline]
+/// Pushes `cmd` onto the global ring; `false` when full.
 pub fn push_control_command(cmd: PortalControlCommand) -> bool {
     control_ring().try_push(cmd)
 }
 
 #[inline]
+/// Pushes an already-packed `raw` word onto the global ring.
 pub fn push_control_raw(raw: u64) -> bool {
     push_control_command(PortalControlCommand { raw })
 }
 
 #[inline]
+/// Pops the oldest command from the global ring, or `None`.
 pub fn pop_control_command() -> Option<PortalControlCommand> {
     control_ring().try_pop()
 }
 
 #[inline]
+/// Pending command count on the global ring (relaxed read).
 pub fn control_pending() -> u32 {
     control_ring().len() as u32
 }

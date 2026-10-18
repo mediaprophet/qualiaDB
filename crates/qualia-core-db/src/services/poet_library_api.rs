@@ -66,13 +66,17 @@ fn default_media_type() -> String {
 }
 
 pub trait PoetLibraryProvider: Send + Sync + 'static {
+    /// Library stats.
     fn stats(&self) -> Result<serde_json::Value, String>;
+    /// Library query.
     fn query(&self, request: &PoetLibraryQueryRequest) -> Result<serde_json::Value, String>;
+    /// Library ingest.
     fn ingest(&self, request: &PoetLibraryIngestRequest) -> Result<serde_json::Value, String>;
 }
 
 static LIBRARY_PROVIDER: OnceLock<Arc<dyn PoetLibraryProvider>> = OnceLock::new();
 
+/// Registers `poet-library-provider`.
 pub fn register_poet_library_provider(
     provider: Arc<dyn PoetLibraryProvider>,
 ) -> Result<(), &'static str> {
@@ -189,6 +193,7 @@ fn provider_result(result: Result<serde_json::Value, String>) -> Response {
     }
 }
 
+/// HTTP `stats` handler.
 pub async fn stats_handler() -> Response {
     let provider = match provider() {
         Ok(provider) => provider,
@@ -204,6 +209,7 @@ pub async fn stats_handler() -> Response {
     }
 }
 
+/// HTTP `query` handler.
 pub async fn query_handler(body: Bytes) -> Response {
     let mut request: PoetLibraryQueryRequest = match decode(&body) {
         Ok(request) => request,
@@ -226,6 +232,7 @@ pub async fn query_handler(body: Bytes) -> Response {
     }
 }
 
+/// HTTP `ingest` handler.
 pub async fn ingest_handler(body: Bytes) -> Response {
     let mut request: PoetLibraryIngestRequest = match decode(&body) {
         Ok(request) => request,

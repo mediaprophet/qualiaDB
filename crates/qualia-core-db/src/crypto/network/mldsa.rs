@@ -13,6 +13,7 @@ use super::types::{ML_DSA_65_PK_LEN, ML_DSA_65_SIG_LEN, ML_DSA_65_SK_LEN};
 
 const NETWORK_CTX_LABEL: &[u8] = b"QDNF-MLDSA-CTX-V1";
 
+/// ML-DSA-65 keypair generation.
 pub fn generate_keypair() -> Result<([u8; ML_DSA_65_SK_LEN], [u8; ML_DSA_65_PK_LEN]), CryptoError> {
     let (pk, sk) = ml_dsa_65::try_keygen().map_err(|_| CryptoError::CryptoFailure)?;
     Ok((sk.into_bytes(), pk.into_bytes()))
@@ -31,6 +32,7 @@ fn network_ctx(context: &[u8]) -> [u8; 48] {
     ctx
 }
 
+/// ML-DSA-65 sign over message+context.
 pub fn sign(
     secret: &[u8; ML_DSA_65_SK_LEN],
     message: &[u8],
@@ -47,6 +49,7 @@ pub fn sign(
     Ok(())
 }
 
+/// ML-DSA-65 verify; fails closed on bad signature.
 pub fn verify(
     public: &[u8; ML_DSA_65_PK_LEN],
     message: &[u8],

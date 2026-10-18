@@ -4,6 +4,7 @@ use crate::poet_host::PoetSnapshot;
 use std::collections::BTreeMap;
 use vibe::Value;
 
+/// Stats snapshot.
 pub fn stats(snap: &PoetSnapshot) -> Value {
     let mut rec = BTreeMap::new();
     rec.insert("quin_count".into(), Value::U64(snap.visible_count() as u64));

@@ -43,6 +43,7 @@ pub struct Q42RangeVolumeSetBindState {
 }
 
 impl Q42RangeBindPlan {
+    /// Lowers an `ExecutionPlan` into a range-bind plan.
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
             return Err("range BIND requires a non-empty execution plan".into());
@@ -135,6 +136,7 @@ fn triple_scan(plan: &ExecutionPlan, operator: u16) -> Result<Q42RangeTriplePatt
     }
 }
 
+/// Applies a BIND clause into the binding row.
 pub fn apply_bind(
     ctx: &SparqlQueryContext,
     var: VariableId,
@@ -151,6 +153,7 @@ pub fn apply_bind(
     }
 }
 
+/// Executes range-bind into a caller page buffer on `S`.
 pub fn execute_range_bind_page_into<S: crate::q42_volume::Q42RangeSource>(
     volume: &crate::q42_volume::Q42RangeVolume<S>,
     plan: Q42RangeBindPlan,
@@ -226,6 +229,7 @@ pub fn execute_range_bind_page_into<S: crate::q42_volume::Q42RangeSource>(
     }
 }
 
+/// Executes range-bind across a volume set.
 pub fn execute_range_volume_set_bind_page_into<S: crate::q42_volume::Q42RangeSource>(
     volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
     plan: Q42RangeBindPlan,

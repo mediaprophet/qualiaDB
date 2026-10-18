@@ -43,6 +43,7 @@ pub enum JournalApplicationProfile {
 }
 
 impl Default for JournalApplicationProfile {
+    /// `GenericSemantic` (0x0001) — the general-purpose knowledge-base profile.
     fn default() -> Self {
         Self::GenericSemantic
     }
@@ -50,6 +51,8 @@ impl Default for JournalApplicationProfile {
 
 impl TryFrom<u16> for JournalApplicationProfile {
     type Error = JournalError;
+    /// Decodes a u16 profile tag (0x0001–0x0005); `UnknownApplicationProfile`
+    /// on any other value — fails closed rather than guessing a profile.
     fn try_from(val: u16) -> Result<Self, Self::Error> {
         match val {
             0x0001 => Ok(Self::GenericSemantic),
@@ -72,6 +75,7 @@ pub enum JournalPrivacyClass {
 }
 
 impl Default for JournalPrivacyClass {
+    /// `Sanctuary` — the most restrictive class is the default (fail-safe).
     fn default() -> Self {
         Self::Sanctuary
     }
@@ -96,6 +100,9 @@ pub struct JournalHeader {
 }
 
 impl JournalHeader {
+    /// Builds a 128-byte header for a new `.q42j`: current magic/version,
+    /// Sanctuary privacy, zeroed flags/reserved fields, `schema_rule_version`
+    /// 1, and the caller's world DID hash + base snapshot digest/generation.
     pub fn new(
         profile: JournalApplicationProfile,
         world_did_hash: u64,
@@ -118,6 +125,7 @@ impl JournalHeader {
         }
     }
 
+    /// Serializes the header to its fixed 128-byte little-endian layout.
     pub fn to_bytes(&self) -> [u8; Q42J_HEADER_SIZE] {
         let mut buf = [0u8; Q42J_HEADER_SIZE];
         buf[0..4].copy_from_slice(&self.magic);
@@ -135,6 +143,8 @@ impl JournalHeader {
         buf
     }
 
+    /// Parses a header; fails closed on short input, bad magic, or an
+    /// unsupported format version.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, JournalError> {
         if bytes.len() < Q42J_HEADER_SIZE {
             return Err(JournalError::InvalidHeader("header too short"));
@@ -200,6 +210,8 @@ pub enum JournalFrameType {
 
 impl TryFrom<u8> for JournalFrameType {
     type Error = JournalError;
+    /// Decodes a frame-type tag (0x01–0x05, 0xFF); `UnknownFrameType` on any
+    /// other byte — corrupt/unrecognized frames fail closed.
     fn try_from(val: u8) -> Result<Self, Self::Error> {
         match val {
             0x01 => Ok(Self::TxBegin),
@@ -229,6 +241,7 @@ pub struct FrameHeader {
 pub const FRAME_HEADER_SIZE: usize = 32;
 
 impl FrameHeader {
+    /// Serializes the frame header to its 32-byte little-endian layout.
     pub fn to_bytes(&self) -> [u8; FRAME_HEADER_SIZE] {
         let mut b = [0u8; FRAME_HEADER_SIZE];
         b[0] = self.frame_type;
@@ -241,6 +254,7 @@ impl FrameHeader {
         b
     }
 
+    /// Parses a frame header; `InvalidHeader` on truncation.
     pub fn from_bytes(b: &[u8]) -> Result<Self, JournalError> {
         if b.len() < FRAME_HEADER_SIZE {
             return Err(JournalError::InvalidHeader("frame header too short"));
@@ -295,6 +309,8 @@ pub struct JournalTransaction {
 }
 
 impl JournalTransaction {
+    /// Creates an empty transaction delta: `tx_id`, logical `tick`, the hash
+    /// of the originating command, and the acting agent's DID hash.
     pub fn new(tx_id: u32, tick: u64, command_hash: u64, actor_did: u64) -> Self {
         Self {
             tx_id,
@@ -309,14 +325,17 @@ impl JournalTransaction {
         }
     }
 
+    /// Stages a quin addition into the transaction's `added` list.
     pub fn add_quin(&mut self, quin: NQuin) {
         self.adds.push(quin);
     }
 
+    /// Stages a quin removal into the transaction's `removed` list.
     pub fn remove_quin(&mut self, quin: NQuin) {
         self.removes.push(quin);
     }
 
+    /// Stages a hash→IRI lexicon binding so replay can resolve token hashes.
     pub fn bind_lexicon(&mut self, token_hash: u64, iri: String) {
         self.lexicon_bindings.push((token_hash, iri));
     }
@@ -433,6 +452,8 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
         Ok(())
     }
 
+    /// Writes one frame header + payload to storage; errors propagate as
+    /// `JournalError::Io` so a partial transaction is never reported committed.
     fn write_frame(
         &mut self,
         frame_type: JournalFrameType,
@@ -629,10 +650,13 @@ impl<S: Read + Write + Seek> MutableQ42Session<S> {
         })
     }
 
+    /// The session's current logical clock (Lamport tick).
     pub fn current_tick(&self) -> u64 {
         self.current_tick
     }
 
+    /// Advances the session clock to `tick` (callers should pass a
+    /// monotonically increasing value).
     pub fn advance_tick(&mut self, tick: u64) {
         if tick > self.current_tick {
             self.current_tick = tick;
@@ -776,12 +800,14 @@ pub enum JournalError {
 }
 
 impl From<io::Error> for JournalError {
+    /// Wraps a storage IO failure as `JournalError::Io`.
     fn from(e: io::Error) -> Self {
         Self::Io(e)
     }
 }
 
 impl std::fmt::Display for JournalError {
+    /// Human-readable rendering of each journal error variant.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Io(e) => write!(f, "IO error: {}", e),

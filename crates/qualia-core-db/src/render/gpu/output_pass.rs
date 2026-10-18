@@ -39,6 +39,7 @@ pub(super) struct OutputChain {
 }
 
 impl OutputChain {
+    /// Tries to construct.
     pub(super) fn try_new(
         device: &wgpu::Device,
         width: u32,
@@ -195,18 +196,22 @@ impl OutputChain {
         })
     }
 
+    /// `scene_view`.
     pub(super) fn scene_view(&self) -> &wgpu::TextureView {
         &self.scene_view
     }
 
+    /// `extent`.
     pub(super) fn extent(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
+    /// `uses_hdr_scene`.
     pub(super) fn uses_hdr_scene(&self) -> bool {
         self.hdr_scene
     }
 
+    /// Sets exposure.
     pub(super) fn set_exposure(&mut self, queue: &wgpu::Queue, exposure_ev: f32) -> bool {
         let Some(exposure_scale) = crate::render::output::exposure_scale_from_ev(exposure_ev)
         else {
@@ -224,6 +229,7 @@ impl OutputChain {
         true
     }
 
+    /// Sets white balance.
     pub(super) fn set_white_balance(&mut self, queue: &wgpu::Queue, white_balance_gains: [f32; 3]) {
         self.white_balance_gains = white_balance_gains;
         let params = OutputParams {
@@ -236,6 +242,7 @@ impl OutputChain {
         queue.write_buffer(&self.uniform_buf, 0, bytemuck::bytes_of(&params));
     }
 
+    /// `composite`.
     pub(super) fn composite(&self, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView) {
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("qualia-sdr-output"),

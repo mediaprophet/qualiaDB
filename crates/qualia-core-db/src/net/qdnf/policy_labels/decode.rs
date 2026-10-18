@@ -8,6 +8,7 @@ use crate::net::qdnf::types::StrongDigest;
 /// || audience(48) || issuer(48) || compartments || purposes.
 pub const HEADER_LEN: usize = 1 + 1 + 2 + 1 + 1 + 48 + 48;
 
+/// Decodes `label-into`.
 pub fn decode_label_into(original: &[u8], out: &mut LabelFields) -> Result<(), QdnfError> {
     *out = LabelFields::blank();
     if original.is_empty() {

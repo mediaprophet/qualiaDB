@@ -32,6 +32,7 @@ pub struct SimulationConfig {
 }
 
 impl SimulationConfig {
+    /// Returns the default `SimulationConfig`.
     pub fn default() -> Self {
         Self {
             simulation_id: "default".to_string(),

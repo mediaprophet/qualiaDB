@@ -15,6 +15,7 @@ pub const MAX_QDNF_MTU: u16 = 1500;
 /// Default advertised MTU when the adapter has not reported one.
 pub const DEFAULT_QDNF_MTU: u16 = MIN_QDNF_MTU;
 
+/// `?::negotiate_mtu`.
 pub fn negotiate_mtu(local: u16, remote: u16) -> Result<u16, QdnfError> {
     if local == 0 || remote == 0 {
         return Err(QdnfError::Range);

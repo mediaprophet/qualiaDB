@@ -16,11 +16,13 @@ pub struct ComparisonReport {
 }
 
 impl ComparisonReport {
+    /// `ComparisonReport::passed`.
     pub const fn passed(&self) -> bool {
         self.mismatch_count == 0
     }
 }
 
+/// Compares f32 results against tolerance.
 pub fn compare_f32(
     expected: &[f32],
     actual: &[f32],

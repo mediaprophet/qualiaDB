@@ -8,16 +8,19 @@ use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::StrongDigest;
 
 #[inline]
+/// `?::public_patient_index_allowed`.
 pub const fn public_patient_index_allowed() -> bool {
     false
 }
 
 #[inline]
+/// `?::vip_association_indexed`.
 pub const fn vip_association_indexed() -> bool {
     false
 }
 
 #[inline]
+/// `?::diagnosis_discovery_allowed`.
 pub const fn diagnosis_discovery_allowed() -> bool {
     false
 }
@@ -40,6 +43,7 @@ pub struct PairingTable {
 }
 
 impl PairingTable {
+    /// Creates a default `PairingTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
@@ -76,6 +80,7 @@ impl PairingTable {
         Ok(i)
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(
         &self,
         patient: StrongDigest,

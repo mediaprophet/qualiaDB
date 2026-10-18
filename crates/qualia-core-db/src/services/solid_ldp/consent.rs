@@ -26,6 +26,7 @@ pub enum SanctuaryExportChoice {
 }
 
 impl SanctuaryExportChoice {
+    /// Static string.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Unset => "unset",
@@ -34,6 +35,7 @@ impl SanctuaryExportChoice {
         }
     }
 
+    /// Builds `SanctuaryExportChoice` from `str`.
     pub fn from_str(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
             "unset" | "" => Some(Self::Unset),
@@ -67,6 +69,7 @@ pub fn count_sanctuary_quins(quins: &[NQuin]) -> usize {
         .count()
 }
 
+/// Counts quins by classification.
 pub fn count_classified_quins(quins: &[NQuin]) -> usize {
     quins
         .iter()

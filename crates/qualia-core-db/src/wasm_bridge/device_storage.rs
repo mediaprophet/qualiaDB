@@ -222,12 +222,14 @@ mod wasm_exports {
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
+    /// WASM bridge: device-storage-policy.
     pub fn device_storage_policy_wasm() -> Result<JsValue, JsValue> {
         serde_wasm_bindgen::to_value(&device_storage_policy())
             .map_err(|e| JsValue::from_str(&e.to_string()))
     }
 
     #[wasm_bindgen]
+    /// WASM bridge: plan-device-storage.
     pub fn plan_device_storage_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         let input: StoragePlanInput = serde_wasm_bindgen::from_value(val)?;
         serde_wasm_bindgen::to_value(&plan_device_storage(&input))
@@ -235,6 +237,7 @@ mod wasm_exports {
     }
 
     #[wasm_bindgen]
+    /// WASM bridge: verify-backup-manifest.
     pub fn verify_backup_manifest_wasm(
         manifest: JsValue,
         payload_sha256_hex: &str,

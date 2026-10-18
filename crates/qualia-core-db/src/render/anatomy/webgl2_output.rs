@@ -168,6 +168,7 @@ pub(super) struct WebGl2Output {
 }
 
 impl WebGl2Output {
+    /// Tries to construct.
     pub(super) fn try_new(gl: &WebGl2RenderingContext) -> Result<Self, JsValue> {
         let vertex = super::webgl2::compile_shader(
             gl,
@@ -209,6 +210,7 @@ impl WebGl2Output {
         })
     }
 
+    /// Begins the scene.
     pub(super) fn begin_scene(
         &mut self,
         gl: &WebGl2RenderingContext,
@@ -262,6 +264,7 @@ impl WebGl2Output {
         }
     }
 
+    /// Finishes the scene.
     pub(super) fn finish_scene(&self, gl: &WebGl2RenderingContext) {
         let Some(scene) = &self.scene else { return };
         gl.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
@@ -286,6 +289,7 @@ impl WebGl2Output {
         gl.enable(WebGl2RenderingContext::DEPTH_TEST);
     }
 
+    /// Sets exposure.
     pub(super) fn set_exposure(&mut self, ev: f32) -> bool {
         if crate::render::output::exposure_scale_from_ev(ev).is_none() {
             return false;
@@ -294,14 +298,17 @@ impl WebGl2Output {
         true
     }
 
+    /// Sets white balance.
     pub(super) fn set_white_balance(&mut self, gains: [f32; 3]) {
         self.white_balance_gains = gains;
     }
 
+    /// `true` when transform is available.
     pub(super) fn transform_available(&self) -> bool {
         self.scene.is_some()
     }
 
+    /// `true` when HDR scene is available.
     pub(super) fn hdr_scene_available(&self) -> bool {
         self.scene.as_ref().is_some_and(|scene| scene.hdr)
     }

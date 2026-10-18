@@ -5,6 +5,7 @@
 
 pub(crate) const ENTRY: &str = "q8_0_dp4a_qkv_rope_warp8";
 
+/// Source reference.
 pub(crate) fn source() -> &'static str {
     r#"
 #include <cuda_fp16.h>

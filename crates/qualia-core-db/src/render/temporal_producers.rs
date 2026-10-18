@@ -26,6 +26,7 @@ pub struct MotionVector2d {
 impl MotionVector2d {
     pub const ZERO: Self = Self { du: 0.0, dv: 0.0 };
 
+    /// Creates a default `MotionVector2d`.
     pub const fn new(du: f32, dv: f32) -> Self {
         Self { du, dv }
     }
@@ -63,10 +64,12 @@ impl Mat4ColumnMajor {
         ],
     };
 
+    /// Builds `Mat4ColumnMajor` from `cols`.
     pub const fn from_cols(cols: [[f32; 4]; 4]) -> Self {
         Self { cols }
     }
 
+    /// Builds `Mat4ColumnMajor` from `f32_16`.
     pub const fn from_f32_16(raw: [f32; 16]) -> Self {
         Self {
             cols: [

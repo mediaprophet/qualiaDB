@@ -141,6 +141,7 @@ pub fn sto3g_h2(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Parses `bse-json`.
 pub fn parse_bse_json(
     _args: &vibe::Value,
     span: vibe::Span,

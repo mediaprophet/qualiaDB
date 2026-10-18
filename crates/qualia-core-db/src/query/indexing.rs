@@ -56,26 +56,32 @@ impl QuinIndex {
         self.quins.push(quin);
     }
 
+    /// Indexed quins.
     pub fn len(&self) -> usize {
         self.quins.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.quins.is_empty()
     }
 
+    /// All quins with subject `id`.
     pub fn by_subject(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_subject, id)
     }
 
+    /// All quins with predicate `id`.
     pub fn by_predicate(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_predicate, id)
     }
 
+    /// All quins with object `id`.
     pub fn by_object(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_object, id)
     }
 
+    /// All quins with context `id`.
     pub fn by_context(&self, id: u64) -> Vec<NQuin> {
         self.lookup(&self.by_context, id)
     }

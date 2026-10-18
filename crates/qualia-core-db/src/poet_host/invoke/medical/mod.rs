@@ -114,6 +114,7 @@ pub fn analyze_intensity_grid(args: &Value, span: Span) -> Result<Value, Diagnos
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::analyze_differential`.
 pub fn analyze_differential(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -122,6 +123,7 @@ pub fn analyze_differential(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::screen_compounds`.
 pub fn screen_compounds(
     _args: &vibe::Value,
     span: vibe::Span,

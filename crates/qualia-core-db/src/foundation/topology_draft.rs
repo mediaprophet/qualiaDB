@@ -9,6 +9,7 @@ pub struct TopologyDraftMapper<'a> {
 }
 
 impl<'a> TopologyDraftMapper<'a> {
+    /// Creates a default `TopologyDraftMapper`.
     pub fn new(tokenizer: &'a GgufTokenizer) -> Self {
         Self { tokenizer }
     }

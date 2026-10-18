@@ -18,6 +18,7 @@ pub struct AssetIdentity {
 }
 
 impl AssetIdentity {
+    /// Creates a default `AssetIdentity`.
     pub fn new(
         asset_id: impl Into<String>,
         content_digest: u64,
@@ -149,6 +150,7 @@ pub struct ContractVerificationReceipt {
 }
 
 impl FunctionalContract {
+    /// Creates a default `FunctionalContract`.
     pub fn new(
         contract_id: impl Into<String>,
         target_asset_digest: u64,

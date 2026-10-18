@@ -30,6 +30,7 @@ pub struct FraminghamParams {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: compute-framingham-risk.
 pub fn compute_framingham_risk_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: FraminghamParams = serde_wasm_bindgen::from_value(val)?;
 
@@ -100,6 +101,7 @@ pub struct FhirObsParams {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: validate-fhir-observation.
 pub fn validate_fhir_observation_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: FhirObsParams = serde_wasm_bindgen::from_value(val)?;
     #[derive(Serialize)]
@@ -136,6 +138,7 @@ pub fn validate_fhir_observation_wasm(val: JsValue) -> Result<JsValue, JsValue> 
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: check-drug-interactions.
 pub fn check_drug_interactions_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: DrugInteractionParams = serde_wasm_bindgen::from_value(val)?;
     let hashes: Vec<u64> = p

@@ -7,6 +7,7 @@ use super::args;
 use super::ids;
 use vibe::{Diagnostic, Span, Value};
 
+/// Vibe fn: creates a manifold from args.
 pub fn manifold_create(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let label = args::rec_str(args_v, "label")
         .or_else(|| args::rec_str(args_v, "name"))
@@ -25,6 +26,7 @@ pub fn manifold_create(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// Vibe fn: places a container.
 pub fn container_place(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let container_type = args::rec_str(args_v, "container_type")
         .or_else(|| args::rec_str(args_v, "type"))
@@ -41,6 +43,7 @@ pub fn container_place(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// Vibe fn: links a nested element.
 pub fn nested_link(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let to = args::rec_str(args_v, "to")
         .or_else(|| args::rec_str(args_v, "target_manifold"))
@@ -55,6 +58,7 @@ pub fn nested_link(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// Vibe fn: declares a subject.
 pub fn subject_declare(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let label = args::rec_str(args_v, "label")
         .or_else(|| args::rec_str(args_v, "name"))
@@ -69,6 +73,7 @@ pub fn subject_declare(args_v: &Value, span: Span) -> Result<Value, Diagnostic> 
     ]))
 }
 
+/// Vibe fn: invites a participant.
 pub fn participant_invite(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let did = args::rec_str(args_v, "did")
         .or_else(|| args::rec_str(args_v, "participant"))

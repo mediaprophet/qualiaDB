@@ -52,6 +52,7 @@ impl ClassMatrix {
         self.rows(class).first()
     }
 
+    /// Summary.
     pub fn summary(&self) -> String {
         let mut s = String::from("ClassMatrix (per kernel-class, ranked fastest-first):\n");
         for (class, rows) in &self.per_class {

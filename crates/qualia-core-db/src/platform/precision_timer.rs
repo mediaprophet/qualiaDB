@@ -137,6 +137,7 @@ pub struct BenchmarkResult {
 }
 
 impl BenchmarkResult {
+    /// Converts to `report_string`.
     pub fn to_report_string(&self) -> String {
         format!(
             "Iterations: {} | Total: {} | Speed: {:.2} ns/op ({:.2} M-ops/s)",

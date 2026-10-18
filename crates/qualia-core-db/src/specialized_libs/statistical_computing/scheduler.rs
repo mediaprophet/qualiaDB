@@ -79,6 +79,7 @@ pub struct UnitMetrics {
 }
 
 impl StatisticalScheduler {
+    /// Creates a default `StatisticalScheduler`.
     pub fn new() -> Self {
         Self {
             scheduling_policy: SchedulingPolicy::Priority,
@@ -87,6 +88,7 @@ impl StatisticalScheduler {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), StatisticalError> {
         Ok(())
     }
@@ -123,6 +125,7 @@ impl StatisticalScheduler {
 }
 
 impl QueueManager {
+    /// Creates a default `QueueManager`.
     pub fn new() -> Self {
         Self {
             pending_queue: Vec::new(),
@@ -195,6 +198,7 @@ impl QueueManager {
 }
 
 impl LoadBalancer {
+    /// Creates a default `LoadBalancer`.
     pub fn new() -> Self {
         Self {
             balancing_strategy: BalancingStrategy::LoadBased,

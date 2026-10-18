@@ -17,6 +17,7 @@ pub struct LogitFitSummary {
     pub fit_intercept: bool,
 }
 
+/// Logit fit.
 pub fn fit_logit(
     x: &[f64],
     y: &[f64],

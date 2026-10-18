@@ -116,6 +116,7 @@ pub struct TaxClearingHouse {
 }
 
 impl TaxClearingHouse {
+    /// Creates a default `TaxClearingHouse`.
     pub fn new() -> Self {
         Self {
             schemas: Vec::new(),

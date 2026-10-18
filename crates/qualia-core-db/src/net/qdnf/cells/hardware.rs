@@ -56,16 +56,19 @@ pub fn rapl_energy_uj() -> Result<u64, HardwareObservation> {
 }
 
 #[inline]
+/// `?::rss_measured`.
 pub fn rss_measured() -> bool {
     rss_bytes().is_ok()
 }
 
 #[inline]
+/// `?::numa_measured`.
 pub fn numa_measured() -> bool {
     numa_node().is_ok()
 }
 
 #[inline]
+/// `?::idle_energy_measured`.
 pub const fn idle_energy_measured() -> bool {
     false
 }

@@ -9,6 +9,7 @@ pub struct RgbView<'a> {
 }
 
 impl<'a> RgbView<'a> {
+    /// Creates a default `RgbView`.
     pub fn new(width: u32, height: u32, stride: u32, bytes: &'a [u8]) -> Option<Self> {
         let need = stride.checked_mul(height)? as usize;
         if bytes.len() < need || width == 0 || height == 0 || stride < width * 3 {
@@ -23,6 +24,7 @@ impl<'a> RgbView<'a> {
     }
 
     #[inline]
+    /// `RgbView::pixel`.
     pub fn pixel(&self, x: u32, y: u32) -> (u8, u8, u8) {
         let i = (y * self.stride + x * 3) as usize;
         (self.bytes[i], self.bytes[i + 1], self.bytes[i + 2])

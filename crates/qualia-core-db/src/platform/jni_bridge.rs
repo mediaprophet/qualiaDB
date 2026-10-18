@@ -9,6 +9,7 @@ use jni::sys::{jboolean, jbyteArray, jdouble, jstring};
 use jni::JNIEnv;
 
 #[no_mangle]
+/// JNI export: returns ledger transactions as `NQuin` bytes. **Currently returns two hardcoded quins — fabricated (see STUBS).**
 pub extern "system" fn Java_com_example_qualia_QualiaCore_queryLedgerTransactions(
     mut env: JNIEnv,
     _class: JClass,
@@ -41,6 +42,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_queryLedgerTransaction
 }
 
 #[no_mangle]
+/// JNI export: inserts a ledger transaction. **Currently only validates the 48-byte multiple — never persists (see STUBS).**
 pub extern "system" fn Java_com_example_qualia_QualiaCore_insertLedgerTransaction(
     mut env: JNIEnv,
     _class: JClass,
@@ -60,6 +62,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertLedgerTransactio
 }
 
 #[no_mangle]
+/// JNI export: inserts a CBOR-LD quin.
 pub extern "system" fn Java_com_example_qualia_QualiaCore_insertCborQuin(
     mut env: JNIEnv,
     _class: JClass,
@@ -74,6 +77,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertCborQuin(
 }
 
 #[no_mangle]
+/// JNI export: loads a Q42 ontology.
 pub extern "system" fn Java_com_example_qualia_ontology_OntologyManager_loadQ42Ontology(
     mut env: JNIEnv,
     _class: JClass,
@@ -87,6 +91,7 @@ pub extern "system" fn Java_com_example_qualia_ontology_OntologyManager_loadQ42O
 }
 
 #[no_mangle]
+/// JNI export: commits project state.
 pub extern "system" fn Java_com_example_qualia_QualiaCore_commitProjectState(
     mut env: JNIEnv,
     _class: JClass,
@@ -98,6 +103,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_commitProjectState(
 }
 
 #[no_mangle]
+/// JNI export: generates a git export.
 pub extern "system" fn Java_com_example_qualia_QualiaCore_generateGitExport(
     mut env: JNIEnv,
     _class: JClass,
@@ -116,6 +122,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_generateGitExport(
 }
 
 #[no_mangle]
+/// JNI export: evaluates tax liability.
 pub extern "system" fn Java_com_example_qualia_QualiaCore_evaluateTaxLiability(
     mut env: JNIEnv,
     _class: JClass,
@@ -144,6 +151,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_evaluateTaxLiability(
 }
 
 #[no_mangle]
+/// JNI export: inserts a spatial log.
 pub extern "system" fn Java_com_example_qualia_QualiaCore_insertSpatialLog(
     mut env: JNIEnv,
     _class: JClass,
@@ -157,6 +165,7 @@ pub extern "system" fn Java_com_example_qualia_QualiaCore_insertSpatialLog(
 }
 
 #[no_mangle]
+/// JNI export: calculates asset apportionment.
 pub extern "system" fn Java_com_example_qualia_QualiaCore_calculateAssetApportionment(
     mut env: JNIEnv,
     _class: JClass,

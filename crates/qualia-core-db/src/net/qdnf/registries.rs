@@ -30,6 +30,7 @@ pub enum FrameType {
 }
 
 impl FrameType {
+    /// Builds `FrameType` from `u8`.
     pub const fn from_u8(v: u8) -> Result<Self, QdnfError> {
         Ok(match v {
             1 => Self::DiscoveryBeacon,
@@ -58,6 +59,7 @@ impl FrameType {
     }
 
     #[inline]
+    /// Encodes as u8.
     pub const fn as_u8(self) -> u8 {
         self as u8
     }
@@ -100,6 +102,7 @@ pub enum NextProtocol {
 }
 
 impl NextProtocol {
+    /// Builds `NextProtocol` from `u8`.
     pub const fn from_u8(v: u8) -> Result<Self, QdnfError> {
         Ok(match v {
             1 => Self::QLink,
@@ -129,6 +132,7 @@ pub enum AlgorithmId {
 }
 
 impl AlgorithmId {
+    /// Builds `AlgorithmId` from `u16`.
     pub const fn from_u16(v: u16) -> Result<Self, QdnfError> {
         Ok(match v {
             1 => Self::Sha384,
@@ -163,6 +167,7 @@ pub enum BearerProfile {
 }
 
 impl BearerProfile {
+    /// `BearerProfile::from_u16`.
     pub const fn from_u16(v: u16) -> Result<Self, QdnfError> {
         Ok(match v {
             1 => Self::LocalIpcV1,

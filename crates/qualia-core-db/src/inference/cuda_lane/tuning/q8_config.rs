@@ -8,6 +8,7 @@ pub(crate) enum CudaQ8Profile {
 }
 
 impl CudaQ8Profile {
+    /// Profile receipt id.
     pub(crate) const fn receipt_id(self) -> &'static str {
         match self {
             Self::Incumbent => "cuda-q8-incumbent-v1",
@@ -30,6 +31,7 @@ pub(crate) struct CudaQ8Tuning {
 }
 
 impl CudaQ8Tuning {
+    /// Loads Q8 tuning from environment variables.
     pub(crate) fn from_env() -> Self {
         let stage_debug = std::env::var_os("QUALIA_CUDA_STAGE_DEBUG").is_some();
         if std::env::var("QUALIA_CUDA_Q8_PROFILE").ok().as_deref() == Some("a2000-smollm2-q8-v1") {
@@ -59,6 +61,7 @@ impl CudaQ8Tuning {
         }
     }
 
+    /// A2000 SmolLM2 Q8 v1 tuning.
     pub(crate) const fn a2000_smollm2_q8_v1(stage_debug: bool) -> Self {
         Self {
             profile: CudaQ8Profile::A2000SmolLm2Q8V1,
@@ -72,6 +75,7 @@ impl CudaQ8Tuning {
         }
     }
 
+    /// Tuning profile for `model` on the default adapter.
     pub(crate) fn for_model(
         self,
         n_embd: usize,
@@ -92,6 +96,7 @@ impl CudaQ8Tuning {
         }
     }
 
+    /// Tuning profile for `model` on a named adapter.
     pub(crate) fn for_model_on_adapter(
         self,
         n_embd: usize,
@@ -116,6 +121,7 @@ impl CudaQ8Tuning {
         Self::a2000_smollm2_q8_v1(model_tuning.stage_debug)
     }
 
+    /// Incumbent tuning.
     pub(crate) const fn incumbent() -> Self {
         Self {
             profile: CudaQ8Profile::Incumbent,
@@ -129,15 +135,18 @@ impl CudaQ8Tuning {
         }
     }
 
+    /// Tuning receipt id.
     pub(crate) const fn receipt_id(self) -> &'static str {
         self.profile.receipt_id()
     }
 
     #[inline]
+    /// `true` when layer `layer` uses DP4A SwiGLU.
     pub(crate) fn dp4a_swiglu_layer(self, layer: usize) -> bool {
         self.dp4a_swiglu && layer < self.dp4a_swiglu_layers
     }
 
+    /// Graph fingerprint.
     pub(crate) fn graph_fingerprint(self) -> u64 {
         let mut fingerprint = 0x5138_5455_4e45_5631u64;
         for value in [
@@ -156,6 +165,7 @@ impl CudaQ8Tuning {
     }
 
     #[cfg(test)]
+    /// Q8 graph node count.
     pub(crate) fn q8_graph_nodes(self, layer_count: u32) -> u64 {
         let layers = layer_count as u64;
         layers * 8
@@ -201,11 +211,13 @@ fn contains_ascii_case_insensitive(haystack: &str, needle: &str) -> bool {
         .any(|candidate| candidate.eq_ignore_ascii_case(needle.as_bytes()))
 }
 
+/// Process-wide cached tuning.
 pub(crate) fn cuda_q8_tuning() -> &'static CudaQ8Tuning {
     static CONFIG: OnceLock<CudaQ8Tuning> = OnceLock::new();
     CONFIG.get_or_init(CudaQ8Tuning::from_env)
 }
 
+/// Cached tuning for `model`.
 pub(crate) fn cuda_q8_tuning_for_model(
     n_embd: usize,
     n_head: usize,

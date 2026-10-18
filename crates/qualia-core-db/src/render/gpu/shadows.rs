@@ -68,6 +68,7 @@ impl ShadowTarget {
     }
 }
 
+/// `compare_sampler`.
 pub(super) fn compare_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("qualia-sun-shadow-compare"),
@@ -82,6 +83,7 @@ pub(super) fn compare_sampler(device: &wgpu::Device) -> wgpu::Sampler {
     })
 }
 
+/// `matrix_layout`.
 pub(super) fn matrix_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("qualia-sun-shadow-matrix-layout"),

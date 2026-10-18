@@ -65,6 +65,7 @@ pub struct DemAdapter {
 }
 
 impl DemAdapter {
+    /// Creates a DEM adapter for `endpoint`.
     pub fn new(id: &'static str, endpoint: &str) -> Self {
         let endpoint =
             if endpoint.contains("{z}") && endpoint.contains("{x}") && endpoint.contains("{y}") {
@@ -81,10 +82,12 @@ impl DemAdapter {
         }
     }
 
+    /// Creates an adapter preset for the Terrarium tile endpoint.
     pub fn terrarium(id: &'static str) -> Self {
         Self::new(id, DEFAULT_TERRARIUM_ENDPOINT)
     }
 
+    /// Builder: pins the zoom level; error when out of range.
     pub fn with_zoom(mut self, zoom: u8) -> Result<Self, String> {
         if zoom > MAX_ZOOM {
             return Err(format!("Terrarium zoom must be in 0..={MAX_ZOOM}"));
@@ -93,10 +96,12 @@ impl DemAdapter {
         Ok(self)
     }
 
+    /// Stable adapter identifier.
     pub fn adapter_id(&self) -> &'static str {
         self.id
     }
 
+    /// Estimated tiles covering `bbox` at the configured zoom.
     pub fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
         estimate_tile_count(bbox, self.zoom).unwrap_or(0)
     }

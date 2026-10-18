@@ -23,6 +23,7 @@ pub struct DaemonGraphStore {
 }
 
 impl DaemonGraphStore {
+    /// Creates a default `DaemonGraphStore`.
     pub const fn new() -> Self {
         Self {
             quins: [NQuin {
@@ -38,21 +39,25 @@ impl DaemonGraphStore {
     }
 
     #[inline]
+    /// Quin count.
     pub fn len(&self) -> usize {
         self.len
     }
 
     #[inline]
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
     #[inline]
+    /// Quin slice.
     pub fn as_slice(&self) -> &[NQuin] {
         &self.quins[..self.len]
     }
 
     #[inline]
+    /// Clears the store.
     pub fn clear(&mut self) {
         for quin in &mut self.quins[..self.len] {
             *quin = NQuin::default();
@@ -61,6 +66,7 @@ impl DaemonGraphStore {
     }
 
     #[inline]
+    /// Pushes a quin; `false` at capacity.
     pub fn push(&mut self, quin: NQuin) -> bool {
         if self.len >= MAX_GRAPH_QUINS {
             return false;
@@ -71,6 +77,7 @@ impl DaemonGraphStore {
     }
 
     #[inline]
+    /// Extends from `quins`; returns accepted count.
     pub fn extend_from_slice(&mut self, quins: &[NQuin]) -> usize {
         let remaining = MAX_GRAPH_QUINS.saturating_sub(self.len);
         let to_copy = quins.len().min(remaining);

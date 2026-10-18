@@ -62,6 +62,7 @@ pub struct StreamHasher {
 }
 
 impl StreamHasher {
+    /// Creates a default `StreamHasher`.
     pub fn new() -> Self {
         Self {
             inner: blake3::Hasher::new(),

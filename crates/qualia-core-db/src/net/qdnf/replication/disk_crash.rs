@@ -53,6 +53,7 @@ pub struct FilePairStore {
 }
 
 impl FilePairStore {
+    /// Opens the resource.
     pub fn open(dir: impl AsRef<Path>) -> Result<Self, QdnfError> {
         let dir = dir.as_ref();
         fs::create_dir_all(dir).map_err(|_| QdnfError::Incomplete)?;

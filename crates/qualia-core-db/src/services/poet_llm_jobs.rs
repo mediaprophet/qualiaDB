@@ -82,6 +82,7 @@ fn jobs() -> &'static Mutex<BTreeMap<String, Arc<LlmJob>>> {
     JOBS.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
+/// `true` when `active_jobs` present.
 pub fn has_active_jobs() -> bool {
     jobs()
         .lock()
@@ -106,6 +107,7 @@ fn diagnostic(status: StatusCode, code: &'static str, message: impl Into<String>
         .into_response()
 }
 
+/// HTTP `start` handler.
 pub async fn start_handler(body: Bytes) -> Response {
     let request = match decode_request(&body) {
         Ok(request) => request,
@@ -162,6 +164,7 @@ pub struct JobQuery {
     job_id: String,
 }
 
+/// HTTP `events` handler.
 pub async fn events_handler(Query(query): Query<JobQuery>) -> Response {
     let job = match jobs()
         .lock()
@@ -221,6 +224,7 @@ pub struct CancelRequest {
     job_id: String,
 }
 
+/// HTTP `cancel` handler.
 pub async fn cancel_handler(body: Bytes) -> Response {
     let request: CancelRequest = match serde_json::from_slice(&body) {
         Ok(request) if body.len() <= 4096 => request,

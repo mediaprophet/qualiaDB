@@ -28,6 +28,7 @@ pub use dynamics::{degree_centrality, gini, lorenz, malfeasance_delta, narrative
     feature = "wasm-scientific",
     feature = "wasm-full"
 )))]
+/// VibeScript seam: last-write-wins merge.
 pub fn lww_merge(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(vibe::Diagnostic::new(
         vibe::DiagCode::E300,
@@ -37,6 +38,7 @@ pub fn lww_merge(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, v
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::degree_centrality`.
 pub fn degree_centrality(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -45,16 +47,19 @@ pub fn degree_centrality(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::gini`.
 pub fn gini(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "Social"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::lorenz`.
 pub fn lorenz(_args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "Social"))
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::malfeasance_delta`.
 pub fn malfeasance_delta(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -63,6 +68,7 @@ pub fn malfeasance_delta(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::narrative_divergence`.
 pub fn narrative_divergence(
     _args: &vibe::Value,
     span: vibe::Span,

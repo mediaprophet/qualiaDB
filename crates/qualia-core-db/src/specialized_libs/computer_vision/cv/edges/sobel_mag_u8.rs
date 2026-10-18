@@ -3,6 +3,7 @@
 use crate::specialized_libs::computer_vision::cv::buffer::GrayView;
 use crate::specialized_libs::computer_vision::cv::error::CvError;
 
+/// Sobel magnitude on a u8 image.
 pub fn sobel_mag_u8(src: GrayView<'_>, out: &mut [u8]) -> Result<(), CvError> {
     let w = src.width as i32;
     let h = src.height as i32;

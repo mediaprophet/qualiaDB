@@ -6,6 +6,7 @@ pub struct PretokenSpan {
 }
 
 impl PretokenSpan {
+    /// Fetches an entry by key; `None` when absent.
     pub fn get<'a>(self, text: &'a str) -> Option<&'a str> {
         text.get(self.start as usize..self.end as usize)
     }
@@ -583,6 +584,7 @@ pub fn scan_unicode(text: &str, out: &mut [PretokenSpan]) -> Result<usize, Preto
 }
 
 #[cfg(not(target_arch = "x86_64"))]
+/// Scalar ASCII scan.
 pub(super) fn scan_ascii_scalar(
     bytes: &[u8],
     out: &mut [PretokenSpan],

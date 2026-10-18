@@ -32,8 +32,11 @@ pub struct DecodeStepOutput {
 
 /// Tier-1 execution contract for an already prepared model/backend pair.
 pub trait PreparedDecodePlan {
+    /// Prepared backend.
     fn backend(&self) -> PreparedBackend;
+    /// Plan state.
     fn state(&self) -> PreparedPlanState;
+    /// Execution counters.
     fn counters(&self) -> ExecutionCounters;
 
     /// Execute one autoregressive step.

@@ -2,6 +2,7 @@
 use super::super::*;
 
 impl QTensorEngine {
+    /// Pipeline helper: `read-hidden`.
     pub(crate) async fn pipeline_read_hidden(&self, emb_dim: usize, hidden: &mut [f32]) -> bool {
         let staging = self.gemm_output_staging.as_ref().unwrap();
         let hidden_buf = self.gemm_input_buf.as_ref().unwrap();
@@ -30,6 +31,7 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Pipeline helper: `read-batch`.
     pub(crate) async fn pipeline_read_batch(&self, batch_elems: usize, out: &mut [f32]) -> bool {
         if batch_elems > out.len() || batch_elems > self.gemm_max_input_floats {
             return false;
@@ -64,6 +66,7 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Pipeline helper: `read-gpu-bytes-at`.
     pub(crate) async fn pipeline_read_gpu_bytes_at(
         &self,
         src: &wgpu::Buffer,
@@ -101,6 +104,7 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Pipeline helper: `read-kv-head`.
     pub(crate) async fn pipeline_read_kv_head(
         &self,
         layout: &KvCacheLayout,

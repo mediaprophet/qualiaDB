@@ -25,10 +25,12 @@ pub struct CameraFlyTo {
 
 impl CameraFlyTo {
     #[inline]
+    /// `true` when active.
     pub fn is_active(&self) -> bool {
         self.remaining > 0
     }
 
+    /// `CameraFlyTo::start_toward`.
     pub fn start_toward(target: CameraState) -> Self {
         Self {
             target: target.clamped(),
@@ -62,6 +64,7 @@ pub fn camera_frame_node(node: [f32; 3]) -> CameraState {
 }
 
 #[inline]
+/// `CameraFlyTo::lerp_camera`.
 pub fn lerp_camera(a: CameraState, b: CameraState, t: f32) -> CameraState {
     CameraState {
         near_plane: a.near_plane + (b.near_plane - a.near_plane) * t,

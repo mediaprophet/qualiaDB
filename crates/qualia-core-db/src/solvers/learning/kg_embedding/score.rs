@@ -101,6 +101,7 @@ fn transe_distance(h: &[f64], r: &[f64], t: &[f64], p: u8) -> f64 {
     }
 }
 
+/// TransE score `‖h+r−t‖_p`.
 pub fn transe_score(h: &[f64], r: &[f64], t: &[f64], p: u8) -> f64 {
     -transe_distance(h, r, t, p)
 }
@@ -144,6 +145,7 @@ fn transe_grad(
 
 // ── DistMult: score = Σ h_i r_i t_i ──────────────────────────────────────────
 
+/// DistMult score `Σ h·r·t`.
 pub fn distmult_score(h: &[f64], r: &[f64], t: &[f64]) -> f64 {
     h.iter().zip(r).zip(t).map(|((&a, &b), &c)| a * b * c).sum()
 }
@@ -160,6 +162,7 @@ fn distmult_grad(h: &[f64], r: &[f64], t: &[f64], gh: &mut [f64], gr: &mut [f64]
 // Layout [re(0..k), im(k..2k)]. With h=a+bi, r=c+di, t=e+fi:
 //   Re = Σ (a c - b d) e + (a d + b c) f
 
+/// ComplEx score over `k` dims.
 pub fn complex_score(h: &[f64], r: &[f64], t: &[f64], k: usize) -> f64 {
     let mut s = 0.0;
     for i in 0..k {
@@ -199,6 +202,7 @@ fn complex_grad(
 // ── RotatE: score = -Σ_i |h_i ∘ e^{iθ_i} - t_i| ──────────────────────────────
 // Entity [re, im] length 2k; relation θ length k.
 
+/// RotatE score over `k` complex dims.
 pub fn rotate_score(h: &[f64], r: &[f64], t: &[f64], k: usize) -> f64 {
     let mut d = 0.0;
     for i in 0..k {

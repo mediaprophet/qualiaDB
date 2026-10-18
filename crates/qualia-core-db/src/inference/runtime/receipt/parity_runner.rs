@@ -29,6 +29,7 @@ pub struct ParityGateReport {
 }
 
 impl ParityGateReport {
+    /// `true` when `certified`.
     pub fn is_certified(&self) -> bool {
         self.evaluation.all_passed()
     }

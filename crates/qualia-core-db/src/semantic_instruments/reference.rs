@@ -115,6 +115,7 @@ pub fn reference_catalog() -> &'static [ReferenceSeed] {
     ]
 }
 
+/// Reference by slug.
 pub fn reference_by_slug(slug: &str) -> Option<&'static ReferenceSeed> {
     reference_catalog().iter().find(|s| s.slug == slug)
 }

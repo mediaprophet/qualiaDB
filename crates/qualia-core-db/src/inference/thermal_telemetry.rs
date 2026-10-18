@@ -235,6 +235,7 @@ mod nvml_impl {
     }
 
     impl NvmlThermalGovernor {
+        /// Creates `GpuThermalSample` with the given state.
         pub fn new() -> Result<Self, String> {
             let nvml = Nvml::init().map_err(|e| format!("NVML init: {e}"))?;
             let index = 0u32;
@@ -252,6 +253,7 @@ mod nvml_impl {
             })
         }
 
+        /// Device label.
         pub fn device_label(&self) -> &str {
             &self.label
         }

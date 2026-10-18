@@ -19,6 +19,7 @@ const MAX_ITEMS: usize = 64;
 const SLG_ARENA_BYTES: u64 = 42 * 1024 * 1024;
 const QUIN_BYTES: u64 = 48;
 
+/// Computes the result.
 pub fn compute(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     match args::rec_str(args_v, "mode") {
         Some("bytecode") => bytecode(args_v, span),

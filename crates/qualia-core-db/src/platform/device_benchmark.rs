@@ -106,6 +106,7 @@ impl CapabilityMatrix {
         self.circuits.first()
     }
 
+    /// Summary.
     pub fn summary(&self) -> String {
         let mut s = format!(
             "CapabilityMatrix (GEMV {n}x{n}, ranked by measured throughput; NPU probed={npu}):\n",

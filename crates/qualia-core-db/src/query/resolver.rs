@@ -118,6 +118,7 @@ pub struct Lexicon {
 }
 
 impl Lexicon {
+    /// Creates a default `Lexicon`.
     pub const fn new() -> Self {
         Self {
             entries: DEMO_LEXICON,

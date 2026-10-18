@@ -7,6 +7,7 @@ use super::super::{args, engineering, geometry};
 use crate::poet_host::PoetSnapshot;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: scene build.
 pub fn scene(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let kind = args::rec_str(args_v, "kind")
         .or_else(|| args::as_str(args_v))

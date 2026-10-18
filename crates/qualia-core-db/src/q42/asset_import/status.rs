@@ -18,6 +18,7 @@ pub enum ImportStatus {
 }
 
 impl ImportStatus {
+    /// `true` when `succeeded`.
     pub fn is_succeeded(&self) -> bool {
         matches!(self, Self::Succeeded { .. })
     }
@@ -52,6 +53,7 @@ pub struct PromotedArtifact {
 }
 
 impl ImportStatus {
+    /// `Ok(())` iff the import succeeded.
     pub(crate) fn require_succeeded(&self) -> Result<(u64, u64, u64, u64), ImportError> {
         match self {
             Self::Succeeded {

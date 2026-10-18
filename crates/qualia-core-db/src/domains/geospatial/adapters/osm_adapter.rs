@@ -60,6 +60,7 @@ pub struct OsmRelationMember {
 }
 
 impl OsmVectorFeature {
+    /// OSM feature source IRI.
     pub fn source_iri(&self) -> String {
         format!("{}/{}/{}", OSM_BASE, self.element_type, self.id)
     }
@@ -78,6 +79,7 @@ pub struct OsmAdapter {
 }
 
 impl OsmAdapter {
+    /// Creates a default `OsmAdapter`.
     pub fn new(id: &'static str, overpass_endpoint: &str, tile_endpoint: &str) -> Self {
         Self {
             id,
@@ -86,6 +88,7 @@ impl OsmAdapter {
         }
     }
 
+    /// Adapter identifier.
     pub fn adapter_id(&self) -> &'static str {
         self.id
     }

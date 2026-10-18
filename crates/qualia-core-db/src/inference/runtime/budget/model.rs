@@ -19,6 +19,7 @@ pub struct ModelMemoryProfile {
 }
 
 impl ModelMemoryProfile {
+    /// Creates `ModelMemoryProfile` with the given state.
     pub fn new(
         weight_bytes: u64,
         scratch_activation_bytes: u64,

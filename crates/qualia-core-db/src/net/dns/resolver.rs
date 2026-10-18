@@ -76,6 +76,7 @@ pub struct QualiaDnsResolver<'a> {
 }
 
 impl<'a> QualiaDnsResolver<'a> {
+    /// Creates a default `QualiaDnsResolver`.
     pub fn new(config: ResolverConfig<'a>) -> Self {
         Self { config }
     }

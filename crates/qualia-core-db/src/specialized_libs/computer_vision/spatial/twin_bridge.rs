@@ -86,6 +86,7 @@ pub struct BarStretchResult {
     pub assurance_note: &'static str,
 }
 
+/// Closed-form bar-stretch tensor.
 pub fn closed_form_bar_stretch(inp: BarStretchInput) -> Result<BarStretchResult, &'static str> {
     if inp.length_m <= 0.0 || inp.area_m2 <= 0.0 || inp.youngs_pa <= 0.0 {
         return Err("invalid bar geometry or modulus");

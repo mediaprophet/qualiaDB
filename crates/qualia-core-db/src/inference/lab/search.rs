@@ -25,6 +25,7 @@ pub struct SobolSequence {
 }
 
 impl SobolSequence {
+    /// Creates `SobolSequence` with the given state.
     pub fn new(dim: usize) -> Self {
         let direction = sobol_direction_numbers(dim);
         Self {
@@ -148,6 +149,7 @@ pub struct KnnSurrogate {
 }
 
 impl KnnSurrogate {
+    /// Creates the component.
     pub fn new(k: usize) -> Self {
         Self {
             points: Vec::new(),
@@ -291,6 +293,7 @@ pub struct SearchEngine {
 }
 
 impl SearchEngine {
+    /// Creates the component.
     pub fn new(space: ConfigurationSpace, budget: usize) -> Self {
         let dim = space.dims();
         let initial = (budget / 5).clamp(5, 20).min(budget);
@@ -450,6 +453,7 @@ pub struct TrackAndStopBandit {
 }
 
 impl TrackAndStopBandit {
+    /// Creates the component.
     pub fn new(arms: Vec<Configuration>) -> Self {
         let n = arms.len();
         Self {

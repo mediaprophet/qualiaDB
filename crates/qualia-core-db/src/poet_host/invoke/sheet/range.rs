@@ -15,6 +15,7 @@ fn mean_slice(xs: &[f64]) -> Option<f64> {
     }
 }
 
+/// Stats snapshot.
 pub fn stats(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let cells = flatten(args_v, span)?;
     if cells.is_empty() {
@@ -31,6 +32,7 @@ pub fn stats(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// VibeScript seam: range sum.
 pub fn sum_range(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let grid = grid(args_v, span)?;
     let spec = args::rec_str(args_v, "range")

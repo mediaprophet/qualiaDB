@@ -10,14 +10,17 @@ pub struct ManifestCache {
 }
 
 impl ManifestCache {
+    /// Creates a manifest cache rooted at `root`.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
     }
 
+    /// Cache root directory.
     pub fn root(&self) -> &Path {
         &self.root
     }
 
+    /// Persists a certification manifest; returns its path.
     pub fn store_certification(
         &self,
         manifest: &CertificationManifest,
@@ -28,10 +31,12 @@ impl ManifestCache {
         self.store_json(key, "certification", manifest)
     }
 
+    /// Persists a tuning manifest; returns its path.
     pub fn store_tuning(&self, manifest: &TuningManifest) -> Result<PathBuf, ForgeError> {
         self.store_json(&manifest.cache_key, "tuning", manifest)
     }
 
+    /// Loads a tuning manifest by `key`; `None` when absent.
     pub fn load_tuning(&self, key: &str) -> Result<Option<TuningManifest>, ForgeError> {
         validate_cache_key(key)?;
         let path = self.path_for(key, "tuning");
@@ -50,6 +55,7 @@ impl ManifestCache {
             .to_string()
     }
 
+    /// Loads the best tuning manifest for a topology signature.
     pub fn load_tuning_for_topology(
         &self,
         topology_hash: &str,
@@ -58,6 +64,7 @@ impl ManifestCache {
         self.load_tuning(&Self::topology_key(topology_hash, kernel_id))
     }
 
+    /// Persists a topology-keyed tuning manifest.
     pub fn store_tuning_for_topology(
         &self,
         topology_hash: &str,

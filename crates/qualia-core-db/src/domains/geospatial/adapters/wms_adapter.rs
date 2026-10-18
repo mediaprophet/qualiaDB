@@ -16,6 +16,7 @@ pub struct WmsAdapter {
 }
 
 impl WmsAdapter {
+    /// Creates a WMS/WFS adapter for `endpoint` of `service_type`.
     pub fn new(id: &'static str, endpoint: &str, service_type: OgcServiceType) -> Self {
         Self {
             id,
@@ -26,10 +27,12 @@ impl WmsAdapter {
 }
 
 impl WmsAdapter {
+    /// Stable adapter identifier.
     pub fn adapter_id(&self) -> &'static str {
         self.id
     }
 
+    /// Builds an OGC fetch request for a region.
     pub fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -64,6 +67,7 @@ impl WmsAdapter {
         Ok(AdapterHttpRequest::get(url, "OGC"))
     }
 
+    /// Fetches map/feature data for the region.
     pub fn fetch_region(
         &self,
         bbox: (f64, f64, f64, f64),

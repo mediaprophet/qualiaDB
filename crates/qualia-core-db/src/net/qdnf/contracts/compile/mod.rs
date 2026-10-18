@@ -26,6 +26,7 @@ pub struct ContractBundle {
 
 impl ContractBundle {
     #[inline]
+    /// `ContractBundle::exact_bytes_unsigned`.
     pub const fn exact_bytes_unsigned(&self) -> bool {
         self.exact_bytes_digest.is_zero()
     }
@@ -38,6 +39,7 @@ impl ContractBundle {
     }
 
     #[inline]
+    /// `ContractBundle::required_vocabulary_known`.
     pub fn required_vocabulary_known(&self) -> bool {
         !self.required_vocab_digest.is_zero()
             && !self.known_vocab_digest.is_zero()

@@ -11,6 +11,7 @@ use crate::render::physics::{Aabb, Joint};
 use crate::render::telemetry::ObserverStandpoint;
 
 impl PortalGpu {
+    /// `true` after the GPU device has been reported lost (atomic flag).
     pub fn is_device_lost(&self) -> bool {
         self.device_lost.load(std::sync::atomic::Ordering::Acquire)
     }
@@ -50,14 +51,17 @@ impl PortalGpu {
         };
     }
 
+    /// `true` when SSAO targets were allocated — the half-res AO pass can run.
     pub fn screen_space_ao_available(&self) -> bool {
         self.ao_targets.is_some()
     }
 
+    /// Whether the SSAO pass is enabled (only meaningful when available).
     pub fn screen_space_ao_enabled(&self) -> bool {
         self.ao_enabled
     }
 
+    /// Half-resolution AO target extent, or `None` when SSAO is unavailable.
     pub fn screen_space_ao_resolution(&self) -> Option<(u32, u32)> {
         self.ao_targets.as_ref().map(ao::AoTargets::extent)
     }
@@ -91,14 +95,17 @@ impl PortalGpu {
         self.shadow_enabled = enabled;
     }
 
+    /// Whether the shadow-map pass is enabled.
     pub fn shadows_enabled(&self) -> bool {
         self.shadow_enabled && self.shadow_target.is_some()
     }
 
+    /// Configured shadow-map resolution, or `None` when shadows are off.
     pub fn shadow_resolution(&self) -> Option<u32> {
         self.shadow_target.as_ref().map(|target| target.resolution)
     }
 
+    /// Sets yaw/pitch/zoom, preserving target/near-plane/lighting, then clamps and flags a temporal-history reset.
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
         let current_target = self.camera.target;
         let sun_dir = self.camera.sun_dir;
@@ -117,6 +124,7 @@ impl PortalGpu {
         .clamped();
         self.temporal_reset_pending = true;
     }
+    /// Sets the near plane; `false` when `near` is non-finite or outside [1e-5, 1.0] — fails closed without touching the camera.
     pub fn set_camera_near_plane(&mut self, near: f32) -> bool {
         if !near.is_finite() || !(0.00001..=1.0).contains(&near) {
             return false;
@@ -128,11 +136,13 @@ impl PortalGpu {
         true
     }
 
+    /// Moves the camera look-at target and flags a temporal-history reset.
     pub fn set_camera_pan(&mut self, target_x: f32, target_y: f32, target_z: f32) {
         self.camera.target = [target_x, target_y, target_z];
         self.temporal_reset_pending = true;
     }
 
+    /// Replaces camera yaw/pitch/zoom/target, preserving near-plane and lighting; result is clamped.
     pub fn set_camera_target(
         &mut self,
         yaw: f32,
@@ -159,15 +169,18 @@ impl PortalGpu {
         self.temporal_reset_pending = true;
     }
 
+    /// Sets the clear color and disables the sky preset.
     pub fn set_clear_color(&mut self, r: f64, g: f64, b: f64, a: f64) {
         self.clear_color = [r, g, b, a];
         self.sky_enabled = false;
     }
 
+    /// Current RGBA clear color.
     pub fn clear_color(&self) -> [f64; 4] {
         self.clear_color
     }
 
+    /// Updates sun direction/intensity and ambient intensity, clamped to valid ranges.
     pub fn set_lighting(
         &mut self,
         sun_x: f32,
@@ -181,6 +194,7 @@ impl PortalGpu {
         self.camera.ambient_intensity = ambient_intensity;
     }
 
+    /// Selects a procedural sky preset by index.
     pub fn set_sky_preset(&mut self, preset: u32) {
         let profile = AtmospherePreset::from_id(preset);
         self.clear_color = profile.clear_rgba.map(f64::from);
@@ -201,14 +215,17 @@ impl PortalGpu {
             bytemuck::bytes_of(&atmosphere),
         );
     }
+    /// Sets the observer standpoint used by telemetry/temporal views.
     pub fn set_standpoint(&mut self, observer: ObserverStandpoint) {
         self.observer = observer;
     }
 
+    /// Current observer standpoint.
     pub fn observer_standpoint(&self) -> ObserverStandpoint {
         self.observer
     }
 
+    /// Copy of the current camera state.
     pub fn camera_state(&self) -> CameraState {
         self.camera
     }
@@ -326,14 +343,17 @@ impl PortalGpu {
         self.previous_camera_view_projection
     }
 
+    /// Motion-vector texture view when temporal producers are allocated.
     pub fn temporal_motion_view(&self) -> Option<&wgpu::TextureView> {
         self.temporal_producers.as_ref().map(|p| p.motion_view())
     }
 
+    /// Reactive-mask texture view when temporal producers are allocated.
     pub fn temporal_reactive_view(&self) -> Option<&wgpu::TextureView> {
         self.temporal_producers.as_ref().map(|p| p.reactive_view())
     }
 
+    /// Records the temporal producer passes into `encoder`: inverse current view-projection (identity fallback), previous VP, and per-layer reactive weights (water 0.8, ambient 0.5).
     pub fn record_temporal_producers(&mut self, encoder: &mut wgpu::CommandEncoder) {
         if let Some(ref producers) = self.temporal_producers {
             let inv_curr = self
@@ -355,6 +375,7 @@ impl PortalGpu {
         }
     }
 
+    /// Effective `temporal-schedule`.
     pub(super) fn effective_temporal_schedule(
         &self,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,

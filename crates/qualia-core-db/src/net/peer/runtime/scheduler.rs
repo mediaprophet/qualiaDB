@@ -26,11 +26,13 @@ impl WorkClass {
     pub const COUNT: usize = 3;
 
     #[inline]
+    /// `WorkClass::index`.
     pub const fn index(self) -> usize {
         self as usize
     }
 
     #[inline]
+    /// `WorkClass::from_index`.
     pub const fn from_index(i: usize) -> Option<Self> {
         match i {
             0 => Some(Self::Control),
@@ -78,10 +80,12 @@ pub struct FairScheduler {
 }
 
 impl FairScheduler {
+    /// Creates a default `FairScheduler`.
     pub const fn new() -> Self {
         Self::with_quanta(1, 1, 1)
     }
 
+    /// Builder: `quanta`.
     pub const fn with_quanta(control: u32, interactive: u32, background: u32) -> Self {
         let blank = ScopeSlot {
             occupied: false,
@@ -102,6 +106,7 @@ impl FairScheduler {
         }
     }
 
+    /// Enqueues a task.
     pub fn enqueue(&mut self, work: ScheduledWork) -> Result<(), QdnfError> {
         if work.cost == 0 {
             return Err(QdnfError::Malformed);
@@ -143,6 +148,7 @@ impl FairScheduler {
         Err(QdnfError::WouldBlock)
     }
 
+    /// `class` length.
     pub fn class_len(&self, scope: u64, class: WorkClass) -> usize {
         match self.scope_index(scope) {
             None => 0,

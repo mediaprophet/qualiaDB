@@ -29,6 +29,7 @@ pub struct CookieJar {
 }
 
 impl CookieJar {
+    /// Creates a default `CookieJar`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_PENDING],
@@ -111,6 +112,7 @@ impl CookieJar {
         )
     }
 
+    /// Accepts a stateless-retry cookie bound to the connection.
     pub fn accept_bound_reply(
         &mut self,
         cookie: &[u8; COOKIE_LEN],
@@ -136,10 +138,12 @@ impl CookieJar {
         Ok(())
     }
 
+    /// `true` when the cookie grants membership.
     pub fn grants_membership() -> bool {
         false
     }
 
+    /// `true` when the cookie grants application access.
     pub fn grants_application() -> bool {
         false
     }

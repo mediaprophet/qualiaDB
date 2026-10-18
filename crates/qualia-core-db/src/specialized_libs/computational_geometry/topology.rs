@@ -63,6 +63,7 @@ pub enum TopologyError {
 }
 
 #[inline]
+/// `Default::required_edge_slots`.
 pub fn required_edge_slots(triangle_count: usize) -> usize {
     triangle_count
         .saturating_mul(6)

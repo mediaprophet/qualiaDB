@@ -145,6 +145,7 @@ pub struct OptimizationSolverParameters {
 }
 
 impl EigenvalueSolver {
+    /// Creates an eigenvalue solver with default parameters.
     pub fn new() -> Self {
         Self {
             solver_method: EigenvalueSolverMethod::QRAlgorithm,
@@ -153,6 +154,7 @@ impl EigenvalueSolver {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -189,6 +191,7 @@ impl EigenvalueSolver {
 }
 
 impl EigenvalueSolverParameters {
+    /// Creates default eigenvalue solver parameters.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,
@@ -200,6 +203,7 @@ impl EigenvalueSolverParameters {
 }
 
 impl OptimizationSolver {
+    /// Creates an optimization solver with default parameters.
     pub fn new() -> Self {
         Self {
             optimizer_type: OptimizerType::ConjugateGradient,
@@ -209,6 +213,7 @@ impl OptimizationSolver {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -264,6 +269,7 @@ impl OptimizationSolver {
 }
 
 impl ObjectiveFunction {
+    /// Creates a default objective function descriptor.
     pub fn new() -> Self {
         Self {
             function_id: "default".to_string(),
@@ -310,6 +316,7 @@ impl ObjectiveFunction {
 }
 
 impl Constraint {
+    /// Creates a default constraint descriptor.
     pub fn new() -> Self {
         Self {
             constraint_id: "default".to_string(),
@@ -356,6 +363,7 @@ impl Constraint {
 }
 
 impl Bounds {
+    /// Creates default variable bounds.
     pub fn new() -> Self {
         Self {
             lower_bound: Vec::new(),
@@ -365,6 +373,7 @@ impl Bounds {
 }
 
 impl OptimizationSolverParameters {
+    /// Creates default optimization parameters.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,

@@ -31,6 +31,7 @@ impl<const N: usize> Default for DnsCacheRing<N> {
 }
 
 impl<const N: usize> DnsCacheRing<N> {
+    /// Creates a default `DnsCacheRing`.
     pub const fn new() -> Self {
         Self {
             slots: [NQuin {

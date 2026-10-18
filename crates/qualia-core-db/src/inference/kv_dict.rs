@@ -32,6 +32,7 @@ pub struct SparseCode {
 
 impl KvDictionary {
     #[inline]
+    /// `KvDictionary::atom`.
     pub(crate) fn atom(&self, a: usize) -> &[f32] {
         &self.atoms[a * self.dim..(a + 1) * self.dim]
     }
@@ -241,16 +242,19 @@ fn solve_spd(g: &mut [f32], b: &mut [f32], n: usize) {
 }
 
 #[inline]
+/// `KvDictionary::dot`.
 pub(crate) fn dot(a: &[f32], b: &[f32]) -> f32 {
     a.iter().zip(b).map(|(x, y)| x * y).sum()
 }
 
 #[inline]
+/// `KvDictionary::l2`.
 pub(crate) fn l2(v: &[f32]) -> f32 {
     dot(v, v).sqrt()
 }
 
 #[inline]
+/// `KvDictionary::normalize`.
 pub(crate) fn normalize(v: &mut [f32]) {
     let n = l2(v);
     if n > 1e-12 {

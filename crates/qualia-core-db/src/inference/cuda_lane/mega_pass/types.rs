@@ -34,10 +34,16 @@ pub enum MegaPassWeightLayout {
 
 /// Immutable view of the cold-prepared weights and tensor metadata.
 pub trait MegaPassPlanView {
+    /// Weight layout.
     fn weight_layout(&self) -> MegaPassWeightLayout;
+    /// Layer count.
     fn layer_count(&self) -> usize;
+    /// Layer weights.
     fn layer_weights(&self, layer: usize) -> Option<MegaPassLayerWeights<'_>>;
+    /// Layer dims.
     fn layer_dims(&self, layer: usize) -> Option<&MegaPassLayerDims>;
+    /// Layer weight keys.
     fn layer_weight_keys(&self, layer: usize) -> Option<[u64; 7]>;
+    /// Layer norm keys.
     fn layer_norm_keys(&self, layer: usize) -> Option<[u64; 2]>;
 }

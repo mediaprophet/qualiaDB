@@ -79,6 +79,7 @@ pub struct SparqlWebSocketHandler<'a> {
 }
 
 impl<'a> SparqlWebSocketHandler<'a> {
+    /// Creates `SparqlWebSocketHandler` with the given state.
     pub fn new(quins: &'a [NQuin]) -> Self {
         Self {
             quins,

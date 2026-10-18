@@ -16,6 +16,7 @@ const PREFIX: &[u8] = b"did:qi:";
 const MULTIBASE_Z: u8 = b'z';
 pub(crate) const B58: &[u8; 58] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
+/// Formats `did:qi:z<base58btc(digest)>` into `out`; `BufferTooSmall` when undersized.
 pub fn format_did(id: &DidQi, out: &mut [u8]) -> Result<usize, QiError> {
     let mut digits = [0u8; 64];
     let n = encode_b58(&id.0, &mut digits)?;
@@ -29,6 +30,7 @@ pub fn format_did(id: &DidQi, out: &mut [u8]) -> Result<usize, QiError> {
     Ok(total)
 }
 
+/// Parses a `did:qi:` string; rejects other methods and non-canonical base58 encodings.
 pub fn parse_did(s: &[u8]) -> Result<DidQi, QiError> {
     if starts_ignore_ascii(s, b"did:q42:")
         || starts_ignore_ascii(s, b"did:hcai:")
@@ -70,6 +72,7 @@ fn starts_ignore_ascii(s: &[u8], prefix: &[u8]) -> bool {
     true
 }
 
+/// Bitcoin base58btc-encodes `input` into `out`.
 pub(crate) fn encode_b58(input: &[u8], out: &mut [u8]) -> Result<usize, QiError> {
     let leading = input.iter().take_while(|b| **b == 0).count();
     let mut acc = [0u8; 128];
@@ -107,6 +110,7 @@ pub(crate) fn encode_b58(input: &[u8], out: &mut [u8]) -> Result<usize, QiError>
     Ok(total)
 }
 
+/// Bitcoin base58btc-decodes `input` into `out`.
 pub(crate) fn decode_b58(input: &[u8], out: &mut [u8]) -> Result<usize, QiError> {
     if input.is_empty() || out.is_empty() {
         return Err(QiError::MalformedId);

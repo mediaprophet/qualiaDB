@@ -21,10 +21,12 @@ pub struct PreAuthBudget {
 }
 
 impl PreAuthBudget {
+    /// Creates a default `PreAuthBudget`.
     pub const fn new() -> Self {
         Self::with_caps(MAX_UNAUTH_BYTES, MAX_UNAUTH_WORK)
     }
 
+    /// Builder: `caps`.
     pub const fn with_caps(cap_bytes: u64, cap_work: u64) -> Self {
         Self {
             cap_bytes,
@@ -35,16 +37,19 @@ impl PreAuthBudget {
     }
 
     #[inline]
+    /// `PreAuthBudget::used_bytes`.
     pub const fn used_bytes(self) -> u64 {
         self.used_bytes
     }
 
     #[inline]
+    /// `PreAuthBudget::used_work`.
     pub const fn used_work(self) -> u64 {
         self.used_work
     }
 
     #[inline]
+    /// `PreAuthBudget::remaining_bytes`.
     pub const fn remaining_bytes(self) -> u64 {
         self.cap_bytes.saturating_sub(self.used_bytes)
     }

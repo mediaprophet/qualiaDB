@@ -44,6 +44,7 @@ pub(super) struct FfnSpec {
     pub keys: LayerWeightKeys,
 }
 
+/// Dispatches FFN.
 pub(super) fn dispatch_ffn(
     dev: &mut MultiWeightDevice,
     mut views: FfnViews,

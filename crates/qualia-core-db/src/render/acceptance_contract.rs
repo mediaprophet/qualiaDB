@@ -21,10 +21,12 @@ impl Default for CapabilityEvidence {
 }
 
 impl CapabilityEvidence {
+    /// `true` when `confirmed`.
     pub const fn is_confirmed(self) -> bool {
         matches!(self, Self::Confirmed)
     }
 
+    /// Stable string form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Unknown => "unknown",
@@ -52,6 +54,7 @@ pub struct TemporalProducerEvidence {
 }
 
 impl TemporalProducerEvidence {
+    /// Temporal-producer gate.
     pub const fn gate(self) -> CapabilityEvidence {
         self.motion_vectors
             .all(self.reactive_mask)
@@ -67,6 +70,7 @@ pub struct EnvironmentProbeEvidence {
 }
 
 impl EnvironmentProbeEvidence {
+    /// Environment-probe gate.
     pub const fn gate(self) -> CapabilityEvidence {
         match self.availability {
             CapabilityEvidence::Refused => CapabilityEvidence::Refused,
@@ -90,10 +94,12 @@ pub struct BrowserWebGpuEvidence {
 }
 
 impl BrowserWebGpuEvidence {
+    /// Browser-WebGPU gate.
     pub const fn gate(self) -> CapabilityEvidence {
         self.api.all(self.adapter).all(self.device)
     }
 
+    /// Adapter gate.
     pub const fn adapter_gate(self) -> CapabilityEvidence {
         self.api.all(self.adapter)
     }
@@ -107,6 +113,7 @@ pub struct PixelReadbackEvidence {
 }
 
 impl PixelReadbackEvidence {
+    /// Pixel-readback gate.
     pub const fn gate(self) -> CapabilityEvidence {
         match self.rgba8 {
             CapabilityEvidence::Refused => CapabilityEvidence::Refused,
@@ -133,6 +140,7 @@ pub struct PerformanceEvidence {
 impl PerformanceEvidence {
     pub const MIN_SAMPLES: u16 = 3;
 
+    /// Builds a measured performance gate.
     pub const fn measured(
         sample_count: u16,
         worst_frame_time_us: u32,
@@ -145,6 +153,7 @@ impl PerformanceEvidence {
         }
     }
 
+    /// Performance gate.
     pub const fn gate(self) -> CapabilityEvidence {
         if self.sample_count < Self::MIN_SAMPLES {
             return CapabilityEvidence::Unknown;
@@ -170,26 +179,32 @@ pub struct CapabilityAcceptance {
 }
 
 impl CapabilityAcceptance {
+    /// Temporal gate.
     pub const fn temporal_gate(self) -> CapabilityEvidence {
         self.temporal_producers.gate()
     }
 
+    /// Environment-probe gate.
     pub const fn environment_probe_gate(self) -> CapabilityEvidence {
         self.environment_probes.gate()
     }
 
+    /// Browser-WebGPU gate.
     pub const fn browser_webgpu_gate(self) -> CapabilityEvidence {
         self.browser_webgpu.gate()
     }
 
+    /// WebGPU adapter gate.
     pub const fn browser_webgpu_adapter_gate(self) -> CapabilityEvidence {
         self.browser_webgpu.adapter_gate()
     }
 
+    /// Pixel-readback gate.
     pub const fn pixel_readback_gate(self) -> CapabilityEvidence {
         self.pixel_readback.gate()
     }
 
+    /// Performance gate.
     pub const fn performance_gate(self) -> CapabilityEvidence {
         self.performance.gate()
     }

@@ -28,6 +28,7 @@ pub struct ChannelTable {
 }
 
 impl ChannelTable {
+    /// Creates a default `ChannelTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_CHANNELS],

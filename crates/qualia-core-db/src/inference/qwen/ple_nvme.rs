@@ -94,6 +94,7 @@ impl PleNvmeReader {
         Self::open(path, index.tensor_data_start, info)
     }
 
+    /// Opens a PLE NVMe weight source.
     pub fn open(
         path: &std::path::Path,
         tensor_data_start: u64,
@@ -122,14 +123,17 @@ impl PleNvmeReader {
         self.stats
     }
 
+    /// `PleNvmeReader::row_width`.
     pub fn row_width(&self) -> usize {
         self.row_width
     }
 
+    /// Weight rows.
     pub fn row_count(&self) -> u64 {
         self.rows
     }
 
+    /// Bytes per row.
     pub fn raw_row_bytes(&self) -> usize {
         self.row_bytes
     }

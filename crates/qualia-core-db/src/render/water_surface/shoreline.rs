@@ -19,15 +19,19 @@ pub struct ShoreTopology<'a> {
     pub(crate) parents: &'a [u64],
 }
 impl ShoreTopology<'_> {
+    /// Boundary edge count.
     pub fn boundary_edges(&self) -> usize {
         self.edges.len()
     }
+    /// Vertex count.
     pub fn vertices(&self) -> usize {
         self.parents.len()
     }
+    /// `true` when vertex `index` is referenced by an edge.
     pub(crate) fn referenced(&self, index: usize) -> bool {
         self.parents[index] & REFERENCED != 0
     }
+    /// Connected-component id for vertex `index`.
     pub(crate) fn component(&self, index: usize) -> u32 {
         self.parents[index] as u32
     }

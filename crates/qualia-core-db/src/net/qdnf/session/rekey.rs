@@ -68,6 +68,7 @@ pub struct RekeyTable {
 }
 
 impl RekeyTable {
+    /// Builds `RekeyTable` from `keys`.
     pub fn from_keys(
         send: [u8; AEAD_KEY_LEN],
         recv: [u8; AEAD_KEY_LEN],
@@ -90,10 +91,12 @@ impl RekeyTable {
     }
 
     #[inline]
+    /// `RekeyTable::current_generation`.
     pub fn current_generation(&self) -> u64 {
         self.current
     }
 
+    /// `RekeyTable::current_generation_token`.
     pub fn current_generation_token(&self) -> Generation {
         Generation(self.current)
     }
@@ -164,6 +167,7 @@ impl RekeyTable {
         Ok(self.current)
     }
 
+    /// Rekey phase.
     pub fn phase(&self, generation: u64) -> Result<KeyPhase, QdnfError> {
         if generation == self.current {
             return Ok(KeyPhase::Current);
@@ -183,6 +187,7 @@ impl RekeyTable {
         Err(QdnfError::Expired)
     }
 
+    /// Rekey slot.
     pub fn slot(&self, generation: u64) -> Result<TrafficKeySlot, QdnfError> {
         Ok(TrafficKeySlot {
             generation,

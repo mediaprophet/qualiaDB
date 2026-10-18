@@ -49,12 +49,14 @@ pub struct Q42InspectReport {
 }
 
 impl Q42InspectReport {
+    /// Builds `Q42InspectReport` from `path`.
     pub fn from_path(path: &Path) -> io::Result<Self> {
         let file_bytes = std::fs::metadata(path)?.len();
         let volume = Q42Volume::open(path)?;
         Ok(Self::from_volume(path, file_bytes, &volume))
     }
 
+    /// Builds `Q42InspectReport` from `volume`.
     pub fn from_volume(path: &Path, file_bytes: u64, volume: &Q42Volume) -> Self {
         let header = volume.header();
         let flags = header.flags;
@@ -129,6 +131,7 @@ impl Q42InspectReport {
         }
     }
 
+    /// Converts to `text`.
     pub fn to_text(&self) -> String {
         let mut out = String::new();
         out.push_str(&format!("Q42  {}\n", self.path));

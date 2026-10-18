@@ -147,6 +147,7 @@ pub struct TrainingData {
 }
 
 impl PropertyPredictor {
+    /// Creates a predictor with default descriptor calculator and empty model registry.
     pub fn new() -> Self {
         Self {
             property_models: HashMap::new(),
@@ -155,6 +156,7 @@ impl PropertyPredictor {
         }
     }
 
+    /// Initializes the descriptor calculator; `ChemistryError` propagates.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         self.descriptor_calculator.initialize()?;
         // Register basic QSPR / group-contribution models for common properties.
@@ -383,6 +385,7 @@ impl PropertyPredictor {
         );
     }
 
+    /// Fails closed on an empty molecule (no atoms).
     pub fn validate_molecule(&self, molecule: &Molecule) -> Result<(), ChemistryError> {
         if molecule.atoms.is_empty() {
             return Err(ChemistryError::ValidationError(
@@ -523,6 +526,7 @@ impl PropertyPredictor {
 }
 
 impl PropertyModel {
+    /// Creates a default `PropertyModel`.
     pub fn new() -> Self {
         Self {
             model_id: "model_1".to_string(),
@@ -534,6 +538,7 @@ impl PropertyModel {
 }
 
 impl PropertyModelParameters {
+    /// Creates default `PropertyModelParameters`.
     pub fn new() -> Self {
         Self {
             coefficients: HashMap::new(),
@@ -544,6 +549,7 @@ impl PropertyModelParameters {
 }
 
 impl ReferenceData {
+    /// Creates empty `ReferenceData`.
     pub fn new() -> Self {
         Self {
             molecule_id: "mol_1".to_string(),
@@ -554,6 +560,7 @@ impl ReferenceData {
 }
 
 impl ReferenceConditions {
+    /// Creates default `ReferenceConditions`.
     pub fn new() -> Self {
         Self {
             temperature: 298.15,
@@ -564,6 +571,7 @@ impl ReferenceConditions {
 }
 
 impl DescriptorCalculator {
+    /// Creates a descriptor calculator with default molecular/quantum/topological descriptor state.
     pub fn new() -> Self {
         Self {
             molecular_descriptors: MolecularDescriptors::new(),
@@ -602,12 +610,14 @@ impl DescriptorCalculator {
         &mut self.topological_descriptors
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), ChemistryError> {
         Ok(())
     }
 }
 
 impl MolecularDescriptors {
+    /// Creates a zeroed `MolecularDescriptors`.
     pub fn new() -> Self {
         Self {
             molecular_weight: 16.04,
@@ -620,6 +630,7 @@ impl MolecularDescriptors {
 }
 
 impl QuantumDescriptors {
+    /// Creates a zeroed `QuantumDescriptors`.
     pub fn new() -> Self {
         Self {
             homo_energy: -13.6,
@@ -632,6 +643,7 @@ impl QuantumDescriptors {
 }
 
 impl TopologicalDescriptors {
+    /// Creates a zeroed `TopologicalDescriptors`.
     pub fn new() -> Self {
         Self {
             connectivity_index: 1.0,
@@ -643,6 +655,7 @@ impl TopologicalDescriptors {
 }
 
 impl MLModel {
+    /// Creates a default `MLModel`.
     pub fn new() -> Self {
         Self {
             model_id: "ml_1".to_string(),
@@ -654,6 +667,7 @@ impl MLModel {
 }
 
 impl MLModelParameters {
+    /// Creates default `MLModelParameters`.
     pub fn new() -> Self {
         Self {
             hyperparameters: HashMap::new(),
@@ -664,6 +678,7 @@ impl MLModelParameters {
 }
 
 impl ModelPerformance {
+    /// Creates a zeroed `ModelPerformance`.
     pub fn new() -> Self {
         Self {
             r_squared: 0.95,
@@ -675,6 +690,7 @@ impl ModelPerformance {
 }
 
 impl TrainingData {
+    /// Creates empty `TrainingData`.
     pub fn new() -> Self {
         Self {
             data_id: "data_1".to_string(),
@@ -696,24 +712,24 @@ mod tests {
             element: "O".to_string(),
             atomic_number: 8,
             mass: 15.999,
+            charge: 0.0,
             coordinates: vec![0.0, 0.0, 0.0],
-            properties: HashMap::new(),
         });
         m.atoms.push(Atom {
             atom_id: "H1".to_string(),
             element: "H".to_string(),
             atomic_number: 1,
             mass: 1.008,
+            charge: 0.0,
             coordinates: vec![0.0, 0.757, 0.586],
-            properties: HashMap::new(),
         });
         m.atoms.push(Atom {
             atom_id: "H2".to_string(),
             element: "H".to_string(),
             atomic_number: 1,
             mass: 1.008,
+            charge: 0.0,
             coordinates: vec![0.0, -0.757, 0.586],
-            properties: HashMap::new(),
         });
         m
     }

@@ -4,6 +4,7 @@ use super::super::args;
 use crate::solvers::special_functions::bessel::bessel_j;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: Bessel J_n.
 pub fn bessel_jn(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let n = args::rec_i64(args_v, "n")
         .or_else(|| args::list(args_v).and_then(|xs| xs.first().and_then(args::as_i64)))

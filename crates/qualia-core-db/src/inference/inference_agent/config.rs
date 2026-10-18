@@ -43,6 +43,7 @@ pub const INFERENCE_TIMEOUT_MS: u64 = 30_000;
 /// Effective timeout: batch profile / env may extend (e.g. 8h overnight jobs).
 // NOTE: `pub(super)` widening — read by `decode.rs` and `runtime.rs`.
 #[inline]
+/// Effective inference timeout.
 pub(super) fn effective_inference_timeout_ms() -> u64 {
     #[cfg(not(target_arch = "wasm32"))]
     {

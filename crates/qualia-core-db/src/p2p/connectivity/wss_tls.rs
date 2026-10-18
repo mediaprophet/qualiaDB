@@ -30,6 +30,7 @@ pub struct LocalCa {
     issuer: Issuer<'static, KeyPair>,
 }
 
+/// Mints a local CA cert+key for dev TLS.
 pub fn mint_ca() -> Result<LocalCa, String> {
     let mut params = CertificateParams::new(Vec::<String>::new()).map_err(|e| e.to_string())?;
     params
@@ -47,6 +48,7 @@ pub fn mint_ca() -> Result<LocalCa, String> {
     Ok(LocalCa { cert, issuer })
 }
 
+/// Mints a server cert signed by `ca`.
 pub fn mint_server(ca: &LocalCa) -> Result<(Certificate, KeyPair), String> {
     let mut params = CertificateParams::new(vec!["localhost".into()]).map_err(|e| e.to_string())?;
     params
@@ -62,6 +64,7 @@ pub fn mint_server(ca: &LocalCa) -> Result<(Certificate, KeyPair), String> {
     Ok((cert, key))
 }
 
+/// Builds a rustls `ServerConfig` from cert+key.
 pub fn server_config(cert: &Certificate, key: &KeyPair) -> Result<Arc<ServerConfig>, String> {
     install_ring();
     let der = CertificateDer::from(cert.der().to_vec());
@@ -76,6 +79,7 @@ pub fn server_config(cert: &Certificate, key: &KeyPair) -> Result<Arc<ServerConf
     Ok(Arc::new(cfg))
 }
 
+/// Builds a `ClientConfig` trusting `ca`.
 pub fn client_config(ca: &LocalCa) -> Result<Arc<ClientConfig>, String> {
     install_ring();
     let mut roots = RootCertStore::empty();
@@ -160,6 +164,7 @@ pub fn loopback_tls_wss(ca: &LocalCa) -> Result<(TlsStream, TlsStream), String> 
     Ok((client, server))
 }
 
+/// Probe: `true` when a client built against a different CA is rejected — verifies pinning.
 pub fn wrong_ca_is_rejected() -> bool {
     let ca_good = match mint_ca() {
         Ok(c) => c,
@@ -215,6 +220,7 @@ pub fn wrong_ca_is_rejected() -> bool {
     failed
 }
 
+/// `Write::plain_tcp_is_not_tls`.
 pub const fn plain_tcp_is_not_tls() -> bool {
     true
 }

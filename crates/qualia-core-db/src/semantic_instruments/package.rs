@@ -162,6 +162,7 @@ pub fn build_collectable(mut parts: CollectableParts) -> Result<Vec<u8>, Instrum
     Ok(bytes)
 }
 
+/// Opens `collectable`.
 pub fn open_collectable(bytes: &[u8]) -> Result<OpenedCollectable, InstrumentError> {
     if bytes.len() > MAX_COLLECTABLE_BYTES {
         return Err(InstrumentError::BundleTooLarge { bytes: bytes.len() });
@@ -201,6 +202,7 @@ pub fn open_collectable(bytes: &[u8]) -> Result<OpenedCollectable, InstrumentErr
     })
 }
 
+/// `Ok(())` when the key is not a traversal key.
 pub fn reject_traversal_key(key: &str) -> Result<(), InstrumentError> {
     reject_unsafe_key(key)
 }

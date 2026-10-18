@@ -60,6 +60,7 @@ pub struct InferenceCacheKey {
 }
 
 impl InferenceCacheKey {
+    /// Creates a default `InferenceCacheKey`.
     pub fn new(
         model_instance: u64,
         tokenizer_revision: u64,
@@ -81,6 +82,7 @@ impl InferenceCacheKey {
         )
     }
 
+    /// Builder: sets `provenance`.
     pub fn with_provenance(
         model_instance: u64,
         tokenizer_revision: u64,
@@ -128,6 +130,7 @@ pub struct BoundedInferenceCache {
 }
 
 impl BoundedInferenceCache {
+    /// Creates a default `BoundedInferenceCache`.
     pub fn new(max_entries: usize, max_bytes: usize) -> Self {
         Self {
             entries: HashMap::new(),
@@ -143,6 +146,7 @@ impl BoundedInferenceCache {
         self.entries.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }

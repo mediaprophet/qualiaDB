@@ -13,6 +13,7 @@ pub struct Material {
 }
 
 impl Material {
+    /// Creates `Material` with the given state.
     pub const fn new(density: f32, incompressible: bool) -> Self {
         Material {
             density,
@@ -30,6 +31,7 @@ pub struct Body {
 }
 
 impl Body {
+    /// Creates a default `Body`.
     pub fn new(material: Material, aabb: Aabb, velocity: [f32; 3]) -> Self {
         Body {
             material,

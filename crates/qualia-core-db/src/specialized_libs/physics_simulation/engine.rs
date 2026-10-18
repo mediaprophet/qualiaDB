@@ -12,6 +12,7 @@ pub struct SimulationEngine {
 // Supporting implementations
 
 impl SimulationEngine {
+    /// Creates a default `SimulationEngine`.
     pub fn new() -> Self {
         Self {
             simulation_config: SimulationConfig::default(),
@@ -22,12 +23,14 @@ impl SimulationEngine {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.time_integrator.initialize()?;
         self.spatial_discretizer.initialize()?;
         Ok(())
     }
 
+    /// Creates `mesh`.
     pub fn create_mesh(&self, config: &SimulationConfig) -> Result<Mesh, PhysicsError> {
         let mesh = Mesh {
             mesh_id: "default_mesh".to_string(),
@@ -41,6 +44,7 @@ impl SimulationEngine {
         Ok(mesh)
     }
 
+    /// Applies boundary conditions to the engine.
     pub fn update_boundary_conditions(
         &self,
         simulation: &mut Simulation,

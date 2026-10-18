@@ -19,6 +19,7 @@ pub enum PrefixConfiguration {
 }
 
 impl PrefixConfiguration {
+    /// Static string.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Standard => "standard",
@@ -40,6 +41,7 @@ pub enum CompressionStrategy {
 }
 
 impl CompressionStrategy {
+    /// Static string.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::PreservePrefix => "preserve-prefix",
@@ -61,6 +63,7 @@ pub struct ModelPrecisionContract {
 }
 
 impl ModelPrecisionContract {
+    /// Creates a default `ModelPrecisionContract`.
     pub fn new(
         profile_id: impl Into<String>,
         profile_version: u64,

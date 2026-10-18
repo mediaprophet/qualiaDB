@@ -18,6 +18,7 @@ pub struct UnivariateOutlierScreen {
     pub sigma3_indices: Vec<usize>,
 }
 
+/// Univariate outlier screen.
 pub fn univariate_outlier_screen(values: &[f64]) -> Option<UnivariateOutlierScreen> {
     if values.len() < 4 {
         return None;

@@ -1145,11 +1145,13 @@ impl NQuin {
     const NESTED_BIT_MASK: u64 = 1 << 63;
 
     #[inline(always)]
+    /// `true` when the subject is nested.
     pub fn is_subject_nested(&self) -> bool {
         (self.subject & Self::NESTED_BIT_MASK) != 0
     }
 
     #[inline(always)]
+    /// Subject literal id.
     pub fn get_subject_literal_id(&self) -> u64 {
         self.subject & !Self::NESTED_BIT_MASK
     }
@@ -1168,6 +1170,7 @@ impl NQuin {
     const SHIFT_LANE: u32 = 61;
 
     #[inline(always)]
+    /// PermissiveRoutingLane.
     pub fn identify_routing_lane(&self) -> PermissiveRoutingLane {
         // Since it's packed, taking reference to field might be unsafe in some contexts,
         // but passing self by reference and copying the field is usually fine,
@@ -1189,11 +1192,13 @@ impl NQuin {
     pub const SENSITIVITY_CLASSIFIED: u8 = 0x02;
 
     #[inline(always)]
+    /// Sensitivity byte.
     pub fn get_sensitivity_byte(&self) -> u8 {
         (self.context >> 56) as u8
     }
 
     #[inline(always)]
+    /// Sets the sensitivity byte.
     pub fn set_sensitivity_byte(&mut self, sensitivity: u8) {
         // Clear top 8 bits
         self.context &= 0x00FF_FFFF_FFFF_FFFF;
@@ -1207,6 +1212,7 @@ impl NQuin {
     // intentional, role-exclusive overlay documented in frame_layout). It is NOT
     // relocated lower — every lower slot lands inside the tensor-bake clock [32:60].
     #[inline(always)]
+    /// Quin type tag.
     pub fn get_quin_type(&self) -> u8 {
         crate::frame_layout::quin_type(self.metadata)
     }
@@ -1273,6 +1279,7 @@ impl NQuin {
     }
 
     #[inline(always)]
+    /// `true` when the ECC parity holds.
     pub fn verify_ecc_parity(&self) -> bool {
         self.parity
             == Self::calculate_parity(
@@ -1297,6 +1304,7 @@ impl NQuin {
     }
 
     #[inline(always)]
+    /// Builds a conduct-violation quin.
     pub fn new_conduct_violation(reason: &[u8]) -> Self {
         let mut quin = Self::default();
         quin.predicate = 0x42_0000_0000_0000; // q42:conductViolation
@@ -1321,17 +1329,21 @@ pub const MODALITY_FLAG_DENSE_PHYSICS: u8 = 0b1000;
 pub const MODALITY_FLAG_VISION_TENSOR: u8 = 0b1010;
 
 pub trait QuinPointerExt {
+    /// Extracts the modality flag.
     fn extract_modality_flag(&self) -> u8;
+    /// Extracts the byte offset.
     fn extract_byte_offset(&self) -> u64;
 }
 
 impl QuinPointerExt for NQuin {
     #[inline(always)]
+    /// Extracts the modality flag.
     fn extract_modality_flag(&self) -> u8 {
         (self.object >> 60) as u8
     }
 
     #[inline(always)]
+    /// Extracts the byte offset.
     fn extract_byte_offset(&self) -> u64 {
         self.object & 0x0FFF_FFFF_FFFF_FFFF
     }
@@ -1385,6 +1397,7 @@ pub const MASK_COMMERCIAL_BILLABLE_GATE: u16 = 0b0000_0100;
 pub const MASK_WORK_OBLIGATION_SATISFIED: u16 = 0b0000_1000;
 
 #[inline(always)]
+/// Evaluates the permissive runtime gate.
 pub fn evaluate_permissive_runtime_gate(
     entry_policy_mask: u16,
     requesting_agent_signature_flags: u16,

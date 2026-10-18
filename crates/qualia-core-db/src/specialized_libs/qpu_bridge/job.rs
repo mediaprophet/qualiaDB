@@ -157,6 +157,7 @@ pub struct QPUJobResult {
 
 impl QPUJobManager {
     #[inline(always)]
+    /// Returns the default `QPUJobManager`.
     pub const fn default() -> Self {
         Self {
             active_jobs: [QPUJob::default(); 64],
@@ -166,6 +167,7 @@ impl QPUJobManager {
         }
     }
 
+    /// Allocates a 64-byte job id; `QPUBridgeError` at capacity.
     pub fn allocate_job_slot(&mut self) -> Result<[u8; 64], QPUBridgeError> {
         // Find empty slot in active jobs
         for i in 0..64 {
@@ -178,6 +180,7 @@ impl QPUJobManager {
         Err(QPUBridgeError::QueueFull)
     }
 
+    /// Frees `job_id`'s slot.
     pub fn release_job_slot(&mut self, job_id: [u8; 64]) {
         // Find and clear job slot
         for i in 0..64 {
@@ -188,6 +191,7 @@ impl QPUJobManager {
         }
     }
 
+    /// Moves `job` onto the active list.
     pub fn add_active_job(&mut self, job: QPUJob) {
         // Add job to active queue
         for i in 0..64 {
@@ -199,6 +203,7 @@ impl QPUJobManager {
         }
     }
 
+    /// Index of `job_id` in the active list.
     pub fn find_active_job(&self, job_id: &[u8; 64]) -> Result<usize, QPUBridgeError> {
         for i in 0..64 {
             if self.active_jobs[i].job_id == *job_id {
@@ -208,6 +213,7 @@ impl QPUJobManager {
         Err(QPUBridgeError::JobNotFound)
     }
 
+    /// Moves active job `active_index` to the completed list.
     pub fn move_to_completed(&mut self, active_index: usize) {
         // Move job from active to completed
         let job = self.active_jobs[active_index];
@@ -246,6 +252,7 @@ impl QPUJobManager {
 
 impl QPUJob {
     #[inline(always)]
+    /// Default state.
     pub const fn default() -> Self {
         Self {
             job_id: [0u8; 64],
@@ -262,6 +269,7 @@ impl QPUJob {
 
 impl QPUJobCounters {
     #[inline(always)]
+    /// Default state.
     pub const fn default() -> Self {
         Self {
             total_submitted: 0,
@@ -275,6 +283,7 @@ impl QPUJobCounters {
 
 impl QPURateLimiter {
     #[inline(always)]
+    /// Default state.
     pub const fn default() -> Self {
         Self {
             jobs_per_second: 10,
@@ -285,6 +294,7 @@ impl QPURateLimiter {
         }
     }
 
+    /// `true` when under the per-second job cap and quota remains.
     pub fn can_submit_job(&mut self, current_time: u64) -> bool {
         // Check if window has expired
         if current_time - self.window_start > (self.window_duration as u64 * 1_000_000) {
@@ -297,6 +307,7 @@ impl QPURateLimiter {
         self.current_jobs < self.jobs_per_second && self.quota_remaining > 0
     }
 
+    /// Accounts one submission against rate and quota.
     pub fn record_job_submission(&mut self, _current_time: u64) {
         self.current_jobs += 1;
         self.quota_remaining -= 1;

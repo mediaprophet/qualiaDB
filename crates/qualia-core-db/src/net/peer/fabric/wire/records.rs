@@ -44,6 +44,7 @@ fn known_reject(t: u8) -> bool {
     matches!(t, 1)
 }
 
+/// Encodes a `ContactDescriptor` as CSCP TLVs into `out`; returns bytes written.
 pub fn encode_contact(d: &ContactDescriptor, out: &mut [u8]) -> Result<usize, CscpError> {
     let mut body = [0u8; 128];
     let mut n = 0usize;
@@ -68,6 +69,7 @@ pub fn encode_contact(d: &ContactDescriptor, out: &mut [u8]) -> Result<usize, Cs
     finish(out, MSG_CONTACT, &body[..n])
 }
 
+/// Decodes a `ContactDescriptor`; fails closed on missing/duplicate/malformed TLVs.
 pub fn decode_contact(bytes: &[u8]) -> Result<ContactDescriptor, CscpError> {
     let body = parse_header(bytes, MSG_CONTACT)?;
     let mut d = ContactDescriptor::mailbox([0u8; 32], 0, 0);
@@ -105,6 +107,7 @@ pub fn decode_contact(bytes: &[u8]) -> Result<ContactDescriptor, CscpError> {
     Ok(d)
 }
 
+/// Encodes a `RelayLease` into `out`.
 pub fn encode_relay_lease(l: &RelayLease, out: &mut [u8]) -> Result<usize, CscpError> {
     let mut body = [0u8; 192];
     let mut n = 0usize;
@@ -130,6 +133,7 @@ pub fn encode_relay_lease(l: &RelayLease, out: &mut [u8]) -> Result<usize, CscpE
     finish(out, MSG_RELAY_LEASE, &body[..n])
 }
 
+/// Decodes a `RelayLease` with required-tag validation.
 pub fn decode_relay_lease(bytes: &[u8]) -> Result<RelayLease, CscpError> {
     let body = parse_header(bytes, MSG_RELAY_LEASE)?;
     let mut l = RelayLease::grant(0, 0, [0u8; 32], [0u8; 32], 0, 0, 0, false);
@@ -175,6 +179,7 @@ pub fn decode_relay_lease(bytes: &[u8]) -> Result<RelayLease, CscpError> {
     Ok(l)
 }
 
+/// Encodes a `CustodyLease` into `out`.
 pub fn encode_custody(c: &CustodyLease, out: &mut [u8]) -> Result<usize, CscpError> {
     let mut body = [0u8; 64];
     let mut n = 0usize;
@@ -193,6 +198,7 @@ pub fn encode_custody(c: &CustodyLease, out: &mut [u8]) -> Result<usize, CscpErr
     finish(out, MSG_CUSTODY_LEASE, &body[..n])
 }
 
+/// Decodes a `CustodyLease` with required-tag validation.
 pub fn decode_custody(bytes: &[u8]) -> Result<CustodyLease, CscpError> {
     let body = parse_header(bytes, MSG_CUSTODY_LEASE)?;
     let mut c = CustodyLease::grant(0, 0, 0, 0);
@@ -210,6 +216,7 @@ pub fn decode_custody(bytes: &[u8]) -> Result<CustodyLease, CscpError> {
     Ok(c)
 }
 
+/// Encodes `PathEvidence` into `out`.
 pub fn encode_evidence(e: &PathEvidence, out: &mut [u8]) -> Result<usize, CscpError> {
     let mut body = [0u8; 64];
     let mut n = 0usize;
@@ -293,6 +300,7 @@ pub fn decode_evidence(bytes: &[u8]) -> Result<PathEvidence, CscpError> {
     Ok(PathEvidence::remote_assertion(class, generation, at))
 }
 
+/// Encodes an `OpReceipt` into `out`.
 pub fn encode_receipt(r: &OpReceipt, out: &mut [u8]) -> Result<usize, CscpError> {
     let mut body = [0u8; 128];
     let mut n = 0usize;
@@ -313,6 +321,7 @@ pub fn encode_receipt(r: &OpReceipt, out: &mut [u8]) -> Result<usize, CscpError>
     finish(out, MSG_RECEIPT, &body[..n])
 }
 
+/// Decodes an `OpReceipt` with required-tag validation.
 pub fn decode_receipt(bytes: &[u8]) -> Result<OpReceipt, CscpError> {
     let body = parse_header(bytes, MSG_RECEIPT)?;
     let mut r = OpReceipt::queued(0, [0u8; 32], [0u8; 32], 0, 0);
@@ -355,6 +364,7 @@ pub fn decode_receipt(bytes: &[u8]) -> Result<OpReceipt, CscpError> {
     Ok(r)
 }
 
+/// Encodes a path-accept message (class + lease id).
 pub fn encode_accept(
     class: PathClass,
     generation: u32,
@@ -367,6 +377,7 @@ pub fn encode_accept(
     finish(out, MSG_CONNECT_ACCEPT, &body[..n])
 }
 
+/// Decodes a path-accept into `(PathClass, lease_id)`.
 pub fn decode_accept(bytes: &[u8]) -> Result<(PathClass, u32), CscpError> {
     let body = parse_header(bytes, MSG_CONNECT_ACCEPT)?;
     let mut class = PathClass::Offline;
@@ -393,12 +404,14 @@ pub fn decode_accept(bytes: &[u8]) -> Result<(PathClass, u32), CscpError> {
     Ok((class, generation))
 }
 
+/// Encodes a `RejectReason` byte.
 pub fn encode_reject(reason: RejectReason, out: &mut [u8]) -> Result<usize, CscpError> {
     let mut body = [0u8; 8];
     let n = write_tlv(&mut body, 1 | TAG_CRITICAL, &[reason as u8])?;
     finish(out, MSG_CONNECT_REJECT, &body[..n])
 }
 
+/// Decodes a `RejectReason`; fails closed on unknown reason byte.
 pub fn decode_reject(bytes: &[u8]) -> Result<RejectReason, CscpError> {
     let body = parse_header(bytes, MSG_CONNECT_REJECT)?;
     let mut reason = RejectReason::Policy;

@@ -80,6 +80,7 @@ pub struct TileHeader {
 impl TileHeader {
     pub const BYTES: usize = 12;
 
+    /// Converts to `bytes`.
     pub fn to_bytes(&self) -> [u8; Self::BYTES] {
         let mut buf = [0u8; Self::BYTES];
         buf[0] = self.kind as u8;
@@ -90,6 +91,7 @@ impl TileHeader {
         buf
     }
 
+    /// Builds `TileHeader` from `bytes`.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, TileCodecError> {
         if bytes.len() < Self::BYTES {
             return Err(TileCodecError::MalformedHeader);

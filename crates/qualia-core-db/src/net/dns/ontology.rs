@@ -56,6 +56,7 @@ pub struct DnsRecordTypeDescriptor {
 }
 
 impl DnsRecordTypeDescriptor {
+    /// `true` when `lossless_inline`.
     pub const fn is_lossless_inline(&self) -> bool {
         matches!(
             self.storage_strategy,

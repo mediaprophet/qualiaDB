@@ -107,6 +107,7 @@ pub struct VonNeumannAnalysis {
 }
 
 impl TimeIntegrator {
+    /// Creates a time integrator with default step control and stability analysis.
     pub fn new() -> Self {
         Self {
             integrator_type: TimeIntegratorType::ExplicitEuler,
@@ -115,6 +116,7 @@ impl TimeIntegrator {
         }
     }
 
+    /// Initializes step control and stability analysis; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.time_step_control.initialize()?;
         self.stability_analysis.initialize()?;
@@ -156,6 +158,7 @@ impl TimeIntegrator {
 }
 
 impl TimeStepControl {
+    /// Creates step control with default CFL/adaptive parameters.
     pub fn new() -> Self {
         Self {
             control_type: TimeStepControlType::CFLBased,
@@ -165,6 +168,7 @@ impl TimeStepControl {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -252,6 +256,7 @@ impl TimeStepControl {
 }
 
 impl CflCondition {
+    /// Creates a CFL condition with default safety factor.
     pub fn new() -> Self {
         Self {
             cfl_number: 0.5,
@@ -308,6 +313,7 @@ impl CflCondition {
 }
 
 impl AdaptiveParameters {
+    /// Creates default adaptive step-size parameters.
     pub fn new() -> Self {
         Self {
             min_time_step: 1e-6,
@@ -342,6 +348,7 @@ impl AdaptiveParameters {
 }
 
 impl StabilityAnalysis {
+    /// Creates a stability analyzer with default eigenvalue/Von-Neumann components.
     pub fn new() -> Self {
         Self {
             analysis_method: StabilityAnalysisMethod::VonNeumann,
@@ -350,6 +357,7 @@ impl StabilityAnalysis {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -386,6 +394,7 @@ impl StabilityAnalysis {
 }
 
 impl EigenvalueAnalysis {
+    /// Creates default eigenvalue-analysis parameters.
     pub fn new() -> Self {
         Self {
             eigenvalues: Vec::new(),
@@ -396,6 +405,7 @@ impl EigenvalueAnalysis {
 }
 
 impl VonNeumannAnalysis {
+    /// Creates default Von-Neumann stability parameters.
     pub fn new() -> Self {
         Self {
             amplification_factor: 1.0,

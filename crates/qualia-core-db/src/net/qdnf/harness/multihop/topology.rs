@@ -97,6 +97,7 @@ pub(super) fn shortcut_index() -> Result<AdjacencyIndex, QdnfError> {
 }
 
 #[cfg(test)]
+/// Realm constraint.
 pub(super) fn realm_constraint() -> PathConstraint {
     PathConstraint {
         permitted_realms: 1u64 << PERMITTED_REALM,
@@ -109,6 +110,7 @@ pub(super) fn realm_constraint() -> PathConstraint {
 }
 
 #[cfg(test)]
+/// Profile constraint.
 pub(super) fn profile_constraint() -> PathConstraint {
     PathConstraint {
         permitted_realms: u64::MAX,
@@ -178,6 +180,7 @@ pub(super) fn publish_planned(
     Ok(origin.hop_len)
 }
 
+/// Publishes a line.
 pub(super) fn publish_line(m: &mut MultiHop) -> Result<(), QdnfError> {
     let index = line_index()?;
     let origin = plan_one(
@@ -273,11 +276,13 @@ fn publish_admitted(
 }
 
 #[cfg(test)]
+/// Unrestricted plan.
 pub(super) fn plan_unrestricted(index: &AdjacencyIndex) -> Result<CandidatePath, QdnfError> {
     plan_one(index, ORIGIN_NODE, DEST_NODE, &PathConstraint::UNRESTRICTED)
 }
 
 #[cfg(test)]
+/// Plan with constraint.
 pub(super) fn plan_with(
     index: &AdjacencyIndex,
     constraint: &PathConstraint,

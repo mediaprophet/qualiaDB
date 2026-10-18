@@ -57,6 +57,7 @@ fn reject_complete_failures(
     Ok(())
 }
 
+/// Initiator sends its handshake share.
 pub fn initiator_share(
     x25519_secret: &[u8; 32],
     ml_kem_pk: &[u8; ML_KEM_768_PK_LEN],
@@ -70,6 +71,7 @@ pub fn initiator_share(
     })
 }
 
+/// Responder consumes the initiator share, producing its reply.
 pub fn responder_complete(
     initiator: &InitiatorShare,
     x25519_secret: &[u8; 32],
@@ -89,6 +91,7 @@ pub fn responder_complete(
     Ok((share, kem_ss, x_ss))
 }
 
+/// Initiator consumes the reply, completing the handshake.
 pub fn initiator_complete(
     ml_kem_sk: &MlKem768Secret,
     x25519_secret: &[u8; 32],

@@ -3,6 +3,7 @@
 use super::AoUniform;
 use crate::render::camera::{CAMERA_FAR_PLANE, CAMERA_TAN_HALF_FOV};
 
+/// Makes a uniform AO sample.
 pub fn make_uniform(
     width: u32,
     height: u32,
@@ -85,15 +86,18 @@ fn scale(value: [f32; 3], factor: f32) -> [f32; 3] {
     [value[0] * factor, value[1] * factor, value[2] * factor]
 }
 
+/// Half extent.
 pub(super) fn half_extent(width: u32, height: u32) -> (u32, u32) {
     (width.div_ceil(2).max(1), height.div_ceil(2).max(1))
 }
 
+/// Target byte size.
 pub(super) fn target_bytes(width: u32, height: u32) -> Option<u64> {
     let (width, height) = half_extent(width, height);
     target_bytes_at_half(width, height)
 }
 
+/// Target bytes at half res.
 pub(super) fn target_bytes_at_half(width: u32, height: u32) -> Option<u64> {
     u64::from(width)
         .checked_mul(u64::from(height))?

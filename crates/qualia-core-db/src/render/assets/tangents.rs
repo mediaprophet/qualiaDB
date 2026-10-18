@@ -130,6 +130,7 @@ pub(super) fn generate_mikktspace_tangents(
     })
 }
 
+/// Orthogonalizes an imported tangent.
 pub(super) fn orthogonalize_imported_tangent(
     tangent: [f32; 4],
     normal: [f32; 3],
@@ -155,6 +156,7 @@ pub(super) fn orthogonalize_imported_tangent(
     ])
 }
 
+/// Default tangent for a normal.
 pub(super) fn default_tangent_for_normal(normal: [f32; 3]) -> [f32; 4] {
     let axis = if normal[0].abs() < 0.8 {
         [1.0, 0.0, 0.0]
@@ -170,6 +172,7 @@ pub(super) fn default_tangent_for_normal(normal: [f32; 3]) -> [f32; 4] {
     [tangent[0], tangent[1], tangent[2], 1.0]
 }
 
+/// Normalizes an imported normal.
 pub(super) fn normalize_imported_normal(normal: [f32; 3]) -> Result<[f32; 3], AssetError> {
     if normal.iter().any(|v| !v.is_finite()) {
         return Err(AssetError::Parse(
@@ -185,6 +188,7 @@ pub(super) fn normalize_imported_normal(normal: [f32; 3]) -> Result<[f32; 3], As
     Ok([normal[0] / length, normal[1] / length, normal[2] / length])
 }
 
+/// Generates import normals.
 pub(super) fn generate_import_normals(
     positions: &[[f32; 3]],
     indices: &[u32],

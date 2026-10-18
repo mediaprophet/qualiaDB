@@ -42,16 +42,19 @@ pub struct PathHandle {
 
 impl PathHandle {
     #[inline]
+    /// Slot.
     pub const fn slot(self) -> u8 {
         self.slot
     }
 
     #[inline]
+    /// Generation.
     pub const fn generation(self) -> Generation {
         self.generation
     }
 }
 
+/// `PathHandle::path_handle_is_budget_token`.
 pub const fn path_handle_is_budget_token() -> bool {
     false
 }
@@ -72,6 +75,7 @@ pub struct PathTable {
 }
 
 impl PathTable {
+    /// Creates a default `PathTable`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_RACE_CANDIDATES],
@@ -95,6 +99,7 @@ impl PathTable {
         Ok(id)
     }
 
+    /// Path handle for `id`; error when absent.
     pub fn handle_of(&self, id: u8) -> Result<PathHandle, QdnfError> {
         let slot = self.get(id).ok_or(QdnfError::Closed)?;
         Ok(PathHandle {
@@ -115,6 +120,7 @@ impl PathTable {
         Ok(())
     }
 
+    /// Transitions `handle` to `next` state; returns the new handle.
     pub fn mutate(&mut self, handle: PathHandle, next: PathState) -> Result<PathHandle, QdnfError> {
         let idx = self.index_of(handle.slot)?;
         {
@@ -193,6 +199,7 @@ impl PathTable {
         self.lose_and_cleanup(id)
     }
 
+    /// Active paths.
     pub fn active_count(&self) -> usize {
         let mut n = 0usize;
         let mut i = 0usize;
@@ -217,6 +224,7 @@ impl PathTable {
         false
     }
 
+    /// `PathTable::get`.
     pub fn get(&self, id: u8) -> Option<&PathSlot> {
         let idx = id as usize;
         if idx >= MAX_RACE_CANDIDATES {

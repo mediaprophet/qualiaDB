@@ -116,6 +116,7 @@ pub struct EnergyPoint {
 // Supporting structs
 
 impl Molecule {
+    /// Creates an empty molecule.
     pub fn new() -> Self {
         Self {
             molecule_id: "mol_1".to_string(),
@@ -129,6 +130,7 @@ impl Molecule {
 }
 
 impl Atom {
+    /// Creates a default atom.
     pub fn new() -> Self {
         Self {
             atom_id: "atom_1".to_string(),
@@ -142,6 +144,7 @@ impl Atom {
 }
 
 impl Bond {
+    /// Creates a default bond.
     pub fn new() -> Self {
         Self {
             bond_id: "bond_1".to_string(),
@@ -154,6 +157,7 @@ impl Bond {
 }
 
 impl MolecularProperties {
+    /// Creates default molecular properties.
     pub fn new() -> Self {
         Self {
             molecular_weight: 16.04,
@@ -165,6 +169,7 @@ impl MolecularProperties {
 }
 
 impl SimulationTrajectory {
+    /// Creates an empty trajectory.
     pub fn new() -> Self {
         Self {
             trajectory_id: "traj_1".to_string(),
@@ -176,6 +181,7 @@ impl SimulationTrajectory {
 }
 
 impl TrajectoryProperties {
+    /// Creates default trajectory properties.
     pub fn new() -> Self {
         Self {
             total_frames: 0,
@@ -187,6 +193,7 @@ impl TrajectoryProperties {
 }
 
 impl ReactionConditions {
+    /// Creates default reaction conditions.
     pub fn new() -> Self {
         Self {
             temperature: 298.15,
@@ -197,6 +204,7 @@ impl ReactionConditions {
 }
 
 impl KineticsResults {
+    /// Creates empty kinetics results.
     pub fn new() -> Self {
         Self {
             rate_constant: 1.0,
@@ -208,6 +216,7 @@ impl KineticsResults {
 }
 
 impl QuantumProperties {
+    /// Creates default quantum properties.
     pub fn new() -> Self {
         Self {
             total_energy: -74.8,
@@ -222,6 +231,7 @@ impl QuantumProperties {
 }
 
 impl PredictedProperties {
+    /// Creates empty predicted properties.
     pub fn new() -> Self {
         Self {
             properties: HashMap::new(),

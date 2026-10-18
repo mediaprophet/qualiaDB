@@ -28,6 +28,7 @@ pub struct AggregateAccumulator {
 }
 
 impl AggregateAccumulator {
+    /// Creates an accumulator for `func` (COUNT/SUM/AVG/MIN/MAX/…).
     pub fn new(func: AggregateFunction) -> Self {
         Self {
             func,
@@ -39,6 +40,7 @@ impl AggregateAccumulator {
         }
     }
 
+    /// Folds one value into the accumulator.
     pub fn add_value(&mut self, value: u64) {
         self.count += 1;
 
@@ -67,6 +69,7 @@ impl AggregateAccumulator {
         }
     }
 
+    /// Final aggregate value, or `None` when empty.
     pub fn get_result(&self) -> Option<u64> {
         if self.count == 0 {
             return None;
@@ -109,6 +112,7 @@ pub struct GroupKey {
 }
 
 impl GroupKey {
+    /// Creates an empty group key.
     pub fn new() -> Self {
         Self {
             values: [0; MAX_VARIABLES],
@@ -116,6 +120,7 @@ impl GroupKey {
         }
     }
 
+    /// Sets one variable binding in the key.
     pub fn set(&mut self, var_id: VariableId, value: u64) {
         if (var_id as usize) < MAX_VARIABLES {
             self.values[var_id as usize] = value;
@@ -140,6 +145,7 @@ pub struct AggregationContext {
 }
 
 impl AggregationContext {
+    /// Creates an aggregation context over the given variables/functions.
     pub fn new(
         aggregates_spec: &[crate::sparql_planner::AggregateSpec],
         aggregate_count: u8,
@@ -175,6 +181,7 @@ impl AggregationContext {
         }
     }
 
+    /// Looks up `key`, creating a group when absent; error at capacity.
     pub fn find_or_create_group(&mut self, key: GroupKey) -> Result<usize, String> {
         // Try to find existing group
         for i in 0..self.group_count as usize {
@@ -205,6 +212,7 @@ impl AggregationContext {
         Ok(idx)
     }
 
+    /// Folds one binding row into group `group_idx`.
     pub fn add_values_to_group(&mut self, group_idx: usize, row: &BindingRow) {
         for i in 0..self.aggregate_count as usize {
             let spec = &self.aggregates_spec[i];

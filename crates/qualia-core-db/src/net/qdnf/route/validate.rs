@@ -166,6 +166,7 @@ mod tests {
     use super::*;
     use crate::crypto::network::digest::sha384;
 
+    /// `ValidatedEdge::rec`.
     pub(crate) fn rec(origin: u8, from: u8, to: u8, seq: u32, expiry: u64) -> TopologyRecord {
         TopologyRecord {
             origin,

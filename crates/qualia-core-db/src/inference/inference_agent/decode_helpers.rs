@@ -188,6 +188,7 @@ pub(super) enum TopologyDraftStep {
     },
 }
 
+/// Drains the tensor-context injection.
 pub(super) fn drain_tensor_context_inject() {
     while let Some(inject) = crate::compute_universe::pop_tensor_context() {
         if let Some(tensor) = crate::tensor::resident_substrate::global_resident_substrate()
@@ -198,6 +199,7 @@ pub(super) fn drain_tensor_context_inject() {
     }
 }
 
+/// Tries to accept a topology draft.
 pub(super) fn try_accept_topology_draft(
     engine: &mut crate::gguf_bridge::QTensorEngine,
     tensor_idx: Option<&crate::gguf_sharder::GgufTensorIndex>,
@@ -299,6 +301,7 @@ pub(super) fn try_accept_topology_draft(
     }
 }
 
+/// Builds the sieve.
 pub(super) fn build_sieve(
     tok: &crate::gguf_sharder::GgufTokenizer,
     spec: Option<&crate::neuro_symbolic_sieve::SieveLexSpec>,
@@ -356,6 +359,7 @@ pub(super) static PREFIX_CACHE: std::sync::OnceLock<
 > = std::sync::OnceLock::new();
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Prefix cache.
 pub(super) fn get_prefix_cache(
 ) -> &'static std::sync::Mutex<super::prefix_cache::BoundedInferenceCache> {
     super::prefix_cache::get_prefix_cache()

@@ -33,9 +33,11 @@ impl StandardScaler {
         Some(Self { means, stds })
     }
 
+    /// Feature means.
     pub fn means(&self) -> &[f64] {
         &self.means
     }
+    /// Feature standard deviations.
     pub fn stds(&self) -> &[f64] {
         &self.stds
     }

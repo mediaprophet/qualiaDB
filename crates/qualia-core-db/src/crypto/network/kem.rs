@@ -13,6 +13,7 @@ pub struct MlKem768Secret {
 }
 
 impl MlKem768Secret {
+    /// Generates an ML-KEM-768 keypair; returns `(secret, public)`.
     pub fn generate() -> Result<(Self, [u8; ML_KEM_768_PK_LEN]), CryptoError> {
         let (ek, dk) = ml_kem_768::KG::try_keygen().map_err(|_| CryptoError::CryptoFailure)?;
         Ok((
@@ -23,10 +24,12 @@ impl MlKem768Secret {
         ))
     }
 
+    /// Wraps a raw secret key.
     pub fn from_bytes(bytes: [u8; ML_KEM_768_SK_LEN]) -> Self {
         Self { bytes }
     }
 
+    /// Decapsulates a ciphertext into a shared secret.
     pub fn decapsulate(
         &self,
         ciphertext: &[u8; ML_KEM_768_CT_LEN],
@@ -40,6 +43,7 @@ impl MlKem768Secret {
     }
 }
 
+/// Encapsulates against a public key, returning `(ct, ss)`.
 pub fn encapsulate(
     public: &[u8; ML_KEM_768_PK_LEN],
 ) -> Result<([u8; ML_KEM_SS_LEN], [u8; ML_KEM_768_CT_LEN]), CryptoError> {

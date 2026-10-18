@@ -204,6 +204,7 @@ pub enum TrustRegionMethod {
 }
 
 impl PhysicsSolver {
+    /// Creates a solver facade with default linear/nonlinear solver state.
     pub fn new() -> Self {
         Self {
             solver_type: SolverType::Iterative,
@@ -214,6 +215,7 @@ impl PhysicsSolver {
         }
     }
 
+    /// Initializes the linear and nonlinear solvers; `PhysicsError` propagates.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.linear_solver.initialize()?;
         self.nonlinear_solver.initialize()?;
@@ -222,6 +224,7 @@ impl PhysicsSolver {
         Ok(())
     }
 
+    /// Builds a `CfdSolver` configured with GMRES + default preconditioner/convergence/parameters (ignores `_config` — fixed configuration).
     pub fn create_cfd_solver(&self, _config: &SimulationConfig) -> Result<CfdSolver, PhysicsError> {
         let solver = CfdSolver {
             solver_id: "cfd_solver".to_string(),
@@ -234,6 +237,7 @@ impl PhysicsSolver {
         Ok(solver)
     }
 
+    /// Computes a real steady-state residual: L2 norm of the 1-D Burgers operator `ν·u_xx − u·u_x` over the velocity field (ν=1.5e-5); `residual_norm = f64::MAX` and 0 iterations when no velocity field is present.
     pub fn solve_cfd_step(
         &self,
         _solver: &CfdSolver,
@@ -286,6 +290,7 @@ impl PhysicsSolver {
 }
 
 impl LinearSolver {
+    /// Creates a linear solver with default preconditioner and convergence criteria.
     pub fn new() -> Self {
         Self {
             solver_method: LinearSolverMethod::GMRES,
@@ -295,6 +300,7 @@ impl LinearSolver {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         Ok(())
     }
@@ -388,6 +394,7 @@ impl CfdSolver {
 }
 
 impl Preconditioner {
+    /// Creates a default `Preconditioner`.
     pub fn new() -> Self {
         Self {
             preconditioner_type: PreconditionerType::ILU,
@@ -417,6 +424,7 @@ impl Preconditioner {
 }
 
 impl PreconditionerParameters {
+    /// Creates default `PreconditionerParameters`.
     pub fn new() -> Self {
         Self {
             relaxation_factor: 1.0,
@@ -428,6 +436,7 @@ impl PreconditionerParameters {
 }
 
 impl ConvergenceCriteria {
+    /// Creates default `ConvergenceCriteria`.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,
@@ -440,6 +449,7 @@ impl ConvergenceCriteria {
 }
 
 impl SolverParameters {
+    /// Creates default `SolverParameters`.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,
@@ -451,6 +461,7 @@ impl SolverParameters {
 }
 
 impl NonlinearSolver {
+    /// Creates a nonlinear solver with default parameters.
     pub fn new() -> Self {
         Self {
             solver_method: NonlinearSolverMethod::NewtonRaphson,
@@ -460,6 +471,7 @@ impl NonlinearSolver {
         }
     }
 
+    /// No-op returning `Ok(())`.
     pub fn initialize(&mut self) -> Result<(), PhysicsError> {
         self.linear_solver.initialize()?;
         Ok(())
@@ -497,6 +509,7 @@ impl NonlinearSolver {
 }
 
 impl NonlinearSolverParameters {
+    /// Creates default `NonlinearSolverParameters`.
     pub fn new() -> Self {
         Self {
             tolerance: 1e-6,

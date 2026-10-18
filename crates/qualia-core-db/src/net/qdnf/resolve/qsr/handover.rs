@@ -60,11 +60,13 @@ impl Handover {
     }
 
     #[inline]
+    /// `Handover::accepted_count`.
     pub const fn accepted_count(&self) -> u8 {
         self.accepted
     }
 
     #[inline]
+    /// `Handover::transferred_count`.
     pub const fn transferred_count(&self) -> u8 {
         self.transferred
     }

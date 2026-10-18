@@ -21,6 +21,7 @@ pub use gbm_var::simulate as gbm_var;
 pub use portfolio::risk as portfolio_risk;
 
 #[cfg(target_arch = "wasm32")]
+/// VibeScript seam: Black-Scholes.
 pub fn black_scholes(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -29,6 +30,7 @@ pub fn black_scholes(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// VibeScript seam: portfolio risk.
 pub fn portfolio_risk(
     args: &vibe::Value,
     span: vibe::Span,
@@ -37,11 +39,13 @@ pub fn portfolio_risk(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// VibeScript seam: GBM VaR.
 pub fn gbm_var(args: &vibe::Value, span: vibe::Span) -> Result<vibe::Value, vibe::Diagnostic> {
     black_scholes(args, span)
 }
 
 #[cfg(target_arch = "wasm32")]
+/// VibeScript seam: currency conversion.
 pub fn convert_currency(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -53,6 +57,7 @@ pub fn convert_currency(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// VibeScript seam: multisig check.
 pub fn multisig_check(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -61,6 +66,7 @@ pub fn multisig_check(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// VibeScript seam: ledger balance.
 pub fn ledger_balance(
     _args: &vibe::Value,
     span: vibe::Span,

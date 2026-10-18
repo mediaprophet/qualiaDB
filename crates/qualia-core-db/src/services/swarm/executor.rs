@@ -15,6 +15,7 @@ use crate::solvers::linear_algebra::gemm::matmul;
 /// A node that can execute swarm jobs. Object-safe so it can be boxed and swapped
 /// (a local cell, a remote peer proxy, a test double).
 pub trait JobExecutor {
+    /// Executes a job.
     fn execute(&self, input: &JobInput) -> Result<JobResult, SwarmError>;
 }
 
@@ -22,6 +23,7 @@ pub trait JobExecutor {
 pub struct LocalKernelExecutor;
 
 impl JobExecutor for LocalKernelExecutor {
+    /// Executes a job.
     fn execute(&self, input: &JobInput) -> Result<JobResult, SwarmError> {
         if !input.is_well_formed() {
             return Err(SwarmError::InvalidJob);

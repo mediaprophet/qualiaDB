@@ -36,6 +36,7 @@ pub enum MentionKind {
 }
 
 impl MentionKind {
+    /// Views `self` as `label`.
     pub fn as_label(self) -> &'static str {
         match self {
             Self::Pronoun => "pronoun",
@@ -70,6 +71,7 @@ pub struct ValidatedMention {
 }
 
 impl ValidatedMention {
+    /// Doc span of the mention.
     pub fn span(self) -> DocSpan {
         DocSpan::new(self.start, self.end)
     }
@@ -95,6 +97,7 @@ pub struct CorefScratch<'a> {
 }
 
 impl CorefScratch<'_> {
+    /// `provided` size in bytes.
     pub fn provided_bytes(&self) -> usize {
         core::mem::size_of_val(self.work)
             .saturating_add(core::mem::size_of_val(self.order))

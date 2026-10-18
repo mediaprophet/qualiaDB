@@ -21,6 +21,7 @@ use super::args;
 use crate::clinical_engine::{validate_fhir_observation, FhirObservation};
 use vibe::{Diagnostic, Span, Value};
 
+/// Validates `observation`.
 pub fn validate_observation(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let loinc_code = args::rec_str(args_v, "loinc_code")
         .ok_or_else(|| args::bad(span, "FHIR observation needs loinc_code"))?;

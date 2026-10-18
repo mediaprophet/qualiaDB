@@ -33,6 +33,7 @@ fn missing(span: vibe::Span, family: &str) -> Result<vibe::Value, vibe::Diagnost
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::shortest_path`.
 pub fn shortest_path(
     _args: &vibe::Value,
     span: vibe::Span,
@@ -41,6 +42,7 @@ pub fn shortest_path(
 }
 
 #[cfg(not(any(not(target_arch = "wasm32"), feature = "wasm-scientific")))]
+/// `?::spreading_activation`.
 pub fn spreading_activation(
     _args: &vibe::Value,
     span: vibe::Span,

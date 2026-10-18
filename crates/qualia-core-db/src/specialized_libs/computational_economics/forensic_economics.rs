@@ -58,6 +58,7 @@ impl NquinVector {
     };
 
     #[inline]
+    /// `NquinVector::from_array`.
     pub fn from_array(a: [f64; NQUIN_DIMS]) -> Self {
         Self {
             physical: a[0],
@@ -69,6 +70,7 @@ impl NquinVector {
     }
 
     #[inline]
+    /// `NquinVector::to_array`.
     pub fn to_array(&self) -> [f64; NQUIN_DIMS] {
         [
             self.physical,
@@ -80,6 +82,7 @@ impl NquinVector {
     }
 
     #[inline]
+    /// `true` when finite.
     pub fn is_finite(&self) -> bool {
         self.physical.is_finite()
             && self.psychological.is_finite()
@@ -113,6 +116,7 @@ pub enum HealthWelfareState {
 
 impl HealthWelfareState {
     #[inline]
+    /// `true` when absorbing.
     pub fn is_absorbing(self) -> bool {
         matches!(self, HealthWelfareState::IrrecoverableDebilitation)
     }

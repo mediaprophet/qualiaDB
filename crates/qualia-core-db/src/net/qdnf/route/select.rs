@@ -48,6 +48,7 @@ impl CandidatePath {
         metrics: PathMetrics::EMPTY,
     };
 
+    /// `true` when `simple`.
     pub fn is_simple(&self) -> bool {
         let n = self.hop_len as usize;
         if n > MAX_PATH_HOPS {

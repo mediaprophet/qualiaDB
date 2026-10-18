@@ -112,6 +112,7 @@ fn default_true() -> bool {
 }
 
 impl CommonsObligation {
+    /// `true` when `discharged`.
     pub fn is_discharged(&self) -> bool {
         if self.production_cost_cents == 0 {
             return true;
@@ -127,6 +128,7 @@ impl CommonsObligation {
         )
     }
 
+    /// Outstanding commons obligation in cents.
     pub fn outstanding_obligation(&self) -> u64 {
         let total_cost = crate::modalities::socioeconomics::commons_cost(
             self.production_cost_cents,

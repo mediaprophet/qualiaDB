@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: dispatches a computational-geometry op.
 pub fn computational_geometry(args: &[u8]) -> Result<String, McpSystemError> {
     let text = core::str::from_utf8(args).map_err(|_| McpSystemError::ParseError)?;
     crate::specialized_libs::computational_geometry::execute_geometry_tool_json(text)
@@ -63,6 +64,7 @@ pub fn geometry_manifests(args: &[u8]) -> Result<String, McpSystemError> {
     }
 }
 
+/// MCP tool: dispatches a geometric-algebra op.
 pub fn geometric_algebra_op(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::geometric_algebra::utils::{angle_between_vectors, cross_product, dot_product};
 

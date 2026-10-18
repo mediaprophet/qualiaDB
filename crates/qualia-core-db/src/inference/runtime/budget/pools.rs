@@ -13,6 +13,7 @@ pub struct BlockGeometry {
 }
 
 impl BlockGeometry {
+    /// Creates `BlockGeometry` with the given state.
     pub fn new(tokens_per_block: u32, bytes_per_block: u32) -> Result<Self, BudgetError> {
         if tokens_per_block == 0 || bytes_per_block == 0 {
             return Err(BudgetError::InvalidGeometry);
@@ -59,6 +60,7 @@ pub struct MemoryPoolBudget {
 }
 
 impl MemoryPoolBudget {
+    /// Creates the budget.
     pub fn new(
         total_device_bytes: u64,
         model_profile: ModelMemoryProfile,

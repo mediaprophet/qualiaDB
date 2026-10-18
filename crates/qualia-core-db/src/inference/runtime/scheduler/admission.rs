@@ -102,6 +102,7 @@ impl AdmittedCurrencies {
         }
     }
 
+    /// Allocates; error on exhaustion.
     pub fn allocated_blocks(&self) -> &[u32] {
         &self.allocated_blocks
     }

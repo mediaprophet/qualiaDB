@@ -8,6 +8,7 @@ use vibe::{Span, Value};
 
 use super::super::args;
 
+/// Vibe → JSON.
 pub(super) fn vibe_to_json(v: &Value) -> Option<serde_json::Value> {
     match v {
         Value::Null => Some(serde_json::Value::Null),
@@ -35,6 +36,7 @@ pub(super) fn vibe_to_json(v: &Value) -> Option<serde_json::Value> {
     }
 }
 
+/// JSON → Vibe.
 pub(super) fn json_to_vibe(v: &serde_json::Value) -> Value {
     match v {
         serde_json::Value::Null => Value::Null,
@@ -60,6 +62,7 @@ pub(super) fn json_to_vibe(v: &serde_json::Value) -> Value {
     }
 }
 
+/// Decodes a field.
 pub(super) fn decode_field<T: DeserializeOwned>(
     args_v: &Value,
     key: &str,
@@ -78,6 +81,7 @@ pub(super) fn decode_field<T: DeserializeOwned>(
         .map_err(|e| args::bad(span, format!("{what}: failed to decode `{key}` ({e})")))
 }
 
+/// Encodes as JSON.
 pub(super) fn encode_json<T: Serialize>(
     value: &T,
     span: Span,

@@ -48,8 +48,9 @@ pub fn mount_resident_gguf(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// WASM gate: fails closed since raw filesystem memory-mapping is unsupported on browser wasm.
 pub fn mount_resident_gguf(_model_id: u64, _path: &str) -> Result<(), String> {
-    Ok(())
+    Err("WASM target does not support filesystem mmap; use adopt_resident_mmap with preloaded bytes".to_string())
 }
 
 /// Memory-map a P64 weight container and retain it as the resident model.
@@ -128,9 +129,11 @@ pub fn clear_resident_model() {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Drops the resident mmap.
 pub fn clear_resident_model() {}
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Resident mmap for `path` when it matches the slot.
 pub fn resident_mmap_for_path(path: &str) -> Option<Arc<memmap2::Mmap>> {
     let guard = slot().lock().ok()?;
     let slot = guard.as_ref()?;
@@ -151,6 +154,7 @@ pub fn resident_mmap_for_path(path: &str) -> Option<Arc<memmap2::Mmap>> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Resident model id.
 pub fn resident_model_id() -> Option<u64> {
     slot()
         .lock()
@@ -159,6 +163,7 @@ pub fn resident_model_id() -> Option<u64> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Resident model path.
 pub fn resident_gguf_path() -> Option<String> {
     slot()
         .lock()
@@ -167,11 +172,27 @@ pub fn resident_gguf_path() -> Option<String> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Resident model path.
 pub fn resident_gguf_path() -> Option<String> {
     None
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Resident mmap for `path` when it matches the slot.
 pub fn resident_mmap_for_path(_path: &str) -> Option<()> {
+    None
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Current resident mmap if one is actively mounted in the resident slot.
+pub fn current_resident_mmap() -> Option<Arc<memmap2::Mmap>> {
+    let guard = slot().lock().ok()?;
+    let slot = guard.as_ref()?;
+    Some(Arc::clone(&slot.mmap))
+}
+
+#[cfg(target_arch = "wasm32")]
+/// Current resident mmap (always None on browser wasm).
+pub fn current_resident_mmap() -> Option<()> {
     None
 }

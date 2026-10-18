@@ -63,6 +63,7 @@ pub fn assert_not_endorsement(listing: &CatalogueListing) -> Result<(), Instrume
 }
 
 impl LocalCatalogue {
+    /// Creates a default `LocalCatalogue`.
     pub fn new() -> Self {
         Self {
             by_id: BTreeMap::new(),

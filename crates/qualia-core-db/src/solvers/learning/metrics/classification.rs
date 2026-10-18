@@ -24,9 +24,11 @@ pub struct ConfusionBinary {
 }
 
 impl ConfusionBinary {
+    /// Running total.
     pub fn total(&self) -> u64 {
         self.tp + self.fp + self.tn + self.fn_
     }
+    /// `ConfusionBinary::accuracy`.
     pub fn accuracy(&self) -> f64 {
         let t = self.total();
         if t == 0 {

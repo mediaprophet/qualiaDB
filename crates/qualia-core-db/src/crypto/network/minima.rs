@@ -45,6 +45,7 @@ pub struct MinimaCache {
 }
 
 impl MinimaCache {
+    /// Creates a default `MinimaCache`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_CACHED_MINIMA],

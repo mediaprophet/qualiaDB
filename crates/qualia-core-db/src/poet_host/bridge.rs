@@ -22,6 +22,7 @@ pub enum CapabilityRoute {
 }
 
 impl CapabilityRoute {
+    /// Static string.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::StandaloneWasm => "standalone-wasm",
@@ -43,6 +44,7 @@ pub enum SemanticGuarantee {
 }
 
 impl SemanticGuarantee {
+    /// Stable string form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Exact => "exact",

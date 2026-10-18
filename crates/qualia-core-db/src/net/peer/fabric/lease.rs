@@ -19,6 +19,7 @@ pub struct RelayLease {
 }
 
 impl RelayLease {
+    /// `RelayLease::grant`.
     pub const fn grant(
         lease_id: u64,
         operator: u64,
@@ -42,10 +43,12 @@ impl RelayLease {
         }
     }
 
+    /// `RelayLease::live`.
     pub const fn live(&self, now_ms: u64) -> bool {
         !self.cancelled && now_ms < self.expiry_ms && self.remaining_bytes > 0
     }
 
+    /// `true` when the lease admits `from` → `to`.
     pub fn admits(&self, from: &PeerId, to: &PeerId) -> bool {
         (from == &self.participants[0] && to == &self.participants[1])
             || (from == &self.participants[1] && to == &self.participants[0])
@@ -60,6 +63,7 @@ impl RelayLease {
         Ok(())
     }
 
+    /// Cancels the lease.
     pub fn cancel(&mut self) {
         self.cancelled = true;
         self.remaining_bytes = 0;
@@ -78,6 +82,7 @@ pub struct CustodyLease {
 }
 
 impl CustodyLease {
+    /// Lease grant.
     pub const fn grant(lease_id: u64, operator: u64, expiry_unix: u32, max_objects: u16) -> Self {
         Self {
             lease_id,
@@ -89,6 +94,7 @@ impl CustodyLease {
         }
     }
 
+    /// `true` when live.
     pub const fn live(&self, now_unix: u32) -> bool {
         !self.cancelled && now_unix < self.expiry_unix && self.held < self.max_objects
     }

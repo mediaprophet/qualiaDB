@@ -47,6 +47,7 @@ pub struct StreamingQ42VolumeWriter {
 }
 
 impl StreamingQ42VolumeWriter {
+    /// Creates a default `StreamingQ42VolumeWriter`.
     pub fn new(lexicon: &HashMap<u64, String>) -> io::Result<Self> {
         let temp = TempDir::new()?;
         let bidx_path = temp.path().join("bidx.entries");
@@ -91,6 +92,7 @@ impl StreamingQ42VolumeWriter {
         self.publication_sanctuary = true;
     }
 
+    /// `StreamingQ42VolumeWriter::push_block`.
     pub fn push_block(&mut self, seq_id: u64, quins: &[NQuin]) -> io::Result<()> {
         let Some(first) = quins.first() else {
             return Err(invalid("Q42 SuperBlock must not be empty"));
@@ -177,6 +179,7 @@ impl StreamingQ42VolumeWriter {
         Ok(())
     }
 
+    /// `block` count.
     pub fn block_count(&self) -> u64 {
         self.block_count
     }
@@ -236,6 +239,7 @@ impl StreamingQ42VolumeWriter {
             .ok_or_else(|| invalid("Q42 postings section overflow"))
     }
 
+    /// Flushes and finishes the stream.
     pub fn finish(mut self, path: &Path) -> io::Result<()> {
         self.bidx.flush()?;
         self.field_ranges.flush()?;

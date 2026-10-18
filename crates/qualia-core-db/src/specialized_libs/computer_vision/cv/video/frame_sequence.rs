@@ -16,6 +16,7 @@ pub struct FrameSequence {
 }
 
 impl FrameSequence {
+    /// Creates a default `FrameSequence`.
     pub fn new(width: u32, height: u32, fps: f32) -> Self {
         Self {
             width,
@@ -26,6 +27,7 @@ impl FrameSequence {
         }
     }
 
+    /// `frame` size in bytes.
     pub fn frame_bytes(&self) -> usize {
         (self.width as usize)
             .saturating_mul(self.height as usize)
@@ -48,6 +50,7 @@ impl FrameSequence {
         Ok(())
     }
 
+    /// Frame at `idx`.
     pub fn frame(&self, i: usize) -> Option<&[u8]> {
         let fb = self.frame_bytes();
         if i >= self.n_frames || fb == 0 {

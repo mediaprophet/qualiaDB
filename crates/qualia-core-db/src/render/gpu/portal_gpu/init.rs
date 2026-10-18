@@ -11,6 +11,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
 impl PortalGpu {
+    /// Builds from `device`.
     pub(super) async fn from_device(
         device: Arc<wgpu::Device>,
         queue: Arc<wgpu::Queue>,

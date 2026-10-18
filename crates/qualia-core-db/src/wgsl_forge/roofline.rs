@@ -39,6 +39,7 @@ pub struct RooflineEstimate {
 pub const DEFAULT_BALANCE_FLOP_PER_BYTE: f64 = 10.0;
 
 impl RooflineEstimate {
+    /// Creates `RooflineEstimate` with the given state.
     pub fn new(flops: u64, bytes: u64) -> Self {
         let arithmetic_intensity = if bytes == 0 {
             0.0

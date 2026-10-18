@@ -10,6 +10,7 @@ pub struct IvoaTapAdapter {
 }
 
 impl IvoaTapAdapter {
+    /// Creates a default `IvoaTapAdapter`.
     pub fn new(id: &'static str, endpoint: &str, catalog_name: &str) -> Self {
         Self {
             id,

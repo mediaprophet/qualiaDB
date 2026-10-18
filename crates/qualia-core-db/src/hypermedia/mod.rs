@@ -126,6 +126,7 @@ pub struct AssetRef {
 }
 
 impl AssetRef {
+    /// Creates an asset reference for `uri` with media-type and hash metadata.
     pub fn new(
         uri: impl Into<String>,
         digest: u64,
@@ -143,14 +144,17 @@ impl AssetRef {
         }
     }
 
+    /// Builder: records the source URI this asset derives from.
     pub fn derived_from(mut self, source_uri: impl Into<String>) -> Self {
         self.derived_from.push(source_uri.into());
         self
     }
+    /// Builder: attaches a licence URI.
     pub fn with_licence(mut self, licence: impl Into<String>) -> Self {
         self.licence = Some(licence.into());
         self
     }
+    /// q_hash of the asset URI — the graph subject.
     pub fn subject(&self) -> u64 {
         fnv60(self.uri.as_bytes())
     }
@@ -169,6 +173,7 @@ pub struct AnalyticsRef {
 }
 
 impl AnalyticsRef {
+    /// `AnalyticsRef::subject`.
     pub fn subject(&self) -> u64 {
         fnv60(self.id.as_bytes())
     }
@@ -185,6 +190,7 @@ pub struct HypermediaContainer {
 }
 
 impl HypermediaContainer {
+    /// Creates a container rooted at `uri` holding `primary`.
     pub fn new(uri: impl Into<String>, primary: AssetRef) -> Self {
         Self {
             uri: uri.into(),
@@ -193,14 +199,17 @@ impl HypermediaContainer {
             analytics: Vec::new(),
         }
     }
+    /// Builder: adds a related asset.
     pub fn with_related(mut self, asset: AssetRef) -> Self {
         self.related.push(asset);
         self
     }
+    /// Builder: attaches analytics metadata.
     pub fn with_analytics(mut self, analytics: AnalyticsRef) -> Self {
         self.analytics.push(analytics);
         self
     }
+    /// q_hash of the container URI.
     pub fn subject(&self) -> u64 {
         fnv60(self.uri.as_bytes())
     }
@@ -508,6 +517,7 @@ pub enum FlagSeverity {
     Urgent,
 }
 impl FlagSeverity {
+    /// Numeric severity level for ordering.
     pub fn level(self) -> u64 {
         match self {
             FlagSeverity::Info => 0,

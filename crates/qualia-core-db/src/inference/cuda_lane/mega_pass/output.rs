@@ -44,6 +44,7 @@ pub(super) struct OutputSpec<'a> {
     pub device_embedding: bool,
 }
 
+/// Dispatches output.
 pub(super) fn dispatch_output(
     dev: &mut MultiWeightDevice,
     mut views: OutputViews,

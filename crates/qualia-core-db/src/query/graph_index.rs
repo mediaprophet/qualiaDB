@@ -20,6 +20,7 @@ pub struct RevisionCache<T> {
 }
 
 impl<T> RevisionCache<T> {
+    /// Creates a default `RevisionCache`.
     pub const fn new() -> Self {
         Self {
             inner: RwLock::new(None),
@@ -67,6 +68,7 @@ static GRAPH_INDEX: RevisionCache<QuinIndex> = RevisionCache::new();
 // Routes through `daemon_graph` (the native daemon's in-memory graph), which does not exist on
 // wasm32; the only caller (mcp_tool_impls) is native-only too.
 #[cfg(not(target_arch = "wasm32"))]
+/// Builder: `graph-index`.
 pub fn with_graph_index<R>(f: impl FnOnce(&QuinIndex) -> R) -> R {
     let revision = crate::daemon_graph::graph_revision();
     GRAPH_INDEX.with(

@@ -62,6 +62,7 @@ impl LocalLlmAgent {
         self.infer_local_model_inner(prompt, graph_context, Some(control), on_token)
     }
 
+    /// Runs local inference.
     pub(super) fn infer_local_model(
         &self,
         prompt: &str,

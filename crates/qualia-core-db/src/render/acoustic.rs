@@ -63,6 +63,7 @@ pub fn phenomenal_voice_frequency_hz(t: &Tensor10D) -> f32 {
 }
 
 #[inline]
+/// `?::phenomenal_fm_index`.
 pub fn phenomenal_fm_index(t: &Tensor10D) -> f32 {
     epistemic_fm_index(t.q, t.mu)
 }

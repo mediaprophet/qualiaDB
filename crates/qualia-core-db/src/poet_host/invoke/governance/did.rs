@@ -4,6 +4,7 @@ use super::super::args;
 use crate::identifier::parse_did_q42;
 use vibe::{Diagnostic, Span, Value};
 
+/// Parses input; error on malformed data.
 pub fn parse(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let s = args::as_str(args_v).ok_or_else(|| args::bad(span, "parse_did_q42 needs a string"))?;
     match parse_did_q42(s.as_bytes()) {

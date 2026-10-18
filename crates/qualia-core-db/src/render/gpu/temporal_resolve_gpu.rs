@@ -82,16 +82,19 @@ pub struct TemporalProducerAvailability {
 }
 
 impl TemporalProducerAvailability {
+    /// `TemporalProducerAvailability::host_producers_available`.
     pub const fn host_producers_available(self) -> bool {
         self.motion_vectors && self.reactive_mask
     }
 
+    /// `TemporalProducerAvailability::all_available`.
     pub const fn all_available(self) -> bool {
         self.scene_color && self.linear_depth && self.host_producers_available()
     }
 }
 
 impl<'a> TemporalProducerViews<'a> {
+    /// `TemporalProducerViews::availability`.
     pub const fn availability(self, scene_color: bool) -> TemporalProducerAvailability {
         TemporalProducerAvailability {
             scene_color,
@@ -361,18 +364,22 @@ impl TemporalResolveGpu {
         })
     }
 
+    /// Current render extent.
     pub fn extent(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
+    /// `true` when the history buffer holds a valid previous frame.
     pub fn history_valid(&self) -> bool {
         self.history_valid
     }
 
+    /// `true` when the resolved output is ready.
     pub fn resolved_ready(&self) -> bool {
         self.resolved_ready
     }
 
+    /// Current submission state.
     pub fn submission_state(&self) -> TemporalSubmissionState {
         self.submission_state
     }

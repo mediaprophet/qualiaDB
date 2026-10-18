@@ -326,6 +326,7 @@ impl ResultFormatter {
         Ok(())
     }
 
+    /// Writes results as N-Triples to `writer`.
     pub fn format_ntriples<W: Write>(
         writer: &mut W,
         results: &[BindingRow],
@@ -347,6 +348,7 @@ impl ResultFormatter {
         Ok(())
     }
 
+    /// Writes a SPARQL XML ASK result to `writer`.
     pub fn format_ask_xml<W: Write>(writer: &mut W, result: bool) -> std::io::Result<()> {
         writeln!(writer, r#"<?xml version="1.0"?>"#)?;
         writeln!(
@@ -380,6 +382,7 @@ impl ResultFormatter {
         String::from_utf8(buf).unwrap()
     }
 
+    /// Writes a SPARQL JSON ASK result to `writer`.
     pub fn format_ask_json<W: Write>(writer: &mut W, result: bool) -> std::io::Result<()> {
         writeln!(writer, r#"{{"#)?;
         writeln!(writer, r#"  "head": {{}},"#)?;

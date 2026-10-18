@@ -61,16 +61,19 @@ impl GradientBoosting {
         })
     }
 
+    /// Prediction for one feature row.
     pub fn predict_row(&self, q: &[f64]) -> f64 {
         self.init + self.learning_rate * self.trees.iter().map(|t| t.predict_row(q)).sum::<f64>()
     }
 
+    /// Predictions for `m` rows of `x`.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<f64> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))
             .collect()
     }
 
+    /// Estimator count.
     pub fn n_estimators(&self) -> usize {
         self.trees.len()
     }

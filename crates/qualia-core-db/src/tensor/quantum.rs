@@ -23,6 +23,7 @@ impl Default for QuantumState {
 }
 
 impl QuantumState {
+    /// Builds `QuantumState` from `q_value`.
     pub fn from_q_value(q: f32) -> Self {
         if q == 0.0 {
             QuantumState::GroundTruth
@@ -33,6 +34,7 @@ impl QuantumState {
         }
     }
 
+    /// Converts to `q_value`.
     pub fn to_q_value(&self) -> f32 {
         match self {
             QuantumState::GroundTruth => 0.0,

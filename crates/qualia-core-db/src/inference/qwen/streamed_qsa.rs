@@ -75,6 +75,7 @@ pub struct QsaState<'a> {
 }
 
 impl QsaState<'_> {
+    /// Maximum capacity.
     pub fn capacity(&self) -> usize {
         self.keys.len() / KV_WIDTH
     }

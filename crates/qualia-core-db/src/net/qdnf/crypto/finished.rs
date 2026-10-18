@@ -15,6 +15,7 @@ fn finished_data(transcript_digest: &StrongDigest, role: &[u8], out: &mut [u8; 8
     48 + n
 }
 
+/// Finished MAC over the transcript.
 pub fn finished_mac(
     secret: &[u8; AEAD_KEY_LEN],
     transcript_digest: &StrongDigest,
@@ -32,6 +33,7 @@ pub fn finished_mac(
     Ok(StrongDigest(out))
 }
 
+/// Verifies `finished`.
 pub fn verify_finished(
     secret: &[u8; AEAD_KEY_LEN],
     transcript_digest: &StrongDigest,

@@ -127,6 +127,7 @@ fn colour_target(format: wgpu::TextureFormat) -> wgpu::ColorTargetState {
 }
 
 impl WaterGpu {
+    /// Creates with the given state.
     pub(super) fn new(
         device: &wgpu::Device,
         mesh_frame_layout: &wgpu::BindGroupLayout,
@@ -249,19 +250,23 @@ impl WaterGpu {
         }
     }
 
+    /// Sets `viewport`.
     pub(super) fn set_viewport(&mut self, width: u32, height: u32) {
         self.uniform.viewport[0] = width.max(1) as f32;
         self.uniform.viewport[1] = height.max(1) as f32;
     }
 
+    /// `true` when `geometry` present.
     pub(super) fn has_geometry(&self) -> bool {
         self.index_count > 0
     }
 
+    /// Sets `time`.
     pub(super) fn set_time(&mut self, time: f32) {
         self.uniform.wave[0] = time;
     }
 
+    /// Writes `uniform`.
     pub(super) fn write_uniform(&self, belt: &mut UniformBelt, encoder: &mut wgpu::CommandEncoder) {
         belt.write_and_unmap(bytemuck::bytes_of(&self.uniform));
         belt.record_copy(encoder, &self.uniform_buf, 0);
@@ -269,6 +274,7 @@ impl WaterGpu {
         // frame-owned writes in one preallocated ring.
     }
 
+    /// `replace_geometry`.
     pub(super) fn replace_geometry(
         &mut self,
         device: &wgpu::Device,
@@ -278,6 +284,7 @@ impl WaterGpu {
         self.replace_geometry_with_budget(device, positions, indices, u64::MAX)
     }
 
+    /// `replace_geometry_with_budget`.
     pub(super) fn replace_geometry_with_budget(
         &mut self,
         device: &wgpu::Device,
@@ -403,6 +410,7 @@ impl WaterGpu {
         self._geometry_reservation = None;
     }
 
+    /// `record`.
     pub(super) fn record<'a>(
         &'a self,
         pass: &mut wgpu::RenderPass<'a>,
@@ -430,6 +438,7 @@ impl WaterGpu {
 }
 
 impl PortalGpu {
+    /// Uploads water mesh buffers.
     pub fn upload_water_geometry(
         &mut self,
         positions: &[[f32; 3]],
@@ -451,10 +460,12 @@ impl PortalGpu {
             .replace_geometry_with_budget(&self.device, positions, indices, max_bytes)
     }
 
+    /// Drops water geometry.
     pub fn clear_water_geometry(&mut self) {
         let _ = self.water.replace_geometry(&self.device, &[], &[]);
     }
 
+    /// Sets the water surface parameters.
     pub fn set_water_surface(
         &mut self,
         colour: [f32; 3],
@@ -507,6 +518,7 @@ impl PortalGpu {
     }
 
     #[allow(dead_code)]
+    /// `PortalGpu::water_geometry_state`.
     pub fn water_geometry_state(&self) -> (u64, u64, u32) {
         (
             self.water.geometry_generation,
@@ -514,6 +526,7 @@ impl PortalGpu {
             self.water.index_count / 3,
         )
     }
+    /// Shoreline state `(count, lo, hi)`.
     pub fn water_shoreline_state(&self) -> (u32, u64, u64) {
         (
             self.water.shoreline_edges,

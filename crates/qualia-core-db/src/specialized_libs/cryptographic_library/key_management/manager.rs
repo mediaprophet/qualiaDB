@@ -23,6 +23,7 @@ pub struct KeyStorage {
 }
 
 impl KeyManager {
+    /// Creates the manager with fresh generator, storage, and rotator components.
     pub fn new() -> Self {
         Self {
             key_storage: KeyStorage::new(),
@@ -32,6 +33,7 @@ impl KeyManager {
         }
     }
 
+    /// Initializes key storage (zones) and rotator; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.key_storage.initialize()?;
         self.key_generator.initialize()?;
@@ -40,6 +42,7 @@ impl KeyManager {
         Ok(())
     }
 
+    /// Generates a private key via the key generator then derives the public key from it — real delegated generation, not a canned pair.
     pub fn generate_key_pair(
         &mut self,
         key_id: String,
@@ -63,28 +66,34 @@ impl KeyManager {
         Ok((private_key, public_key))
     }
 
+    /// Stores `key` in the zone/catalog map.
     pub fn store_key(&mut self, key: Key) -> Result<(), CryptographicError> {
         self.key_storage.store_key(key)
     }
 
+    /// Cloned `Key` for `key_id` or an error.
     pub fn get_key(&self, key_id: &str) -> Result<Key, CryptographicError> {
         self.key_storage.get_key(key_id)
     }
 
+    /// Delegates rotation to `KeyRotator` (new key derived from `old_key`).
     pub fn rotate_key(&mut self, old_key: &Key) -> Result<Key, CryptographicError> {
         self.key_rotator.rotate_key(old_key)
     }
 
+    /// All stored key IDs.
     pub fn list_keys(&self) -> Vec<String> {
         self.key_storage.list_keys()
     }
 
+    /// `KeyMetadata` for `key_id`, or `None`.
     pub fn get_key_metadata(&self, key_id: &str) -> Option<KeyMetadata> {
         self.key_storage.get_key_metadata(key_id)
     }
 }
 
 impl KeyStorage {
+    /// Creates the manager with fresh generator, storage, and rotator components.
     pub fn new() -> Self {
         Self {
             zones: HashMap::new(),
@@ -95,6 +104,7 @@ impl KeyStorage {
         }
     }
 
+    /// Initializes key storage (zones) and rotator; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.create_zones()?;
         self.key_catalog.initialize()?;
@@ -128,6 +138,7 @@ impl KeyStorage {
         Ok(())
     }
 
+    /// Stores `key` in the zone/catalog map.
     pub fn store_key(&mut self, key: Key) -> Result<(), CryptographicError> {
         // Determine best zone for this key
         let zone_id = self.select_best_zone(&key)?;
@@ -149,6 +160,7 @@ impl KeyStorage {
         Ok(())
     }
 
+    /// Cloned `Key` for `key_id` or an error.
     pub fn get_key(&self, key_id: &str) -> Result<Key, CryptographicError> {
         self.key_data
             .get(key_id)
@@ -185,6 +197,7 @@ impl KeyStorage {
         Ok(key)
     }
 
+    /// `KeyMetadata` for `key_id`, or `None`.
     pub fn get_key_metadata(&self, key_id: &str) -> Option<KeyMetadata> {
         for zone in self.zones.values() {
             if let Some(metadata) = zone.keys.get(key_id) {
@@ -194,6 +207,7 @@ impl KeyStorage {
         None
     }
 
+    /// All stored key IDs.
     pub fn list_keys(&self) -> Vec<String> {
         let mut keys = Vec::new();
         for zone in self.zones.values() {

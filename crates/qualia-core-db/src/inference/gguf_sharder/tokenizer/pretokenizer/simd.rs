@@ -3,6 +3,7 @@ use super::scalar::scan_ascii_scalar;
 use super::scalar::{PretokenError, PretokenSpan};
 
 #[inline]
+/// `?::avx2_available`.
 pub fn avx2_available() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
@@ -156,6 +157,7 @@ pub unsafe fn scan_ascii_avx2(
 }
 
 #[cfg(not(target_arch = "x86_64"))]
+/// `?::scan_ascii_avx2`.
 pub unsafe fn scan_ascii_avx2(
     bytes: &[u8],
     out: &mut [PretokenSpan],

@@ -29,6 +29,7 @@ impl Default for ReferenceFrame {
 }
 
 impl ReferenceFrame {
+    /// Creates a default `ReferenceFrame`.
     pub fn new(id: u64, parent_id: Option<u64>) -> Self {
         Self {
             id,

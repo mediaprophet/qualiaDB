@@ -45,6 +45,7 @@ pub struct BackendCapabilities {
 }
 
 impl BackendCapabilities {
+    /// `BackendCapabilities::cpu_reference`.
     pub const fn cpu_reference() -> Self {
         Self {
             backend: PreparedBackend::Cpu,
@@ -67,6 +68,7 @@ impl BackendCapabilities {
         }
     }
 
+    /// `BackendCapabilities::cuda_reference`.
     pub const fn cuda_reference() -> Self {
         Self {
             backend: PreparedBackend::Cuda,
@@ -89,16 +91,19 @@ impl BackendCapabilities {
         }
     }
 
+    /// `true` when `arch` is supported.
     pub fn is_architecture_supported(&self, arch: SupportedArchitecture) -> bool {
         self.supported_architectures.contains(&arch)
     }
 
+    /// `true` when `quant` scheme is supported.
     pub fn is_quant_supported(&self, quant: &str) -> bool {
         self.supported_quants
             .iter()
             .any(|&q| q.eq_ignore_ascii_case(quant))
     }
 
+    /// `true` when KV `enc` is supported.
     pub fn is_kv_encoding_supported(&self, enc: KvEncoding) -> bool {
         self.supported_kv_encodings.contains(&enc)
     }

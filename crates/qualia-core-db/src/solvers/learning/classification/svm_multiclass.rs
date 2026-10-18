@@ -58,6 +58,7 @@ impl MulticlassSvm {
         self.classes[best]
     }
 
+    /// Predicts class labels.
     pub fn predict(&self, x: &[f64], m: usize) -> Vec<usize> {
         (0..m)
             .map(|i| self.predict_row(&x[i * self.p..(i + 1) * self.p]))

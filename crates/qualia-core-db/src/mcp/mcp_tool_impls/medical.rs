@@ -1,5 +1,6 @@
 use super::*;
 
+/// MCP tool: medical score.
 pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     use crate::specialized_libs::medical_computing::{
         ClinicalDataType, MedicalComputingLibrary, MedicalError, Patient,

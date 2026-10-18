@@ -80,36 +80,43 @@ impl CampaignConfig {
         }
     }
 
+    /// Builder: sets the campaign prompt.
     pub fn with_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.prompt = prompt.into();
         self
     }
 
+    /// Builder: sets the application-profile weighting.
     pub fn with_profile(mut self, profile: ApplicationProfileWeight) -> Self {
         self.profile = profile;
         self
     }
 
+    /// Builder: toggles quality scoring.
     pub fn with_quality(mut self, quality: bool) -> Self {
         self.with_quality = quality;
         self
     }
 
+    /// Builder: writes results to a JSONL log at `path`.
     pub fn with_jsonl_log(mut self, path: impl Into<PathBuf>) -> Self {
         self.jsonl_path = Some(path.into());
         self
     }
 
+    /// Builder: writes belief traces to `path`.
     pub fn with_belief_log(mut self, path: impl Into<PathBuf>) -> Self {
         self.belief_path = Some(path.into());
         self
     }
 
+    /// Builder: sets the batch size.
     pub fn with_batch_size(mut self, batch: usize) -> Self {
         self.batch_size = batch.max(1);
         self
     }
 
+    /// Builder: caps campaign duration.
     pub fn with_max_duration(mut self, dur: Duration) -> Self {
         self.max_duration = Some(dur);
         self

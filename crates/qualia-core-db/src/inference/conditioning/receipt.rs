@@ -17,6 +17,7 @@ pub struct RequirementOutcome<'a> {
 }
 
 impl<'a> RequirementOutcome<'a> {
+    /// `RequirementOutcome::applied`.
     pub const fn applied(id: &'a str) -> Self {
         Self {
             id,
@@ -25,6 +26,7 @@ impl<'a> RequirementOutcome<'a> {
         }
     }
 
+    /// `RequirementOutcome::enforced`.
     pub const fn enforced(id: &'a str) -> Self {
         Self {
             id,
@@ -33,6 +35,7 @@ impl<'a> RequirementOutcome<'a> {
         }
     }
 
+    /// `RequirementOutcome::degraded`.
     pub const fn degraded(id: &'a str, reason: &'a str) -> Self {
         Self {
             id,
@@ -41,6 +44,7 @@ impl<'a> RequirementOutcome<'a> {
         }
     }
 
+    /// `RequirementOutcome::rejected`.
     pub const fn rejected(id: &'a str, reason: &'a str) -> Self {
         Self {
             id,

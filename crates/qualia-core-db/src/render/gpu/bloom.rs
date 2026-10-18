@@ -2,6 +2,7 @@
 use super::*;
 use crate::gpu_context::{global_vram_ledger, VramResourceClass};
 use crate::shaders::viewport::BLOOM_WGSL;
+/// `true` when portal bloom is enabled.
 pub(super) fn portal_bloom_enabled() -> bool {
     let ledger = global_vram_ledger();
     universe_orchestrator().bloom_enabled(ComputeUniverse::Viewport, ledger.mode())
@@ -16,6 +17,7 @@ fn hdr_composite_available(
     has_bloom_targets && has_ambient_pipeline && has_projector_pipeline && bloom_policy_enabled
 }
 
+/// Probes the HDR format.
 pub(super) fn probe_hdr_format(device: &wgpu::Device) -> bool {
     // WebGPU pipeline validation is deferred, and the browser path cannot yet
     // inspect the error scope reliably (see portal_gpu/init.rs). Creating an
@@ -49,6 +51,7 @@ pub(super) fn probe_hdr_format(device: &wgpu::Device) -> bool {
     }
 }
 
+/// HDR color-target state.
 pub(super) fn hdr_color_target_state() -> wgpu::ColorTargetState {
     wgpu::ColorTargetState {
         format: HDR_FORMAT,
@@ -68,6 +71,7 @@ pub(super) fn hdr_color_target_state() -> wgpu::ColorTargetState {
     }
 }
 
+/// Bloom VRAM bytes.
 pub(super) fn bloom_vram_bytes(width: u32, height: u32) -> Option<u64> {
     let w = width.max(1) as u64;
     let h = height.max(1) as u64;
@@ -80,6 +84,7 @@ pub(super) fn bloom_vram_bytes(width: u32, height: u32) -> Option<u64> {
         .checked_add(std::mem::size_of::<BloomUniformBlock>() as u64)
 }
 
+/// Creates a float target.
 pub(super) fn create_float_target(
     device: &wgpu::Device,
     label: &str,
@@ -104,6 +109,7 @@ pub(super) fn create_float_target(
     (texture, view)
 }
 
+/// Bloom bind layout.
 pub(super) fn bloom_bind_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("portal-bloom-layout"),
@@ -150,6 +156,7 @@ pub(super) fn bloom_bind_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout 
     })
 }
 
+/// Makes a bloom bind group.
 pub(super) fn make_bloom_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
@@ -182,6 +189,7 @@ pub(super) fn make_bloom_bind_group(
     })
 }
 
+/// Creates the bloom chain.
 pub(super) fn create_bloom_chain(
     device: &wgpu::Device,
     width: u32,
@@ -353,6 +361,7 @@ pub(super) fn create_bloom_chain(
     })
 }
 
+/// Writes the bloom uniform.
 pub(super) fn write_bloom_uniform(
     queue: &wgpu::Queue,
     buf: &wgpu::Buffer,
@@ -435,10 +444,12 @@ impl PortalGpu {
         self.hdr_exposure_available() || output_available
     }
 
+    /// HDR exposure compensation.
     pub fn hdr_exposure_compensation(&self) -> f32 {
         self.hdr_exposure_ev
     }
 
+    /// `true` when HDR exposure is available.
     pub fn hdr_exposure_available(&self) -> bool {
         hdr_composite_available(
             self.bloom.is_some(),
@@ -505,6 +516,7 @@ mod tests {
     }
 }
 
+/// Runs `bloom-passes`.
 pub(super) fn run_bloom_passes(
     encoder: &mut wgpu::CommandEncoder,
     bloom: &BloomChain,

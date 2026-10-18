@@ -26,10 +26,12 @@ pub enum Disclosure {
 }
 
 impl Disclosure {
+    /// `true` when `relay_only`.
     pub const fn is_relay_only(self) -> bool {
         !matches!(self, Disclosure::DirectPermitted)
     }
 
+    /// `Disclosure::json_name`.
     pub const fn json_name(self) -> &'static [u8] {
         match self {
             Disclosure::DirectPermitted => b"DirectPermitted",
@@ -41,6 +43,7 @@ impl Disclosure {
 }
 
 impl LocatorClass {
+    /// JSON wire name.
     pub const fn json_name(self) -> &'static [u8] {
         match self {
             LocatorClass::Mailbox => b"mailbox",
@@ -58,6 +61,7 @@ pub struct RelayHint {
 }
 
 impl RelayHint {
+    /// Creates a default `RelayHint`.
     pub fn new(hint_id: &[u8], operator_hash: [u8; 32]) -> Result<Self, QiError> {
         if hint_id.is_empty() || hint_id.len() > MAX_HINT_ID {
             return Err(QiError::MalformedDocument);
@@ -84,6 +88,7 @@ pub struct CscpMailbox {
 }
 
 impl CscpMailbox {
+    /// `CscpMailbox::mailbox`.
     pub const fn mailbox(contact_key: [u8; 32], disclosure: Disclosure) -> Self {
         Self {
             kind: LocatorClass::Mailbox,
@@ -100,12 +105,14 @@ impl CscpMailbox {
         }
     }
 
+    /// `CscpMailbox::direct`.
     pub const fn direct(contact_key: [u8; 32], disclosure: Disclosure) -> Self {
         let mut s = Self::mailbox(contact_key, disclosure);
         s.kind = LocatorClass::Direct;
         s
     }
 
+    /// `true` when `direct`.
     pub const fn is_direct(&self) -> bool {
         matches!(self.kind, LocatorClass::Direct)
     }

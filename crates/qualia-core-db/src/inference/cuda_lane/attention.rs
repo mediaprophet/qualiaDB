@@ -6,6 +6,7 @@ use super::paged_attention::{PAGED_GQA_TILED_ENTRY, PAGED_GQA_TILED_SRC};
 use super::weight_cache::weight_fingerprint;
 
 #[inline]
+/// `?::f32_bits_u32`.
 pub(crate) fn f32_bits_u32(v: f32) -> u32 {
     v.to_bits()
 }

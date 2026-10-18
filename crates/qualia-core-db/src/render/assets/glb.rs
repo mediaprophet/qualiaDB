@@ -7,6 +7,7 @@ use super::tangents::{
 };
 use super::{AssetError, ImportedMesh, Mesh, CHUNK_BIN, CHUNK_JSON, GLB_MAGIC};
 use crate::container_10d::SubmeshRange;
+/// `true` when the data looks like GLB.
 pub(super) fn looks_like_glb(bytes: &[u8]) -> bool {
     bytes.len() >= 12 && u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) == GLB_MAGIC
 }

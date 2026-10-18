@@ -115,6 +115,7 @@ pub struct HeterogeneousDispatcher {
 }
 
 impl HeterogeneousDispatcher {
+    /// Creates a default `HeterogeneousDispatcher`.
     pub fn new(caps: HostCapabilities) -> Self {
         Self { caps }
     }
@@ -150,6 +151,7 @@ impl HeterogeneousDispatcher {
         tiles.max(1).min(u32::MAX as u64) as u32
     }
 
+    /// Dispatch capabilities.
     pub fn capabilities(&self) -> HostCapabilities {
         self.caps
     }

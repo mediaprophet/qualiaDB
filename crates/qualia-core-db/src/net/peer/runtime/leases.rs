@@ -20,6 +20,7 @@ pub struct LeaseTable {
 }
 
 impl LeaseTable {
+    /// Creates a default `LeaseTable`.
     pub const fn new() -> Self {
         Self {
             slots: [Slot {
@@ -31,6 +32,7 @@ impl LeaseTable {
         }
     }
 
+    /// Acquires the resource.
     pub fn acquire(&mut self, capacity: u32, exclusive: bool) -> Result<BufferLease, QdnfError> {
         let mut exhausted = false;
         for i in 0..LEASE_SLOTS {
@@ -85,6 +87,7 @@ impl LeaseTable {
         })
     }
 
+    /// Releases the resource.
     pub fn release(&mut self, handle: LeaseHandle) -> Result<(), QdnfError> {
         let idx = handle.slot as usize;
         if idx >= LEASE_SLOTS {
@@ -104,6 +107,7 @@ impl LeaseTable {
         Ok(())
     }
 
+    /// `occupied` count.
     pub fn occupied_count(&self) -> usize {
         let mut n = 0;
         for slot in &self.slots {
@@ -115,6 +119,7 @@ impl LeaseTable {
     }
 
     #[cfg(test)]
+    /// `LeaseTable::debug_set_generation`.
     pub(crate) fn debug_set_generation(&mut self, slot: usize, generation: Generation) {
         debug_assert!(slot < LEASE_SLOTS);
         debug_assert!(!self.slots[slot].occupied);

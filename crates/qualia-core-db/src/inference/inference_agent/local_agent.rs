@@ -32,6 +32,7 @@ pub struct LocalLlmAgent {
 }
 
 impl LocalLlmAgent {
+    /// Creates `LocalLlmAgent` with the given state.
     pub fn new(agent_did: impl Into<String>, model_path: impl Into<String>) -> Self {
         Self::with_local_backend(
             agent_did,
@@ -123,6 +124,7 @@ impl LocalLlmAgent {
             .unwrap_or_else(|e| e.into_inner()) = Some(path.into());
     }
 
+    /// q-hash of the agent DID.
     pub fn agent_did_hash(&self) -> u64 {
         q_hash(&self.agent_did)
     }

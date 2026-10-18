@@ -27,6 +27,7 @@ pub struct IngestInspectReport {
     pub volume_lex_shards: Option<u64>,
 }
 
+/// Inspects an ingest job.
 pub fn inspect_job(dir: &Path) -> io::Result<IngestInspectReport> {
     let job = IngestJob::open(dir.to_path_buf())?;
     let runs = summarize_runs(&job.runs_dir())?;
@@ -107,6 +108,7 @@ pub fn inspect_legacy_scratch(dir: &Path) -> io::Result<IngestInspectReport> {
     })
 }
 
+/// Inspects a volume root.
 pub fn inspect_volume_root(path: &Path) -> io::Result<IngestInspectReport> {
     let vol = Q42Volume::open(path)?;
     let mut notes = Vec::new();

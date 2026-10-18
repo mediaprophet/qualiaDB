@@ -120,6 +120,7 @@ impl GraphInput {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: evaluate-inference-guard.
 pub fn evaluate_inference_guard_wasm(value: JsValue) -> Result<JsValue, JsValue> {
     let params: GuardParams = serde_wasm_bindgen::from_value(value)?;
     let mut norms = Vec::with_capacity(params.norms.len());

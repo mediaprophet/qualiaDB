@@ -292,6 +292,7 @@ pub fn parse_cbor_ld_into<R: std::io::Read, S: crate::sparql_library::quin_sink:
     parse_cbor_ld_star_sink(&bytes, context_hash, sink)
 }
 
+/// Parses `cbor-ld-star-stream`.
 pub fn parse_cbor_ld_star_stream(
     bytes: &[u8],
     context_hash: u64,
@@ -300,6 +301,7 @@ pub fn parse_cbor_ld_star_stream(
     parse_cbor_ld_star_sink(bytes, context_hash, sorter)
 }
 
+/// Parses `cbor-ld-star-sink`.
 pub fn parse_cbor_ld_star_sink<S: crate::sparql_library::quin_sink::QuinSink>(
     bytes: &[u8],
     context_hash: u64,

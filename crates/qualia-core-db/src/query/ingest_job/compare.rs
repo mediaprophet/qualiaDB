@@ -21,6 +21,7 @@ pub struct CompareReport {
     pub notes: Vec<String>,
 }
 
+/// Compares attestation to a stream.
 pub fn compare_attestation_to_stream(
     attestation: &SourceAttestation,
     against: &IngestSourceKind,
@@ -83,6 +84,7 @@ pub fn compare_attestation_to_stream(
     })
 }
 
+/// Compares an attestation file to a path.
 pub fn compare_attestation_file_to_path(
     attestation_path: &Path,
     against: &IngestSourceKind,

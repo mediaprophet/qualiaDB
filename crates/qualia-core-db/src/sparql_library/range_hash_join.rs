@@ -47,6 +47,7 @@ pub struct Q42RangeHashJoinPlan {
 }
 
 impl Q42RangeHashJoinPlan {
+    /// Narrows to a join-select view.
     pub fn as_join_select(&self) -> Q42RangeJoinSelectPlan {
         Q42RangeJoinSelectPlan {
             join: Q42RangeNestedLoopJoinPlan {
@@ -62,6 +63,7 @@ impl Q42RangeHashJoinPlan {
         }
     }
 
+    /// Lowers an `ExecutionPlan` into a hash-join plan.
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
             return Err("range HashJoin requires a non-empty execution plan".into());
@@ -398,6 +400,7 @@ fn emit_matches_accel(
     n
 }
 
+/// Executes hash join into a caller page buffer on `S`.
 pub fn execute_range_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
     volume: &crate::q42_volume::Q42RangeVolume<S>,
     plan: Q42RangeHashJoinPlan,
@@ -574,6 +577,7 @@ pub fn execute_range_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
     }
 }
 
+/// Executes hash join across a volume set.
 pub fn execute_range_volume_set_hash_join_page_into<S: crate::q42_volume::Q42RangeSource>(
     volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
     plan: Q42RangeHashJoinPlan,

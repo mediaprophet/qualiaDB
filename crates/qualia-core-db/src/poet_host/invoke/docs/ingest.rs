@@ -6,6 +6,7 @@ use crate::hypermedia::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: document ingestion.
 pub fn ingest(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let text = args::as_str(args_v)
         .or_else(|| args::rec_str(args_v, "text"))

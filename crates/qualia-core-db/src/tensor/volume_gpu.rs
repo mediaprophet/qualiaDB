@@ -32,6 +32,7 @@ pub struct TensorVolumeGpu {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 impl TensorVolumeGpu {
+    /// Tries `new`.
     pub fn try_new(device: &wgpu::Device) -> Option<Self> {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("TensorVolumeShader"),
@@ -275,6 +276,7 @@ pub fn try_gpu_tensor_search_into(
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
+/// Tries `gpu-tensor-search-into`.
 pub fn try_gpu_tensor_search_into(
     _query: &Tensor10D,
     _max_distance: f32,

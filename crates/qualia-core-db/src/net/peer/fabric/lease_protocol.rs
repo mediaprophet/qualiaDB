@@ -5,6 +5,7 @@ use super::lease::{CustodyLease, RelayLease};
 use super::wire::{decode_custody, decode_relay_lease, encode_relay_lease};
 use crate::net::peer::connectivity::policy::Disclosure;
 
+/// Decodes and applies a relay lease under `disclosure`.
 pub fn apply_relay_lease(bytes: &[u8], disclosure: Disclosure) -> Result<RelayLease, FabricError> {
     let mut lease = decode_relay_lease(bytes)?;
     if !matches!(disclosure, Disclosure::DirectPermitted) {
@@ -13,6 +14,7 @@ pub fn apply_relay_lease(bytes: &[u8], disclosure: Disclosure) -> Result<RelayLe
     Ok(lease)
 }
 
+/// Asserts a custody lease cannot forward.
 pub fn custody_cannot_forward(bytes: &[u8]) -> Result<CustodyLease, FabricError> {
     decode_custody(bytes).map_err(FabricError::from)
 }
@@ -22,6 +24,7 @@ pub fn charge_lease(lease: &mut RelayLease, n: u64, now_ms: u64) -> Result<(), F
     lease.charge(n, now_ms).map_err(|_| FabricError::LeaseDead)
 }
 
+/// Encodes `forced-relay-only`.
 pub fn encode_forced_relay_only(lease: &RelayLease, out: &mut [u8]) -> Result<usize, FabricError> {
     let mut copy = *lease;
     copy.export_observations = false;

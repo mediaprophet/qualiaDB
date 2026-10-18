@@ -16,6 +16,7 @@ pub struct AnnotationPlan {
     pub kind: &'static str,
 }
 
+/// Emits annotation plans from raw hits.
 pub fn emit_from_hits(source: &str, hits: &[Hit]) -> Vec<AnnotationPlan> {
     let source_hash = hash60(source.as_bytes());
     hits.iter()
@@ -34,6 +35,7 @@ pub fn emit_from_hits(source: &str, hits: &[Hit]) -> Vec<AnnotationPlan> {
         .collect()
 }
 
+/// Emits annotation plans from normalized spans.
 pub fn emit_from_normalized(source: &str, norms: &[Normalized]) -> Vec<AnnotationPlan> {
     let source_hash = hash60(source.as_bytes());
     norms
@@ -67,6 +69,7 @@ pub fn emit_from_normalized(source: &str, norms: &[Normalized]) -> Vec<Annotatio
         .collect()
 }
 
+/// Doc span of an `AnnotationPlan`.
 pub fn span_of_plan(plan: &AnnotationPlan) -> DocSpan {
     DocSpan::new(plan.start_utf8, plan.end_utf8)
 }

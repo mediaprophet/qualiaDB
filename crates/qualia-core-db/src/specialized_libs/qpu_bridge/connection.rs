@@ -589,6 +589,7 @@ impl QPUBridgeManager {
 
 impl QPUConnectionState {
     #[inline(always)]
+    /// Returns the default `QPUConnectionState`.
     pub const fn default() -> Self {
         Self {
             status: QPUConnectionStatus::Disconnected,
@@ -601,6 +602,7 @@ impl QPUConnectionState {
 
 impl QPUAuthManager {
     #[inline(always)]
+    /// Default state.
     pub fn default() -> Self {
         Self {
             auth_hash: [0u8; 32],
@@ -610,6 +612,7 @@ impl QPUAuthManager {
         }
     }
 
+    /// Initializes the component; error propagates.
     pub fn initialize(
         &mut self,
         api_endpoint: &[u8],
@@ -636,6 +639,7 @@ impl QPUAuthManager {
         Ok(())
     }
 
+    /// Authenticates the QPU connection.
     pub fn authenticate(&mut self) -> Result<(), QPUBridgeError> {
         // This would perform actual authentication
         // For now, simulate success
@@ -643,6 +647,7 @@ impl QPUAuthManager {
         Ok(())
     }
 
+    /// Creates `auth-header`.
     pub fn create_auth_header(&self) -> Result<[u8; 256], QPUBridgeError> {
         let mut header = [0u8; 256];
         let mut hex_token = String::with_capacity(64);
@@ -659,6 +664,7 @@ impl QPUAuthManager {
 
 impl QPUAPIConfig {
     #[inline(always)]
+    /// Default state.
     pub const fn default() -> Self {
         Self {
             endpoint: [0u8; 256],

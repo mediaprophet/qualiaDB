@@ -140,6 +140,7 @@ impl MeshNormalWorkspace {
         (&self.dirty_vertices, &self.normals)
     }
 
+    /// Mesh normals.
     pub(crate) fn normals(&self) -> &[[f32; 3]] {
         &self.normals
     }

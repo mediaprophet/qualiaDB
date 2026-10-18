@@ -39,6 +39,7 @@ pub struct BenchmarkManifest {
 }
 
 impl BenchmarkManifest {
+    /// Validates manifest field coherence; static-str error on violation.
     pub fn validate(&self) -> Result<(), &'static str> {
         if self.schema_version != MANIFEST_SCHEMA_VERSION {
             return Err("unsupported benchmark manifest schema");
@@ -78,6 +79,7 @@ impl BenchmarkManifest {
     }
 }
 
+/// Streaming SHA-256 hex of a file.
 pub fn sha256_file(path: &Path) -> Result<String, std::io::Error> {
     let mut file = std::fs::File::open(path)?;
     let mut hasher = Sha256::new();
@@ -92,6 +94,7 @@ pub fn sha256_file(path: &Path) -> Result<String, std::io::Error> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+/// SHA-256 hex of a token-id sequence.
 pub fn sha256_token_ids(token_ids: &[u32]) -> String {
     let mut hasher = Sha256::new();
     for token_id in token_ids {
@@ -115,6 +118,7 @@ pub struct HardwareProfileManifest {
 }
 
 impl HardwareProfileManifest {
+    /// Reference manifest for the RTX A2000 12GB.
     pub fn rtx_a2000_12gb() -> Self {
         Self {
             device_name: "NVIDIA RTX A2000 12GB".into(),
@@ -146,6 +150,7 @@ pub struct OsrpBaselineManifest {
 }
 
 impl OsrpBaselineManifest {
+    /// Reference baseline: Qwen3.6-35B NVFP4.
     pub fn qwen3_6_35b_nvfp4_reference() -> Self {
         Self {
             model_id: "Qwen3.6-35B-A3B-NVFP4".into(),
@@ -163,6 +168,7 @@ impl OsrpBaselineManifest {
         }
     }
 
+    /// Reference baseline: Granite-4.0-H-tiny Q4_K_M.
     pub fn granite_4_0_h_tiny_q4km_reference() -> Self {
         Self {
             model_id: "granite-4.0-h-tiny-Q4_K_M".into(),
@@ -192,6 +198,7 @@ pub struct ParityGateEvaluation {
 }
 
 impl ParityGateEvaluation {
+    /// `true` when every parity gate passed.
     pub fn all_passed(&self) -> bool {
         self.gate1_baseline_captured
             && self.gate2_identical_workload

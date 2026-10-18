@@ -16,12 +16,14 @@ pub struct Mailbox {
 }
 
 impl Mailbox {
+    /// Creates a default `Mailbox`.
     pub const fn new() -> Self {
         Self {
             slots: [None; MAX_SLOTS],
         }
     }
 
+    /// Fetches an entry by key; `None` when absent.
     pub fn get(&self, slot: usize) -> Result<MailboxSlot, QdnfError> {
         let err = if slot >= MAX_SLOTS {
             QdnfError::Range

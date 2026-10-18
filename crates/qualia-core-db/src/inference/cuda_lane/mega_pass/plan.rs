@@ -17,6 +17,7 @@ pub(super) struct LayerWeightKeys {
     pub kd: u64,
 }
 
+/// Collects layer keys.
 pub(super) fn collect_layer_keys(
     dev: &MultiWeightDevice,
     plan: &impl MegaPassPlanView,

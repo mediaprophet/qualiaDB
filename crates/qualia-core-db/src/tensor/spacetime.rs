@@ -24,10 +24,12 @@ impl Default for SpacetimeCoord {
 }
 
 impl SpacetimeCoord {
+    /// Creates a default `SpacetimeCoord`.
     pub fn new(x: f32, y: f32, z: f32, t: f32) -> Self {
         Self { x, y, z, t }
     }
 
+    /// `SpacetimeCoord::spatial_distance`.
     pub fn spatial_distance(&self, other: &Self) -> f32 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;

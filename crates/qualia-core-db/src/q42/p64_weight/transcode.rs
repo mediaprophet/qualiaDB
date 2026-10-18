@@ -365,6 +365,7 @@ fn transcode_safetensor_with_policy<W: std::io::Write>(
     })
 }
 
+/// Transcodes a SafeTensor to the P64 weight stream.
 pub fn transcode_safetensor_to_p64<W: std::io::Write>(
     src: &[u8],
     page_log2: u16,
@@ -405,6 +406,7 @@ pub fn transcode_safetensor_to_p64_policy<W: std::io::Write>(
     transcode_safetensor_with_policy(src, page_log2, out, SafetensorQuantization::FfnTernary)
 }
 
+/// Transcodes a SafeTensor FFN block to ternary P64.
 pub fn transcode_safetensor_to_p64_ffn_ternary<W: std::io::Write>(
     src: &[u8],
     page_log2: u16,
@@ -413,6 +415,7 @@ pub fn transcode_safetensor_to_p64_ffn_ternary<W: std::io::Write>(
     transcode_safetensor_to_p64_policy(src, page_log2, out)
 }
 
+/// Transcodes a SafeTensor FFN block to ternary in a Q42 volume.
 pub fn transcode_safetensor_to_q42_ffn_ternary<W: std::io::Write>(
     src: &[u8],
     page_log2: u16,

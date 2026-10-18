@@ -78,18 +78,22 @@ impl ImportJob {
         &self.raw_scratch
     }
 
+    /// `ImportJob::status`.
     pub fn status(&self) -> &ImportStatus {
         &self.status
     }
 
+    /// Accepted assets.
     pub fn accepted(&self) -> u64 {
         self.accepted
     }
 
+    /// Quarantined assets.
     pub fn quarantined(&self) -> u64 {
         self.quarantined
     }
 
+    /// Import budgets.
     pub fn budgets(&self) -> ImportBudgets {
         self.budgets
     }

@@ -8,6 +8,7 @@ pub(super) struct CpuBodyMesh {
 }
 
 impl CpuBodyMesh {
+    /// `decimate`.
     pub(super) fn decimate(
         positions: &[[f32; 3]],
         colors: &[[f32; 4]],

@@ -6,6 +6,7 @@ use crate::specialized_libs::symbolic_algebra::{add, c, mul, pow, var, Expr};
 use std::collections::HashMap;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: symbolic polynomial eval.
 pub fn eval_poly(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let coeffs = args::rec(args_v, "coeffs")
         .and_then(args::f64s)

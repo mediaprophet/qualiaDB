@@ -66,6 +66,7 @@ pub(crate) struct MultiWeightDevice {
 /// CUDA slab for multi-weight SoA + device KV (bytes). 2.5 GiB covers 3B Q4 + KV headroom.
 const CUDA_SOA_SLAB_BYTES: u64 = (5 * 1024 * 1024 * 1024) / 2;
 
+/// `?::multi_weight_device`.
 pub(crate) fn multi_weight_device() -> &'static Mutex<Option<MultiWeightDevice>> {
     static C: OnceLock<Mutex<Option<MultiWeightDevice>>> = OnceLock::new();
     C.get_or_init(|| Mutex::new(None))
@@ -80,6 +81,7 @@ pub fn q4k_device_weight_count() -> usize {
         .unwrap_or(0)
 }
 
+/// `true` when weight `key` is device-resident.
 pub fn q4k_weight_resident(key: u64) -> bool {
     multi_weight_device()
         .lock()
@@ -262,6 +264,7 @@ fn empty_mw_device(ctx: CudaComputeContext) -> MultiWeightDevice {
     }
 }
 
+/// Ensures a device exists; `false` when unavailable.
 pub(crate) fn ensure_device(guard: &mut Option<MultiWeightDevice>) -> bool {
     use crate::wgsl_forge::execute::CudaComputeContext;
     if guard.is_some() {
@@ -415,6 +418,7 @@ pub fn device_kv_ready() -> bool {
         .unwrap_or(false)
 }
 
+/// Uploads `raw` for `key` if absent; `false` on failure.
 pub(crate) fn ensure_weight_resident(dev: &mut MultiWeightDevice, key: u64, raw: &[u8]) -> bool {
     if dev.weights.contains_key(&key) {
         return true;

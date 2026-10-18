@@ -63,6 +63,7 @@ impl Default for PerformanceEvidenceAccumulator {
 }
 
 impl PerformanceEvidenceAccumulator {
+    /// Folds one quality sample into the evidence window.
     pub fn observe(&mut self, sample: RuntimeQualitySample) {
         let (Some(frame_time_us), Some(target_frame_time_us)) =
             (sample.frame_time_us, sample.target_frame_time_us)
@@ -85,6 +86,7 @@ impl PerformanceEvidenceAccumulator {
         }
     }
 
+    /// `PerformanceEvidenceAccumulator::evidence`.
     pub const fn evidence(self) -> PerformanceEvidence {
         PerformanceEvidence {
             sample_count: self.sample_count,
@@ -211,6 +213,7 @@ pub struct QualityRuntimePolicy {
 }
 
 impl QualityRuntimePolicy {
+    /// Creates a policy starting at `initial_tier` under `config`.
     pub fn new(initial_tier: QualityTier, config: RuntimeQualityConfig) -> Self {
         let config = config.normalized();
         Self {
@@ -230,10 +233,12 @@ impl QualityRuntimePolicy {
         }
     }
 
+    /// Current quality tier.
     pub fn tier(&self) -> QualityTier {
         self.tier
     }
 
+    /// Step/oscillation counters.
     pub fn counters(&self) -> QualityRuntimeCounters {
         self.counters
     }
@@ -256,10 +261,12 @@ impl QualityRuntimePolicy {
         (&self.receipts, self.receipt_start, self.receipt_len)
     }
 
+    /// Quality decisions emitted so far.
     pub fn receipt_count(&self) -> usize {
         self.receipt_len
     }
 
+    /// Observes `sample` and returns the tier decision (hold/step-up/step-down).
     pub fn observe(&mut self, sample: RuntimeQualitySample) -> RuntimeQualityDecision {
         self.counters.samples = self.counters.samples.saturating_add(1);
         self.performance.observe(sample);

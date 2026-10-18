@@ -27,6 +27,7 @@ pub struct NavigationGrid<const W: usize, const H: usize> {
 }
 
 impl<const W: usize, const H: usize> NavigationGrid<W, H> {
+    /// Creates a default `NavigationGrid`.
     pub fn new() -> Self {
         assert!(W <= NAV_GRID_MAX_DIM && H <= NAV_GRID_MAX_DIM);
         Self {
@@ -37,6 +38,7 @@ impl<const W: usize, const H: usize> NavigationGrid<W, H> {
     }
 
     #[inline]
+    /// `NavigationGrid::index_of`.
     pub fn index_of(&self, x: i32, y: i32) -> Option<usize> {
         if x >= 0 && (x as usize) < self.width && y >= 0 && (y as usize) < self.height {
             Some((y as usize) * self.width + (x as usize))
@@ -46,6 +48,7 @@ impl<const W: usize, const H: usize> NavigationGrid<W, H> {
     }
 
     #[inline]
+    /// `true` when walkable.
     pub fn is_walkable(&self, x: i32, y: i32) -> bool {
         match self.index_of(x, y) {
             Some(idx) => self.cells[idx] == 0,
@@ -53,6 +56,7 @@ impl<const W: usize, const H: usize> NavigationGrid<W, H> {
         }
     }
 
+    /// Sets `obstacle`.
     pub fn set_obstacle(&mut self, x: i32, y: i32, obstacle_code: u8) -> bool {
         if let Some(idx) = self.index_of(x, y) {
             self.cells[idx] = obstacle_code;
@@ -62,6 +66,7 @@ impl<const W: usize, const H: usize> NavigationGrid<W, H> {
         }
     }
 
+    /// Clears an obstacle.
     pub fn clear_obstacle(&mut self, x: i32, y: i32) -> bool {
         if let Some(idx) = self.index_of(x, y) {
             self.cells[idx] = 0;

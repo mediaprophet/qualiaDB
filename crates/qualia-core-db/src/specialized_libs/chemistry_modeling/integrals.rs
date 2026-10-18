@@ -17,6 +17,7 @@ pub struct GtoPrimitive {
 }
 
 impl GtoPrimitive {
+    /// Total angular momentum of the shell pair.
     pub fn total_angular_momentum(&self) -> u8 {
         self.l[0] + self.l[1] + self.l[2]
     }

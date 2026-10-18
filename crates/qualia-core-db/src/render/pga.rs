@@ -18,6 +18,7 @@ pub struct Motor {
 
 impl Motor {
     #[inline]
+    /// Identity motor.
     pub const fn identity() -> Self {
         Self {
             r: [1.0, 0.0, 0.0, 0.0],
@@ -26,6 +27,7 @@ impl Motor {
     }
 
     #[inline]
+    /// Motor from a rotor.
     pub fn from_rotor(r: [f32; 4]) -> Self {
         Self { r, d: [0.0; 4] }
     }
@@ -163,6 +165,7 @@ pub fn sandwich_point(m: Motor, p: [f32; 3]) -> [f32; 3] {
 // ── Phase 1 legacy path (regression oracle) ─────────────────────────────────
 
 #[inline]
+/// Rotor from axis+angle.
 pub fn rotor_from_axis_angle(axis: [f32; 3], angle: f32) -> [f32; 4] {
     let half = angle * 0.5;
     let c = half.cos();
@@ -171,6 +174,7 @@ pub fn rotor_from_axis_angle(axis: [f32; 3], angle: f32) -> [f32; 4] {
 }
 
 #[inline]
+/// Rotor product.
 pub fn rotor_mul(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
     [
         a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
@@ -248,6 +252,7 @@ pub fn motor_v_band(v: f32, node: [f32; 3], sigma: f32, time: f32, alpha: f32) -
 }
 
 #[inline]
+/// Rotor-wrap motor.
 pub fn motor_rw(w: f32, alpha: f32) -> [f32; 4] {
     let theta_w = w * (TWO_PI / MANIFOLD_COUNT);
     let gain = alpha.clamp(0.2, 1.0);
@@ -255,11 +260,13 @@ pub fn motor_rw(w: f32, alpha: f32) -> [f32; 4] {
 }
 
 #[inline]
+/// Rotor-quat motor.
 pub fn motor_rq(q: f32, sigma: f32, time: f32, alpha: f32) -> [f32; 4] {
     motor_rq_gated(q, sigma, time, alpha, STANDPOINT_SPECTATOR, 1.0)
 }
 
 #[inline]
+/// Gated rotor-quat motor.
 pub fn motor_rq_gated(
     q: f32,
     sigma: f32,
@@ -286,6 +293,7 @@ pub fn motor_rq_gated(
 }
 
 #[inline]
+/// Semantic motor.
 pub fn semantic_motor(w: f32, q: f32, sigma: f32, time: f32, alpha: f32) -> Motor {
     semantic_motor_intrinsic(
         0.0,
@@ -301,6 +309,7 @@ pub fn semantic_motor(w: f32, q: f32, sigma: f32, time: f32, alpha: f32) -> Moto
 }
 
 #[inline]
+/// Intrinsic semantic motor.
 pub fn semantic_motor_intrinsic(
     tensor_v: f32,
     w: f32,

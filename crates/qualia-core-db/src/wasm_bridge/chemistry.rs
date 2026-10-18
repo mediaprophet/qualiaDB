@@ -23,6 +23,7 @@ pub struct SmilesParams {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: compute-molecular-descriptors.
 pub fn compute_molecular_descriptors_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: SmilesParams = serde_wasm_bindgen::from_value(val)?;
     let mol = crate::domains::chemical::organic_chemistry::parse_smiles(&p.smiles);
@@ -65,6 +66,7 @@ pub fn compute_molecular_descriptors_wasm(val: JsValue) -> Result<JsValue, JsVal
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: evaluate-lipinski.
 pub fn evaluate_lipinski_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: SmilesParams = serde_wasm_bindgen::from_value(val)?;
     let mol = crate::domains::chemical::organic_chemistry::parse_smiles(&p.smiles);
@@ -104,6 +106,7 @@ pub fn evaluate_lipinski_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: detect-functional-groups.
 pub fn detect_functional_groups_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: SmilesParams = serde_wasm_bindgen::from_value(val)?;
     let mol = crate::domains::chemical::organic_chemistry::parse_smiles(&p.smiles);
@@ -145,6 +148,7 @@ pub struct ReactionMetricsParams {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: compute-reaction-metrics.
 pub fn compute_reaction_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ReactionMetricsParams = serde_wasm_bindgen::from_value(val)?;
     let reactant_mws: Vec<f64> = p
@@ -192,6 +196,7 @@ pub fn compute_reaction_metrics_wasm(val: JsValue) -> Result<JsValue, JsValue> {
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// WASM bridge: compute-thermochemistry.
 pub fn compute_thermochemistry_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: ThermochemParams = serde_wasm_bindgen::from_value(val)?;
     let dg = crate::domains::chemical::organic_chemistry::gibbs_free_energy(

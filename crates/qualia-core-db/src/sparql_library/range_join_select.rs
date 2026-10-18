@@ -39,6 +39,7 @@ pub struct Q42RangeVolumeSetJoinSelectState {
 }
 
 impl Q42RangeJoinSelectPlan {
+    /// Builds `Q42RangeJoinSelectPlan` from `execution_plan`.
     pub fn from_execution_plan(plan: &ExecutionPlan) -> Result<Self, String> {
         if plan.operator_count == 0 || plan.root_operator as usize >= plan.operator_count as usize {
             return Err("range join-select requires a non-empty execution plan".to_string());
@@ -115,6 +116,7 @@ impl Q42RangeJoinSelectPlan {
     }
 }
 
+/// Executes a range-join-select into `out`.
 pub fn execute_range_join_select_page_into<S: crate::q42_volume::Q42RangeSource>(
     volume: &crate::q42_volume::Q42RangeVolume<S>,
     plan: Q42RangeJoinSelectPlan,
@@ -191,6 +193,7 @@ pub fn execute_range_join_select_page_into<S: crate::q42_volume::Q42RangeSource>
     }
 }
 
+/// Executes a volume-set range-join-select into `out`.
 pub fn execute_range_volume_set_join_select_page_into<S: crate::q42_volume::Q42RangeSource>(
     volumes: &crate::q42_volume::Q42RangeVolumeSet<S>,
     plan: Q42RangeJoinSelectPlan,

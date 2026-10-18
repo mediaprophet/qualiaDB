@@ -22,6 +22,7 @@ impl Default for SpectralDecomposition {
 }
 
 impl SpectralDecomposition {
+    /// Creates a default `SpectralDecomposition`.
     pub fn new(amplitude: f32, phase: f32, frequency: f32) -> Self {
         Self {
             amplitude,

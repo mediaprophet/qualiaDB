@@ -6,6 +6,7 @@ use crate::net::qdnf::policy_labels::{
 };
 use crate::net::qdnf::types::StrongDigest;
 
+/// Deterministic test digest for `tag`.
 pub fn digest(tag: u8) -> StrongDigest {
     let mut d = StrongDigest::ZERO;
     d.0[0] = tag;
@@ -13,6 +14,7 @@ pub fn digest(tag: u8) -> StrongDigest {
     d
 }
 
+/// Builds a `VerifiedLabel` for `iss` at `conf` level.
 pub fn verified(conf: Confidentiality, iss: StrongDigest) -> Result<VerifiedLabel, QdnfError> {
     let mut fields = LabelFields::request(conf, iss);
     if conf.requires_audience() {
@@ -23,6 +25,7 @@ pub fn verified(conf: Confidentiality, iss: StrongDigest) -> Result<VerifiedLabe
     verify_label(fields, &buf[..n])
 }
 
+/// Asserts `got` is `Err(want)`; error on mismatch.
 pub fn expect_err(got: Result<(), QdnfError>, want: QdnfError) -> Result<(), QdnfError> {
     match got {
         Err(e) if e == want => Ok(()),

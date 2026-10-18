@@ -10,6 +10,7 @@ use serde_json::{json, Map, Value};
 const NOT_ADVICE: &str =
     "This number is not a diagnosis, treatment recommendation, or clinical advice.";
 
+/// MCP tool: clinical risk.
 pub fn clinical_risk(args: &[u8]) -> Result<String, McpSystemError> {
     let root = parse_tool_args(args)?;
     let v = flatten(&root);

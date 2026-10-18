@@ -76,6 +76,7 @@ fn slot_insert(portal: PortalGpu) -> GpuHandle {
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+/// Slot with.
 pub(super) fn slot_with<R>(handle: GpuHandle, f: impl FnOnce(&mut PortalGpu) -> R) -> Option<R> {
     let mut slots = lock_slots();
     let idx = handle as usize;

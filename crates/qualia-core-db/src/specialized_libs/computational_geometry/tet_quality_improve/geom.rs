@@ -9,22 +9,27 @@ use super::*;
 // ---------------------------------------------------------------------------
 
 #[inline]
+/// Subtracts.
 pub(super) fn sub(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 #[inline]
+/// Adds.
 pub(super) fn add(a: Point3, b: Point3) -> Point3 {
     Point3::new(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 #[inline]
+/// `scale`.
 pub(super) fn scale(a: Point3, s: f64) -> Point3 {
     Point3::new(a.x * s, a.y * s, a.z * s)
 }
 #[inline]
+/// Dot product.
 pub(super) fn dot(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
 }
 #[inline]
+/// `cross`.
 pub(super) fn cross(a: Point3, b: Point3) -> Point3 {
     Point3::new(
         a.y * b.z - a.z * b.y,
@@ -33,6 +38,7 @@ pub(super) fn cross(a: Point3, b: Point3) -> Point3 {
     )
 }
 #[inline]
+/// `norm`.
 pub(super) fn norm(a: Point3) -> f64 {
     dot(a, a).sqrt()
 }

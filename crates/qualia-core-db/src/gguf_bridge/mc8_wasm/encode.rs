@@ -2,6 +2,7 @@
 use super::super::*;
 
 impl QTensorEngine {
+    /// Encodes an elementwise dispatch with offset buffers.
     pub(crate) fn encode_elem_offset(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -103,6 +104,7 @@ impl QTensorEngine {
         cpass.dispatch_workgroups(wg_x, wg_y, 1);
     }
 
+    /// Encodes a GEMM dispatch with offset buffers.
     pub(crate) fn encode_gemm_bufs_offset(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -301,6 +303,7 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Encodes `residual-add-offset`.
     pub(crate) fn encode_residual_add_offset(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -344,6 +347,7 @@ impl QTensorEngine {
 
     #[cfg(feature = "wasm-llm-diagnostics")]
     #[cfg(feature = "wasm-llm-diagnostics")]
+    /// Encodes `attention-pass-gpu-offset`.
     pub(crate) fn encode_attention_pass_gpu_offset(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -501,6 +505,7 @@ impl QTensorEngine {
         true
     }
 
+    /// Encodes an elementwise dispatch.
     pub(crate) fn encode_elem(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -592,6 +597,7 @@ impl QTensorEngine {
             .copy_buffer_to_buffer(scratch, 0, dst, 0, bytes);
     }
 
+    /// Encodes a GEMM dispatch.
     pub(crate) fn encode_gemm_bufs(
         &self,
         pipeline: &mut WasmGpuPipeline,
@@ -663,6 +669,7 @@ impl QTensorEngine {
         true
     }
 
+    /// Encodes the GPU attention pass.
     pub(crate) fn encode_attention_pass_gpu(
         &self,
         pipeline: &mut WasmGpuPipeline,

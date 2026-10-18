@@ -38,6 +38,7 @@ impl HardwareProfile {
         Ok(blake3::hash(&bytes).to_hex().to_string())
     }
 
+    /// Serializes the profile to pretty JSON.
     pub fn to_pretty_json(&self) -> Result<String, ForgeError> {
         Ok(serde_json::to_string_pretty(self)?)
     }
@@ -72,6 +73,7 @@ pub struct TimingSummary {
 }
 
 impl TimingSummary {
+    /// Builds a timing summary from `samples`; `None` when empty.
     pub fn from_samples(source: TimingSource, samples: &[u64]) -> Option<Self> {
         if samples.is_empty() {
             return None;
@@ -169,6 +171,7 @@ pub struct CertificationManifest {
 }
 
 impl CertificationManifest {
+    /// `CertificationManifest::naga_only`.
     pub fn naga_only(generated: &GeneratedShader, validation: ValidationReport) -> Self {
         Self {
             forge_schema_version: FORGE_SCHEMA_VERSION,
@@ -191,6 +194,7 @@ impl CertificationManifest {
         }
     }
 
+    /// Serializes the certification manifest to JSON.
     pub fn to_pretty_json(&self) -> Result<String, ForgeError> {
         Ok(serde_json::to_string_pretty(self)?)
     }
@@ -211,6 +215,7 @@ pub struct TuningManifest {
 }
 
 impl TuningManifest {
+    /// Creates a tuning manifest.
     pub fn new(
         generated_winner: &GeneratedShader,
         adapter: AdapterIdentity,
@@ -239,6 +244,7 @@ impl TuningManifest {
         })
     }
 
+    /// Serializes the tuning manifest to JSON.
     pub fn to_pretty_json(&self) -> Result<String, ForgeError> {
         Ok(serde_json::to_string_pretty(self)?)
     }

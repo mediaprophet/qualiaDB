@@ -21,6 +21,7 @@ pub(crate) struct SceneAnimation {
     timeline: ActivityTimeline,
 }
 impl SceneAnimation {
+    /// Replaces the active scene animation with `next`, optionally compacting GPU state.
     pub(crate) fn install(&mut self, mut next: Self, compact_gpu: bool) {
         next.reduced_motion = self.reduced_motion;
         next.compact_gpu = compact_gpu;
@@ -58,6 +59,7 @@ impl SceneAnimation {
 }
 
 impl QualiaPortal {
+    /// Sets the root actor for scene animation.
     pub fn set_scene_actor_root(
         &mut self,
         joint: u64,
@@ -75,6 +77,7 @@ impl QualiaPortal {
         }
         Ok(count)
     }
+    /// Applies a per-joint animation delta.
     pub fn set_scene_joint_delta(
         &mut self,
         group: u64,
@@ -93,6 +96,7 @@ impl QualiaPortal {
         }
         Ok(count)
     }
+    /// Advances scene animation by `dt_ms`, updating GPU state.
     pub(crate) fn tick_scene_animation(&mut self, dt_ms: f32) -> Result<(), JsValue> {
         if !dt_ms.is_finite() || dt_ms < 0.0 {
             return Err(JsValue::from_str("invalid animation frame duration"));
@@ -218,10 +222,12 @@ impl QualiaPortal {
         }
         Ok(selected)
     }
+    /// Serializes current animation state to JSON.
     pub fn animation_snapshot_json(&self) -> Result<String, JsValue> {
         serde_json::to_string(&self.scene_animation.timeline)
             .map_err(|_| JsValue::from_str("animation snapshot encoding failed"))
     }
+    /// Clears scene activities idle since `idle`.
     pub fn clear_scene_activities(&mut self, idle: u64) -> Result<(), JsValue> {
         self.scene_animation.timeline = ActivityTimeline::default();
         for actor in &mut self.scene_animation.actors {
@@ -239,6 +245,7 @@ impl QualiaPortal {
         }
         Ok(())
     }
+    /// Restores animation state from `json`.
     pub fn restore_animation_snapshot_json(&mut self, json: &str) -> Result<(), JsValue> {
         if json.len() > 16384 {
             return Err(JsValue::from_str("animation snapshot exceeds bound"));
@@ -287,9 +294,11 @@ impl QualiaPortal {
         }
         Ok(selected)
     }
+    /// Sets reduced-motion accessibility flag.
     pub fn set_animation_reduced_motion(&mut self, reduced: bool) {
         self.scene_animation.reduced_motion = reduced;
     }
+    /// Seeks scene animation to `time`.
     pub fn seek_scene_animation(&mut self, time: f64) -> Result<(), JsValue> {
         if !time.is_finite() || time.abs() > 1e12 {
             return Err(JsValue::from_str("invalid animation seek"));
@@ -302,6 +311,7 @@ impl QualiaPortal {
         }
         self.tick_scene_animation(0.0)
     }
+    /// Returns an attestation receipt of current animation state.
     pub fn scene_animation_receipt(&self) -> Result<JsValue, JsValue> {
         #[derive(serde::Serialize)]
         struct Receipt {

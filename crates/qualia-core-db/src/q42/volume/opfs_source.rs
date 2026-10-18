@@ -37,12 +37,14 @@ pub struct OpfsSliceRangeSource<B> {
 }
 
 impl<B> OpfsSliceRangeSource<B> {
+    /// Creates a default `OpfsSliceRangeSource`.
     pub fn new(bytes: B) -> Self {
         Self { bytes }
     }
 }
 
 impl<B: AsRef<[u8]>> OpfsSliceRangeSource<B> {
+    /// Views `self` as `bytes`.
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_ref()
     }
@@ -71,6 +73,7 @@ impl<F> OpfsCallbackRangeSource<F>
 where
     F: Fn(u64, usize, &mut [u8]) -> io::Result<usize>,
 {
+    /// Creates a default `OpfsCallbackRangeSource`.
     pub fn new(length: u64, fill: F) -> Self {
         Self { length, fill }
     }

@@ -33,6 +33,7 @@ pub enum OntologicalClass {
 }
 
 impl OntologicalClass {
+    /// Decodes from u8.
     pub fn from_u8(tag: u8) -> Option<Self> {
         match tag {
             1 => Some(Self::DarwinianTaxon),
@@ -44,6 +45,7 @@ impl OntologicalClass {
         }
     }
 
+    /// Builds `OntologicalClass` from `str_name`.
     pub fn from_str_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
             "darwiniantaxon" | "taxon" | "specimen" | "species" | "flora" | "fauna" => {

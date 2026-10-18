@@ -15,6 +15,7 @@ use super::*;
 
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
+/// Runs `semantic-simulation`.
 pub fn run_semantic_simulation(val: JsValue) -> Result<JsValue, JsValue> {
     let params: SimulationParams = serde_wasm_bindgen::from_value(val)?;
     let (mean, value_at_risk) = crate::domains::financial::economics::run_monte_carlo_var(

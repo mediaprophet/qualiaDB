@@ -29,6 +29,7 @@ pub enum FidelityContract {
 }
 
 impl FidelityContract {
+    /// Decodes from u8.
     pub fn from_u8(v: u8) -> Option<Self> {
         match v {
             1 => Some(Self::SourceBytePreserving),
@@ -103,6 +104,7 @@ pub struct OperatorPackageManifest {
 }
 
 impl OperatorPackageManifest {
+    /// Creates a default `OperatorPackageManifest`.
     pub fn new(
         source_digest: u64,
         representation_digest: u64,
@@ -119,6 +121,7 @@ impl OperatorPackageManifest {
         }
     }
 
+    /// Registers a segment descriptor; `PackageError` on conflict.
     pub fn add_segment(&mut self, segment: SegmentDescriptor) -> Result<(), PackageError> {
         if self
             .segments
@@ -131,6 +134,7 @@ impl OperatorPackageManifest {
         Ok(())
     }
 
+    /// Registers an operator record.
     pub fn add_operator(&mut self, record: OperatorRecord) -> Result<(), PackageError> {
         record
             .descriptor
@@ -140,6 +144,7 @@ impl OperatorPackageManifest {
         Ok(())
     }
 
+    /// Segment by `segment_id`.
     pub fn find_segment(&self, segment_id: u32) -> Option<&SegmentDescriptor> {
         self.segments.iter().find(|s| s.segment_id == segment_id)
     }

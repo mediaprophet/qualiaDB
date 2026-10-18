@@ -77,10 +77,12 @@ pub struct CpuWasmEngine {
 }
 
 impl CpuWasmEngine {
+    /// Loads a GGUF model blob onto the WASM-CPU engine with the default context size.
     pub fn new(model: Arc<[u8]>) -> Result<Self, CpuWasmError> {
         Self::new_with_context(model, CPU_WASM_DEFAULT_CONTEXT)
     }
 
+    /// Loads a GGUF model with an explicit `max_context`.
     pub fn new_with_context(model: Arc<[u8]>, max_context: usize) -> Result<Self, CpuWasmError> {
         if max_context == 0 || max_context > CPU_WASM_MAX_CONTEXT {
             return Err(CpuWasmError::UnsupportedModel(format!(
@@ -182,18 +184,22 @@ impl CpuWasmEngine {
         })
     }
 
+    /// The model's GGUF tokenizer.
     pub fn tokenizer(&self) -> &GgufTokenizer {
         &self.tokenizer
     }
 
+    /// Vocabulary size in tokens.
     pub fn vocab_len(&self) -> u32 {
         self.tokenizer.vocab_len()
     }
 
+    /// Configured context-window length.
     pub fn max_context(&self) -> usize {
         self.max_context
     }
 
+    /// Current working-set size.
     pub fn working_set_bytes(&self) -> usize {
         (self.kv.capacity()
             + self.hidden.capacity()
@@ -211,6 +217,7 @@ impl CpuWasmEngine {
             * core::mem::size_of::<f32>()
     }
 
+    /// Resets KV cache and sampler state for a fresh session.
     pub fn reset(&mut self) {
         self.kv.fill(0.0);
     }

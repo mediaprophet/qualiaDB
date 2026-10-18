@@ -18,6 +18,7 @@ pub struct ValueArgumentationFramework {
 }
 
 impl ValueArgumentationFramework {
+    /// Creates `ValueArgumentationFramework` with the given state.
     pub fn new(af: ArgumentationFramework) -> Self {
         Self {
             af,

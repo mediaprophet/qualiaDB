@@ -44,6 +44,7 @@ pub struct Counts {
 }
 
 impl Counts {
+    /// `encoded` length.
     pub fn encoded_len(self) -> Option<usize> {
         use crate::render::skeletal::{MAX_JOINTS, MAX_KEYS, MAX_VERTICES};
         if self.joints == 0

@@ -61,6 +61,7 @@ impl AttentionSchedule {
         }
     }
 
+    /// Validates internal consistency; error on violation.
     pub fn validate(self, shape: AttentionShape) -> Result<(), ForgeError> {
         if shape.head_dim == 0 || shape.head_count == 0 || shape.context_tokens == 0 {
             return Err(ForgeError::InvalidSchedule(

@@ -3,6 +3,7 @@ use super::{materials, PortalGpu};
 use crate::render::physics::Aabb;
 
 impl PortalGpu {
+    /// Writes `mesh-animated-frames`.
     pub fn write_mesh_animated_frames(
         &mut self,
         start: u32,

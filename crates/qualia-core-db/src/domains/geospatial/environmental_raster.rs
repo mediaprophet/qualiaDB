@@ -38,6 +38,7 @@ pub struct EnvironmentalRasterLayer<'a> {
 }
 
 impl<'a> EnvironmentalRasterLayer<'a> {
+    /// Creates a default `EnvironmentalRasterLayer`.
     pub fn new(
         name_uri: &'static str,
         unit_uri: &'static str,

@@ -141,6 +141,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         }
     }
 
+    /// Creates a scheduler over `logical_pages` starting at `initial_generation`.
     pub fn with_generation(logical_pages: u32, initial_generation: u64) -> Self {
         Self {
             slots: std::array::from_fn(|_| RequestSlot::new(logical_pages)),
@@ -149,14 +150,17 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         }
     }
 
+    /// Drain controller for graceful shutdown.
     pub fn drain(&self) -> &DrainController {
         &self.drain
     }
 
+    /// Mutable drain controller.
     pub fn drain_mut(&mut self) -> &mut DrainController {
         &mut self.drain
     }
 
+    /// Initiates/updates drain state.
     pub fn request_drain(
         &mut self,
         reason: DrainReason,
@@ -198,6 +202,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         action
     }
 
+    /// Currently active requests.
     pub fn active_count(&self) -> usize {
         self.slots
             .iter()
@@ -267,6 +272,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
             .map_err(Into::into)
     }
 
+    /// Transitions `request_id` out of prefill; error when unknown/out-of-state.
     pub fn mark_prefill_complete(&mut self, request_id: u64) -> Result<(), SchedulerError> {
         self.find_mut(request_id)?.state = RequestState::Decode;
         Ok(())
@@ -284,6 +290,7 @@ impl<const REQUESTS: usize> RequestScheduler<REQUESTS> {
         Ok(())
     }
 
+    /// Records one decoded token for `request_id`; returns its sequence position.
     pub fn record_token(&mut self, request_id: u64) -> Result<u32, SchedulerError> {
         let slot = self.find_mut(request_id)?;
         slot.token_count = slot.token_count.saturating_add(1);

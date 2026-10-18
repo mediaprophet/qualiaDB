@@ -55,6 +55,7 @@ pub fn calibrate_device_roof(gemv_n: usize) -> DeviceRoof {
 }
 
 impl DeviceRoof {
+    /// Formats `report`.
     pub fn format_report(&self) -> String {
         format!(
             "Device roof calibration\n  gemv_n:        {}\n  best:          {} [{}]\n  gemv_ms:       {:.4}\n  gemv_gflops:   {:.2}\n  upload_gbps:   {:.2}\n  balance FLOP/B:{:.2}\n  {}\n",

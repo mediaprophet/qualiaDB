@@ -43,6 +43,7 @@ pub(super) struct GpuInstanceStream {
 }
 
 impl GpuInstanceStream {
+    /// Creates with the given state.
     pub(super) fn new(
         device: &wgpu::Device,
         layout: &wgpu::BindGroupLayout,
@@ -66,6 +67,7 @@ impl GpuInstanceStream {
         })
     }
 
+    /// `replace_packed`.
     pub(super) fn replace_packed(
         &mut self,
         device: &wgpu::Device,
@@ -151,10 +153,12 @@ impl GpuInstanceStream {
         self.replace_packed(device, queue, layout, packed_records)
     }
 
+    /// `bind_group`.
     pub(super) fn bind_group(&self) -> &wgpu::BindGroup {
         &self.bind_group
     }
 
+    /// `count`.
     pub(super) fn count(&self) -> u32 {
         self.count
     }

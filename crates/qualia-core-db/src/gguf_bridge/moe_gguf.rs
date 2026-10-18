@@ -175,6 +175,7 @@ pub(super) fn evaluate_gguf_swiglu_expert_fused_gate_up(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Evaluates dense SwiGLU on GGUF weights.
 pub(super) fn evaluate_gguf_dense_swiglu(
     mmap: &[u8],
     tensor_data_start: u64,
@@ -239,6 +240,7 @@ pub(super) fn evaluate_gguf_dense_swiglu(
 }
 
 #[inline]
+/// Dot product.
 pub(super) fn dot(left: &[f32], right: &[f32]) -> f32 {
     let mut sum = 0.0;
     for i in 0..left.len() {

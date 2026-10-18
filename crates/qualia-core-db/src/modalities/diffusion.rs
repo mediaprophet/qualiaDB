@@ -13,6 +13,7 @@ use std::borrow::Cow;
 use std::sync::mpsc;
 
 #[cfg(feature = "gpu-runtime")]
+/// Executes `diffusion-pass`.
 pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
     if graph.is_empty() {
         return Ok(());
@@ -128,6 +129,7 @@ pub async fn execute_diffusion_pass(graph: &mut [NQuin]) -> Result<(), String> {
 }
 
 #[cfg(not(feature = "gpu-runtime"))]
+/// Executes a diffusion pass.
 pub async fn execute_diffusion_pass(_graph: &mut [NQuin]) -> Result<(), String> {
     Ok(())
 }

@@ -178,6 +178,7 @@ const _: () = assert!(core::mem::size_of::<P64TensorEntry>() == P64_TENSOR_ENTRY
 const _: () = assert!(core::mem::size_of::<P64HParams>() == 64);
 
 impl P64WeightHeader {
+    /// Reads `le`.
     pub fn read_le(data: &[u8]) -> Result<Self, String> {
         if data.len() < P64_WEIGHT_HEADER_BYTES {
             return Err("p64: truncated header".to_string());
@@ -207,6 +208,7 @@ impl P64WeightHeader {
         })
     }
 
+    /// Writes `le`.
     pub fn write_le(&self, out: &mut [u8]) {
         assert!(out.len() >= P64_WEIGHT_HEADER_BYTES);
         out[..P64_WEIGHT_HEADER_BYTES].fill(0);
@@ -227,6 +229,7 @@ impl P64WeightHeader {
 }
 
 impl P64HParams {
+    /// Little-endian read.
     pub(super) fn read_le(data: &[u8]) -> Result<Self, String> {
         if data.len() < 64 {
             return Err("p64: truncated hyperparameters".to_string());
@@ -252,6 +255,7 @@ impl P64HParams {
         })
     }
 
+    /// Little-endian write.
     pub(super) fn write_le(&self, out: &mut [u8]) {
         assert!(out.len() >= 64);
         out[..64].fill(0);

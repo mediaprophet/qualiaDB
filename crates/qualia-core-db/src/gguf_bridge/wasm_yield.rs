@@ -23,6 +23,7 @@ pub fn init_status() -> String {
     INIT_STATUS.with(|s| s.borrow().clone())
 }
 
+/// Sets `init-status`.
 pub fn set_init_status(msg: impl Into<String>) {
     let msg = msg.into();
     INIT_STATUS.with(|s| *s.borrow_mut() = msg.clone());
@@ -31,6 +32,7 @@ pub fn set_init_status(msg: impl Into<String>) {
     web_sys::console::log_1(&JsValue::from_str(&format!("[webgpu-init] {msg}")));
 }
 
+/// Clears the WASM init status cell.
 pub fn clear_init_status() {
     INIT_STATUS.with(|s| s.borrow_mut().clear());
 }

@@ -22,6 +22,7 @@ pub const BLOOM_HASHES: usize = 4;
 const KIND_POSTINGS: u8 = 0;
 const KIND_BLOOM: u8 = 1;
 
+/// Wraps `message` as an `InvalidData` io error (corrupt section contents).
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
@@ -35,6 +36,8 @@ pub struct BlockFieldPostings {
 }
 
 impl BlockFieldPostings {
+    /// Collects the sorted-unique subject/predicate/context sets from a
+    /// block's quins.
     pub fn from_quins(quins: &[NQuin]) -> Self {
         let mut subjects = Vec::with_capacity(quins.len());
         let mut predicates = Vec::with_capacity(quins.len());
@@ -54,12 +57,15 @@ impl BlockFieldPostings {
         }
     }
 
+    /// Exact membership test on the sorted subject set.
     pub fn contains_subject(&self, value: u64) -> bool {
         self.subjects.binary_search(&value).is_ok()
     }
+    /// Exact membership test on the sorted predicate set.
     pub fn contains_predicate(&self, value: u64) -> bool {
         self.predicates.binary_search(&value).is_ok()
     }
+    /// Exact membership test on the sorted context set.
     pub fn contains_context(&self, value: u64) -> bool {
         self.contexts.binary_search(&value).is_ok()
     }
@@ -80,6 +86,9 @@ pub fn encode_block_postings(postings: &BlockFieldPostings) -> Vec<u8> {
     out
 }
 
+/// Writes one field: `KIND_BLOOM` + 32-byte filter when it strictly beats the
+/// posting encoding (>8 values and longer than the bloom), else `KIND_POSTINGS`
+/// + count + delta-varints.
 fn encode_field(out: &mut Vec<u8>, values: &[u64]) {
     let posting_len = BlockFieldPostings::posting_bytes(values);
     if values.len() > 8 && posting_len > BLOOM_BYTES + 1 {
@@ -110,6 +119,9 @@ pub fn field_may_contain(encoded: &[u8], field: usize, value: u64) -> io::Result
     Err(invalid("field postings have fewer than three fields"))
 }
 
+/// Tests field membership at `offset`: exact decode for postings (delta
+    /// accumulation with overflow checks), probabilistic test for Bloom.
+    /// Returns `(next_offset, present)`; errors on truncation/unknown kind.
 fn decode_field_contains(encoded: &[u8], offset: usize, value: u64) -> io::Result<(usize, bool)> {
     let kind = *encoded
         .get(offset)
@@ -151,6 +163,8 @@ fn decode_field_contains(encoded: &[u8], offset: usize, value: u64) -> io::Resul
     }
 }
 
+/// Encodes all blocks' postings into the PIDX section: a per-block offset
+/// table followed by each block's three-field payload.
 pub fn encode_postings_section(blocks: &[BlockFieldPostings]) -> Vec<u8> {
     let mut payloads = Vec::with_capacity(blocks.len());
     let mut offsets = Vec::with_capacity(blocks.len() + 1);
@@ -178,6 +192,9 @@ pub fn encode_postings_section(blocks: &[BlockFieldPostings]) -> Vec<u8> {
     out
 }
 
+/// Structural validation of a PIDX section: magic, version, block-count
+/// match, non-truncated offset table, payload-length consistency, and
+/// per-block payload decodability.
 pub fn validate_postings_section(bytes: &[u8], expected_blocks: usize) -> io::Result<()> {
     if bytes.len() < FIELD_POSTINGS_HEADER_BYTES {
         return Err(invalid("field postings shorter than header"));
@@ -262,11 +279,14 @@ pub fn block_payload<'a>(bytes: &'a [u8], block_index: usize) -> io::Result<&'a 
         .ok_or_else(|| invalid("field postings payload slice out of range"))
 }
 
+/// Sorts `values` ascending and removes duplicates in place.
 fn sort_unique(values: &mut Vec<u64>) {
     values.sort_unstable();
     values.dedup();
 }
 
+/// Total byte length of `values` under delta-varint encoding (caller must
+/// pass sorted input).
 fn encoded_delta_len(values: &[u64]) -> usize {
     let mut previous = 0u64;
     let mut len = 0usize;
@@ -277,6 +297,7 @@ fn encoded_delta_len(values: &[u64]) -> usize {
     len
 }
 
+/// Appends each `value - previous` as a varint (sorted input assumed).
 fn encode_deltas(out: &mut Vec<u8>, values: &[u64]) {
     let mut previous = 0u64;
     for value in values {
@@ -285,6 +306,7 @@ fn encode_deltas(out: &mut Vec<u8>, values: &[u64]) {
     }
 }
 
+/// Appends `value` as a LEB128 varint (7 bits per byte, MSB continuation).
 fn encode_varint(out: &mut Vec<u8>, mut value: u64) {
     loop {
         let mut byte = (value & 0x7f) as u8;
@@ -299,6 +321,7 @@ fn encode_varint(out: &mut Vec<u8>, mut value: u64) {
     }
 }
 
+/// Byte length of `value` under LEB128 varint encoding.
 fn varint_len(mut value: u64) -> usize {
     let mut len = 1;
     while value > 0x7f {
@@ -308,6 +331,8 @@ fn varint_len(mut value: u64) -> usize {
     len
 }
 
+/// Decodes one LEB128 varint; returns `(value, bytes_used)`. Errors on a
+/// shift exceeding 64 bits or a truncated sequence.
 fn decode_varint(bytes: &[u8]) -> io::Result<(u64, usize)> {
     let mut value = 0u64;
     let mut shift = 0u32;
@@ -324,6 +349,7 @@ fn decode_varint(bytes: &[u8]) -> io::Result<(u64, usize)> {
     Err(invalid("truncated varint"))
 }
 
+/// Sets the `BLOOM_HASHES` bits for `value` in the 256-bit filter.
 fn bloom_insert(bloom: &mut [u8], value: u64) {
     for hash in bloom_hashes(value) {
         let bit = (hash as usize) % BLOOM_BITS;
@@ -331,6 +357,8 @@ fn bloom_insert(bloom: &mut [u8], value: u64) {
     }
 }
 
+/// `true` when all of `value`'s hash bits are set — definite non-membership
+/// when `false`, possible membership when `true` (false positives possible).
 fn bloom_may_contain(bloom: &[u8], value: u64) -> bool {
     bloom_hashes(value).into_iter().all(|hash| {
         let bit = (hash as usize) % BLOOM_BITS;
@@ -338,6 +366,8 @@ fn bloom_may_contain(bloom: &[u8], value: u64) -> bool {
     })
 }
 
+/// Four hash functions derived from `value` via two multiply-mix seeds —
+/// cheap double-hashing rather than four independent hashes.
 fn bloom_hashes(value: u64) -> [u64; BLOOM_HASHES] {
     let mixed = value.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     let alt = (!value).wrapping_mul(0xBF58_476D_1CE4_E5B9);

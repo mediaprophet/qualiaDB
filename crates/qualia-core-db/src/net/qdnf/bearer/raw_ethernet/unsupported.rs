@@ -14,11 +14,13 @@ pub struct RawEthernet {
 }
 
 impl RawEthernet {
+    /// Opens the resource.
     pub fn open(interface: &[u8]) -> Result<Self, QdnfError> {
         validate_ifname(interface)?;
         Err(QdnfError::PlatformUnsupported)
     }
 
+    /// Evidence level on unsupported platforms.
     pub fn ethernet_evidence_level(&self) -> EthernetEvidence {
         EthernetEvidence::AfPacketAttempt
     }

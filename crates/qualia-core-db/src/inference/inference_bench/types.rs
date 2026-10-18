@@ -24,6 +24,7 @@ pub struct BenchConfig {
 }
 
 impl BenchConfig {
+    /// Creates `BenchConfig` with the given state.
     pub fn new(
         label: impl Into<String>,
         model_path: impl Into<String>,
@@ -68,6 +69,7 @@ impl BenchGpuMeta {
     // Widened from module-private `fn` to `pub(super)` so `runner::run_bench`
     // (a sibling submodule) can build this from the shared GPU context.
     #[cfg(feature = "gpu-runtime")]
+    /// From shared context.
     pub(super) fn from_shared_context(ctx: &crate::gpu_context::SharedGpuContext) -> Self {
         let caps = &ctx.adapter_caps;
         Self {
@@ -83,6 +85,7 @@ impl BenchGpuMeta {
     }
 
     #[cfg(not(feature = "gpu-runtime"))]
+    /// Unavailable marker.
     pub(super) fn unavailable() -> Self {
         Self {
             adapter: String::new(),

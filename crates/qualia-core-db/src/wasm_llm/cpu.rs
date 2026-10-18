@@ -11,10 +11,12 @@ thread_local! {
     static CPU_ENGINE: std::cell::RefCell<Option<CpuWasmEngine>> = const { std::cell::RefCell::new(None) };
 }
 
+/// `ready`.
 pub(super) fn ready() -> bool {
     CPU_ENGINE.with(|engine| engine.borrow().is_some())
 }
 
+/// `vocab_len`.
 pub(super) fn vocab_len() -> u32 {
     CPU_ENGINE.with(|engine| {
         engine
@@ -25,6 +27,7 @@ pub(super) fn vocab_len() -> u32 {
     })
 }
 
+/// `working_set_bytes`.
 pub(super) fn working_set_bytes() -> u64 {
     CPU_ENGINE.with(|engine| {
         engine
@@ -35,10 +38,12 @@ pub(super) fn working_set_bytes() -> u64 {
     })
 }
 
+/// `release`.
 pub(super) fn release() {
     CPU_ENGINE.with(|engine| *engine.borrow_mut() = None);
 }
 
+/// Initializes.
 pub(super) async fn initialize(model: std::sync::Arc<[u8]>) -> Result<(), String> {
     initialize_with_context(
         model,
@@ -47,6 +52,7 @@ pub(super) async fn initialize(model: std::sync::Arc<[u8]>) -> Result<(), String
     .await
 }
 
+/// `initialize_with_context`.
 pub(super) async fn initialize_with_context(
     model: std::sync::Arc<[u8]>,
     max_context: usize,
@@ -75,6 +81,7 @@ fn restore(engine: CpuWasmEngine) {
     CPU_ENGINE.with(|slot| *slot.borrow_mut() = Some(engine));
 }
 
+/// Runs inference.
 pub(super) async fn infer(
     prompt: &str,
     graph_context: &str,

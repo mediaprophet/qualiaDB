@@ -8,6 +8,7 @@ use crate::sparql_parser::parse_sparql_full;
 use crate::sparql_planner::QueryPlanner;
 use vibe::{Diagnostic, Span, Value};
 
+/// VibeScript seam: SPARQL query.
 pub fn query(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let q = args::as_str(args_v)
         .or_else(|| args::rec_str(args_v, "query"))

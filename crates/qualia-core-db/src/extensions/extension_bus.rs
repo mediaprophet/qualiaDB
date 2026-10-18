@@ -16,6 +16,7 @@ pub struct ExtensionBus {
 }
 
 impl ExtensionBus {
+    /// Creates `ExtensionBus` with the given state.
     pub fn new(extensions_dir: impl AsRef<Path>) -> Self {
         let bus = Self {
             registered_extensions: RwLock::new(HashMap::new()),
@@ -261,6 +262,7 @@ pub mod wasm_bus {
         pub signature: String,
     }
 
+    /// Initializes the extension bus under `did`.
     pub fn init_extension_bus(did: String) -> Result<(), JsValue> {
         let ws = WebSocket::new("ws://127.0.0.1:4242")?;
 
@@ -332,6 +334,7 @@ pub mod wasm_bus {
         Ok(())
     }
 
+    /// `true` when the bus is live.
     pub fn is_connected() -> bool {
         EXTENSION_BUS.with(|bus| {
             bus.borrow()
@@ -341,6 +344,7 @@ pub mod wasm_bus {
         })
     }
 
+    /// Sends an intent, invoking `f` with the reply.
     pub fn send_intent<F: FnMut(String) + 'static>(
         prompt: &str,
         graph_context: &str,
@@ -373,6 +377,7 @@ pub mod wasm_bus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::extension_manifest::{ExtensionSecurity, SandboxLevel, TransportProtocol};
 
     #[tokio::test]
     async fn provision_asset_with_data_uri() {
@@ -386,7 +391,12 @@ mod tests {
             version: "1.0.0".to_string(),
             description: "A test extension".to_string(),
             capabilities: Vec::new(),
-            entrypoints: HashMap::new(),
+            transport: TransportProtocol::Stdio,
+            security: ExtensionSecurity {
+                sandbox_level: SandboxLevel::Strict,
+                requires_gpu: false,
+                requires_network_bind: false,
+            },
         };
         bus.registered_extensions
             .write()
@@ -416,7 +426,12 @@ mod tests {
             version: "1.0.0".to_string(),
             description: "A test extension".to_string(),
             capabilities: Vec::new(),
-            entrypoints: HashMap::new(),
+            transport: TransportProtocol::Stdio,
+            security: ExtensionSecurity {
+                sandbox_level: SandboxLevel::Strict,
+                requires_gpu: false,
+                requires_network_bind: false,
+            },
         };
         bus.registered_extensions
             .write()

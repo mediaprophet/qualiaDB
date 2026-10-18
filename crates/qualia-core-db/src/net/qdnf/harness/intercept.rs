@@ -19,6 +19,7 @@ pub struct InterceptReport {
 
 impl InterceptReport {
     #[inline]
+    /// `InterceptReport::had_heap_touch`.
     pub const fn had_heap_touch(self) -> bool {
         self.alloc_calls > 0
     }
@@ -39,6 +40,7 @@ pub fn measure<F: FnOnce()>(f: F) -> InterceptReport {
     }
 }
 
+/// Measures latency on a worker.
 pub fn measure_on_worker<F>(f: F) -> InterceptReport
 where
     F: FnOnce() + Send + 'static,

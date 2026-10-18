@@ -8,6 +8,7 @@ pub struct CivicsRoutingTable {
 }
 
 impl CivicsRoutingTable {
+    /// Creates a default `CivicsRoutingTable`.
     pub fn new() -> Self {
         Self {
             trusted_groups: Arc::new(DashMap::new()),

@@ -13,6 +13,7 @@ pub struct Point2 {
 
 impl Point2 {
     #[inline]
+    /// Creates `Point2` with the given state.
     pub const fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
@@ -29,6 +30,7 @@ pub struct Point3 {
 
 impl Point3 {
     #[inline]
+    /// Creates the point.
     pub const fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }

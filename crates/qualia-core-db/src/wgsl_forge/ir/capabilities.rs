@@ -82,6 +82,7 @@ pub struct LoweringContext {
 }
 
 impl LoweringContext {
+    /// Creates a default `LoweringContext`.
     pub fn new(capabilities: HardwareCapabilityMatrix, schedule: Schedule) -> Self {
         Self {
             capabilities,

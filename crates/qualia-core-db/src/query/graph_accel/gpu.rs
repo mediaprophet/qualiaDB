@@ -337,6 +337,7 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
     Some(idx)
 }
 
+/// GPU sieve of equality indices.
 pub fn sieve_eq_indices_gpu(quins: &[NQuin], field: QuinField, needle: u64) -> Option<Vec<u32>> {
     if !gpu_available() || quins.is_empty() {
         return None;

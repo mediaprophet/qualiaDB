@@ -32,6 +32,7 @@ pub fn discover_pref64() -> Pref64 {
     }
 }
 
+/// `?::numeric_ipv4_hint_insufficient_on_v6only`.
 pub const fn numeric_ipv4_hint_insufficient_on_v6only() -> bool {
     true
 }

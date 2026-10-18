@@ -39,6 +39,7 @@ pub struct RequestPart<'a> {
 }
 
 impl<'a> RequestPart<'a> {
+    /// `RequestPart::required_instruction`.
     pub const fn required_instruction(content: &'a str) -> Self {
         Self {
             kind: RequestPartKind::RequiredInstruction,
@@ -49,6 +50,7 @@ impl<'a> RequestPart<'a> {
         }
     }
 
+    /// `RequestPart::user_prompt`.
     pub const fn user_prompt(content: &'a str) -> Self {
         Self {
             kind: RequestPartKind::UserPrompt,
@@ -59,6 +61,7 @@ impl<'a> RequestPart<'a> {
         }
     }
 
+    /// `RequestPart::tool_schema`.
     pub const fn tool_schema(name: &'a str, schema: &'a str) -> Self {
         Self {
             kind: RequestPartKind::ToolSchema,
@@ -103,6 +106,7 @@ impl<'a> RequestPart<'a> {
         }
     }
 
+    /// `RequestPart::evidence`.
     pub const fn evidence(
         source_id: &'a str,
         content: &'a str,
@@ -117,6 +121,7 @@ impl<'a> RequestPart<'a> {
         }
     }
 
+    /// `RequestPart::history`.
     pub const fn history(content: &'a str) -> Self {
         Self {
             kind: RequestPartKind::HistoryMessage,
@@ -127,6 +132,7 @@ impl<'a> RequestPart<'a> {
         }
     }
 
+    /// `byte` length.
     pub fn byte_len(&self) -> usize {
         self.content.len()
     }

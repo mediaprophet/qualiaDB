@@ -50,6 +50,7 @@ impl ExpertPlacementPolicy {
         }
     }
 
+    /// Placement calibration.
     pub fn calibration(&self) -> ExpertPlacementCalibration {
         self.calibration
     }

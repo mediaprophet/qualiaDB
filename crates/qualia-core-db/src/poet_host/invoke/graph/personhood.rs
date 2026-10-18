@@ -17,11 +17,13 @@ const PERSON_LOCAL_NAMES: &[&str] = &[
 ];
 
 #[cfg(test)]
+/// `?::looks_like_natural_person`.
 pub fn looks_like_natural_person(term: &str) -> bool {
     local_name(term).is_some_and(|local| PERSON_LOCAL_NAMES.iter().any(|marker| local == *marker))
 }
 
 #[cfg(test)]
+/// `true` when owl-construct.
 pub fn is_owl_construct(term: &str) -> bool {
     let trimmed = term.trim();
     let lower = trimmed.to_ascii_lowercase();
@@ -35,6 +37,7 @@ pub fn is_shacl_negation(predicate: &str) -> bool {
 }
 
 #[cfg(test)]
+/// `?::owl_forbidden_for_person`.
 pub fn owl_forbidden_for_person(subject: &str, predicate: &str, object: &str) -> bool {
     if is_shacl_negation(predicate) {
         return false;
@@ -46,6 +49,7 @@ pub fn owl_forbidden_for_person(subject: &str, predicate: &str, object: &str) ->
     is_owl_construct(predicate) || (is_type_predicate(predicate) && is_owl_construct(object))
 }
 
+/// VibeScript seam: OWL person-source violation probe.
 pub fn owl_person_source_violation(source: &str) -> Option<&'static str> {
     for raw in source.lines() {
         let line = strip_comment(raw);

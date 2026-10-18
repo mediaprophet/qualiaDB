@@ -20,6 +20,7 @@ pub struct TemporalResolveConfig {
 }
 
 impl TemporalResolveConfig {
+    /// `TemporalResolveConfig::disabled`.
     pub const fn disabled() -> Self {
         Self {
             enabled: false,
@@ -60,6 +61,7 @@ pub struct TemporalHistoryState {
 }
 
 impl TemporalHistoryState {
+    /// Creates a default `TemporalHistoryState`.
     pub const fn new() -> Self {
         Self {
             history_valid: false,
@@ -67,10 +69,12 @@ impl TemporalHistoryState {
         }
     }
 
+    /// `TemporalHistoryState::history_valid`.
     pub const fn history_valid(self) -> bool {
         self.history_valid
     }
 
+    /// `TemporalHistoryState::frame_index`.
     pub const fn frame_index(self) -> u64 {
         self.frame_index
     }

@@ -16,10 +16,12 @@ pub struct SeededEntropy {
 }
 
 impl SeededEntropy {
+    /// Creates a default `SeededEntropy`.
     pub const fn new(seed: u64) -> Self {
         Self { state: seed | 1 }
     }
 
+    /// `SeededEntropy::fill`.
     pub fn fill(&mut self, out: &mut [u8]) -> Result<(), QdnfError> {
         for byte in out.iter_mut() {
             self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1);
@@ -34,14 +36,17 @@ impl SeededEntropy {
 pub struct ProductionEntropy;
 
 impl ProductionEntropy {
+    /// Creates `ProductionEntropy` with the given state.
     pub const fn new() -> Self {
         Self
     }
 
+    /// Source reference.
     pub const fn source(self) -> EntropySource {
         EntropySource::Os
     }
 
+    /// Fills `out` with OS entropy.
     pub fn fill(&self, out: &mut [u8]) -> Result<(), QdnfError> {
         fill_os(out)
     }

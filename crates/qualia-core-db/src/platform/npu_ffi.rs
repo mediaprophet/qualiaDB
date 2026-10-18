@@ -25,6 +25,7 @@ pub mod gpu_sieve {
     }
 
     impl SieveOrchestrator {
+        /// Creates `?` with the given state.
         pub async fn new() -> Option<Self> {
             let instance = wgpu::Instance::default();
             let adapter = instance
@@ -200,6 +201,7 @@ pub unsafe extern "C" fn nets_map_lorentz(
 }
 
 #[no_mangle]
+/// NPU FFI: tropical-Voronoi route on the accelerator.
 pub unsafe extern "C" fn nets_tropical_voronoi_route(
     queries_ptr: *const crate::domains::mathematical::geometric::LorentzVector,
     queries_len: usize,
@@ -268,6 +270,7 @@ pub fn nets_parse_smiles(smiles: &str) -> Option<crate::NQuin> {
     })
 }
 
+/// NPU valency for the net.
 pub fn nets_calculate_valency(molecule_quin: &crate::NQuin) -> i32 {
     if molecule_quin.predicate == crate::q_hash("IS_SMILES") {
         (molecule_quin.object & 0xFFFF) as i32

@@ -106,6 +106,7 @@ pub struct PassNode {
 }
 
 impl PassNode {
+    /// Creates a default `PassNode`.
     pub const fn new(id: PassId) -> Self {
         Self {
             id,
@@ -117,6 +118,7 @@ impl PassNode {
         }
     }
 
+    /// Builder: marks `res` as read by this pass.
     pub fn with_read(mut self, res: FrameResourceId) -> Self {
         if self.read_count < MAX_PASS_DEPENDENCIES {
             self.reads[self.read_count] = Some(res);
@@ -125,6 +127,7 @@ impl PassNode {
         self
     }
 
+    /// Builder: marks `res` as written by this pass.
     pub fn with_write(mut self, res: FrameResourceId) -> Self {
         if self.write_count < MAX_PASS_DEPENDENCIES {
             self.writes[self.write_count] = Some(res);
@@ -133,6 +136,7 @@ impl PassNode {
         self
     }
 
+    /// Builder: toggles pass enablement.
     pub fn with_enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
@@ -180,6 +184,7 @@ pub struct TemporalOutputSchedule {
 }
 
 impl TemporalOutputSchedule {
+    /// `TemporalOutputSchedule::disabled`.
     pub const fn disabled() -> Self {
         Self {
             enabled: false,
@@ -190,6 +195,7 @@ impl TemporalOutputSchedule {
         }
     }
 
+    /// `TemporalOutputSchedule::fail_closed`.
     pub const fn fail_closed() -> Self {
         Self::disabled()
     }
@@ -205,10 +211,12 @@ impl TemporalOutputSchedule {
             && !(self.reset_history && self.reads_history)
     }
 
+    /// `true` when complete.
     pub const fn is_complete(self) -> bool {
         self.is_valid()
     }
 
+    /// Builder: `reset-history`.
     pub const fn with_reset_history(mut self) -> Self {
         self.reset_history = true;
         self.reads_history = false;
@@ -217,6 +225,7 @@ impl TemporalOutputSchedule {
 }
 
 impl CompiledSchedule {
+    /// Schedule slot for pass `id`, or `None`.
     pub fn pass_index(&self, id: PassId) -> Option<usize> {
         self.passes[..self.pass_count]
             .iter()
@@ -262,6 +271,7 @@ impl Default for FrameGraphBuilder {
 }
 
 impl FrameGraphBuilder {
+    /// Creates a default `FrameGraphBuilder`.
     pub const fn new() -> Self {
         Self {
             passes: [None; MAX_PASSES],

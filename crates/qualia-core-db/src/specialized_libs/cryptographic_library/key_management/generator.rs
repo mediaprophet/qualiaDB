@@ -98,6 +98,7 @@ pub enum RecommendationSeverity {
 }
 
 impl KeyGenerator {
+    /// Creates a generator with default entropy sources and algorithm registry.
     pub fn new() -> Self {
         Self {
             generation_algorithms: HashMap::new(),
@@ -111,6 +112,7 @@ impl KeyGenerator {
         }
     }
 
+    /// Populates the generation-algorithm registry; `CryptographicError` propagates.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         for alg in [
             KeyAlgorithm::MLDSA,
@@ -188,6 +190,7 @@ impl KeyGenerator {
         Ok(data)
     }
 
+    /// Generates a `Key` under `algorithm` at `security_level`; `UnsupportedAlgorithm` when unregistered.
     pub fn generate_key(
         &mut self,
         key_id: String,
@@ -229,6 +232,7 @@ impl KeyGenerator {
         })
     }
 
+    /// Derives the public key from `private_key`.
     pub fn derive_public_key(
         &mut self,
         private_key: &Key,
@@ -459,6 +463,7 @@ impl KeyGenerator {
 }
 
 impl GenerationAlgorithm {
+    /// Creates a generation-algorithm descriptor for `algorithm`.
     pub fn new(algorithm: KeyAlgorithm) -> Self {
         Self {
             algorithm_id: format!("gen_{}", format!("{:?}", algorithm).to_lowercase()),
@@ -475,6 +480,7 @@ impl GenerationAlgorithm {
 }
 
 impl KeyQualityMetrics {
+    /// Creates zeroed key-quality metrics.
     pub fn new() -> Self {
         Self {
             entropy_score: 0.0,
@@ -489,6 +495,7 @@ impl KeyQualityMetrics {
 }
 
 impl SecurityAssessment {
+    /// Creates a default security assessment.
     pub fn new() -> Self {
         Self {
             vulnerability_score: 0.0,

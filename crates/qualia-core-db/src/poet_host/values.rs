@@ -6,6 +6,7 @@ use vibe::Value;
 
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 
+/// q_hash of a Vibe `Value`, or `None` when unhashable.
 pub(crate) fn hash_val(v: &Value) -> Option<u64> {
     match v {
         Value::U64(n) => Some(*n),
@@ -17,6 +18,7 @@ pub(crate) fn hash_val(v: &Value) -> Option<u64> {
     }
 }
 
+/// Converts a `Value` term to an `NQuin` in `context`.
 pub(crate) fn value_to_quin(term: &Value, context: u64) -> Option<NQuin> {
     match term {
         Value::QuinRef(qr) => {
@@ -53,6 +55,7 @@ pub(crate) fn value_to_quin(term: &Value, context: u64) -> Option<NQuin> {
     }
 }
 
+/// Builds a reifier quin for `term`.
 pub(crate) fn reifier_quin(term: &Value, context: u64) -> Option<NQuin> {
     let Value::Reified { s, p, o, r } = term else {
         return None;
@@ -72,6 +75,7 @@ pub(crate) fn reifier_quin(term: &Value, context: u64) -> Option<NQuin> {
     })
 }
 
+/// Local name of a shape `Value`.
 pub(crate) fn shape_local_name(shape: &Value) -> String {
     match shape {
         Value::Prefixed(_, local) => local.clone(),
@@ -82,6 +86,7 @@ pub(crate) fn shape_local_name(shape: &Value) -> String {
     }
 }
 
+/// Renders a `Value` to a display string.
 pub fn format_value(v: &Value) -> String {
     match v {
         Value::Null => "null".into(),

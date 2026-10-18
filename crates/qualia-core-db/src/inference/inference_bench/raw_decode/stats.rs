@@ -1,7 +1,9 @@
+/// Median of `values` (0.0 on empty).
 pub fn median_f64(values: &[f64]) -> f64 {
     percentile_nearest_rank(values, 0.5)
 }
 
+/// Nearest-rank `quantile` of `values`.
 pub fn percentile_nearest_rank(values: &[f64], quantile: f64) -> f64 {
     if values.is_empty() {
         return 0.0;

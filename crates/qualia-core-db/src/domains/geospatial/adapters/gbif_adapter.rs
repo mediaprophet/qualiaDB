@@ -8,6 +8,7 @@ pub struct GbifAdapter {
 }
 
 impl GbifAdapter {
+    /// Creates a GBIF adapter for `occurrence_endpoint`.
     pub fn new(id: &'static str, occurrence_endpoint: &str) -> Self {
         Self {
             id,
@@ -17,10 +18,12 @@ impl GbifAdapter {
 }
 
 impl GbifAdapter {
+    /// Stable adapter identifier.
     pub fn adapter_id(&self) -> &'static str {
         self.id
     }
 
+    /// Builds a GBIF occurrence fetch request for a region.
     pub fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
@@ -126,6 +129,7 @@ impl GbifAdapter {
         Ok(quins)
     }
 
+    /// Fetches occurrence records covering the region.
     pub fn fetch_region(
         &self,
         bbox: (f64, f64, f64, f64),

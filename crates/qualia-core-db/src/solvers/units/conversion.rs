@@ -18,6 +18,7 @@ pub struct Unit {
 }
 
 impl Unit {
+    /// `Unit::linear`.
     pub const fn linear(name: &'static str, dimension: Dimension, factor: f64) -> Self {
         Self {
             name,
@@ -26,6 +27,7 @@ impl Unit {
             to_si_offset: 0.0,
         }
     }
+    /// `Unit::affine`.
     pub const fn affine(
         name: &'static str,
         dimension: Dimension,

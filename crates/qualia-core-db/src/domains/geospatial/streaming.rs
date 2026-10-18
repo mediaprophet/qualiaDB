@@ -36,6 +36,7 @@ pub struct SceneStreamingPlanner {
 }
 
 impl SceneStreamingPlanner {
+    /// Creates `SceneStreamingPlanner` with the given state.
     pub fn new(
         pyramid: TilePyramid,
         predictor: FrustumPredictor,
@@ -95,7 +96,14 @@ pub struct FrustumPredictor {
     pub far_clip: f64,
 }
 
+/// Helper to convert continuous 3D world coordinates into a 100-meter grid tile ID.
+#[inline]
+pub fn point_to_tile_id(x: f64, y: f64, z: f64) -> u64 {
+    ((x / 100.0).floor() as u64) ^ ((y / 100.0).floor() as u64) ^ ((z / 100.0).floor() as u64)
+}
+
 impl FrustumPredictor {
+    /// Creates a predictor from the camera frustum parameters.
     pub fn new(fov: f64, aspect: f64, near: f64, far: f64) -> Self {
         Self {
             fov_degrees: fov,
@@ -105,25 +113,101 @@ impl FrustumPredictor {
         }
     }
 
-    /// Given a camera pose (mocked here as xyz + pitch/yaw), return required tile IDs
+    /// Evaluates genuine 3D view frustum intersection against the spatial tile grid.
+    /// Derives directional forward, right, and up vectors from camera yaw and pitch,
+    /// samples the view volume along the frustum from near to far clip planes,
+    /// and projects each intersection point to its corresponding grid tile ID.
     pub fn predict_intersecting_tiles(
         &self,
         camera_x: f64,
         camera_y: f64,
         camera_z: f64,
-        _yaw: f64,
-        _pitch: f64,
+        yaw: f64,
+        pitch: f64,
     ) -> Vec<u64> {
-        // Structural stub: return a few mock tile IDs around the camera position
-        // In reality, this would intersect a frustum math volume with the TilePyramid.
-        let center_tile = ((camera_x / 100.0).floor() as u64)
-            ^ ((camera_y / 100.0).floor() as u64)
-            ^ ((camera_z / 100.0).floor() as u64);
-        vec![
-            center_tile,
-            center_tile.wrapping_add(1),
-            center_tile.wrapping_sub(1),
-        ]
+        let mut tiles = HashSet::new();
+
+        // 1. Camera location itself is always in immediate residency consideration
+        let center_tile = point_to_tile_id(camera_x, camera_y, camera_z);
+        tiles.insert(center_tile);
+
+        // Convert angles to radians (handling both radian inputs in [-2pi, 2pi] or degrees)
+        let yaw_rad = if yaw.abs() > 2.0 * std::f64::consts::PI {
+            yaw.to_radians()
+        } else {
+            yaw
+        };
+        let pitch_rad = if pitch.abs() > 2.0 * std::f64::consts::PI {
+            pitch.to_radians()
+        } else {
+            pitch
+        };
+
+        // 3D camera basis vectors:
+        // Forward: (cos(pitch)*sin(yaw), sin(pitch), cos(pitch)*cos(yaw))
+        let cos_p = pitch_rad.cos();
+        let sin_p = pitch_rad.sin();
+        let cos_y = yaw_rad.cos();
+        let sin_y = yaw_rad.sin();
+
+        let fwd = (cos_p * sin_y, sin_p, cos_p * cos_y);
+        let right = (cos_y, 0.0, -sin_y);
+        // Up = Right x Forward
+        let up = (
+            right.1 * fwd.2 - right.2 * fwd.1,
+            right.2 * fwd.0 - right.0 * fwd.2,
+            right.0 * fwd.1 - right.1 * fwd.0,
+        );
+
+        let fov_rad = self.fov_degrees.to_radians();
+        let tan_half_fov = (fov_rad * 0.5).tan();
+
+        // Sample along the frustum depth from near_clip to far_clip
+        let near = self.near_clip.max(0.1);
+        let far = self.far_clip.max(near + 1.0);
+        let depth_steps = 8;
+        let uv_samples = [-1.0, -0.5, 0.0, 0.5, 1.0];
+
+        for i in 0..=depth_steps {
+            let t = i as f64 / depth_steps as f64;
+            let d = near + t * (far - near);
+            let half_h = d * tan_half_fov;
+            let half_w = half_h * self.aspect_ratio;
+
+            for &u in &uv_samples {
+                for &v in &uv_samples {
+                    let px = camera_x + d * fwd.0 + (u * half_w) * right.0 + (v * half_h) * up.0;
+                    let py = camera_y + d * fwd.1 + (u * half_w) * right.1 + (v * half_h) * up.1;
+                    let pz = camera_z + d * fwd.2 + (u * half_w) * right.2 + (v * half_h) * up.2;
+
+                    tiles.insert(point_to_tile_id(px, py, pz));
+                }
+            }
+        }
+
+        let mut res: Vec<u64> = tiles.into_iter().collect();
+        res.sort_unstable();
+        res
+    }
+
+    /// Predicts frustum-intersecting tiles that are present in the provided TilePyramid for an active LOD.
+    pub fn predict_intersecting_pyramid_tiles(
+        &self,
+        camera_pose: &CameraPose,
+        pyramid: &TilePyramid,
+        active_lod: u8,
+    ) -> Vec<u64> {
+        let predicted = self.predict_intersecting_tiles(
+            camera_pose.x,
+            camera_pose.y,
+            camera_pose.z,
+            camera_pose.yaw,
+            camera_pose.pitch,
+        );
+        predicted
+            .into_iter()
+            .filter(|&id| pyramid.has_tile(active_lod, id))
+            .collect()
     }
 }
 
@@ -134,6 +218,7 @@ pub struct VramBudgetEviction {
 }
 
 impl VramBudgetEviction {
+    /// Creates an eviction policy with a `max_tiles` VRAM budget.
     pub fn new(max_tiles: usize) -> Self {
         Self {
             max_tiles,
@@ -141,6 +226,7 @@ impl VramBudgetEviction {
         }
     }
 
+    /// Records a tile access at `timestamp` for LRU eviction.
     pub fn access_tile(&mut self, tile_id: u64, timestamp: u64) {
         self.active_tiles.insert(tile_id, timestamp);
     }
@@ -176,16 +262,19 @@ pub struct TilePyramid {
 }
 
 impl TilePyramid {
+    /// Creates an empty tile pyramid.
     pub fn new() -> Self {
         Self {
             layers: HashMap::new(),
         }
     }
 
+    /// Registers `tile_id` at `lod`.
     pub fn register_tile(&mut self, lod: u8, tile_id: u64) {
         self.layers.entry(lod).or_default().insert(tile_id);
     }
 
+    /// `true` when `tile_id` exists at `lod`.
     pub fn has_tile(&self, lod: u8, tile_id: u64) -> bool {
         self.layers
             .get(&lod)
@@ -303,5 +392,22 @@ mod tests {
             },
         );
         assert!(plan.required_tiles.is_empty());
+    }
+
+    #[test]
+    fn frustum_predictor_orients_with_yaw_and_pitch() {
+        let predictor = FrustumPredictor::new(60.0, 1.0, 10.0, 500.0);
+        // Look north (yaw = 0) vs look south (yaw = PI)
+        let tiles_north = predictor.predict_intersecting_tiles(0.0, 0.0, 0.0, 0.0, 0.0);
+        let tiles_south =
+            predictor.predict_intersecting_tiles(0.0, 0.0, 0.0, std::f64::consts::PI, 0.0);
+
+        // Both include the origin camera tile
+        let origin = point_to_tile_id(0.0, 0.0, 0.0);
+        assert!(tiles_north.contains(&origin));
+        assert!(tiles_south.contains(&origin));
+
+        // But they look in opposite directions and predict different tile sets
+        assert_ne!(tiles_north, tiles_south);
     }
 }

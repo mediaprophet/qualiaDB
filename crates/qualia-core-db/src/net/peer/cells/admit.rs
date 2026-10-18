@@ -54,6 +54,7 @@ pub struct CellTable {
 }
 
 impl CellTable {
+    /// Creates a default `CellTable`.
     pub const fn new() -> Self {
         Self {
             occupied: [false; MAX_CELLS],
@@ -130,6 +131,7 @@ impl CellTable {
         })
     }
 
+    /// Releases the resource.
     pub fn release(
         &mut self,
         leases: &mut LeaseTable,
@@ -155,6 +157,7 @@ impl CellTable {
         Ok(())
     }
 
+    /// Occupied cells.
     pub fn occupied(&self) -> usize {
         let mut n = 0;
         let mut i = 0;

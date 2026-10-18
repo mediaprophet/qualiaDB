@@ -5,6 +5,7 @@ use std::io::{self, Write};
 
 use crate::query::resolver::{classify_inline_literal, resolve_hash, InlineLiteral, MSB_FLAG};
 
+/// Writes `iri`.
 pub fn write_iri<W: Write>(
     val: u64,
     lex: Option<&HashMap<u64, String>>,
@@ -28,6 +29,7 @@ pub fn write_iri<W: Write>(
     write!(out, "<quin:hash/{val:016x}>")
 }
 
+/// Writes `object`.
 pub fn write_object<W: Write>(
     val: u64,
     lex: Option<&HashMap<u64, String>>,

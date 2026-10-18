@@ -31,6 +31,7 @@ pub struct SdnFrontDoorView<'a> {
 }
 
 impl<'a> SdnFrontDoorView<'a> {
+    /// Empty value.
     pub const fn empty(domain: &'a str) -> Self {
         Self {
             domain,

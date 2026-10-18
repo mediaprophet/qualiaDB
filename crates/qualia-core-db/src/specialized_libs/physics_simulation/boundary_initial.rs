@@ -111,6 +111,7 @@ pub enum PerturbationType {
 }
 
 impl BoundaryConditions {
+    /// Creates `BoundaryConditions` with the given state.
     pub fn new() -> Self {
         Self {
             boundary_types: HashMap::new(),
@@ -252,6 +253,7 @@ impl BoundaryConditions {
 }
 
 impl InitialConditions {
+    /// Creates a default `InitialConditions`.
     pub fn new() -> Self {
         Self {
             condition_types: HashMap::new(),
@@ -310,6 +312,7 @@ impl InitialConditions {
 }
 
 impl Perturbation {
+    /// Creates a default `Perturbation`.
     pub fn new() -> Self {
         Self {
             perturbation_id: "default".to_string(),

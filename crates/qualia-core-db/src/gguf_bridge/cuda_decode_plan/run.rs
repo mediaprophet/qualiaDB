@@ -76,6 +76,7 @@ impl CudaDecodePlan {
 }
 
 impl crate::gguf_bridge::QTensorEngine {
+    /// Telemetry for a ready CUDA decode plan; `None` otherwise.
     pub fn cuda_prepared_telemetry(&self) -> Option<CudaPreparedTelemetry> {
         let CudaDecodePlanState::Ready(plan) = &self.cuda_decode_plan else {
             return None;
@@ -99,6 +100,7 @@ impl crate::gguf_bridge::QTensorEngine {
         })
     }
 
+    /// Tries a prepared CUDA decode.
     pub(in crate::gguf_bridge) fn try_prepared_cuda_decode(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -135,6 +137,7 @@ impl crate::gguf_bridge::QTensorEngine {
         result
     }
 
+    /// Tries a prepared CUDA decode token.
     pub(in crate::gguf_bridge) fn try_prepared_cuda_decode_token(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,
@@ -173,6 +176,7 @@ impl crate::gguf_bridge::QTensorEngine {
     }
 
     #[cfg(test)]
+    /// Test-only prepared CUDA hidden state.
     pub(in crate::gguf_bridge) fn try_prepared_cuda_hidden_for_test(
         &mut self,
         index: &crate::gguf_sharder::GgufTensorIndex,

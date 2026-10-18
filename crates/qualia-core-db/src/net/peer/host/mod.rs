@@ -48,16 +48,19 @@ pub struct NativePeer {
 
 impl NativePeer {
     #[inline]
+    /// `NativePeer::identity`.
     pub fn identity(&self) -> ControllerIdentity {
         self.identity
     }
 
     #[inline]
+    /// Locator.
     pub fn locator(&self) -> ObservedLocator {
         self.bearer.locator()
     }
 
     #[inline]
+    /// `NativePeer::local_link`.
     pub fn local_link(&self) -> LinkId {
         self.local_link
     }
@@ -97,6 +100,7 @@ impl NativePeer {
         Err(QdnfError::Unauthorized)
     }
 
+    /// `NativePeer::remote_or_reject`.
     pub(crate) fn remote_or_reject(&self) -> Result<LinkId, QdnfError> {
         let mut want = LinkId::ZERO;
         want.0[0] = if self.local_link.0[0] == 1 { 2 } else { 1 };
@@ -107,6 +111,7 @@ impl NativePeer {
         }
     }
 
+    /// `neighbor` count.
     pub fn neighbor_count(&self) -> usize {
         self.neighbors.len()
     }

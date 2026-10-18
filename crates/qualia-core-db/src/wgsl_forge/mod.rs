@@ -29,6 +29,7 @@ pub mod tune;
 pub mod validate;
 
 #[cfg(test)]
+/// `?::test_gpu_available`.
 pub(crate) fn test_gpu_available() -> bool {
     use std::sync::OnceLock;
     static AVAILABLE: OnceLock<bool> = OnceLock::new();
@@ -36,6 +37,7 @@ pub(crate) fn test_gpu_available() -> bool {
 }
 
 #[cfg(all(test, feature = "cuda"))]
+/// `?::test_cuda_available`.
 pub(crate) fn test_cuda_available() -> bool {
     use std::sync::OnceLock;
     static AVAILABLE: OnceLock<bool> = OnceLock::new();
@@ -140,6 +142,7 @@ impl From<serde_json::Error> for ForgeError {
     }
 }
 
+/// Generates a WGSL builtin.
 pub fn generate_builtin(
     builtin: BuiltinKernel,
     schedule: Schedule,

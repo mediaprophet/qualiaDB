@@ -526,6 +526,7 @@ pub struct SecurityPerformanceMetrics {
     pub error_rate: f64,
 }
 impl SecurityMonitor {
+    /// Creates a monitor with fresh threat detector, anomaly detector, compliance monitor, and zeroed metrics.
     pub fn new() -> Self {
         Self {
             threat_detector: ThreatDetector::new(),
@@ -535,6 +536,7 @@ impl SecurityMonitor {
         }
     }
 
+    /// Initializes the threat detector, anomaly detector, and compliance monitor.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.threat_detector.initialize()?;
         self.anomaly_detector.initialize()?;
@@ -542,12 +544,14 @@ impl SecurityMonitor {
         Ok(())
     }
 
+    /// Returns a snapshot of the current security metrics.
     pub fn get_metrics(&self) -> SecurityMetrics {
         self.security_metrics.clone()
     }
 }
 
 impl ThreatDetector {
+    /// Creates a detector with empty signature/rule registries and a fresh alert system.
     pub fn new() -> Self {
         Self {
             threat_signatures: HashMap::new(),
@@ -556,6 +560,7 @@ impl ThreatDetector {
         }
     }
 
+    /// Initializes the inner alert system.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.alert_system.initialize()?;
         Ok(())
@@ -589,6 +594,7 @@ impl ThreatDetector {
 }
 
 impl SecurityAlertSystem {
+    /// Creates the alert system defaulting to Threat+Anomaly types over the Email channel.
     pub fn new() -> Self {
         Self {
             alert_types: vec![SecurityAlertType::Threat, SecurityAlertType::Anomaly],
@@ -597,6 +603,7 @@ impl SecurityAlertSystem {
         }
     }
 
+    /// No-op — alert types/channels are set at construction.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -637,6 +644,7 @@ impl SecurityAlertSystem {
 }
 
 impl AnomalyDetector {
+    /// Creates a detector with an empty baseline-model registry.
     pub fn new() -> Self {
         Self {
             detection_algorithms: vec![AnomalyDetectionAlgorithm::Statistical],
@@ -645,6 +653,7 @@ impl AnomalyDetector {
         }
     }
 
+    /// No-op — baselines are registered per-entity by callers.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -688,6 +697,7 @@ impl AnomalyDetector {
 }
 
 impl ComplianceMonitor {
+    /// Creates a monitor with an empty compliance-framework registry.
     pub fn new() -> Self {
         Self {
             compliance_frameworks: HashMap::new(),
@@ -696,6 +706,7 @@ impl ComplianceMonitor {
         }
     }
 
+    /// No-op — frameworks are registered by callers.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.reporting_engine.initialize()?;
         Ok(())
@@ -729,6 +740,7 @@ impl ComplianceMonitor {
 }
 
 impl AuditTrail {
+    /// Creates an empty audit trail.
     pub fn new() -> Self {
         Self {
             entries: Vec::new(),
@@ -766,6 +778,7 @@ impl AuditTrail {
 }
 
 impl ComplianceReportingEngine {
+    /// Creates an engine with empty report-template/schedule/distribution registries.
     pub fn new() -> Self {
         Self {
             report_templates: HashMap::new(),
@@ -774,6 +787,7 @@ impl ComplianceReportingEngine {
         }
     }
 
+    /// Initializes the scheduling and distribution sub-engines.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         self.scheduling_engine.initialize()?;
         self.distribution_engine.initialize()?;
@@ -798,6 +812,7 @@ impl ComplianceReportingEngine {
 }
 
 impl ReportSchedulingEngine {
+    /// Creates a scheduling engine with an empty schedule registry.
     pub fn new() -> Self {
         Self {
             schedules: HashMap::new(),
@@ -805,6 +820,7 @@ impl ReportSchedulingEngine {
         }
     }
 
+    /// Initializes the inner scheduler and queue manager.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -837,6 +853,7 @@ impl ReportSchedulingEngine {
 }
 
 impl ReportScheduler {
+    /// Creates a scheduler with no queued or running reports.
     pub fn new() -> Self {
         Self {
             scheduler_type: SchedulerType::Cron,
@@ -866,6 +883,7 @@ impl ReportScheduler {
 }
 
 impl ReportQueueManager {
+    /// Creates an empty report queue.
     pub fn new() -> Self {
         Self {
             pending_reports: Vec::new(),
@@ -921,6 +939,7 @@ impl ReportQueueManager {
 }
 
 impl ReportDistributionEngine {
+    /// Creates an engine with an empty distribution-channel registry.
     pub fn new() -> Self {
         Self {
             distribution_channels: HashMap::new(),
@@ -928,6 +947,7 @@ impl ReportDistributionEngine {
         }
     }
 
+    /// Initializes the delivery tracker.
     pub fn initialize(&mut self) -> Result<(), CryptographicError> {
         Ok(())
     }
@@ -960,6 +980,7 @@ impl ReportDistributionEngine {
 }
 
 impl DeliveryTracker {
+    /// Creates a tracker with an empty delivery-record registry.
     pub fn new() -> Self {
         Self {
             deliveries: HashMap::new(),
@@ -1002,6 +1023,7 @@ impl DeliveryTracker {
 }
 
 impl DeliveryStatus {
+    /// Returns the default (pending) delivery status.
     pub fn new() -> Self {
         Self {
             total_deliveries: 0,
@@ -1013,6 +1035,7 @@ impl DeliveryStatus {
 }
 
 impl SecurityMetrics {
+    /// Returns zeroed security metrics.
     pub fn new() -> Self {
         Self {
             threat_metrics: ThreatMetrics::new(),
@@ -1022,12 +1045,14 @@ impl SecurityMetrics {
         }
     }
 
+    /// Returns a clone of this metrics record.
     pub fn get_metrics(&self) -> SecurityMetrics {
         self.clone()
     }
 }
 
 impl ThreatMetrics {
+    /// Returns zeroed threat metrics.
     pub fn new() -> Self {
         Self {
             threats_detected: 0,
@@ -1040,6 +1065,7 @@ impl ThreatMetrics {
 }
 
 impl AnomalyMetrics {
+    /// Returns zeroed anomaly metrics.
     pub fn new() -> Self {
         Self {
             anomalies_detected: 0,
@@ -1052,6 +1078,7 @@ impl AnomalyMetrics {
 }
 
 impl ComplianceMetrics {
+    /// Returns zeroed compliance metrics.
     pub fn new() -> Self {
         Self {
             compliance_score: 1.0,
@@ -1064,6 +1091,7 @@ impl ComplianceMetrics {
 }
 
 impl SecurityPerformanceMetrics {
+    /// Returns zeroed security performance metrics.
     pub fn new() -> Self {
         Self {
             average_response_time: 0.0,

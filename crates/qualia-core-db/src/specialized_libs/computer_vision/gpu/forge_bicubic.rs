@@ -238,6 +238,7 @@ pub fn try_resize_bicubic_shared_gpu(
 }
 
 #[cfg(not(all(feature = "gpu-runtime", not(target_arch = "wasm32"))))]
+/// Tries `resize-bicubic-shared-gpu`.
 pub fn try_resize_bicubic_shared_gpu(
     _input: &[f32],
     _c: usize,

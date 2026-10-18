@@ -769,6 +769,7 @@ fn star_object_jsonld(val: u64) -> String {
 pub struct TurtleStarSerializer;
 
 impl TurtleStarSerializer {
+    /// Creates a default `TurtleStarSerializer`.
     pub fn new() -> Self {
         Self
     }
@@ -835,6 +836,7 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
 pub struct CborLdStarSerializer;
 
 impl CborLdStarSerializer {
+    /// Builds a CBOR-LD* serializer.
     pub fn new() -> Self {
         Self
     }
@@ -945,6 +947,7 @@ mod cbor_serializer_tests {
 pub struct NTriplesStarSerializer;
 
 impl NTriplesStarSerializer {
+    /// Builds an N-Triples* serializer.
     pub fn new() -> Self {
         Self
     }
@@ -1009,6 +1012,7 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
 pub struct NQuadsStarSerializer;
 
 impl NQuadsStarSerializer {
+    /// Builds an N-Quads* serializer.
     pub fn new() -> Self {
         Self
     }
@@ -1079,6 +1083,7 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
 pub struct JsonLdStarSerializer;
 
 impl JsonLdStarSerializer {
+    /// Builds a JSON-LD* serializer.
     pub fn new() -> Self {
         Self
     }
@@ -1212,10 +1217,12 @@ pub struct TrigStarSerializer {
 }
 
 impl TrigStarSerializer {
+    /// Creates a default `TrigStarSerializer`.
     pub fn new() -> Self {
         Self { current_graph: 0 }
     }
 
+    /// Sets the current graph hash.
     pub fn set_current_graph(&mut self, graph_hash: u64) {
         self.current_graph = graph_hash;
     }
@@ -1308,12 +1315,14 @@ pub struct N3StarSerializer {
 }
 
 impl N3StarSerializer {
+    /// Builds an N3* serializer.
     pub fn new() -> Self {
         Self {
             variables: std::collections::HashMap::new(),
         }
     }
 
+    /// Binds a variable.
     pub fn bind_variable(&mut self, hash: u64, name: String) {
         self.variables.insert(hash, name);
     }

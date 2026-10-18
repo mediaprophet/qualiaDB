@@ -6,6 +6,7 @@ use crate::container_10d::TextureTransform;
 
 use super::AssetError;
 
+/// Parses.
 pub(super) fn parse(info: &Value, semantic: &str) -> Result<TextureTransform, AssetError> {
     if info.is_null() {
         return Ok(TextureTransform::IDENTITY);

@@ -186,6 +186,7 @@ pub fn gemm_parity_probe_blocking(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::gemm_parity_probe_blocking`.
 pub fn gemm_parity_probe_blocking(
     n_in: usize,
     n_out: usize,
@@ -273,6 +274,7 @@ pub fn gemm_parity_probe_f16_blocking(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::gemm_parity_probe_f16_blocking`.
 pub fn gemm_parity_probe_f16_blocking(
     n_in: usize,
     n_out: usize,
@@ -583,6 +585,7 @@ pub fn capture_kv_gpu_readback(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::capture_kv_gpu_readback`.
 pub fn capture_kv_gpu_readback(
     model_path: &str,
     max_tok: usize,
@@ -857,6 +860,7 @@ pub fn spec_verify_probe_blocking(
 }
 
 #[cfg(all(not(target_arch = "wasm32"), not(feature = "gpu-runtime")))]
+/// `?::spec_verify_probe_blocking`.
 pub fn spec_verify_probe_blocking(
     model_path: &str,
     prompt: &str,

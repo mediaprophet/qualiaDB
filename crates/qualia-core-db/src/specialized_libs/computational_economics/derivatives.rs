@@ -216,6 +216,7 @@ pub fn put_call_parity(
             - strike * (-risk_free_rate * time_years).exp()))
 }
 
+/// Call price implied by put-call parity.
 pub fn parity_implied_call_price(
     put_price: f64,
     spot: f64,
@@ -237,6 +238,7 @@ pub fn parity_implied_call_price(
         - strike * (-risk_free_rate * time_years).exp())
 }
 
+/// Put price implied by put-call parity.
 pub fn parity_implied_put_price(
     call_price: f64,
     spot: f64,

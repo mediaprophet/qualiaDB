@@ -3,6 +3,7 @@ use std::fmt::Write;
 use super::GeneratedShader;
 use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule, FORGE_SCHEMA_VERSION};
 
+/// Emits `wgsl`.
 pub fn emit_wgsl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
     kernel.validate()?;
     let semantic_hash = kernel.semantic_hash()?;

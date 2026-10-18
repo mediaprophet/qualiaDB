@@ -13,6 +13,7 @@ use vibe::{DiagCode, Diagnostic, Span, Value};
 
 const MAX: usize = 32;
 
+/// Evaluates and returns the result.
 pub fn evaluate(snap: &PoetSnapshot, args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let compiled = compile_term_quin(args);
     snap.with_live_quins(|quins| {

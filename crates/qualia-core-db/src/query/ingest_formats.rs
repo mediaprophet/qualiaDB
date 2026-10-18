@@ -15,6 +15,7 @@ use crate::query::ingest_job::IngestRdfFormat;
 /// Object-field hashes keep bits 60–63 free for resolver type tags.
 pub const OBJECT_IRI_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
 
+/// `?::object_iri_hash`.
 pub fn object_iri_hash(iri: &str) -> u64 {
     q_hash(iri) & OBJECT_IRI_MASK
 }
@@ -29,10 +30,12 @@ pub struct RawTriple {
     pub context: u64,
 }
 
+/// Infers the RDF ingest format from a lowercased path extension.
 pub fn format_from_path(path_lower: &str) -> IngestRdfFormat {
     crate::query::ingest_job::infer_rdf_format(path_lower)
 }
 
+/// Packs a rio `Triple` into a `RawTriple` under `context`.
 pub fn pack_rio_triple(t: Triple<'_>, context: u64) -> RawTriple {
     let (object, packed_object) = pack_term(t.object);
     RawTriple {
@@ -73,6 +76,7 @@ pub fn repair_rdfxml_empty_base(src: &str, base: &str) -> String {
         .replace("xml:base=''", &format!("xml:base='{base}'"))
 }
 
+/// Packs a rio `Quad` into a `RawTriple`.
 pub fn pack_rio_quad(q: Quad<'_>) -> RawTriple {
     let context = match q.graph_name {
         Some(GraphName::NamedNode(n)) => q_hash(n.iri),
@@ -93,6 +97,7 @@ fn pack_typed_literal(value: &str, dt: &str) -> Option<u64> {
     crate::resolver::pack_typed_literal(value, dt)
 }
 
+/// Streams a triples-format document, invoking the callback per triple.
 pub fn parse_triples_format<R, F>(
     format: IngestRdfFormat,
     reader: R,

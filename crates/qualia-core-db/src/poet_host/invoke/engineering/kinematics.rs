@@ -4,6 +4,7 @@ use super::super::args;
 use crate::specialized_libs::engineering_analysis::MechanicalAnalyzer;
 use vibe::{Diagnostic, Span, Value};
 
+/// Runs the operation.
 pub fn run(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let x0 = args::rec_f64(args_v, "x0").unwrap_or(0.0);
     let v0 = args::rec_f64(args_v, "v0").unwrap_or(0.0);

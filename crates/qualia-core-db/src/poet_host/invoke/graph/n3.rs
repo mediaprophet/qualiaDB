@@ -10,6 +10,7 @@ use vibe::{Diagnostic, Span, Value};
 
 const MAX_STATIC_TRIPLES: usize = 256;
 
+/// Evaluates and returns the result.
 pub fn evaluate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let source = args::rec_str(args_v, "source")
         .ok_or_else(|| args::bad(span, "N3Logic.evaluate needs `source`"))?;

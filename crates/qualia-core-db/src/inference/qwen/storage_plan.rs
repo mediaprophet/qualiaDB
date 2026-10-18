@@ -35,10 +35,12 @@ pub struct Qwen4ExpStoragePlan {
 }
 
 impl Qwen4ExpStoragePlan {
+    /// `Qwen4ExpStoragePlan::requires_trunk_streaming`.
     pub fn requires_trunk_streaming(&self) -> bool {
         self.trunk_streamed_bytes != 0
     }
 
+    /// `resident-weight` size in bytes.
     pub fn resident_weight_bytes(&self) -> u64 {
         self.gpu_trunk_bytes.saturating_add(self.host_trunk_bytes)
     }
