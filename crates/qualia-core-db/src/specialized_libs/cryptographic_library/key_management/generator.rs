@@ -150,10 +150,9 @@ impl KeyGenerator {
     }
 
     /// Generate random key data of the requested size using the selected
-    /// entropy source. For `HardwareRNG`, `OSRandom`, and `Quantum` (used as a
-    /// placeholder since a real quantum RNG is not available) the bytes are
-    /// filled with `rand::random()`. The generated material is also folded into
-    /// the quality metrics as a simple entropy estimate.
+    /// entropy source. For `OSRandom` the bytes are drawn from the OS CSPRNG (`rand::random()`).
+    /// For `HardwareRNG` and `Quantum`, the generator fails closed honestly when physical
+    /// hardware entropy devices are unattached, preventing security illusions.
     pub fn generate_key_data(&mut self, key_size: usize) -> Result<Vec<u8>, CryptographicError> {
         let source = self
             .selected_entropy_source
@@ -169,16 +168,26 @@ impl KeyGenerator {
 
         let mut data = vec![0u8; key_size];
         match source {
-            EntropySource::HardwareRNG | EntropySource::OSRandom | EntropySource::Quantum => {
-                // rand::random() draws from the OS CSPRNG; for HardwareRNG and
-                // Quantum this is a placeholder until dedicated hardware is wired.
+            EntropySource::OSRandom => {
                 for byte in data.iter_mut() {
                     *byte = rand::random();
                 }
             }
+            EntropySource::HardwareRNG => {
+                return Err(CryptographicError::SecurityError(
+                    "Hardware RNG source unavailable: dedicated hardware TRNG driver not attached"
+                        .to_string(),
+                ));
+            }
+            EntropySource::Quantum => {
+                return Err(CryptographicError::SecurityError(
+                    "Quantum RNG source unavailable: physical quantum entropy source unattached"
+                        .to_string(),
+                ));
+            }
             _ => {
                 return Err(CryptographicError::SecurityError(format!(
-                    "entropy source {:?} not yet supported for raw key generation",
+                    "entropy source {:?} not supported for raw key generation",
                     source
                 )));
             }

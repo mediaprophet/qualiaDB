@@ -268,7 +268,7 @@ pub struct DeliveryStatus {
 }
 
 impl ReportingEngine {
-    /// Creates an engine with an empty template registry. **Scaffold** — no `generate`/`render` path consumes the registered templates.
+    /// Creates an engine with registered report generator and distributor.
     pub fn new() -> Self {
         Self {
             report_templates: HashMap::new(),
@@ -299,10 +299,60 @@ impl ReportingEngine {
     pub fn list_report_templates(&self) -> Vec<String> {
         self.report_templates.keys().cloned().collect()
     }
+
+    /// Shared access to report generator.
+    pub fn report_generator(&self) -> &ReportGenerator {
+        &self.report_generator
+    }
+
+    /// Mutable access to report generator.
+    pub fn report_generator_mut(&mut self) -> &mut ReportGenerator {
+        &mut self.report_generator
+    }
+
+    /// Shared access to report distributor.
+    pub fn report_distributor(&self) -> &ReportDistributor {
+        &self.report_distributor
+    }
+
+    /// Mutable access to report distributor.
+    pub fn report_distributor_mut(&mut self) -> &mut ReportDistributor {
+        &mut self.report_distributor
+    }
+
+    /// Generates a concrete `FinancialReport` by looking up the registered template,
+    /// validating the generation strategy (if provided), evaluating all template sections,
+    /// aggregating dataset inputs, and packaging the result.
+    pub fn generate_report(
+        &self,
+        template_id: &str,
+        strategy_id: Option<&str>,
+        data_map: &HashMap<String, Vec<f64>>,
+    ) -> Result<FinancialReport, FinancialError> {
+        let template = self.report_templates.get(template_id).ok_or_else(|| {
+            FinancialError::DataError(format!("Report template '{}' not found", template_id))
+        })?;
+
+        let content = self
+            .report_generator
+            .generate_report_content(strategy_id, template, data_map)?;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        Ok(FinancialReport::new(
+            format!("rep_{}_{}", template_id, now),
+            template.template_type.clone(),
+            now,
+            content,
+            ContentFormat::JSON,
+        ))
+    }
 }
 
 impl ReportGenerator {
-    /// Creates a generator with an empty strategy registry. **Scaffold** — strategies are stored but no generation path consumes them.
+    /// Creates a generator with an empty strategy registry.
     pub fn new() -> Self {
         Self {
             generation_strategies: HashMap::new(),
@@ -331,10 +381,70 @@ impl ReportGenerator {
     pub fn list_generation_strategies(&self) -> Vec<String> {
         self.generation_strategies.keys().cloned().collect()
     }
+
+    /// Shared access to data aggregator.
+    pub fn data_aggregator(&self) -> &DataAggregator {
+        &self.data_aggregator
+    }
+
+    /// Mutable access to data aggregator.
+    pub fn data_aggregator_mut(&mut self) -> &mut DataAggregator {
+        &mut self.data_aggregator
+    }
+
+    /// Evaluates template sections and generates report bytes using the registered aggregation rules.
+    pub fn generate_report_content(
+        &self,
+        strategy_id: Option<&str>,
+        template: &ReportTemplate,
+        data_map: &HashMap<String, Vec<f64>>,
+    ) -> Result<Vec<u8>, FinancialError> {
+        if let Some(strat_id) = strategy_id {
+            if !self.generation_strategies.contains_key(strat_id) {
+                return Err(FinancialError::DataError(format!(
+                    "Generation strategy '{}' not registered",
+                    strat_id
+                )));
+            }
+        }
+
+        let mut section_results: Vec<String> = Vec::new();
+        for section in &template.sections {
+            let section_data = data_map.get(&section.section_id).cloned().unwrap_or_default();
+            let mut metric_str = String::new();
+            if !section_data.is_empty() {
+                if let Ok(val) = self
+                    .data_aggregator
+                    .aggregate_data(&section.section_id, &section_data)
+                {
+                    metric_str = format!(",\"aggregate_metric\":{:.4}", val);
+                }
+            }
+            let sec_json = format!(
+                "{{\"section_id\":\"{}\",\"section_name\":\"{}\",\"section_type\":\"{:?}\",\"data_points\":{}{}}}",
+                section.section_id,
+                section.section_name,
+                section.section_type,
+                section_data.len(),
+                metric_str
+            );
+            section_results.push(sec_json);
+        }
+
+        let report_json = format!(
+            "{{\"template_id\":\"{}\",\"template_name\":\"{}\",\"template_type\":\"{:?}\",\"sections\":[{}]}}",
+            template.template_id,
+            template.template_name,
+            template.template_type,
+            section_results.join(",")
+        );
+
+        Ok(report_json.into_bytes())
+    }
 }
 
 impl DataAggregator {
-    /// Creates an aggregator with empty rule/source registries. **Scaffold** — no aggregation pass executes the registered rules.
+    /// Creates an aggregator with empty rule/source registries.
     pub fn new() -> Self {
         Self {
             aggregation_rules: HashMap::new(),
@@ -375,6 +485,35 @@ impl DataAggregator {
     /// All registered source IDs.
     pub fn list_data_sources(&self) -> Vec<String> {
         self.data_sources.keys().cloned().collect()
+    }
+
+    /// Aggregates a slice of numeric data according to a registered rule.
+    pub fn aggregate_data(&self, rule_id: &str, data: &[f64]) -> Result<f64, FinancialError> {
+        let rule = self.aggregation_rules.get(rule_id).ok_or_else(|| {
+            FinancialError::DataError(format!("Aggregation rule '{}' not registered", rule_id))
+        })?;
+
+        if data.is_empty() {
+            return match rule.rule_type {
+                AggregationRuleType::Sum | AggregationRuleType::Count => Ok(0.0),
+                AggregationRuleType::Average
+                | AggregationRuleType::Min
+                | AggregationRuleType::Max => Err(FinancialError::InsufficientData(format!(
+                    "Cannot compute {:?} on empty data slice",
+                    rule.rule_type
+                ))),
+            };
+        }
+
+        let result = match rule.rule_type {
+            AggregationRuleType::Sum => data.iter().sum::<f64>(),
+            AggregationRuleType::Average => data.iter().sum::<f64>() / (data.len() as f64),
+            AggregationRuleType::Min => data.iter().copied().fold(f64::INFINITY, f64::min),
+            AggregationRuleType::Max => data.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+            AggregationRuleType::Count => data.len() as f64,
+        };
+
+        Ok(result)
     }
 }
 

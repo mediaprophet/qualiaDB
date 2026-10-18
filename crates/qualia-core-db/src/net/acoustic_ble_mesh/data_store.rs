@@ -108,8 +108,38 @@ impl MeshDataStore {
         Ok(())
     }
 
-    /// Delegates to the inner `MessageStore`; `MeshError` propagates.
+    /// Delegates to the inner `MessageStore` while enforcing buffer manager capacity bounds and tracking usage.
     pub fn store_message(&mut self, message: StoredMessage) -> Result<(), MeshError> {
+        let payload_len = message.payload.len();
+        let existing_len = self
+            .message_store
+            .stored_messages
+            .get(&message.message_id)
+            .map(|m| m.payload.len())
+            .unwrap_or(0);
+        let needed = payload_len.saturating_sub(existing_len);
+        if self.buffer_manager.used_capacity + needed > self.buffer_manager.total_capacity {
+            return Err(MeshError::StorageError(format!(
+                "Buffer capacity exceeded: {} bytes required, {} available",
+                needed,
+                self.buffer_manager.total_capacity.saturating_sub(self.buffer_manager.used_capacity)
+            )));
+        }
+        self.buffer_manager.used_capacity = self
+            .buffer_manager
+            .used_capacity
+            .saturating_add(needed)
+            .saturating_sub(existing_len.saturating_sub(payload_len));
+
+        // Update buffer pools if allocated
+        for pool in self.buffer_manager.buffer_pools.values_mut() {
+            if pool.buffer_size > 0 {
+                let allocated = (self.buffer_manager.used_capacity + pool.buffer_size - 1) / pool.buffer_size;
+                pool.allocated_buffers = allocated.min(pool.pool_size);
+                pool.available_buffers = pool.pool_size.saturating_sub(pool.allocated_buffers);
+            }
+        }
+
         self.message_store.store_message(message)?;
         Ok(())
     }
@@ -139,10 +169,60 @@ impl MeshDataStore {
         &self.persistence_manager
     }
 
-    /// **Scaffold** — sets `used_capacity` to 0 labeled "compaction" without actually freeing or compacting buffers; desyncs accounting if real buffers back the counter.
+    /// Performs genuine buffer compaction: prunes messages that are expired, delivered, or failed,
+    /// cleans associated indices, recalculates true used buffer capacity, and adjusts buffer pools.
     pub fn optimize_buffers(&mut self) -> Result<(), MeshError> {
-        // Reset buffer usage to zero (compaction).
-        self.buffer_manager.used_capacity = 0;
+        let now = Instant::now();
+        let pruned_ids: Vec<String> = self
+            .message_store
+            .stored_messages
+            .values()
+            .filter(|m| {
+                m.status == MessageStatus::Expired
+                    || m.status == MessageStatus::Delivered
+                    || m.status == MessageStatus::Failed
+                    || (m.ttl > Duration::ZERO && now.duration_since(m.timestamp) > m.ttl)
+            })
+            .map(|m| m.message_id.clone())
+            .collect();
+
+        for id in &pruned_ids {
+            self.message_store.stored_messages.remove(id);
+        }
+
+        // Clean indices
+        for v in self.message_store.message_index.source_index.values_mut() {
+            v.retain(|id| !pruned_ids.contains(id));
+        }
+        for v in self.message_store.message_index.destination_index.values_mut() {
+            v.retain(|id| !pruned_ids.contains(id));
+        }
+        for v in self.message_store.message_index.priority_index.values_mut() {
+            v.retain(|id| !pruned_ids.contains(id));
+        }
+        self.message_store
+            .message_index
+            .timestamp_index
+            .retain(|(_, id)| !pruned_ids.contains(id));
+
+        // Recalculate true used capacity from active messages
+        let active_bytes: usize = self
+            .message_store
+            .stored_messages
+            .values()
+            .map(|m| m.payload.len())
+            .sum();
+        self.buffer_manager.used_capacity = active_bytes;
+
+        // Update buffer pool availability
+        for pool in self.buffer_manager.buffer_pools.values_mut() {
+            if pool.buffer_size > 0 {
+                let allocated = (active_bytes + pool.buffer_size - 1) / pool.buffer_size;
+                pool.allocated_buffers = allocated.min(pool.pool_size);
+                pool.available_buffers = pool.pool_size.saturating_sub(pool.allocated_buffers);
+            }
+        }
+
         Ok(())
     }
 }
@@ -156,10 +236,35 @@ impl MessageStore {
         }
     }
 
-    /// Inserts/updates `message` keyed by `message_id`.
+    /// Inserts/updates `message` keyed by `message_id`, maintaining indices.
     pub fn store_message(&mut self, message: StoredMessage) -> Result<(), MeshError> {
-        self.stored_messages
-            .insert(message.message_id.clone(), message);
+        let msg_id = message.message_id.clone();
+        let source = message.source.clone();
+        let destination = message.destination.clone();
+        let priority = message.priority;
+        let timestamp = message.timestamp;
+
+        self.stored_messages.insert(msg_id.clone(), message);
+
+        self.message_index
+            .source_index
+            .entry(source)
+            .or_default()
+            .push(msg_id.clone());
+        self.message_index
+            .destination_index
+            .entry(destination)
+            .or_default()
+            .push(msg_id.clone());
+        self.message_index
+            .priority_index
+            .entry(priority)
+            .or_default()
+            .push(msg_id.clone());
+        self.message_index
+            .timestamp_index
+            .push((timestamp, msg_id));
+
         Ok(())
     }
 
@@ -225,5 +330,68 @@ impl PersistenceManager {
             compression: CompressionType::None,
             encryption: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_store_message_and_optimize_buffers_compaction() {
+        let mut store = MeshDataStore::new();
+        // Set a small capacity for testing
+        store.buffer_manager_mut().total_capacity = 100;
+
+        let msg1 = StoredMessage {
+            message_id: "msg_1".to_string(),
+            source: "node_a".to_string(),
+            destination: "node_b".to_string(),
+            payload: vec![1u8; 40],
+            priority: MessagePriority::Normal,
+            timestamp: Instant::now(),
+            ttl: Duration::from_secs(60),
+            delivery_attempts: 1,
+            status: MessageStatus::Pending,
+        };
+        store.store_message(msg1).unwrap();
+        assert_eq!(store.buffer_manager().used_capacity, 40);
+
+        let msg2 = StoredMessage {
+            message_id: "msg_2".to_string(),
+            source: "node_a".to_string(),
+            destination: "node_c".to_string(),
+            payload: vec![2u8; 50],
+            priority: MessagePriority::High,
+            timestamp: Instant::now(),
+            ttl: Duration::from_secs(60),
+            delivery_attempts: 1,
+            status: MessageStatus::Delivered, // Delivered -> should be pruned on compaction
+        };
+        store.store_message(msg2).unwrap();
+        assert_eq!(store.buffer_manager().used_capacity, 90);
+
+        // Attempting to store another 20 bytes should exceed 100 bytes capacity
+        let msg3 = StoredMessage {
+            message_id: "msg_3".to_string(),
+            source: "node_b".to_string(),
+            destination: "node_c".to_string(),
+            payload: vec![3u8; 20],
+            priority: MessagePriority::Low,
+            timestamp: Instant::now(),
+            ttl: Duration::from_secs(60),
+            delivery_attempts: 0,
+            status: MessageStatus::Pending,
+        };
+        assert!(store.store_message(msg3.clone()).is_err());
+
+        // Optimize buffers - msg_2 (Delivered) should be pruned
+        store.optimize_buffers().unwrap();
+        // Remaining active message is msg_1 with 40 bytes
+        assert_eq!(store.buffer_manager().used_capacity, 40);
+
+        // Now msg3 can be stored successfully!
+        assert!(store.store_message(msg3).is_ok());
+        assert_eq!(store.buffer_manager().used_capacity, 60);
     }
 }

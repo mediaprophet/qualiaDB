@@ -76,9 +76,64 @@ impl Q42Context {
         }
     }
 
-    /// Currently ignores `volume` and returns the default context — does not read per-volume vocabulary.
-    pub fn from_volume(_volume: &Q42Volume) -> Result<Self, io::Error> {
-        Ok(Self::new())
+    /// Derives the semantic context from the volume's embedded lexicon and manifest headers.
+    pub fn from_volume(volume: &Q42Volume) -> Result<Self, io::Error> {
+        let mut context = Self::new();
+        let lex_view = volume.lex_view().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid volume lexicon: {:?}", e),
+            )
+        })?;
+
+        // Extract per-volume vocabulary mappings from the embedded lexicon
+        for i in 0..lex_view.entry_count() {
+            let Some(hash) = lex_view.hash_at(i) else {
+                break;
+            };
+            if let Some(text) = lex_view
+                .lookup_webizen_identity(hash)
+                .or_else(|| lex_view.lookup_hash(hash))
+            {
+                if let Some(colon_pos) = text.find(':') {
+                    let prefix = &text[..colon_pos];
+                    let uri = &text[colon_pos + 1..];
+                    if uri.starts_with("http://")
+                        || uri.starts_with("https://")
+                        || uri.starts_with("urn:")
+                    {
+                        context
+                            .vocabulary
+                            .insert(prefix.to_string(), uri.to_string());
+                    }
+                }
+            }
+        }
+
+        // Check for base IRI / context overrides in the volume manifest
+        if let Ok(Some(manifest_bytes)) = volume.volume_manifest_bytes() {
+            if let Ok(manifest_str) = std::str::from_utf8(manifest_bytes) {
+                for line in manifest_str.lines() {
+                    let line = line.trim();
+                    if let Some(base) = line.strip_prefix("@base ") {
+                        context.base_iri = base
+                            .trim_matches(|c| c == '<' || c == '>' || c == '"' || c == ';')
+                            .to_string();
+                    } else if let Some(prefix_decl) = line.strip_prefix("@prefix ") {
+                        let parts: Vec<&str> = prefix_decl.split_whitespace().collect();
+                        if parts.len() >= 2 {
+                            let prefix = parts[0].trim_end_matches(':');
+                            let uri = parts[1].trim_matches(|c| c == '<' || c == '>' || c == ';');
+                            context
+                                .vocabulary
+                                .insert(prefix.to_string(), uri.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(context)
     }
 
     /// Resolves a vocabulary prefix to its base IRI.

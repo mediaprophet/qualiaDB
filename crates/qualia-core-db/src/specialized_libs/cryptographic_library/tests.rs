@@ -1184,14 +1184,18 @@ fn test_key_generator_generate_key_data_default_source() {
 }
 
 #[test]
-fn test_key_generator_generate_key_data_quantum_placeholder() {
+fn test_key_generator_generate_key_data_unattached_hardware_fails_closed() {
     let mut gen = KeyGenerator::new();
     gen.set_entropy_source(EntropySource::Quantum);
-    let data = gen.generate_key_data(64).unwrap();
-    assert_eq!(data.len(), 64);
     assert!(
-        !data.iter().all(|&b| b == 0),
-        "quantum placeholder should still produce non-zero data"
+        gen.generate_key_data(64).is_err(),
+        "quantum entropy request without physical quantum source must fail closed"
+    );
+
+    gen.set_entropy_source(EntropySource::HardwareRNG);
+    assert!(
+        gen.generate_key_data(64).is_err(),
+        "hardware RNG request without dedicated TRNG hardware must fail closed"
     );
 }
 

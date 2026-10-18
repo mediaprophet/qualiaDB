@@ -7,7 +7,7 @@ pub mod device_benchmark;
 pub mod git_bridge;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod hardware_passport;
-#[cfg(target_os = "android")]
+#[cfg(any(target_os = "android", test))]
 pub mod jni_bridge;
 pub mod kml_bridge;
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
