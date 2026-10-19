@@ -15,6 +15,7 @@ class QualiaHandler(http.server.SimpleHTTPRequestHandler):
     }
 
     def end_headers(self):
+        """Ends HTTP headers."""
         # Enable cross-origin isolation for SharedArrayBuffer
         self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
         self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
@@ -22,6 +23,7 @@ class QualiaHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def log_message(self, format, *args):
+        """Logs an HTTP request."""
         # Suppress noisy logs except errors
         if args and '404' in str(args[0]):
             super().log_message(format, *args)

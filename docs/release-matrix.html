@@ -28,34 +28,34 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> 0.0.40 · Qualia · Webizen · Poet</div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-layer-group"></i> 0.0.40.16 · Qualia · Webizen · Poet · Sim · Geospatial</div>
     <div class="mb-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-4 text-sm text-cyan-100/90">
-      <strong class="text-cyan-200">0.0.40 Conditioning &amp; Instruments Line:</strong> Prompt Precision zero-heap conditioning, automated Model Precision Optimizer (strategies B0–B5), Semantic Instruments Studio Bay, and streaming Qwen inference. Explore <a class="underline text-cyan-300 font-semibold" href="progress-0.0.40.html">0.0.40 Progress</a>, <a class="underline text-violet-300 font-semibold" href="semantic-instruments.html">Semantic Instruments</a>, and <a class="underline text-violet-300 font-semibold" href="prompt-precision.html">Prompt Precision Specs</a>.
+      <strong class="text-cyan-200">0.0.40.16 Multi-Physics &amp; Sovereign Spatial Line:</strong> Deterministic Multi-Physics Simulation (qualia-sim), Sovereign GIS &amp; Cartography (qualia-geospatial), Holographic 3D Differential Video Codecs, qualia-mcp Model Context Protocol server, Semantic Instruments, and streaming Qwen inference. Explore <a class="underline text-cyan-300 font-semibold" href="progress-0.0.40.html">0.0.40 Progress</a>, <a class="underline text-sky-300 font-semibold" href="spatial.html">Spatial Engine</a>, and <a class="underline text-violet-300 font-semibold" href="semantic-instruments.html">Semantic Instruments</a>.
     </div>
     <div class="mb-8 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100/90">
-      <strong class="text-emerald-200">Current human-surface maintenance.</strong> Talk keeps people-to-people composition primary; optional instruments remain tools. Settings and Library navigation land on the 0.0.40 line. Historical human-surface records remain in the archive at <a class="underline text-cyan-300" href="progress-0.0.38.html">progress-0.0.38.html</a> and <a class="underline text-cyan-300" href="progress-0.0.39.html">progress-0.0.39.html</a>.
-      Publish path: tag <code class="q-mono">v0.0.40</code>.
+      <strong class="text-emerald-200">Current human-surface maintenance.</strong> Talk keeps people-to-people composition primary; optional instruments remain tools. Settings, Library navigation, and Multi-Physics simulation land on the 0.0.40 line. Historical records remain in the archive at <a class="underline text-cyan-300" href="progress-0.0.38.html">progress-0.0.38.html</a> and <a class="underline text-cyan-300" href="progress-0.0.39.html">progress-0.0.39.html</a>.
+      Publish path: tag <code class="q-mono">v0.0.40.16</code>.
     </div>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] mb-4">
       Three products. One local-first stack.<br>
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">What 0.0.40 is for. What 0.0.39 was for stays in the archive.</span>
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-cyan-300 to-violet-300">What 0.0.40 is for. Multi-physics, sovereign GIS, and living instruments.</span>
     </h1>
     <p class="text-lg text-white/70 max-w-3xl mb-3">
-      <strong>Qualia</strong> is the semantic graph and in-process LLM.
-      <strong>Webizen</strong> is the habitat a person lives in — desktop, ontology, anatomy, rights.
-      <strong>Poet</strong> is the creative environment that hosts VibeScript.
+      <strong>Qualia</strong> is the semantic graph, in-process LLM, and MCP server.
+      <strong>Webizen</strong> is the habitat a person lives in — desktop, geospatial streaming, ontology, anatomy, rights.
+      <strong>Poet</strong> is the creative environment hosting VibeScript and multi-physics simulation.
       They share one 48-byte CRDT engine. This page is the product map: what each does, and how to run it.
     </p>
     <p class="text-sm text-white/45 mb-12">
-      Binaries and installers ship from GitHub Actions on tag <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.40"><code class="q-mono">v0.0.40</code></a> ·
+      Binaries and installers ship from GitHub Actions on tag <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.40"><code class="q-mono">v0.0.40.16</code></a> ·
       <a class="q-link" href="https://github.com/mediaprophet/qualiaDB/releases">all releases</a>
     </p>
 
     <section class="grid lg:grid-cols-3 gap-5 mb-14">
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Qualia</p>
-        <h2 class="text-2xl font-semibold mb-3">Graph engine + local LLM</h2>
-        <p class="text-sm text-white/65 mb-4">Zero-copy 48-byte CRDT graph, SPARQL-style query, GGUF→P64, wgpu inference on the machine. The daemon on <code class="q-mono">:4242</code> is the graph — not an LLM HTTP server. Token generation stays in-process; classified context never egresses.</p>
+        <h2 class="text-2xl font-semibold mb-3">Graph engine + local LLM + MCP</h2>
+        <p class="text-sm text-white/65 mb-4">Zero-copy 48-byte CRDT graph, SPARQL-style query, GGUF→P64, wgpu inference on the machine, and standards-compliant JSON-RPC 2.0 Model Context Protocol (qualia-mcp) exposing semantic graphs and simulation tools to AI agents.</p>
         <ul class="text-sm text-white/70 space-y-2">
           <li>Ingest, query, shader, and P64 convert from <span class="q-mono text-cyan-300">qualia-cli</span></li>
           <li>Browser portal: viewport, logic, WASM-safe science</li>
@@ -65,43 +65,48 @@
       </article>
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Webizen</p>
-        <h2 class="text-2xl font-semibold mb-3">Habitat for living with meaning</h2>
-        <p class="text-sm text-white/65 mb-4">Desktop shell, local daemon, ontology MCP, Wellfair anatomy, rights VM. Memory · Relations · Care · Practice · World · Instruments. Natural persons are not identity assets; instruments are not peers.</p>
+        <h2 class="text-2xl font-semibold mb-3">Habitat + Sovereign GIS</h2>
+        <p class="text-sm text-white/65 mb-4">Desktop shell, local daemon, ontology MCP, Wellfair anatomy, and high-precision geospatial streaming (qualia-geospatial) with hydro-enforced GeoTIFF DEMs, Hilbert 3D indexing, and diachronic isogloss mapping.</p>
         <ul class="text-sm text-white/70 space-y-2">
           <li><span class="q-mono text-violet-300">webizen-desktop</span> — Tauri habitat (signed Windows NSIS, macOS, Linux)</li>
-          <li><span class="q-mono text-violet-300">webizen-studio</span> — authoring and Wellfair panels</li>
+          <li><span class="q-mono text-violet-300">qualia-geospatial</span> — GeoTIFF, Hilbert curve, WFS/WMS streaming</li>
           <li>Ontology MCP — N3, Quin query, SHACL, modal kernels in an 800 KiB kernel</li>
-          <li><a class="q-link" href="playground/anatomy.html">3D anatomy</a> · <a class="q-link" href="qdnf.html">QDNF fabric</a> · <a class="q-link" href="ontology.html">ontologies</a></li>
+          <li><a class="q-link" href="spatial.html">Spatial &amp; GIS</a> · <a class="q-link" href="playground/anatomy.html">3D anatomy</a> · <a class="q-link" href="qdnf.html">QDNF fabric</a></li>
         </ul>
       </article>
       <article class="q-card p-7">
         <p class="q-kicker mb-2">Poet</p>
-        <h2 class="text-2xl font-semibold mb-3">Creative host for VibeScript</h2>
-        <p class="text-sm text-white/65 mb-4">Closed 0.1 grammar, growing Host catalog (1,107 invoke ids, 105 families). Cells, signed modules, Cosmic geodesy, diagnose JSON. Four ops: parse, check, diagnose, <code class="q-mono">capability.invoke</code>.</p>
+        <h2 class="text-2xl font-semibold mb-3">Creative host + Multi-Physics</h2>
+        <p class="text-sm text-white/65 mb-4">VibeScript language engine with value-producing if-else expressions, alongside qualia-sim 64 Hz multi-physics (geomechanics, space weather, fire ecology, 2D SWE hydrology, and flora biophysics).</p>
         <ul class="text-sm text-white/70 space-y-2">
-          <li><span class="q-mono text-emerald-300">poet-cli</span> — tool-chest and manifolds</li>
-          <li><span class="q-mono text-emerald-300">vibe</span> — language engine and bytecode VM</li>
+          <li><span class="q-mono text-emerald-300">qualia-sim</span> — 64 Hz deterministic multi-physics simulation</li>
+          <li><span class="q-mono text-emerald-300">vibe</span> — language engine with value-producing if-else</li>
           <li><span class="q-mono text-emerald-300">vibe-wasm</span> — in-browser parse / check / diagnose / invoke</li>
           <li><a class="q-link" href="vibe/">Vibe hub</a> · <a class="q-link" href="vibe/playground.html">playground</a> · <a class="q-link" href="vibe/showcase.html">showcase</a></li>
         </ul>
       </article>
     </section>
 
-    <section class="grid sm:grid-cols-3 gap-4 mb-14">
+    <section class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
       <div class="q-card p-6">
         <div class="text-xs text-white/40 mb-1">Engine datum</div>
-        <div class="hero-num text-4xl font-semibold text-emerald-300">48 B</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-emerald-300">48 B</div>
         <div class="text-sm text-white/55 mt-1">CRDT Quin — every semantic fact, one record</div>
       </div>
       <div class="q-card p-6">
-        <div class="text-xs text-white/40 mb-1">Poet Host catalog</div>
-        <div class="hero-num text-4xl font-semibold text-cyan-300">1,107</div>
-        <div class="text-sm text-white/55 mt-1">invoke ids · 105 families · Cosmic, Animation, Deontic</div>
+        <div class="text-xs text-white/40 mb-1">Multi-Physics Engine</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-amber-300">6 Domains</div>
+        <div class="text-sm text-white/55 mt-1">qualia-sim: Geomechanics, Space, Fire, Hydro, Flora, Kinematics</div>
       </div>
       <div class="q-card p-6">
-        <div class="text-xs text-white/40 mb-1">Webizen ontology kernel</div>
-        <div class="hero-num text-4xl font-semibold text-violet-300">800 KiB</div>
-        <div class="text-sm text-white/55 mt-1">MCP in the browser · 260 KiB gzip</div>
+        <div class="text-xs text-white/40 mb-1">Sovereign GIS</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-sky-300">Hilbert 3D</div>
+        <div class="text-sm text-white/55 mt-1">qualia-geospatial: GeoTIFF, WFS/WMS, Toponyms, Isogloss</div>
+      </div>
+      <div class="q-card p-6">
+        <div class="text-xs text-white/40 mb-1">Agent Protocol</div>
+        <div class="hero-num text-3xl sm:text-4xl font-semibold text-violet-300">MCP 2.0</div>
+        <div class="text-sm text-white/55 mt-1">qualia-mcp: JSON-RPC tools for Claude, Gemini &amp; swarms</div>
       </div>
     </section>
 

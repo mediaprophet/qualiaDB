@@ -1,5 +1,5 @@
 {
-  "version": "0.0.40",
+  "version": "0.0.40.16",
   "brand": {
     "name": "Webizen",
     "tagline": "Life-domain habitat · QualiaDB engine",
@@ -20,9 +20,16 @@
       "group": "Core"
     },
     {
-      "label": "0.0.40 Progress",
+      "label": "0.0.40.16 Progress",
       "href": "progress-0.0.40.html",
       "icon": "fa-wand-magic-sparkles",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "Geospatial & GIS",
+      "href": "spatial.html",
+      "icon": "fa-mountain",
       "highlight": true,
       "group": "Core"
     },

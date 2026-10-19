@@ -135,6 +135,9 @@
         <button class="tab-btn" data-tab="dft" onclick="switchTab('dft',this)" id="tab-dft-btn">
             <i class="fas fa-atom mr-1.5"></i>Quantum DFT
         </button>
+        <button class="tab-btn" data-tab="sim" onclick="switchTab('sim',this)" id="tab-sim-btn">
+            <i class="fas fa-mountain mr-1.5"></i>Multi-Physics (0.0.40.16)
+        </button>
     </div>
 
     <!-- ═══════════════════════════════════════════════════
@@ -502,6 +505,94 @@ SELECT ?molecule ?energy ?homo ?lumo WHERE {
   BIND(qualia:homo_energy(?molecule) AS ?homo)
   BIND(qualia:lumo_energy(?molecule) AS ?lumo)
 }
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TAB 7 — MULTI-PHYSICS & GEOMECHANICS (0.0.40.16)
+    ═══════════════════════════════════════════════════ -->
+    <div id="tab-sim" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-mountain text-amber-400"></i>
+                qualia-sim — Deterministic Multi-Physics &amp; Biophysics Simulation
+            </h2>
+            
+            <p class="text-white/70 mb-6">
+                <code>qualia-sim</code> provides fixed 64 Hz timestep simulation accumulators, zero-heap hot paths, and coupled physical solvers across earth geomechanics, solar magnetospheres, wildfire ecology, 2D SWE hydrology, and functional-structural plant biophysics.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
+                <div class="glass-panel p-5 rounded-xl border border-amber-500/20">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-layer-group text-amber-400"></i>
+                        <h4 class="text-base font-semibold text-amber-300">Geomechanics &amp; Soil Failure</h4>
+                    </div>
+                    <p class="text-white/70 text-xs mb-3">
+                        Mohr-Coulomb shear strength criterion (&tau; = c + &sigma;' tan &phi;) and Terzaghi effective stress (&sigma;' = &sigma; - u). Computes Rankine active/passive earth pressures, critical trench depth, and elastoplastic deformation under tool effectors.
+                    </p>
+                    <div class="code-block text-[11px] text-amber-200">
+// Excavation pass evaluation
+let verdict = evaluate_excavation_pass(
+    &soil_profile, &tool_effector, dt
+);
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-xl border border-sky-500/20">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-sun text-sky-400"></i>
+                        <h4 class="text-base font-semibold text-sky-300">Space Weather &amp; Magnetosphere</h4>
+                    </div>
+                    <p class="text-white/70 text-xs mb-3">
+                        Couples solar wind dynamic pressure (P<sub>dyn</sub> = &rho; v&sup2;) with Chapman-Ferraro magnetopause standoff distance R<sub>mp</sub> &approx; (B<sub>0</sub>&sup2; / 2&mu;<sub>0</sub>P<sub>dyn</sub>)<sup>1/6</sup>. Solves Kp and Dst geomagnetic indices, ionospheric TEC, and cosmic ray dosage across Schwabe and Hale cycles.
+                    </p>
+                    <div class="code-block text-[11px] text-sky-200">
+let coupling = evaluate_space_weather_coupling(
+    &solar_wind, &storm_state, &hale_phase
+);
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-xl border border-rose-500/20">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-fire text-rose-400"></i>
+                        <h4 class="text-base font-semibold text-rose-300">Fire Ecology &amp; Rothermel</h4>
+                    </div>
+                    <p class="text-white/70 text-xs mb-3">
+                        Rothermel surface fire spread rate and Byram fireline intensity (I<sub>B</sub> = H w r). Models dead fine fuel moisture extinction, crown fire transition thresholds, ember spotting transport, and pyrocumulonimbus atmospheric feedback.
+                    </p>
+                    <div class="code-block text-[11px] text-rose-200">
+let fire = evaluate_fireline_intensity(
+    &fuel_state, slope_deg, wind_kmh, drought
+);
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                <div class="glass-panel p-5 rounded-xl border border-cyan-500/20">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-water text-cyan-400"></i>
+                        <h4 class="text-base font-semibold text-cyan-300">2D Shallow Water Equations (SWE)</h4>
+                    </div>
+                    <p class="text-white/70 text-xs mb-3">
+                        Saint-Venant continuity and momentum conservation with Manning roughness, bed shear stress, and hydraulic sediment erosion. Driven by the Naga-certified GPU compute shader <code>swe_solver.wgsl</code>.
+                    </p>
+                    <div class="text-xs text-white/50 font-mono">Shader: crates/qualia-core-db/src/shaders/viewport/swe_solver.wgsl</div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-xl border border-emerald-500/20">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-seedling text-emerald-400"></i>
+                        <h4 class="text-base font-semibold text-emerald-300">Flora Biophysics &amp; FSPM</h4>
+                    </div>
+                    <p class="text-white/70 text-xs mb-3">
+                        Functional-Structural Plant Modeling combining Farquhar-von Caemmerer-Berry photosynthetic assimilation, Ball-Berry stomatal conductance, L-system branching, and aeroelastic branch deflection.
+                    </p>
+                    <div class="text-xs text-white/50 font-mono">Modules: leaf_biophysics.rs, metamer_fspm.rs, flora_archetype.rs</div>
+                </div>
             </div>
         </div>
     </div>

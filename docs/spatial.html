@@ -158,6 +158,9 @@
         <button class="tab-btn" data-tab="operations" onclick="switchTab('operations',this)" id="tab-operations-btn">
             <i class="fas fa-calculator mr-1.5"></i>Spatial Ops
         </button>
+        <button class="tab-btn" data-tab="geospatial" onclick="switchTab('geospatial',this)" id="tab-geospatial-btn">
+            <i class="fas fa-mountain mr-1.5"></i>qualia-geospatial (0.0.40.16)
+        </button>
         <button class="tab-btn" data-tab="q42" onclick="switchTab('q42',this)" id="tab-q42-btn">
             <i class="fas fa-atom mr-1.5"></i>Q42 10D Tensor
         </button>
@@ -482,6 +485,89 @@ parity:    XOR fold
             
             <div id="native-result" class="code-block text-emerald-300 min-h-[200px]">
                 Select an operation and execute to see results…
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Geospatial: qualia-geospatial (0.0.40.16) -->
+    <div id="tab-geospatial" class="tab-pane">
+        <div class="glass-strong rounded-3xl p-6 mb-6">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-mountain text-sky-400"></i>
+                qualia-geospatial — Sovereign GIS, Hilbert Indexing &amp; Isogloss
+            </h2>
+            
+            <p class="text-white/70 mb-6">
+                <code>qualia-geospatial</code> provides sovereign, zero-copy cartographic and digital elevation processing. It ingests hydro-enforced raster DEMs directly into M64 matter chunk directories, indexes multi-scale spatial coordinates with Hilbert space-filling curves, streams OGC WFS/WMS layers, and maps diachronic linguistic dialect boundaries.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-layer-group text-sky-400"></i>
+                        <h4 class="text-sm font-semibold text-sky-300">GeoTIFF to M64</h4>
+                    </div>
+                    <p class="text-white/60 text-xs">
+                        Parses Terrarium and TerrainRGB elevation rasters, enforcing hydro-burned stream networks and compiling lossless chunks for zero-stutter rendering.
+                    </p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-wave-square text-emerald-400"></i>
+                        <h4 class="text-sm font-semibold text-emerald-300">Hilbert 2D / 3D</h4>
+                    </div>
+                    <p class="text-white/60 text-xs">
+                        Space-filling curve hashing (<code>xy_to_hilbert</code>, <code>hilbert_to_xy</code>) guaranteeing strict locality and sub-millisecond range queries across multi-scale coordinates.
+                    </p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-satellite text-violet-400"></i>
+                        <h4 class="text-sm font-semibold text-violet-300">WFS / WMS Streaming</h4>
+                    </div>
+                    <p class="text-white/60 text-xs">
+                        OGC Web Feature Service vector streaming and texture array WMS caching (<code>WmsTileStreamer</code>) with automated mipmapping and slot pooling.
+                    </p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-route text-amber-400"></i>
+                        <h4 class="text-sm font-semibold text-amber-300">Isogloss &amp; Corridors</h4>
+                    </div>
+                    <p class="text-white/60 text-xs">
+                        Diachronic linguistic boundary polygons, sonic toponym streaming, and continuous cubic Hermite spline corridors for roads and hydrology.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass-panel p-5 rounded-xl">
+                    <h3 class="text-sm font-semibold text-white mb-2">Rust API Signature</h3>
+                    <div class="code-block text-xs text-sky-200">
+// Ingest GeoTIFF DEM into M64 matter chunk volume
+let raster = ElevationRaster::from_geotiff_bytes(&geotiff_bytes)?;
+let m64 = compile_raster_to_m64(&raster, CompressionCodec::Zstd)?;
+
+// Fast Hilbert space-filling curve index
+let hilbert_idx = xy_to_hilbert(easting_mm, northing_mm, 16);
+
+// Diachronic socio-linguistic toponym streamer
+let streamer = SonicToponymStreamer::new(&manifest);
+let nearby_lects = streamer.query_radius(&geodetic_coord, 5000.0);
+                    </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-xl">
+                    <h3 class="text-sm font-semibold text-white mb-2">Supported Geodetic Datums &amp; Projections</h3>
+                    <ul class="text-xs text-white/70 space-y-2 font-mono">
+                        <li><span class="text-emerald-400">SRID_GDA2020 (7844)</span> — Geocentric Datum of Australia 2020</li>
+                        <li><span class="text-cyan-400">SRID_MGA_ZONE_55 (7855)</span> — Map Grid of Australia Zone 55</li>
+                        <li><span class="text-cyan-400">SRID_MGA_ZONE_56 (7856)</span> — Map Grid of Australia Zone 56</li>
+                        <li><span class="text-violet-400">SRID_WGS84 (4329)</span> — World Geodetic System 1984 3D</li>
+                        <li><span class="text-amber-400">SRID_WEB_MERCATOR (3857)</span> — Pseudo-Mercator tiling</li>
+                        <li><span class="text-sky-400">VERTICAL_DATUM_AHD</span> — Australian Height Datum (geoid-referenced)</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
