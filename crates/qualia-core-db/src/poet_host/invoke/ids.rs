@@ -1273,6 +1273,91 @@ pub const POET_CONTAINER_PLACE: &str = "Poet.container_place";
 pub const POET_NESTED_LINK: &str = "Poet.nested_link";
 pub const POET_SUBJECT_DECLARE: &str = "Poet.subject_declare";
 pub const POET_PARTICIPANT_INVITE: &str = "Poet.participant_invite";
+pub const POET_TOOLCHEST_LIST: &str = "Poet.toolchest_list";
+pub const POET_MANIFOLD_INSPECT: &str = "Poet.manifold_inspect";
+pub const POET_TOOLCHAIN_EXECUTE: &str = "Poet.toolchain_execute";
+pub const POET_STUDIO_CONFIGURE: &str = "Poet.studio_configure";
+pub const POET_IDE_EVALUATE: &str = "Poet.ide_evaluate";
+pub const POET_QAPP_SCAFFOLD: &str = "Poet.qapp_scaffold";
+pub const POET_THEME_CONFIGURE: &str = "Poet.theme_configure";
+pub const POET_INSPECTOR_BIND: &str = "Poet.inspector_bind";
+pub const POET_TIMELINE_SCRUB: &str = "Poet.timeline_scrub";
+pub const POET_VIEWPORT_CONFIGURE: &str = "Poet.viewport_configure";
+pub const POET_EXPORT_BUNDLE: &str = "Poet.export_bundle";
+
+// WGSL Forge & Shaders
+pub const SHADERS_LIST: &str = "Shaders.list";
+pub const WGSL_FORGE_LIST_KERNELS: &str = "WgslForge.list_kernels";
+pub const WGSL_FORGE_GENERATE: &str = "WgslForge.generate";
+pub const WGSL_FORGE_VALIDATE: &str = "WgslForge.validate";
+pub const WGSL_FORGE_ROOFLINE: &str = "WgslForge.roofline";
+pub const WGSL_FORGE_SCHEDULE_CANDIDATES: &str = "WgslForge.schedule_candidates";
+pub const WGSL_FORGE_ATTENTION_SYNTHESIZE: &str = "WgslForge.attention_synthesize";
+
+// Studio Domains
+pub const DOC_CREATE: &str = "Document.create";
+pub const DOC_LAYOUT_PARAGRAPH: &str = "Document.layout_paragraph";
+pub const DOC_PROOF_CHECK: &str = "Document.proof_check";
+pub const DOC_EXPORT_DOCX: &str = "Document.export_docx";
+pub const DOC_CITATIONS_SYNC: &str = "Document.citations_sync";
+
+pub const SHEET_CREATE: &str = "Sheet.create";
+pub const SHEET_EVAL_FORMULA: &str = "Sheet.eval_formula";
+pub const SHEET_PIVOT_ANALYZE: &str = "Sheet.pivot_analyze";
+pub const SHEET_CHART_SPEC: &str = "Sheet.chart_spec";
+
+pub const DECK_CREATE: &str = "Deck.create";
+pub const DECK_SLIDE_LAYOUT: &str = "Deck.slide_layout";
+pub const DECK_TRANSITION_SET: &str = "Deck.transition_set";
+pub const DECK_EXPORT_PPTX: &str = "Deck.export_pptx";
+
+pub const PDF_INSPECT_COS: &str = "Pdf.inspect_cos";
+pub const PDF_PREFLIGHT_A11Y: &str = "Pdf.preflight_a11y";
+pub const PDF_REDACT_SIGN: &str = "Pdf.redact_sign";
+pub const PDF_FORM_EXTRACT: &str = "Pdf.form_extract";
+
+pub const RASTER_CMS_CONVERT: &str = "Raster.cms_convert";
+pub const RASTER_TONE_CURVE: &str = "Raster.tone_curve";
+pub const RAW_DEMOSAIC: &str = "RawDevelop.demosaic";
+pub const RAW_DENOISE_NLMEANS: &str = "RawDevelop.denoise_nlmeans";
+pub const RAW_SEGMENT_MASK: &str = "RawDevelop.segment_mask";
+
+pub const VECTOR_PATH_BOOLEAN: &str = "Vector.path_boolean";
+pub const VECTOR_BEZIER_OFFSET: &str = "Vector.bezier_offset";
+pub const VECTOR_SVG_COMPILE: &str = "Vector.svg_compile";
+pub const VECTOR_EXTRUDE_3D: &str = "Vector.extrude_3d";
+
+pub const CAD_SKETCH_CONSTRAIN: &str = "Cad.sketch_constrain";
+pub const CAD_BREP_SOLID: &str = "Cad.brep_solid";
+pub const CAD_DXF_DWG_IO: &str = "Cad.dxf_dwg_io";
+pub const CAD_DIMENSION_MEASURE: &str = "Cad.dimension_measure";
+
+pub const TIMELINE_SCOPES_ANALYZE: &str = "Timeline.scopes_analyze";
+pub const TIMELINE_CAPTIONS_SYNC: &str = "Timeline.captions_sync";
+pub const TIMELINE_DSP_CHAIN: &str = "Timeline.dsp_chain";
+pub const TIMELINE_MASTER_LUFS: &str = "Timeline.master_lufs";
+
+pub const SIM_SOIL_COMPACTION: &str = "Simulation.soil_compaction";
+pub const SIM_TRENCH_EXCAVATION: &str = "Simulation.trench_excavation";
+pub const SIM_SPACE_WEATHER: &str = "Simulation.space_weather";
+pub const SIM_FIRE_ECOLOGY: &str = "Simulation.fire_ecology";
+
+pub const STUDIO_CREATE: &str = "Studio.create";
+pub const STUDIO_EDIT: &str = "Studio.edit";
+pub const STUDIO_INSPECT: &str = "Studio.inspect";
+pub const STUDIO_IMPORT: &str = "Studio.import";
+pub const STUDIO_EXPORT: &str = "Studio.export";
+pub const STUDIO_UNDO: &str = "Studio.undo";
+pub const STUDIO_REDO: &str = "Studio.redo";
+pub const STUDIO_LIST_ARTIFACTS: &str = "Studio.list_artifacts";
+
+pub const VIBE_EVAL: &str = "Vibe.eval";
+pub const BOOKMARKS_LIST: &str = "Bookmarks.list";
+pub const CODECS_MATRIX: &str = "Codecs.matrix";
+pub const DOMAIN_INFO: &str = "Domain.info";
+pub const ECON_EVALUATE_PEER: &str = "Econ.evaluate_peer";
+pub const GIT_STATUS: &str = "Git.status";
+pub const JOB_LIST: &str = "Job.list";
 
 pub const ALL_BOUND: &[&str] = &[
     CLIN_FRAMINGHAM,
@@ -2427,6 +2512,77 @@ pub const ALL_BOUND: &[&str] = &[
     POET_NESTED_LINK,
     POET_SUBJECT_DECLARE,
     POET_PARTICIPANT_INVITE,
+    POET_TOOLCHEST_LIST,
+    POET_MANIFOLD_INSPECT,
+    POET_TOOLCHAIN_EXECUTE,
+    POET_STUDIO_CONFIGURE,
+    POET_IDE_EVALUATE,
+    POET_QAPP_SCAFFOLD,
+    POET_THEME_CONFIGURE,
+    POET_INSPECTOR_BIND,
+    POET_TIMELINE_SCRUB,
+    POET_VIEWPORT_CONFIGURE,
+    POET_EXPORT_BUNDLE,
+    SHADERS_LIST,
+    WGSL_FORGE_LIST_KERNELS,
+    WGSL_FORGE_GENERATE,
+    WGSL_FORGE_VALIDATE,
+    WGSL_FORGE_ROOFLINE,
+    WGSL_FORGE_SCHEDULE_CANDIDATES,
+    WGSL_FORGE_ATTENTION_SYNTHESIZE,
+    DOC_CREATE,
+    DOC_LAYOUT_PARAGRAPH,
+    DOC_PROOF_CHECK,
+    DOC_EXPORT_DOCX,
+    DOC_CITATIONS_SYNC,
+    SHEET_CREATE,
+    SHEET_EVAL_FORMULA,
+    SHEET_PIVOT_ANALYZE,
+    SHEET_CHART_SPEC,
+    DECK_CREATE,
+    DECK_SLIDE_LAYOUT,
+    DECK_TRANSITION_SET,
+    DECK_EXPORT_PPTX,
+    PDF_INSPECT_COS,
+    PDF_PREFLIGHT_A11Y,
+    PDF_REDACT_SIGN,
+    PDF_FORM_EXTRACT,
+    RASTER_CMS_CONVERT,
+    RASTER_TONE_CURVE,
+    RAW_DEMOSAIC,
+    RAW_DENOISE_NLMEANS,
+    RAW_SEGMENT_MASK,
+    VECTOR_PATH_BOOLEAN,
+    VECTOR_BEZIER_OFFSET,
+    VECTOR_SVG_COMPILE,
+    VECTOR_EXTRUDE_3D,
+    CAD_SKETCH_CONSTRAIN,
+    CAD_BREP_SOLID,
+    CAD_DXF_DWG_IO,
+    CAD_DIMENSION_MEASURE,
+    TIMELINE_SCOPES_ANALYZE,
+    TIMELINE_CAPTIONS_SYNC,
+    TIMELINE_DSP_CHAIN,
+    TIMELINE_MASTER_LUFS,
+    SIM_SOIL_COMPACTION,
+    SIM_TRENCH_EXCAVATION,
+    SIM_SPACE_WEATHER,
+    SIM_FIRE_ECOLOGY,
+    STUDIO_CREATE,
+    STUDIO_EDIT,
+    STUDIO_INSPECT,
+    STUDIO_IMPORT,
+    STUDIO_EXPORT,
+    STUDIO_UNDO,
+    STUDIO_REDO,
+    STUDIO_LIST_ARTIFACTS,
+    VIBE_EVAL,
+    BOOKMARKS_LIST,
+    CODECS_MATRIX,
+    DOMAIN_INFO,
+    ECON_EVALUATE_PEER,
+    GIT_STATUS,
+    JOB_LIST,
     ODE_RK4_INTEGRATE,
     ODE_DOPRI5,
     ODE_BDF,
@@ -3515,7 +3671,76 @@ pub fn seam_for(id: &str) -> &'static str {
         | POET_CONTAINER_PLACE
         | POET_NESTED_LINK
         | POET_SUBJECT_DECLARE
-        | POET_PARTICIPANT_INVITE => "docs",
+        | POET_PARTICIPANT_INVITE
+        | POET_TOOLCHEST_LIST
+        | POET_MANIFOLD_INSPECT
+        | POET_TOOLCHAIN_EXECUTE
+        | POET_STUDIO_CONFIGURE
+        | POET_IDE_EVALUATE
+        | POET_QAPP_SCAFFOLD
+        | POET_THEME_CONFIGURE
+        | POET_INSPECTOR_BIND
+        | POET_TIMELINE_SCRUB
+        | POET_VIEWPORT_CONFIGURE
+        | POET_EXPORT_BUNDLE
+        | DOC_CREATE
+        | DOC_LAYOUT_PARAGRAPH
+        | DOC_PROOF_CHECK
+        | DOC_EXPORT_DOCX
+        | DOC_CITATIONS_SYNC
+        | DECK_CREATE
+        | DECK_SLIDE_LAYOUT
+        | DECK_TRANSITION_SET
+        | DECK_EXPORT_PPTX
+        | PDF_INSPECT_COS
+        | PDF_PREFLIGHT_A11Y
+        | PDF_REDACT_SIGN
+        | PDF_FORM_EXTRACT
+        | STUDIO_CREATE
+        | STUDIO_EDIT
+        | STUDIO_INSPECT
+        | STUDIO_IMPORT
+        | STUDIO_EXPORT
+        | STUDIO_UNDO
+        | STUDIO_REDO
+        | STUDIO_LIST_ARTIFACTS => "docs",
+        SHADERS_LIST
+        | WGSL_FORGE_LIST_KERNELS
+        | WGSL_FORGE_GENERATE
+        | WGSL_FORGE_VALIDATE
+        | WGSL_FORGE_ROOFLINE
+        | WGSL_FORGE_SCHEDULE_CANDIDATES
+        | WGSL_FORGE_ATTENTION_SYNTHESIZE => "render",
+        SHEET_CREATE
+        | SHEET_EVAL_FORMULA
+        | SHEET_PIVOT_ANALYZE
+        | SHEET_CHART_SPEC => "sheet",
+        RASTER_CMS_CONVERT
+        | RASTER_TONE_CURVE
+        | RAW_DEMOSAIC
+        | RAW_DENOISE_NLMEANS
+        | RAW_SEGMENT_MASK => "vision",
+        VECTOR_PATH_BOOLEAN
+        | VECTOR_BEZIER_OFFSET
+        | VECTOR_SVG_COMPILE
+        | VECTOR_EXTRUDE_3D
+        | CAD_SKETCH_CONSTRAIN
+        | CAD_BREP_SOLID
+        | CAD_DXF_DWG_IO
+        | CAD_DIMENSION_MEASURE => "geometry",
+        TIMELINE_SCOPES_ANALYZE
+        | TIMELINE_CAPTIONS_SYNC
+        | TIMELINE_DSP_CHAIN
+        | TIMELINE_MASTER_LUFS => "hypermedia",
+        SIM_SOIL_COMPACTION
+        | SIM_TRENCH_EXCAVATION
+        | SIM_SPACE_WEATHER
+        | SIM_FIRE_ECOLOGY => "science",
+        VIBE_EVAL | JOB_LIST => "runtime",
+        BOOKMARKS_LIST | GIT_STATUS => "docs",
+        CODECS_MATRIX => "hypermedia",
+        DOMAIN_INFO => "net",
+        ECON_EVALUATE_PEER => "econ",
         SOCIAL_GINI | SOCIAL_LORENZ | SOCIAL_DEGREE_CENTRALITY => "social",
         FORENSIC_MALFEASANCE_DELTA | FORENSIC_NARRATIVE_DIVERGENCE => "social",
         AGENT_PLAN | AGENT_EXECUTE | AGENT_EVALUATE => "agent",

@@ -4,11 +4,11 @@
 extern crate std;
 
 #[path = "mcp_format_impls.rs"]
-mod mcp_format_impls;
+pub mod mcp_format_impls;
 #[path = "mcp_stub_impls.rs"]
-mod mcp_stub_impls;
+pub mod mcp_stub_impls;
 #[path = "mcp_tool_impls/mod.rs"]
-mod mcp_tool_impls;
+pub mod mcp_tool_impls;
 
 use crate::wal::append_mutation;
 use crate::NQuin;

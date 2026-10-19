@@ -414,7 +414,7 @@ impl AssetManager {
 /// Uses a simple xorshift LCG seeded by an FNV-1a hash of `seed`, so the same
 /// feed id always produces the same history (reproducible, no fabrication of
 /// "real" market data). The series oscillates around a 100.0 baseline.
-fn deterministic_price_series(seed: &str, len: usize) -> Vec<f64> {
+pub fn deterministic_price_series(seed: &str, len: usize) -> Vec<f64> {
     // FNV-1a hash of the seed string → u64 state.
     let mut state: u64 = 0xcbf2_9ce4_8422_2325;
     for &b in seed.as_bytes() {

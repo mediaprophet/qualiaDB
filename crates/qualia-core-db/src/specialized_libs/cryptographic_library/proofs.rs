@@ -530,7 +530,7 @@ impl ProofEngine {
         public_inputs: &[Vec<u8>],
     ) -> Result<bool, CryptographicError> {
         use sha2::{Digest, Sha256};
-        use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+        use ed25519_dalek::{Signature, VerifyingKey};
 
         if proof_data.len() < 130 {
             return Ok(false);

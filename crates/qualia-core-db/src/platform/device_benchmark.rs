@@ -14,11 +14,15 @@
 //!
 //! Native-only (wgpu adapters when `gpu-runtime` is on, plus a `rayon` CPU GEMV row).
 #![cfg(not(target_arch = "wasm32"))]
+#![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
 
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
+#[cfg(feature = "gpu-runtime")]
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
+use std::sync::atomic::AtomicU64;
+#[cfg(feature = "gpu-runtime")]
+use std::sync::atomic::Ordering as AtomicOrdering;
 use std::time::Instant;
 
 #[cfg(feature = "gpu-runtime")]

@@ -84,6 +84,7 @@ impl Json {
         }
     }
 
+    /// Field.
     pub fn field<'a>(&'a self, key: &str) -> Option<&'a Json> {
         self.as_object()?.get(key)
     }

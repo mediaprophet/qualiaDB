@@ -126,10 +126,10 @@ pub fn prune_and_validate_mesh(mesh_id: u64) -> bool {
     };
     let quins = [test_quin];
     let mut verdicts = [crate::modalities::defeasible::DefeasibleVerdict {
-        quin: test_quin,
+        claim: test_quin,
         status: crate::modalities::defeasible::DefeasibleStatus::Active,
     }];
-    if let Ok(count) = crate::modalities::defeasible::evaluate_defeasible_frame(&quins, &mut verdicts) {
+    if let Ok(count) = crate::modalities::defeasible::evaluate_defeasible_frame(&quins, 0, &mut verdicts) {
         count > 0 && verdicts[0].status == crate::modalities::defeasible::DefeasibleStatus::Active
     } else {
         false

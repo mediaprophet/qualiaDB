@@ -25,6 +25,7 @@ gpu-runtime = ["dep:wgpu", "dep:raw-window-handle"]
 # can omit it and use the renderer-only GLES/Vulkan selection path instead.
 gpu-native-dx12 = ["wgpu/dx12"]
 gpu-native-portable = []
+metal-native = []
 wgsl-forge = ["dep:naga", "dxc"]
 wgsl-forge-cuda = ["wgsl-forge", "cuda"]
 webgl2 = ["dep:naga"]

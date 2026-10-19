@@ -3,6 +3,8 @@
 //! preserved by re-exports in lib.rs). mcp_server owns the *_impls submodules.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mcp_server;
+#[cfg(not(target_arch = "wasm32"))]
+pub use mcp_server::{mcp_format_impls, mcp_stub_impls, mcp_tool_impls};
 // Cooperation gate composes modalities::interaction_governance, so it compiles
 // only where modalities does (native or the logic-enabled wasm profiles).
 #[cfg(any(

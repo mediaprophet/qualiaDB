@@ -83,7 +83,10 @@ pub fn run_q4k_soa_microbench(n_in: usize, n_out: usize) -> MicrobenchResult {
     let prev = std::env::var("QUALIA_INFERENCE_MODE").ok();
     set_inference_mode(InferenceMode::CudaTc);
     std::env::set_var("QUALIA_INFERENCE_MODE", "cuda");
+    #[cfg(feature = "cuda")]
     let mut gpu_out = vec![0.0f32; n_out];
+    #[cfg(not(feature = "cuda"))]
+    let gpu_out = vec![0.0f32; n_out];
     #[cfg(feature = "cuda")]
     let ok = crate::try_q4k_soa_gemv(n_in, n_out, &x, &weight, &mut gpu_out);
     #[cfg(not(feature = "cuda"))]

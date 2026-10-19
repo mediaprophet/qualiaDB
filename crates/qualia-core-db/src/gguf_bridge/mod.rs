@@ -12,6 +12,8 @@
 //! and `substrate_parity_tests`). What remains here is plumbing: GPU command encoding, the KV
 //! cache, weight loading, the autoregressive loop, and the GGUF/dequant codec.
 
+#![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
+
 // pub(crate) so the concern submodules (gemm / ffn / attention / output / embedding / mc8_wasm …)
 // inherit these via `use super::*` — keeps the impl split a pure structural move.
 pub(crate) use crate::gguf_sharder::GgufTensorInfo;

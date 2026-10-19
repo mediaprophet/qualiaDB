@@ -1,4 +1,9 @@
 //! Full implementations for MCP tools that previously returned `tool_not_ready()`.
+//!
+//! # DEPRECATION NOTICE
+//! This file is DEPRECATED in favor of the modular `qualia-mcp` workspace crate (`crates/qualia-mcp/src/tools/*`).
+//! All functions have been migrated to active, fully-tested library modules per AGENTS.md §0-B (<500 lines).
+//! This file will be phased out and deleted once all legacy internal references are transitioned.
 
 use super::mcp_tool_impls::{hex_decode, parse_quin_slice, parse_tool_args};
 use super::McpSystemError;

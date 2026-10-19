@@ -97,7 +97,7 @@ impl PrecisionTimer {
     /// Returns elapsed time in fractional milliseconds (e.g. 0.015 ms instead of 0).
     #[inline]
     pub fn elapsed_millis_f64(&self) -> f64 {
-        self.start_instant.elapsed().as_millis_f64()
+        DurationPrecisionExt::as_millis_f64(&self.start_instant.elapsed())
     }
 
     /// Formats the elapsed time as a readable string (e.g. "340 ns", "12.45 µs").
@@ -165,7 +165,7 @@ mod tests {
     fn test_sub_millisecond_fractional_millis() {
         let d = Duration::from_micros(25); // 25 µs = 0.025 ms
         assert_eq!(d.as_millis(), 0); // Demonstrates the original truncation bug
-        assert!((d.as_millis_f64() - 0.025).abs() < 1e-6);
+        assert!((DurationPrecisionExt::as_millis_f64(&d) - 0.025).abs() < 1e-6);
         assert!((d.as_micros_f64() - 25.0).abs() < 1e-6);
     }
 

@@ -34,6 +34,10 @@ mod ml;
 mod net;
 mod nlp;
 mod poet_shell;
+pub mod shed_registry;
+pub mod os_shared_services;
+pub mod qdnf_bridge;
+pub mod semantic_instrument_bridge;
 mod render;
 mod research;
 mod runtime;
@@ -44,6 +48,9 @@ mod social;
 mod solvers;
 mod stats;
 mod vision;
+mod studio_domains;
+pub mod studio_store;
+mod wgsl_forge_seam;
 
 use super::PoetSnapshot;
 use vibe::{DiagCode, Diagnostic, Span, Value};
@@ -754,6 +761,76 @@ pub fn dispatch(
         ids::POET_NESTED_LINK => poet_shell::nested_link(args, span),
         ids::POET_SUBJECT_DECLARE => poet_shell::subject_declare(args, span),
         ids::POET_PARTICIPANT_INVITE => poet_shell::participant_invite(args, span),
+        ids::POET_TOOLCHEST_LIST => poet_shell::toolchest_list(args, span),
+        ids::POET_MANIFOLD_INSPECT => poet_shell::manifold_inspect(args, span),
+        ids::POET_TOOLCHAIN_EXECUTE => poet_shell::toolchain_execute(args, span),
+        ids::POET_STUDIO_CONFIGURE => poet_shell::studio_configure(args, span),
+        ids::POET_IDE_EVALUATE => poet_shell::ide_evaluate(args, span),
+        ids::POET_QAPP_SCAFFOLD => poet_shell::qapp_scaffold(args, span),
+        ids::POET_THEME_CONFIGURE => poet_shell::theme_configure(args, span),
+        ids::POET_INSPECTOR_BIND => poet_shell::inspector_bind(args, span),
+        ids::POET_TIMELINE_SCRUB => poet_shell::timeline_scrub(args, span),
+        ids::POET_VIEWPORT_CONFIGURE => poet_shell::viewport_configure(args, span),
+        ids::POET_EXPORT_BUNDLE => poet_shell::export_bundle(args, span),
+        ids::SHADERS_LIST | ids::WGSL_FORGE_LIST_KERNELS => wgsl_forge_seam::list_kernels(args, span),
+        ids::WGSL_FORGE_GENERATE => wgsl_forge_seam::generate(args, span),
+        ids::WGSL_FORGE_VALIDATE => wgsl_forge_seam::validate(args, span),
+        ids::WGSL_FORGE_ROOFLINE => wgsl_forge_seam::roofline(args, span),
+        ids::WGSL_FORGE_SCHEDULE_CANDIDATES => wgsl_forge_seam::schedule_candidates(args, span),
+        ids::WGSL_FORGE_ATTENTION_SYNTHESIZE => wgsl_forge_seam::attention_synthesize(args, span),
+        ids::DOC_CREATE => studio_domains::doc_create(args, span),
+        ids::DOC_LAYOUT_PARAGRAPH => studio_domains::doc_layout_paragraph(args, span),
+        ids::DOC_PROOF_CHECK => studio_domains::doc_proof_check(args, span),
+        ids::DOC_EXPORT_DOCX => studio_domains::doc_export_docx(args, span),
+        ids::DOC_CITATIONS_SYNC => studio_domains::doc_citations_sync(args, span),
+        ids::SHEET_CREATE => studio_domains::sheet_create(args, span),
+        ids::SHEET_EVAL_FORMULA => studio_domains::sheet_eval_formula(args, span),
+        ids::SHEET_PIVOT_ANALYZE => studio_domains::sheet_pivot_analyze(args, span),
+        ids::SHEET_CHART_SPEC => studio_domains::sheet_chart_spec(args, span),
+        ids::DECK_CREATE => studio_domains::deck_create(args, span),
+        ids::DECK_SLIDE_LAYOUT => studio_domains::deck_slide_layout(args, span),
+        ids::DECK_TRANSITION_SET => studio_domains::deck_transition_set(args, span),
+        ids::DECK_EXPORT_PPTX => studio_domains::deck_export_pptx(args, span),
+        ids::PDF_INSPECT_COS => studio_domains::pdf_inspect_cos(args, span),
+        ids::PDF_PREFLIGHT_A11Y => studio_domains::pdf_preflight_a11y(args, span),
+        ids::PDF_REDACT_SIGN => studio_domains::pdf_redact_sign(args, span),
+        ids::PDF_FORM_EXTRACT => studio_domains::pdf_form_extract(args, span),
+        ids::RASTER_CMS_CONVERT => studio_domains::raster_cms_convert(args, span),
+        ids::RASTER_TONE_CURVE => studio_domains::raster_tone_curve(args, span),
+        ids::RAW_DEMOSAIC => studio_domains::raw_demosaic(args, span),
+        ids::RAW_DENOISE_NLMEANS => studio_domains::raw_denoise_nlmeans(args, span),
+        ids::RAW_SEGMENT_MASK => studio_domains::raw_segment_mask(args, span),
+        ids::VECTOR_PATH_BOOLEAN => studio_domains::vector_path_boolean(args, span),
+        ids::VECTOR_BEZIER_OFFSET => studio_domains::vector_bezier_offset(args, span),
+        ids::VECTOR_SVG_COMPILE => studio_domains::vector_svg_compile(args, span),
+        ids::VECTOR_EXTRUDE_3D => studio_domains::vector_extrude_3d(args, span),
+        ids::CAD_SKETCH_CONSTRAIN => studio_domains::cad_sketch_constrain(args, span),
+        ids::CAD_BREP_SOLID => studio_domains::cad_brep_solid(args, span),
+        ids::CAD_DXF_DWG_IO => studio_domains::cad_dxf_dwg_io(args, span),
+        ids::CAD_DIMENSION_MEASURE => studio_domains::cad_dimension_measure(args, span),
+        ids::TIMELINE_SCOPES_ANALYZE => studio_domains::timeline_scopes_analyze(args, span),
+        ids::TIMELINE_CAPTIONS_SYNC => studio_domains::timeline_captions_sync(args, span),
+        ids::TIMELINE_DSP_CHAIN => studio_domains::timeline_dsp_chain(args, span),
+        ids::TIMELINE_MASTER_LUFS => studio_domains::timeline_master_lufs(args, span),
+        ids::SIM_SOIL_COMPACTION => studio_domains::sim_soil_compaction(args, span),
+        ids::SIM_TRENCH_EXCAVATION => studio_domains::sim_trench_excavation(args, span),
+        ids::SIM_SPACE_WEATHER => studio_domains::sim_space_weather(args, span),
+        ids::SIM_FIRE_ECOLOGY => studio_domains::sim_fire_ecology(args, span),
+        ids::VIBE_EVAL => studio_domains::vibe_eval_body(args, span),
+        ids::BOOKMARKS_LIST => studio_domains::bookmarks_list(args, span),
+        ids::CODECS_MATRIX => studio_domains::codecs_matrix(args, span),
+        ids::DOMAIN_INFO => studio_domains::domain_info(args, span),
+        ids::ECON_EVALUATE_PEER => studio_domains::econ_evaluate_peer(args, span),
+        ids::GIT_STATUS => studio_domains::git_status(args, span),
+        ids::JOB_LIST => studio_domains::job_list(args, span),
+        ids::STUDIO_CREATE => studio_domains::studio_create(args, span),
+        ids::STUDIO_EDIT => studio_domains::studio_edit(args, span),
+        ids::STUDIO_INSPECT => studio_domains::studio_inspect(args, span),
+        ids::STUDIO_IMPORT => studio_domains::studio_import(args, span),
+        ids::STUDIO_EXPORT => studio_domains::studio_export(args, span),
+        ids::STUDIO_UNDO => studio_domains::studio_undo(args, span),
+        ids::STUDIO_REDO => studio_domains::studio_redo(args, span),
+        ids::STUDIO_LIST_ARTIFACTS => studio_domains::studio_list_artifacts(args, span),
         ids::DOC_INGEST => docs::ingest(args, span),
         ids::SHEET_STATS => sheet::stats(args, span),
         ids::SHEET_SUM => sheet::sum_range(args, span),

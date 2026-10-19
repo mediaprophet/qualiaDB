@@ -8,16 +8,20 @@
 
 pub mod banked_lut;
 pub mod chunk_directory;
+pub mod holo_record;
 pub mod layout;
 pub mod lut_entry;
 pub mod phase_juncture;
+pub mod point_record;
 pub mod strata_record;
 #[cfg(test)]
 mod tests;
 
 pub use banked_lut::*;
 pub use chunk_directory::*;
+pub use holo_record::*;
 pub use layout::*;
 pub use lut_entry::*;
 pub use phase_juncture::*;
+pub use point_record::*;
 pub use strata_record::*;

@@ -64,6 +64,8 @@ pub mod frame_graph;
 pub mod gamut;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
 pub mod gpu_colour_kernel;
+/// Dynamic GPU memory & compute throughput governor.
+pub mod hardware_governor;
 /// Browser HMC mesh source verification and resident-upload lifecycle.
 pub mod hmc_playback;
 /// Generic, canvas-backed interactive HUD surface for browser render clients.

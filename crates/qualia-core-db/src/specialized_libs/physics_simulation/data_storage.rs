@@ -1,4 +1,7 @@
 use super::*;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::{Arc, Mutex};
+
 
 /// Physics data manager
 pub struct PhysicsDataManager {
@@ -16,7 +19,10 @@ pub struct PhysicsDataStorage {
     /// In-memory store used directly or as a caching tier when hardware backends are active.
     stored_data: HashMap<String, Vec<f64>>,
     /// Optional hardware-backed Zoned Namespace manager for physical zone persistence.
+    #[cfg(not(target_arch = "wasm32"))]
     pub zns_manager: Option<Arc<Mutex<crate::zns_storage::ZnsZoneManager>>>,
+    #[cfg(target_arch = "wasm32")]
+    pub zns_manager: Option<()>,
 }
 
 /// Storage backends
@@ -338,9 +344,13 @@ impl PhysicsDataStorage {
     }
 
     /// Attach a hardware-backed Zoned Namespace manager for physical zone persistence.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn attach_zns_manager(&mut self, manager: Arc<Mutex<crate::zns_storage::ZnsZoneManager>>) {
         self.zns_manager = Some(manager);
     }
+    #[cfg(target_arch = "wasm32")]
+    pub fn attach_zns_manager(&mut self, _manager: ()) {}
+
 
     /// Initialize default storage backends.
     ///

@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
+
 use std::sync::Arc;
 
 use crate::gguf_bridge::QTensorEngine;
