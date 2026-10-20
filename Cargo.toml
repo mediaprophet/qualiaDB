@@ -25,6 +25,9 @@ members = [
     "crates/vibe-wasm",
     "crates/qualia-peer",
     "crates/qualia-app-contract",
+    "crates/qualia-sim",
+    "crates/qualia-geospatial",
+    "crates/qualia-mcp",
 ]
 resolver = "2"
 
@@ -55,6 +58,10 @@ work-graph = { path = "crates/work-graph" }
 vibe-lsp = { path = "crates/vibe-lsp" }
 vibe-wasm = { path = "crates/vibe-wasm" }
 qualia-peer = { path = "crates/qualia-peer" }
+qualia-sim = { path = "crates/qualia-sim" }
+qualia-geospatial = { path = "crates/qualia-geospatial" }
+qualia-mcp = { path = "crates/qualia-mcp" }
+poet = { path = "crates/poet" }
 
 # External crates harmonised across the workspace
 anyhow = "1.0.104"
@@ -87,7 +94,7 @@ js-sys = "0.3.102"
 log = "0.4.33"
 lz4_flex = "0.13.1"
 minicbor = "2.2.3"
-naga = "30"
+naga = { version = "0.0.1", path = "../etalon/naga", features = ["wgsl-in", "spv-out", "msl-out", "hlsl-out"] }
 oxiri = "0.2"
 pdf-extract = "0.12"
 pollster = "1.0"
@@ -117,7 +124,8 @@ warp = "0.4.3"
 wasm-bindgen = "=0.2.125"
 wasm-bindgen-futures = "0.4.75"
 web-sys = "0.3.102"
-wgpu = "30"
+wgpu = { version = "30.0.0", path = "../etalon/compat/wgpu" }
+etalon = { version = "0.0.1", path = "../etalon/etalon" }
 
 
 # Profile for WASM web builds (qualia-mobile-harness).
@@ -155,3 +163,5 @@ debug = 1
 # we upgrade to imap 3.x (which uses the imap-types ecosystem instead).
 [patch.crates-io]
 imap-proto = { path = "vendor/imap-proto" }
+wgpu = { path = "../etalon/compat/wgpu" }
+naga = { path = "../etalon/naga" }

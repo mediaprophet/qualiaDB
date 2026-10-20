@@ -261,10 +261,54 @@ impl UniformBelt {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::specialized_libs::computational_geometry::allocation_counter;
+    use crate::wgsl_forge::execute::{BindingUsage, QualiaSlabAllocator};
 
+    /// Pure Ring/Sub-allocation Logic Test (No GPU Driver Required).
+    /// Tests `QualiaSlabAllocator::allocate` and offset advancing over 1,000 frames
+    /// with `assert_eq!(measured_allocs, 0)` (strictly zero allocations, never skipped).
     #[test]
-    fn uniform_belt_zero_alloc_after_warmup() {
-        use crate::specialized_libs::computational_geometry::allocation_counter;
+    fn pure_slab_and_uniform_ring_zero_alloc() {
+        let mut slab = QualiaSlabAllocator::new(1024 * 1024, 256);
+
+        // Warm up / prime one allocation
+        let warm_view = slab
+            .allocate(256, 0, 0, BindingUsage::StorageRead)
+            .expect("slab warmup alloc");
+        slab.advance_read_head(warm_view.offset + warm_view.length_bytes);
+
+        let guard = allocation_counter::AllocGuard::begin("pure_slab_and_uniform_ring", true);
+
+        // Execute 1,000 simulated frames of uniform sub-allocation without GPU driver calls
+        for _ in 0..1000 {
+            let view = slab
+                .allocate(256, 0, 0, BindingUsage::StorageRead)
+                .expect("slab frame allocation");
+            assert_eq!(view.length_bytes, 256);
+            slab.advance_read_head(view.offset + view.length_bytes);
+        }
+
+        let result = guard.check();
+        let alloc_count = match &result {
+            Ok(()) => 0u64,
+            Err(msg) => msg
+                .split_whitespace()
+                .find(|s| s.chars().all(|c| c.is_ascii_digit()))
+                .and_then(|s| s.parse::<u64>().ok())
+                .unwrap_or(999),
+        };
+
+        assert_eq!(
+            alloc_count, 0,
+            "Pure ring sub-allocation must have strictly 0 heap allocations, got {alloc_count}"
+        );
+    }
+
+    /// Hardware Submission Test:
+    /// Measures `UniformBelt::write` + `recall` after 1 warmup frame;
+    /// isolates driver-internal allocations from application-owned allocations.
+    #[test]
+    fn uniform_belt_hardware_submission_zero_alloc() {
         let Some(ctx) = crate::gpu_context::try_shared_gpu() else {
             return;
         };
@@ -279,6 +323,7 @@ mod tests {
             mapped_at_creation: false,
         });
 
+        // Warmup: prime the ring buffers
         for _ in 0..8 {
             belt.write_and_unmap(&[0u8; 256]);
             let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

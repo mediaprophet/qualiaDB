@@ -5,20 +5,13 @@ use std::process::Command;
 /// Compiles HLSL source to SPIR-V bytecodes using the DirectXShaderCompiler (DXC).
 #[cfg(feature = "dxc")]
 pub fn compile_hlsl_to_spirv(hlsl_source: &str, entry_point: &str) -> Result<Vec<u8>, ForgeError> {
-    // Use temp path strings (not NamedTempFile) for both input and output —
-    // NamedTempFile holds exclusive locks on Windows that prevent DXC from
-    // accessing the files.
-    let temp_dir = std::env::temp_dir();
-    let in_path = temp_dir.join(format!(
-        "qualia_dxc_in_{}_{}.hlsl",
-        std::process::id(),
-        entry_point
-    ));
-    let out_path = temp_dir.join(format!(
-        "qualia_dxc_out_{}_{}.spv",
-        std::process::id(),
-        entry_point
-    ));
+    // Use a thread-unique temporary directory with RAII cleanup (Rule 0-B).
+    let temp_dir = tempfile::Builder::new()
+        .prefix("etalon-dxc-")
+        .tempdir()
+        .map_err(|e| ForgeError::Emission(format!("Failed to create temporary directory for DXC: {:?}", e)))?;
+    let in_path = temp_dir.path().join("shader.hlsl");
+    let out_path = temp_dir.path().join("shader.spv");
 
     std::fs::write(&in_path, hlsl_source)
         .map_err(|e| ForgeError::Emission(format!("Failed to write HLSL temp file: {:?}", e)))?;
@@ -60,8 +53,6 @@ pub fn compile_hlsl_to_spirv(hlsl_source: &str, entry_point: &str) -> Result<Vec
         })?;
 
     if !output.status.success() {
-        let _ = std::fs::remove_file(&in_path);
-        let _ = std::fs::remove_file(&out_path);
         let err_str = String::from_utf8_lossy(&output.stderr);
         let out_str = String::from_utf8_lossy(&output.stdout);
         return Err(ForgeError::Emission(format!(
@@ -72,9 +63,7 @@ pub fn compile_hlsl_to_spirv(hlsl_source: &str, entry_point: &str) -> Result<Vec
 
     let spirv_blob = std::fs::read(&out_path)
         .map_err(|e| ForgeError::Emission(format!("Failed to read SPIRV output: {:?}", e)))?;
-    // Clean up temp files.
-    let _ = std::fs::remove_file(&in_path);
-    let _ = std::fs::remove_file(&out_path);
+    // TempDir auto-cleans up in_path and out_path upon drop.
     Ok(spirv_blob)
 }
 

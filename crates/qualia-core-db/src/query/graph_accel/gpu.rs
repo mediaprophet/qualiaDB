@@ -18,7 +18,7 @@ use super::path::gpu_available;
 struct RadixParams {
     n: u32,
     shift: u32,
-    _pad0: u32,
+    num_wgs: u32,
     _pad1: u32,
 }
 
@@ -93,23 +93,10 @@ fn map_read(device: &wgpu::Device, staging: &wgpu::Buffer, size: u64) -> Option<
     }
     #[cfg(target_arch = "wasm32")]
     {
-        // Wait panics on WebGPU. Poll until mapAsync completes or give the CPU floor.
-        let mut mapped = false;
-        for _ in 0..10_000 {
-            let _ = device.poll(wgpu::PollType::Poll);
-            match rx.try_recv() {
-                Ok(Ok(())) => {
-                    mapped = true;
-                    break;
-                }
-                Ok(Err(_)) => return None,
-                Err(std::sync::mpsc::TryRecvError::Empty) => continue,
-                Err(std::sync::mpsc::TryRecvError::Disconnected) => return None,
-            }
-        }
-        if !mapped {
-            return None;
-        }
+        // On wasm32, synchronous spin-polling cannot yield to the browser microtask loop to complete map_async.
+        // Return None immediately to allow zero-latency synchronous CPU fallback without spinning.
+        let _ = (device, staging, slice, tx, rx);
+        return None;
     }
     let data = slice.get_mapped_range().ok()?.to_vec();
     staging.unmap();
@@ -168,9 +155,12 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
     queue.write_buffer(&k0, 0, bytemuck::cast_slice(&packed));
     queue.write_buffer(&i0, 0, bytemuck::cast_slice(&idx));
 
+    let wg = (n as u32).div_ceil(256).max(1);
+    let hist_size = (256 * wg * 4) as u64;
+
     let hist_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("graph-radix-hist"),
-        size: 256 * 4,
+        size: hist_size,
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_SRC
             | wgpu::BufferUsages::COPY_DST,
@@ -178,13 +168,13 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
     });
     let hist_stage = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("graph-radix-hist-stage"),
-        size: 256 * 4,
+        size: hist_size,
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
     let off_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("graph-radix-off"),
-        size: 256 * 4,
+        size: hist_size,
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
@@ -195,18 +185,16 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
         mapped_at_creation: false,
     });
 
-    let wg = (n as u32).div_ceil(256).max(1);
     let mut src_k = &k0;
     let mut src_i = &i0;
     let mut dst_k = &k1;
     let mut dst_i = &i1;
 
     for shift in (0..64).step_by(8) {
-        queue.write_buffer(&hist_buf, 0, &[0u8; 256 * 4]);
         let params = RadixParams {
             n: n as u32,
             shift: shift as u32,
-            _pad0: 0,
+            num_wgs: wg,
             _pad1: 0,
         };
         queue.write_buffer(&param_buf, 0, bytemuck::bytes_of(&params));
@@ -241,15 +229,17 @@ pub fn radix_sort_u64_indices_gpu(keys: &[u64]) -> Option<Vec<u32>> {
             pass.set_bind_group(0, &hist_bg, &[]);
             pass.dispatch_workgroups(wg, 1, 1);
         }
-        enc.copy_buffer_to_buffer(&hist_buf, 0, &hist_stage, 0, 256 * 4);
+        enc.copy_buffer_to_buffer(&hist_buf, 0, &hist_stage, 0, hist_size);
         queue.submit(Some(enc.finish()));
-        let raw = map_read(device, &hist_stage, 256 * 4)?;
+        let raw = map_read(device, &hist_stage, hist_size)?;
         let hist: &[u32] = bytemuck::cast_slice(&raw);
-        let mut offsets = [0u32; 256];
+        let mut offsets = vec![0u32; 256 * wg as usize];
         let mut sum = 0u32;
-        for b in 0..256 {
-            offsets[b] = sum;
-            sum = sum.saturating_add(hist[b]);
+        for d in 0..256 {
+            for w in 0..wg as usize {
+                offsets[d * wg as usize + w] = sum;
+                sum = sum.saturating_add(hist[d * wg as usize + w]);
+            }
         }
         if sum as usize != n {
             return None;

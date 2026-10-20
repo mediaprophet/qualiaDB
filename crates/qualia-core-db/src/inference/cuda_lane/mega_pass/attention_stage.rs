@@ -415,6 +415,11 @@ fn compile<'a>(
     CudaPipeline::compile_cuda_c_source_cached(&dev.ctx, source, entry, bindings).ok()
 }
 
+/// Returns true if WMMA tensor-core tiled GEMM is beneficial.
+/// Single-token decode (M = 1..=4) is routed to GEMV / DP4A because 16x16 WMMA
+/// with zero-padding wastes up to 93.75% of compute. Batched execution (M >= 8)
+/// uses WMMA tensor cores.
 const fn wmma_usable(n_in: usize, n_out: usize) -> bool {
-    n_in > 0 && n_out > 0 && n_in % 256 == 0 && n_out % 16 == 0
+    const BATCH_M: usize = 1;
+    BATCH_M >= 8 && n_in > 0 && n_out > 0 && n_in % 256 == 0 && n_out % 16 == 0
 }

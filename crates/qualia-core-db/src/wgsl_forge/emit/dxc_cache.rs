@@ -9,10 +9,15 @@ use std::sync::{Mutex, OnceLock};
 
 use crate::wgsl_forge::ForgeError;
 
-/// Cache key: blake3 hash of (hlsl_source, entry_point).
+const DXC_CACHE_SCHEMA_V2: &[u8] = b"etalon-dxc-cache-v2";
+
+/// Cache key: length-delimited blake3 hash of (schema, hlsl_source, entry_point).
 fn cache_key(hlsl_source: &str, entry_point: &str) -> String {
     let mut hasher = blake3::Hasher::new();
+    hasher.update(DXC_CACHE_SCHEMA_V2);
+    hasher.update(&(hlsl_source.len() as u64).to_le_bytes());
     hasher.update(hlsl_source.as_bytes());
+    hasher.update(&(entry_point.len() as u64).to_le_bytes());
     hasher.update(entry_point.as_bytes());
     hasher.finalize().to_hex().to_string()
 }

@@ -37,6 +37,13 @@
 //! path (`emit::cuda_c::WMMA_GEMM_16X16_SRC`, `oracle::evaluate_matmul_tc_cuda`),
 //! which uses NVIDIA's mature `nvcuda::wmma` API and is unaffected by this wgpu bug.
 
+/// Target Etalon / WGPU API version.
+pub const WGPU_API_VERSION: &str = "30.0.0-etalon";
+
+/// Cooperative matrix blocked flag: `false` on Etalon because
+/// `etalon-hal` enables `vulkan_memory_model_device_scope`.
+pub const WGPU_COOPMAT_BLOCKED: bool = false;
+
 /// The fixed tile dimension (rows == columns == K) of the emitted GEMM.
 pub const TILE: u32 = 8;
 

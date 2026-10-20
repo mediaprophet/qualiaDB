@@ -106,16 +106,11 @@ pub fn try_metal_mega_pass(
 }
 
 /// Check if the Metal mega-pass is available on this platform.
-/// Returns false so the inference runtime truthfully routes through the certified wgpu WGSL path.
+///
+/// Truthfulness gate: returns false until try_metal_mega_pass executes a verified pipeline.
+/// Apple Silicon GPU execution uses Etalon's Metal backend via ResidentFullToken (resident_decode.rs).
 pub fn metal_mega_pass_available() -> bool {
-    #[cfg(all(target_os = "macos", feature = "metal-native"))]
-    {
-        true
-    }
-    #[cfg(not(all(target_os = "macos", feature = "metal-native")))]
-    {
-        false
-    }
+    false
 }
 
 /// Warm the Metal context (pre-compile kernels, pre-allocate arenas).
