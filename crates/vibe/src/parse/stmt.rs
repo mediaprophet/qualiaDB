@@ -1,6 +1,7 @@
 use super::*;
 
 impl<'a> Parser<'a> {
+    /// Parses stmt.
     pub(crate) fn parse_stmt(&mut self) -> Result<Stmt, Diagnostic> {
         if self.kw("let") {
             return self.parse_let();
@@ -71,6 +72,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses let.
     pub(crate) fn parse_let(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -136,6 +138,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses if.
     pub(crate) fn parse_if(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -164,6 +167,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses for.
     pub(crate) fn parse_for(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -182,6 +186,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses while.
     pub(crate) fn parse_while(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -194,6 +199,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses match.
     pub(crate) fn parse_match(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -211,6 +217,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses match-arm.
     pub(crate) fn parse_match_arm(&mut self) -> Result<MatchArm, Diagnostic> {
         let start = self.cur.span.start;
         let pattern = self.parse_pattern()?;
@@ -235,6 +242,7 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses pattern.
     pub(crate) fn parse_pattern(&mut self) -> Result<Pattern, Diagnostic> {
         if self.cur.kind == TokenKind::LBrace {
             self.bump()?;
@@ -369,6 +377,7 @@ impl<'a> Parser<'a> {
         Ok(Pattern::Ident(name))
     }
 
+    /// Parses return.
     pub(crate) fn parse_return(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -384,6 +393,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses yield.
     pub(crate) fn parse_yield(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -399,6 +409,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses transaction.
     pub(crate) fn parse_transaction(&mut self) -> Result<Stmt, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -425,6 +436,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses block.
     pub(crate) fn parse_block(&mut self) -> Result<Block, Diagnostic> {
         let start = self.expect(TokenKind::LBrace, "expected '{'")?.start;
         let mut stmts = Vec::new();

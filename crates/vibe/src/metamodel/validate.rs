@@ -52,6 +52,7 @@ pub fn coverage_report() -> CoverageReport {
 }
 
 impl CoverageReport {
+    ///  when all nodes are complete.
     pub fn all_complete(&self) -> bool {
         matches!(self.items, CoverageStatus::Complete)
             && matches!(self.stmts, CoverageStatus::Complete)

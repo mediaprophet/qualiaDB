@@ -30,6 +30,7 @@ pub struct AudioView<'a> {
 
 impl<'a> AudioView<'a> {
     #[inline]
+    /// Bytes per sample.
     pub fn bytes_per_sample(self) -> u32 {
         match self.format {
             SampleFormat::I16 => 2,
@@ -38,6 +39,7 @@ impl<'a> AudioView<'a> {
         }
     }
 
+    /// `true` when well-formed.
     pub fn is_well_formed(self) -> bool {
         if self.frames == 0 || self.channels == 0 || self.sample_rate == 0 {
             return false;
@@ -69,6 +71,7 @@ impl AuditoryEvent {
     pub const FLAG_LOW_ASSURANCE: u32 = 2;
     pub const FLAG_VAD: u32 = 4;
 
+    /// Empty instance.
     pub fn empty() -> Self {
         Self {
             class_hash: 0,
@@ -82,6 +85,7 @@ impl AuditoryEvent {
         }
     }
 
+    /// Confidence as f32.
     pub fn confidence_f32(self) -> f32 {
         self.confidence_u16 as f32 / 65535.0
     }
@@ -101,6 +105,7 @@ pub struct TranscriptToken {
 }
 
 impl TranscriptToken {
+    /// Empty instance.
     pub fn empty() -> Self {
         Self {
             form_hash: 0,

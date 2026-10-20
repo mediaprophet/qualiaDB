@@ -39,6 +39,7 @@ pub struct PolicyViolation {
 }
 
 impl PolicyViolation {
+    /// Creates a new `PolicyViolation`.
     pub fn new(policy: &str, span: Span, message: &str) -> Self {
         Self {
             policy: policy.to_string(),
@@ -48,11 +49,13 @@ impl PolicyViolation {
         }
     }
 
+    /// Builder — sets fix.
     pub fn with_fix(mut self, fix: &str) -> Self {
         self.suggested_fix = Some(fix.to_string());
         self
     }
 
+    /// Converts to diagnostic.
     pub fn to_diagnostic(&self) -> Diagnostic {
         Diagnostic::new(DiagCode::E400, self.span, &self.message)
     }
@@ -259,6 +262,7 @@ pub struct Policy {
 }
 
 impl Policy {
+    /// Creates a new `Policy`.
     pub fn new(name: &str, pattern: QueryPattern, message: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -268,6 +272,7 @@ impl Policy {
         }
     }
 
+    /// Builder — sets fix.
     pub fn with_fix(mut self, fix: &str) -> Self {
         self.suggested_fix = Some(fix.to_string());
         self

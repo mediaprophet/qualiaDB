@@ -36,6 +36,7 @@ pub fn step_mode_pulse_spring(spring: &mut Spring, theme_class: Option<&str>, dt
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -61,6 +62,7 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback.
 pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
     // UI signals are !Send — drive springs on the Dioxus runtime thread, not a worker.
     dioxus::prelude::spawn(async move {

@@ -30,6 +30,7 @@ impl Default for ReferenceEventModel {
 }
 
 impl ReferenceEventModel {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             model_hash: q_hash(MODEL_ID),
@@ -39,6 +40,7 @@ impl ReferenceEventModel {
         }
     }
 
+    /// `model` hash.
     pub fn model_hash(&self) -> u64 {
         self.model_hash
     }

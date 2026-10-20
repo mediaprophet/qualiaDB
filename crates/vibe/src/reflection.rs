@@ -174,6 +174,7 @@ pub struct ReflectionLoop {
 pub type ReflectionEngine = ReflectionLoop;
 
 impl ReflectionLoop {
+    /// Creates a new `ReflectionLoop`.
     pub fn new(config: ReflectionConfig) -> Self {
         let mut all_policies = builtin_policies();
         all_policies.extend(config.extra_policies.clone());

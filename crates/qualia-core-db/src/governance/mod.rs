@@ -41,3 +41,4 @@ pub mod webizen_bytecode;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod webizen_sync;
 pub mod webizen_validator;
+pub mod worker_pool;

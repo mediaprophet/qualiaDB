@@ -34,6 +34,7 @@ pub struct NestedRealm {
 }
 
 impl NestedRealm {
+    /// Creates a new `NestedRealm`.
     pub fn new(depth: u32, realm_usri: &str, time_dilation: f64, parent_context: u64) -> Self {
         Self {
             depth,
@@ -66,6 +67,7 @@ impl NestedRealm {
         nested_tau_secs / self.time_dilation
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("depth".into(), Value::U64(self.depth as u64));
@@ -83,6 +85,7 @@ pub struct NestingStack {
 }
 
 impl NestingStack {
+    /// Creates a new `NestingStack`.
     pub fn new() -> Self {
         Self { realms: Vec::new() }
     }

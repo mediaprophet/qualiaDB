@@ -145,6 +145,7 @@ pub(crate) fn coarse_texture_level_into(
     Ok((width, height))
 }
 
+/// Coarse texture level.
 pub(crate) fn coarse_texture_level(
     source: &[u8],
     source_width: u32,

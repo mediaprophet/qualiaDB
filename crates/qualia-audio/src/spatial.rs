@@ -13,7 +13,43 @@
 pub const SPEED_OF_SOUND_AIR: f32 = 343.2;
 
 /// Maximum spatial sound emitters processed in a single zero-heap mix pass.
-pub const MAX_SPATIAL_VOICES: usize = 32;
+pub const MAX_SPATIAL_VOICES: usize = 64;
+
+/// Acoustic occlusion bridge parameters shared with `qualia-core-db::audio::scene_audio_graph`.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpatialOcclusionBridge {
+    /// Direct-path amplitude multiplier in `[0.0, 1.0]`.
+    pub direct_gain: f32,
+    /// Frequency-dependent low-pass cutoff in Hz (`20000.0` = unoccluded).
+    pub lowpass_cutoff_hz: f32,
+    /// Phase diffraction delay $\Delta\phi$ in radians.
+    pub diffraction_phase_rad: f32,
+    /// Local canyon/canopy enclosure reverb send level in `[0.0, 1.0]`.
+    pub reverb_send: f32,
+}
+
+impl Default for SpatialOcclusionBridge {
+    fn default() -> Self {
+        Self {
+            direct_gain: 1.0,
+            lowpass_cutoff_hz: 18_000.0,
+            diffraction_phase_rad: 0.0,
+            reverb_send: 0.1,
+        }
+    }
+}
+
+/// Zero-heap stereo DF2T biquad state for per-voice occlusion low-pass filtering.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct SpatialOcclusionFilterState {
+    pub s1_l: f32,
+    pub s2_l: f32,
+    pub s1_r: f32,
+    pub s2_r: f32,
+}
+
 
 /// Distance attenuation model.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -108,6 +144,75 @@ impl Default for SpatialListener {
         }
     }
 }
+
+impl SpatialListener {
+    /// Extracts a `SpatialListener` pose directly from 8-component PGA `Motor` blades `(r, d)`
+    /// (`r = [s, e12, e13, e23]`, `d = [e0123, e03, e02, e01]`) and linear velocity.
+    #[inline]
+    pub fn from_pga_motor_blades(r: [f32; 4], d: [f32; 4], velocity: [f32; 3]) -> Self {
+        let position = pga_sandwich_point(r, d, [0.0, 0.0, 0.0]);
+        let fwd_pt = pga_sandwich_point(r, d, [0.0, 0.0, 1.0]);
+        let up_pt = pga_sandwich_point(r, d, [0.0, 1.0, 0.0]);
+        let forward = normalize_vec3(
+            [
+                fwd_pt[0] - position[0],
+                fwd_pt[1] - position[1],
+                fwd_pt[2] - position[2],
+            ],
+            [0.0, 0.0, 1.0],
+        );
+        let up = normalize_vec3(
+            [
+                up_pt[0] - position[0],
+                up_pt[1] - position[1],
+                up_pt[2] - position[2],
+            ],
+            [0.0, 1.0, 0.0],
+        );
+        Self {
+            position,
+            velocity,
+            forward,
+            up,
+        }
+    }
+}
+
+#[inline]
+fn pga_sandwich_point(r: [f32; 4], d: [f32; 4], p: [f32; 3]) -> [f32; 3] {
+    let qr = [r[0], -r[3], -r[2], -r[1]];
+    let qd = [d[0], -d[3], -d[2], -d[1]];
+    let qr_conj = [qr[0], -qr[1], -qr[2], -qr[3]];
+    let pq = [0.0, p[0], p[1], p[2]];
+    let rot = quat_mul(quat_mul(qr, pq), qr_conj);
+    let tq = quat_mul(qd, qr_conj);
+    [
+        rot[1] + 2.0 * tq[1],
+        rot[2] + 2.0 * tq[2],
+        rot[3] + 2.0 * tq[3],
+    ]
+}
+
+#[inline]
+fn quat_mul(a: [f32; 4], b: [f32; 4]) -> [f32; 4] {
+    [
+        a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+        a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+        a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+        a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
+    ]
+}
+
+#[inline]
+fn normalize_vec3(v: [f32; 3], fallback: [f32; 3]) -> [f32; 3] {
+    let len = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if len > 1e-6 {
+        [v[0] / len, v[1] / len, v[2] / len]
+    } else {
+        fallback
+    }
+}
+
 
 /// 3D Spatial Sound Emitter.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -231,6 +336,20 @@ impl SpatialEmitter {
             azimuth,
         }
     }
+
+    /// Evaluates spatial acoustic parameters modulated by shared SDF + BVH [`SpatialOcclusionBridge`].
+    #[inline]
+    pub fn evaluate_spatial_with_occlusion(
+        &self,
+        listener: &SpatialListener,
+        occlusion: &SpatialOcclusionBridge,
+    ) -> SpatialVoiceParams {
+        let mut params = self.evaluate_spatial(listener);
+        let occ_gain = occlusion.direct_gain.clamp(0.0, 1.0);
+        params.gain_left *= occ_gain;
+        params.gain_right *= occ_gain;
+        params
+    }
 }
 
 /// Zero-heap stereo mixer mixing mono PCM audio into a stereo output buffer with spatial gains.
@@ -247,6 +366,64 @@ pub fn mix_spatial_voice_into(
         let s = mono_samples[i];
         out_stereo[i][0] += s * gl;
         out_stereo[i][1] += s * gr;
+    }
+}
+
+/// Zero-heap occluded stereo mixer bridging `qualia-audio` voices with `scene_audio_graph`
+/// DF2T biquad low-pass occlusion filtering and wet reverb send bus accumulation.
+pub fn mix_spatial_voice_occluded_into(
+    mono_samples: &[f32],
+    params: &SpatialVoiceParams,
+    occlusion: &SpatialOcclusionBridge,
+    sample_rate: f32,
+    filter_state: &mut SpatialOcclusionFilterState,
+    out_direct_stereo: &mut [[f32; 2]],
+    out_reverb_stereo: &mut [[f32; 2]],
+) {
+    let n = mono_samples
+        .len()
+        .min(out_direct_stereo.len())
+        .min(out_reverb_stereo.len());
+    if n == 0 {
+        return;
+    }
+
+    // Compute RBJ 2nd-order low-pass biquad coefficients for occlusion cutoff
+    let sr = sample_rate.max(8_000.0);
+    let fc = occlusion.lowpass_cutoff_hz.clamp(80.0, sr * 0.45);
+    let w0 = std::f32::consts::TAU * fc / sr;
+    let cos_w0 = w0.cos();
+    let sin_w0 = w0.sin();
+    let alpha = sin_w0 / (2.0 * 0.7071);
+    let inv_a0 = 1.0 / (1.0 + alpha).max(1e-6);
+    let b0 = ((1.0 - cos_w0) * 0.5) * inv_a0;
+    let b1 = (1.0 - cos_w0) * inv_a0;
+    let b2 = b0;
+    let a1 = (-2.0 * cos_w0) * inv_a0;
+    let a2 = (1.0 - alpha) * inv_a0;
+
+    let gl = params.gain_left;
+    let gr = params.gain_right;
+    let rev_send = occlusion.reverb_send.clamp(0.0, 1.0);
+    const DC_OFFSET: f32 = 1e-24;
+
+    for i in 0..n {
+        let s = mono_samples[i] + DC_OFFSET;
+        let xl = s * gl;
+        let xr = s * gr;
+
+        let yl = b0 * xl + filter_state.s1_l;
+        filter_state.s1_l = b1 * xl - a1 * yl + filter_state.s2_l;
+        filter_state.s2_l = b2 * xl - a2 * yl;
+
+        let yr = b0 * xr + filter_state.s1_r;
+        filter_state.s1_r = b1 * xr - a1 * yr + filter_state.s2_r;
+        filter_state.s2_r = b2 * xr - a2 * yr;
+
+        out_direct_stereo[i][0] += yl;
+        out_direct_stereo[i][1] += yr;
+        out_reverb_stereo[i][0] += yl * rev_send;
+        out_reverb_stereo[i][1] += yr * rev_send;
     }
 }
 
@@ -296,5 +473,42 @@ mod tests {
 
         // Right channel must be significantly louder than left
         assert!(params.gain_right > params.gain_left);
+    }
+
+    #[test]
+    fn test_pga_motor_listener_and_occluded_mixer_bridge() {
+        // Pure translation motor by [0.0, 2.0, -5.0] in PGA blade4 encoding
+        let r = [1.0, 0.0, 0.0, 0.0];
+        let d = [0.0, 2.5, -1.0, 0.0]; // blade4: [w, -z, -y, -x] for half-translation [0, 1, -2.5]
+        let listener = SpatialListener::from_pga_motor_blades(r, d, [0.0, 0.0, 0.0]);
+        assert!((listener.position[1] - 2.0).abs() < 1e-4);
+        assert!((listener.position[2] + 5.0).abs() < 1e-4);
+
+        let mut emitter = SpatialEmitter::default();
+        emitter.position = [4.0, 2.0, -5.0];
+        let occlusion = SpatialOcclusionBridge {
+            direct_gain: 0.4,
+            lowpass_cutoff_hz: 900.0,
+            diffraction_phase_rad: 0.25,
+            reverb_send: 0.35,
+        };
+        let params = emitter.evaluate_spatial_with_occlusion(&listener, &occlusion);
+        assert!(params.gain_right > params.gain_left);
+
+        let mono = [0.8_f32; 32];
+        let mut st = SpatialOcclusionFilterState::default();
+        let mut direct = [[0.0_f32; 2]; 32];
+        let mut reverb = [[0.0_f32; 2]; 32];
+        mix_spatial_voice_occluded_into(
+            &mono,
+            &params,
+            &occlusion,
+            48_000.0,
+            &mut st,
+            &mut direct,
+            &mut reverb,
+        );
+        assert!(direct[31][1] > direct[31][0]);
+        assert!(reverb[31][1] > 0.0);
     }
 }

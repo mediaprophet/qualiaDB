@@ -5,6 +5,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
+/// Calls a quin builtin.
 pub fn call_quin<H: Host>(
     host: &mut H,
     path: &str,

@@ -339,6 +339,7 @@ pub struct EnumValue {
 }
 
 impl EnumValue {
+    /// Unit value.
     pub fn unit(enum_name: &str, variant_name: &str) -> Self {
         Self {
             enum_name: enum_name.to_string(),
@@ -347,6 +348,7 @@ impl EnumValue {
         }
     }
 
+    /// Builder — sets payload.
     pub fn with_payload(enum_name: &str, variant_name: &str, payload: Vec<Value>) -> Self {
         Self {
             enum_name: enum_name.to_string(),
@@ -497,6 +499,7 @@ pub enum Value {
 }
 
 impl Value {
+    /// `true` when truthy.
     pub fn is_truthy(&self) -> bool {
         match self {
             Value::Bool(b) => *b,
@@ -508,6 +511,7 @@ impl Value {
         }
     }
 
+    /// `f64` form.
     pub fn as_f64(&self) -> Option<f64> {
         match self {
             Value::I64(n) => Some(*n as f64),
@@ -518,6 +522,7 @@ impl Value {
         }
     }
 
+    /// `i64` form.
     pub fn as_i64(&self) -> Option<i64> {
         match self {
             Value::I64(n) => Some(*n),
@@ -694,6 +699,7 @@ impl Value {
 // ── Convenience constructors ───────────────────────────────────────────────
 
 impl Instant {
+    /// Unix timestamp.
     pub fn unix(secs: i64, nanos: u32) -> Self {
         Self {
             scale: TimeScale::Unix,
@@ -704,6 +710,7 @@ impl Instant {
         }
     }
 
+    /// Monotonic timestamp.
     pub fn monotonic(nanos: u64) -> Self {
         Self {
             scale: TimeScale::Monotonic,
@@ -716,10 +723,12 @@ impl Instant {
 }
 
 impl Duration {
+    /// Constructs from secs.
     pub fn from_secs(secs: i64) -> Self {
         Self { secs, nanos: 0 }
     }
 
+    /// Constructs from nanos.
     pub fn from_nanos(nanos: i64) -> Self {
         Self {
             secs: nanos / 1_000_000_000,
@@ -746,6 +755,7 @@ impl std::fmt::Display for Duration {
 }
 
 impl Quantity {
+    /// Creates a new `Quantity`.
     pub fn new(value: f64, unit: &str) -> Self {
         Self {
             value,
@@ -753,6 +763,7 @@ impl Quantity {
         }
     }
 
+    /// Dimensionless quantity.
     pub fn dimensionless(value: f64) -> Self {
         Self {
             value,

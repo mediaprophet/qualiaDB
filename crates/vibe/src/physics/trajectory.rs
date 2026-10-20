@@ -14,6 +14,7 @@ pub struct Waypoint {
 }
 
 impl Waypoint {
+    /// Creates a new `Waypoint`.
     pub fn new(t_secs: i64, t_nanos: u32, pose: Pose) -> Self {
         Self {
             t_secs,
@@ -38,6 +39,7 @@ pub struct WorldLineTrajectory {
 }
 
 impl WorldLineTrajectory {
+    /// Creates a new `WorldLineTrajectory`.
     pub fn new(worldline: WorldLine) -> Self {
         Self {
             worldline,

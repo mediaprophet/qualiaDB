@@ -13,6 +13,7 @@ pub struct Quat {
 }
 
 impl Quat {
+    /// Identity quaternion/transform.
     pub const fn identity() -> Self {
         Self {
             w: 1.0,
@@ -22,15 +23,18 @@ impl Quat {
         }
     }
 
+    /// Creates a new `Quat`.
     pub const fn new(w: f64, x: f64, y: f64, z: f64) -> Self {
         Self { w, x, y, z }
     }
 
     #[inline]
+    /// Dot product.
     pub fn dot(&self, other: &Self) -> f64 {
         self.w * other.w + self.x * other.x + self.y * other.y + self.z * other.z
     }
 
+    /// Normalizes.
     pub fn normalize(&self) -> Self {
         let mag_sq = self.dot(self);
         if mag_sq < 1e-12 {
@@ -45,6 +49,7 @@ impl Quat {
         }
     }
 
+    /// Quaternion conjugate.
     pub fn conjugate(&self) -> Self {
         Self {
             w: self.w,
@@ -54,6 +59,7 @@ impl Quat {
         }
     }
 
+    /// Multiplies.
     pub fn mul(&self, other: &Self) -> Self {
         Self {
             w: self.w * other.w - self.x * other.x - self.y * other.y - self.z * other.z,

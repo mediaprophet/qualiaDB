@@ -272,6 +272,51 @@ impl RoverKinematics {
         let vz = self.state.velocity[2];
         (vx * vx + vz * vz).sqrt() * 3.6
     }
+
+    /// Advances the 4-wheel rover kinematics using 3D sphere-cast wheel suspension probes
+    /// (`cast_sphere`) against a [`BroadphaseBvh`] and 3D collider shapes (`SdfAnalytical`,
+    /// `Cuboid`, `ConvexHull`, etc.).
+    pub fn step_3d<const MAX_LEAVES: usize>(
+        &mut self,
+        throttle: f32,
+        steer: f32,
+        brake: f32,
+        dt: f32,
+        bvh: &crate::physics3d::BroadphaseBvh<MAX_LEAVES>,
+        shapes: &[crate::physics3d::ColliderShape3D],
+        motors: &[qualia_core_db::render::pga::Motor],
+    ) {
+        let max_probe_dist = self.wheel.rest_length + self.wheel.max_travel + 2.0;
+        let wheel_radius = self.wheel.radius.max(0.05);
+        let probe_start_y = self.state.position[1] + wheel_radius + 0.5;
+
+        self.step(throttle, steer, brake, dt, |wx, wz| {
+            if let Some(hit) = crate::physics3d::cast_sphere(
+                bvh,
+                shapes,
+                motors,
+                [wx, probe_start_y, wz],
+                wheel_radius,
+                [0.0, -1.0, 0.0],
+                max_probe_dist,
+                None,
+            ) {
+                (hit.point[1], hit.normal)
+            } else if let Some(ray_hit) = crate::physics3d::cast_ray(
+                bvh,
+                shapes,
+                motors,
+                [wx, probe_start_y, wz],
+                [0.0, -1.0, 0.0],
+                max_probe_dist,
+                None,
+            ) {
+                (ray_hit.point[1], ray_hit.normal)
+            } else {
+                (0.0, [0.0, 1.0, 0.0])
+            }
+        });
+    }
 }
 
 #[cfg(test)]
@@ -317,5 +362,32 @@ mod tests {
 
         // Heading must have turned clockwise (positive heading)
         assert!(rover.state.heading > 0.0);
+    }
+
+    #[test]
+    fn test_rover_step_3d_on_sdf_terrain() {
+        use crate::physics3d::{BroadphaseBvh, ColliderShape3D, SdfPrimitive};
+        use qualia_core_db::render::pga::motor_translate;
+
+        let chassis = VehicleChassisConfig::default();
+        let wheel = WheelConfig::default();
+        let mut rover = RoverKinematics::new(chassis, wheel, [0.0, 0.5, 0.0]);
+
+        let shapes = [ColliderShape3D::SdfAnalytical {
+            primitive: SdfPrimitive::RoundedBox {
+                half_extents: [50.0, 0.5, 50.0],
+                bevel_radius: 0.05,
+            },
+        }];
+        let motors = [motor_translate([0.0, -0.55, 0.0])];
+        let mut bvh = BroadphaseBvh::<16>::new(0.1);
+        bvh.insert(0, shapes[0].world_aabb(&motors[0])).unwrap();
+
+        for _ in 0..32 {
+            rover.step_3d(1.0, 0.0, 0.0, 1.0 / 64.0, &bvh, &shapes, &motors);
+        }
+
+        assert!(rover.speed_kmh() > 2.0);
+        assert!(rover.state.position[2] > 0.0);
     }
 }

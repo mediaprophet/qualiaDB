@@ -47,3 +47,4 @@ pub const SGGX_MICROFLAKE_WGSL: &str = include_str!("sggx_microflake.wgsl");
 pub const FOLIAGE_LOD_WGSL: &str = include_str!("foliage_lod.wgsl");
 pub const TEMPORAL_WARP_WGSL: &str = include_str!("temporal_warp.wgsl");
 pub const TILE_COMPACTION_WGSL: &str = include_str!("tile_compaction.wgsl");
+pub const INSTANCE_CULL_INDIRECT_WGSL: &str = include_str!("instance_cull_indirect.wgsl");

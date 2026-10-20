@@ -81,26 +81,26 @@ fn pipeline(device: &wgpu::Device, src: &str, label: &'static str) -> wgpu::Comp
 }
 
 fn map_read(device: &wgpu::Device, staging: &wgpu::Buffer, size: u64) -> Option<Vec<u8>> {
-    let slice = staging.slice(0..size);
-    let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |r| {
-        let _ = tx.send(r);
-    });
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
-        rx.recv().ok()?.ok()?;
-    }
     #[cfg(target_arch = "wasm32")]
     {
         // On wasm32, synchronous spin-polling cannot yield to the browser microtask loop to complete map_async.
         // Return None immediately to allow zero-latency synchronous CPU fallback without spinning.
-        let _ = (device, staging, slice, tx, rx);
-        return None;
+        let _ = (device, staging, size);
+        None
     }
-    let data = slice.get_mapped_range().ok()?.to_vec();
-    staging.unmap();
-    Some(data)
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let slice = staging.slice(0..size);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |r| {
+            let _ = tx.send(r);
+        });
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
+        rx.recv().ok()?.ok()?;
+        let data = slice.get_mapped_range().ok()?.to_vec();
+        staging.unmap();
+        Some(data)
+    }
 }
 
 /// GPU LSD radix of `keys` → permutation `indices` (`indices[i]` is original row).

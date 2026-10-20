@@ -1,5 +1,6 @@
 //! `hz_to_mel` — Hertz → mel using the HTK convention `2595 * log10(1 + hz/700)`.
 //!
+//! Per-unit conversion.
 //! The inverse lives in the sibling file [`mod@super::mel_to_hz`] (one pub fn per file).
 
 /// Convert a frequency in Hertz to the HTK mel scale.

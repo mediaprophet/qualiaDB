@@ -56,6 +56,7 @@ pub enum Type {
 }
 
 impl Type {
+    /// Constructs from ast.
     pub fn from_ast(t: &TypeExpr) -> Type {
         match t.name.as_str() {
             "i32" => Type::I64,
@@ -115,6 +116,7 @@ impl Type {
     }
 
     #[allow(dead_code)]
+    /// `true` when numeric.
     pub fn is_numeric(&self) -> bool {
         matches!(self, Type::I64 | Type::U64 | Type::F64)
     }

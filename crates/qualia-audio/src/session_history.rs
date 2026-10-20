@@ -43,6 +43,7 @@ impl Default for SessionHistory {
 }
 
 impl SessionHistory {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             ops: [None; MAX_HISTORY],
@@ -51,6 +52,7 @@ impl SessionHistory {
         }
     }
 
+    /// Pushes an item.
     pub fn push(&mut self, op: SessionOp) {
         if self.cursor < self.len {
             // drop redo tail
@@ -69,14 +71,17 @@ impl SessionHistory {
         self.cursor = self.len;
     }
 
+    /// `true` when able to undo.
     pub fn can_undo(&self) -> bool {
         self.cursor > 0
     }
 
+    /// `true` when able to redo.
     pub fn can_redo(&self) -> bool {
         self.cursor < self.len
     }
 
+    /// Undoes.
     pub fn undo(&mut self, plan: &mut ProcessPlan) -> bool {
         if self.cursor == 0 {
             return false;
@@ -88,6 +93,7 @@ impl SessionHistory {
         true
     }
 
+    /// Redoes.
     pub fn redo(&mut self, plan: &mut ProcessPlan) -> bool {
         if self.cursor >= self.len {
             return false;
@@ -99,6 +105,7 @@ impl SessionHistory {
         true
     }
 
+    /// Applies and-record.
     pub fn apply_and_record(&mut self, plan: &mut ProcessPlan, op: SessionOp) {
         apply_forward(plan, op);
         self.push(op);
@@ -198,6 +205,7 @@ pub struct AutomationLane {
 }
 
 impl AutomationLane {
+    /// Creates a new instance.
     pub fn new(track: u8) -> Self {
         Self {
             track,
@@ -209,6 +217,7 @@ impl AutomationLane {
         }
     }
 
+    /// Adds.
     pub fn add(&mut self, frame: u64, value: f32) -> bool {
         if self.n_points >= MAX_AUTO_POINTS {
             return false;

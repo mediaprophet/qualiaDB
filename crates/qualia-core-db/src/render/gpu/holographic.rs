@@ -161,7 +161,7 @@ impl HolographicPipelineGpu {
             },
             depth_stencil: Some(wgpu::DepthStencilState {
                 format: wgpu::TextureFormat::Depth32Float,
-                depth_write_enabled: Some(false),
+                depth_write_enabled: Some(true),
                 depth_compare: Some(wgpu::CompareFunction::LessEqual),
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
@@ -175,5 +175,48 @@ impl HolographicPipelineGpu {
             pipeline,
             node_storage_layout,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn holographic_wgsl_parses_and_outputs_frag_depth_with_voronoi() {
+        let src = crate::shaders::viewport::HOLOGRAPHIC_WGSL;
+        assert!(src.contains("proc_voronoi_f1_3d"));
+        assert!(src.contains("@builtin(frag_depth)"));
+        let module = naga::front::wgsl::parse_str(src).expect("HOLOGRAPHIC_WGSL must parse");
+        let mut validator = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        );
+        validator
+            .validate(&module)
+            .expect("HOLOGRAPHIC_WGSL must validate cleanly");
+    }
+
+    #[test]
+    fn holographic_node_gpu_layout_and_bridge_builder() {
+        let node = HolographicNodeGpu::new(
+            [1.0, 2.0, 3.0],
+            1.5,
+            [0.5, 0.5, 0.5],
+            HolographicPrimitive::Sphere,
+            2.0,
+            1.0,
+            0.0,
+            1.2,
+            0.9,
+            [0.2, 0.8, 1.0, 1.0],
+        )
+        .with_interference_bridge([4.0, 5.0, 6.0], 0.75);
+        assert_eq!(std::mem::size_of::<HolographicNodeGpu>(), 96);
+        assert_eq!(
+            node.half_extents_primitive[3] as u32,
+            HolographicPrimitive::InterferenceBridge as u32
+        );
+        assert_eq!(node.connection_endpoint, [4.0, 5.0, 6.0, 0.75]);
     }
 }

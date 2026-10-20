@@ -60,6 +60,7 @@ pub enum Domain {
 }
 
 impl Domain {
+    /// `&str` form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Domain::Io => "io",

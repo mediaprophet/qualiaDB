@@ -4,6 +4,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
+/// Calls a math builtin.
 pub fn call_math(path: &str, args: &[Value], span: Span) -> Result<Option<Value>, Diagnostic> {
     match path {
         "math.abs" => {

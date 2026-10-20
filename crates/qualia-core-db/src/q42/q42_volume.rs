@@ -49,7 +49,7 @@ pub use volume::{
     Q42SegmentMatchRange, Q42SegmentRangeFactory, Q42Transport, Q42VolumeManifest,
     Q42VolumeSegment, Q42VolumeSetQueryCursor, Q42VolumeSetQueryPage, VerifiedCarBlock,
     VerifiedCarRangeSource, FIELD_POSTINGS_MAGIC, MAX_VOLUME_MANIFEST_BYTES,
-    RESIDENT_QUERY_MAX_BYTES,
+    RESIDENT_QUERY_MAX_BYTES, WasmSliceQ42Reader,
 };
 // Filesystem / memmap / HTTP / publish surface — native only.
 #[cfg(not(target_arch = "wasm32"))]

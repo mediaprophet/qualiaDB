@@ -22,6 +22,7 @@ impl Default for Budget {
 }
 
 impl Budget {
+    /// Constructs from steps.
     pub fn from_steps(steps: u64) -> Self {
         Self {
             steps_left: steps,
@@ -29,6 +30,7 @@ impl Budget {
         }
     }
 
+    /// Charges the budget; fails when exceeded.
     pub fn charge(&mut self, bytes: u64, span: Span) -> Result<(), Diagnostic> {
         if bytes > self.workspace_left {
             return Err(Diagnostic::new(
@@ -44,6 +46,7 @@ impl Budget {
         Ok(())
     }
 
+    /// Advances the tick budget.
     pub fn tick(&mut self, span: Span) -> Result<(), Diagnostic> {
         if self.steps_left == 0 {
             return Err(Diagnostic::new(

@@ -28,6 +28,7 @@ pub struct WorldFrame {
 
 impl WorldFrame {
     #[inline]
+    /// Constructs from time.
     pub fn from_time(time_seconds: f32, seed: u32) -> Self {
         let time_seconds = if time_seconds.is_finite() {
             time_seconds.max(0.0)
@@ -53,6 +54,7 @@ pub struct WindField {
 
 impl WindField {
     #[inline]
+    /// Constructs from telemetry.
     pub fn from_telemetry(telemetry: &SystemTelemetry) -> Self {
         let strength = telemetry.ambient_wind_strength();
         Self {
@@ -97,6 +99,7 @@ pub enum EffectsMode {
 }
 
 #[inline]
+/// Selects mode.
 pub fn select_mode(enabled: bool, gpu_available: bool) -> EffectsMode {
     if !enabled {
         EffectsMode::Disabled
@@ -157,16 +160,19 @@ impl EffectPool {
     }
 
     #[inline]
+    /// Capacity.
     pub fn capacity(&self) -> usize {
         self.particles.len()
     }
 
     #[inline]
+    /// Particles.
     pub fn particles(&self) -> &[GpuParticle] {
         &self.particles
     }
 
     #[inline]
+    /// Dropped events.
     pub fn dropped_events(&self) -> u32 {
         self.dropped_events
     }
@@ -262,6 +268,7 @@ impl EffectPool {
 }
 
 #[inline]
+/// `stable` seed.
 pub fn stable_seed(seed: u32, index: u32) -> u32 {
     let mut value = seed.wrapping_add(index.wrapping_mul(0x9e37_79b9));
     value = (value ^ (value >> 16)).wrapping_mul(0x85eb_ca6b);

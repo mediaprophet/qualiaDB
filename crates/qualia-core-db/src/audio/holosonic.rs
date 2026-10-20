@@ -8,8 +8,46 @@
 //! - Evaluates in the Tier-1 zero-heap hot path with caller-supplied buffers.
 
 use crate::audio::hrtf::binaural_from_position;
-use crate::sonic_token::{SonicEventType, SonicToken};
+use crate::sonic_token::{SonicEventType, SonicToken, SONIC_MAGIC};
+use bytemuck::{Pod, Zeroable};
 use std::f32::consts::TAU;
+
+/// 48-byte Pod telemetry token emitted by the Holosonic wavefield engine (`Q42` U3 telemetry).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
+pub struct HolosonicSonicToken48 {
+    /// 64-bit origin NQuin hash or semantic entity identifier (offset 0..8).
+    pub origin_quin_hash: u64,
+    /// `HolosonicModality` archetype (0..=4) (offset 8).
+    pub archetype: u8,
+    /// Deontic permit state (`0 = Permitted`, `1 = Obligatory`, `2 = Forbidden/Escrow`) (offset 9).
+    pub deontic_permit: u8,
+    /// Magic and status flags (`SONIC_MAGIC`) (offset 10..12).
+    pub flags: u16,
+    /// Associated 10D tensor node index in `NodePool` (offset 12..16).
+    pub tensor_index: u32,
+    /// Base fundamental frequency in Hz (offset 16..20).
+    pub fundamental_hz: f32,
+    /// Instantaneous wavefield phase at the listener in radians (offset 20..24).
+    pub phase_rad: f32,
+    /// Epistemic certainty `q` in `[0.0, 1.0]` (offset 24..28).
+    pub epistemic_q: f32,
+    /// Constructive/destructive wave interference gain ratio (offset 28..32).
+    pub interference_gain: f32,
+    /// Direct-path acoustic occlusion transmission gain `[0.0, 1.0]` (offset 32..36).
+    pub occlusion_gain: f32,
+    /// World-space emitter position `[x, y, z]` (offset 36..48).
+    pub position: [f32; 3],
+}
+
+const _: [(); 48] = [(); core::mem::size_of::<HolosonicSonicToken48>()];
+
+impl Default for HolosonicSonicToken48 {
+    fn default() -> Self {
+        Self::zeroed()
+    }
+}
+
 
 /// Maximum number of active acoustic hologram emitters evaluated simultaneously (zero-heap stack array).
 pub const MAX_HOLOSONIC_EMITTERS: usize = 32;
@@ -163,6 +201,67 @@ impl HolosonicWavefield {
         true
     }
 
+    /// Returns a slice of the currently active emitters.
+    #[inline]
+    pub fn as_slice(&self) -> &[HolosonicEmitter] {
+        &self.emitters[..self.count]
+    }
+
+    /// Emits a 48-byte `HolosonicSonicToken48` telemetry record for an active emitter and sample,
+    /// and also packs a 64-bit `SonicToken` for the `Q42` U3 `SonicTokenRing`.
+    #[inline]
+    pub fn emit_sonic_token(
+        &self,
+        emitter_idx: usize,
+        origin_quin_hash: u64,
+        tensor_index: u32,
+        deontic_permit: u8,
+        occlusion_gain: f32,
+        sample: HolosonicPointSample,
+        listener_pos: [f32; 3],
+        time_s: f32,
+    ) -> (HolosonicSonicToken48, SonicToken) {
+        let e = if emitter_idx < self.count {
+            self.emitters[emitter_idx]
+        } else {
+            HolosonicEmitter::default()
+        };
+        let dx = e.position[0] - listener_pos[0];
+        let dy = e.position[1] - listener_pos[1];
+        let dz = e.position[2] - listener_pos[2];
+        let dist = (dx * dx + dy * dy + dz * dz).sqrt();
+        let omega = TAU * e.base_freq_hz;
+        let phase_rad = e.phase_rad + omega * time_s - (omega / SPEED_OF_SOUND_MPS) * dist;
+        let tok48 = HolosonicSonicToken48 {
+            origin_quin_hash,
+            archetype: e.modality as u8,
+            deontic_permit,
+            flags: SONIC_MAGIC as u16,
+            tensor_index,
+            fundamental_hz: e.base_freq_hz,
+            phase_rad,
+            epistemic_q: e.epistemic_q,
+            interference_gain: sample.interference_gain,
+            occlusion_gain: (e.amplitude * occlusion_gain).clamp(0.0, 1.0),
+            position: e.position,
+        };
+        let midi_note = (69.0 + 12.0 * (e.base_freq_hz.max(20.0) / 440.0).log2())
+            .round()
+            .clamp(0.0, 127.0) as u8;
+        let velocity = ((e.amplitude * occlusion_gain * sample.interference_gain * 96.0)
+            .clamp(1.0, 127.0)) as u8;
+        let packed = SonicToken::pack(
+            0,
+            SonicEventType::Parametric,
+            e.modality as u8 & 0x0f,
+            midi_note,
+            velocity,
+            tensor_index,
+            (SONIC_MAGIC as u16) | ((deontic_permit as u16) << 8),
+        );
+        (tok48, packed)
+    }
+
     /// Evaluates the instantaneous spatial acoustic wavefield at the listener standpoint.
     ///
     /// Computes spherical wave propagation, phase delays ($\Delta \phi = k \cdot d$),
@@ -207,9 +306,10 @@ impl HolosonicWavefield {
             // High q -> pure fundamental tone; low q -> complex multi-frequency dissonant phase
             let q = e.epistemic_q.clamp(0.0, 1.0);
 
-            // HRTF binaural spatialization (ITD + ILD)
-            let relative_pos = [dx, dy, dz];
-            let gains = binaural_from_position(relative_pos, listener_yaw);
+            // HRTF binaural spatialization (ITD + ILD); pass unit direction so distance
+            // attenuation is governed once by the Holosonic spherical spreading formula above.
+            let unit_dir = [dx / dist, dy / dist, dz / dist];
+            let gains = binaural_from_position(unit_dir, listener_yaw);
 
             // Left/right ear pressure with interaural phase delay and epistemic harmonics
             let ear_delay_phase = wave_number * gains.itd_seconds * SPEED_OF_SOUND_MPS;

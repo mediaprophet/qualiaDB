@@ -15,6 +15,7 @@ pub struct StreamingStft {
 }
 
 impl StreamingStft {
+    /// Creates a new instance.
     pub fn new(frame_size: usize, hop: usize) -> Result<Self, AudioError> {
         if !frame_size.is_power_of_two() || !(4..=512).contains(&frame_size) || hop == 0 {
             return Err(AudioError::MalformedAudio);
@@ -77,6 +78,7 @@ impl StreamingStft {
         Ok(written)
     }
 
+    /// Resets.
     pub fn reset(&mut self) {
         self.ring_len = 0;
         self.ring.fill(0.0);

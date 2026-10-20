@@ -33,6 +33,7 @@ pub struct CaptureSession {
 impl CaptureSession {
     pub const RING_CAP: usize = 48_000 * 2; // ~2s @ 48k
 
+    /// Creates a new instance.
     pub fn new(purpose: CapturePurpose, sample_rate: u32, channels: u16) -> Self {
         Self {
             purpose,
@@ -52,6 +53,7 @@ impl CaptureSession {
         self.intent_granted = true;
     }
 
+    /// Revokes intent.
     pub fn revoke_intent(&mut self) {
         self.intent_granted = false;
         self.live = false;
@@ -66,6 +68,7 @@ impl CaptureSession {
         Ok(())
     }
 
+    /// Stops.
     pub fn stop(&mut self) {
         self.live = false;
     }
@@ -101,6 +104,7 @@ impl CaptureSession {
         n
     }
 
+    /// `true` when available.
     pub fn available(&self) -> usize {
         if self.write >= self.read {
             self.write - self.read

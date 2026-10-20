@@ -49,11 +49,13 @@ impl Transform {
         }
     }
 
+    /// Builder — sets scale.
     pub fn with_scale(mut self, s: f64) -> Self {
         self.scale = Vec3::new(s, s, s);
         self
     }
 
+    /// Builder — sets rotation.
     pub fn with_rotation(mut self, rotation: Vec3) -> Self {
         self.rotation = rotation;
         self

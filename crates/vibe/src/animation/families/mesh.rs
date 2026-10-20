@@ -4,6 +4,7 @@ use crate::animation::curves::EasingCurve;
 use crate::animation::pga::Motor;
 use crate::animation::presets::AnimationSample;
 
+/// Evaluates the families family.
 pub fn eval(preset: &str, t: f64) -> AnimationSample {
     match preset {
         "morph_laplacian" | "morph" => {

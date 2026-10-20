@@ -85,6 +85,7 @@ pub struct SpringState1D {
 }
 
 impl SpringState1D {
+    /// Creates a new `SpringState1D`.
     pub const fn new(position: f64, velocity: f64, target: f64) -> Self {
         Self {
             position,
@@ -172,6 +173,7 @@ pub struct SpringState3D {
 }
 
 impl SpringState3D {
+    /// Creates a new `SpringState3D`.
     pub const fn new(position: [f64; 3], velocity: [f64; 3], target: [f64; 3]) -> Self {
         Self {
             position,

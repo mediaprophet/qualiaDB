@@ -235,8 +235,46 @@ fn phase_to_sigma(phase: f32) -> f32 {
     return fract(phase / TWO_PI);
 }
 
+// ── .10d PROC1 3D Cellular Voronoi Micro-Relief (evaluate_voronoi_cellular_f1 GPU counterpart) ──
+
+fn hash33_voronoi(p: vec3<f32>) -> vec3<f32> {
+    var q = vec3<f32>(
+        dot(p, vec3<f32>(127.1, 311.7, 74.7)),
+        dot(p, vec3<f32>(269.5, 183.3, 246.1)),
+        dot(p, vec3<f32>(113.5, 271.9, 124.6))
+    );
+    return fract(sin(q) * 43758.5453123);
+}
+
+fn proc_voronoi_f1_3d(p: vec3<f32>, cell_density: f32, jitter: f32) -> f32 {
+    let sp = p * max(cell_density, 0.001);
+    let ip = floor(sp);
+    let fp = fract(sp);
+    let clamped_jitter = clamp(jitter, 0.0, 1.0);
+    var min_dist_sq = 100.0;
+
+    for (var dz = -1; dz <= 1; dz = dz + 1) {
+        for (var dy = -1; dy <= 1; dy = dy + 1) {
+            for (var dx = -1; dx <= 1; dx = dx + 1) {
+                let neighbor = vec3<f32>(f32(dx), f32(dy), f32(dz));
+                let rnd = hash33_voronoi(ip + neighbor);
+                let offset = mix(vec3<f32>(0.5), rnd, clamped_jitter);
+                let diff = neighbor + offset - fp;
+                let d_sq = dot(diff, diff);
+                min_dist_sq = min(min_dist_sq, d_sq);
+            }
+        }
+    }
+    return clamp(sqrt(min_dist_sq), 0.0, 1.0);
+}
+
+struct HoloFragmentOut {
+    @location(0) color: vec4<f32>,
+    @builtin(frag_depth) depth: f32,
+};
+
 @fragment
-fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment_main(input: VertexOutput) -> HoloFragmentOut {
     let node = nodes[input.node_index];
     let time = camera._padding0.x;
     let camera_eye = camera._padding0.yzw;
@@ -283,6 +321,11 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
+    // Exact world-space hit position and clip-space depth for seamless B-Rep depth-interleaving
+    let hit_pos = node.position_scale.xyz + hit_p;
+    let clip_pos = camera.view_projection * vec4<f32>(hit_pos, 1.0);
+    let exact_depth = clamp(clip_pos.z / max(clip_pos.w, 1e-6), 0.0, 1.0);
+
     // Surface normal & Fresnel rim glow
     let normal = evaluate_normal(hit_p, node, time);
     let view_dir = -local_rd;
@@ -290,9 +333,11 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let curvature = clamp(node.frequency_amplitude.w, 0.1, 4.0);
     let fresnel = pow(1.0 - ndotv, 2.2) * curvature;
 
-    // N3Logic Wave interference pattern
+    // N3Logic Wave interference pattern + PROC1 cellular Voronoi micro-relief
     let interference = evaluate_interference_field(hit_p, node, time);
     let constructive = max(0.0, interference);
+    let voronoi_f1 = proc_voronoi_f1_3d(hit_p, max(node.frequency_amplitude.x * 2.0, 1.0), 0.85);
+    let cellular_relief = mix(1.0, 0.85 + 0.30 * (1.0 - voronoi_f1), clamp(node.manifold_tensor.w, 0.0, 1.0));
 
     // SVG-like procedural telemetry scanlines & latitude rings
     let scanline = 0.85 + 0.15 * sin(hit_p.y * 55.0 - time * 6.0);
@@ -310,9 +355,12 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     // Direct EMF radiant color output (HDR)
     let base_rgb = mix(node.emissive_color.rgb, spectral_rgb, 0.65);
     let emission_hdr = base_rgb * amplitude * (0.6 + fresnel * 1.5 + latitude_ring * 0.8)
-                     * (1.0 + constructive * 0.7) * scanline * certainty_gain;
+                     * (1.0 + constructive * 0.7) * scanline * certainty_gain * cellular_relief;
 
     let alpha = clamp(0.35 + fresnel * 0.65 + latitude_ring * 0.35 + constructive * 0.25, 0.15, 1.0);
 
-    return vec4<f32>(emission_hdr, alpha * node.emissive_color.a);
+    var out: HoloFragmentOut;
+    out.color = vec4<f32>(emission_hdr, alpha * node.emissive_color.a);
+    out.depth = exact_depth;
+    return out;
 }

@@ -105,6 +105,7 @@ impl SignatureFacet {
         }
     }
 
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Mechanical => "mechanical",
@@ -209,6 +210,7 @@ pub enum SpectrumReading {
 }
 
 impl SpectrumReading {
+    /// Parses.
     pub fn parse(name: &str) -> Option<Self> {
         match name.trim().to_ascii_lowercase().as_str() {
             "colour" | "color" => Some(Self::Colour),
@@ -217,6 +219,7 @@ impl SpectrumReading {
         }
     }
 
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Colour => "colour",
@@ -224,6 +227,7 @@ impl SpectrumReading {
         }
     }
 
+    /// Facet.
     pub fn facet(self) -> SignatureFacet {
         match self {
             Self::Colour => SignatureFacet::Optical,
@@ -256,6 +260,7 @@ pub enum PartBindError {
 }
 
 impl PartBindError {
+    /// Message.
     pub fn message(&self) -> String {
         match self {
             Self::EmptyPart => {
@@ -622,6 +627,7 @@ impl MaterialSignature {
         })
     }
 
+    /// `true` when it has facet.
     pub fn has_facet(&self, facet: SignatureFacet) -> bool {
         match facet {
             SignatureFacet::Mechanical => self.mechanical.is_some(),

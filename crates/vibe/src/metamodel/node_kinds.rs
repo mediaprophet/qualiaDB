@@ -175,6 +175,7 @@ pub fn all_node_kinds() -> Vec<&'static NodeKindDescriptor> {
     out
 }
 
+/// Kind IRI.
 pub fn kind_iri(d: &NodeKindDescriptor) -> String {
     term(d.rdfs_class_local)
 }

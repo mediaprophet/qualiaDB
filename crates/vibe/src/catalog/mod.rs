@@ -22,6 +22,7 @@ use crate::animation::presets::list_all_presets;
 use crate::animation::AnimationFamily;
 use crate::value::Value;
 
+/// `true` when known.
 pub fn is_known(path: &str) -> bool {
     canonical_id(path).is_some()
 }
@@ -54,11 +55,13 @@ fn utf8_eq_ignore_case(a: &str, b: &str) -> bool {
     a.to_lowercase() == b.to_lowercase()
 }
 
+/// Family of a builtin.
 pub fn family_of(path: &str) -> Option<&str> {
     let dot = path.find('.')?;
     Some(&path[..dot])
 }
 
+/// `true` when the grant covers the capability.
 pub fn granted_covers(granted: &[&str], path: &str) -> bool {
     if let Some(id) = canonical_id(path) {
         if granted.iter().any(|g| *g == id || *g == path) {
@@ -95,6 +98,7 @@ pub fn looks_like_catalog_path(path: &str) -> bool {
     ALL_INVOKE_IDS.iter().any(|id| id.starts_with(&prefix))
 }
 
+/// Animation preset.
 pub fn animation_preset(path: &str) -> Option<(&'static str, &'static str)> {
     let name = path.strip_prefix("Animation.")?;
     for info in list_all_presets() {
@@ -121,6 +125,7 @@ pub fn apply_preset_alias(path: &str, payload: &mut Value) {
         .or_insert_with(|| Value::String(preset.into()));
 }
 
+/// Parses family-from-preset.
 pub fn parse_family_from_preset(family: &str) -> Option<AnimationFamily> {
     AnimationFamily::from_name(family)
 }
@@ -134,6 +139,7 @@ pub fn family_grant(family: &str) -> String {
     family.to_string()
 }
 
+/// Methods for a family.
 pub fn methods_for_family(family: &str) -> Vec<&'static str> {
     let prefix = format!("{family}.");
     ALL_INVOKE_IDS

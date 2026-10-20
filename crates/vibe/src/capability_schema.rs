@@ -32,6 +32,7 @@ pub enum EffectClass {
 }
 
 impl EffectClass {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Pure => "pure",
@@ -56,6 +57,7 @@ pub enum HonestyLabel {
 }
 
 impl HonestyLabel {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Always => "always",
@@ -80,6 +82,7 @@ pub struct SchemaArg {
 }
 
 impl SchemaArg {
+    /// Creates a new `SchemaArg`.
     pub fn new(name: &str, ty: &str, required: bool) -> Self {
         Self {
             name: name.into(),
@@ -89,11 +92,13 @@ impl SchemaArg {
         }
     }
 
+    /// Builder — sets description.
     pub fn with_description(mut self, desc: &str) -> Self {
         self.description = desc.into();
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
@@ -127,6 +132,7 @@ pub struct SchemaEntry {
 }
 
 impl SchemaEntry {
+    /// Creates a new `SchemaEntry`.
     pub fn new(id: &str, effect: EffectClass, honesty: HonestyLabel, returns: &str) -> Self {
         Self {
             id: id.into(),
@@ -138,16 +144,19 @@ impl SchemaEntry {
         }
     }
 
+    /// Builder — sets arg.
     pub fn with_arg(mut self, arg: SchemaArg) -> Self {
         self.args.push(arg);
         self
     }
 
+    /// Builder — sets description.
     pub fn with_description(mut self, desc: &str) -> Self {
         self.description = desc.into();
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("id".into(), Value::String(self.id.clone()));

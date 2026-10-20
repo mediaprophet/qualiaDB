@@ -50,6 +50,7 @@ pub enum HierarchyLevel {
 }
 
 impl HierarchyLevel {
+    /// `u8` form.
     pub fn as_u8(&self) -> u8 {
         match self {
             Self::LNeg2 => 0,
@@ -70,6 +71,7 @@ impl HierarchyLevel {
         }
     }
 
+    /// Constructs from u8.
     pub fn from_u8(v: u8) -> Option<Self> {
         match v {
             0 => Some(Self::LNeg2),
@@ -91,6 +93,7 @@ impl HierarchyLevel {
         }
     }
 
+    /// Name.
     pub fn name(&self) -> &'static str {
         match self {
             Self::LNeg2 => "L_-2",

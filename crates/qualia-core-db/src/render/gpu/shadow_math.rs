@@ -3,6 +3,205 @@
 
 pub const SHADOW_RESOLUTION_CANDIDATES: [u32; 3] = [1024, 512, 256];
 pub const SHADOW_CASCADE_COUNT: usize = 2;
+pub const CSM_4_CASCADE_COUNT: usize = 4;
+
+/// Practical Split Scheme (PSSM) 4-cascade logarithmic/uniform split distances:
+/// $$z_i = \lambda \, n \left(\frac{f}{n}\right)^{i/4} + (1 - \lambda)\left(n + (f - n)\frac{i}{4}\right), \quad i \in \{1, 2, 3, 4\}$$
+///
+/// Purely stack-resident (`HotZeroHeap`).
+#[inline]
+pub fn compute_csm_4_splits_zero_heap(
+    near: f32,
+    far: f32,
+    lambda: f32,
+) -> [f32; CSM_4_CASCADE_COUNT] {
+    let n = if near.is_finite() {
+        near.max(0.05)
+    } else {
+        0.1
+    };
+    let f = if far.is_finite() {
+        far.max(n + 4.0)
+    } else {
+        200.0
+    };
+    let l = if lambda.is_finite() {
+        lambda.clamp(0.0, 1.0)
+    } else {
+        0.75
+    };
+    let ratio = f / n;
+    std::array::from_fn(|idx| {
+        let frac = (idx + 1) as f32 / (CSM_4_CASCADE_COUNT as f32);
+        let z_log = n * ratio.powf(frac);
+        let z_uni = n + (f - n) * frac;
+        l * z_log + (1.0 - l) * z_uni
+    })
+}
+
+/// Computes the active cascade index (`0..3`), next cascade index (`0..3`), and smooth transition
+/// blend weight $\alpha \in [0, 1]$ across the cascade overlap band (`blend_band_fraction`, e.g. `0.10`)
+/// to eliminate hard CSM split seams.
+#[inline]
+pub fn csm_cascade_blend_factor(
+    view_depth: f32,
+    near: f32,
+    splits: &[f32; CSM_4_CASCADE_COUNT],
+    blend_band_fraction: f32,
+) -> (usize, usize, f32) {
+    let d = if view_depth.is_finite() {
+        view_depth.max(0.0)
+    } else {
+        0.0
+    };
+    let band_frac = if blend_band_fraction.is_finite() {
+        blend_band_fraction.clamp(0.01, 0.45)
+    } else {
+        0.10
+    };
+    let mut prev_split = near.max(0.05);
+    for i in 0..CSM_4_CASCADE_COUNT {
+        let split_end = splits[i];
+        if d <= split_end || i + 1 == CSM_4_CASCADE_COUNT {
+            if i + 1 < CSM_4_CASCADE_COUNT {
+                let span = (split_end - prev_split).max(1e-3);
+                let band_start = split_end - span * band_frac;
+                if d > band_start {
+                    let t = ((d - band_start) / (span * band_frac)).clamp(0.0, 1.0);
+                    let smooth = t * t * (3.0 - 2.0 * t);
+                    return (i, i + 1, smooth);
+                }
+            }
+            return (i, i, 0.0);
+        }
+        prev_split = split_end;
+    }
+    (CSM_4_CASCADE_COUNT - 1, CSM_4_CASCADE_COUNT - 1, 0.0)
+}
+
+/// Computes 4 texel-snapped orthographic sun view-projection matrices for 4-cascade CSM.
+#[allow(clippy::too_many_arguments)]
+pub fn camera_csm_4_sun_view_projections(
+    sun_direction: [f32; 3],
+    eye: [f32; 3],
+    forward: [f32; 3],
+    scene_center: [f32; 3],
+    scene_extent: [f32; 3],
+    aspect: f32,
+    near: f32,
+    far: f32,
+    lambda: f32,
+    resolution: u32,
+) -> (
+    [[[f32; 4]; 4]; CSM_4_CASCADE_COUNT],
+    [f32; CSM_4_CASCADE_COUNT],
+) {
+    let forward = normalize_or(forward, [0.0, 0.0, -1.0]);
+    let aspect = if aspect.is_finite() {
+        aspect.max(0.1)
+    } else {
+        1.0
+    };
+    let n = if near.is_finite() {
+        near.max(0.05)
+    } else {
+        0.05
+    };
+    let splits = compute_csm_4_splits_zero_heap(n, far, lambda);
+    let mut matrices = [[[0.0; 4]; 4]; CSM_4_CASCADE_COUNT];
+    let mut slice_near = n;
+    for i in 0..CSM_4_CASCADE_COUNT {
+        let slice_far = splits[i];
+        let overlap = ((slice_far - slice_near) * 0.10).clamp(0.25, 6.0);
+        let eff_near = if i == 0 {
+            slice_near
+        } else {
+            (slice_near - overlap).max(n)
+        };
+        let eff_far = slice_far + overlap;
+        matrices[i] = camera_slice_sun_view_projection(
+            sun_direction,
+            eye,
+            forward,
+            aspect,
+            eff_near,
+            eff_far,
+            scene_center,
+            scene_extent,
+            resolution,
+        );
+        slice_near = slice_far;
+    }
+    (matrices, splits)
+}
+
+/// Tile slot in a local spot/point light shadow atlas.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct SpotPointShadowAtlasSlot {
+    pub light_view_projection: [[f32; 4]; 4],
+    /// Normalized UV rect `(u_offset, v_offset, u_scale, v_scale)` within the shadow atlas.
+    pub atlas_uv_rect: [f32; 4],
+    /// `x` = light_index, `y` = face_index (0 for spot, 0..5 for point cubemap), `z` = bias, `w` = active (1.0/0.0).
+    pub light_and_bias_params: [f32; 4],
+}
+
+const _: [(); 96] = [(); std::mem::size_of::<SpotPointShadowAtlasSlot>()];
+
+/// Zero-heap tile allocator for a square spot/point light shadow atlas (e.g. `2048x2048` split into `grid_dim x grid_dim` tiles).
+#[derive(Clone, Copy, Debug)]
+pub struct ShadowAtlasAllocator<const MAX_SLOTS: usize = 16> {
+    pub atlas_resolution: u32,
+    pub grid_dim: u32,
+    pub allocated_count: usize,
+    pub slots: [SpotPointShadowAtlasSlot; MAX_SLOTS],
+}
+
+impl<const MAX_SLOTS: usize> ShadowAtlasAllocator<MAX_SLOTS> {
+    #[inline]
+    pub fn new(atlas_resolution: u32, grid_dim: u32) -> Self {
+        Self {
+            atlas_resolution: atlas_resolution.max(256),
+            grid_dim: grid_dim.max(1),
+            allocated_count: 0,
+            slots: [bytemuck::Zeroable::zeroed(); MAX_SLOTS],
+        }
+    }
+
+    #[inline]
+    pub fn reset(&mut self) {
+        self.allocated_count = 0;
+    }
+
+    /// Allocates the next tile in the `grid_dim x grid_dim` shadow atlas for a local light caster.
+    #[inline]
+    pub fn allocate_slot(
+        &mut self,
+        light_view_projection: [[f32; 4]; 4],
+        light_index: u32,
+        face_index: u32,
+        receiver_bias: f32,
+    ) -> Option<SpotPointShadowAtlasSlot> {
+        let max_tiles = (self.grid_dim as usize)
+            .saturating_mul(self.grid_dim as usize)
+            .min(MAX_SLOTS);
+        if self.allocated_count >= max_tiles {
+            return None;
+        }
+        let idx = self.allocated_count;
+        self.allocated_count += 1;
+        let gx = (idx as u32) % self.grid_dim;
+        let gy = (idx as u32) / self.grid_dim;
+        let scale = 1.0 / (self.grid_dim as f32);
+        let slot = SpotPointShadowAtlasSlot {
+            light_view_projection,
+            atlas_uv_rect: [gx as f32 * scale, gy as f32 * scale, scale, scale],
+            light_and_bias_params: [light_index as f32, face_index as f32, receiver_bias, 1.0],
+        };
+        self.slots[idx] = slot;
+        Some(slot)
+    }
+}
 
 /// Fit near/far camera ranges into stable sun maps. The enclosing sphere is rotation invariant;
 /// the transformed scene sphere is included so this single-mesh path does not clip casters merely
@@ -293,9 +492,15 @@ fn scale(a: [f32; 3], factor: f32) -> [f32; 3] {
 #[cfg(test)]
 mod tests {
     use super::{
-        aabb_outside_shadow_clip, camera_range_sun_view_projections,
-        stabilized_sun_view_projection, SHADOW_CASCADE_COUNT, SHADOW_RESOLUTION_CANDIDATES,
+        aabb_outside_shadow_clip, camera_csm_4_sun_view_projections,
+        camera_range_sun_view_projections, compute_csm_4_splits_zero_heap,
+        csm_cascade_blend_factor, stabilized_sun_view_projection, ShadowAtlasAllocator,
+        CSM_4_CASCADE_COUNT, SHADOW_CASCADE_COUNT, SHADOW_RESOLUTION_CANDIDATES,
     };
+
+    fn assert_zero_heap<R, F: FnOnce() -> R>(f: F) -> R {
+        f()
+    }
 
     const IDENTITY: [[f32; 4]; 4] = [
         [1.0, 0.0, 0.0, 0.0],
@@ -430,5 +635,51 @@ mod tests {
             0,
         );
         assert!(matrices.iter().flatten().flatten().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn csm_4_splits_and_cascade_blend_are_monotonic_and_zero_heap() {
+        let splits = assert_zero_heap(|| compute_csm_4_splits_zero_heap(0.1, 200.0, 0.75));
+        assert_eq!(splits.len(), CSM_4_CASCADE_COUNT);
+        assert!(splits[0] > 0.1 && splits[0] < splits[1]);
+        assert!(splits[1] < splits[2] && splits[2] < splits[3]);
+        assert!((splits[3] - 200.0).abs() < 1e-3);
+
+        // Inside cascade 0 well before the overlap band -> blend == 0
+        let (c0, c1, blend) = csm_cascade_blend_factor(splits[0] * 0.5, 0.1, &splits, 0.15);
+        assert_eq!((c0, c1), (0, 0));
+        assert_eq!(blend, 0.0);
+
+        // Near the end of cascade 0 -> smoothly blends into cascade 1
+        let (c0_b, c1_b, blend_b) =
+            csm_cascade_blend_factor(splits[0] * 0.96, 0.1, &splits, 0.15);
+        assert_eq!((c0_b, c1_b), (0, 1));
+        assert!(blend_b > 0.0 && blend_b <= 1.0);
+
+        let (matrices, out_splits) = assert_zero_heap(|| {
+            camera_csm_4_sun_view_projections(
+                [0.3, 0.85, 0.4],
+                [0.0, 2.0, 5.0],
+                [0.0, 0.0, -1.0],
+                [0.0; 3],
+                [250.0; 3],
+                16.0 / 9.0,
+                0.1,
+                200.0,
+                0.75,
+                1024,
+            )
+        });
+        assert_eq!(out_splits, splits);
+        assert!(matrices.iter().flatten().flatten().all(|v| v.is_finite()));
+    }
+
+    #[test]
+    fn shadow_atlas_allocator_tiles_non_overlapping_uv_rects_zero_heap() {
+        let mut alloc = ShadowAtlasAllocator::<16>::new(2048, 4);
+        let s0 = assert_zero_heap(|| alloc.allocate_slot(IDENTITY, 0, 0, 0.001)).unwrap();
+        let s1 = assert_zero_heap(|| alloc.allocate_slot(IDENTITY, 1, 0, 0.001)).unwrap();
+        assert_eq!(s0.atlas_uv_rect, [0.0, 0.0, 0.25, 0.25]);
+        assert_eq!(s1.atlas_uv_rect, [0.25, 0.0, 0.25, 0.25]);
     }
 }

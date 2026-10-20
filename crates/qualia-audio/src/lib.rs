@@ -34,9 +34,16 @@ pub mod resample;
 pub mod semantic;
 pub mod session_history;
 pub mod sonify;
+pub mod spatial;
 pub mod speech;
 pub mod types;
 pub mod wav;
+
+pub use spatial::{
+    mix_spatial_voice_into, mix_spatial_voice_occluded_into, DistanceModel, SpatialEmitter,
+    SpatialListener, SpatialOcclusionBridge, SpatialOcclusionFilterState, SpatialVoiceParams,
+    MAX_SPATIAL_VOICES, SPEED_OF_SOUND_AIR,
+};
 
 pub use aed_weights::{AedWeightBundle, WeightedAedModel};
 pub use capture::{CapturePurpose, CaptureSession};

@@ -30,6 +30,7 @@ pub enum Curvature {
 }
 
 impl Curvature {
+    /// Curvature constant.
     pub fn k(&self) -> f64 {
         match self {
             Self::Open => -1.0,
@@ -99,6 +100,7 @@ impl FlrwMetric {
         self.hubble_param * distance_m / C
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("scale_factor".into(), Value::F64(self.scale_factor));
@@ -152,6 +154,7 @@ pub struct FloatingOrigin {
 }
 
 impl FloatingOrigin {
+    /// Creates a new `FloatingOrigin`.
     pub fn new(origin: [f64; 3]) -> Self {
         Self { origin_mpc: origin }
     }

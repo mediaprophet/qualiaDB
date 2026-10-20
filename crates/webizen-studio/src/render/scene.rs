@@ -15,26 +15,32 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    /// Creates a new instance.
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
 
+    /// Vector subtraction.
     pub fn sub(self, other: Self) -> Self {
         Self::new(self.x - other.x, self.y - other.y, self.z - other.z)
     }
 
+    /// Vector addition.
     pub fn add(self, other: Self) -> Self {
         Self::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
 
+    /// Scalar multiply.
     pub fn scale(self, k: f64) -> Self {
         Self::new(self.x * k, self.y * k, self.z * k)
     }
 
+    /// Dot product.
     pub fn dot(self, other: Self) -> f64 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
+    /// Cross product.
     pub fn cross(self, other: Self) -> Self {
         Self::new(
             self.y * other.z - self.z * other.y,
@@ -43,10 +49,12 @@ impl Vec3 {
         )
     }
 
+    /// Vector length.
     pub fn length(self) -> f64 {
         self.dot(self).sqrt()
     }
 
+    /// Unit vector.
     pub fn normalize(self) -> Self {
         let len = self.length();
         if len <= f64::EPSILON {

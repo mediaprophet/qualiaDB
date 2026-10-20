@@ -20,6 +20,7 @@ pub enum FieldQuantity {
 }
 
 impl FieldQuantity {
+    /// `iri` form.
     pub fn as_iri(&self) -> &str {
         match self {
             Self::Pressure => "http://qudt.org/vocab/quantitykind/Pressure",
@@ -49,6 +50,7 @@ pub enum FieldUnit {
 }
 
 impl FieldUnit {
+    /// `iri` form.
     pub fn as_iri(&self) -> &str {
         match self {
             Self::KiloPascal => "http://qudt.org/vocab/unit/KiloPA",

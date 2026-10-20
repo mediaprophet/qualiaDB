@@ -20,6 +20,7 @@ pub enum ArFrameLevel {
 }
 
 impl ArFrameLevel {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::L60GeodeticAnchor => "L_6.0",
@@ -95,6 +96,7 @@ impl SpatialAnchor {
         (norm - 1.0).abs() < 1e-5
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("anchor_id".into(), Value::String(self.anchor_id.clone()));
@@ -149,6 +151,7 @@ pub struct HeadPose {
 }
 
 impl HeadPose {
+    /// Identity quaternion/transform.
     pub fn identity() -> Self {
         Self {
             position: [0.0, 0.0, 0.0],
@@ -183,6 +186,7 @@ pub struct VioWorldRoot {
 }
 
 impl VioWorldRoot {
+    /// Creates a new `VioWorldRoot`.
     pub fn new(anchor: SpatialAnchor) -> Self {
         Self {
             init_anchor: anchor,

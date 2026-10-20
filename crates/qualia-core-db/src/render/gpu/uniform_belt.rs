@@ -262,18 +262,24 @@ impl UniformBelt {
 mod tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::allocation_counter;
-    use crate::wgsl_forge::execute::{BindingUsage, QualiaSlabAllocator};
+    use crate::wgsl_forge::execute::{BindingUsage, MemoryTopology, QualiaSlabAllocator};
 
     /// Pure Ring/Sub-allocation Logic Test (No GPU Driver Required).
-    /// Tests `QualiaSlabAllocator::allocate` and offset advancing over 1,000 frames
+    /// Tests `QualiaSlabAllocator::allocate_transient` and offset advancing over 1,000 frames
     /// with `assert_eq!(measured_allocs, 0)` (strictly zero allocations, never skipped).
     #[test]
     fn pure_slab_and_uniform_ring_zero_alloc() {
-        let mut slab = QualiaSlabAllocator::new(1024 * 1024, 256);
+        let mut slab = QualiaSlabAllocator::new_with_alignment(
+            MemoryTopology::Discrete {
+                staging_required: true,
+            },
+            1024 * 1024,
+            256,
+        );
 
         // Warm up / prime one allocation
         let warm_view = slab
-            .allocate(256, 0, 0, BindingUsage::StorageRead)
+            .allocate_transient(256, 0, 0, BindingUsage::StorageRead)
             .expect("slab warmup alloc");
         slab.advance_read_head(warm_view.offset + warm_view.length_bytes);
 
@@ -282,7 +288,7 @@ mod tests {
         // Execute 1,000 simulated frames of uniform sub-allocation without GPU driver calls
         for _ in 0..1000 {
             let view = slab
-                .allocate(256, 0, 0, BindingUsage::StorageRead)
+                .allocate_transient(256, 0, 0, BindingUsage::StorageRead)
                 .expect("slab frame allocation");
             assert_eq!(view.length_bytes, 256);
             slab.advance_read_head(view.offset + view.length_bytes);

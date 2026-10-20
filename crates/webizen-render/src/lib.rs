@@ -18,6 +18,9 @@ pub mod poet_preview;
 pub mod scene_contract;
 pub mod shaders;
 pub mod telemetry;
+pub mod ui;
+pub mod ui_layout;
+pub mod ui_msdf_text;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub mod volumetric;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
@@ -41,6 +44,21 @@ pub use pipeline::{BindGroupManager, RenderBindGroups};
 pub use scene_contract::{RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint};
 pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};
 pub use telemetry::SystemTelemetry;
+pub use ui::{
+    Color4f, NodeWire, Rect2D, UiWidget, WidgetKind, ZeroHeapUiCanvas, MAX_UI_TEXT_QUADS,
+    MAX_UI_WIDGETS, MAX_UI_WIRES,
+};
+pub use ui_layout::{
+    AlignItems, ComputedUiRect, Edges, FlexDirection, JustifyContent, Margin, Padding, SizeRule,
+    UiLayoutNode, UiLayoutStyle, ZeroHeapUiLayoutTree, MAX_UI_LAYOUT_NODES, NO_UI_NODE,
+};
+pub use ui_msdf_text::{
+    generate_procedural_msdf_atlas_into, glyph_metrics_for_char, glyph_slot_for_char,
+    kerning_advance_em, msdf_median_of_three, shape_text_zero_heap, MsdfGlyphMetrics,
+    MsdfTextQuad, ShapedTextRunMetrics, MAX_MSDF_TEXT_QUADS, MSDF_ATLAS_COLS,
+    MSDF_ATLAS_GLYPH_COUNT, MSDF_ATLAS_HEIGHT, MSDF_ATLAS_ROWS, MSDF_ATLAS_WIDTH, MSDF_CELL_PX,
+    MSDF_PIXEL_RANGE, MSDF_TEXT_WGSL,
+};
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub use volumetric::{
     render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into,

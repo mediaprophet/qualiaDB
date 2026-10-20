@@ -13,6 +13,7 @@ fn term(local: &str) -> String {
     format!("{COND_NS}{local}")
 }
 
+/// Projects a conditioning profile.
 pub fn project_profile(profile: &ConditioningProfileDto) -> Result<Vec<CondStatement>, String> {
     profile.validate()?;
     let subj = profile.profile_id.clone();

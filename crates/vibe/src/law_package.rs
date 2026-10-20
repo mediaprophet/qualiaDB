@@ -41,6 +41,7 @@ pub enum LawKind {
 }
 
 impl LawKind {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Physical => "physical",
@@ -48,6 +49,7 @@ impl LawKind {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "physical" => Some(Self::Physical),
@@ -183,6 +185,7 @@ pub struct LawStore {
 }
 
 impl LawStore {
+    /// Creates a new `LawStore`.
     pub fn new() -> Self {
         Self::default()
     }

@@ -26,6 +26,7 @@ pub struct Vibrato {
 
 impl Vibrato {
     #[inline]
+    /// None variant.
     pub const fn none() -> Self {
         Self {
             rate_hz: 0.0,

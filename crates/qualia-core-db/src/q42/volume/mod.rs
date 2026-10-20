@@ -39,6 +39,7 @@ mod range_volume;
 #[cfg(not(target_arch = "wasm32"))]
 mod stream_writer;
 mod validate;
+mod wasm_slice_reader;
 #[cfg(not(target_arch = "wasm32"))]
 mod verify;
 #[cfg(not(target_arch = "wasm32"))]
@@ -112,3 +113,4 @@ pub use write_quins::{write_sorted_quins_volume, write_sorted_quins_volume_with_
 
 pub(crate) use index::{bidx_block_range_for_hash, bidx_blocks_for_hash_into};
 pub(crate) use validate::validate_volume_structure;
+pub use wasm_slice_reader::WasmSliceQ42Reader;

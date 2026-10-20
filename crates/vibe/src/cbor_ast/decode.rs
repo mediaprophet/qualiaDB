@@ -5,6 +5,7 @@ use super::{DecodeError, TAG_VIBE_AST};
 use crate::ast::*;
 use crate::span::Span;
 
+/// Decodes CBOR.
 pub fn decode(bytes: &[u8]) -> Result<Program, DecodeError> {
     let mut dec = CborDecoder::new(bytes);
     let tag = dec.tag()?;

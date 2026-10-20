@@ -143,7 +143,7 @@ impl PortalGpu {
             .formats
             .iter()
             .copied()
-            .find(|f| f.is_srgb())
+            .find(|f| f.has_srgb_suffix())
             .unwrap_or(caps.formats[0]);
 
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
@@ -304,7 +304,7 @@ impl PortalGpu {
             .formats
             .iter()
             .copied()
-            .find(|f| f.is_srgb())
+            .find(|f| f.has_srgb_suffix())
             .unwrap_or(caps.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {

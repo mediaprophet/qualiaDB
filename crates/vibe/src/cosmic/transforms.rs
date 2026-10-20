@@ -184,6 +184,7 @@ pub struct FourVector {
 }
 
 impl FourVector {
+    /// Creates a new `FourVector`.
     pub fn new(ct: f64, x: f64, y: f64, z: f64) -> Self {
         Self { ct, x, y, z }
     }
@@ -203,6 +204,7 @@ pub struct LorentzBoost {
 }
 
 impl LorentzBoost {
+    /// Creates a new `LorentzBoost`.
     pub fn new(beta_x: f64, beta_y: f64, beta_z: f64) -> Result<Self, &'static str> {
         let beta_sq = beta_x * beta_x + beta_y * beta_y + beta_z * beta_z;
         if beta_sq >= 1.0 {

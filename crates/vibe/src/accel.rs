@@ -11,6 +11,7 @@ pub const CELL_BATCH_NATIVE: usize = 512;
 /// WASM sequential chunk (P16.3).
 pub const CELL_BATCH_WASM: usize = 64;
 
+/// Cell batch capacity.
 pub fn cell_batch_cap() -> usize {
     #[cfg(target_arch = "wasm32")]
     {

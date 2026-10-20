@@ -106,6 +106,21 @@ fn open_from_bytes(
     ]))
 }
 
+/// Admit a `.q42` or 48-byte `NQuin` slice into the live `PoetSnapshot` on both native and `wasm32`.
+pub fn admit_pack_slice(
+    snap: &mut PoetSnapshot,
+    args_v: &Value,
+    span: Span,
+) -> Result<Value, Diagnostic> {
+    let bytes_val = args::rec(args_v, "bytes").ok_or_else(|| {
+        args::bad(
+            span,
+            "GraphDatabase.admit_pack_slice requires `bytes: [...]`",
+        )
+    })?;
+    open_from_bytes(snap, bytes_val, args_v, span)
+}
+
 /// Commit resident quins (committed ∪ staged) to `path` as a unified v3 `.q42`.
 /// `sanctuary` defaults true (Poet sanctuary save). Empty graphs are rejected.
 pub fn commit(snap: &mut PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, Diagnostic> {

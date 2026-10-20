@@ -200,3 +200,405 @@ impl PortalGpu {
         }
     }
 }
+
+/// 112-byte uniform block for `CLUSTER_LIGHT_WGSL` (`16 x 9 x 24 = 3456` frustum clusters).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct ClusterGridParamsGpu {
+    pub grid_dim: [u32; 4],
+    pub view_size: [f32; 4],
+    pub inverse_projection: [[f32; 4]; 4],
+    pub light_count: u32,
+    pub max_lights_per_cluster: u32,
+    pub _pad0: u32,
+    pub _pad1: u32,
+}
+
+const _: [(); 112] = [(); std::mem::size_of::<ClusterGridParamsGpu>()];
+
+/// Active GPU compute pipeline owner for 3D Clustered Light Culling (`CLUSTER_LIGHT_WGSL`).
+pub struct ClusterLightPipelineGpu {
+    pub build_aabbs_pipeline: wgpu::ComputePipeline,
+    pub cull_lights_pipeline: wgpu::ComputePipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
+    pub params_buf: wgpu::Buffer,
+    pub cluster_aabbs_buf: wgpu::Buffer,
+    pub point_lights_buf: wgpu::Buffer,
+    pub cluster_light_indices_buf: wgpu::Buffer,
+    pub cluster_grid_buf: wgpu::Buffer,
+}
+
+impl ClusterLightPipelineGpu {
+    pub const TOTAL_CLUSTERS: u32 = 16 * 9 * 24;
+    pub const MAX_LIGHTS_PER_CLUSTER: u32 = 64;
+
+    pub fn new(device: &wgpu::Device, max_lights: u32) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("qualia_cluster_light_wgsl"),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::shaders::viewport::CLUSTER_LIGHT_WGSL.into(),
+            ),
+        });
+
+        let storage_entry = |binding: u32, read_only: bool| wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        };
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("qualia_cluster_light_bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                storage_entry(1, false),
+                storage_entry(2, true),
+                storage_entry(3, false),
+                storage_entry(4, false),
+            ],
+        });
+
+        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("qualia_cluster_light_pl"),
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
+        });
+
+        let build_aabbs_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("qualia_cluster_build_aabbs"),
+                layout: Some(&layout),
+                module: &shader,
+                entry_point: Some("cluster_build_aabbs"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+
+        let cull_lights_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("qualia_cluster_cull_lights"),
+                layout: Some(&layout),
+                module: &shader,
+                entry_point: Some("cluster_cull_lights"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+
+        let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qualia_cluster_params_buf"),
+            size: std::mem::size_of::<ClusterGridParamsGpu>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let cluster_aabbs_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qualia_cluster_aabbs_buf"),
+            size: u64::from(Self::TOTAL_CLUSTERS) * 32,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let point_lights_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qualia_cluster_point_lights_buf"),
+            size: u64::from(max_lights.max(16)) * 32,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let cluster_light_indices_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qualia_cluster_light_indices_buf"),
+            size: u64::from(Self::TOTAL_CLUSTERS * Self::MAX_LIGHTS_PER_CLUSTER) * 4,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let cluster_grid_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("qualia_cluster_grid_buf"),
+            size: u64::from(Self::TOTAL_CLUSTERS) * 8,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        Self {
+            build_aabbs_pipeline,
+            cull_lights_pipeline,
+            bind_group_layout,
+            params_buf,
+            cluster_aabbs_buf,
+            point_lights_buf,
+            cluster_light_indices_buf,
+            cluster_grid_buf,
+        }
+    }
+}
+
+/// Active GPU compute pipeline owner for Continuous EMF Spectral Deferred Resolve (`DEFERRED_RESOLVE_WGSL`).
+pub struct DeferredSpectralResolvePipelineGpu {
+    pub pipeline: wgpu::ComputePipeline,
+    pub frame_bgl: wgpu::BindGroupLayout,
+    pub gbuffer_bgl: wgpu::BindGroupLayout,
+    pub output_bgl: wgpu::BindGroupLayout,
+}
+
+impl DeferredSpectralResolvePipelineGpu {
+    pub fn new(device: &wgpu::Device) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("qualia_deferred_resolve_wgsl"),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::shaders::viewport::DEFERRED_RESOLVE_WGSL.into(),
+            ),
+        });
+
+        let frame_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("qualia_deferred_resolve_frame_bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 4,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+
+        let gbuffer_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("qualia_deferred_resolve_gbuffer_bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Depth,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+            ],
+        });
+
+        let output_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("qualia_deferred_resolve_output_bgl"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::StorageTexture {
+                    access: wgpu::StorageTextureAccess::WriteOnly,
+                    format: wgpu::TextureFormat::Rgba16Float,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                },
+                count: None,
+            }],
+        });
+
+        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("qualia_deferred_resolve_pl"),
+            bind_group_layouts: &[Some(&frame_bgl), Some(&gbuffer_bgl), Some(&output_bgl)],
+            immediate_size: 0,
+        });
+
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("qualia_deferred_resolve_pipeline"),
+            layout: Some(&layout),
+            module: &shader,
+            entry_point: Some("cs_deferred_resolve"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+
+        Self {
+            pipeline,
+            frame_bgl,
+            gbuffer_bgl,
+            output_bgl,
+        }
+    }
+}
+
+/// Active GPU compute pipeline owner for Continuous Multi-Scale Foliage LOD (`FOLIAGE_LOD_WGSL`).
+pub struct FoliageLodPipelineGpu {
+    pub pipeline: wgpu::ComputePipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
+}
+
+impl FoliageLodPipelineGpu {
+    pub fn new(device: &wgpu::Device) -> Self {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("qualia_foliage_lod_wgsl"),
+            source: wgpu::ShaderSource::Wgsl(crate::shaders::viewport::FOLIAGE_LOD_WGSL.into()),
+        });
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("qualia_foliage_lod_bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+
+        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("qualia_foliage_lod_pl"),
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
+        });
+
+        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("qualia_foliage_lod_pipeline"),
+            layout: Some(&layout),
+            module: &shader,
+            entry_point: Some("foliage_cull_and_generate"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
+
+        Self {
+            pipeline,
+            bind_group_layout,
+        }
+    }
+}
+
+/// 64-byte Inherent Optical Properties (IOP) descriptor mirroring `DielectricVolumeIop` in `HYDROLOGIC_OPTICS_WGSL`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct DielectricVolumeIopGpu {
+    pub ior_spectrum: [f32; 3],
+    pub _pad0: f32,
+    pub absorption_coeff: [f32; 3],
+    pub _pad1: f32,
+    pub rayleigh_scattering: [f32; 3],
+    pub _pad2: f32,
+    pub mie_scattering: [f32; 4],
+}
+
+const _: [(); 64] = [(); std::mem::size_of::<DielectricVolumeIopGpu>()];
+
+impl DielectricVolumeIopGpu {
+    /// Evaluates Beer-Lambert transmittance $T(d) = \exp(-(a + b_r + b_m) d)$ with zero heap allocations.
+    #[inline]
+    pub fn beer_lambert_transmittance(&self, distance_m: f32) -> [f32; 3] {
+        let d = distance_m.max(0.0);
+        [
+            (-((self.absorption_coeff[0] + self.rayleigh_scattering[0] + self.mie_scattering[0])
+                * d))
+                .exp(),
+            (-((self.absorption_coeff[1] + self.rayleigh_scattering[1] + self.mie_scattering[1])
+                * d))
+                .exp(),
+            (-((self.absorption_coeff[2] + self.rayleigh_scattering[2] + self.mie_scattering[2])
+                * d))
+                .exp(),
+        ]
+    }
+}

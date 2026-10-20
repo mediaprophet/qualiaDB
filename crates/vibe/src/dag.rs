@@ -66,6 +66,7 @@ pub struct DagNode {
 }
 
 impl DagNode {
+    /// Creates a new `DagNode`.
     pub fn new(id: u32, name: &str, effect: NodeEffect) -> Self {
         Self {
             id,
@@ -79,26 +80,31 @@ impl DagNode {
         }
     }
 
+    /// Builder — sets capability.
     pub fn with_capability(mut self, cap: &str) -> Self {
         self.capabilities.push(cap.to_string());
         self
     }
 
+    /// Builder — sets input.
     pub fn with_input(mut self, channel: &str) -> Self {
         self.inputs.push(channel.to_string());
         self
     }
 
+    /// Builder — sets output.
     pub fn with_output(mut self, channel: &str) -> Self {
         self.outputs.push(channel.to_string());
         self
     }
 
+    /// Builder — sets budget.
     pub fn with_budget(mut self, budget: u32) -> Self {
         self.budget = budget;
         self
     }
 
+    /// `control-unit` form.
     pub fn as_control_unit(mut self) -> Self {
         self.is_control_unit = true;
         self
@@ -115,6 +121,7 @@ pub struct DagEdge {
 }
 
 impl DagEdge {
+    /// Creates a new `DagEdge`.
     pub fn new(from: u32, to: u32) -> Self {
         Self { from, to }
     }
@@ -163,6 +170,7 @@ pub struct DagPipeline {
 }
 
 impl DagPipeline {
+    /// Creates a new `DagPipeline`.
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
@@ -393,6 +401,7 @@ pub enum RouterStrategy {
 }
 
 impl ControlUnit {
+    /// Creates a new `ControlUnit`.
     pub fn new(node_id: u32, strategy: RouterStrategy) -> Self {
         Self { node_id, strategy }
     }
@@ -448,6 +457,7 @@ pub struct ExecutionState {
 }
 
 impl ExecutionState {
+    /// Creates a new `ExecutionState`.
     pub fn new(pipeline: &DagPipeline) -> Self {
         let statuses: HashMap<u32, NodeStatus> = pipeline
             .nodes()
@@ -534,6 +544,7 @@ pub struct JudgeFrame {
 }
 
 impl JudgeFrame {
+    /// Creates a new `JudgeFrame`.
     pub fn new() -> Self {
         Self {
             claims: Vec::with_capacity(MAX_JUDGE_CLAIMS),

@@ -3,6 +3,7 @@ use crate::bind::dispatch;
 use crate::value::EnumValue;
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Evaluates a call with the first arg evaluated.
     pub(crate) fn eval_call_with_first_val(
         &mut self,
         callee: &Expr,
@@ -43,6 +44,7 @@ impl<'a, H: Host> Engine<'a, H> {
         self.dispatch_call_path(&path, pos, named, span, env)
     }
 
+    /// Evaluates a call.
     pub(crate) fn eval_call(
         &mut self,
         callee: &Expr,
@@ -159,6 +161,7 @@ impl<'a, H: Host> Engine<'a, H> {
         self.dispatch_call_path(&path, pos, named, span, env)
     }
 
+    /// Dispatches a call path.
     pub(crate) fn dispatch_call_path(
         &mut self,
         path: &str,

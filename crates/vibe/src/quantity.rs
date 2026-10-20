@@ -18,6 +18,7 @@ pub struct Dimension {
 }
 
 impl Dimension {
+    /// Dimensionless quantity.
     pub const fn dimensionless() -> Self {
         Self {
             length: 0,
@@ -30,48 +31,56 @@ impl Dimension {
         }
     }
 
+    /// Length dimension.
     pub const fn length() -> Self {
         let mut d = Self::dimensionless();
         d.length = 1;
         d
     }
 
+    /// Mass dimension.
     pub const fn mass() -> Self {
         let mut d = Self::dimensionless();
         d.mass = 1;
         d
     }
 
+    /// Time dimension.
     pub const fn time() -> Self {
         let mut d = Self::dimensionless();
         d.time = 1;
         d
     }
 
+    /// Frequency dimension.
     pub const fn frequency() -> Self {
         let mut d = Self::dimensionless();
         d.time = -1;
         d
     }
 
+    /// Current dimension.
     pub const fn current() -> Self {
         let mut d = Self::dimensionless();
         d.current = 1;
         d
     }
 
+    /// Temperature dimension.
     pub const fn temperature() -> Self {
         let mut d = Self::dimensionless();
         d.temperature = 1;
         d
     }
 
+    /// Amount-of-substance dimension.
     pub const fn amount() -> Self {
         let mut d = Self::dimensionless();
         d.amount = 1;
         d
     }
 
+    /// Luminous-intensity dimension.
     pub const fn luminous() -> Self {
         let mut d = Self::dimensionless();
         d.luminous = 1;
@@ -79,18 +88,21 @@ impl Dimension {
     }
 
     // Common derived dimensions
+    /// Area dimension.
     pub const fn area() -> Self {
         let mut d = Self::dimensionless();
         d.length = 2;
         d
     }
 
+    /// Volume dimension.
     pub const fn volume() -> Self {
         let mut d = Self::dimensionless();
         d.length = 3;
         d
     }
 
+    /// Velocity dimension.
     pub const fn velocity() -> Self {
         let mut d = Self::dimensionless();
         d.length = 1;
@@ -98,6 +110,7 @@ impl Dimension {
         d
     }
 
+    /// Acceleration dimension.
     pub const fn acceleration() -> Self {
         let mut d = Self::dimensionless();
         d.length = 1;
@@ -105,6 +118,7 @@ impl Dimension {
         d
     }
 
+    /// Force dimension.
     pub const fn force() -> Self {
         let mut d = Self::dimensionless();
         d.mass = 1;
@@ -113,6 +127,7 @@ impl Dimension {
         d
     }
 
+    /// Pressure dimension.
     pub const fn pressure() -> Self {
         let mut d = Self::dimensionless();
         d.mass = 1;
@@ -121,6 +136,7 @@ impl Dimension {
         d
     }
 
+    /// Energy dimension.
     pub const fn energy() -> Self {
         let mut d = Self::dimensionless();
         d.mass = 1;
@@ -129,6 +145,7 @@ impl Dimension {
         d
     }
 
+    /// Power dimension.
     pub const fn power() -> Self {
         let mut d = Self::dimensionless();
         d.mass = 1;
@@ -180,6 +197,7 @@ pub struct Unit {
 }
 
 impl Unit {
+    /// Creates a new `Unit`.
     pub fn new(symbol: impl Into<String>, dimension: Dimension, scale: f64) -> Self {
         Self {
             symbol: symbol.into(),
@@ -189,6 +207,7 @@ impl Unit {
         }
     }
 
+    /// Builder — sets offset.
     pub fn with_offset(
         symbol: impl Into<String>,
         dimension: Dimension,
@@ -278,12 +297,14 @@ pub struct UnitId {
 }
 
 impl UnitId {
+    /// Creates a new `UnitId`.
     pub fn new(symbol: impl Into<String>) -> Self {
         Self {
             symbol: symbol.into(),
         }
     }
 
+    ///  when dimensions are compatible.
     pub fn compatible(&self, other: &Self) -> bool {
         match (lookup_unit(&self.symbol), lookup_unit(&other.symbol)) {
             (Some(a), Some(b)) => a.dimension == b.dimension,

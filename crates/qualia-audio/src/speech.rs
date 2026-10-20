@@ -23,6 +23,7 @@ pub const SPEECH_MAGIC: u32 = 0x4850_5153; // 'SQPH' LE-ish
 pub const SPEECH_VERSION: u32 = 1;
 
 impl SpeechEncoderWeights {
+    /// Constructs from seed.
     pub fn from_seed(seed: u64, n_mel: usize) -> Self {
         let n_phones = PHONES.len();
         let mut weight = vec![0.0f32; n_phones * n_mel];
@@ -39,6 +40,7 @@ impl SpeechEncoderWeights {
         }
     }
 
+    /// Byte form.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut v = Vec::with_capacity(32 + self.weight.len() * 4);
         v.extend_from_slice(&SPEECH_MAGIC.to_le_bytes());
@@ -52,6 +54,7 @@ impl SpeechEncoderWeights {
         v
     }
 
+    /// Parses bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, AudioError> {
         if bytes.len() < 24 {
             return Err(AudioError::MalformedAudio);
@@ -89,6 +92,7 @@ impl SpeechEncoderWeights {
         })
     }
 
+    /// Saves path.
     pub fn save_path(&self, path: &std::path::Path) -> Result<(), String> {
         if let Some(p) = path.parent() {
             std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
@@ -96,6 +100,7 @@ impl SpeechEncoderWeights {
         std::fs::write(path, self.to_bytes()).map_err(|e| e.to_string())
     }
 
+    /// Loads path.
     pub fn load_path(path: &std::path::Path) -> Result<Self, String> {
         let b = std::fs::read(path).map_err(|e| e.to_string())?;
         Self::from_bytes(&b).map_err(|e| format!("{e:?}"))
@@ -161,6 +166,7 @@ pub struct StreamingSpeechDecoder {
 }
 
 impl StreamingSpeechDecoder {
+    /// Creates a new instance.
     pub fn new(weights: SpeechEncoderWeights, hop: usize) -> Self {
         let blank = weights.n_phones.saturating_sub(1);
         Self {
@@ -171,6 +177,7 @@ impl StreamingSpeechDecoder {
         }
     }
 
+    /// `model` hash.
     pub fn model_hash(&self) -> u64 {
         self.weights.model_hash
     }

@@ -33,6 +33,7 @@ const VALID_IMPORT_NS: &[&str] = &[
     "zk",
 ];
 
+/// Checks program-all.
 pub fn check_program_all(program: &Program) -> (CheckResult, Vec<Diagnostic>) {
     let mut errors = Vec::new();
     let mut aliases = HashMap::new();
@@ -61,6 +62,7 @@ pub fn check_program_all(program: &Program) -> (CheckResult, Vec<Diagnostic>) {
     (CheckResult { effect: max_effect }, errors)
 }
 
+/// Checks program.
 pub fn check_program(program: &Program) -> Result<CheckResult, Diagnostic> {
     let (result, errors) = check_program_all(program);
     match errors.into_iter().next() {
@@ -271,6 +273,7 @@ fn check_item(
     }
 }
 
+/// Checks cell.
 pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {
     let mut env = HashMap::new();
     let aliases = HashMap::new();
@@ -285,6 +288,7 @@ pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {
     Ok(CheckResult { effect })
 }
 
+/// Checks function.
 pub(crate) fn check_function(
     f: &FunctionDecl,
     aliases: &HashMap<String, String>,

@@ -1,6 +1,7 @@
 use super::*;
 
 impl<'a> Parser<'a> {
+    /// Parses module.
     pub(crate) fn parse_module(&mut self) -> Result<ModuleDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // module
@@ -21,6 +22,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses import.
     pub(crate) fn parse_import(&mut self) -> Result<ImportDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -49,6 +51,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses prefix.
     pub(crate) fn parse_prefix(&mut self) -> Result<PrefixDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?;
@@ -69,6 +72,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses locale.
     pub(crate) fn parse_locale(&mut self) -> Result<LocaleDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // locale
@@ -98,6 +102,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses using.
     pub(crate) fn parse_using(&mut self) -> Result<Vec<CapSpec>, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // using
@@ -140,6 +145,7 @@ impl<'a> Parser<'a> {
         Ok(caps)
     }
 
+    /// Parses present.
     pub(crate) fn parse_present(&mut self) -> Result<crate::ast::PresentDecl, Diagnostic> {
         let start = self.cur.span.start;
         self.bump()?; // present
@@ -172,6 +178,7 @@ impl<'a> Parser<'a> {
         })
     }
 
+    /// Parses requires.
     pub(crate) fn parse_requires(&mut self) -> Result<Vec<CapSpec>, Diagnostic> {
         self.bump()?;
         self.expect(TokenKind::LBracket, "expected '[' after requires")?;
@@ -191,6 +198,7 @@ impl<'a> Parser<'a> {
         Ok(caps)
     }
 
+    /// Parses cap-spec.
     pub(crate) fn parse_cap_spec(&mut self) -> Result<CapSpec, Diagnostic> {
         let start = self.cur.span.start;
         if !self.kw("capability") {

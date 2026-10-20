@@ -80,6 +80,7 @@ pub struct WebGpuCapabilityReport {
 }
 
 impl WebGpuCapabilityReport {
+    /// Unavailable variant.
     pub fn unavailable() -> Self {
         Self {
             status: WebGpuStatus::AdapterUnavailable,
@@ -775,7 +776,7 @@ impl<'a> WgpuRenderer<'a> {
             .formats
             .iter()
             .copied()
-            .find(|f| f.is_srgb())
+            .find(|f| f.has_srgb_suffix())
             .or_else(|| surface_caps.formats.first().copied())
             .ok_or_else(|| "webizen-render surface has no supported formats".to_string())?;
         let alpha_mode = surface_caps

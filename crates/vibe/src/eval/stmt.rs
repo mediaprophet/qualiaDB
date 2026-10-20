@@ -1,6 +1,7 @@
 use super::*;
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Evaluates a block.
     pub(crate) fn eval_block(&mut self, block: &Block, env: &mut Env) -> Result<Flow, Diagnostic> {
         let mut last = Value::Null;
         for s in &block.stmts {
@@ -12,6 +13,7 @@ impl<'a, H: Host> Engine<'a, H> {
         Ok(Flow::Next(last))
     }
 
+    /// Finishes a block.
     pub(crate) fn finish_block(
         &mut self,
         block: &Block,
@@ -22,6 +24,7 @@ impl<'a, H: Host> Engine<'a, H> {
         }
     }
 
+    /// Evaluates a statement.
     pub(crate) fn eval_stmt(&mut self, stmt: &Stmt, env: &mut Env) -> Result<Flow, Diagnostic> {
         self.budget.tick(stmt.span())?;
         match stmt {

@@ -565,6 +565,75 @@ const fn is_srgb_format(vk_format: u32) -> bool {
         || (vk_format >= 158 && vk_format <= 184 && vk_format % 2 == 0)
 }
 
+/// Hardware-native compressed GPU texture format for direct zero-inflation `wgpu` upload.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HardwareCompressedUploadFormat {
+    Bc1RgbaUnorm,
+    Bc1RgbaUnormSrgb,
+    Bc3RgbaUnorm,
+    Bc3RgbaUnormSrgb,
+    Bc5RgUnorm,
+    Bc7RgbaUnorm,
+    Bc7RgbaUnormSrgb,
+    Etc2Rgb8Unorm,
+    Etc2Rgb8UnormSrgb,
+    Etc2Rgba8Unorm,
+    Etc2Rgba8UnormSrgb,
+    Astc4x4Unorm,
+    Astc4x4UnormSrgb,
+}
+
+impl HardwareCompressedUploadFormat {
+    /// Block dimensions `(width, height)` in texels.
+    #[inline]
+    pub const fn block_dimensions(self) -> (u32, u32) {
+        (4, 4)
+    }
+
+    /// Byte size of one 4x4 compressed block.
+    #[inline]
+    pub const fn bytes_per_block(self) -> usize {
+        match self {
+            Self::Bc1RgbaUnorm
+            | Self::Bc1RgbaUnormSrgb
+            | Self::Etc2Rgb8Unorm
+            | Self::Etc2Rgb8UnormSrgb => 8,
+            _ => 16,
+        }
+    }
+}
+
+/// Select a direct hardware-compressed upload format when the KTX2 document's `vk_format`
+/// matches an enabled GPU compression feature (`BC`, `ASTC`, or `ETC2`), avoiding CPU RGBA8
+/// inflation.
+#[inline]
+pub const fn select_hardware_compressed_format(
+    ktx2_header: &Ktx2Document<'_>,
+    gpu_features_bc: bool,
+    gpu_features_astc: bool,
+    gpu_features_etc2: bool,
+) -> Option<HardwareCompressedUploadFormat> {
+    if ktx2_header.supercompression_scheme == 1 {
+        return None;
+    }
+    match ktx2_header.vk_format {
+        131 | 133 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc1RgbaUnorm),
+        132 | 134 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc1RgbaUnormSrgb),
+        137 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc3RgbaUnorm),
+        138 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc3RgbaUnormSrgb),
+        141 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc5RgUnorm),
+        145 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc7RgbaUnorm),
+        146 if gpu_features_bc => Some(HardwareCompressedUploadFormat::Bc7RgbaUnormSrgb),
+        147 if gpu_features_etc2 => Some(HardwareCompressedUploadFormat::Etc2Rgb8Unorm),
+        148 if gpu_features_etc2 => Some(HardwareCompressedUploadFormat::Etc2Rgb8UnormSrgb),
+        151 | 155 if gpu_features_etc2 => Some(HardwareCompressedUploadFormat::Etc2Rgba8Unorm),
+        152 | 156 if gpu_features_etc2 => Some(HardwareCompressedUploadFormat::Etc2Rgba8UnormSrgb),
+        157 if gpu_features_astc => Some(HardwareCompressedUploadFormat::Astc4x4Unorm),
+        158 if gpu_features_astc => Some(HardwareCompressedUploadFormat::Astc4x4UnormSrgb),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 #[path = "texture_ktx2_tests.rs"]
 mod tests;

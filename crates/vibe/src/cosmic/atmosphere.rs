@@ -16,6 +16,7 @@ pub enum AtmosphericLayer {
 }
 
 impl AtmosphericLayer {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Exosphere => "exosphere",
@@ -131,6 +132,7 @@ impl AtmosphericProfile {
         }
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("body_name".into(), Value::String(self.body_name.clone()));
@@ -175,6 +177,7 @@ pub enum MagnetosphereType {
 }
 
 impl MagnetosphereType {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::None => "none",
@@ -241,6 +244,7 @@ impl MagnetosphereProfile {
         self.surface_field_t * (body_radius_m / r_m).powi(3)
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("body_name".into(), Value::String(self.body_name.clone()));

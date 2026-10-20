@@ -11,6 +11,8 @@ pub mod dsp;
 pub mod dsp_kernel;
 pub mod holosonic;
 pub mod hrtf;
+/// Epic 8: Scene-synchronized 3D Holosonic Wavefield & Multi-Bus HRTF Audio Graph with SDF + BVH occlusion.
+pub mod scene_audio_graph;
 /// AU-CORE-DSP — real inverse STFT (WOLA resynthesis; reuses `qualia-audio`). Native only.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod istft;
@@ -51,12 +53,19 @@ pub use dsp::biquad_df2t::{
 };
 pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
 pub use holosonic::{
-    HolosonicEmitter, HolosonicModality, HolosonicPointSample, HolosonicWavefield,
-    MAX_HOLOSONIC_EMITTERS, SPEED_OF_SOUND_MPS,
+    HolosonicEmitter, HolosonicModality, HolosonicPointSample, HolosonicSonicToken48,
+    HolosonicWavefield, MAX_HOLOSONIC_EMITTERS, SPEED_OF_SOUND_MPS,
 };
 pub use hrtf::{
     binaural_from_position, binaural_render, convolve_fir, set_hrtf_profile, synthesize_hrir,
     BinauralGains, HrtfProfile,
+};
+pub use scene_audio_graph::{
+    calc_rbj_lowpass_coeffs, evaluate_acoustic_occlusion_zero_heap, AcousticMaterial,
+    AcousticObstacle, AcousticObstacleShape, AcousticOcclusionResult, AudioListenerPose,
+    DirectBinauralBus, EarlyReflectionsBus, HolosonicNode, HolosonicTelemetryBus,
+    LateReverbFreeverbBus, SceneAudioBusGraph, EARLY_REFLECTION_TAPS,
+    HOLOSONIC_TELEMETRY_RING_CAP, MAX_SCENE_AUDIO_EMITTERS, ZERO_HEAP_HRIR_TAPS,
 };
 pub use stft::{bake_stft_sidecar_from_samples, forward_stft, stft_magnitudes};
 pub use stft_bake::{bake_stft_sidecar_from_preview, bake_tensor_stft_sidecar, StftBakeError};

@@ -46,6 +46,7 @@ pub struct Phase {
 }
 
 impl Phase {
+    /// Creates a new `Phase`.
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -55,16 +56,19 @@ impl Phase {
         }
     }
 
+    /// Allows the action in this interrupt scope.
     pub fn allow(mut self, cap: &str) -> Self {
         self.allowed_caps.push(cap.to_string());
         self
     }
 
+    /// Forbids the action in this interrupt scope.
     pub fn forbid(mut self, cap: &str) -> Self {
         self.forbidden_caps.push(cap.to_string());
         self
     }
 
+    /// Marks the scope non-interruptible.
     pub fn non_interruptible(mut self) -> Self {
         self.interruptible = false;
         self
@@ -112,6 +116,7 @@ pub struct DeonticInterrupt {
 }
 
 impl DeonticInterrupt {
+    /// Records a prohibition breach.
     pub fn prohibition_breach(cap: &str, phase: &str, node_id: Option<u32>) -> Self {
         Self {
             interrupt_type: InterruptType::ProhibitionBreach,
@@ -125,6 +130,7 @@ impl DeonticInterrupt {
         }
     }
 
+    /// Records a phase violation.
     pub fn phase_violation(cap: &str, phase: &str, node_id: Option<u32>) -> Self {
         Self {
             interrupt_type: InterruptType::PhaseViolation,
@@ -176,6 +182,7 @@ pub struct PhaseLeaser {
 }
 
 impl PhaseLeaser {
+    /// Creates a new `PhaseLeaser`.
     pub fn new() -> Self {
         Self {
             phases: HashMap::new(),
@@ -342,6 +349,7 @@ pub struct AgentSandbox {
 }
 
 impl AgentSandbox {
+    /// Creates a new `AgentSandbox`.
     pub fn new() -> Self {
         Self {
             leasers: HashMap::new(),

@@ -6,6 +6,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
+/// Dispatches a host call.
 pub fn dispatch<H: Host>(
     host: &mut H,
     path: &str,

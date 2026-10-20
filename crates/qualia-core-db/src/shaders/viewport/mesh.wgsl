@@ -605,3 +605,87 @@ fn screen_space_ao_visibility(position: vec4<f32>, normal: vec3<f32>, depth: f32
     }
     return select(1.0, total / max(total_weight, 1e-6), total_weight > 1e-5);
 }
+
+
+// ── GPU PGA Dual-Quaternion Skinning & .10d PROC1 Harmonic Motor Oscillation ──
+
+struct PgaSkinMotor {
+    r: vec4<f32>,
+    d: vec4<f32>,
+};
+
+fn pga_blade4_to_quat(b: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(b.x, -b.w, -b.z, -b.y);
+}
+
+fn pga_quat_mul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(
+        a.x * b.x - a.y * b.y - a.z * b.z - a.w * b.w,
+        a.x * b.y + a.y * b.x + a.z * b.w - a.w * b.z,
+        a.x * b.z - a.y * b.w + a.z * b.x + a.w * b.y,
+        a.x * b.w + a.y * b.z - a.z * b.y + a.w * b.x
+    );
+}
+
+fn pga_motor_blend_4(
+    m0_r: vec4<f32>, m0_d: vec4<f32>,
+    m1_r: vec4<f32>, m1_d: vec4<f32>,
+    m2_r: vec4<f32>, m2_d: vec4<f32>,
+    m3_r: vec4<f32>, m3_d: vec4<f32>,
+    weights: vec4<f32>
+) -> PgaSkinMotor {
+    let s1 = select(1.0, -1.0, dot(m0_r, m1_r) < 0.0);
+    let s2 = select(1.0, -1.0, dot(m0_r, m2_r) < 0.0);
+    let s3 = select(1.0, -1.0, dot(m0_r, m3_r) < 0.0);
+    let w1 = weights.y * s1;
+    let w2 = weights.z * s2;
+    let w3 = weights.w * s3;
+    let r_sum = m0_r * weights.x + m1_r * w1 + m2_r * w2 + m3_r * w3;
+    let d_sum = m0_d * weights.x + m1_d * w1 + m2_d * w2 + m3_d * w3;
+    let inv_norm = inverseSqrt(max(dot(r_sum, r_sum), 1e-12));
+    let r_unit = r_sum * inv_norm;
+    let d_scaled = d_sum * inv_norm;
+    let d_ortho = d_scaled - r_unit * dot(r_unit, d_scaled);
+    return PgaSkinMotor(r_unit, d_ortho);
+}
+
+fn pga_motor_transform_point(m: PgaSkinMotor, p: vec3<f32>) -> vec3<f32> {
+    let qr = pga_blade4_to_quat(m.r);
+    let qd = pga_blade4_to_quat(m.d);
+    let qr_conj = vec4<f32>(qr.x, -qr.y, -qr.z, -qr.w);
+    let p_q = vec4<f32>(0.0, p.x, p.y, p.z);
+    let p_rot = pga_quat_mul(pga_quat_mul(qr, p_q), qr_conj);
+    let t_q = pga_quat_mul(qd, qr_conj);
+    return vec3<f32>(
+        p_rot.y + 2.0 * t_q.y,
+        p_rot.z + 2.0 * t_q.z,
+        p_rot.w + 2.0 * t_q.w
+    );
+}
+
+fn pga_motor_transform_vector(m_r: vec4<f32>, v: vec3<f32>) -> vec3<f32> {
+    let qr = pga_blade4_to_quat(m_r);
+    let qr_conj = vec4<f32>(qr.x, -qr.y, -qr.z, -qr.w);
+    let v_q = vec4<f32>(0.0, v.x, v.y, v.z);
+    let v_rot = pga_quat_mul(pga_quat_mul(qr, v_q), qr_conj);
+    return vec3<f32>(v_rot.y, v_rot.z, v_rot.w);
+}
+
+fn pga_eval_proc_motor_oscillation(
+    pos: vec3<f32>,
+    axis: vec3<f32>,
+    amp_rad: f32,
+    freq_hz: f32,
+    damping: f32,
+    time_s: f32,
+    phase_rad: f32
+) -> vec3<f32> {
+    let omega = 6.283185307 * freq_hz;
+    let decay = exp(-damping * max(time_s, 0.0));
+    let theta = amp_rad * sin(omega * time_s + phase_rad) * decay;
+    let half_theta = theta * 0.5;
+    let ax = normalize(select(vec3<f32>(0.0, 0.0, 1.0), axis, dot(axis, axis) > 1e-8));
+    let s = sin(half_theta);
+    let r = vec4<f32>(cos(half_theta), s * (-ax.z), s * ax.y, s * (-ax.x));
+    return pga_motor_transform_vector(r, pos);
+}

@@ -46,6 +46,7 @@ pub struct WebizenFramePlan<'a> {
 
 #[cfg(feature = "qualia")]
 impl<'a> WebizenFramePlan<'a> {
+    /// Temporal contract.
     pub const fn temporal_contract(&self) -> TemporalFrameContract<'a> {
         self.temporal
     }
@@ -78,6 +79,7 @@ impl Default for WebizenFrameScheduler {
 
 #[cfg(feature = "qualia")]
 impl WebizenFrameScheduler {
+    /// Creates a new instance.
     pub const fn new() -> Self {
         Self {
             builder: FrameGraphBuilder::new(),

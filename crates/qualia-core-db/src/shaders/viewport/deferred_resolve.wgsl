@@ -111,6 +111,54 @@ fn evaluate_spectral_reflectance(coeffs: vec3<f32>, u: vec4<f32>) -> vec4<f32> {
     return fma(f * inverseSqrt(denom), vec4<f32>(0.5), vec4<f32>(0.5));
 }
 
+// 4-Cascade CSM smooth transition blend factor (returns vec3(primary_idx, next_idx, blend_alpha)).
+fn eval_csm_4_cascade_blend(view_depth: f32, splits: vec4<f32>, blend_band: f32) -> vec3<f32> {
+    let d = max(view_depth, 0.0);
+    let band = clamp(blend_band, 0.02, 0.40);
+    let s = array<f32, 4>(splits.x, splits.y, splits.z, splits.w);
+    var prev_s: f32 = 0.05;
+    for (var i: u32 = 0u; i < 4u; i = i + 1u) {
+        let cur_s = s[i];
+        if (d <= cur_s || i == 3u) {
+            if (i < 3u) {
+                let span = max(cur_s - prev_s, 1e-3);
+                let band_start = cur_s - span * band;
+                if (d > band_start) {
+                    let alpha = smoothstep(band_start, cur_s, d);
+                    return vec3<f32>(f32(i), f32(i + 1u), alpha);
+                }
+            }
+            return vec3<f32>(f32(i), f32(i), 0.0);
+        }
+        prev_s = cur_s;
+    }
+    return vec3<f32>(3.0, 3.0, 0.0);
+}
+
+// Height-stratified valley fog with a crisp 35m foreground clear zone:
+// d_eff = max(0.0, dist - 35.0), preserving near-field material contrast while
+// integrating exponential height-stratified optical depth over distance.
+fn apply_height_stratified_valley_fog_35m(
+    radiance: vec3<f32>,
+    camera_pos: vec3<f32>,
+    world_pos: vec3<f32>,
+    inscatter_color: vec3<f32>,
+) -> vec3<f32> {
+    let ray = world_pos - camera_pos;
+    let dist = length(ray);
+    let d_eff = max(0.0, dist - 35.0);
+    if (d_eff <= 0.0) {
+        return radiance;
+    }
+    let scale_height = 42.0;
+    let base_sigma_t = 0.0045;
+    let mid_height = 0.5 * (camera_pos.y + world_pos.y);
+    let height_density = exp(-max(mid_height, -20.0) / scale_height);
+    let optical_depth = clamp(base_sigma_t * height_density * d_eff, 0.0, 12.0);
+    let transmittance = exp(-optical_depth);
+    return mix(inscatter_color, radiance, transmittance);
+}
+
 @compute @workgroup_size(8, 8, 1)
 fn cs_deferred_resolve(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let pixel_coord = vec2<i32>(global_id.xy);
@@ -241,8 +289,15 @@ fn cs_deferred_resolve(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let Y = dot(hero_radiance, cmf_y) * 0.25;
     let Z = dot(hero_radiance, cmf_z) * 0.25;
 
-    // 9. Convert CIE XYZ to Linear sRGB
-    let linear_rgb = xyz_to_linear_srgb(vec3<f32>(X, Y, Z));
+    // 9. Convert CIE XYZ to Linear sRGB & apply 35m foreground-clear height-stratified valley fog
+    let raw_linear_rgb = xyz_to_linear_srgb(vec3<f32>(X, Y, Z));
+    let valley_fog_inscatter = vec3<f32>(0.36, 0.46, 0.58) * 0.18;
+    let linear_rgb = apply_height_stratified_valley_fog_35m(
+        raw_linear_rgb,
+        camera.camera_pos.xyz,
+        world_pos,
+        valley_fog_inscatter,
+    );
 
     // 10. Store in Output Buffer
     textureStore(resolve_out, pixel_coord, vec4<f32>(linear_rgb, 1.0));

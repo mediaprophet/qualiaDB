@@ -65,6 +65,7 @@ fn spawn_spatial_refresh(page: Page, mut epoch: Signal<u64>, mut status: Signal<
 }
 
 #[component]
+/// Dioxus `SpatialBridgeCanvas` component.
 pub fn SpatialBridgeCanvas(page: Page) -> Element {
     let page_for_effect = page.clone();
     let epoch = use_signal(|| 0u64);

@@ -26,6 +26,7 @@ pub const AED_MAGIC: u32 = 0x4445_4151;
 pub const AED_VERSION: u32 = 1;
 
 impl AedWeightBundle {
+    /// Constructs from seed.
     pub fn from_seed(seed: u64) -> Self {
         let mut weight = [0.0f32; 16];
         let mut h = seed ^ 0xAED0_AED0_AED0_AED0;
@@ -66,6 +67,7 @@ impl AedWeightBundle {
         v
     }
 
+    /// Parses bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, crate::types::AudioError> {
         let need = 4 + 4 + 8 + 16 * 4 + 4 * 4 + 4 * 8;
         if bytes.len() < need {
@@ -120,6 +122,7 @@ impl AedWeightBundle {
         })
     }
 
+    /// Saves path.
     pub fn save_path(&self, path: &std::path::Path) -> Result<(), String> {
         if let Some(p) = path.parent() {
             std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
@@ -127,6 +130,7 @@ impl AedWeightBundle {
         std::fs::write(path, self.to_bytes()).map_err(|e| e.to_string())
     }
 
+    /// Loads path.
     pub fn load_path(path: &std::path::Path) -> Result<Self, String> {
         let b = std::fs::read(path).map_err(|e| e.to_string())?;
         Self::from_bytes(&b).map_err(|e| format!("{e:?}"))
@@ -141,6 +145,7 @@ pub struct WeightedAedModel {
 }
 
 impl WeightedAedModel {
+    /// Constructs from seed.
     pub fn from_seed(seed: u64) -> Self {
         Self {
             bundle: AedWeightBundle::from_seed(seed),
@@ -150,6 +155,7 @@ impl WeightedAedModel {
         }
     }
 
+    /// Constructs from bundle.
     pub fn from_bundle(bundle: AedWeightBundle) -> Self {
         Self {
             bundle,
@@ -159,6 +165,7 @@ impl WeightedAedModel {
         }
     }
 
+    /// `model` hash.
     pub fn model_hash(&self) -> u64 {
         self.bundle.model_hash
     }

@@ -79,6 +79,7 @@ impl TimelineBranch {
         fnv1a_64(&input)
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("branch_id".into(), Value::String(self.branch_id.clone()));
@@ -107,6 +108,7 @@ pub struct TimelineDag {
 }
 
 impl TimelineDag {
+    /// Creates a new `TimelineDag`.
     pub fn new(prime: TimelineBranch) -> Self {
         Self {
             branches: vec![prime],

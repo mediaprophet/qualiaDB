@@ -14,6 +14,27 @@ pub fn query(snap: &PoetSnapshot, args_v: &Value, span: Span) -> Result<Value, D
         .or_else(|| args::rec_str(args_v, "query"))
         .ok_or_else(|| args::bad(span, "GraphDatabase.sparql needs a query string"))?;
     let star = q.contains("<<") || q.contains(">>");
+    if let Some(Value::List(items)) = args::rec(args_v, "bytes") {
+        let mut raw = Vec::with_capacity(items.len());
+        for item in items {
+            match item {
+                Value::U64(n) if *n <= 255 => raw.push(*n as u8),
+                Value::I64(n) if *n >= 0 && *n <= 255 => raw.push(*n as u8),
+                _ => {
+                    return Err(args::bad(
+                        span,
+                        "GraphDatabase.sparql: bytes element out of u8 range",
+                    ))
+                }
+            }
+        }
+        let reader = crate::q42_volume::WasmSliceQ42Reader::open(&raw)
+            .map_err(|e| args::bad(span, format!("GraphDatabase.sparql slice open: {e}")))?;
+        let slice_quins = reader
+            .collect_all_quins()
+            .map_err(|e| args::bad(span, format!("GraphDatabase.sparql slice decode: {e}")))?;
+        return run(q, star, &slice_quins, span);
+    }
     snap.with_live_quins(|quins| run(q, star, quins, span))
 }
 

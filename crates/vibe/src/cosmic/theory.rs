@@ -21,6 +21,7 @@ pub enum LawNature {
 }
 
 impl LawNature {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Physical => "Physical",
@@ -30,6 +31,7 @@ impl LawNature {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "Physical" => Some(Self::Physical),
@@ -57,6 +59,7 @@ pub enum AssuranceLevel {
 }
 
 impl AssuranceLevel {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::A0 => "A0",
@@ -67,6 +70,7 @@ impl AssuranceLevel {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "A0" => Some(Self::A0),
@@ -89,6 +93,7 @@ pub enum TheoryLineage {
 }
 
 impl TheoryLineage {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Refines => "Refines",
@@ -192,6 +197,7 @@ impl TheoryPackage {
         self.nature == LawNature::Fictional
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("theory_id".into(), Value::String(self.theory_id.clone()));

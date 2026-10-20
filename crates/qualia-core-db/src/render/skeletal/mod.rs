@@ -2,11 +2,39 @@
 //! Joint transforms are rigid; authoring scale is baked into mesh/bind positions.
 //! Sampling, hierarchy composition and skinning allocate no heap memory.
 
+pub mod absm;
 pub mod activity;
 pub mod authoring;
+pub mod blend_space;
+pub mod gpu_morph;
+pub mod gpu_skin;
+pub mod ik_motor;
 mod player;
 mod pose;
 mod skin;
+pub use absm::{
+    AbsmLayer, AbsmMachine, AbsmParameter, AbsmStateNode, AbsmStateSource, AbsmTransition,
+    AnimationSignal, BoneLayerMask, EontPostureConfig, LayerBlendMode, LeafCondition,
+    RootMotionDelta, RootMotionExtractor, SignalQueue, SignalTrigger, TransitionCondition,
+};
+pub use blend_space::{
+    sample_blend_space_1d_zero_heap, sample_blend_space_2d_zero_heap, BlendPoint1D, BlendPoint2D,
+    BlendSample2D, BlendSpace1D, BlendSpace2D, BlendTriangle,
+};
+pub use gpu_morph::{
+    compute_ontogenetic_morph_weights_from_header_zero_heap,
+    compute_ontogenetic_morph_weights_zero_heap, evaluate_morph_deltas_zero_heap,
+    GpuInstanceMorphWeights, GpuMorphDelta, MAX_GPU_MORPH_TARGETS,
+};
+pub use gpu_skin::{
+    evaluate_skinning_motor_palette_zero_heap, gpu_shader_skin_vertex_reference,
+    hemisphere_align_motor, skin_vertices_gpu_reference_into, GpuJointMotorPair, GpuSkinnedVertex,
+    MAX_GPU_RIG_JOINTS, MAX_GPU_SKELETON_INSTANCES,
+};
+pub use ik_motor::{
+    solve_constrained_fabrik_motor_ik_zero_heap, solve_two_bone_motor_ik_zero_heap,
+    JointConstraint, TwoBoneIkResult, MAX_IK_CHAIN,
+};
 pub use player::{PlaybackReceipt, PlayerError, SkeletalPlayer};
 pub use pose::{compose_palette_into, sample_pose_into};
 pub use skin::{skin_vertices_into, SkinWeight};

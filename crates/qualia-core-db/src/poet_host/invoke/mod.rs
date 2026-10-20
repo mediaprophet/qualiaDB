@@ -104,6 +104,7 @@ pub fn dispatch(
         ids::GRAPH_STATS | "get_graph_stats" => Ok(graph::stats(snap)),
         ids::GRAPH_SPARQL => graph::sparql(snap, args, span),
         ids::GRAPH_VOLUME_OPEN => graph::volume_open(snap, args, span),
+        "GraphDatabase.admit_pack_slice" => graph::admit_pack_slice(snap, args, span),
         ids::GRAPH_VOLUME_COMMIT => graph::volume_commit(snap, args, span),
         ids::GRAPH_LEXICON_MANIFEST => graph::lexicon_manifest(snap, args, span),
         ids::N3_EVALUATE => graph::n3_evaluate(args, span),

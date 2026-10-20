@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
-wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"] }
+wgpu = { workspace = true, default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"] }
 bytemuck = { workspace = true, features = ["derive"] }
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -25,9 +25,9 @@ optional = true
 # via WebGPU/WebGL instead of reading pixels back. png codec only, to keep the
 # dependency lean (image@0.25 is already in the workspace lock).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-image = { version = "0.25", default-features = false, features = ["png"] }
-base64 = "0.22"
-pollster = "1"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+base64 = "0.23.1"
+pollster = "1.0.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"

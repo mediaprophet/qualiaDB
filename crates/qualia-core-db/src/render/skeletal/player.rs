@@ -47,6 +47,8 @@ pub struct SkeletalPlayer {
     previous: Vec<Motor>,
     globals: Vec<Motor>,
     palette: Vec<Motor>,
+    prev_skin_motors: Vec<Motor>,
+    gpu_palette: Vec<super::gpu_skin::GpuJointMotorPair>,
     joint_deltas: Vec<Motor>,
     controlled_local: Vec<Motor>,
     clip: usize,
@@ -104,7 +106,7 @@ impl SkeletalPlayer {
         let allocated_bytes = std::mem::size_of::<Self>()
             + n * 120
             + indices.len() * 4
-            + c.joints * (std::mem::size_of::<Joint>() + 8 + 6 * 64)
+            + c.joints * (std::mem::size_of::<Joint>() + 8 + 8 * 64)
             + c.clips * std::mem::size_of::<ClipRecord>()
             + c.tracks * std::mem::size_of::<Track>()
             + c.keys * std::mem::size_of::<Key>();
@@ -171,6 +173,8 @@ impl SkeletalPlayer {
             previous: vec![identity; c.joints],
             globals: vec![identity; c.joints],
             palette: vec![identity; c.joints],
+            prev_skin_motors: vec![identity; c.joints],
+            gpu_palette: vec![super::gpu_skin::GpuJointMotorPair::identity(); c.joints],
             joint_deltas: vec![identity; c.joints],
             controlled_local: vec![identity; c.joints],
             clip: 0,
@@ -342,9 +346,15 @@ impl SkeletalPlayer {
         self.transition_duration = 0.0;
         Ok(())
     }
-    /// Samples and deforms from immutable bind data, avoiding accumulated drift.
-    /// Reduced motion selects the authored first pose and disables transitions.
-    pub fn advance(
+    /// Evaluates hierarchical joint `Motor`s and updates the GPU dual-quaternion
+    /// skinning palette (`current` + `prev` for TAA motion vectors) with zero heap
+    /// allocation and without executing the CPU per-vertex skinning loop.
+    pub fn advance_pose_only(&mut self, dt_seconds: f64) -> Result<PlaybackReceipt, PlayerError> {
+        self.advance_pose_only_with_mode(dt_seconds, false)
+    }
+
+    /// As [`Self::advance_pose_only`], with an explicit `reduced_motion` flag.
+    pub fn advance_pose_only_with_mode(
         &mut self,
         dt_seconds: f64,
         reduced_motion: bool,
@@ -352,6 +362,7 @@ impl SkeletalPlayer {
         if !dt_seconds.is_finite() || !(0.0..=1.0).contains(&dt_seconds) {
             return Err(PlayerError::InvalidInput);
         }
+        self.prev_skin_motors.copy_from_slice(&self.palette);
         self.time += dt_seconds;
         self.transition += dt_seconds;
         let clip = self.clips[self.clip];
@@ -389,6 +400,31 @@ impl SkeletalPlayer {
             &mut self.globals,
             &mut self.palette,
         )?;
+        for ((gpu_slot, curr), prev) in self
+            .gpu_palette
+            .iter_mut()
+            .zip(&self.palette)
+            .zip(&self.prev_skin_motors)
+        {
+            *gpu_slot = super::gpu_skin::GpuJointMotorPair::from_motors(curr, prev);
+        }
+        Ok(PlaybackReceipt {
+            clip_id: clip.id,
+            time: self.time,
+            vertices: self.positions.len(),
+            joints: self.joints.len(),
+            reduced_motion,
+        })
+    }
+
+    /// Samples and deforms from immutable bind data, avoiding accumulated drift.
+    /// Reduced motion selects the authored first pose and disables transitions.
+    pub fn advance(
+        &mut self,
+        dt_seconds: f64,
+        reduced_motion: bool,
+    ) -> Result<PlaybackReceipt, PlayerError> {
+        let receipt = self.advance_pose_only_with_mode(dt_seconds, reduced_motion)?;
         skin_vertices_into(
             &self.bind_positions,
             &self.bind_normals,
@@ -420,13 +456,27 @@ impl SkeletalPlayer {
             &mut self.tangent_scratch,
         )
         .map_err(|_| PlayerError::Tangents)?;
-        Ok(PlaybackReceipt {
-            clip_id: clip.id,
-            time: self.time,
-            vertices: self.positions.len(),
-            joints: self.joints.len(),
-            reduced_motion,
-        })
+        Ok(receipt)
+    }
+
+    /// Current GPU dual-quaternion skinning motor palette (`current_r/d` + `prev_r/d`).
+    pub fn gpu_motor_palette(&self) -> &[super::gpu_skin::GpuJointMotorPair] {
+        &self.gpu_palette
+    }
+
+    /// Current world-space joint `Motor`s.
+    pub fn world_motors(&self) -> &[Motor] {
+        &self.globals
+    }
+
+    /// Current skinning `Motor` palette ($M_{\text{world}} \circ M_{\text{inv\_bind}}$).
+    pub fn skinning_palette(&self) -> &[Motor] {
+        &self.palette
+    }
+
+    /// Previous frame's skinning `Motor` palette.
+    pub fn prev_skinning_palette(&self) -> &[Motor] {
+        &self.prev_skin_motors
     }
     /// Attachment globals are in authored world space, as are rig roots.
     pub fn attachment(&self, joint_id: u64) -> Option<Motor> {

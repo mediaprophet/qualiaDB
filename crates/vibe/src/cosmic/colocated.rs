@@ -53,6 +53,7 @@ impl CoLocatedLayer {
         }
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("usri".into(), Value::String(self.usri.clone()));
@@ -76,6 +77,7 @@ pub struct CoLocatedStack {
 }
 
 impl CoLocatedStack {
+    /// Creates a new `CoLocatedStack`.
     pub fn new(physical: CoLocatedLayer) -> Self {
         Self {
             layers: vec![physical],
@@ -132,6 +134,7 @@ impl CoLocatedStack {
         self.verify_isolation()
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         Value::List(self.layers.iter().map(|l| l.to_value()).collect())
     }

@@ -7,18 +7,22 @@ pub(crate) struct CborEncoder {
 }
 
 impl CborEncoder {
+    /// Creates a new `CborEncoder`.
     pub(crate) fn new() -> Self {
         Self { buf: Vec::new() }
     }
+    /// Finishes and returns the buffer.
     pub(crate) fn finish(self) -> Vec<u8> {
         self.buf
     }
 
     #[allow(dead_code)]
+    /// Writes a u8.
     pub(crate) fn write_u8(&mut self, b: u8) {
         self.buf.push(b);
     }
 
+    /// Writes a CBOR major-type + length header.
     pub(crate) fn write_type_and_len(&mut self, major: u8, len: u64) {
         if len < 24 {
             self.buf.push((major << 5) | len as u8);
@@ -37,9 +41,11 @@ impl CborEncoder {
         }
     }
 
+    /// Writes a CBOR uint.
     pub(crate) fn uint(&mut self, n: u64) {
         self.write_type_and_len(0, n);
     }
+    /// Writes a CBOR int.
     pub(crate) fn int(&mut self, n: i64) {
         if n >= 0 {
             self.uint(n as u64);
@@ -47,22 +53,28 @@ impl CborEncoder {
             self.write_type_and_len(1, (-1 - n) as u64);
         }
     }
+    /// Writes a CBOR string.
     pub(crate) fn str(&mut self, s: &str) {
         self.write_type_and_len(3, s.len() as u64);
         self.buf.extend_from_slice(s.as_bytes());
     }
+    /// Writes a CBOR bool.
     pub(crate) fn bool(&mut self, b: bool) {
         self.buf.push(if b { 0xF5 } else { 0xF4 });
     }
+    /// Writes CBOR null.
     pub(crate) fn null(&mut self) {
         self.buf.push(0xF6);
     }
+    /// Writes a CBOR array header.
     pub(crate) fn array(&mut self, len: u64) {
         self.write_type_and_len(4, len);
     }
+    /// CBOR map header.
     pub(crate) fn map(&mut self, len: u64) {
         self.write_type_and_len(5, len);
     }
+    /// CBOR tag.
     pub(crate) fn tag(&mut self, tag: u64) {
         self.write_type_and_len(6, tag);
     }
@@ -76,14 +88,17 @@ pub(crate) struct CborDecoder<'a> {
 }
 
 impl<'a> CborDecoder<'a> {
+    /// Creates a new `CborDecoder`.
     pub(crate) fn new(buf: &'a [u8]) -> Self {
         Self { buf, pos: 0 }
     }
     #[allow(dead_code)]
+    /// Reader position.
     pub(crate) fn pos(&self) -> usize {
         self.pos
     }
 
+    /// Reads a u8.
     pub(crate) fn read_u8(&mut self) -> Result<u8, DecodeError> {
         if self.pos >= self.buf.len() {
             return Err(DecodeError::Eof);
@@ -93,6 +108,7 @@ impl<'a> CborDecoder<'a> {
         Ok(b)
     }
 
+    /// Peeks the next byte.
     pub(crate) fn peek(&self) -> Result<u8, DecodeError> {
         if self.pos >= self.buf.len() {
             return Err(DecodeError::Eof);
@@ -100,6 +116,7 @@ impl<'a> CborDecoder<'a> {
         Ok(self.buf[self.pos])
     }
 
+    /// Reads a CBOR major-type + length header.
     pub(crate) fn read_type_and_len(&mut self) -> Result<(u8, u64), DecodeError> {
         let b = self.read_u8()?;
         let major = b >> 5;
@@ -154,6 +171,7 @@ impl<'a> CborDecoder<'a> {
         Ok((major, len))
     }
 
+    /// Writes a CBOR uint.
     pub(crate) fn uint(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         if major != 0 {
@@ -162,6 +180,7 @@ impl<'a> CborDecoder<'a> {
         Ok(len)
     }
 
+    /// Writes a CBOR int.
     pub(crate) fn int(&mut self) -> Result<i64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         match major {
@@ -171,6 +190,7 @@ impl<'a> CborDecoder<'a> {
         }
     }
 
+    /// Writes a CBOR string.
     pub(crate) fn str(&mut self) -> Result<String, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         if major != 3 {
@@ -186,6 +206,7 @@ impl<'a> CborDecoder<'a> {
         Ok(s.to_string())
     }
 
+    /// Writes a CBOR bool.
     pub(crate) fn bool(&mut self) -> Result<bool, DecodeError> {
         let b = self.read_u8()?;
         match b {
@@ -196,6 +217,7 @@ impl<'a> CborDecoder<'a> {
     }
 
     #[allow(dead_code)]
+    /// Writes CBOR null.
     pub(crate) fn null(&mut self) -> Result<(), DecodeError> {
         let b = self.read_u8()?;
         if b == 0xF6 {
@@ -205,10 +227,12 @@ impl<'a> CborDecoder<'a> {
         }
     }
 
+    /// `true` when null.
     pub(crate) fn is_null(&self) -> Result<bool, DecodeError> {
         Ok(self.peek()? == 0xF6)
     }
 
+    /// Writes a CBOR array header.
     pub(crate) fn array(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         if major != 4 {
@@ -217,6 +241,7 @@ impl<'a> CborDecoder<'a> {
         Ok(len)
     }
 
+    /// CBOR map header.
     pub(crate) fn map(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         if major != 5 {
@@ -225,6 +250,7 @@ impl<'a> CborDecoder<'a> {
         Ok(len)
     }
 
+    /// CBOR tag.
     pub(crate) fn tag(&mut self) -> Result<u64, DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         if major != 6 {
@@ -233,6 +259,7 @@ impl<'a> CborDecoder<'a> {
         Ok(len)
     }
 
+    /// Skips an item.
     pub(crate) fn skip(&mut self) -> Result<(), DecodeError> {
         let (major, len) = self.read_type_and_len()?;
         match major {

@@ -23,6 +23,7 @@ pub enum GroundingStatus {
 }
 
 impl GroundingStatus {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::EmpiricallyAnchored { .. } => "EmpiricallyAnchored",
@@ -37,6 +38,7 @@ impl GroundingStatus {
         matches!(self, Self::EmpiricallyAnchored { .. })
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("status".into(), Value::String(self.as_str().into()));
@@ -87,6 +89,7 @@ impl NarrativeEntity {
         }
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));

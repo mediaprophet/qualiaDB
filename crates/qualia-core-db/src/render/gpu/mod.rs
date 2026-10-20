@@ -23,6 +23,33 @@ pub use texture_residency::{TextureColorSpace, TextureUploadError};
 mod animated_upload;
 pub mod holographic;
 pub use holographic::{HolographicNodeGpu, HolographicPipelineGpu, HolographicPrimitive};
+pub mod ibl_cubemap;
+pub use ibl_cubemap::{
+    cubemap_face_uv_to_direction, eval_procedural_sky_radiance_zero_heap,
+    integrate_split_sum_brdf_zero_heap, IblCubemapGenerator, IblCubemapParams,
+    IBL_CUBEMAP_CONVOLVE_WGSL,
+};
+pub mod indirect_cull;
+pub use indirect_cull::{
+    build_hzb_mip_chain_zero_heap, cull_and_select_lod_indirect_zero_heap,
+    select_lod_tier_with_hysteresis, CullUniformsGpu, DrawIndexedIndirectCommand, HzbPyramidView,
+    IndirectCullPipelineGpu, IndirectCullStreamCounts, InstanceCullDescriptor,
+    RepresentationPolicy,
+};
+pub mod mesh_slab;
+pub use mesh_slab::{
+    AssetRepresentationKind, MeshSlabArenaDescriptor, MeshSlabArenaGpu, MeshSlabVertex,
+    ProceduralSynthesisGpu, ResidentAssetEntry, SkinAttrVertex, SlabRange, SlabRangeAllocator,
+    SubmeshSlice,
+};
+pub use shadows::{
+    camera_csm_4_sun_view_projections, compute_csm_4_splits_zero_heap, csm_cascade_blend_factor,
+    Csm4ShadowUniform, ShadowAtlasAllocator, SpotPointShadowAtlasSlot, CSM_4_CASCADE_COUNT,
+};
+pub use portal_gpu::lighting_passes::{
+    ClusterGridParamsGpu, ClusterLightPipelineGpu, DeferredSpectralResolvePipelineGpu,
+    DielectricVolumeIopGpu, FoliageLodPipelineGpu,
+};
 mod mesh_normals;
 mod mesh_upload;
 mod output_pass;

@@ -17,6 +17,9 @@ pub mod motion_loop;
 pub mod qualia;
 pub mod scene;
 
+pub mod command_stack;
+pub mod gizmo_3d;
+pub mod inspector_10d;
 pub mod node_graph;
 pub mod q_viewport;
 pub mod spatial_bridge;
@@ -34,7 +37,17 @@ pub mod studio_preview;
 #[cfg(target_arch = "wasm32")]
 pub mod canvas2d;
 
+pub use command_stack::{StudioCommand, StudioCommandStack};
+pub use gizmo_3d::{
+    GizmoDragDelta, GizmoHandle, GizmoMode, GizmoPickHit, Motor as StudioPgaMotor, MotorGizmo3D,
+};
 pub use graph::{Node, Scene, Style};
+pub use inspector_10d::{
+    AbsmLayerInspectorState, AffordanceBinaryRecord, DevelopmentalKeyframeRecord,
+    EntityOntologyMiniHeader, Epistemic10DSliceParams, ProceduralSynthesisHeader,
+    StudioNodeInspector10D, Tensor10D as StudioTensor10D, MAX_INSPECTOR_ABSM_LAYERS,
+    MAX_INSPECTOR_AFFORDANCES, MAX_INSPECTOR_KEYFRAMES,
+};
 pub use mesh::{Mesh, Transform};
 pub use qualia::{build_scene, item_color, ItemState, SceneItem, SceneSource, SemanticScene};
 pub use scene::{Camera, ScreenPoint, Vec3};

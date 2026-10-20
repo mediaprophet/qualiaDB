@@ -5,6 +5,7 @@ use super::TAG_VIBE_AST;
 use crate::ast::*;
 use crate::span::Span;
 
+/// Encodes CBOR.
 pub fn encode(program: &Program) -> Vec<u8> {
     let mut enc = CborEncoder::new();
     enc.tag(TAG_VIBE_AST);

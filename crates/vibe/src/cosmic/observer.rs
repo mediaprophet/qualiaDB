@@ -49,6 +49,7 @@ impl AffectiveStatus {
         self.safety_threat_index > 0.8 || self.arousal_level > 0.9
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert(
@@ -118,6 +119,7 @@ pub struct ObserverFiber {
 }
 
 impl ObserverFiber {
+    /// Creates a new `ObserverFiber`.
     pub fn new(observer_did: &str, perceived_frame: &str) -> Self {
         Self {
             observer_did: observer_did.into(),
@@ -163,6 +165,7 @@ impl ObserverFiber {
         self.affective_state.is_hyper_vigilant() || self.affective_state.dissociation_index > 0.7
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert(

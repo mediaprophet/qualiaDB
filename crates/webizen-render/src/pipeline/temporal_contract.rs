@@ -15,6 +15,7 @@ pub struct FrameExtent {
 }
 
 impl FrameExtent {
+    /// Creates a new instance.
     pub fn new(width: u32, height: u32) -> Result<Self, TemporalContractError> {
         if width == 0 || height == 0 {
             return Err(TemporalContractError::InvalidExtent { width, height });
@@ -66,6 +67,7 @@ macro_rules! producer_view {
         }
 
         impl<'a> $name<'a> {
+            /// Creates a new instance.
             pub fn new(
                 view: &'a TextureView,
                 extent: FrameExtent,
@@ -73,14 +75,17 @@ macro_rules! producer_view {
                 Ok(Self { view, extent })
             }
 
+            /// View.
             pub const fn view(self) -> &'a TextureView {
                 self.view
             }
 
+            /// Extent.
             pub const fn extent(self) -> FrameExtent {
                 self.extent
             }
 
+            /// Resource.
             pub const fn resource(self) -> TemporalResource {
                 TemporalResource::$resource
             }
@@ -106,6 +111,7 @@ pub struct TemporalProducerContract<'a> {
 }
 
 impl<'a> TemporalProducerContract<'a> {
+    /// Empty instance.
     pub const fn empty() -> Self {
         Self {
             extent: None,
@@ -115,6 +121,7 @@ impl<'a> TemporalProducerContract<'a> {
         }
     }
 
+    /// For-extent constructor.
     pub const fn for_extent(extent: FrameExtent) -> Self {
         Self {
             extent: Some(extent),
@@ -124,22 +131,27 @@ impl<'a> TemporalProducerContract<'a> {
         }
     }
 
+    /// Extent.
     pub const fn extent(self) -> Option<FrameExtent> {
         self.extent
     }
 
+    /// Linear-depth resource.
     pub const fn linear_depth(self) -> Option<LinearDepthView<'a>> {
         self.linear_depth
     }
 
+    /// Motion-vectors resource.
     pub const fn motion_vectors(self) -> Option<MotionVectorsView<'a>> {
         self.motion_vectors
     }
 
+    /// Reactive-mask resource.
     pub const fn reactive_mask(self) -> Option<ReactiveMaskView<'a>> {
         self.reactive_mask
     }
 
+    /// Builder — sets linear-depth.
     pub fn with_linear_depth(
         mut self,
         view: LinearDepthView<'a>,
@@ -149,6 +161,7 @@ impl<'a> TemporalProducerContract<'a> {
         Ok(self)
     }
 
+    /// Builder — sets motion-vectors.
     pub fn with_motion_vectors(
         mut self,
         view: MotionVectorsView<'a>,
@@ -158,6 +171,7 @@ impl<'a> TemporalProducerContract<'a> {
         Ok(self)
     }
 
+    /// Builder — sets reactive-mask.
     pub fn with_reactive_mask(
         mut self,
         view: ReactiveMaskView<'a>,
@@ -167,6 +181,7 @@ impl<'a> TemporalProducerContract<'a> {
         Ok(self)
     }
 
+    /// Capabilities.
     pub const fn capabilities(self) -> TemporalProducerCapabilities {
         TemporalProducerCapabilities {
             extent: self.extent,
@@ -211,6 +226,7 @@ pub struct TemporalProducerCapabilities {
 }
 
 impl TemporalProducerCapabilities {
+    /// `true` when complete.
     pub const fn complete(extent: FrameExtent) -> Self {
         Self {
             extent: Some(extent),
@@ -238,6 +254,7 @@ pub struct TemporalHistoryContract {
 }
 
 impl TemporalHistoryContract {
+    /// `true` on the first frame.
     pub const fn first_frame(frame_index: u64) -> Self {
         Self {
             frame_index,
@@ -247,6 +264,7 @@ impl TemporalHistoryContract {
         }
     }
 
+    /// `true` when continuing.
     pub const fn continuing(frame_index: u64) -> Self {
         Self {
             frame_index,
@@ -256,14 +274,17 @@ impl TemporalHistoryContract {
         }
     }
 
+    /// `true` when this frame may read temporal history.
     pub const fn reads_history(self) -> bool {
         self.history_valid && !self.reset_history
     }
 
+    /// Publishes history.
     pub const fn publish_history(self) -> bool {
         matches!(self.publication, HistoryPublication::Publish)
     }
 
+    /// Next-frame contract after publication.
     pub const fn after_publication(self) -> Self {
         Self {
             frame_index: self.frame_index.wrapping_add(1),
@@ -282,6 +303,7 @@ pub struct TemporalFrameContract<'a> {
 }
 
 impl<'a> TemporalFrameContract<'a> {
+    /// Creates a new instance.
     pub const fn new(
         producers: TemporalProducerContract<'a>,
         history: TemporalHistoryContract,
@@ -289,6 +311,7 @@ impl<'a> TemporalFrameContract<'a> {
         Self { producers, history }
     }
 
+    /// Admits one temporal frame against the expected extent; fails closed on capability refusal.
     pub fn admit(
         self,
         expected_extent: FrameExtent,

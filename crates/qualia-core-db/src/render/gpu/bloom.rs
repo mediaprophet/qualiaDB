@@ -17,38 +17,24 @@ fn hdr_composite_available(
     has_bloom_targets && has_ambient_pipeline && has_projector_pipeline && bloom_policy_enabled
 }
 
-/// Probes the HDR format.
+/// Probes the HDR format (`Rgba16Float` render attachment + texture binding) on both native and `wasm32` WebGPU adapters.
 pub(super) fn probe_hdr_format(device: &wgpu::Device) -> bool {
-    // WebGPU pipeline validation is deferred, and the browser path cannot yet
-    // inspect the error scope reliably (see portal_gpu/init.rs). Creating an
-    // rgba16float texture alone does not establish that all HDR scene
-    // pipelines are valid on the selected adapter. Keep the standard render
-    // path active until the full HDR pipeline can be validated on WASM.
-    #[cfg(target_arch = "wasm32")]
-    {
-        let _ = device;
-        return false;
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let tex = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("portal-hdr-probe"),
-            size: wgpu::Extent3d {
-                width: 4,
-                height: 4,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: HDR_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
-        tex.create_view(&wgpu::TextureViewDescriptor::default());
-        true
-    }
+    let tex = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("portal-hdr-probe"),
+        size: wgpu::Extent3d {
+            width: 4,
+            height: 4,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: HDR_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    tex.create_view(&wgpu::TextureViewDescriptor::default());
+    true
 }
 
 /// HDR color-target state.
@@ -237,7 +223,7 @@ pub(super) fn create_bloom_chain(
             composite: CompositeParamsGpu {
                 exposure: BLOOM_EXPOSURE,
                 bloom_strength: BLOOM_STRENGTH,
-                surface_is_srgb: if surface_format.is_srgb() { 1.0 } else { 0.0 },
+                surface_is_srgb: if surface_format.has_srgb_suffix() { 1.0 } else { 0.0 },
                 _pad1: 0.0,
                 white_balance_gains: crate::render::output::DEFAULT_WHITE_BALANCE_GAINS,
                 _pad2: 0.0,
@@ -355,7 +341,7 @@ pub(super) fn create_bloom_chain(
         half_width,
         half_height,
         exposure_scale: crate::render::output::exposure_scale_from_ev(exposure_ev)?,
-        surface_is_srgb: surface_format.is_srgb(),
+        surface_is_srgb: surface_format.has_srgb_suffix(),
         white_balance_gains: crate::render::output::DEFAULT_WHITE_BALANCE_GAINS,
         _frame_target_reservation: frame_target_reservation,
     })

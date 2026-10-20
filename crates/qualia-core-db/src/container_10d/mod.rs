@@ -60,6 +60,7 @@ pub use manifold_identity_container::{
 pub mod manifold_identity_v2;
 pub mod mesh_section;
 pub mod metric_check;
+pub mod morph_section;
 pub mod node_section;
 pub mod normal_section;
 pub mod provenance_section;
@@ -143,6 +144,14 @@ pub use material_section::{
 pub use mesh_section::{
     decode_mesh_section, encode_mesh_section, parse_mesh_header, MeshMiniHeader, MeshSectionError,
     FLAG_U16_INDICES, MAX_TRIANGLE_COUNT, MAX_VERTEX_COUNT, MESH_MINI_HEADER_SIZE,
+};
+pub use morph_section::{
+    apply_morph_targets_zero_heap, decode_morph_section_into, dequantize_morph_delta,
+    encode_morph_section, morph_section_encoded_len, quantize_morph_delta, MorphSectionError,
+    MorphSectionHeader, QuantizedMorphDelta, FLAG_MORPH_DENSE, FLAG_MORPH_HAS_NORMALS,
+    FLAG_MORPH_HAS_TANGENTS, FLAG_MORPH_ONTOGENETIC_BIND, FLAG_MORPH_SPARSE, MAGIC_MRP1,
+    MAX_MORPH_DELTAS, MAX_MORPH_TARGETS, MORPH_SECTION_HEADER_SIZE, MORPH_SECTION_VERSION,
+    QUANTIZED_MORPH_DELTA_SIZE,
 };
 pub use metric_check::{
     proposed_metric_descriptor, verify_descriptor_against_reality, MetricBranchDescriptor,

@@ -131,10 +131,12 @@ pub(super) enum Flow {
 }
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Workspace remaining.
     pub fn workspace_left(&self) -> u64 {
         self.budget.workspace_left
     }
 
+    /// Creates a new `Engine`.
     pub fn new(host: &'a mut H, budget: Budget) -> Self {
         Self {
             host,
@@ -175,6 +177,7 @@ impl<'a, H: Host> Engine<'a, H> {
         }
     }
 
+    /// Granted refs.
     pub(crate) fn granted_refs(&self) -> Vec<&str> {
         self.granted.iter().map(|s| s.as_str()).collect()
     }
@@ -213,6 +216,7 @@ impl<'a, H: Host> Engine<'a, H> {
     }
 }
 
+/// Literal expression.
 pub(super) fn lit(l: &Literal) -> Value {
     match l {
         Literal::Null => Value::Null,
@@ -241,6 +245,7 @@ pub(super) fn lit(l: &Literal) -> Value {
     }
 }
 
+/// Binary operation.
 pub(super) fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value, Diagnostic> {
     if matches!(op, BinOp::Eq | BinOp::Ne) {
         let eq = l == r;
@@ -528,6 +533,7 @@ pub(super) fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value
     Ok(Value::F64(n))
 }
 
+/// Match pattern.
 pub(super) fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
     match p {
         Pattern::Wildcard => true,
@@ -610,6 +616,7 @@ pub(super) fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
     }
 }
 
+/// Collects pattern identifiers.
 pub(super) fn collect_pat_idents(pat: &Pattern, out: &mut Vec<String>) {
     match pat {
         Pattern::Ident(n) => out.push(n.clone()),
@@ -635,6 +642,7 @@ pub(super) fn collect_pat_idents(pat: &Pattern, out: &mut Vec<String>) {
     }
 }
 
+/// Budget step count.
 pub(super) fn budget_steps<H: Host>(
     args: &[NamedArg],
     env: &mut Env,

@@ -1,6 +1,7 @@
 use super::*;
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Evaluates a program.
     pub fn eval_program(&mut self, program: &Program, env: &mut Env) -> Result<Value, Diagnostic> {
         self.granted = program.requires.iter().map(|c| c.id.clone()).collect();
         let mut last = Value::Null;
@@ -175,6 +176,7 @@ impl<'a, H: Host> Engine<'a, H> {
         Ok(())
     }
 
+    /// Calls a function.
     pub fn call_function(
         &mut self,
         program: &Program,

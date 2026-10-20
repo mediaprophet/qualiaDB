@@ -12,6 +12,7 @@ pub enum Effect {
 }
 
 impl Effect {
+    /// Constructs from class.
     pub fn from_class(c: EffectClass) -> Effect {
         match c {
             EffectClass::Pure => Effect::Pure,
@@ -22,6 +23,7 @@ impl Effect {
         }
     }
 
+    /// Joins effect sets.
     pub fn join(self, other: Effect) -> Effect {
         self.max(other)
     }
@@ -45,6 +47,7 @@ pub fn binding_effect(path: &str) -> Effect {
     }
 }
 
+/// Capability required for the effect.
 pub fn capability_for(path: &str) -> Option<&'static str> {
     match path {
         "graph.query" | "graph.snapshot" => Some("graph.read"),

@@ -31,6 +31,7 @@ mod format;
 mod reader;
 pub use entity_compiler as twin_compiler;
 pub use entity_verifier as twin_verifier;
+pub mod streaming_loader;
 pub mod variant_matrix;
 mod writer;
 
@@ -56,6 +57,10 @@ pub use format::{
     SHA256_LEN,
 };
 pub use reader::BundleReader;
+pub use streaming_loader::{
+    classify_10d_section_tier, classify_entry_tier, verify_arrived_range, HmcHeaderProbe,
+    HmcProgressiveRangePlanner, HmcRangeRequest, StreamPriorityTier,
+};
 pub use variant_matrix::{
     BiologicalPhenotype, EntityFamilyManifest, LodTier, ModelVariantDescriptor, StructuralState,
     TwinFamilyManifest, FAMILY_MANIFEST_ENTRY_KEY, FAMILY_MANIFEST_KIND,

@@ -69,6 +69,7 @@ pub struct MeasurementContext {
 }
 
 impl MeasurementContext {
+    /// Creates a new `MeasurementContext`.
     pub fn new(observer: &str, instrument: &str, instant_secs: i64) -> Self {
         Self {
             observer: observer.into(),
@@ -81,16 +82,19 @@ impl MeasurementContext {
         }
     }
 
+    /// Builder — sets frame.
     pub fn with_frame(mut self, frame: &str) -> Self {
         self.frame = Some(frame.into());
         self
     }
 
+    /// Builder — sets uncertainty.
     pub fn with_uncertainty(mut self, u: f64) -> Self {
         self.uncertainty = Some(u);
         self
     }
 
+    /// Builder — sets stalk.
     pub fn with_stalk(mut self, stalk_id: u64) -> Self {
         self.stalk_id = Some(stalk_id);
         self
@@ -180,6 +184,7 @@ pub enum IdentifierModality {
 }
 
 impl IdentifierModality {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Visual => "visual",
@@ -189,6 +194,7 @@ impl IdentifierModality {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "visual" => Some(Self::Visual),
@@ -214,6 +220,7 @@ pub struct IdentifierView {
 }
 
 impl IdentifierView {
+    /// Creates a new `IdentifierView`.
     pub fn new(iri: &str, modality: IdentifierModality, content: &str) -> Self {
         Self {
             iri: iri.into(),
@@ -223,11 +230,13 @@ impl IdentifierView {
         }
     }
 
+    /// Builder — sets locale.
     pub fn with_locale(mut self, locale: &str) -> Self {
         self.locale = Some(locale.into());
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("iri".into(), Value::String(self.iri.clone()));
@@ -264,6 +273,7 @@ pub enum LevelOfDetail {
 }
 
 impl LevelOfDetail {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Continuum => "continuum",
@@ -274,6 +284,7 @@ impl LevelOfDetail {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "continuum" => Some(Self::Continuum),
@@ -305,6 +316,7 @@ pub struct MultiScaleSheaf {
 }
 
 impl MultiScaleSheaf {
+    /// Creates a new `MultiScaleSheaf`.
     pub fn new(sheaf_id: &str, lod: LevelOfDetail, scale: f64) -> Self {
         Self {
             sheaf_id: sheaf_id.into(),
@@ -314,6 +326,7 @@ impl MultiScaleSheaf {
         }
     }
 
+    /// Finest observer resolution.
     pub fn finest(sheaf_id: &str, lod: LevelOfDetail, scale: f64) -> Self {
         Self {
             sheaf_id: sheaf_id.into(),
@@ -323,6 +336,7 @@ impl MultiScaleSheaf {
         }
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("sheaf_id".into(), Value::String(self.sheaf_id.clone()));
@@ -355,6 +369,7 @@ pub struct CivicInstant {
 }
 
 impl CivicInstant {
+    /// Creates a new `CivicInstant`.
     pub fn new(secs: i64, nanos: u32, authority: &str) -> Self {
         Self {
             secs,
@@ -364,11 +379,13 @@ impl CivicInstant {
         }
     }
 
+    /// Builder — sets uncertainty.
     pub fn with_uncertainty(mut self, uncertainty_nanos: u64) -> Self {
         self.uncertainty_nanos = Some(uncertainty_nanos);
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("secs".into(), Value::I64(self.secs));
@@ -399,6 +416,7 @@ pub struct AgentCharacteristic {
 }
 
 impl AgentCharacteristic {
+    /// Creates a new `AgentCharacteristic`.
     pub fn new(agent_id: &str, name: &str, value: f64, observed_at: i64) -> Self {
         Self {
             agent_id: agent_id.into(),
@@ -409,11 +427,13 @@ impl AgentCharacteristic {
         }
     }
 
+    /// Builder — sets sample-count.
     pub fn with_sample_count(mut self, count: u64) -> Self {
         self.sample_count = count;
         self
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("agent_id".into(), Value::String(self.agent_id.clone()));
@@ -433,6 +453,7 @@ pub struct AgentCharacteristicsKb {
 }
 
 impl AgentCharacteristicsKb {
+    /// Creates a new `AgentCharacteristicsKb`.
     pub fn new() -> Self {
         Self::default()
     }

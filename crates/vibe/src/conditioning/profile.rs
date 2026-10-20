@@ -38,6 +38,7 @@ pub struct ConditioningProfileDto {
 }
 
 impl ConditioningProfileDto {
+    /// Validates.
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != SCHEMA_VERSION {
             return Err(format!(

@@ -50,10 +50,12 @@ pub struct CameraUniform {
 const _: [(); 128] = [(); std::mem::size_of::<CameraUniform>()];
 
 impl CameraUniform {
+    /// Creates a new instance.
     pub fn new(view: [[f32; 4]; 4], proj: [[f32; 4]; 4]) -> Self {
         Self { view, proj }
     }
 
+    /// `bytes` form.
     pub fn as_bytes(&self) -> &[u8] {
         bytemuck::bytes_of(self)
     }
@@ -74,6 +76,7 @@ pub struct ModelUniform {
 const _: [(); 80] = [(); std::mem::size_of::<ModelUniform>()];
 
 impl ModelUniform {
+    /// Creates a new instance.
     pub fn new(model: [[f32; 4]; 4], time: f32) -> Self {
         Self {
             model,
@@ -82,6 +85,7 @@ impl ModelUniform {
         }
     }
 
+    /// `bytes` form.
     pub fn as_bytes(&self) -> &[u8] {
         bytemuck::bytes_of(self)
     }
@@ -102,6 +106,7 @@ pub struct TimeUniform {
 const _: [(); 16] = [(); std::mem::size_of::<TimeUniform>()];
 
 impl TimeUniform {
+    /// Creates a new instance.
     pub fn new(time: f32, width: f32, height: f32) -> Self {
         Self {
             time,
@@ -111,6 +116,7 @@ impl TimeUniform {
         }
     }
 
+    /// `bytes` form.
     pub fn as_bytes(&self) -> &[u8] {
         bytemuck::bytes_of(self)
     }

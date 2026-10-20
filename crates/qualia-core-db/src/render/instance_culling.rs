@@ -8,6 +8,44 @@
 pub const GPU_INSTANCE_RECORD_ABI_VERSION: u32 = 2;
 pub const MAX_GPU_MESH_INSTANCES: usize = 10_000;
 
+pub use crate::render::gpu::indirect_cull::{
+    build_hzb_mip_chain_zero_heap, cull_and_select_lod_indirect_zero_heap,
+    select_lod_tier_with_hysteresis, CullUniformsGpu, DrawIndexedIndirectCommand, HzbPyramidView,
+    IndirectCullPipelineGpu, IndirectCullStreamCounts, InstanceCullDescriptor,
+    RepresentationPolicy, DEFAULT_LOD_HYSTERESIS, DEFAULT_LOD_THRESHOLDS_PX,
+    DEFAULT_MIN_CULL_RADIUS_PX,
+};
+
+/// Normalized Gribb-Hartmann frustum plane $\mathbf{n} \cdot \mathbf{x} + d \ge 0$.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct FrustumPlane {
+    pub normal: [f32; 3],
+    pub d: f32,
+}
+
+/// Extracts 6 normalized inward-pointing frustum planes from a column-major view-projection matrix.
+#[inline]
+pub fn extract_frustum_planes(view_projection: &[[f32; 4]; 4]) -> [FrustumPlane; 6] {
+    let raw = extract_clip_planes(*view_projection);
+    std::array::from_fn(|i| {
+        let p = raw[i];
+        let len = (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt();
+        if len > 1e-8 && len.is_finite() {
+            let inv = 1.0 / len;
+            FrustumPlane {
+                normal: [p[0] * inv, p[1] * inv, p[2] * inv],
+                d: p[3] * inv,
+            }
+        } else {
+            FrustumPlane {
+                normal: [0.0, 0.0, 1.0],
+                d: f32::INFINITY,
+            }
+        }
+    })
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BoundedInstance {
     /// Local-space AABB. Bounds must already include authored deformation margins.

@@ -33,6 +33,7 @@ pub enum DiagCode {
 }
 
 impl DiagCode {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             DiagCode::E001 => "E001",
@@ -62,6 +63,7 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
+    /// Creates a new `Diagnostic`.
     pub fn new(code: DiagCode, span: Span, message: impl Into<String>) -> Self {
         let message = message.into();
         let suggested_fix = infer_fix(code, &message);
@@ -74,6 +76,7 @@ impl Diagnostic {
         }
     }
 
+    /// Builder — sets fix.
     pub fn with_fix(mut self, fix: impl Into<String>) -> Self {
         self.suggested_fix = Some(fix.into());
         self

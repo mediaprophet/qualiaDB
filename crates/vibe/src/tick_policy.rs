@@ -46,6 +46,7 @@ pub enum TickPolicy {
 }
 
 impl TickPolicy {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Drop => "drop",
@@ -54,6 +55,7 @@ impl TickPolicy {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "drop" => Some(Self::Drop),
@@ -127,6 +129,7 @@ pub struct TickQueue {
 }
 
 impl TickQueue {
+    /// Creates a new `TickQueue`.
     pub fn new(policy: TickPolicy) -> Self {
         Self {
             policy,

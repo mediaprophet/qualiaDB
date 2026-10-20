@@ -107,3 +107,21 @@ mod shadow_math;
 pub(super) use shadow_math::{
     aabb_outside_shadow_clip, camera_range_sun_view_projections, SHADOW_RESOLUTION_CANDIDATES,
 };
+pub use shadow_math::{
+    camera_csm_4_sun_view_projections, compute_csm_4_splits_zero_heap, csm_cascade_blend_factor,
+    ShadowAtlasAllocator, SpotPointShadowAtlasSlot, CSM_4_CASCADE_COUNT,
+};
+
+/// 4-Cascade Cascaded Shadow Map (CSM) GPU uniform block (288 bytes) with practical split distances
+/// and smooth inter-cascade blend band parameters.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct Csm4ShadowUniform {
+    pub light_view_projection: [[[f32; 4]; 4]; CSM_4_CASCADE_COUNT],
+    /// Split distances `[z0, z1, z2, z3]` in camera view space.
+    pub cascade_splits: [f32; CSM_4_CASCADE_COUNT],
+    /// `[enabled, inv_resolution, receiver_bias, blend_band_fraction]`
+    pub params: [f32; 4],
+}
+
+const _: [(); 288] = [(); std::mem::size_of::<Csm4ShadowUniform>()];

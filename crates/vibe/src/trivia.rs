@@ -193,6 +193,7 @@ pub struct CstNode<T> {
 }
 
 impl<T> CstNode<T> {
+    /// Creates a new `CstNode`.
     pub fn new(node: T, leading: Vec<Trivia>, trailing: Vec<Trivia>) -> Self {
         Self {
             node,

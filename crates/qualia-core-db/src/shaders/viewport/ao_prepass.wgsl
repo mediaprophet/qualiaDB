@@ -107,6 +107,70 @@ struct Output {
     @location(3) uv0: vec2<f32>,
 };
 
+struct PgaSkinMotor {
+    r: vec4<f32>,
+    d: vec4<f32>,
+};
+
+fn pga_blade4_to_quat(b: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(b.x, -b.w, -b.z, -b.y);
+}
+
+fn pga_quat_mul(a: vec4<f32>, b: vec4<f32>) -> vec4<f32> {
+    return vec4<f32>(
+        a.x * b.x - a.y * b.y - a.z * b.z - a.w * b.w,
+        a.x * b.y + a.y * b.x + a.z * b.w - a.w * b.z,
+        a.x * b.z - a.y * b.w + a.z * b.x + a.w * b.y,
+        a.x * b.w + a.y * b.z - a.z * b.y + a.w * b.x
+    );
+}
+
+fn pga_motor_blend_4(
+    m0_r: vec4<f32>, m0_d: vec4<f32>,
+    m1_r: vec4<f32>, m1_d: vec4<f32>,
+    m2_r: vec4<f32>, m2_d: vec4<f32>,
+    m3_r: vec4<f32>, m3_d: vec4<f32>,
+    weights: vec4<f32>
+) -> PgaSkinMotor {
+    let s1 = select(1.0, -1.0, dot(m0_r, m1_r) < 0.0);
+    let s2 = select(1.0, -1.0, dot(m0_r, m2_r) < 0.0);
+    let s3 = select(1.0, -1.0, dot(m0_r, m3_r) < 0.0);
+    let r_sum = m0_r * weights.x + m1_r * (weights.y * s1) + m2_r * (weights.z * s2) + m3_r * (weights.w * s3);
+    let d_sum = m0_d * weights.x + m1_d * (weights.y * s1) + m2_d * (weights.z * s2) + m3_d * (weights.w * s3);
+    let inv_norm = inverseSqrt(max(dot(r_sum, r_sum), 1e-12));
+    let r_unit = r_sum * inv_norm;
+    let d_scaled = d_sum * inv_norm;
+    let d_ortho = d_scaled - r_unit * dot(r_unit, d_scaled);
+    return PgaSkinMotor(r_unit, d_ortho);
+}
+
+fn pga_motor_transform_vector(m_r: vec4<f32>, v: vec3<f32>) -> vec3<f32> {
+    let qr = pga_blade4_to_quat(m_r);
+    let qr_conj = vec4<f32>(qr.x, -qr.y, -qr.z, -qr.w);
+    let v_q = vec4<f32>(0.0, v.x, v.y, v.z);
+    let v_rot = pga_quat_mul(pga_quat_mul(qr, v_q), qr_conj);
+    return vec3<f32>(v_rot.y, v_rot.z, v_rot.w);
+}
+
+fn pga_eval_proc_motor_oscillation(
+    pos: vec3<f32>,
+    axis: vec3<f32>,
+    amp_rad: f32,
+    freq_hz: f32,
+    damping: f32,
+    time_s: f32,
+    phase_rad: f32
+) -> vec3<f32> {
+    let omega = 6.283185307 * freq_hz;
+    let decay = exp(-damping * max(time_s, 0.0));
+    let theta = amp_rad * sin(omega * time_s + phase_rad) * decay;
+    let half_theta = theta * 0.5;
+    let ax = normalize(select(vec3<f32>(0.0, 0.0, 1.0), axis, dot(axis, axis) > 1e-8));
+    let s = sin(half_theta);
+    let r = vec4<f32>(cos(half_theta), s * (-ax.z), s * ax.y, s * (-ax.x));
+    return pga_motor_transform_vector(r, pos);
+}
+
 fn oct_encode(normal: vec3<f32>) -> vec2<f32> {
     let n = normalize(normal);
     let projected = n.xy / (abs(n.x) + abs(n.y) + abs(n.z));

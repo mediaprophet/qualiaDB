@@ -196,6 +196,7 @@ pub use inference::lab::{
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use inference::metal_bridge;
+pub use inference::metal_lane;
 pub use inference::neuro_symbolic_sieve;
 pub use inference::orchestrator;
 pub use inference::post_turn_verify;
@@ -273,6 +274,12 @@ pub mod gpu_context;
 pub mod shaders;
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 pub mod wgsl_forge;
+pub use etalon_agent;
+pub use etalon_nquin;
+pub use etalon_render;
+pub use etalon_tensor;
+pub use etalon_wasm;
+pub use etalon_wgsl_forge;
 // --- foundation/ category (reorg) ---
 pub mod foundation;
 pub use foundation::crdt;

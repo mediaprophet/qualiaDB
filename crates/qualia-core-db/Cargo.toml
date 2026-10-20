@@ -20,10 +20,10 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-dx12"
 # Browser model runtime:            --features wasm-llm
 # API explorer / playground:        --features wasm-full
 # Native-only stays native: daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF.
-gpu-runtime = ["dep:wgpu", "dep:raw-window-handle"]
+gpu-runtime = ["dep:wgpu", "dep:etalon", "dep:raw-window-handle"]
 # DX12 remains enabled in the default Windows build. The portable native profile
 # can omit it and use the renderer-only GLES/Vulkan selection path instead.
-gpu-native-dx12 = ["wgpu/dx12"]
+gpu-native-dx12 = ["wgpu/dx12", "etalon?/dx12"]
 gpu-native-portable = []
 metal-native = []
 wgsl-forge = ["dep:naga", "dxc"]
@@ -118,7 +118,7 @@ futures-core = { version = "0.3", default-features = false }
 futures-channel = "0.3"
 tempfile = { workspace = true }
 futures-intrusive = { version = "0.5", default-features = false, features = ["alloc"] }
-zeroize = { version = "1.8.2", features = ["zeroize_derive"] }
+zeroize = { version = "1.9.1", features = ["zeroize_derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 mikktspace = { version = "0.3.0", default-features = false, features = ["glam"] }
@@ -184,7 +184,14 @@ async-trait = { workspace = true }
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { workspace = true, features = ["svg"] }
-wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"], optional = true }
+wgpu = { workspace = true, default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"], optional = true }
+etalon = { workspace = true, default-features = false, features = ["std", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"], optional = true }
+etalon-agent = { workspace = true }
+etalon-wgsl-forge = { workspace = true }
+etalon-nquin = { workspace = true }
+etalon-tensor = { workspace = true }
+etalon-render = { workspace = true }
+etalon-wasm = { workspace = true }
 naga = { workspace = true, features = ["wgsl-in", "spv-out", "glsl-out"], optional = true }
 raw-window-handle = { workspace = true, optional = true }
 cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
@@ -199,7 +206,7 @@ jni = "0.22.4"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
-pollster = "1"
+pollster = "1.0.1"
 console_error_panic_hook = "0.1"
 web-sys = { version = "0.3", features = [
     "StorageManager",
@@ -239,14 +246,14 @@ web-sys = { version = "0.3", features = [
 # consume rand_core 0.6/getrandom 0.2 on wasm32.
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
-getrandom = { version = "0.4", features = ["wasm_js"] }
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
 serde-wasm-bindgen = "0.6.5"
 wasm-bindgen-futures = "0.4"
-reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json"] }
 
 [target.'cfg(all(windows, target_arch = "x86_64"))'.dependencies]
 # Force a specific, stable version to prevent transitive conflicts and 32-bit fallback macros
-windows = { version = "0.62", features = [
+windows = { version = "0.62.2", features = [
     "Win32_AI_MachineLearning_DirectML",
     "Win32_Graphics_Direct3D",
     "Win32_Graphics_Direct3D12",
@@ -268,40 +275,40 @@ windows = { version = "0.62", features = [
 libc = "0.2"
 qualia-audio = { path = "../qualia-audio" }
 keyring = "4"
-memmap2 = "0.9"
+memmap2 = "0.9.11"
 futures-util = "0.3"
 # Tiny block-on executor for one-shot async device probes (H1(a) cross-circuit benchmark).
-pollster = "1"
-tokio = { version = "1.0", features = ["full"] }
+pollster = "1.0.1"
+tokio = { version = "1.54.0", features = ["full"] }
 rayon = "1.12.0"
 axum = { version = "0.8.9", features = ["ws"] }
-tower-http = { version = "0.7", features = ["fs", "cors", "set-header"] }
-tokio-stream = { version = "0.1.18", features = ["sync"] }
+tower-http = { version = "0.7.1", features = ["fs", "cors", "set-header"] }
+tokio-stream = { version = "0.1.19", features = ["sync"] }
 http-body-util = "0.1.3"
 zstd = "0.13"
-flate2 = "1"
+flate2 = "1.1.9"
 # ONNX Runtime for learned SR session adapters (feature `vision-onnx`, off by default).
 ort = { version = "2.0.0-rc.12", features = ["download-binaries"], optional = true }
 # Pure-Rust MP4 container demuxer (MIT) for D1.11 video file I/O (demux only; codec decode is separate).
 mp4 = "0.14"
-sysinfo = "0.39.3"
+sysinfo = "0.39.6"
 # W7: NVIDIA GPU thermal/power telemetry (opt-in via the `nvml` feature). Loads the driver's NVML
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.
-nvml-wrapper = { version = "0.12", optional = true }
+nvml-wrapper = { version = "0.12.1", optional = true }
 libp2p = { version = "0.56.0", optional = true, features = ["tcp", "dns", "noise", "yamux", "request-response", "kad", "mdns", "macros", "tokio"] }
-reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls-no-provider", "blocking"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls-no-provider", "blocking"] }
 boringtun = "0.7.1"
 rcgen = "0.14.8"
-rustls = { version = "0.23", default-features = false, features = ["std", "tls12", "ring"] }
-rustls-pki-types = "1"
+rustls = { version = "0.23.38", default-features = false, features = ["std", "tls12", "ring"] }
+rustls-pki-types = "1.15.1"
 # CSCP-09 local HTTP/2 Extended CONNECT + RFC 9297 capsules (loopback only; not MASQUE Internet).
 h2 = "0.4.15"
-http = "1"
-bytes = "1"
+http = "1.5.0"
+bytes = "1.12.1"
 tokio-rustls = { version = "0.26.4", default-features = false, features = ["logging", "tls12", "ring"] }
 # Native zero-heap DNS & SDN stack resides in crate::net::dns (zero 3rd-party dependencies)
-base64 = "0.22"
-getrandom = { version = "0.4", features = ["wasm_js"] }
+base64 = "0.23.1"
+getrandom = { version = "0.4.3", features = ["wasm_js"] }
 serde-wasm-bindgen = "0.6.5"
 
 [target.'cfg(target_os = "linux")'.dependencies]

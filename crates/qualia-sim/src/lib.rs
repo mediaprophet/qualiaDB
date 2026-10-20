@@ -11,6 +11,7 @@ pub mod atmosphere;
 pub mod camera;
 pub mod character;
 pub mod differential_codec;
+pub mod ecs;
 pub mod fire_ecology;
 pub mod flora_archetype;
 pub mod geomechanics;
@@ -22,6 +23,7 @@ pub mod leaf_biophysics;
 pub mod metamer_fspm;
 pub mod navmesh;
 pub mod optics;
+pub mod physics3d;
 pub mod ripple;
 pub mod space_weather;
 pub mod time;
@@ -57,7 +59,17 @@ pub use atmosphere::{
 pub use camera::{
     unproject_screen_to_ray, FlyCamera, OrbitCamera, Ray3D, SpringChaseCamera,
 };
-pub use character::{CharacterConfig, CharacterController, CharacterState};
+pub use character::{step_character_3d, CharacterConfig, CharacterController, CharacterState};
+pub use ecs::{Added, Changed, SimTable, SimTableError, Tick, INVALID_ROW};
+pub use physics3d::{
+    cast_capsule, cast_ray, cast_sphere, compute_narrowphase_contact,
+    couple_rigid_body_with_botanical_stem, couple_rigid_body_with_hydro,
+    couple_rigid_body_with_soil, evaluate_and_fracture_body, gjk_intersect, overlap_aabb,
+    step_xpbd_world, Aabb3D, ArticulatedRagdoll, BallMotorJoint, BroadphaseBvh, ColliderShape3D,
+    ContactManifold3D, ContactPoint3D, FixedMotorJoint, FractureOutcome3D, MotorJoint3D,
+    NarrowphaseContact, RagdollMode, RayHit3D, RevoluteMotorJoint, RigidBody3D, RigidBodyType3D,
+    SdfPrimitive, ShapeCastHit3D, SpringSuspensionJoint,
+};
 pub use flora_archetype::{
     FloraArchetypeConfig, FloraBiomechanicsEvaluator, RaunkiaerLifeForm, StemSupportRegime,
 };

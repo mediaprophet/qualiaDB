@@ -208,16 +208,19 @@ mod tests {
             len: usize,
         }
         impl V {
+            /// Creates a new instance.
             pub fn new() -> Self {
                 Self {
                     buf: [0; 16],
                     len: 0,
                 }
             }
+            /// Pushes an item.
             pub fn push(&mut self, v: u64) {
                 self.buf[self.len] = v;
                 self.len += 1;
             }
+            /// `slice` form.
             pub fn as_slice(&self) -> &[u64] {
                 &self.buf[..self.len]
             }

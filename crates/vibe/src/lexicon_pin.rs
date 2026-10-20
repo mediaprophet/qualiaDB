@@ -34,6 +34,7 @@ pub struct LexiconPin {
 }
 
 impl LexiconPin {
+    /// Parses.
     pub fn parse(raw: &str) -> Option<Self> {
         let raw = raw.trim().trim_matches('"').trim_end_matches(';').trim();
         if raw.is_empty() {
@@ -51,6 +52,7 @@ impl LexiconPin {
         })
     }
 
+    /// `pin-str` form.
     pub fn as_pin_str(&self) -> String {
         format!("{}@{}", self.pack_id, self.pack_semver)
     }
@@ -78,6 +80,7 @@ pub enum LexiconFraming {
 }
 
 impl LexiconFraming {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::LivingShacl => "living-SHACL",
@@ -86,6 +89,7 @@ impl LexiconFraming {
         }
     }
 
+    /// Parses.
     pub fn parse(raw: &str) -> Option<Self> {
         match raw.trim() {
             "living-SHACL" | "living_shacl" | "living" => Some(Self::LivingShacl),
@@ -105,6 +109,7 @@ pub struct AliasRow {
 }
 
 impl AliasRow {
+    /// Converts to json.
     pub fn to_json(&self) -> String {
         format!(
             "{{\"from\":\"{}\",\"to\":\"{}\",\"framing\":\"{}\"}}",
@@ -251,6 +256,7 @@ pub fn apply_upgrade_framing(
     }
 }
 
+/// Applies upgrade-map.
 pub fn apply_upgrade_map(rows: &[AliasRow], requested: &[LexiconFraming]) -> Vec<AliasRow> {
     rows.iter()
         .zip(requested.iter().copied().chain(std::iter::repeat(
@@ -264,6 +270,7 @@ pub fn apply_upgrade_map(rows: &[AliasRow], requested: &[LexiconFraming]) -> Vec
         .collect()
 }
 
+/// `true` when living content was rewritten as an artifact.
 pub fn living_rewritten_as_artifact(before: &[AliasRow], after: &[AliasRow]) -> bool {
     before.iter().any(|old| {
         old.framing == LexiconFraming::LivingShacl
@@ -317,6 +324,7 @@ pub struct PackManifest {
     pub concept_ids: Vec<String>,
 }
 
+/// Parses pack-manifest-json.
 pub fn parse_pack_manifest_json(raw: &str) -> Option<PackManifest> {
     let pack_id = json_string_field(raw, "packId")?;
     let pack_semver = json_string_field(raw, "packSemVer")?;

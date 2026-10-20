@@ -200,6 +200,7 @@ impl Default for HmcTextureStreamRequest {
     }
 }
 
+/// `true` when ktx2-mime.
 pub(crate) fn is_ktx2_mime(mime: &str) -> bool {
     mime.split(';')
         .next()
@@ -230,6 +231,7 @@ impl Default for HmcWaterLoadPolicy {
     }
 }
 
+/// Validates hmc-water-geometry.
 pub(crate) fn validate_hmc_water_geometry(
     positions: &[[f32; 3]],
     triangles: &[[u32; 3]],
@@ -267,6 +269,7 @@ pub(crate) fn validate_hmc_water_geometry(
     Ok(bytes)
 }
 
+/// Selects hmc-water-quality.
 pub(crate) fn select_hmc_water_quality(
     triangle_count: usize,
     geometry_bytes: u64,
@@ -994,6 +997,7 @@ pub fn load_hmc_asset_with_texture_request(
     }
 }
 
+/// Requests a texture stream.
 pub fn request_texture_stream(
     renderer: &super::VolumetricRenderer,
     request: HmcTextureStreamApplyRequest<'_>,
@@ -1001,6 +1005,7 @@ pub fn request_texture_stream(
     volumetric_hmc_stream::request_texture_stream(renderer, request)
 }
 
+/// Applies texture-stream.
 pub fn apply_texture_stream(
     renderer: &mut super::VolumetricRenderer,
     plan: HmcTextureStreamPlan,

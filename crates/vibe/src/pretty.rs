@@ -56,6 +56,7 @@ pub struct PrettyField {
 }
 
 impl PrettyField {
+    /// Creates a new `PrettyField`.
     pub fn new(name: &str, field_type: &str) -> Self {
         Self {
             name: name.into(),
@@ -64,11 +65,13 @@ impl PrettyField {
         }
     }
 
+    /// Formatted property.
     pub fn prop(mut self, key: &str, value: &str) -> Self {
         self.properties.push((key.into(), value.into()));
         self
     }
 
+    /// Formats the item.
     pub fn format(&self, opts: &PrettyOptions, out: &mut String) {
         writeln!(out, "field {} : {}", self.name, self.field_type).unwrap();
         for (i, (k, v)) in self.properties.iter().enumerate() {
@@ -92,6 +95,7 @@ pub struct PrettyMaterial {
 }
 
 impl PrettyMaterial {
+    /// Creates a new `PrettyMaterial`.
     pub fn new(name: &str, material_type: &str) -> Self {
         Self {
             name: name.into(),
@@ -100,11 +104,13 @@ impl PrettyMaterial {
         }
     }
 
+    /// Formatted property.
     pub fn prop(mut self, key: &str, value: &str) -> Self {
         self.properties.push((key.into(), value.into()));
         self
     }
 
+    /// Formats the item.
     pub fn format(&self, opts: &PrettyOptions, out: &mut String) {
         writeln!(out, "material {} : {}", self.name, self.material_type).unwrap();
         for (i, (k, v)) in self.properties.iter().enumerate() {
@@ -128,6 +134,7 @@ pub struct PrettyLaw {
 }
 
 impl PrettyLaw {
+    /// Creates a new `PrettyLaw`.
     pub fn new(name: &str, when_expr: &str, then_expr: &str) -> Self {
         Self {
             name: name.into(),
@@ -136,6 +143,7 @@ impl PrettyLaw {
         }
     }
 
+    /// Formats the item.
     pub fn format(&self, opts: &PrettyOptions, out: &mut String) {
         writeln!(out, "law {}", self.name).unwrap();
         writeln!(out, "{}when {}", opts.indent, self.when_expr).unwrap();
@@ -159,6 +167,7 @@ impl Default for PrettyDocument {
 }
 
 impl PrettyDocument {
+    /// Creates a new `PrettyDocument`.
     pub fn new() -> Self {
         Self {
             fields: Vec::new(),
@@ -167,16 +176,19 @@ impl PrettyDocument {
         }
     }
 
+    /// Adds field.
     pub fn add_field(&mut self, f: PrettyField) -> &mut Self {
         self.fields.push(f);
         self
     }
 
+    /// Adds material.
     pub fn add_material(&mut self, m: PrettyMaterial) -> &mut Self {
         self.materials.push(m);
         self
     }
 
+    /// Adds law.
     pub fn add_law(&mut self, l: PrettyLaw) -> &mut Self {
         self.laws.push(l);
         self

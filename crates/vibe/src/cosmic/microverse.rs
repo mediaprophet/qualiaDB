@@ -123,6 +123,7 @@ pub enum ParticleClass {
 }
 
 impl ParticleClass {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Fermion => "fermion",
@@ -254,6 +255,7 @@ impl ParticleProfile {
         constants::HBAR_J_S / (self.mass_kg * velocity_m_s)
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("name".into(), Value::String(self.name.clone()));
@@ -309,6 +311,7 @@ impl MicroverseRealm {
         }
     }
 
+    /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("usri".into(), Value::String(self.usri.clone()));

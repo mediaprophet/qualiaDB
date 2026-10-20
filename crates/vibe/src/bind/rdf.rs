@@ -4,6 +4,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
 
+/// Calls an RDF builtin.
 pub fn call_rdf(path: &str, args: &[Value], span: Span) -> Result<Option<Value>, Diagnostic> {
     match path {
         "rdf.triple" => {

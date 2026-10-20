@@ -3,6 +3,7 @@ use crate::bind::dispatch;
 use crate::value::EnumValue;
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Evaluates an expression.
     pub fn eval_expr(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {
         self.budget.tick(expr.span)?;
         match &expr.kind {

@@ -559,6 +559,7 @@ pub enum Name {
 }
 
 impl Expr {
+    /// Identifier name.
     pub fn ident_name(&self) -> Option<&str> {
         match &self.kind {
             ExprKind::Ident(s) => Some(s),
@@ -568,6 +569,7 @@ impl Expr {
 }
 
 impl Stmt {
+    /// Span.
     pub fn span(&self) -> Span {
         match self {
             Stmt::Let { span, .. }

@@ -267,7 +267,7 @@ fn read_positions(
     read_vec3(accessor, bvs, bin, "POSITION")
 }
 
-fn read_vec3(
+pub(super) fn read_vec3(
     accessor: &Value,
     bvs: &[Value],
     bin: &[u8],
@@ -317,7 +317,7 @@ fn read_vec3(
     Ok(out)
 }
 
-fn read_vec4(
+pub(super) fn read_vec4(
     accessor: &Value,
     bvs: &[Value],
     bin: &[u8],
@@ -472,7 +472,7 @@ pub(super) fn read_texcoords_0(
 }
 
 /// Read a SCALAR index accessor (u8/u16/u32) out of the GLB binary buffer, widened to `u32`.
-fn read_indices(accessor: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<u32>, AssetError> {
+pub(super) fn read_indices(accessor: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<u32>, AssetError> {
     if accessor["type"].as_str() != Some("SCALAR") {
         return Err(AssetError::Parse(
             "index accessor type must be SCALAR".into(),

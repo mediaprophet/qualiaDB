@@ -414,7 +414,7 @@ impl PortalGpu {
             schedule,
             self.hdr_exposure_ev,
             self.white_balance_gains,
-            self.color_format.is_srgb(),
+            self.color_format.has_srgb_suffix(),
         );
         if recorded {
             self.temporal_reset_pending = false;

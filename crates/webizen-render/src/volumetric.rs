@@ -40,6 +40,7 @@ pub struct VolumetricRenderer {
 }
 
 impl VolumetricRenderer {
+    /// New offscreen renderer.
     pub fn new_offscreen(width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_offscreen(width, height, particle_cap)?,
@@ -65,6 +66,7 @@ impl VolumetricRenderer {
         })
     }
 
+    /// Uploads a tensor buffer.
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
         self.inner.upload_tensor_buffer(bytes)
     }
@@ -151,6 +153,7 @@ impl VolumetricRenderer {
         crate::volumetric_hmc::load_hmc_water_asset(self, hmc_bytes, asset_key)
     }
 
+    /// Uploads a mesh.
     pub fn upload_mesh(&mut self, positions: &[[f32; 3]], indices: &[u32]) -> u32 {
         self.inner.upload_mesh(positions, indices)
     }
@@ -171,6 +174,7 @@ impl VolumetricRenderer {
         Ok(self.inner.upload_mesh(&mesh.positions, &indices))
     }
 
+    /// Uploads a colored mesh.
     pub fn upload_mesh_colored(
         &mut self,
         positions: &[[f32; 3]],
@@ -180,6 +184,7 @@ impl VolumetricRenderer {
         self.inner.upload_mesh_colored(positions, colors, indices)
     }
 
+    /// Sets camera.
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
         self.inner.set_camera(yaw, pitch, zoom);
     }
@@ -190,6 +195,7 @@ impl VolumetricRenderer {
         self.inner.set_shadows_enabled(enabled);
     }
 
+    /// Sun-shadow resolution.
     pub fn sun_shadow_resolution(&self) -> Option<u32> {
         self.inner.shadow_resolution()
     }
@@ -204,18 +210,22 @@ impl VolumetricRenderer {
         self.inner.set_screen_space_ao(radius, strength, bias);
     }
 
+    /// Sets screen-space-ao-sample-count.
     pub fn set_screen_space_ao_sample_count(&mut self, samples: u32) {
         self.inner.set_screen_space_ao_sample_count(samples);
     }
 
+    /// `true` when SSAO is available.
     pub fn screen_space_ao_available(&self) -> bool {
         self.inner.screen_space_ao_available()
     }
 
+    /// SSAO resolution.
     pub fn screen_space_ao_resolution(&self) -> Option<(u32, u32)> {
         self.inner.screen_space_ao_resolution()
     }
 
+    /// Renders.
     pub fn render(
         &mut self,
         time_seconds: f32,
@@ -224,14 +234,17 @@ impl VolumetricRenderer {
         self.inner.render(time_seconds, &core_telemetry(telemetry))
     }
 
+    /// Required RGBA8 bytes.
     pub fn required_rgba8_bytes(&self) -> usize {
         self.inner.required_rgba8_bytes()
     }
 
+    /// Reads rgba8-into.
     pub fn read_rgba8_into(&self, out: &mut [u8]) -> Result<usize, String> {
         self.inner.read_rgba8_into(out)
     }
 
+    /// Resizes.
     pub fn resize(&mut self, width: u32, height: u32) {
         if let Err(error) = self.inner.resize(width, height) {
             log::warn!("volumetric renderer resize retained previous targets: {error}");

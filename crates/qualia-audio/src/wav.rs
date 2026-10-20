@@ -71,6 +71,7 @@ pub fn decode_wav(bytes: &[u8]) -> Result<DecodedWav, AudioError> {
 }
 
 impl DecodedWav {
+    /// View.
     pub fn view(&self) -> AudioView<'_> {
         let bps = match self.format {
             SampleFormat::I16 => 2,

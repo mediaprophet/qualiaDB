@@ -22,6 +22,7 @@ pub enum WeightState {
 
 impl WeightState {
     #[inline]
+    /// `true` when loaded.
     pub fn is_loaded(&self) -> bool {
         matches!(self, WeightState::Loaded(_))
     }

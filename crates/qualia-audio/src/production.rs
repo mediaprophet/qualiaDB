@@ -88,6 +88,7 @@ pub struct DelayLine {
 }
 
 impl DelayLine {
+    /// Creates a new instance.
     pub fn new(max_samples: usize) -> Self {
         Self {
             buf: vec![0.0; max_samples.max(1)],
@@ -95,6 +96,7 @@ impl DelayLine {
         }
     }
 
+    /// Processes.
     pub fn process(&mut self, s: f32, delay_samples: usize, mix: f32) -> f32 {
         let n = self.buf.len();
         if delay_samples == 0 || mix <= 0.0 || n == 0 {
@@ -119,6 +121,7 @@ pub struct ProcessPlan {
 }
 
 impl ProcessPlan {
+    /// Creates a new instance.
     pub fn new(sample_rate: u32, block_frames: usize) -> Self {
         Self {
             tracks: [TrackState::default(); MAX_TRACKS],
@@ -128,6 +131,7 @@ impl ProcessPlan {
         }
     }
 
+    /// Adds track.
     pub fn add_track(&mut self, t: TrackState) -> Option<usize> {
         if self.n_tracks >= MAX_TRACKS {
             return None;

@@ -41,12 +41,14 @@ impl Default for Style {
 }
 
 impl Style {
+    /// Adds/looks up a wire.
     pub fn wire(color: impl Into<String>) -> Self {
         Self {
             stroke: Some(color.into()),
             ..Default::default()
         }
     }
+    /// `true` for a solid edge.
     pub fn solid(fill: impl Into<String>) -> Self {
         Self {
             stroke: None,
@@ -54,6 +56,7 @@ impl Style {
             ..Default::default()
         }
     }
+    /// Builder — sets alpha.
     pub fn with_alpha(mut self, a: f64) -> Self {
         self.alpha = a;
         self
@@ -89,6 +92,7 @@ impl Default for Node {
 }
 
 impl Node {
+    /// Creates a new instance.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
@@ -96,31 +100,38 @@ impl Node {
         }
     }
 
+    /// Builder — sets entity-id.
     pub fn with_entity_id(mut self, entity_id: u64) -> Self {
         self.entity_id = entity_id;
         self
     }
 
+    /// Builder — sets affordance-bits.
     pub fn with_affordance_bits(mut self, bits: u8) -> Self {
         self.affordance_bits = bits;
         self
     }
+    /// Builder — sets mesh.
     pub fn with_mesh(mut self, mesh: Mesh) -> Self {
         self.mesh = Some(mesh);
         self
     }
+    /// Builder — sets style.
     pub fn with_style(mut self, style: Style) -> Self {
         self.style = style;
         self
     }
+    /// Builder — sets transform.
     pub fn with_transform(mut self, t: Transform) -> Self {
         self.transform = t;
         self
     }
+    /// Element access.
     pub fn at(mut self, position: Vec3) -> Self {
         self.transform.position = position;
         self
     }
+    /// Child node.
     pub fn child(mut self, node: Node) -> Self {
         self.children.push(node);
         self
@@ -146,16 +157,19 @@ impl Default for Scene {
 }
 
 impl Scene {
+    /// Creates a new instance.
     pub fn new(camera: Camera) -> Self {
         Self {
             camera,
             ..Default::default()
         }
     }
+    /// Builder — sets background.
     pub fn with_background(mut self, bg: impl Into<String>) -> Self {
         self.background = bg.into();
         self
     }
+    /// Vector addition.
     pub fn add(mut self, node: Node) -> Self {
         self.roots.push(node);
         self

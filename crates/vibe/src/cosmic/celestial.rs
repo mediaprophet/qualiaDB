@@ -22,6 +22,7 @@ pub enum CelestialBodyClass {
 }
 
 impl CelestialBodyClass {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::TerrestrialPlanet => "TerrestrialPlanet",
@@ -38,6 +39,7 @@ impl CelestialBodyClass {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "TerrestrialPlanet" => Some(Self::TerrestrialPlanet),
@@ -217,6 +219,7 @@ pub fn earth_profile() -> CelestialBodyProfile {
     }
 }
 
+/// Mars profile.
 pub fn mars_profile() -> CelestialBodyProfile {
     CelestialBodyProfile {
         name: "Mars".into(),

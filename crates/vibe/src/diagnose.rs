@@ -16,6 +16,7 @@ pub struct DiagnoseReport {
 }
 
 impl DiagnoseReport {
+    /// Converts to json.
     pub fn to_json(&self) -> String {
         if let Some(err) = &self.error {
             format!(

@@ -15,6 +15,7 @@ pub struct GalileanMorphism {
 }
 
 impl GalileanMorphism {
+    /// Creates a new `GalileanMorphism`.
     pub fn new(velocity: Vec<f64>) -> Self {
         Self { velocity }
     }
@@ -64,6 +65,7 @@ pub struct LorentzMorphism {
 impl LorentzMorphism {
     pub const C: f64 = 299_792_458.0;
 
+    /// Creates a new `LorentzMorphism`.
     pub fn new(velocity: f64) -> Self {
         Self {
             velocity,

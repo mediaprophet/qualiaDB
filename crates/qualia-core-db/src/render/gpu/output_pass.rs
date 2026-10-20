@@ -85,7 +85,7 @@ impl OutputChain {
         });
         let params = OutputParams {
             exposure_scale,
-            surface_is_srgb: if surface_format.is_srgb() { 1.0 } else { 0.0 },
+            surface_is_srgb: if surface_format.has_srgb_suffix() { 1.0 } else { 0.0 },
             _padding: [0.0; 2],
             white_balance_gains,
             _padding2: 0.0,
@@ -189,7 +189,7 @@ impl OutputChain {
             width,
             height,
             exposure_scale,
-            surface_is_srgb: surface_format.is_srgb(),
+            surface_is_srgb: surface_format.has_srgb_suffix(),
             hdr_scene,
             white_balance_gains,
             _frame_target_reservation: reservation,
