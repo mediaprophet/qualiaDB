@@ -126,6 +126,12 @@ wasm-bindgen-futures = "0.4.75"
 web-sys = "0.3.102"
 wgpu = { version = "30.0.0", path = "../etalon/compat/wgpu" }
 etalon = { version = "0.0.1", path = "../etalon/etalon" }
+etalon-agent = { version = "0.0.1", path = "../etalon/crates/etalon-agent" }
+etalon-wgsl-forge = { version = "0.0.1", path = "../etalon/crates/etalon-wgsl-forge" }
+etalon-nquin = { version = "0.0.1", path = "../etalon/crates/etalon-nquin" }
+etalon-tensor = { version = "0.0.1", path = "../etalon/crates/etalon-tensor" }
+etalon-render = { version = "0.0.1", path = "../etalon/crates/etalon-render" }
+etalon-wasm = { version = "0.0.1", path = "../etalon/crates/etalon-wasm" }
 
 
 # Profile for WASM web builds (qualia-mobile-harness).
