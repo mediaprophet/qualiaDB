@@ -1350,6 +1350,24 @@ pub const STUDIO_EXPORT: &str = "Studio.export";
 pub const STUDIO_UNDO: &str = "Studio.undo";
 pub const STUDIO_REDO: &str = "Studio.redo";
 pub const STUDIO_LIST_ARTIFACTS: &str = "Studio.list_artifacts";
+pub const BOTANICAL_ANATOMY_SYNTHESIZE_ORGAN_10D: &str = "BotanicalAnatomy.synthesize_organ_10d";
+pub const BOTANICAL_ANATOMY_DISSECT_TISSUE_LAYER: &str = "BotanicalAnatomy.dissect_tissue_layer";
+pub const BOTANICAL_ANATOMY_EVALUATE_ANTHESIS: &str = "BotanicalAnatomy.evaluate_anthesis";
+pub const BOTANICAL_ANATOMY_EVALUATE_STOMATAL_CONDUCTANCE: &str = "BotanicalAnatomy.evaluate_stomatal_conductance";
+pub const BOTANICAL_ANATOMY_EVALUATE_PIPE_MODEL_SAPWOOD: &str = "BotanicalAnatomy.evaluate_pipe_model_sapwood";
+pub const ZOOLOGICAL_ANATOMY_SYNTHESIZE_VERTEBRATE_10D: &str = "ZoologicalAnatomy.synthesize_vertebrate_10d";
+pub const ZOOLOGICAL_ANATOMY_PEEL_LAYER: &str = "ZoologicalAnatomy.peel_layer";
+pub const ZOOLOGICAL_ANATOMY_EVALUATE_TENDON_STRAIN: &str = "ZoologicalAnatomy.evaluate_tendon_strain";
+pub const BIOLOGICAL_ONTOLOGY_QUERY_CALLOUT_PIN: &str = "BiologicalOntology.query_callout_pin";
+pub const BIOLOGICAL_ONTOLOGY_RESOLVE_CURIE: &str = "BiologicalOntology.resolve_curie";
+pub const WORLD_CONTINUUM_SAMPLE_ELEVATION_NORMAL: &str = "WorldContinuum.sample_elevation_normal";
+pub const WORLD_CONTINUUM_STEP_ROVER_64HZ: &str = "WorldContinuum.step_rover_64hz";
+pub const WORLD_CONTINUUM_STEP_CHARACTER_3D: &str = "WorldContinuum.step_character_3d";
+pub const WORLD_CONTINUUM_STREAM_HILBERT_CHUNKS: &str = "WorldContinuum.stream_hilbert_chunks";
+pub const WORLD_CONTINUUM_LOCATE_STUDY_SITE: &str = "WorldContinuum.locate_study_site";
+pub const SCENE_GRAPH_10D_STEP_ONTOGENY: &str = "SceneGraph10D.step_ontogeny";
+pub const SCENE_GRAPH_10D_DISPATCH_AFFORDANCE: &str = "SceneGraph10D.dispatch_affordance";
+pub const SCENE_GRAPH_10D_CULL_INDIRECT_4TIER: &str = "SceneGraph10D.cull_indirect_4tier";
 
 pub const VIBE_EVAL: &str = "Vibe.eval";
 pub const BOOKMARKS_LIST: &str = "Bookmarks.list";
@@ -2599,6 +2617,24 @@ pub const ALL_BOUND: &[&str] = &[
     VC_SURFACE_FLUX,
     XFORM_LAPLACE_NUMERIC,
     XFORM_LAPLACE_SYMBOLIC,
+    BOTANICAL_ANATOMY_SYNTHESIZE_ORGAN_10D,
+    BOTANICAL_ANATOMY_DISSECT_TISSUE_LAYER,
+    BOTANICAL_ANATOMY_EVALUATE_ANTHESIS,
+    BOTANICAL_ANATOMY_EVALUATE_STOMATAL_CONDUCTANCE,
+    BOTANICAL_ANATOMY_EVALUATE_PIPE_MODEL_SAPWOOD,
+    ZOOLOGICAL_ANATOMY_SYNTHESIZE_VERTEBRATE_10D,
+    ZOOLOGICAL_ANATOMY_PEEL_LAYER,
+    ZOOLOGICAL_ANATOMY_EVALUATE_TENDON_STRAIN,
+    BIOLOGICAL_ONTOLOGY_QUERY_CALLOUT_PIN,
+    BIOLOGICAL_ONTOLOGY_RESOLVE_CURIE,
+    WORLD_CONTINUUM_SAMPLE_ELEVATION_NORMAL,
+    WORLD_CONTINUUM_STEP_ROVER_64HZ,
+    WORLD_CONTINUUM_STEP_CHARACTER_3D,
+    WORLD_CONTINUUM_STREAM_HILBERT_CHUNKS,
+    WORLD_CONTINUUM_LOCATE_STUDY_SITE,
+    SCENE_GRAPH_10D_STEP_ONTOGENY,
+    SCENE_GRAPH_10D_DISPATCH_AFFORDANCE,
+    SCENE_GRAPH_10D_CULL_INDIRECT_4TIER,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -3763,6 +3799,24 @@ pub fn seam_for(id: &str) -> &'static str {
         | HID_SPATIAL_HAND_SKELETON
         | HID_SPATIAL_GAZE_RAY
         | HID_BIOSIGNAL_POLL => "hid",
+        BOTANICAL_ANATOMY_SYNTHESIZE_ORGAN_10D
+        | BOTANICAL_ANATOMY_DISSECT_TISSUE_LAYER
+        | BOTANICAL_ANATOMY_EVALUATE_ANTHESIS
+        | BOTANICAL_ANATOMY_EVALUATE_STOMATAL_CONDUCTANCE
+        | BOTANICAL_ANATOMY_EVALUATE_PIPE_MODEL_SAPWOOD
+        | ZOOLOGICAL_ANATOMY_SYNTHESIZE_VERTEBRATE_10D
+        | ZOOLOGICAL_ANATOMY_PEEL_LAYER
+        | ZOOLOGICAL_ANATOMY_EVALUATE_TENDON_STRAIN
+        | BIOLOGICAL_ONTOLOGY_QUERY_CALLOUT_PIN
+        | BIOLOGICAL_ONTOLOGY_RESOLVE_CURIE => "science",
+        WORLD_CONTINUUM_SAMPLE_ELEVATION_NORMAL
+        | WORLD_CONTINUUM_STEP_ROVER_64HZ
+        | WORLD_CONTINUUM_STEP_CHARACTER_3D
+        | WORLD_CONTINUUM_STREAM_HILBERT_CHUNKS
+        | WORLD_CONTINUUM_LOCATE_STUDY_SITE
+        | SCENE_GRAPH_10D_STEP_ONTOGENY
+        | SCENE_GRAPH_10D_DISPATCH_AFFORDANCE
+        | SCENE_GRAPH_10D_CULL_INDIRECT_4TIER => "simulation",
         _ => "unbound",
     }
 }
