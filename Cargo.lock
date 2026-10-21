@@ -11812,12 +11812,16 @@ dependencies = [
 name = "qualia-wasm"
 version = "0.0.40"
 dependencies = [
+ "etalon-wasm",
  "js-sys",
  "qualia-core-db",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
+ "webizen-render",
 ]
 
 [[package]]
@@ -15821,6 +15825,7 @@ dependencies = [
  "base64 0.23.1",
  "bytemuck",
  "cfg_aliases",
+ "etalon-render",
  "image",
  "js-sys",
  "log",
@@ -15830,6 +15835,7 @@ dependencies = [
  "serde_json",
  "vibe",
  "wasm-bindgen",
+ "web-sys",
  "wgpu",
 ]
 

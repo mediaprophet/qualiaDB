@@ -7,18 +7,22 @@
 #![cfg(target_arch = "wasm32")]
 
 mod qualia_portal;
+pub mod render_stub;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
 
+pub use qualia_core_db::wasm_bridge::{
+    list_hmc_bundle_entries_wasm, read_hmc_bundle_entry_wasm, WasmQ42Session, WasmSimulationWorld,
+};
 pub use qualia_core_db::{
-    export_tensor_buffer_wasm, geosparql_operation_wasm, list_hmc_bundle_entries_wasm,
-    parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm,
-    parse_yaml_ld_q42_wasm, read_hmc_bundle_entry_wasm, sample_browser_telemetry_wasm,
-    spatial_encode_wasm, WasmQ42Session, WasmSimulationWorld,
+    export_tensor_buffer_wasm, geosparql_operation_wasm, parse_cbor_ld_wasm, parse_json_wasm,
+    parse_n3logic_wasm, parse_turtle_wasm, parse_yaml_ld_q42_wasm, sample_browser_telemetry_wasm,
+    spatial_encode_wasm,
 };
 pub use qualia_portal::QualiaPortal;
+pub use render_stub::SimpleCanvasRenderer;
 
 #[wasm_bindgen]
 extern "C" {
@@ -28,10 +32,7 @@ extern "C" {
 
 #[wasm_bindgen]
 /// Initializes panic-hook.
-pub fn init_panic_hook() {
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-}
+pub fn init_panic_hook() {}
 
 /// Legacy alias — prefer `QualiaPortal`.
 #[wasm_bindgen(js_name = WebEngine)]

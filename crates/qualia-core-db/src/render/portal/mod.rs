@@ -5,6 +5,44 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement};
 
+#[allow(unused_imports)]
+use etalon_wasm::{
+    MessageHeader, SharedArrayBufferRing, TransferableMessageTransport, TransportMode, WorkerState,
+    WorkerSteward, SAB_RING_MAGIC, SAB_RING_VERSION,
+};
+
+pub trait WorkerStewardExt {
+    fn mark_ready(&mut self);
+    fn notify_device_lost(&mut self);
+    fn recover(&mut self, new_gen: u32);
+    fn state(&self) -> WorkerState;
+    fn generation(&self) -> u32;
+}
+
+impl WorkerStewardExt for WorkerSteward {
+    fn mark_ready(&mut self) {
+        self.set_ready();
+    }
+
+    fn notify_device_lost(&mut self) {
+        self.state = WorkerState::Suspended;
+    }
+
+    fn recover(&mut self, new_gen: u32) {
+        self.state = WorkerState::Ready;
+        let req = self.next_request_id.load(core::sync::atomic::Ordering::Relaxed) & 0x0000_0000_FFFF_FFFF;
+        self.next_request_id.store(((new_gen as u64) << 32) | req, core::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn state(&self) -> WorkerState {
+        self.state
+    }
+
+    fn generation(&self) -> u32 {
+        (self.next_request_id.load(core::sync::atomic::Ordering::Relaxed) >> 32) as u32
+    }
+}
+
 use crate::audio::acoustic_plane::{
     acoustic_enabled_for_mode, acoustic_params_from_tensor, apply_binaural_to_uniform,
     drain_sonic_tokens, push_sonic_token, sonify_tensor_node, AcousticUniform,
@@ -198,6 +236,7 @@ pub struct QualiaPortal {
     /// adapter death; proof is only the failover after they stick.
     present_misses: u8,
     graphics: PortalGraphicsState,
+    etalon_steward: WorkerSteward,
 }
 
 #[wasm_bindgen]
@@ -210,6 +249,11 @@ impl QualiaPortal {
         let tier = detect_tier();
         let session_nonce = crate::render::standpoint::generate_session_nonce();
         let standpoint = spectator_default(session_nonce);
+        let cross_origin_isolated_detected = web_sys::window()
+            .and_then(|w| Reflect::get(&w, &JsValue::from_str("crossOriginIsolated")).ok())
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let etalon_steward = WorkerSteward::new(cross_origin_isolated_detected);
         let mut portal = QualiaPortal {
             description: "Qualia portal initialized".to_string(),
             last_parsed: None,
@@ -261,6 +305,7 @@ impl QualiaPortal {
             sky_clear: [0.55, 0.74, 0.92, 1.0],
             present_misses: 0,
             graphics: PortalGraphicsState::default(),
+            etalon_steward,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -301,6 +346,10 @@ impl QualiaPortal {
         if backend == "canvas2d" || backend == "unavailable" {
             self.tier = 0;
             self.body_renderer = BodyRendererBackend::CpuCanvas;
+            self.etalon_steward.notify_device_lost();
+        } else {
+            let new_gen = self.etalon_steward.generation().wrapping_add(1);
+            self.etalon_steward.recover(new_gen);
         }
     }
 
@@ -323,6 +372,24 @@ impl QualiaPortal {
     /// (0 = Full, 1 = Eco, 2 = Reserve).
     pub fn operational_mode(&self) -> u8 {
         global_vram_ledger().mode() as u8
+    }
+
+    /// Operational transport mode for dedicated WebWorker IPC.
+    pub fn etalon_transport_mode(&self) -> String {
+        match self.etalon_steward.transport_mode {
+            TransportMode::SharedArrayBufferRing => "SharedArrayBuffer".to_string(),
+            TransportMode::TransferableArrayBuffer => "TransferableMessage".to_string(),
+        }
+    }
+
+    /// Dedicated GPU worker steward lifecycle state (0=Initializing, 1=Ready, 2=Running, 3=Suspended, 4=Terminated).
+    pub fn etalon_worker_state(&self) -> u8 {
+        self.etalon_steward.state() as u8
+    }
+
+    /// Dedicated GPU worker recovery session generation.
+    pub fn etalon_session_generation(&self) -> u32 {
+        self.etalon_steward.generation()
     }
 
     /// Phase 5 (affordability rail) — whether a device tier (`0`=Full, `1`=Eco, `2`=Reserve)
@@ -496,7 +563,9 @@ impl QualiaPortal {
     /// control drain (≤16), time/telemetry/acoustic updates, camera-fly
     /// interpolation, then paint.
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
-        self.note_device_loss();
+        if self.note_device_loss() {
+            self.etalon_steward.notify_device_lost();
+        }
         self.tick_scene_animation(dt_ms)?;
         self.drain_and_apply_control(16);
         self.time += dt_ms as f64 * 0.001;
@@ -2492,6 +2561,7 @@ impl QualiaPortal {
                     gpu.set_tensor_projection_enabled(self.tensor_projection_enabled);
                     self.graphics.apply_to_gpu(&mut gpu);
                     self.gpu = Some(gpu);
+                    self.etalon_steward.mark_ready();
                 }
             }
             if self.anatomy_webgl2.is_none() {
@@ -2513,6 +2583,7 @@ impl QualiaPortal {
         #[cfg(target_arch = "wasm32")]
         {
             if self.note_device_loss() || self.graphics_recovery_requested {
+                self.etalon_steward.notify_device_lost();
                 // JavaScript replaces the old canvas at the next frame boundary;
                 // its WebGPU context cannot be converted into Canvas2D/WebGL2.
                 return Ok(());
@@ -2545,6 +2616,7 @@ impl QualiaPortal {
                     if self.body_renderer == BodyRendererBackend::WebGpu {
                         self.body_renderer = BodyRendererBackend::CpuCanvas;
                     }
+                    self.etalon_steward.notify_device_lost();
                     return Ok(());
                 }
                 let temporal_enabled = self.graphics.auto_temporal_enabled;
@@ -2606,6 +2678,7 @@ impl QualiaPortal {
                     if self.body_renderer == BodyRendererBackend::WebGpu {
                         self.body_renderer = BodyRendererBackend::CpuCanvas;
                     }
+                    self.etalon_steward.notify_device_lost();
                     if let Ok(fresh) = release_claimed_canvas(canvas) {
                         return self.paint_cpu_proof(&fresh, mode);
                     }

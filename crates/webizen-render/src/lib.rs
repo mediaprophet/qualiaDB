@@ -21,11 +21,11 @@ pub mod telemetry;
 pub mod ui;
 pub mod ui_layout;
 pub mod ui_msdf_text;
-#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+#[cfg(feature = "qualia")]
 pub mod volumetric;
-#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+#[cfg(feature = "qualia")]
 pub mod volumetric_hmc;
-#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+#[cfg(feature = "qualia")]
 mod volumetric_texture;
 pub mod wgpu_renderer;
 pub mod zero_copy_views;
@@ -59,10 +59,11 @@ pub use ui_msdf_text::{
     MSDF_ATLAS_GLYPH_COUNT, MSDF_ATLAS_HEIGHT, MSDF_ATLAS_ROWS, MSDF_ATLAS_WIDTH, MSDF_CELL_PX,
     MSDF_PIXEL_RANGE, MSDF_TEXT_WGSL,
 };
+#[cfg(feature = "qualia")]
+pub use volumetric::{HmcTextureAdmissionReport, HmcTextureStreamRequest, VolumetricRenderer};
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub use volumetric::{
     render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into,
-    HmcTextureAdmissionReport, HmcTextureStreamRequest, VolumetricRenderer,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use wgpu_renderer::{
@@ -77,6 +78,15 @@ pub use wgpu_renderer::{
     MAX_OFFSCREEN_DIMENSION, MAX_PIXEL_READBACK_BYTES,
 };
 pub use zero_copy_views::{CameraUniform, ModelUniform, Std140Field, Std140Type, TimeUniform};
+
+// Decoupled volumetric/holographic and EMF pipelines from etalon-render
+pub use etalon_render;
+pub use etalon_render::{
+    EmfFieldCell, EmfPipeline, EmfPipelineDesc, EmfSliceUniform, FrameCameraPod,
+    HolographicNodeGpu as EtalonHolographicNodeGpu, ManifoldProjectionPod,
+    ObserverStandpointUniform as EtalonObserverStandpointUniform,
+    VolumetricPipeline as EtalonVolumetricPipeline, EMF_VOLUMETRIC_WGSL, HOLOGRAPHIC_WGSL,
+};
 
 #[cfg(test)]
 mod tests {
@@ -120,6 +130,14 @@ mod tests {
         // Verify shaders are included
         assert!(!PROJECTOR_WGSL.is_empty());
         assert!(!EPISTEMIC_WGSL.is_empty());
+    }
+
+    #[test]
+    fn test_etalon_render_reexports() {
+        assert!(!EMF_VOLUMETRIC_WGSL.is_empty());
+        assert!(!HOLOGRAPHIC_WGSL.is_empty());
+        assert_eq!(std::mem::size_of::<FrameCameraPod>(), 160);
+        assert_eq!(std::mem::size_of::<ManifoldProjectionPod>(), 48);
     }
 
     /// End-to-end headless render: build an offscreen renderer, clear to red,

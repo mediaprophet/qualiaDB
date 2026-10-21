@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 wasm-bindgen = { workspace = true }
 js-sys = { workspace = true }
+etalon-wasm = { workspace = true }
 web-sys = { workspace = true, features = [
     "console",
     "Document",
@@ -25,6 +26,7 @@ web-sys = { workspace = true, features = [
     "CanvasGradient",
 ] }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 
 [package.metadata.wasm-pack.profile.release]
@@ -35,12 +37,14 @@ wasm-opt = ["-Oz"]
 # This makes webizen-web the single combined package (Qualia core + our web graphics glue).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 qualia-core-db = { path = "../qualia-core-db", default-features = false, features = ["wasm-full"] }
+webizen-render = { path = "../webizen-render" }
+wasm-bindgen-futures = { workspace = true }
 
 # Re-export some core WASM symbols from Qualia so the single package exposes them cleanly
 # (the final webizen-web.wasm will contain both the qualia engine + our web graphics glue)
 
-# Graphics layer: minimal canvas2d path for now (see render_stub.rs).
-# Future: depend on webizen-render with a "web" feature for shared scene contracts + WebGPU path.
+# Graphics layer: wires webizen-render for shared RenderScene contracts,
+# VolumetricRenderer WebGPU rendering, and Canvas2D fallback.
 
 [features]
 default = []

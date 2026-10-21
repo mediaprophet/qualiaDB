@@ -33,6 +33,18 @@ pub use caps::{
 #[cfg(all(feature = "gpu-runtime", target_arch = "wasm32"))]
 pub use caps::{recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
 
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_agent::{
+    AccessRights as EtalonAccessRights, AllocationId as EtalonAllocationId,
+    BufferRegion as EtalonBufferRegion, CapabilityState as EtalonCapabilityState,
+    HalComputeLane as EtalonHalComputeLane, MemoryTopology as EtalonMemoryTopology,
+    QualiaSlabAllocator as EtalonSlabAllocator, SiliconCapability as EtalonSiliconCapability,
+    SubmissionLease as EtalonSubmissionLease, QueueId as EtalonQueueId,
+    SubmissionToken as EtalonSubmissionToken, AccessRights, AllocationId, BufferRegion,
+    CapabilityState, HalComputeLane, MemoryTopology, QualiaSlabAllocator, QueueId,
+    SiliconCapability, SubmissionLease, SubmissionToken,
+};
+
 /// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
 /// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
 /// Native only; mirrors `try_shared_gpu` — never panics on a missing/failed device.
@@ -764,6 +776,29 @@ impl SharedGpuContext {
     pub fn queue_for_universe(&self, universe: ComputeUniverse) -> &wgpu::Queue {
         self.queue_for_lane(universe.default_queue_lane())
     }
+
+    /// Create an Etalon HAL compute lane borrowing this device and queue.
+    pub fn create_etalon_hal_lane(&self) -> etalon_agent::HalComputeLane {
+        etalon_agent::HalComputeLane::new(
+            std::sync::Arc::new(self.device.clone()),
+            std::sync::Arc::new(self.queue.clone()),
+            etalon_agent::QueueId(0),
+        )
+    }
+
+    /// Create an Etalon ring-slab allocator with the requested capacity.
+    pub fn create_etalon_slab_allocator(
+        &self,
+        capacity_bytes: u64,
+        label: &str,
+    ) -> etalon_agent::QualiaSlabAllocator {
+        let _ = (&self.device, label);
+        etalon_agent::QualiaSlabAllocator::new(
+            capacity_bytes as usize,
+            etalon_agent::slab::DEFAULT_BINDING_ALIGNMENT,
+        )
+    }
+
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
@@ -1122,6 +1157,13 @@ pub fn shared_gpu() -> &'static SharedGpuContext {
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn shared_gpu() -> &'static SharedGpuContext {
     try_shared_gpu().expect("shared wgpu init failed")
+}
+
+/// Convenience helper to obtain an Etalon HAL compute lane from the shared GPU context,
+/// or `None` if GPU runtime is unavailable or failed to initialize.
+#[cfg(feature = "gpu-runtime")]
+pub fn try_shared_etalon_hal_lane() -> Option<etalon_agent::HalComputeLane> {
+    try_shared_gpu().map(|g| g.create_etalon_hal_lane())
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "gpu-runtime"))]

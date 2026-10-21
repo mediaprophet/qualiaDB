@@ -8,6 +8,14 @@
 
 use bytemuck::{Pod, Zeroable};
 
+pub use etalon_render::scene_contract::{FrameCameraPod, ManifoldProjectionPod};
+pub use etalon_render::volumetric::{
+    CameraUniform as EtalonCameraUniform,
+    ObserverStandpointUniform as EtalonObserverStandpointUniform,
+    VolumetricPipeline as EtalonVolumetricPipeline,
+    HOLOGRAPHIC_WGSL as ETALON_HOLOGRAPHIC_WGSL,
+};
+
 /// Primitive geometric archetype evaluated procedurally inside the holographic shader.
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,6 +104,34 @@ impl HolographicNodeGpu {
     }
 }
 
+impl From<HolographicNodeGpu> for etalon_render::volumetric::HolographicNodeGpu {
+    #[inline]
+    fn from(node: HolographicNodeGpu) -> Self {
+        Self {
+            position_scale: node.position_scale,
+            half_extents_primitive: node.half_extents_primitive,
+            frequency_amplitude: node.frequency_amplitude,
+            manifold_tensor: node.manifold_tensor,
+            connection_endpoint: node.connection_endpoint,
+            emissive_color: node.emissive_color,
+        }
+    }
+}
+
+impl From<etalon_render::volumetric::HolographicNodeGpu> for HolographicNodeGpu {
+    #[inline]
+    fn from(node: etalon_render::volumetric::HolographicNodeGpu) -> Self {
+        Self {
+            position_scale: node.position_scale,
+            half_extents_primitive: node.half_extents_primitive,
+            frequency_amplitude: node.frequency_amplitude,
+            manifold_tensor: node.manifold_tensor,
+            connection_endpoint: node.connection_endpoint,
+            emissive_color: node.emissive_color,
+        }
+    }
+}
+
 /// WebGPU pipeline wrapper for the Holographic 3D Engine.
 pub struct HolographicPipelineGpu {
     pub pipeline: wgpu::RenderPipeline,
@@ -176,6 +212,15 @@ impl HolographicPipelineGpu {
             node_storage_layout,
         }
     }
+
+    /// Creates an Etalon decoupled volumetric ray-marching pipeline.
+    pub fn new_etalon_volumetric(
+        device: &wgpu::Device,
+        color_format: wgpu::TextureFormat,
+        depth_format: Option<wgpu::TextureFormat>,
+    ) -> EtalonVolumetricPipeline {
+        EtalonVolumetricPipeline::new(device, color_format, depth_format)
+    }
 }
 
 #[cfg(test)]
@@ -218,5 +263,38 @@ mod tests {
             HolographicPrimitive::InterferenceBridge as u32
         );
         assert_eq!(node.connection_endpoint, [4.0, 5.0, 6.0, 0.75]);
+    }
+
+    #[test]
+    fn holographic_node_gpu_roundtrip_conversion() {
+        let node = HolographicNodeGpu::new(
+            [1.0, 2.0, 3.0],
+            1.5,
+            [0.5, 0.5, 0.5],
+            HolographicPrimitive::Sphere,
+            2.0,
+            1.0,
+            0.0,
+            1.2,
+            0.9,
+            [0.2, 0.8, 1.0, 1.0],
+        )
+        .with_interference_bridge([4.0, 5.0, 6.0], 0.75);
+
+        let etalon_node: etalon_render::volumetric::HolographicNodeGpu = node.into();
+        assert_eq!(etalon_node.position_scale, node.position_scale);
+        assert_eq!(etalon_node.half_extents_primitive, node.half_extents_primitive);
+        assert_eq!(etalon_node.frequency_amplitude, node.frequency_amplitude);
+        assert_eq!(etalon_node.manifold_tensor, node.manifold_tensor);
+        assert_eq!(etalon_node.connection_endpoint, [4.0, 5.0, 6.0, 0.75]);
+        assert_eq!(etalon_node.emissive_color, node.emissive_color);
+
+        let roundtrip: HolographicNodeGpu = etalon_node.into();
+        assert_eq!(roundtrip.position_scale, node.position_scale);
+        assert_eq!(roundtrip.half_extents_primitive, node.half_extents_primitive);
+        assert_eq!(roundtrip.frequency_amplitude, node.frequency_amplitude);
+        assert_eq!(roundtrip.manifold_tensor, node.manifold_tensor);
+        assert_eq!(roundtrip.connection_endpoint, node.connection_endpoint);
+        assert_eq!(roundtrip.emissive_color, node.emissive_color);
     }
 }

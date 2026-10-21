@@ -10,32 +10,158 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_render::hud::{
+    AlignItems as HudAlignItems, ComputedUiRect as HudComputedRect, Edges as HudEdges,
+    FlexDirection as HudFlexDirection, HudVertex, JustifyContent as HudJustifyContent,
+    Margin as HudMargin, Padding as HudPadding, SizeRule as HudSizeRule,
+    UiLayoutNode as HudLayoutNode, UiLayoutStyle as HudLayoutStyle, UiLayoutTree as HudLayoutTree,
+    MAX_UI_NODES as MAX_HUD_LAYOUT_NODES, NO_UI_NODE as NO_HUD_NODE,
+};
+
 #[derive(Deserialize)]
 struct HudDocument {
     items: Vec<HudItem>,
 }
 
-#[derive(Deserialize)]
-struct HudItem {
+#[derive(Deserialize, Debug, Clone)]
+pub struct HudItem {
     #[serde(default)]
-    id: String,
-    kind: String,
+    pub id: String,
+    pub kind: String,
     #[serde(default)]
-    text: String,
-    x: f64,
-    y: f64,
+    pub text: String,
+    pub x: f64,
+    pub y: f64,
     #[serde(default)]
-    z: f64,
-    w: f64,
-    h: f64,
+    pub z: f64,
+    pub w: f64,
+    pub h: f64,
     #[serde(default)]
-    value: f64,
+    pub value: f64,
     #[serde(default)]
-    disabled: bool,
+    pub disabled: bool,
     #[serde(default)]
-    icon: String,
+    pub icon: String,
     #[serde(default)]
-    color: String,
+    pub color: String,
+}
+
+/// Solves flex layout for a slice of HUD items using Etalon's 2D vector HUD layout engine.
+///
+/// Auto-sizes items where `w == 0.0` or `h == 0.0` against the available viewport size.
+#[cfg(feature = "gpu-runtime")]
+pub fn compute_hud_flex_layout(items: &mut [HudItem], viewport_w: f32, viewport_h: f32) {
+    compute_hud_flex_layout_internal(items, viewport_w, viewport_h, false);
+}
+
+/// Solves and applies flex layout positions and dimensions for all non-marker HUD items.
+#[cfg(feature = "gpu-runtime")]
+pub fn compute_hud_flex_layout_all(items: &mut [HudItem], viewport_w: f32, viewport_h: f32) {
+    compute_hud_flex_layout_internal(items, viewport_w, viewport_h, true);
+}
+
+#[cfg(feature = "gpu-runtime")]
+fn compute_hud_flex_layout_internal(
+    items: &mut [HudItem],
+    viewport_w: f32,
+    viewport_h: f32,
+    apply_all: bool,
+) {
+    if items.is_empty() || viewport_w <= 0.0 || viewport_h <= 0.0 {
+        return;
+    }
+
+    let mut tree = etalon_render::hud::UiLayoutTree::new();
+    let root_style = etalon_render::hud::UiLayoutStyle {
+        direction: etalon_render::hud::FlexDirection::Column,
+        justify_content: etalon_render::hud::JustifyContent::Start,
+        align_items: etalon_render::hud::AlignItems::Stretch,
+        width: etalon_render::hud::SizeRule::Fixed(viewport_w),
+        height: etalon_render::hud::SizeRule::Fixed(viewport_h),
+        padding: etalon_render::hud::Padding::default(),
+        margin: etalon_render::hud::Margin::default(),
+        gap: 4.0,
+    };
+    let root_id = tree
+        .add_node(
+            etalon_render::hud::NO_UI_NODE,
+            root_style,
+            [0.0, 0.0, 0.0, 0.0],
+        )
+        .unwrap_or(0);
+
+    for (idx, item) in items
+        .iter()
+        .enumerate()
+        .take(etalon_render::hud::MAX_UI_NODES - 1)
+    {
+        if item.kind == "marker" {
+            continue;
+        }
+        let width_rule = if item.w > 0.0 {
+            etalon_render::hud::SizeRule::Fixed(item.w as f32)
+        } else {
+            etalon_render::hud::SizeRule::Auto
+        };
+        let height_rule = if item.h > 0.0 {
+            etalon_render::hud::SizeRule::Fixed(item.h as f32)
+        } else {
+            etalon_render::hud::SizeRule::Auto
+        };
+        let style = etalon_render::hud::UiLayoutStyle {
+            direction: etalon_render::hud::FlexDirection::Row,
+            justify_content: etalon_render::hud::JustifyContent::Start,
+            align_items: etalon_render::hud::AlignItems::Stretch,
+            width: width_rule,
+            height: height_rule,
+            padding: etalon_render::hud::Padding::default(),
+            margin: etalon_render::hud::Margin::default(),
+            gap: 0.0,
+        };
+        tree.add_node(root_id, style, [idx as f32, 0.0, 0.0, 1.0]);
+    }
+
+    tree.solve(viewport_w, viewport_h);
+
+    let mut vertices = [etalon_render::hud::HudVertex {
+        pos: [0.0, 0.0],
+        uv: [0.0, 0.0],
+        color: [0.0; 4],
+    }; etalon_render::hud::MAX_UI_NODES * 6];
+
+    let vert_count = tree.generate_quad_vertices(&mut vertices);
+    for chunk in vertices[..vert_count].chunks_exact(6) {
+        let idx = chunk[0].color[0].round() as usize;
+        if let Some(item) = items.get_mut(idx) {
+            let x0 = chunk[0].pos[0] as f64;
+            let y0 = chunk[0].pos[1] as f64;
+            let x1 = chunk[2].pos[0] as f64;
+            let y1 = chunk[2].pos[1] as f64;
+            let cw = (x1 - x0).max(0.0);
+            let ch = (y1 - y0).max(0.0);
+
+            if apply_all {
+                item.x = x0;
+                item.y = y0;
+                if item.w == 0.0 {
+                    item.w = cw;
+                }
+                if item.h == 0.0 {
+                    item.h = ch;
+                }
+            } else {
+                if item.w == 0.0 {
+                    item.w = cw;
+                    item.x = x0;
+                }
+                if item.h == 0.0 {
+                    item.h = ch;
+                    item.y = y0;
+                }
+            }
+        }
+    }
 }
 
 /// Browser canvas HUD. Place its transparent canvas above the Portal canvas.
@@ -103,9 +229,27 @@ impl QualiaHud {
             }
         }
         self.items = doc.items;
+        #[cfg(feature = "gpu-runtime")]
+        {
+            let cw = self.canvas.width() as f32;
+            let ch = self.canvas.height() as f32;
+            if cw > 0.0 && ch > 0.0 {
+                compute_hud_flex_layout(&mut self.items, cw, ch);
+            }
+        }
         self.focus = None;
         self.paint();
         Ok(())
+    }
+
+    /// Solves flex layout for all HUD items using the Etalon 2D vector HUD layout engine.
+    /// Updates position and dimensions for auto-sized items (`w == 0.0` or `h == 0.0`).
+    pub fn layout_items_flex(&mut self, viewport_w: f32, viewport_h: f32) {
+        #[cfg(feature = "gpu-runtime")]
+        {
+            compute_hud_flex_layout_all(&mut self.items, viewport_w, viewport_h);
+            self.paint();
+        }
     }
 
     /// Use the same orbit camera as Portal to project world markers into HUD pixels.
@@ -257,6 +401,16 @@ impl QualiaHud {
 }
 
 impl QualiaHud {
+    /// Reference to the current HUD items.
+    pub fn items(&self) -> &[HudItem] {
+        &self.items
+    }
+
+    /// Mutable reference to the current HUD items.
+    pub fn items_mut(&mut self) -> &mut [HudItem] {
+        &mut self.items
+    }
+
     fn marker_position(&self, item: &HudItem) -> Option<(f64, f64)> {
         let w = self.canvas.width() as f32;
         let h = self.canvas.height() as f32;
@@ -418,5 +572,90 @@ fn draw_marker(ctx: &CanvasRenderingContext2d, item: &HudItem, x: f64, y: f64, f
         ctx.set_font("bold 13px Trebuchet MS, sans-serif");
         ctx.set_fill_style_str("#fff8e8");
         let _ = ctx.fill_text(&item.text, x + 22.0, y);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(feature = "gpu-runtime")]
+    fn test_compute_hud_flex_layout_auto_size() {
+        let mut items = vec![
+            HudItem {
+                id: "panel_1".into(),
+                kind: "panel".into(),
+                text: "".into(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 0.0,
+                h: 0.0,
+                value: 0.0,
+                disabled: false,
+                icon: "".into(),
+                color: "".into(),
+            },
+            HudItem {
+                id: "btn_1".into(),
+                kind: "button".into(),
+                text: "Click".into(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 120.0,
+                h: 40.0,
+                value: 0.0,
+                disabled: false,
+                icon: "".into(),
+                color: "".into(),
+            },
+        ];
+
+        compute_hud_flex_layout(&mut items, 800.0, 600.0);
+        assert!(items[0].w > 0.0, "auto width should be computed");
+        assert!(items[0].h > 0.0, "auto height should be computed");
+        assert_eq!(items[1].w, 120.0, "fixed width should be preserved");
+        assert_eq!(items[1].h, 40.0, "fixed height should be preserved");
+    }
+
+    #[test]
+    #[cfg(feature = "gpu-runtime")]
+    fn test_compute_hud_flex_layout_all_positions() {
+        let mut items = vec![
+            HudItem {
+                id: "btn_1".into(),
+                kind: "button".into(),
+                text: "First".into(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 100.0,
+                h: 30.0,
+                value: 0.0,
+                disabled: false,
+                icon: "".into(),
+                color: "".into(),
+            },
+            HudItem {
+                id: "btn_2".into(),
+                kind: "button".into(),
+                text: "Second".into(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 100.0,
+                h: 30.0,
+                value: 0.0,
+                disabled: false,
+                icon: "".into(),
+                color: "".into(),
+            },
+        ];
+
+        compute_hud_flex_layout_all(&mut items, 800.0, 600.0);
+        assert_eq!(items[0].y, 0.0);
+        assert!(items[1].y > 0.0, "second child in column should have y offset");
     }
 }

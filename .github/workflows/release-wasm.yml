@@ -2,6 +2,10 @@ name: WASM Release
 
 on:
   push:
+    branches:
+      - main
+      - "0.0.40"
+      - "0.0.40.*"
     tags:
       - 'v*'
   workflow_dispatch:
@@ -139,6 +143,7 @@ jobs:
           tar -czf webizen-lite-wasm.tar.gz -C docs/pkg webizen-lite
 
       - name: Upload Qualia Portal WASM to release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -210,6 +215,7 @@ jobs:
           tar -czf qualia-core-wasm.tar.gz -C docs/playground qualia_core_db.js qualia_core_db_bg.wasm LICENSE
 
       - name: Upload playground WASM to release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}

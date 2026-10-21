@@ -7,6 +7,7 @@ publish = false
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
 wgpu = { workspace = true, default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"] }
+etalon-render = { workspace = true }
 bytemuck = { workspace = true, features = ["derive"] }
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -32,6 +33,7 @@ pollster = "1.0.1"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys = "0.3"
 wasm-bindgen = "0.2"
+web-sys = { workspace = true, features = ["HtmlCanvasElement"] }
 
 # The engine's browser bridge modules are feature-gated for WASM and are not
 # part of the native SDK profile. Resolver v2 keeps this target-only feature

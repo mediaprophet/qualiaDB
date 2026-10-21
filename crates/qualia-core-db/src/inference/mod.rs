@@ -174,3 +174,19 @@ pub mod conditioning_eval;
 
 // Model mapping and precision optimization pipeline
 pub mod conditioning_opt;
+
+// Etalon-tensor accelerated inference bridge (forward arena, FlashAttention, sieve Top-K, DML/CUDA).
+#[cfg(feature = "gpu-runtime")]
+pub mod etalon_tensor_bridge;
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_tensor_bridge::{
+    build_forward_arena_on, build_fused_attention_on, build_topk_pipeline_on,
+    online_softmax_rescale, AttentionParams, CapturedCudaMegaPass, CudaMegaPassExecutor,
+    DirectMlComputeLane, DmlGemmOp, DmlGemmParams, DmlLane, ForwardArena, ForwardMode,
+    FusedAttentionPipeline, KvCacheLayout, LogitMaskHeader, PagedKvBlockTable, QuantScheme,
+    TensorView, TopkParams, TopkReductionPipeline, FUSED_ATTENTION_WGSL, TOPK_REDUCTION_WGSL,
+};
+#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+pub use etalon_tensor_bridge::{
+    try_shared_forward_arena, try_shared_fused_attention, try_shared_topk_pipeline,
+};

@@ -40,7 +40,28 @@ pub struct VolumetricRenderer {
 }
 
 impl VolumetricRenderer {
+    /// Create a volumetric renderer from an existing `PortalGpu` instance.
+    pub fn from_portal_gpu(inner: PortalGpu) -> Self {
+        Self {
+            inner,
+            texture_stream_state: None,
+        }
+    }
+
+    /// Create a volumetric renderer targeting a browser HTML canvas element.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn from_canvas(
+        canvas: web_sys::HtmlCanvasElement,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        Ok(Self {
+            inner: PortalGpu::try_new_async(&canvas, particle_cap).await?,
+            texture_stream_state: None,
+        })
+    }
+
     /// New offscreen renderer.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new_offscreen(width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
         Ok(Self {
             inner: PortalGpu::new_offscreen(width, height, particle_cap)?,
@@ -53,7 +74,7 @@ impl VolumetricRenderer {
     /// This is the native desktop path — no PNG round-trip, no webview `<img>`.
     /// The surface is created from a raw window handle (HWND on Windows).
     /// Call `render()` to draw a frame; the swapchain present is automatic.
-    #[cfg(all(not(target_arch = "wasm32"), feature = "qualia"))]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new_surface(
         hwnd: isize,
         width: u32,
@@ -234,12 +255,51 @@ impl VolumetricRenderer {
         self.inner.render(time_seconds, &core_telemetry(telemetry))
     }
 
+    /// Render a frame of `scene` into the active surface or offscreen target.
+    ///
+    /// Converts scene nodes to Tensor10D instances, compiles faces/edges into a colored mesh,
+    /// updates the camera orientation and distance, and executes the render pass.
+    pub fn render_scene_frame(
+        &mut self,
+        scene: &RenderScene,
+        width: u32,
+        height: u32,
+        time_seconds: f32,
+        telemetry: &crate::telemetry::SystemTelemetry,
+    ) -> Result<(), String> {
+        let tensors: Vec<Tensor10D> = scene.nodes.iter().map(node_tensor).collect();
+        if !tensors.is_empty() {
+            let mut bytes = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
+            write_tensor_buffer(&tensors, &mut bytes).map_err(str::to_owned)?;
+            self.upload_tensor_buffer(&bytes)?;
+        }
+
+        let (positions, colors, indices) = scene_mesh(scene, width, height);
+        if !indices.is_empty() {
+            self.upload_mesh_colored(&positions, &colors, &indices);
+        }
+
+        let eye = scene.camera.position;
+        let target = scene.camera.target;
+        let dx = (eye[0] - target[0]) as f32;
+        let dy = (eye[1] - target[1]) as f32;
+        let dz = (eye[2] - target[2]) as f32;
+        let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+        if distance.is_finite() && (0.35..=48.0).contains(&distance) {
+            self.set_camera(dx.atan2(dz), (dy / distance).asin(), distance);
+        }
+
+        self.render(time_seconds, telemetry)
+    }
+
     /// Required RGBA8 bytes.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn required_rgba8_bytes(&self) -> usize {
         self.inner.required_rgba8_bytes()
     }
 
     /// Reads rgba8-into.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn read_rgba8_into(&self, out: &mut [u8]) -> Result<usize, String> {
         self.inner.read_rgba8_into(out)
     }
@@ -543,6 +603,7 @@ impl VolumetricRenderer {
 /// Nodes become Tensor10D projector instances. Faces and edges become a triangulated depth-tested
 /// mesh. Conversion allocates only on this cold serde/IPC boundary; the renderer draw/readback path
 /// remains caller-buffered.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn render_scene_rgba8_into(
     scene: &RenderScene,
     width: u32,
@@ -552,35 +613,13 @@ pub fn render_scene_rgba8_into(
     out: &mut [u8],
 ) -> Result<usize, String> {
     let mut renderer = VolumetricRenderer::new_offscreen(width, height, 50_000)?;
-
-    let tensors: Vec<Tensor10D> = scene.nodes.iter().map(node_tensor).collect();
-    if !tensors.is_empty() {
-        let mut bytes = vec![0u8; TensorBufferHeader::total_bytes(tensors.len())];
-        write_tensor_buffer(&tensors, &mut bytes).map_err(str::to_owned)?;
-        renderer.upload_tensor_buffer(&bytes)?;
-    }
-
-    let (positions, colors, indices) = scene_mesh(scene, width, height);
-    if !indices.is_empty() {
-        renderer.upload_mesh_colored(&positions, &colors, &indices);
-    }
-
-    let eye = scene.camera.position;
-    let target = scene.camera.target;
-    let dx = (eye[0] - target[0]) as f32;
-    let dy = (eye[1] - target[1]) as f32;
-    let dz = (eye[2] - target[2]) as f32;
-    let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-    if distance.is_finite() && (0.35..=48.0).contains(&distance) {
-        renderer.set_camera(dx.atan2(dz), (dy / distance).asin(), distance);
-    }
-
-    renderer.render(time_seconds, telemetry)?;
+    renderer.render_scene_frame(scene, width, height, time_seconds, telemetry)?;
     renderer.read_rgba8_into(out)
 }
 
 /// PNG convenience bridge for native webviews. The render itself still uses caller-buffered core
 /// APIs; allocation here belongs to the explicit image-codec boundary.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn render_scene_png(
     scene: &RenderScene,
     width: u32,
@@ -743,6 +782,6 @@ fn core_telemetry(value: &crate::telemetry::SystemTelemetry) -> CoreTelemetry {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "volumetric_tests.rs"]
 mod tests;

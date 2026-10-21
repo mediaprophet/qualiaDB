@@ -50,5 +50,8 @@ pub use sort::{
     sort_quins_by_object, sort_quins_by_object_cpu_only, sort_u64_indices, SortOutcome,
 };
 
+#[cfg(feature = "gpu-runtime")]
+pub use etalon_nquin::{GpuNQuinSieve, GpuQuinSieve, GpuRadixSorter, NQuinWire};
+
 #[cfg(test)]
 mod tests;

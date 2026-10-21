@@ -8,9 +8,47 @@ use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement};
 use qualia_core_db::gpu_context::{global_vram_ledger, OperationalMode};
 use qualia_core_db::tensor::buffer_export::{read_tensor_at, tensor_node_count};
 use qualia_core_db::{
-    export_tensor_buffer_wasm, geosparql_operation_wasm, parse_cbor_ld_wasm, parse_json_wasm,
-    parse_n3logic_wasm, parse_turtle_wasm, sample_browser_telemetry_wasm, spatial_encode_wasm,
+    export_tensor_buffer_wasm, parse_cbor_ld_wasm, parse_json_wasm, sample_browser_telemetry_wasm,
+    spatial_encode_wasm,
 };
+
+#[allow(unused_imports)]
+use etalon_wasm::{
+    MessageHeader, SharedArrayBufferRing, TransferableMessageTransport, TransportMode, WorkerState,
+    WorkerSteward, SAB_RING_MAGIC, SAB_RING_VERSION,
+};
+
+pub trait WorkerStewardExt {
+    fn mark_ready(&mut self);
+    fn notify_device_lost(&mut self);
+    fn recover(&mut self, new_gen: u32);
+    fn state(&self) -> WorkerState;
+    fn generation(&self) -> u32;
+}
+
+impl WorkerStewardExt for WorkerSteward {
+    fn mark_ready(&mut self) {
+        self.set_ready();
+    }
+
+    fn notify_device_lost(&mut self) {
+        self.state = WorkerState::Suspended;
+    }
+
+    fn recover(&mut self, new_gen: u32) {
+        self.state = WorkerState::Ready;
+        let req = self.next_request_id.load(core::sync::atomic::Ordering::Relaxed) & 0x0000_0000_FFFF_FFFF;
+        self.next_request_id.store(((new_gen as u64) << 32) | req, core::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn state(&self) -> WorkerState {
+        self.state
+    }
+
+    fn generation(&self) -> u32 {
+        (self.next_request_id.load(core::sync::atomic::Ordering::Relaxed) >> 32) as u32
+    }
+}
 
 const TELEMETRY_DIM: usize = 11;
 
@@ -63,6 +101,9 @@ pub struct QualiaPortal {
     last_tensor: Option<Vec<u8>>,
     telemetry: [f32; TELEMETRY_DIM],
     display_mode: DisplayMode,
+    etalon_steward: WorkerSteward,
+    gpu_renderer: Option<webizen_render::VolumetricRenderer>,
+    active_scene: Option<webizen_render::RenderScene>,
 }
 
 #[wasm_bindgen]
@@ -71,6 +112,14 @@ impl QualiaPortal {
     /// Creates a new instance.
     pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
         let tier = detect_tier();
+        let cross_origin_isolated_detected = web_sys::window()
+            .and_then(|w| Reflect::get(&w, &JsValue::from_str("crossOriginIsolated")).ok())
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let mut etalon_steward = WorkerSteward::new(cross_origin_isolated_detected);
+        if tier >= 1 {
+            etalon_steward.mark_ready();
+        }
         let portal = QualiaPortal {
             description: "Qualia portal initialized".to_string(),
             last_parsed: None,
@@ -79,9 +128,27 @@ impl QualiaPortal {
             last_tensor: None,
             telemetry: default_telemetry(),
             display_mode: DisplayMode::Hybrid,
+            etalon_steward,
+            gpu_renderer: None,
+            active_scene: None,
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
+    }
+
+    /// Initializes WebGPU phenomenal rendering pipeline.
+    pub async fn init_webgpu(&mut self, canvas: HtmlCanvasElement) -> Result<u8, JsValue> {
+        let mut renderer = webizen_render::VolumetricRenderer::from_canvas(canvas.clone(), 50_000)
+            .await
+            .map_err(|e| JsValue::from_str(&e))?;
+        if let Some(ref bytes) = self.last_tensor {
+            let _ = renderer.upload_tensor_buffer(bytes);
+        }
+        self.tier = 2;
+        self.etalon_steward.mark_ready();
+        self.gpu_renderer = Some(renderer);
+        self.paint_frame(&canvas)?;
+        Ok(self.tier)
     }
 
     /// Tier.
@@ -94,15 +161,36 @@ impl QualiaPortal {
         global_vram_ledger().mode() as u8
     }
 
+    /// Operational transport mode for dedicated WebWorker IPC.
+    pub fn etalon_transport_mode(&self) -> String {
+        match self.etalon_steward.transport_mode {
+            TransportMode::SharedArrayBufferRing => "SharedArrayBuffer".to_string(),
+            TransportMode::TransferableArrayBuffer => "TransferableMessage".to_string(),
+        }
+    }
+
+    /// Dedicated GPU worker steward lifecycle state (0=Initializing, 1=Ready, 2=Running, 3=Suspended, 4=Terminated).
+    pub fn etalon_worker_state(&self) -> u8 {
+        self.etalon_steward.state() as u8
+    }
+
+    /// Dedicated GPU worker recovery session generation.
+    pub fn etalon_session_generation(&self) -> u32 {
+        self.etalon_steward.generation()
+    }
+
     /// Resizes.
     pub fn resize(
-        &self,
+        &mut self,
         canvas: HtmlCanvasElement,
         width: u32,
         height: u32,
     ) -> Result<(), JsValue> {
         canvas.set_width(width);
         canvas.set_height(height);
+        if let Some(ref mut gpu) = self.gpu_renderer {
+            gpu.resize(width, height);
+        }
         self.paint_frame(&canvas)
     }
 
@@ -110,6 +198,22 @@ impl QualiaPortal {
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
         self.time += dt_ms as f64 * 0.001;
         self.refresh_telemetry_from_ledger();
+
+        if let Some(ref mut gpu) = self.gpu_renderer {
+            let wtel = from_slice(&self.telemetry);
+            let res = if let Some(ref scene) = self.active_scene {
+                gpu.render_scene_frame(scene, canvas.width(), canvas.height(), self.time as f32, &wtel)
+            } else {
+                gpu.render(self.time as f32, &wtel)
+            };
+            match res {
+                Ok(()) => return Ok(()),
+                Err(_err) => {
+                    self.etalon_steward.notify_device_lost();
+                }
+            }
+        }
+
         self.paint_frame(&canvas)
     }
 
@@ -143,8 +247,14 @@ impl QualiaPortal {
         let count = tensor_node_count(bytes).unwrap_or(0);
         self.last_tensor = Some(bytes.to_vec());
         self.description = format!("{count} tensor nodes resident");
+        if let Some(ref mut gpu) = self.gpu_renderer {
+            let _ = gpu.upload_tensor_buffer(bytes);
+        }
         if self.tier >= 1 && count > 0 {
-            self.tier = 1;
+            if self.gpu_renderer.is_none() {
+                self.tier = 1;
+            }
+            self.etalon_steward.mark_ready();
         }
         Ok(())
     }
@@ -164,6 +274,9 @@ impl QualiaPortal {
 
     /// Loads json-scene.
     pub fn load_json_scene(&mut self, json: &str) -> Result<JsValue, JsValue> {
+        if let Ok(scene) = serde_json::from_str::<webizen_render::RenderScene>(json) {
+            self.active_scene = Some(scene);
+        }
         let parsed = parse_json_wasm(json);
         self.description = "loaded JSON scene".to_string();
         self.last_parsed = Some(parsed.clone());
@@ -247,8 +360,29 @@ impl QualiaPortal {
             paint_tensor_projection(&ctx, w, h, self.time, tensor, mode, self.display_mode);
         }
 
+        if let Some(ref scene) = self.active_scene {
+            crate::render_stub::SimpleCanvasRenderer::new(canvas.clone())?
+                .render_scene(scene, self.time * 0.22);
+        }
+
         paint_hud(&ctx, self, mode);
         Ok(())
+    }
+}
+
+fn from_slice(samples: &[f32; TELEMETRY_DIM]) -> webizen_render::SystemTelemetry {
+    webizen_render::SystemTelemetry {
+        memory_pressure: samples[0],
+        network_ripple: samples[1],
+        baking_crystallization: samples[2],
+        logic_flashes: samples[3],
+        llm_heat: samples[4],
+        quantum_activity: samples[5],
+        spectral_shift: samples[6],
+        temporal_pulse: samples[7],
+        epistemic_density: samples[8],
+        manifold_pressure: samples[9],
+        _padding: [samples[10], 0.0],
     }
 }
 
@@ -280,7 +414,7 @@ fn paint_background(ctx: &CanvasRenderingContext2d, w: f64, h: f64, spectral_shi
     let gradient = ctx.create_linear_gradient(0.0, 0.0, w, h);
     let _ = gradient.add_color_stop(0.0, &format!("rgb({r},{g},{b})"));
     let _ = gradient.add_color_stop(1.0, "#080c12");
-    ctx.set_fill_style(&JsValue::from(gradient));
+    ctx.set_fill_style_canvas_gradient(&gradient);
     ctx.fill_rect(0.0, 0.0, w, h);
 }
 
@@ -310,7 +444,7 @@ fn paint_ambient_field(
         let sigma = ((fi * 0.017 + telemetry[6] as f64) % 1.0) as f32;
         let (r, g, b) = sigma_to_rgb(sigma);
         let alpha = 0.08 + (fi * 0.001 + heat).sin().abs() * 0.35;
-        ctx.set_fill_style(&JsValue::from_str(&format!("rgba({r},{g},{b},{alpha:.2})")));
+        ctx.set_fill_style_str(&format!("rgba({r},{g},{b},{alpha:.2})"));
         ctx.begin_path();
         let _ = ctx.arc(
             px,
@@ -389,19 +523,19 @@ fn paint_tensor_projection(
                 DisplayMode::Solid => node.alpha * 0.85,
                 _ => node.alpha,
             };
-            ctx.set_fill_style(&JsValue::from_str(&format!(
+            ctx.set_fill_style_str(&format!(
                 "rgba({},{},{},{fill_alpha:.2})",
                 node.r, node.g, node.b
-            )));
+            ));
             ctx.begin_path();
             let _ = ctx.arc(node.px, node.py, node.radius, 0.0, std::f64::consts::TAU);
             ctx.fill();
 
             if node.epistemic_ring {
-                ctx.set_stroke_style(&JsValue::from_str(&format!(
+                ctx.set_stroke_style_str(&format!(
                     "rgba({},{},{},0.55)",
                     node.r, node.g, node.b
-                )));
+                ));
                 ctx.begin_path();
                 let _ = ctx.arc(
                     node.px,
@@ -417,10 +551,10 @@ fn paint_tensor_projection(
 }
 
 fn stroke_segment(ctx: &CanvasRenderingContext2d, a: ProjectedNode, b: ProjectedNode, alpha: f32) {
-    ctx.set_stroke_style(&JsValue::from_str(&format!(
+    ctx.set_stroke_style_str(&format!(
         "rgba({},{},{},{alpha:.2})",
         a.r, a.g, a.b
-    )));
+    ));
     ctx.begin_path();
     ctx.move_to(a.px, a.py);
     ctx.line_to(b.px, b.py);
@@ -466,7 +600,7 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
 }
 
 fn paint_hud(ctx: &CanvasRenderingContext2d, portal: &QualiaPortal, mode: OperationalMode) {
-    ctx.set_fill_style(&JsValue::from_str("#67e8f9"));
+    ctx.set_fill_style_str("#67e8f9");
     ctx.set_font("14px Inter, system-ui, sans-serif");
     let tier_label = match portal.tier {
         2 => "T2 · Phenomenal",
