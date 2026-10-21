@@ -21,8 +21,8 @@
     .tab-btn { transition: all 0.2s; padding: 0.5rem 1.25rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: rgba(226, 232, 240, 0.65); cursor: pointer; border: 1px solid transparent; }
     .tab-btn:hover { background: rgba(255, 255, 255, 0.08); color: white; }
     .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.35); }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
+    .tab-pane, .tab-content { display: none; }
+    .tab-pane.active, .tab-content.active { display: block; }
   </style>
 </head>
 <body class="min-h-screen bg-zinc-950 text-zinc-100">
@@ -52,14 +52,14 @@
   <!-- Hero Section -->
   <header class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-12">
     <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-xs font-semibold mb-6">
-      <i class="fa-solid fa-cube"></i> Milestone 0.0.40.16 · Zero-Heap Hot Paths · WebGPU &amp; Vulkan/DX12 Native
+      <i class="fa-solid fa-cube"></i> v0.0.40 Baseline · v0.0.41 Etalon 7-Crate Stack &amp; 10-Epic Game Engine · Zero-Heap Hot Paths
     </div>
     <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
       Cinema-Grade Rendering.<br>
       <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-emerald-300 to-violet-300">Zero heap allocation in frame loops.</span>
     </h1>
     <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8 leading-relaxed">
-      QualiaDB's graphics pipeline delivers advanced temporal reconstruction, image-based lighting, multi-format compressed texture transcoding, and dynamic secondary motion — qualified identically in native desktops and browser WebGPU runtimes.
+      QualiaDB's graphics pipeline delivers advanced temporal reconstruction, image-based lighting, multi-format compressed texture transcoding, and dynamic secondary motion — qualified identically in native desktops and browser WebGPU runtimes. In <strong>v0.0.41 Release Prep (v0.0.40 Baseline)</strong>, the architecture expands with the 7-crate pure-Rust Etalon GPU &amp; compute stack, cross-platform WASM volumetric rendering in <code>webizen-render</code>, zero-heap Flexbox HUD layouts, and the 10-Epic Superior Game Engine.
     </p>
 
     <!-- Key Engine Metrics Grid -->
@@ -90,7 +90,7 @@
   <!-- Interactive Capabilities Section -->
   <main class="max-w-6xl mx-auto px-6 pb-24">
     <!-- Tab Controls -->
-    <div class="flex flex-wrap items-center gap-2 mb-8 p-1.5 bg-black/40 border border-white/10 rounded-full w-fit">
+    <div class="flex flex-wrap items-center gap-2 mb-8 p-1.5 bg-black/40 border border-white/10 rounded-full w-fit tab-nav">
       <button class="tab-btn active" onclick="switchTab('temporal')" id="btn-temporal">
         <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Temporal AA (AG-21)
       </button>
@@ -99,6 +99,9 @@
       </button>
       <button class="tab-btn" onclick="switchTab('transcode')" id="btn-transcode">
         <i class="fa-solid fa-file-image mr-1.5"></i> KTX2 Transcoder (AG-03)
+      </button>
+      <button class="tab-btn" onclick="switchTab('etalon')" id="btn-etalon">
+        <i class="fa-solid fa-microchip mr-1.5"></i> 4. Etalon 7-Crate Stack &amp; 10D Engine (0.0.41)
       </button>
       <button class="tab-btn" onclick="switchTab('water')" id="btn-water">
         <i class="fa-solid fa-water mr-1.5"></i> Water &amp; Shoreline (AG-10)
@@ -227,6 +230,192 @@ let reactive_mask = max(alpha_reactive, water_reactive);</div>
         </div>
       </div>
     </section>
+
+    <!-- Tab 4: Etalon 7-Crate Pure-Rust GPU Stack & 10D Superior Game Engine -->
+    <div id="tab-etalon" class="tab-content">
+      <div class="glass-strong rounded-3xl p-8 mb-8 border border-emerald-500/30">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
+          <div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              MILESTONE 0.0.41 RELEASE PREP · v0.0.40 BASELINE · 7-CRATE STACK &amp; 10-EPIC ENGINE
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">
+              Etalon 7-Crate GPU Stack &amp; 10-Epic Superior Game Engine
+            </h2>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
+            <i class="fa-solid fa-circle-check"></i> 7 / 7 Etalon Crates End-to-End Wired: PASS
+          </div>
+        </div>
+        <p class="text-white/70 mb-6 leading-relaxed">
+          In QualiaDB 0.0.41 (building on the 0.0.40 baseline), all seven specialized crates of the pure-Rust <strong>Etalon GPU &amp; compute ecosystem</strong> are fully wired into <code>qualia-core-db</code>, <code>webizen-render</code>, and <code>webizen-web</code>. This replaces fragmented kernels with unified, zero-intermediate-readback pipelines running natively on desktop WebGPU/Vulkan/DX12 and in the browser on <code>wasm32-unknown-unknown</code>.
+        </p>
+
+        <!-- 7-Crate Grid -->
+        <h3 class="text-base font-semibold text-cyan-300 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-layer-group"></i> 1. The 7-Crate Etalon Pure-Rust GPU &amp; Compute Stack
+        </h3>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-cyan-400">etalon</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">wgpu 30.0.0-etalon</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Direct hardware WebGPU, Vulkan, and DX12 substrate. Powers <code>SharedGpuContext</code> and <code>PortalGpu</code> with capability-intersected device limits (f16, subgroup operations, timestamp queries).
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-emerald-400">etalon-render</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Render Substrate</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Provides <code>EmfPipeline</code>, <code>EtalonVolumetricPipeline</code>, 160-byte <code>FrameCameraPod</code>, 48-byte <code>ManifoldProjectionPod</code>, and the zero-heap <code>UiLayoutTree</code> Flexbox engine.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-violet-400">etalon-nquin</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-300 border border-violet-500/20">Graph Acceleration</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Single-submit 8-pass LSD <code>GpuRadixSorter</code> and warp-transposed <code>uvec4</code> <code>GpuQuinSieve</code> for 48-byte <code>NQuin</code> arrays without CPU readback round-trips.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-amber-400">etalon-wgsl-forge</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">Deterministic Shaders</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Typed <code>KernelSpec</code> and <code>Schedule</code> intermediate representation. Generates, validates with Naga AST certification, and emits to WGSL, SPIR-V, PTX, and HLSL.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-rose-400">etalon-agent</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">Hardware Lanes</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Silicon steward, <code>HalComputeLane</code>, <code>QualiaSlabAllocator</code>, and <code>SubmissionLease</code> deterministic state machine managing ring-buffer quotas and capability isolation.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-blue-400">etalon-tensor &amp; etalon-wasm</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">Inference &amp; Worker</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              <code>ForwardArena</code>, <code>FusedAttentionPipeline</code> with online softmax rescaling, and <code>WorkerSteward</code> automatic transport negotiation (<code>SharedArrayBuffer</code> vs transfer fallback).
+            </p>
+          </div>
+        </div>
+
+        <!-- Cross-Platform VolumetricRenderer & Zero-Heap Flexbox HUD -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+          <div class="glass-panel p-6 rounded-2xl border border-cyan-500/20">
+            <div class="flex items-center gap-3 text-cyan-300 font-semibold mb-3">
+              <i class="fa-solid fa-cube text-base"></i>
+              <h3>2. Cross-Platform VolumetricRenderer (Native &amp; WASM32)</h3>
+            </div>
+            <p class="text-xs sm:text-sm text-white/70 mb-4 leading-relaxed">
+              <code>webizen-render::VolumetricRenderer</code> runs across both desktop native and <code>wasm32-unknown-unknown</code> browser targets. Initialized via <code>from_canvas</code> on HTML canvas or <code>from_portal_gpu</code> on shared GPU contexts:
+            </p>
+            <div class="code-box text-xs text-cyan-200 mb-3">// Unified Native &amp; WASM Volumetric Scene Dispatch
+pub fn render_scene_frame(
+    &amp;mut self,
+    scene: &amp;RenderScene,
+    camera: &amp;CameraParams,
+) -&gt; Result&lt;(), RenderError&gt; {
+    self.upload_scene_tensors(&amp;scene.tensors)?;
+    self.update_camera_uniforms(camera);
+    self.dispatch_volumetric_pass()
+}
+</div>
+            <p class="text-xs text-white/60">
+              Integrates <code>volumetric_hmc</code> (Hamiltonian Monte Carlo volumetric sampling) and <code>volumetric_texture</code> 3D density sampling with zero per-frame heap allocations.
+            </p>
+          </div>
+
+          <div class="glass-panel p-6 rounded-2xl border border-emerald-500/20">
+            <div class="flex items-center gap-3 text-emerald-300 font-semibold mb-3">
+              <i class="fa-solid fa-table-cells-large text-base"></i>
+              <h3>3. Zero-Heap Flexbox HUD Layout Engine</h3>
+            </div>
+            <p class="text-xs sm:text-sm text-white/70 mb-4 leading-relaxed">
+              <code>QualiaHud::layout_items_flex</code> is powered by <code>etalon_render::hud::UiLayoutTree</code>, a stack-allocated Flexbox engine with an immovable limit of 128 nodes (<code>MAX_HUD_LAYOUT_NODES = 128</code>):
+            </p>
+            <div class="code-box text-xs text-emerald-200 mb-3">// Zero-Heap Flexbox Layout Engine in etalon-render
+let mut layout_tree = UiLayoutTree::new();
+layout_tree.begin_flex_row(Justify::SpaceBetween, Align::Center);
+layout_tree.add_panel(rear_mirror_spec);
+layout_tree.add_panel(nav_telemetry_spec);
+layout_tree.end_flex_row();
+hud.layout_items_flex(viewport_w, viewport_h, &amp;layout_tree);
+</div>
+            <p class="text-xs text-white/60">
+              Calculates exact pixel bounds for responsive gauges, dials, holographic buttons, and rear-view mirrors without calling the system allocator.
+            </p>
+          </div>
+        </div>
+
+        <!-- 10-Epic Superior Game Engine -->
+        <h3 class="text-base font-semibold text-emerald-300 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-gamepad"></i> 4. The 10-Epic Superior Game Engine (scene_graph_10d)
+        </h3>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="text-cyan-400 text-sm font-semibold mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-box-archive"></i> .10d Living Containers
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              64-byte aligned container with <code>PROC1</code> (CSG/SDF procedural ops), <code>EONT1</code> (embedded 48-byte <code>NQuin</code> ontology rules), <code>MRP1</code> (quantized morph targets), and <code>SKL1</code> (PGA motor skeleton rigs).
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="text-emerald-400 text-sm font-semibold mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-person-walking"></i> GPU PGA Motor Skinning
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Artifact-free skeletal deformation using Projective Geometric Algebra ($\mathbf{Cl}(3,0,1)$) <code>Motor</code> dual-quaternion blending ($\mathbf{M} = \sum w_i \mathbf{M}_i$) via auto-generated WGSL compute kernels.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="text-violet-400 text-sm font-semibold mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-network-wired"></i> 2D Blend Spaces &amp; ABSM
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              2D Delaunay triangulation blend spaces for locomotion directions + 4-layer Animation Blueprint State Machines with inertialization transitions.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="text-amber-400 text-sm font-semibold mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-bone"></i> Two-Bone + FABRIK Motor IK
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Analytic hinge/pole solver for elbows/knees paired with 8-iteration forward/backward FABRIK chain solver and ground-raycast foot conformation.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="text-rose-400 text-sm font-semibold mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-burst"></i> 3D XPBD &amp; Stress Fracture
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Substepped Gauss-Seidel Extended Position-Based Dynamics with compliant Cosserat rods and Rank-2 Cauchy stress tensor cleavage along principal failure planes.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="text-cyan-400 text-sm font-semibold mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-volume-high"></i> 3D Holosonic HRTF Audio
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Spherical-harmonic wavefield audio synthesis with physical acoustic diffraction, modal impact resonance, bow-string friction, and Gerstner wave audio harmonics.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Tab 4: Water & Shoreline -->
     <section id="tab-water" class="tab-pane">
@@ -405,10 +594,15 @@ HrtfFilter::synthesize_binaural(
 
   <script>
     function switchTab(name) {
-      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-pane, .tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      const targetPane = document.getElementById('tab-' + name);
-      const targetBtn = document.getElementById('btn-' + name);
+      const clean = (name || '').trim();
+      let targetName = clean;
+      if (clean === 'renderer' || clean === 'hud' || clean === 'spatial') {
+        targetName = 'etalon';
+      }
+      const targetPane = document.getElementById('tab-' + targetName) || document.getElementById('tab-' + clean);
+      const targetBtn = document.getElementById('btn-' + targetName) || document.getElementById('btn-' + clean);
       if (targetPane) targetPane.classList.add('active');
       if (targetBtn) targetBtn.classList.add('active');
     }

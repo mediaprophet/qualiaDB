@@ -772,6 +772,124 @@ title: VibeScript
     </div>
   </div>
 
+    <!-- Section: 0.0.41 EcoPunk Biological Continuum & 10D Scene Graph -->
+  <div class="vibe-section">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:9999px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#34d399;font-size:0.82rem;font-weight:600;letter-spacing:0.03em;margin-bottom:0.75rem;">
+      <i class="fa-solid fa-seedling"></i> 0.0.41 Milestone · EcoPunk Biological Continuum &amp; 10D Scene Graph
+    </div>
+    <h2>0.0.41 EcoPunk 26.5 km Biological Continuum &amp; 10D Scene Graph Capabilities (vibe-0.1)</h2>
+    <p>
+      Extending the <strong>0.0.40</strong> production baseline into release <strong>0.0.41</strong>, VibeScript expands its capability surface with 18 first-class capabilities designed for the <strong>EcoPunk 26.5 km Biological Continuum</strong> and <strong>10D Scene Graph</strong>. Every capability compiles directly into compact, relocatable <code>VBC1</code> (<code>.qbc</code>) bytecode and invokes verified native kernels inside <code>qualia-core-db::ecopunk_world</code> and <code>qualia-core-db::scene_graph_10d</code>. Hot-path evaluations remain strictly zero-heap and bounded by the 42 MiB Prolog Sentinel ceiling. Learn more about the architectural roadmap in <a href="../progress-0.0.41.html" class="underline" style="color:#38bdf8;font-weight:600;">../progress-0.0.41.html</a>.
+    </p>
+
+    <!-- 18 Capabilities Grid by Family -->
+    <div class="vibe-features-grid" style="margin-top:1.5rem;">
+      <!-- Botanical Anatomy -->
+      <div class="vibe-feature-item" style="border-color:rgba(52,211,153,0.25);background:rgba(6,36,26,0.5);">
+        <div class="icon" style="color:#34d399;">🌿</div>
+        <h3 style="color:#6ee7b7;">BotanicalAnatomy (5 Capabilities)</h3>
+        <p style="margin-bottom:0.6rem;">Mechanistic vegetation biophysics, sapwood hydraulics, and subterranean nutrient trading:</p>
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+          <li><code class="kw">BotanicalAnatomy.LSystemCanopy</code>: Procedural generative branching grammar computing internode growth, apical dominance, bifurcation angles, and foliage mass under photosynthetic shading.</li>
+          <li><code class="kw">BotanicalAnatomy.XylemHydraulicFlow</code>: Hagen-Poiseuille pipe model computing sapwood pressure differentials, cavitation vulnerability curves, and VPD-driven transpiration loss.</li>
+          <li><code class="kw">BotanicalAnatomy.MycorrhizalCarbonTrade</code>: Subterranean fungal network trading soil N/P for plant photosynthetic carbon, establishing mutualistic nutrient flux equilibria.</li>
+          <li><code class="kw">BotanicalAnatomy.PhotosyntheticField</code>: Farquhar-von Caemmerer-Berry (FvCB) $C_3$/$C_4$ assimilation kinetics coupled with Ball-Berry stomatal conductance ($g_s$) and RuBisCO carboxylation.</li>
+          <li><code class="kw">BotanicalAnatomy.RootSoilReinforcement</code>: Wu-Waldron root tensile strength model computing shear modulus enhancement, tensile pull-out resistance, and slope stability.</li>
+        </ul>
+      </div>
+
+      <!-- Zoological Anatomy -->
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.25);background:rgba(8,28,48,0.5);">
+        <div class="icon" style="color:#38bdf8;">🐺</div>
+        <h3 style="color:#7dd3fc;">ZoologicalAnatomy (5 Capabilities)</h3>
+        <p style="margin-bottom:0.6rem;">Skeletal kinematics, Hill-type biomechanics, and limit-cycle locomotion controllers:</p>
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+          <li><code class="kw">ZoologicalAnatomy.ArticulatedSkeleton</code>: Projective Geometric Algebra ($\mathbf{Cl}(3,0,1)$) motor bone hierarchy calculating zero-heap forward kinematics and inverse chains.</li>
+          <li><code class="kw">ZoologicalAnatomy.HillMuscleFiber</code>: Three-element Hill model (CE, SEE, PEE) computing active force-length-velocity relations, elastic recoil, and tendon strain energy.</li>
+          <li><code class="kw">ZoologicalAnatomy.CardiopulmonaryMetabolism</code>: Dynamic allometric simulator computing stroke volume, heart rate, $\dot{V}_{\text{O}_2}$ oxygen uptake, ATP yield, and lactic clearance.</li>
+          <li><code class="kw">ZoologicalAnatomy.SensoryReceptiveField</code>: Transducer mapping visual cone/rod distributions, cochlear frequency filters, and spatial mechanoreceptive receptive fields.</li>
+          <li><code class="kw">ZoologicalAnatomy.LocomotionGait</code>: Energy-optimal limit cycle gait scheduler coordinating limb duty factors, ground reaction forces, and gait phase transitions (walk $\leftrightarrow$ trot $\leftrightarrow$ gallop).</li>
+        </ul>
+      </div>
+
+      <!-- Biological Ontology -->
+      <div class="vibe-feature-item" style="border-color:rgba(168,85,247,0.25);background:rgba(30,12,48,0.5);">
+        <div class="icon" style="color:#c084fc;">🧬</div>
+        <h3 style="color:#d8b4fe;">BiologicalOntology (3 Capabilities)</h3>
+        <p style="margin-bottom:0.6rem;">Phylogenetic classification, ecosystem trophic webs, and allostatic drives:</p>
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+          <li><code class="kw">BiologicalOntology.TaxonomicLineage</code>: Cladistic phylogenetic tree resolver linking NCBI Taxonomy and Wikidata IRIs with morphological trait inheritance.</li>
+          <li><code class="kw">BiologicalOntology.TrophicCascade</code>: Lotka-Volterra multi-species biomass dynamics modeling prey-predator cycles, carrying capacities, and keystone species cascades.</li>
+          <li><code class="kw">BiologicalOntology.HomeostaticDrive</code>: Allostatic regulatory drive system computing thirst, caloric need, thermoregulation, and circadian sleep debt potentials.</li>
+        </ul>
+      </div>
+
+      <!-- World Continuum -->
+      <div class="vibe-feature-item" style="border-color:rgba(251,191,36,0.25);background:rgba(44,30,6,0.5);">
+        <div class="icon" style="color:#fbbf24;">🌊</div>
+        <h3 style="color:#fde68a;">WorldContinuum (3 Capabilities)</h3>
+        <p style="margin-bottom:0.6rem;">Hydrological surface flows, microclimatic boundaries, and soil pedogenesis:</p>
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+          <li><code class="kw">WorldContinuum.WatershedHydrology</code>: 2D Shallow Water Equations (SWE) solving catchment runoff, infiltration, sediment transport, and river channel routing.</li>
+          <li><code class="kw">WorldContinuum.MicroclimateCanopy</code>: Atmospheric boundary layer model computing beneath-canopy temperature gradients, Beer-Lambert radiation attenuation, and humidity.</li>
+          <li><code class="kw">WorldContinuum.SoilBiogeochemistry</code>: Multi-pool Century soil organic matter model simulating microbial decomposition, humification, carbon sequestration, and mineralization.</li>
+        </ul>
+      </div>
+
+      <!-- 10D Scene Graph -->
+      <div class="vibe-feature-item" style="border-color:rgba(244,114,182,0.25);background:rgba(40,10,26,0.5);">
+        <div class="icon" style="color:#f472b6;">🌐</div>
+        <h3 style="color:#fbcfe8;">SceneGraph10D (2 Capabilities)</h3>
+        <p style="margin-bottom:0.6rem;">High-dimensional spatio-temporal tensor streaming and living container mountings:</p>
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+          <li><code class="kw">SceneGraph10D.TensorFieldStream</code>: Zero-heap streaming pipeline feeding 10D spacetime tensors ($\mathbf{T}^{10\text{D}}$) into GPU compute shaders for real-time field evaluation.</li>
+          <li><code class="kw">SceneGraph10D.LivingContainerMount</code>: Dynamic container mount manager binding compiled procedural <code>.10d</code> living container chunks (<code>PROC1</code>, <code>EONT1</code>, <code>MRP1</code>, <code>SKL1</code>) into spatial partitions.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Code Demo Box -->
+    <h3 style="margin-top:2rem;">Canonical Vibe-0.1 Continuum Program</h3>
+    <div class="vibe-code-box">
+<pre><span class="kw">using</span> <span class="ty">BotanicalAnatomy</span>, <span class="ty">WorldContinuum</span>, <span class="ty">SceneGraph10D</span>;
+
+<span class="cm">// Step EcoPunk biological continuum within 64 Hz deterministic loop</span>
+<span class="kw">effect fn</span> <span class="fn">simulate_canopy_step</span>(tree_did: <span class="ty">Iri</span>, vpd: <span class="ty">f64</span>) -&gt; <span class="ty">Record</span> {
+    <span class="cm">// 1. Hagen-Poiseuille sapwood xylem flow &amp; stomatal transpiration</span>
+    <span class="kw">let</span> xylem = <span class="ty">BotanicalAnatomy</span>.<span class="fn">XylemHydraulicFlow</span>({
+        sapwood_area_m2: 0.045,
+        vpd_kpa: vpd,
+        soil_water_potential_mpa: -0.42
+    });
+
+    <span class="cm">// 2. Query 26.5 km catchment watershed hydrology for root recharge</span>
+    <span class="kw">let</span> hydro = <span class="ty">WorldContinuum</span>.<span class="fn">WatershedHydrology</span>({
+        easting_m: 32450.0,
+        northing_m: 68120.0,
+        dt_s: 0.015625 <span class="cm">// 64 Hz timestep</span>
+    });
+
+    <span class="cm">// 3. Stream updated 10D tensor field directly to GPU volumetric shader</span>
+    <span class="kw">let</span> stream_ack = <span class="ty">SceneGraph10D</span>.<span class="fn">TensorFieldStream</span>({
+        entity: tree_did,
+        flux_rate: xylem.flux_kg_per_h
+    });
+
+    <span class="kw">return</span> {
+        xylem: xylem,
+        hydro: hydro,
+        streamed: stream_ack
+    };
+}</pre>
+    </div>
+
+    <div style="margin-top:1.25rem;">
+      <a href="../progress-0.0.41.html" class="vibe-btn vibe-btn-primary">
+        <i class="fa-solid fa-arrow-right"></i> Explore 0.0.41 Full Progress &amp; Architecture Roadmap
+      </a>
+    </div>
+  </div>
+
   <!-- Section: Tooling & Ecosystem -->
   <div class="vibe-section">
     <h2>VibeScript Ecosystem &amp; Developer Tooling</h2>
@@ -779,6 +897,13 @@ title: VibeScript
       The VibeScript developer ecosystem is distributed across standalone tooling crates and extensions. Tooling validates a selected execution profile before a native-only call reaches a browser-only target:
     </p>
     <div class="vibe-quick-links">
+      <a href="../progress-0.0.41.html" class="vibe-qlink" style="border-color:rgba(52,211,153,0.3);background:rgba(6,36,26,0.4);">
+        <i class="fa-solid fa-seedling" style="color:#34d399;"></i>
+        <div>
+          <strong style="color:#6ee7b7;">0.0.41 EcoPunk Continuum</strong>
+          <div style="font-size:0.78rem;color:#94a3b8;">18 biological capabilities &amp; 10D living containers</div>
+        </div>
+      </a>
       <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-qlink">
         <i class="fa-solid fa-play"></i>
         <div>

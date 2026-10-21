@@ -87,6 +87,95 @@
       </article>
     </section>
 
+    <!-- 0.0.41 Preparation & Architecture Roadmap -->
+    <section class="q-card p-7 sm:p-8 mb-14 border border-emerald-500/30 bg-emerald-950/20">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <p class="q-kicker text-emerald-400">Release 0.0.41 Architecture Roadmap</p>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <i class="fa-solid fa-code-merge"></i> 0.0.41 Preparation Active
+        </span>
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-3">What 0.0.41 Prepares — Full Etalon 7-Crate GPU Stack, Unified WASM Volumetric SDK &amp; 10D Continuum</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">
+        Expanding from the 0.0.40 baseline, the upcoming 0.0.41 release wires the pure-Rust 7-crate Etalon GPU and compute stack across all workspace targets, unifies hardware WebGPU volumetric rendering on WASM with deterministic Canvas2D fallback, and delivers the 10-epic game engine with an EcoPunk biological continuum. Explore the complete architectural roadmap and progress at <a class="underline text-emerald-400 font-semibold" href="progress-0.0.41.html">progress-0.0.41.html</a>.
+      </p>
+
+      <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/30">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 bg-white/5 text-xs uppercase tracking-wider text-white/60">
+              <th class="p-3.5 font-semibold">Subsystem &amp; Crates</th>
+              <th class="p-3.5 font-semibold">0.0.41 Target &amp; Capability</th>
+              <th class="p-3.5 font-semibold">Wiring &amp; Implementation Details</th>
+              <th class="p-3.5 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5 text-white/80 text-xs sm:text-sm">
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-cyan-300 block font-medium">Etalon 7-Crate Stack</strong>
+                <span class="text-xs text-white/45 font-mono">etalon, etalon-render, etalon-nquin, etalon-wgsl-forge, etalon-agent, etalon-tensor, etalon-wasm</span>
+              </td>
+              <td class="p-3.5 align-top font-medium text-white/90">
+                End-to-End Pure-Rust GPU &amp; Compute Stack
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Wired directly across <code class="q-mono text-cyan-300">qualia-core-db</code>, <code class="q-mono text-cyan-300">webizen-render</code>, and <code class="q-mono text-cyan-300">webizen-web</code>. Features single-submit 8-pass LSD radix sort &amp; warp-transposed <code class="q-mono">uvec4</code> Quin sieve (<code class="q-mono">etalon-nquin</code>), volumetric EMF &amp; 128-node zero-heap Flexbox HUD (<code class="q-mono">etalon-render</code>), certified WGSL/SPIR-V/PTX/HLSL generation (<code class="q-mono">etalon-wgsl-forge</code>), HAL hardware compute lanes (<code class="q-mono">etalon-agent</code>), and pre-allocated attention arenas (<code class="q-mono">etalon-tensor</code>).
+              </td>
+              <td class="p-3.5 align-top">
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Wired</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-emerald-300 block font-medium">Unified WASM Volumetric SDK</strong>
+                <span class="text-xs text-white/45 font-mono">webizen-render &amp; webizen-web (qualia-wasm)</span>
+              </td>
+              <td class="p-3.5 align-top font-medium text-white/90">
+                Cross-Platform WebGPU &amp; Canvas2D Fallback
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                <code class="q-mono text-emerald-300">VolumetricRenderer::from_canvas</code> and <code class="q-mono text-emerald-300">render_scene_frame</code> compile and run natively on <code class="q-mono">wasm32-unknown-unknown</code>. <code class="q-mono text-emerald-300">QualiaPortal::init_webgpu</code> dynamically upgrades surfaces to WebGPU; <code class="q-mono text-emerald-300">WorkerSteward</code> auto-negotiates <code class="q-mono">SharedArrayBufferRing</code> vs. <code class="q-mono">TransferableMessageTransport</code>; and <code class="q-mono text-emerald-300">SimpleCanvasRenderer::render_scene</code> delivers a complete deterministic Canvas2D fallback.
+              </td>
+              <td class="p-3.5 align-top">
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Wired</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-violet-300 block font-medium">Automated Release CI</strong>
+                <span class="text-xs text-white/45 font-mono">.github/workflows/release-wasm.yml</span>
+              </td>
+              <td class="p-3.5 align-top font-medium text-white/90">
+                Continuous Branch &amp; Tag Build Verification
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Workflow triggers on active development branch pushes (<code class="q-mono">0.0.40.8-dev</code>, <code class="q-mono">main</code>) in addition to release tags. Automatically tests and bundles WASM engines, verifies 42 MiB Sentinel ceilings and size gates, and audits cross-crate version consistency.
+              </td>
+              <td class="p-3.5 align-top">
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Active</span>
+              </td>
+            </tr>
+            <tr class="hover:bg-white/[0.02]">
+              <td class="p-3.5 align-top">
+                <strong class="text-amber-300 block font-medium">10D Engine &amp; EcoPunk Continuum</strong>
+                <span class="text-xs text-white/45 font-mono">qualia-core-db &amp; qualia-vibe-compiler</span>
+              </td>
+              <td class="p-3.5 align-top font-medium text-white/90">
+                10-Epic Superior Game Engine &amp; 18 Vibe-0.1 Caps
+              </td>
+              <td class="p-3.5 align-top text-white/70">
+                Procedural <code class="q-mono">.10d</code> Living Containers (<code class="q-mono">PROC1</code>, <code class="q-mono">EONT1</code>, <code class="q-mono">MRP1</code>, <code class="q-mono">SKL1</code>), PGA Motor Dual-Quaternion skinning, and substepped XPBD cleavage fracture. 18 new <code class="q-mono">vibe-0.1</code> capabilities driving Botanical Anatomy, Zoological Anatomy, Biological Ontology, World Continuum, and 10D Scene Graph.
+              </td>
+              <td class="p-3.5 align-top">
+                <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Wired</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
       <div class="q-card p-6">
         <div class="text-xs text-white/40 mb-1">Engine datum</div>

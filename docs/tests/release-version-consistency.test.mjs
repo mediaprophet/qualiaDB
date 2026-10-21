@@ -59,6 +59,7 @@ const liveReleaseSurfaces = [
   'docs/js/qualia-wasm-runtime.js',
   'docs/online-llm-demo.html',
   'docs/playground/anatomy.js',
+  'docs/progress-0.0.41.html',
   'docs/qdnf.html',
   'docs/qdnf-status.html',
   'docs/release-matrix.html',
@@ -100,6 +101,10 @@ assert.doesNotMatch(read('docs/index.html'), /Linux release matrix that is actua
 assert.doesNotMatch(read('docs/index.html'), /15 \/ 15 green on Linux/);
 
 const pagesMenu = JSON.parse(read('docs/menu.json'));
+assert.ok(
+  pagesMenu.navigation.some((entry) => entry.href === 'progress-0.0.41.html'),
+  'Pages navigation must expose the 0.0.41 Release Prep guide',
+);
 assert.ok(
   pagesMenu.navigation.some((entry) => entry.href === 'semantic-instruments.html'),
   'Pages navigation must expose the Semantic Instruments guide',

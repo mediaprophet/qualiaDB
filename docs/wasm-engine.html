@@ -28,17 +28,33 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> GitHub Pages · three WASM products · 0.0.40</div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> GitHub Pages · Three WASM Products · QualiaDB 0.0.40 Baseline &amp; 0.0.41 Release Prep</div>
     <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-0.04em] mb-4">Three packages.<br>Two budgets. One engine.</h1>
     <p class="text-lg text-white/70 max-w-3xl mb-3">
       The portal is the full WASM-safe engine — logic plus science plus WebGPU viewport.
       The playground adds the browser LLM. Ontology MCP stays a bounded reasoning kernel and does not swallow science to keep Pages green.
     </p>
-    <p class="text-sm text-white/45 mb-12">
+    <p class="text-sm text-white/45 mb-6">
       Gates live in <code class="q-mono">pages.yml</code> and <code class="q-mono">release-wasm.yml</code>.
       Numbers below are measured from the files this page just fetched. Portal and playground
       <strong>fail</strong> the retired 2.6 MiB / 800 KiB cap — that is expected once science is in the blob.
     </p>
+
+    <!-- 0.0.41 Release Prep Banner -->
+    <div class="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-5 mb-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-rocket text-lg"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-semibold text-white">v0.0.41 Release Prep (v0.0.40 Baseline)</h2>
+          <p class="text-xs text-white/60">Cross-Platform WebGPU Volumetric Renderer, Etalon-WASM Worker Steward, and 10-Epic Engine.</p>
+        </div>
+      </div>
+      <a href="progress-0.0.41.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold hover:bg-cyan-500/30 transition shrink-0">
+        Read 0.0.41 Release Report <i class="fa-solid fa-arrow-right"></i>
+      </a>
+    </div>
 
     <section id="profiles" class="grid lg:grid-cols-3 gap-5 mb-14"></section>
 
@@ -66,6 +82,104 @@
         </div>
       </div>
       <pre id="eng-exports" class="q-mono text-xs text-white/55 whitespace-pre-wrap bg-black/30 rounded-2xl p-4 border border-white/5 min-h-[5rem]">waiting…</pre>
+    </section>
+
+    <!-- 0.0.41 Unified WASM Volumetric & Etalon-WASM Pipeline Section -->
+    <section class="q-card p-8 mb-10 border border-cyan-500/30">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="q-kicker mb-2 text-cyan-300">v0.0.41 Release Prep · v0.0.40 Baseline</p>
+          <h2 class="text-2xl font-semibold text-white">Unified WASM Volumetric &amp; Etalon-WASM Pipeline</h2>
+        </div>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono text-cyan-300">
+          <i class="fa-solid fa-microchip"></i> wgpu 30.0.0-etalon · wasm32-unknown-unknown
+        </div>
+      </div>
+      <p class="text-sm text-white/70 mb-6 leading-relaxed">
+        Building upon the 0.0.40 production baseline, the 0.0.41 release unifies the graphics and compute runtime across native desktop and browser targets. <code>webizen-render</code> volumetric rendering modules compile directly to <code>wasm32-unknown-unknown</code>, while <code>webizen-web</code> (<code>qualia-wasm</code>) introduces two-tier rendering (Hardware WebGPU Volumetric + Deterministic Canvas2D fallback) paired with <code>etalon-wasm</code> worker telemetry.
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <!-- webizen-render on wasm32 -->
+        <div class="rounded-2xl border border-white/10 bg-black/30 p-5">
+          <h3 class="text-base font-semibold text-cyan-300 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-cube"></i> webizen-render on wasm32-unknown-unknown
+          </h3>
+          <p class="text-xs text-white/60 mb-3 leading-relaxed">
+            Direct WebGPU compute and volumetric raymarching now runs natively in browser contexts without desktop-only stubs:
+          </p>
+          <ul class="text-xs text-white/75 space-y-2 mb-4">
+            <li><code class="q-mono text-cyan-300">VolumetricRenderer::from_canvas(canvas, cap)</code>: Configures a hardware WebGPU <code>PortalGpu</code> surface directly on an <code>HtmlCanvasElement</code> with capability-intersected adapter limits.</li>
+            <li><code class="q-mono text-cyan-300">VolumetricRenderer::render_scene_frame(scene, camera)</code>: Zero-heap per-frame upload of 10D node tensors (<code>Tensor10D</code>) and colored scene meshes from a <code>RenderScene</code>.</li>
+            <li><code class="q-mono text-cyan-300">volumetric_hmc</code>: Hamiltonian Monte Carlo volumetric sampler compiled to WASM for continuous probability distributions.</li>
+            <li><code class="q-mono text-cyan-300">volumetric_texture</code>: Direct 3D density texture sampling and hardware filtering on browser WebGPU devices.</li>
+          </ul>
+        </div>
+
+        <!-- webizen-web QualiaPortal Two-Tier -->
+        <div class="rounded-2xl border border-white/10 bg-black/30 p-5">
+          <h3 class="text-base font-semibold text-emerald-300 mb-2 flex items-center gap-2">
+            <i class="fa-solid fa-layer-group"></i> webizen-web (qualia-wasm) QualiaPortal
+          </h3>
+          <p class="text-xs text-white/60 mb-3 leading-relaxed">
+            Dual-tier rendering architecture ensures universal compatibility from high-end WebGPU rigs down to restricted software canvases:
+          </p>
+          <ul class="text-xs text-white/75 space-y-2 mb-4">
+            <li><strong>Tier 2 Hardware WebGPU:</strong> <code class="q-mono text-emerald-300">await portal.init_webgpu(canvas)</code> initializes GPU volumetric pipelines, marks <code>WorkerSteward</code> ready, uploads cached tensor state, and renders the active <code>RenderScene</code>.</li>
+            <li><strong>Tier 1 Deterministic Canvas2D:</strong> <code class="q-mono text-emerald-300">SimpleCanvasRenderer::render_scene(scene, yaw)</code> provides mathematical Canvas2D fallback, projecting and drawing translucent faces, directed edges, and labeled nodes before overlaying the HUD.</li>
+            <li><strong>etalon-wasm WorkerSteward Telemetry:</strong> Live inspection via <code class="q-mono text-emerald-300">portal.etalon_transport_mode()</code>, <code class="q-mono text-emerald-300">portal.etalon_worker_state()</code>, and <code class="q-mono text-emerald-300">portal.etalon_session_generation()</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Telemetry & Automated CI Strip -->
+      <div class="grid sm:grid-cols-3 gap-4 mb-6">
+        <div class="rounded-2xl border border-white/10 p-4 bg-black/20">
+          <div class="text-xs text-white/40 mb-1">Worker Transport Mode</div>
+          <div class="q-mono text-sm text-cyan-300">SharedArrayBuffer / Transferable</div>
+          <div class="text-[11px] text-white/50 mt-1">Negotiated dynamically via crossOriginIsolated</div>
+        </div>
+        <div class="rounded-2xl border border-white/10 p-4 bg-black/20">
+          <div class="text-xs text-white/40 mb-1">Session Generation</div>
+          <div class="q-mono text-sm text-emerald-300">Zero-loss epoch tracking</div>
+          <div class="text-[11px] text-white/50 mt-1">Automatic device recovery generation bumps</div>
+        </div>
+        <div class="rounded-2xl border border-white/10 p-4 bg-black/20">
+          <div class="text-xs text-white/40 mb-1">Automated WASM CI</div>
+          <div class="q-mono text-sm text-violet-300">release-wasm.yml</div>
+          <div class="text-[11px] text-white/50 mt-1">Runs on dev branches + release tags for all 3 profiles</div>
+        </div>
+      </div>
+
+      <!-- JS SDK Usage Snippet -->
+      <div class="rounded-2xl border border-white/10 bg-black/40 p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-semibold text-white/80 uppercase tracking-wider">Browser WebGPU Volumetric SDK &amp; Fallback Usage</span>
+          <span class="text-[11px] font-mono text-white/40">JavaScript / TypeScript</span>
+        </div>
+        <pre class="q-mono text-xs text-cyan-200 whitespace-pre-wrap overflow-x-auto leading-relaxed"><code>import init, { QualiaPortal } from './pkg/qualia/qualia_wasm.js';
+
+await init();
+const canvas = document.getElementById('qualia-viewport');
+const portal = new QualiaPortal(canvas);
+
+// 1. Inspect Etalon-WASM transport telemetry
+console.log('Transport mode:', portal.etalon_transport_mode());      // "SharedArrayBuffer" or "TransferableMessage"
+console.log('Worker state:', portal.etalon_worker_state());          // "Ready" | "Standby" | "Initializing"
+console.log('Session gen:', portal.etalon_session_generation());     // Generation epoch for recovery
+
+// 2. Load cross-platform RenderScene contract (or 10D tensor manifold)
+portal.load_json_scene(JSON.stringify(renderSceneContract));
+
+// 3. Attempt Tier 2 WebGPU upgrade (seamless fallback to Tier 1 Canvas2D on older hardware)
+try {
+  const tier = await portal.init_webgpu(canvas);
+  console.log('Hardware WebGPU Volumetric active (Tier 2):', tier);
+} catch (err) {
+  console.info('Falling back to deterministic Tier 1 Canvas2D scene + HUD renderer:', err);
+}
+</code></pre>
+      </div>
     </section>
 
     <section class="grid md:grid-cols-2 gap-5 mb-10">
