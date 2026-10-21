@@ -94,7 +94,7 @@ js-sys = "0.3.106"
 log = "0.4.34"
 lz4_flex = "0.13.1"
 minicbor = "2.3.1"
-naga = { version = "0.0.1", path = "../etalon/naga", features = ["wgsl-in", "spv-out", "msl-out", "hlsl-out"] }
+naga = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main", features = ["wgsl-in", "spv-out", "msl-out", "hlsl-out"] }
 oxiri = "0.2"
 pdf-extract = "0.12.1"
 pollster = "1.0.1"
@@ -124,14 +124,14 @@ warp = "0.4.3"
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "0.4.79"
 web-sys = "0.3.106"
-wgpu = { version = "30.0.0", path = "../etalon/compat/wgpu", default-features = false }
-etalon = { version = "0.0.1", path = "../etalon/etalon", default-features = false }
-etalon-agent = { version = "0.0.1", path = "../etalon/crates/etalon-agent" }
-etalon-wgsl-forge = { version = "0.0.1", path = "../etalon/crates/etalon-wgsl-forge" }
-etalon-nquin = { version = "0.0.1", path = "../etalon/crates/etalon-nquin" }
-etalon-tensor = { version = "0.0.1", path = "../etalon/crates/etalon-tensor" }
-etalon-render = { version = "0.0.1", path = "../etalon/crates/etalon-render" }
-etalon-wasm = { version = "0.0.1", path = "../etalon/crates/etalon-wasm" }
+wgpu = { version = "30.0.0", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main", default-features = false }
+etalon = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main", default-features = false }
+etalon-agent = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
+etalon-wgsl-forge = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
+etalon-nquin = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
+etalon-tensor = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
+etalon-render = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
+etalon-wasm = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
 
 
 # Profile for WASM web builds (qualia-mobile-harness).
@@ -169,5 +169,5 @@ debug = 1
 # we upgrade to imap 3.x (which uses the imap-types ecosystem instead).
 [patch.crates-io]
 imap-proto = { path = "vendor/imap-proto" }
-wgpu = { path = "../etalon/compat/wgpu" }
-naga = { path = "../etalon/naga" }
+wgpu = { git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
+naga = { git = "https://github.com/mediaprophet/etalon.git", branch = "qualia-main" }
