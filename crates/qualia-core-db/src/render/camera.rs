@@ -3,7 +3,9 @@
 use crate::render::telemetry::CameraUniform;
 
 pub const CAMERA_NEAR_PLANE: f32 = 0.05;
-pub const CAMERA_FAR_PLANE: f32 = 200.0;
+pub const CAMERA_FAR_PLANE: f32 = 15_000.0;
+pub const CAMERA_MIN_ZOOM: f32 = 0.05;
+pub const CAMERA_MAX_ZOOM: f32 = 5_000.0;
 /// Tangent of the vertical half-FOV used by both projection and AO reconstruction.
 pub const CAMERA_TAN_HALF_FOV: f32 = 0.414_213_57;
 
@@ -81,13 +83,13 @@ impl CameraState {
     /// `CameraState::clamped`.
     pub fn clamped(mut self) -> Self {
         self.near_plane = if self.near_plane.is_finite() {
-            self.near_plane.clamp(0.00001, 1.0)
+            self.near_plane.clamp(0.00001, 10.0)
         } else {
             CAMERA_NEAR_PLANE
         };
         const PITCH_LIMIT: f32 = 1.45;
         self.pitch = self.pitch.clamp(-PITCH_LIMIT, PITCH_LIMIT);
-        self.zoom = self.zoom.clamp(0.35, 48.0);
+        self.zoom = self.zoom.clamp(CAMERA_MIN_ZOOM, CAMERA_MAX_ZOOM);
         self
     }
 
@@ -140,7 +142,7 @@ pub fn orbit_eye_position(yaw: f32, pitch: f32, zoom: f32) -> [f32; 3] {
 #[inline]
 pub fn orbit_eye_position_target(yaw: f32, pitch: f32, zoom: f32, target: [f32; 3]) -> [f32; 3] {
     let pitch = pitch.clamp(-1.45, 1.45);
-    let dist = zoom.clamp(0.35, 48.0);
+    let dist = zoom.clamp(CAMERA_MIN_ZOOM, CAMERA_MAX_ZOOM);
     let cy = yaw.cos();
     let sy = yaw.sin();
     let cp = pitch.cos();
@@ -200,7 +202,7 @@ pub fn orbit_view_projection_with_near(
     near: f32,
 ) -> [[f32; 4]; 4] {
     let pitch = pitch.clamp(-1.45, 1.45);
-    let dist = zoom.clamp(0.35, 48.0);
+    let dist = zoom.clamp(CAMERA_MIN_ZOOM, CAMERA_MAX_ZOOM);
     let aspect = aspect.max(0.05);
 
     let cy = yaw.cos();
@@ -216,7 +218,7 @@ pub fn orbit_view_projection_with_near(
     let proj = perspective_rh_zo(
         CAMERA_TAN_HALF_FOV,
         aspect,
-        near.clamp(0.00001, 1.0),
+        near.clamp(0.00001, 10.0),
         CAMERA_FAR_PLANE,
     );
     mat4_mul(proj, view)
@@ -378,5 +380,39 @@ mod tests {
         assert_eq!(order[1], 2);
         assert_eq!(order[2], 0);
         assert_eq!(order.len(), 4);
+    }
+
+    #[test]
+    fn test_open_world_metric_camera_frustum_g70() {
+        // 1. Zoom preservation up to 2,500.0 m without clamping to 48.0
+        let state = CameraState::new(0.0, 0.0, 2_500.0);
+        let clamped = state.clamped();
+        assert_eq!(clamped.zoom, 2_500.0);
+
+        let eye = orbit_eye_position_target(0.0, 0.0, 2_500.0, [0.0, 0.0, 0.0]);
+        assert!((eye[2] - 2_500.0).abs() < 1e-4);
+
+        // 2. Point at 1,200.0 m distance projects inside clip-space 0.0..=1.0 Z
+        // Eye is at [0.0, 0.0, 2_500.0], looking at target [0.0, 0.0, 0.0] (along -Z).
+        // Target is 2,500.0 m ahead. A point 1,200.0 m in front of the camera is at Z = 2500 - 1200 = 1300.
+        let near = 0.25;
+        let vp = orbit_view_projection_with_near(0.0, 0.0, 2_500.0, [0.0, 0.0, 0.0], 16.0 / 9.0, near);
+        let point_world = [0.0_f32, 0.0, 1_300.0, 1.0];
+
+        // Column-major multiplication: clip[r] = sum_c (vp[c][r] * point_world[c])
+        let mut clip = [0.0_f32; 4];
+        for r in 0..4 {
+            for c in 0..4 {
+                clip[r] += vp[c][r] * point_world[c];
+            }
+        }
+        assert!(clip[3] > 0.0, "w must be positive in front of camera");
+        let ndc_z = clip[2] / clip[3];
+        assert!(
+            (0.0..=1.0).contains(&ndc_z),
+            "1,200.0 m distance point NDC Z ({ndc_z}) must lie inside [0.0, 1.0] clip space for 15 km horizon"
+        );
+        assert_eq!(CAMERA_FAR_PLANE, 15_000.0);
+        assert_eq!(CAMERA_MAX_ZOOM, 5_000.0);
     }
 }

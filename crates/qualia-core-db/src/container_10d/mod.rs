@@ -60,6 +60,7 @@ pub use manifold_identity_container::{
 pub mod manifold_identity_v2;
 pub mod mesh_section;
 pub mod metric_check;
+pub mod metric_trait_gate;
 pub mod morph_section;
 pub mod node_section;
 pub mod normal_section;
@@ -157,6 +158,12 @@ pub use metric_check::{
     proposed_metric_descriptor, verify_descriptor_against_reality, MetricBranchDescriptor,
     MetricCompletenessDescriptor, MetricDivergence, MetricKind, BOUNDARY_CLIQUE_BRANCH_INDEX,
     METRIC_BRANCH_COUNT,
+};
+pub use metric_trait_gate::{
+    measure_aabb_extents_zero_heap, verify_fauna_vs_vehicle_scale_invariant_zero_heap,
+    verify_metric_trait_bounds_zero_heap, MetricTraitEnvelope, MetricTraitGateViolation,
+    ENVELOPE_AQUILA_AUDAX, ENVELOPE_CORYMBIA_APARRERINJA, ENVELOPE_FIELD_UTILITY_4WD,
+    ENVELOPE_MACROPUS_GIGANTEUS, ENVELOPE_ORNITHORHYNCHUS_ANATINUS, ENVELOPE_VOMBATUS_URSINUS,
 };
 pub use node_section::{
     parse_node_header, read_node, read_node_aos, read_node_soa, read_node_soa_lane,
