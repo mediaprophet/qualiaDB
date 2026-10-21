@@ -73,16 +73,28 @@
 
             <!-- File Upload -->
             <div class="glass-strong rounded-3xl p-6 mb-8">
-                <div class="font-semibold mb-4 flex items-center gap-x-2">
-                    <i class="fa-solid fa-upload"></i>
-                    <span>2. Upload & Transcompile</span>
+                <div class="font-semibold mb-4 flex items-center justify-between">
+                    <div class="flex items-center gap-x-2">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>2. Upload &amp; Transcompile</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="loadSampleNtBtn" class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer">
+                            <i class="fa-solid fa-file-lines"></i>
+                            <span>Load Sample N-Triples</span>
+                        </button>
+                        <button type="button" id="loadSampleCsvBtn" class="px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 border border-cyan-500/30 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer">
+                            <i class="fa-solid fa-table"></i>
+                            <span>Load Sample CSV</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="dropZone" class="border-2 border-dashed border-white/30 hover:border-emerald-400/60 rounded-2xl p-10 text-center cursor-pointer transition-colors">
                     <i class="fa-solid fa-file-import text-3xl text-white/40 mb-3"></i>
-                    <div class="font-medium">Drop .nt or .csv file here</div>
-                    <div class="text-sm text-white/50">or click to select</div>
-                    <input type="file" id="fileInput" accept=".nt,.csv,.txt" class="hidden">
+                    <div class="font-medium">Drop .nt, .ttl, or .csv file here</div>
+                    <div class="text-sm text-white/50">or click to select from your device</div>
+                    <input type="file" id="fileInput" accept=".nt,.ttl,.csv,.txt" class="hidden">
                 </div>
 
                 <div id="fileInfo" class="mt-3 text-sm text-emerald-400 font-mono text-center"></div>
@@ -90,65 +102,390 @@
                 <div class="mt-6">
                     <div class="text-xs text-white/60 mb-2">Destination</div>
                     <div class="flex flex-wrap gap-4 text-sm">
-                        <label class="flex items-center gap-x-2 cursor-pointer"><input type="radio" name="dest" value="download" checked> Direct Download</label>
+                        <label class="flex items-center gap-x-2 cursor-pointer"><input type="radio" name="dest" value="download" checked> Direct Download (.q42)</label>
                         <label class="flex items-center gap-x-2 cursor-pointer"><input type="radio" name="dest" value="opfs"> Browser Cache (OPFS)</label>
-                        <label class="flex items-center gap-x-2 cursor-pointer"><input type="radio" name="dest" value="daemon"> Native Daemon</label>
+                        <label class="flex items-center gap-x-2 cursor-pointer"><input type="radio" name="dest" value="daemon"> Native Daemon (http://localhost:4242/ingest)</label>
                     </div>
                 </div>
 
-                <button id="processBtn" disabled class="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-white/40 rounded-2xl font-semibold flex items-center justify-center gap-x-2">
+                <button id="processBtn" disabled class="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-white/40 rounded-2xl font-semibold flex items-center justify-center gap-x-2 transition-all cursor-pointer">
                     <i class="fa-solid fa-sync-alt"></i>
                     <span>Transcompile to .q42</span>
                 </button>
+
+                <!-- Real WASM Transcompilation Receipt Panel -->
+                <div id="receiptPanel" class="mt-6 p-5 glass-strong rounded-2xl border border-emerald-500/30 hidden">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <i class="fa-solid fa-circle-check text-base"></i>
+                            <span>WASM Transcompilation Receipt</span>
+                        </div>
+                        <span id="receiptDestBadge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono"></span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="bg-black/40 p-3 rounded-xl">
+                            <span class="text-white/50 block text-[10px] uppercase tracking-wider mb-1">Parsed Semantic Quins</span>
+                            <span id="receiptQuinCount" class="font-mono text-emerald-300 text-sm font-bold">0</span>
+                            <span class="text-white/40 text-[10px] ml-1.5">(48 B / Quin)</span>
+                        </div>
+                        <div class="bg-black/40 p-3 rounded-xl">
+                            <span class="text-white/50 block text-[10px] uppercase tracking-wider mb-1">Packed .q42 SuperBlock Size</span>
+                            <span id="receiptBlockSize" class="font-mono text-cyan-300 text-sm font-bold">0 B</span>
+                            <span class="text-white/40 text-[10px] ml-1.5">(40,960 B fixed Q42 sector)</span>
+                        </div>
+                        <div class="bg-black/40 p-3 rounded-xl">
+                            <span class="text-white/50 block text-[10px] uppercase tracking-wider mb-1">ECC Parity Verification</span>
+                            <div id="receiptEccStatus" class="font-mono text-xs flex items-center gap-1.5 text-emerald-400 font-semibold">
+                                <i class="fa-solid fa-shield-check"></i>
+                                <span>Verified (100% Valid Parity)</span>
+                            </div>
+                        </div>
+                        <div class="bg-black/40 p-3 rounded-xl">
+                            <span class="text-white/50 block text-[10px] uppercase tracking-wider mb-1">Canonical RDFC-1.0 Digest</span>
+                            <span id="receiptRdfcHash" class="font-mono text-amber-300 text-[11px] break-all">-</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 bg-black/40 p-3 rounded-xl text-xs">
+                        <span class="text-white/50 block text-[10px] uppercase tracking-wider mb-1">BLAKE3 Provenance Digest</span>
+                        <span id="receiptBlake3" class="font-mono text-purple-300 text-[11px] break-all">-</span>
+                    </div>
+                    <div id="receiptStatusMsg" class="mt-3 text-[11px] text-white/70 font-mono bg-black/20 p-2.5 rounded-lg border border-white/5"></div>
+                </div>
             </div>
 
             <div class="text-xs text-white/50 text-center">
-                Runs 100% in-browser. Supports WebTorrent seeding and native daemon handoff.
+                Runs 100% in-browser via Qualia Rust WebAssembly Core. Supports WebTorrent seeding and native daemon handoff.
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.40-wasm-retry1';
+
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
         const processBtn = document.getElementById('processBtn');
+        const loadSampleNtBtn = document.getElementById('loadSampleNtBtn');
+        const loadSampleCsvBtn = document.getElementById('loadSampleCsvBtn');
 
         let selectedFile = null;
+        let wasm = null;
+        let daemonOnline = false;
+        let daemonVersion = '';
 
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) handleFile(e.target.files[0]);
-        });
-
-        function handleFile(file) {
-            selectedFile = file;
-            fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-            processBtn.disabled = false;
+        function q_hash(str) {
+            const bytes = new TextEncoder().encode(String(str));
+            let hash = 0xcbf29ce484222325n;
+            const prime = 0x100000001b3n;
+            for (let i = 0; i < bytes.length; i++) {
+                hash ^= BigInt(bytes[i]);
+                hash = (hash * prime) & 0xffffffffffffffffn;
+            }
+            return hash;
         }
 
-        processBtn.addEventListener('click', () => {
-            if (!selectedFile) return;
-            processBtn.disabled = true;
-            alert('Transcompilation started (demo). Full implementation would process the file into .q42 shards.');
-            setTimeout(() => { processBtn.disabled = false; }, 1200);
-        });
+        function updateBadge() {
+            const dot = document.getElementById('daemon-dot');
+            const txt = document.getElementById('daemon-text');
+            const badge = document.getElementById('daemon-badge');
+            if (daemonOnline && wasm) {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+                txt.textContent = `Daemon v${daemonVersion} + WASM Ready`;
+                badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            } else if (wasm) {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                txt.textContent = 'WASM Engine Ready';
+                badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                txt.textContent = 'Loading WASM…';
+                badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700';
+            }
+        }
+
+        async function loadWasm() {
+            try {
+                const module = await import('./playground/qualia_core_db.js');
+                const resp = await fetchWasmBinary('./playground/qualia_core_db_bg.wasm');
+                await module.default(resp);
+                wasm = module;
+                updateBadge();
+            } catch (e) {
+                console.error('Failed to load WASM engine:', e);
+                document.getElementById('daemon-text').textContent = 'WASM Error';
+                document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-red-500';
+            }
+        }
 
         async function checkDaemon() {
             try {
                 const res = await fetch('http://localhost:4242/health', { signal: AbortSignal.timeout(2000) });
                 if (res.ok) {
                     const d = await res.json();
-                    document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-                    document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
-                    document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    daemonOnline = true;
+                    daemonVersion = d.version || '0.0.40';
                 }
             } catch(e) {
-                document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
-                document.getElementById('daemon-text').textContent = 'Daemon Offline';
+                daemonOnline = false;
             }
+            updateBadge();
         }
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-emerald-400');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-emerald-400');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-emerald-400');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            fileInfo.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(3)} MB)`;
+            processBtn.disabled = false;
+        }
+
+        loadSampleNtBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sampleNt = `<did:webizen:entity:sentinel-01> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://webizen.org/ns#SuperQuinLedger> .
+<did:webizen:entity:sentinel-01> <https://webizen.org/ns#hasCapacity> <https://webizen.org/ns#ZeroHeapVerification> .
+<did:webizen:entity:sentinel-01> <https://webizen.org/ns#sentinelBudgetMB> "42" .
+<did:webizen:entity:sentinel-01> <http://purl.org/dc/terms/title> "QualiaDB Kernel Ingest Benchmark" .
+<did:webizen:entity:sentinel-01> <https://webizen.org/ns#deonticObligation> <did:webizen:norm:deterministic-ltl> .
+<did:webizen:entity:sentinel-01> <https://webizen.org/ns#governanceLane> <did:webizen:lane:commons> .
+`;
+            const file = new File([sampleNt], "sample_sentinel_ledger.nt", { type: "application/n-triples" });
+            handleFile(file);
+        });
+
+        loadSampleCsvBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sampleCsv = `entity_did,role,lane,certainty
+did:webizen:agent:01,Governor,commons,1.0
+did:webizen:agent:02,Sentinel,spatial,0.95
+did:webizen:agent:03,Auditor,bilateral,0.85
+`;
+            const file = new File([sampleCsv], "sample_agents.csv", { type: "text/csv" });
+            handleFile(file);
+        });
+
+        function triggerDownload(bytes, filename) {
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            if (!wasm) {
+                alert('Qualia Rust WASM engine is loading. Please try again in a few moments.');
+                return;
+            }
+
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Transcompiling in Rust WASM...</span>';
+
+            try {
+                const text = await selectedFile.text();
+                const sourceUrl = document.getElementById('provSource').value.trim() || 'https://webizen.org/dataset/ingest';
+                const authorDid = document.getElementById('provAuthor').value.trim() || 'did:webizen:anonymous';
+                const license = document.getElementById('provLicense').value.trim() || 'CC BY-NC-ND 4.0';
+
+                const ext = (selectedFile.name.split('.').pop() || '').toLowerCase();
+                let quins = [];
+
+                if (ext === 'csv') {
+                    const lines = text.trim().split(/\r?\n/);
+                    if (lines.length === 0 || !lines[0].trim()) {
+                        throw new Error('CSV file is empty');
+                    }
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                    const field_mappings = headers.filter(h => h.length > 0).map(col => ({
+                        source_key: col,
+                        predicate_hash: q_hash(`https://webizen.org/ns#${col}`),
+                        datatype: 'string'
+                    }));
+
+                    const csvRes = wasm.parse_csv_wasm({
+                        csv_data: text,
+                        base_class_hash: q_hash('https://webizen.org/ns#CsvRecord'),
+                        field_mappings
+                    });
+                    quins = csvRes.quins || [];
+
+                    // Inject provenance Quins
+                    const srcHash = q_hash(sourceUrl).toString();
+                    const authHash = (q_hash(authorDid) & 0x0fffffffffffffffn).toString();
+                    const licHash = (q_hash(license) & 0x0fffffffffffffffn).toString();
+                    const typeHash = (q_hash('https://webizen.org/ns#TranscompiledDataset') & 0x0fffffffffffffffn).toString();
+                    quins.push([srcHash, q_hash('http://purl.org/dc/terms/creator').toString(), authHash, "0", "0", "0"]);
+                    quins.push([srcHash, q_hash('http://purl.org/dc/terms/license').toString(), licHash, "0", "0", "0"]);
+                    quins.push([srcHash, q_hash('http://www.w3.org/1999/02/22-rdf-syntax-ns#type').toString(), typeHash, "0", "0", "0"]);
+                } else {
+                    // .nt, .ttl, .txt
+                    const provBlock = `\n<${sourceUrl}> <http://purl.org/dc/terms/creator> <${authorDid}> .\n<${sourceUrl}> <http://purl.org/dc/terms/license> "${license}" .\n<${sourceUrl}> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://webizen.org/ns#TranscompiledDataset> .\n`;
+                    const fullDoc = text + provBlock;
+                    let parsed = null;
+
+                    const format = ext === 'ttl' ? 'turtle' : 'ntriples';
+                    try {
+                        parsed = wasm.parse_rdf_document_wasm(format, fullDoc);
+                    } catch (e) {
+                        console.warn(`parse_rdf_document_wasm(${format}) attempt failed:`, e);
+                    }
+
+                    if (parsed && parsed.quins && parsed.quins.length > 0) {
+                        quins = parsed.quins;
+                    } else {
+                        // Fallback to parse_turtle_wasm
+                        const triples = wasm.parse_turtle_wasm(fullDoc);
+                        if (triples && triples.length > 0) {
+                            quins = triples.map(t => [
+                                q_hash(t.subject).toString(),
+                                q_hash(t.predicate).toString(),
+                                (q_hash(t.object) & 0x0fffffffffffffffn).toString(),
+                                "0",
+                                "4611686018427387904",
+                                "0"
+                            ]);
+                        }
+                    }
+
+                    if (quins.length === 0) {
+                        throw new Error('RDF parsing failed. Please verify the file has valid N-Triples or Turtle statements.');
+                    }
+                }
+
+                // Pack quins into raw bytes (48 bytes per Quin)
+                const rawBytes = new Uint8Array(quins.length * 48);
+                const view = new DataView(rawBytes.buffer);
+                for (let i = 0; i < quins.length; i++) {
+                    const q = quins[i];
+                    const off = i * 48;
+                    view.setBigUint64(off, BigInt(q[0]), true);
+                    view.setBigUint64(off + 8, BigInt(q[1]), true);
+                    view.setBigUint64(off + 16, BigInt(q[2]), true);
+                    view.setBigUint64(off + 24, BigInt(q[3] || 0), true);
+                    view.setBigUint64(off + 32, BigInt(q[4] || 0), true);
+                    view.setBigUint64(off + 40, BigInt(q[5] || 0), true);
+                }
+
+                const seqId = BigInt(Date.now());
+                const ownerDidHash = q_hash(authorDid);
+                const superblockBytes = wasm.pack_quins_into_superblock(seqId, ownerDidHash, rawBytes);
+
+                // Verify ECC integrity in Rust
+                const eccJsonStr = wasm.verify_superblock_ecc(superblockBytes);
+                const ecc = JSON.parse(eccJsonStr);
+
+                // Compute canonical RDFC-1.0 and BLAKE3 digests in Rust
+                const quinsForRdfc = quins.map(q => [
+                    BigInt(q[0]), BigInt(q[1]), BigInt(q[2]),
+                    BigInt(q[3] || 0), BigInt(q[4] || 0), BigInt(q[5] || 0)
+                ]);
+                const rdfc = wasm.rdfc10_graph_hash_wasm({
+                    quins: quinsForRdfc,
+                    include_provisional: true
+                });
+                const blake3 = wasm.crypto_blake3({ text });
+
+                const canonicalHash = rdfc.rdfc10_digest || rdfc.provisional?.digest || 'N/A';
+                const blake3Hex = blake3.hex || 'N/A';
+
+                // Display Receipt Panel
+                const receiptPanel = document.getElementById('receiptPanel');
+                receiptPanel.classList.remove('hidden');
+                document.getElementById('receiptQuinCount').textContent = quins.length.toLocaleString();
+                document.getElementById('receiptBlockSize').textContent = `${superblockBytes.length.toLocaleString()} B`;
+
+                const eccStatusEl = document.getElementById('receiptEccStatus');
+                if (ecc.valid && (!ecc.bad || ecc.bad.length === 0)) {
+                    eccStatusEl.className = 'font-mono text-xs flex items-center gap-1.5 text-emerald-400 font-semibold';
+                    eccStatusEl.innerHTML = '<i class="fa-solid fa-shield-check"></i><span>Verified (0 Bad Sectors • 100% Valid ECC Parity)</span>';
+                } else {
+                    eccStatusEl.className = 'font-mono text-xs flex items-center gap-1.5 text-red-400 font-semibold';
+                    eccStatusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><span>Parity Mismatch (${ecc.bad?.length || 0} bad quins)</span>`;
+                }
+
+                document.getElementById('receiptRdfcHash').textContent = canonicalHash;
+                document.getElementById('receiptBlake3').textContent = blake3Hex;
+
+                // Handle selected destination
+                const dest = document.querySelector('input[name="dest"]:checked')?.value || 'download';
+                const destBadge = document.getElementById('receiptDestBadge');
+                const statusMsg = document.getElementById('receiptStatusMsg');
+                const outFileName = selectedFile.name.replace(/\.[^.]+$/, '') + '.q42';
+
+                if (dest === 'download') {
+                    destBadge.textContent = 'DEST: Direct Download';
+                    triggerDownload(superblockBytes, outFileName);
+                    statusMsg.textContent = `✓ 40KB .q42 SuperBlock generated and downloaded as "${outFileName}".`;
+                } else if (dest === 'opfs') {
+                    destBadge.textContent = 'DEST: Browser OPFS Vault';
+                    try {
+                        await wasm.write_opfs_block(0, superblockBytes);
+                        statusMsg.textContent = '✓ Successfully committed 40KB SuperBlock to browser OPFS vault at sector block_00000000.qblk.';
+                    } catch (opfsErr) {
+                        console.warn('OPFS write failed, triggering fallback download:', opfsErr);
+                        triggerDownload(superblockBytes, outFileName);
+                        statusMsg.textContent = `⚠ OPFS vault write failed (${opfsErr.message || opfsErr}). Downloaded "${outFileName}" to disk as fallback.`;
+                    }
+                } else if (dest === 'daemon') {
+                    destBadge.textContent = 'DEST: Native Daemon';
+                    try {
+                        const resp = await fetch('http://localhost:4242/ingest', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/octet-stream',
+                                'X-Qualia-Author': authorDid,
+                                'X-Qualia-Format': 'q42-superblock'
+                            },
+                            body: superblockBytes,
+                            signal: AbortSignal.timeout(3000)
+                        });
+                        if (resp.ok) {
+                            statusMsg.textContent = '✓ Successfully streamed 40KB .q42 superblock to local Qualia daemon at http://localhost:4242/ingest.';
+                        } else {
+                            throw new Error(`Daemon returned HTTP ${resp.status}`);
+                        }
+                    } catch (daemonErr) {
+                        console.warn('Daemon offline, triggering fallback download:', daemonErr);
+                        triggerDownload(superblockBytes, outFileName);
+                        statusMsg.textContent = `⚠ Native daemon offline or unreachable. Downloaded "${outFileName}" to disk as fallback.`;
+                    }
+                }
+            } catch (err) {
+                console.error('Transcompilation error:', err);
+                alert(`Transcompilation error: ${err.message || err}`);
+            } finally {
+                processBtn.disabled = false;
+                processBtn.innerHTML = '<i class="fa-solid fa-sync-alt"></i><span>Transcompile to .q42</span>';
+            }
+        });
+
+        loadWasm();
         checkDaemon();
     </script>
 </body>

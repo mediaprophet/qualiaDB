@@ -1,5 +1,43 @@
 // Qualia-DB Semantic Drift Data
 
+import init, {
+  crypto_blake3,
+  spatial_encode_wasm,
+  parse_jsonld_wasm
+} from './qualia_core_db.js';
+import { fetchWasmBinary } from '../js/wasm-fetch.js';
+
+let wasmReady = false;
+let parsedGraph = null;
+
+async function initSemanticsWasm() {
+  if (wasmReady) return;
+  try {
+    const res = await fetchWasmBinary(new URL('./qualia_core_db_bg.wasm', import.meta.url));
+    await init({ module_or_path: res });
+    wasmReady = true;
+  } catch (e) {
+    console.warn('[semantics.js] fetchWasmBinary fallback to direct init:', e);
+    try {
+      await init();
+      wasmReady = true;
+    } catch (e2) {
+      console.error('[semantics.js] WASM init error:', e2);
+    }
+  }
+
+  if (wasmReady) {
+    try {
+      parsedGraph = parse_jsonld_wasm(JSON.stringify(SEMANTIC_GRAPH));
+      console.log('[semantics.js] Real Rust JSON-LD parsed via parse_jsonld_wasm:', parsedGraph);
+    } catch (err) {
+      console.warn('[semantics.js] parse_jsonld_wasm error:', err);
+    }
+    updateUI();
+  }
+}
+initSemanticsWasm();
+
 const SEMANTIC_GRAPH = {
   "@context": "https://mediaprophet.github.io/qualiaDB/qualia-context.jsonld",
   "@graph": [
@@ -83,7 +121,7 @@ const slider = document.getElementById('time-slider');
 const yearLabel = document.getElementById('year-label');
 const container = document.getElementById('meaning-container');
 
-// Hash function simulation
+// Synchronous fallback hash function (used only before WASM loads)
 function hashString(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -95,7 +133,6 @@ function hashString(str) {
 }
 
 function updateUI() {
-    // Force a re-render animation by replacing the node
     const activeData = SEMANTIC_GRAPH["@graph"].find(n => 
         n.term === currentWord && 
         currentYear >= n.start_year && 
@@ -104,10 +141,30 @@ function updateUI() {
 
     if (!activeData) return;
 
-    // Simulate the Context vector generation
     const contextStr = `year:${currentYear} + loc:${activeData.location} + lang:${activeData.language}`;
-    const contextHash = "0x" + hashString(contextStr);
-    const subjectHash = "0x" + hashString(activeData["@id"]);
+    let contextHash, subjectHash, spatialBadge = '';
+
+    if (wasmReady) {
+        try {
+            // Real BLAKE3 256-bit cryptographic digest from Rust
+            const b3Context = crypto_blake3({ text: contextStr });
+            contextHash = "0x" + b3Context.hex;
+
+            const b3Subject = crypto_blake3({ text: activeData["@id"] });
+            subjectHash = "0x" + b3Subject.hex;
+
+            // Real Spatiotemporal geometric encoding from Rust
+            const spatial = spatial_encode_wasm(JSON.stringify({ type: "sphere", detail: 1 }));
+            spatialBadge = `<div style="font-size:0.75rem; color:#67e8f9; margin-top:4px;">BLAKE3 verified · Spatial tensor: ${spatial.quin_count} Quins (${spatial.backend})</div>`;
+        } catch (e) {
+            console.warn('[semantics.js] WASM call failed, falling back:', e);
+            contextHash = "0x" + hashString(contextStr);
+            subjectHash = "0x" + hashString(activeData["@id"]);
+        }
+    } else {
+        contextHash = "0x" + hashString(contextStr);
+        subjectHash = "0x" + hashString(activeData["@id"]);
+    }
 
     const cardHTML = `
         <div class="meaning-card" id="active-card">
@@ -130,6 +187,7 @@ function updateUI() {
                 <div class="meta-item">
                     <span>Active Context Vector (Time+Space)</span>
                     <div class="context-hash">${contextHash}</div>
+                    ${spatialBadge}
                 </div>
             </div>
         </div>

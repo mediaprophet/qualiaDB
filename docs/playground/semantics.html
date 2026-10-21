@@ -260,7 +260,7 @@
         </div>
     </div>
 
-    <script src="semantics.js"></script>
+    <script type="module" src="semantics.js"></script>
 
     <!-- SHACL + Modality Demo (new for v0.0.40) -->
     <div style="position:fixed; bottom:10px; right:10px; width:380px; background:var(--panel-bg); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:12px; font-size:0.82rem; z-index:20; backdrop-filter:blur(6px);">
@@ -291,37 +291,151 @@
         <div id="shacl-output" style="margin-top:6px; font-family:monospace; font-size:0.7rem; background:#0a0a0f; padding:4px; border-radius:4px; min-height:42px; white-space:pre-wrap; color:#a5f3fc;"></div>
     </div>
 
-    <script>
-    // Inline SHACL / Modality demo (mirrors Rust shacl_compiler + webizen opcodes + modalities)
-    const OPCODE_MAP = {
-        'minInclusive': 'CheckThreshold',
-        'minCount': 'CheckSubsumption',
-        'datatype': 'Unify'
-    };
-    function compileShaclDemo() {
-        const cls = document.getElementById('shacl-class').value || 'Thing';
-        const prop = document.getElementById('shacl-prop').value || 'value';
-        const cons = document.getElementById('shacl-constraint').value;
-        const val = document.getElementById('shacl-val').value;
-        const op = OPCODE_MAP[cons] || 'CheckSubsumption';
-        const out = document.getElementById('shacl-output');
-        out.innerHTML = `Compiled SHACL ${cls}::${prop} ${cons}(${val})\n→ [SlgOpcode::${op}, SlgOpcode::Halt]\n(Real: uses shacl_compiler + WebizenCompiler in native)`;
+    <script type="module">
+import init, {
+    compile_shacl_turtle_wasm,
+    validate_shacl_constraint_wasm,
+    spatial_encode_wasm,
+    fuzzy_t_norm_wasm,
+    check_subsumption_wasm,
+    enumerate_stable_models_wasm,
+    evaluate_deontic_wasm
+} from './qualia_core_db.js';
+import { fetchWasmBinary } from '../js/wasm-fetch.js';
+
+let wasmReady = false;
+async function ensureWasm() {
+    if (wasmReady) return;
+    try {
+        const res = await fetchWasmBinary(new URL('./qualia_core_db_bg.wasm', import.meta.url));
+        await init({ module_or_path: res });
+    } catch (e) {
+        console.warn('[semantics.html] fetchWasmBinary fallback to direct init:', e);
+        await init();
+    }
+    wasmReady = true;
+}
+
+const OPCODE_MAP = {
+    'minInclusive': 'CheckThreshold',
+    'minCount': 'CheckSubsumption',
+    'datatype': 'Unify'
+};
+
+window.compileShaclDemo = async function() {
+    await ensureWasm();
+    const cls = document.getElementById('shacl-class').value || 'Person';
+    const prop = document.getElementById('shacl-prop').value || 'age';
+    const cons = document.getElementById('shacl-constraint').value;
+    const val = document.getElementById('shacl-val').value;
+    const op = OPCODE_MAP[cons] || 'CheckSubsumption';
+    const out = document.getElementById('shacl-output');
+
+    // Construct valid SHACL shape in Turtle
+    const shaclTurtle = `@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:${cls}Shape a sh:NodeShape ;
+  sh:targetClass ex:${cls} ;
+  sh:property [
+    sh:path ex:${prop} ;
+    sh:${cons} ${val} ;
+  ] .
+`;
+
+    try {
+        // Real Rust compile_shacl_turtle_wasm
+        const comp = compile_shacl_turtle_wasm(shaclTurtle);
+
+        // Real Rust validate_shacl_constraint_wasm
+        let numericTarget = 25;
+        let numericVal = parseFloat(val) || 0;
+        const valid = validate_shacl_constraint_wasm({
+            constraint_type: cons,
+            value: numericVal,
+            target_value: numericTarget
+        });
+
+        out.innerHTML = `✓ Real Rust SHACL Compiler (v${comp.engine_version}):
+Compiled ${comp.shape_count} shape (${comp.shapes[0]?.name || cls})
+Opcode: [SlgOpcode::${op}, SlgOpcode::Halt] (severity: ${comp.shapes[0]?.severity || 'Violation'})
+Constraint Check: ${cons}(${numericVal}) against target(${numericTarget}) → ${valid.passes ? 'PASS (conforms)' : 'FAIL (violation)'}`;
         out.style.border = '1px solid #67e8f9';
+    } catch (err) {
+        out.innerHTML = `Compilation error: ${err}`;
+        out.style.border = '1px solid #f87171';
     }
-    function updateModalityDemo() {
-        const mod = document.getElementById('modality').value;
-        const out = document.getElementById('shacl-output');
-        out.innerHTML = `Modality active: ${mod}\nAffects CheckThreshold / BranchWorld / ConsumeFact etc. (see modalities/ in Rust)`;
+};
+
+window.updateModalityDemo = function() {
+    const mod = document.getElementById('modality').value;
+    const out = document.getElementById('shacl-output');
+    out.innerHTML = `Modality selected: ${mod}\nReady to execute real Rust evaluator →`;
+    out.style.border = '1px solid rgba(255,255,255,0.2)';
+};
+
+window.executeFrameDemo = async function() {
+    await ensureWasm();
+    const mod = document.getElementById('modality').value;
+    const out = document.getElementById('shacl-output');
+
+    try {
+        let resultText = '';
+        if (mod === 'spatio_temporal') {
+            const res = spatial_encode_wasm(JSON.stringify({ type: "sphere", detail: 2 }));
+            resultText = `[Rust spatial_encode_wasm]
+Generated: ${res.vertex_count} vertices, ${res.quin_count} Quins
+Memory: ${res.memory_kb.toFixed(2)} KB | Backend: ${res.backend} | Tensor: ${res.tensor_bytes} bytes`;
+        } else if (mod === 'probabilistic' || mod === 'diffusion') {
+            const res = fuzzy_t_norm_wasm({ a: 0.85, b: 0.60, family: 'godel' });
+            resultText = `[Rust fuzzy_t_norm_wasm]
+T-norm degree: ${res.degree.toFixed(4)} (family: ${res.family}, engine: ${res.engine_version})
+Evaluated probabilistic threshold over fuzzy hypergraph`;
+        } else if (mod === 'dl') {
+            const res = check_subsumption_wasm({
+                sub_class: 101n,
+                super_class: 102n,
+                tbox: [[101n, 200n, 102n, 0n, 0n, 0n]]
+            });
+            resultText = `[Rust check_subsumption_wasm]
+Subsumption (101 ⊑ 102): ${res.holds ? 'HOLDS (Proven Subsumption)' : 'DOES NOT HOLD'}
+Engine: ${res.engine_version}`;
+        } else if (mod === 'asp') {
+            const res = enumerate_stable_models_wasm({
+                base: [1n, 2n, 3n, 4n, 5n, 6n],
+                rules: []
+            });
+            resultText = `[Rust enumerate_stable_models_wasm]
+Model count: ${res.model_count} stable models
+World contexts: [${res.world_contexts.join(', ')}]
+Note: ${res.note}`;
+        } else { // deontic, linear, etc.
+            const s = 100n, p = 0x10n, o = 200n, c = 1n, m = 2000000000n;
+            const parity = s ^ p ^ o ^ c;
+            const res = evaluate_deontic_wasm({
+                quins: [[s, p, o, c, m, parity]],
+                now_unix: Math.floor(Date.now() / 1000)
+            });
+            const v = res.verdicts[0];
+            resultText = `[Rust evaluate_deontic_wasm]
+Status: ${v.status} | Opcode: 0x${v.opcode.toString(16)} | Defeat: ${v.defeat_kind}
+Norm ECC Valid: ${(v.norm[0] ^ v.norm[1] ^ v.norm[2] ^ v.norm[3]) === v.norm[5]}
+Result: Proven Quin in Webizen VmFrame (engine: ${res.engine_version})`;
+        }
+
+        out.innerHTML = resultText;
+        out.style.border = '1px solid #b026ff';
+    } catch (err) {
+        out.innerHTML = `Evaluation error: ${err}`;
+        out.style.border = '1px solid #f87171';
     }
-    function executeFrameDemo() {
-        const mod = document.getElementById('modality').value;
-        const out = document.getElementById('shacl-output');
-        const now = Date.now() % 1000;
-        out.innerHTML = `Executing VmFrame with ${mod}...\nCheckDefeaters → ${now % 3 === 0 ? 'defeated' : 'pass'}\nResult: Proven Quin (context=${now})`;
-        // Bonus: if native telemetry server is running this could WS, but demo only
-    }
-    // auto hint
-    setTimeout(() => { const o=document.getElementById('shacl-output'); if(o && !o.innerHTML) o.innerHTML = 'Try Compile or pick a modality →'; }, 800);
-    </script>
+};
+
+setTimeout(() => {
+    const o = document.getElementById('shacl-output');
+    if (o && !o.innerHTML) o.innerHTML = 'Rust WASM loaded. Click Compile or Execute Webizen Frame →';
+}, 400);
+</script>
 </body>
 </html>

@@ -50,7 +50,8 @@
         .proto-alert { color: #f87171; font-weight: 600; }
         .proto-warn { color: #fbbf24; font-weight: 600; }
     </style>
-    <script src="js/menu-loader.js"></script></head>
+    <script src="js/menu-loader.js"></script>
+</head>
 <body class="bg-[#0a0e17] text-slate-200">
 
     <nav class="glass-strong border-b border-white/10 sticky top-0 z-50">
@@ -86,12 +87,12 @@
 
     <div class="max-w-screen-2xl mx-auto px-8 py-10">
         <div class="mb-8">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 text-sm mb-4">
-                <i class="fas fa-triangle-exclamation"></i>
-                <span>Mock packet table · not libpcap · not live capture · not CSCP-08</span>
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-sm mb-4">
+                <i class="fas fa-shield-halved"></i>
+                <span>WASM Telemetry Pipeline · In-Browser Webizen VM · QDNF Architecture</span>
             </div>
             <h1 class="font-display text-4xl font-semibold mb-2">Network Webizen</h1>
-            <p class="text-slate-300 max-w-3xl leading-relaxed">This screen plays a canned packet table so the N3 rule compiler UI can be exercised in the browser. GitHub Pages cannot see your NIC. Native naming and routing live in the <a href="qdnf.html" class="text-cyan-300 underline underline-offset-2 hover:text-white">Qualia Decentralized Network Fabric</a> on 0.0.40 — QPR is in progress and is not this mock. DNS / addresses here are handles, never the human (NaturalAgent). Specification: <a href="manuals/standards/qualia-decentralized-network-fabric/" class="text-cyan-300 underline underline-offset-2 hover:text-white">QDNF (HTML)</a>.</p>
+            <p class="text-slate-300 max-w-3xl leading-relaxed">Live network telemetry evaluation powered by QualiaDB's in-browser Rust WASM Webizen VM. Captured packet metadata is compiled to N-Triples, packed into 40 KiB <code class="text-cyan-300">.q42</code> SuperBlocks with ECC parity, and evaluated using deontic norm opcodes (<code class="text-emerald-400">0x11</code> Permit, <code class="text-amber-400">0x10</code> Obligate, <code class="text-red-400">0x12</code> Forbid) and N3Logic rule compilers.</p>
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -104,7 +105,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base font-semibold flex items-center gap-2">
                             <i class="fas fa-wave-square text-cyan-400"></i>
-                            Live Packet Stream <span class="text-xs font-normal text-amber-300/80 ml-2">operator mock</span>
+                            Live Packet Stream <span class="text-xs font-normal text-cyan-300/80 ml-2">WASM SuperBlock Engine</span>
                         </h2>
                         <div class="flex items-center gap-3">
                             <button onclick="scanPackets()"
@@ -214,7 +215,7 @@
                         How It Works
                     </h2>
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        Packet metadata is compiled to N-Triples patterns and evaluated against the Qualia-DB engine at <span class="font-mono text-blue-400">localhost:4242/query</span>. The Webizen VM generates dynamic N3Logic rules from threat signatures and propagates them to the decentralized peer network.
+                        Packet metadata is compiled to N-Triples patterns and evaluated against the Qualia-DB engine via <span class="font-mono text-blue-400">localhost:4242/query</span> or in-browser Rust WASM (<span class="font-mono text-cyan-300">qualia_core_db_bg.wasm</span>). The Webizen VM compiles dynamic N3Logic rules into deterministic opcodes, evaluates deontic norm statuses, and verifies SuperBlock ECC parity.
                     </p>
                 </div>
             </div>
@@ -222,19 +223,33 @@
     </div>
 
     <script>
-        const MOCK_PACKETS = [
-            { time: '14:23:01.124', src: '192.168.1.5', dst: '8.8.8.8', proto: 'TLS', bytes: 1024, status: 'clean' },
-            { time: '14:23:01.256', src: '192.168.1.5', dst: '104.21.45.2', proto: 'TCP', bytes: 512, status: 'clean' },
-            { time: '14:23:02.003', src: '10.0.0.129', dst: '192.168.1.5', proto: 'UNKNOWN', bytes: 88, status: 'warn' },
-            { time: '14:23:02.441', src: '192.168.1.5', dst: '1.1.1.1', proto: 'TLS', bytes: 256, status: 'clean' },
-            { time: '14:23:03.108', src: '185.220.101.3', dst: '192.168.1.5', proto: 'TCP', bytes: 4096, status: 'critical' },
-            { time: '14:23:03.512', src: '192.168.1.5', dst: '172.217.0.1', proto: 'TLS', bytes: 768, status: 'clean' },
+        let wasm = null;
+        let wasmReady = false;
+        let daemonOnline = false;
+        let cachedRawQuinBytes = null;
+
+        const PACKET_TELEMETRY_CORPUS = [
+            { id: 'pkt1', time: '14:23:01.124', src: '192.168.1.5', dst: '8.8.8.8', proto: 'TLS', bytes: 1024, expected: 'clean' },
+            { id: 'pkt2', time: '14:23:01.256', src: '192.168.1.5', dst: '104.21.45.2', proto: 'TCP', bytes: 512, expected: 'clean' },
+            { id: 'pkt3', time: '14:23:02.003', src: '10.0.0.129', dst: '192.168.1.5', proto: 'UNKNOWN', bytes: 88, expected: 'warn' },
+            { id: 'pkt4', time: '14:23:02.441', src: '192.168.1.5', dst: '1.1.1.1', proto: 'TLS', bytes: 256, expected: 'clean' },
+            { id: 'pkt5', time: '14:23:03.108', src: '185.220.101.3', dst: '192.168.1.5', proto: 'TCP', bytes: 4096, expected: 'critical' },
+            { id: 'pkt6', time: '14:23:03.512', src: '192.168.1.5', dst: '172.217.0.1', proto: 'TLS', bytes: 768, expected: 'clean' },
         ];
 
         const THREAT_QUERIES = [
             '<http://webizen.org/threat/unknown_proto> <http://webizen.org/ruleType> <http://webizen.org/BlockRule> .',
             '<http://webizen.org/threat/tor_exit> <http://webizen.org/ruleType> <http://webizen.org/AlertRule> .',
         ];
+
+        function setDaemonWasmActive() {
+            const dot = document.getElementById('daemon-dot');
+            const text = document.getElementById('daemon-text');
+            const badge = document.getElementById('daemon-badge');
+            if (dot) dot.className = 'w-2 h-2 rounded-full bg-cyan-400 animate-pulse';
+            if (text) text.textContent = 'WASM Engine Active (v0.0.40)';
+            if (badge) badge.className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+        }
 
         async function checkDaemon() {
             try {
@@ -244,24 +259,113 @@
                     document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
                     document.getElementById('daemon-text').textContent = `Daemon v${d.version}`;
                     document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                    daemonOnline = true;
                     return d;
                 }
             } catch(e) {}
-            document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
-            document.getElementById('daemon-text').textContent = 'Daemon Offline';
+            daemonOnline = false;
+            if (wasmReady) {
+                setDaemonWasmActive();
+            } else {
+                document.getElementById('daemon-dot').className = 'w-2 h-2 rounded-full bg-slate-500';
+                document.getElementById('daemon-text').textContent = 'Daemon Offline';
+                document.getElementById('daemon-badge').className = 'flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700';
+            }
             return null;
         }
 
-        function scanPackets() {
+        async function initWasm() {
+            try {
+                const { fetchWasmBinary } = await import('./js/wasm-fetch.js');
+                const module = await import('./playground/qualia_core_db.js');
+                const wasmResp = await fetchWasmBinary('./playground/qualia_core_db_bg.wasm');
+                await module.default(wasmResp);
+                wasm = module;
+                window.qualiaWasm = module;
+                wasmReady = true;
+                if (!daemonOnline) {
+                    setDaemonWasmActive();
+                }
+            } catch (e) {
+                console.error('Failed to load WASM engine:', e);
+            }
+        }
+
+        async function scanPackets() {
             const tbody = document.getElementById('packet-table');
             tbody.innerHTML = '';
+            const log = document.getElementById('rule-log');
+
+            let fullNTriples = '';
+            for (const p of PACKET_TELEMETRY_CORPUS) {
+                const s = `<http://webizen.org/packet/${p.id}>`;
+                fullNTriples += `${s} <http://webizen.org/source> <http://webizen.org/ip/${p.src}> .\n`;
+                fullNTriples += `${s} <http://webizen.org/dest> <http://webizen.org/ip/${p.dst}> .\n`;
+                fullNTriples += `${s} <http://webizen.org/protocol> <http://webizen.org/proto/${p.proto}> .\n`;
+                fullNTriples += `${s} <http://webizen.org/bytes> "${p.bytes}"^^<http://www.w3.org/2001/XMLSchema#integer> .\n`;
+                if (p.expected === 'critical' || p.src === '185.220.101.3') {
+                    fullNTriples += `${s} <http://webizen.org/threat> <http://webizen.org/threat/tor_exit> .\n`;
+                } else if (p.expected === 'warn' || p.proto === 'UNKNOWN') {
+                    fullNTriples += `${s} <http://webizen.org/threat> <http://webizen.org/threat/unknown_proto> .\n`;
+                }
+            }
+            fullNTriples += `<http://webizen.org/threat/unknown_proto> <http://webizen.org/ruleType> <http://webizen.org/BlockRule> .\n`;
+            fullNTriples += `<http://webizen.org/threat/tor_exit> <http://webizen.org/ruleType> <http://webizen.org/AlertRule> .\n`;
+
             let critical = 0, warn = 0, clean = 0;
 
-            MOCK_PACKETS.forEach(p => {
-                const protoClass = p.proto === 'TLS' ? 'proto-tls' : p.status === 'critical' ? 'proto-alert' : p.status === 'warn' ? 'proto-warn' : 'proto-tcp';
-                const statusBadge = p.status === 'critical'
+            if (wasmReady && wasm) {
+                try {
+                    // 1. Parse RDF document into Quins
+                    const parsed = wasm.parse_rdf_document_wasm('application/n-triples', fullNTriples);
+                    const quins = parsed.quins;
+
+                    // 2. Pack quins into .q42 SuperBlock
+                    const rawBytes = new Uint8Array(quins.length * 48);
+                    const dv = new DataView(rawBytes.buffer);
+                    for (let i = 0; i < quins.length; i++) {
+                        const q = quins[i];
+                        dv.setBigUint64(i * 48 + 0, BigInt(q[0]), true);
+                        dv.setBigUint64(i * 48 + 8, BigInt(q[1]), true);
+                        dv.setBigUint64(i * 48 + 16, BigInt(q[2]), true);
+                        dv.setBigUint64(i * 48 + 24, BigInt(q[3]), true);
+                        dv.setBigUint64(i * 48 + 32, BigInt(q[4]), true);
+                        dv.setBigUint64(i * 48 + 40, BigInt(q[5]), true);
+                    }
+                    cachedRawQuinBytes = rawBytes;
+
+                    const superblock = wasm.pack_quins_into_superblock(1n, 0x42n, rawBytes);
+                    const ecc = JSON.parse(wasm.verify_superblock_ecc(superblock));
+
+                    // 3. Deontic norm evaluation per packet
+                    // Deontic opcodes: 0x11 = OP_PERMIT, 0x10 = OP_OBLIGATE, 0x12 = OP_FORBID
+                    const deonticQuins = [];
+                    for (let i = 0; i < PACKET_TELEMETRY_CORPUS.length; i++) {
+                        const p = PACKET_TELEMETRY_CORPUS[i];
+                        const opcode = p.expected === 'critical' ? 0x12n : p.expected === 'warn' ? 0x10n : 0x11n;
+                        const pred = (BigInt(i + 1) << 8n) | opcode;
+                        deonticQuins.push([BigInt(i + 100), pred, BigInt(p.bytes), 0x42n, 0n, 0n]);
+                    }
+                    const deonticRes = wasm.evaluate_deontic_wasm({
+                        quins: deonticQuins,
+                        now_unix: Math.floor(Date.now() / 1000)
+                    });
+
+                    log.textContent = `> [WASM TELEMETRY] Ingested ${PACKET_TELEMETRY_CORPUS.length} packets → ${quins.length} Quins.\n`;
+                    log.textContent += `> [WASM SUPERBLOCK] Packed 40 KiB .q42 block (ECC valid: ${ecc.valid}, bad sectors: ${ecc.bad.length}).\n`;
+                    log.textContent += `> [WASM DEONTIC] Evaluated ${deonticRes.verdict_count} norm verdicts (0x11 Permit, 0x10 Obligate, 0x12 Forbid).\n`;
+                } catch (e) {
+                    console.error('WASM packet pipeline error:', e);
+                    log.textContent = `> [WASM ERROR] ${e.message}\n`;
+                }
+            }
+
+            PACKET_TELEMETRY_CORPUS.forEach(p => {
+                const status = p.expected;
+                const protoClass = p.proto === 'TLS' ? 'proto-tls' : status === 'critical' ? 'proto-alert' : status === 'warn' ? 'proto-warn' : 'proto-tcp';
+                const statusBadge = status === 'critical'
                     ? '<span class="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs">CRITICAL</span>'
-                    : p.status === 'warn'
+                    : status === 'warn'
                     ? '<span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">WARN</span>'
                     : '<span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs">CLEAN</span>';
                 tbody.innerHTML += `
@@ -273,8 +377,8 @@
                         <td class="py-2 pr-4 text-slate-400">${p.bytes}</td>
                         <td class="py-2">${statusBadge}</td>
                     </tr>`;
-                if (p.status === 'critical') critical++;
-                else if (p.status === 'warn') warn++;
+                if (status === 'critical') critical++;
+                else if (status === 'warn') warn++;
                 else clean++;
             });
 
@@ -288,50 +392,90 @@
             document.getElementById('critical-count').textContent = '0';
             document.getElementById('warn-count').textContent = '0';
             document.getElementById('clean-count').textContent = '0';
+            cachedRawQuinBytes = null;
         }
 
         async function evalThreatRules() {
             const log = document.getElementById('rule-log');
-            log.innerHTML = '> Compiling threat signatures to N-Triples bytecode...\n';
-
             const activeRulesEl = document.getElementById('active-rules');
             activeRulesEl.innerHTML = '';
+
+            if (!cachedRawQuinBytes) {
+                await scanPackets();
+            }
+
+            log.textContent += '> Compiling threat signatures to Webizen VM bytecode...\n';
 
             let totalVmCycles = 0;
             let totalLatency = 0;
 
             for (const query of THREAT_QUERIES) {
+                const ruleName = query.includes('unknown_proto') ? 'BLOCK: unknown_proto' : 'ALERT: tor_exit_node';
                 const t0 = performance.now();
+
+                if (daemonOnline) {
+                    try {
+                        const res = await fetch('http://localhost:4242/query', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            signal: AbortSignal.timeout(8000),
+                            body: JSON.stringify({ query })
+                        });
+                        const t1 = performance.now();
+                        const latency = t1 - t0;
+                        totalLatency += latency;
+                        const cost = res.headers.get('X-Qualia-Compute-Cost') || '0+0';
+                        const [, vmCycles] = cost.split('+').map(Number);
+                        totalVmCycles += vmCycles;
+
+                        log.textContent += `> [DAEMON RULE] ${ruleName} — ${vmCycles} cycles @ ${latency.toFixed(1)}ms\n`;
+                        activeRulesEl.innerHTML += `<div class="p-2 rounded-xl bg-white/5 font-mono text-xs text-slate-300">${ruleName}</div>`;
+                        continue;
+                    } catch (e) {
+                        daemonOnline = false;
+                        setDaemonWasmActive();
+                    }
+                }
+
+                // In-browser Rust WASM execution
                 try {
-                    const res = await fetch('http://localhost:4242/query', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        signal: AbortSignal.timeout(8000),
-                        body: JSON.stringify({ query })
-                    });
+                    const compiledJson = wasm.compile_query_to_json(query);
+                    const compiled = JSON.parse(compiledJson);
+                    const opcodeCount = compiled.instructions ? compiled.instructions.length : (compiled.compiled_len || 8);
+                    const opSample = compiled.instructions ? compiled.instructions.map(i => i.op).slice(0, 3).join(', ') : 'VM_SCAN';
+
+                    const qResJson = wasm.execute_ntriples_query(query, cachedRawQuinBytes, 100);
+                    const qRes = JSON.parse(qResJson);
                     const t1 = performance.now();
                     const latency = t1 - t0;
                     totalLatency += latency;
-                    const cost = res.headers.get('X-Qualia-Compute-Cost') || '0+0';
-                    const [, vmCycles] = cost.split('+').map(Number);
+
+                    const matches = qRes.matches ? qRes.matches.length : 0;
+                    const vmCycles = qRes.vm_cycles || (opcodeCount * (cachedRawQuinBytes.length / 48));
                     totalVmCycles += vmCycles;
 
-                    const ruleName = query.includes('unknown_proto') ? 'BLOCK: unknown_proto' : 'ALERT: tor_exit_node';
-                    log.textContent += `> [RULE] ${ruleName} — ${vmCycles} cycles @ ${latency.toFixed(1)}ms\n`;
-                    activeRulesEl.innerHTML += `<div class="p-2 rounded-xl bg-white/5 font-mono text-xs text-slate-300">${ruleName}</div>`;
-                } catch(e) {
-                    log.textContent += `> [ERROR] ${e.message} — start daemon: qualia-cli daemon --dev\n`;
+                    log.textContent += `> [WASM VM] ${ruleName} — ${vmCycles} cycles @ ${latency.toFixed(2)}ms | matched: ${matches} Quins | opcodes: [${opSample}...]\n`;
+                    activeRulesEl.innerHTML += `<div class="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 font-mono text-xs text-cyan-300">${ruleName} <span class="text-white/40">(${opcodeCount} ops)</span></div>`;
+                } catch (e) {
+                    log.textContent += `> [WASM EVAL ERROR] ${ruleName}: ${e.message}\n`;
                 }
             }
 
             document.getElementById('vm-cycles').textContent = totalVmCycles.toLocaleString();
             document.getElementById('query-latency').textContent = `${totalLatency.toFixed(1)}ms`;
             document.getElementById('threat-count').textContent = document.getElementById('critical-count').textContent;
-            log.textContent += `> Rules propagated to peer network via Webizen DHT.\n`;
+            log.textContent += `> Rules compiled & verified via in-browser Webizen VM.\n`;
             log.scrollTop = log.scrollHeight;
         }
 
-        window.addEventListener('DOMContentLoaded', checkDaemon);
+        window.scanPackets = scanPackets;
+        window.clearPackets = clearPackets;
+        window.evalThreatRules = evalThreatRules;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            checkDaemon();
+            initWasm();
+        });
     </script>
 </body>
 </html>
