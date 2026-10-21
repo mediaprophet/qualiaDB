@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SiteSpecificityTheoryQapp` component.
 pub fn SiteSpecificityTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

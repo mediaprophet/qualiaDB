@@ -13,6 +13,7 @@ pub enum Layer {
 }
 
 impl Layer {
+    /// Views as str.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Source => "source",
@@ -55,6 +56,7 @@ pub const HELD_INVALID_PUBLISH: &str = "held / not yet — invalid pack cannot p
 pub const NEXT_PUBLISH: &str = "sign and publish";
 
 impl Draft {
+    /// `true` when the layer is ok.
     pub fn layer_ok(&self, layer: Layer) -> bool {
         match layer {
             Layer::Source => self.source_ok,
@@ -63,6 +65,7 @@ impl Draft {
         }
     }
 
+    /// `true` when all layers are ready.
     pub fn layers_ready(&self) -> bool {
         self.source_ok && self.graph_ok && self.executable_ok
     }

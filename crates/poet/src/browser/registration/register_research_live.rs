@@ -22,6 +22,7 @@ fn research_live_tool(
     ))
 }
 
+/// Registers the `research-live` tool set.
 pub(super) fn research_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         research_live_tool(

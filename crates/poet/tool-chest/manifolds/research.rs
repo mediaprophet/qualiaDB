@@ -6,6 +6,7 @@
 
 use super::registry::{ManifoldSeed, SeedContainer, SeedPanel, DockPosition};
 
+/// `research` manifold seed — GIS, clinical, rights alignment.
 pub fn research_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "research".into(),

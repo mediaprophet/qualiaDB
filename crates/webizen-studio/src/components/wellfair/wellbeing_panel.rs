@@ -5,6 +5,7 @@ use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `WellfairWellbeingPanel` component.
 pub fn WellfairWellbeingPanel() -> Element {
     let mut mood = use_signal(|| "neutral".to_string());
     let mut intensity = use_signal(String::new);

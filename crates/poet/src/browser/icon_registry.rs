@@ -31,11 +31,13 @@ impl PuaCodepoint {
     pub const PUA_END: u32 = 0xE1FF;
 
     #[inline(always)]
+    /// `true` when valid.
     pub const fn is_valid(&self) -> bool {
         self.0 >= Self::PUA_START && self.0 <= Self::PUA_END
     }
 
     #[inline(always)]
+    /// Views as char.
     pub const fn as_char(&self) -> char {
         match char::from_u32(self.0) {
             Some(c) => c,
@@ -58,6 +60,7 @@ pub enum IconCategory {
 }
 
 impl IconCategory {
+    /// Views as str.
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::System => "System",
@@ -86,6 +89,7 @@ pub enum IconState {
 }
 
 impl IconState {
+    /// CSS class suffix.
     pub const fn css_class_suffix(&self) -> &'static str {
         match self {
             Self::Default => "",
@@ -111,6 +115,7 @@ pub enum IconSize {
 }
 
 impl IconSize {
+    /// CSS class.
     pub const fn css_class(&self) -> &'static str {
         match self {
             Self::Xs => "wi-xs",
@@ -121,6 +126,7 @@ impl IconSize {
         }
     }
 
+    /// Pixel size.
     pub const fn pixel_size(&self) -> u32 {
         match self {
             Self::Xs => 10,

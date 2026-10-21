@@ -32,6 +32,7 @@ pub struct LayoutUndo {
 }
 
 impl LayoutUndo {
+    /// Creates a new instance.
     pub fn new(max: usize) -> Self {
         Self {
             max,
@@ -40,6 +41,7 @@ impl LayoutUndo {
         }
     }
 
+    /// Pushes an item.
     pub fn push(&mut self, encoded: String) {
         if encoded.is_empty() || encoded.contains("Host") {
             return;
@@ -54,34 +56,41 @@ impl LayoutUndo {
         }
     }
 
+    /// Current.
     pub fn current(&self) -> Option<&str> {
         self.frames.back().map(String::as_str)
     }
 
+    /// `true` when able to undo.
     pub fn can_undo(&self) -> bool {
         self.frames.len() > 1
     }
 
+    /// `true` when able to redo.
     pub fn can_redo(&self) -> bool {
         !self.redo_frames.is_empty()
     }
 
+    /// Undoes the last edit.
     pub fn undo(&mut self) -> Option<String> {
         let popped = self.frames.pop_back()?;
         self.redo_frames.push_back(popped.clone());
         Some(popped)
     }
 
+    /// Redoes the last undone edit.
     pub fn redo(&mut self) -> Option<String> {
         let restored = self.redo_frames.pop_back()?;
         self.frames.push_back(restored.clone());
         Some(restored)
     }
 
+    /// Length.
     pub fn len(&self) -> usize {
         self.frames.len()
     }
 
+    /// `true` when empty.
     pub fn is_empty(&self) -> bool {
         self.frames.is_empty()
     }

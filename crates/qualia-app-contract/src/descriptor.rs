@@ -37,10 +37,12 @@ pub enum Availability {
 }
 
 impl Availability {
+    /// `true` when available.
     pub fn is_available(&self) -> bool {
         matches!(self, Self::Available)
     }
 
+    /// Disabled variant.
     pub fn disabled(code: impl Into<String>, reason: impl Into<String>) -> Self {
         Self::Disabled {
             reason_code: code.into(),

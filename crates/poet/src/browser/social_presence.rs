@@ -8,6 +8,7 @@ use super::native_daemon::{
     NativeRecordUpsertRequest,
 };
 
+/// Builds social-presence.
 pub fn build_social_presence(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-social-presence", "").ok();

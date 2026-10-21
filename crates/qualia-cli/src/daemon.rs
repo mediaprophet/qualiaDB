@@ -69,6 +69,7 @@ struct DaemonServiceRecord {
     compute_swarm: bool,
 }
 
+/// Handles the subcommand action.
 pub async fn handle(action: &DaemonAction, opts: &DaemonOpts) {
     match action {
         DaemonAction::Serve { service_child } => {
@@ -112,6 +113,7 @@ pub async fn handle(action: &DaemonAction, opts: &DaemonOpts) {
     }
 }
 
+/// Serves the daemon in the foreground.
 pub async fn serve_foreground(opts: &DaemonOpts, wait_for_ctrl_c: bool) {
     let is_dev = opts.dev;
     println!(
@@ -216,6 +218,7 @@ pub async fn serve_foreground(opts: &DaemonOpts, wait_for_ctrl_c: bool) {
     }
 }
 
+/// Starts the service.
 pub fn start_service(opts: &DaemonOpts, force: bool) -> Result<(), String> {
     ensure_runtime_dir()?;
 
@@ -269,6 +272,7 @@ pub fn start_service(opts: &DaemonOpts, force: bool) -> Result<(), String> {
     }
 }
 
+/// Stops the service.
 pub fn stop_service() -> Result<(), String> {
     let Some(record) = read_service_record()? else {
         println!("Daemon service is not running.");
@@ -318,6 +322,7 @@ pub fn stop_service() -> Result<(), String> {
     Ok(())
 }
 
+/// Prints status.
 pub fn print_status() -> Result<(), String> {
     let Some(record) = read_service_record()? else {
         println!("stopped");
@@ -346,6 +351,7 @@ pub fn print_status() -> Result<(), String> {
     Ok(())
 }
 
+/// Prints diagnostics.
 pub fn print_doctor(default_port: u16) -> Result<(), String> {
     println!("Daemon doctor");
     println!("  foreground       : qualia-cli daemon --dev");
@@ -389,6 +395,7 @@ pub fn print_doctor(default_port: u16) -> Result<(), String> {
     Ok(())
 }
 
+/// Pings the daemon.
 pub fn ping_daemon(port: u16) -> Result<serde_json::Value, String> {
     use std::io::{Read, Write};
     use std::net::{SocketAddr, TcpStream};

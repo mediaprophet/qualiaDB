@@ -40,6 +40,7 @@ fn parse_roles(raw: &str) -> Vec<String> {
 }
 
 #[component]
+/// Dioxus `WellfairSocialBookPanel` component.
 pub fn WellfairSocialBookPanel() -> Element {
     let mut ui = use_signal(SocialBookUi::default);
 

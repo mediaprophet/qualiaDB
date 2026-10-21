@@ -134,6 +134,7 @@ fn day_epoch(ts: u64) -> u64 {
     ts / 86_400
 }
 
+/// `derive-ontology-id-from` URI.
 pub fn derive_ontology_id_from_uri(uri: &str) -> String {
     let trimmed = uri.trim();
     if let Ok(url) = url::Url::parse(trimmed) {
@@ -202,6 +203,7 @@ fn sha256_file(path: &Path) -> Result<String, String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
+/// SHA-1 of a file.
 pub fn sha1_file(path: &Path) -> Result<String, String> {
     let mut file = fs::File::open(path).map_err(|e| e.to_string())?;
     let mut hasher = Sha1::new();
@@ -220,6 +222,7 @@ pub fn sha1_file(path: &Path) -> Result<String, String> {
         .collect())
 }
 
+/// Builds magnet-uri.
 pub fn build_magnet_uri(info_hash_sha1: &str, display_name: &str) -> String {
     qualia_core_db::webtorrent_seeder::build_magnet_uri(
         info_hash_sha1,
@@ -339,6 +342,7 @@ fn write_entries(storage_root: &Path, entries: &[OntologyWorkbenchEntry]) -> Res
     Ok(())
 }
 
+/// Loads bandwidth-policy.
 pub fn load_bandwidth_policy() -> TorrentBandwidthGlobal {
     let path = bandwidth_policy_path();
     if let Ok(text) = fs::read_to_string(path) {
@@ -349,6 +353,7 @@ pub fn load_bandwidth_policy() -> TorrentBandwidthGlobal {
     TorrentBandwidthGlobal::default()
 }
 
+/// Saves bandwidth-policy.
 pub fn save_bandwidth_policy(policy: &TorrentBandwidthGlobal) -> Result<(), String> {
     let path = bandwidth_policy_path();
     if let Some(parent) = path.parent() {
@@ -360,6 +365,7 @@ pub fn save_bandwidth_policy(policy: &TorrentBandwidthGlobal) -> Result<(), Stri
     Ok(())
 }
 
+/// `true` when the contact is eligible for share.
 pub fn contact_eligible_for_share(entry: &OntologyWorkbenchEntry, contact: &ChatContact) -> bool {
     if !entry.torrent.share_enabled {
         return false;
@@ -381,6 +387,7 @@ pub fn contact_eligible_for_share(entry: &OntologyWorkbenchEntry, contact: &Chat
     }
 }
 
+/// `true` when the session is eligible for share.
 pub fn session_eligible_for_share(entry: &OntologyWorkbenchEntry, session_did: &str) -> bool {
     if !entry.torrent.share_enabled || session_did.is_empty() {
         return false;
@@ -397,6 +404,7 @@ pub fn session_eligible_for_share(entry: &OntologyWorkbenchEntry, session_did: &
     }
 }
 
+/// Lists share cards for a contact.
 pub fn list_share_cards_for_contact(
     storage_root: &Path,
     contact_did: &str,
@@ -418,6 +426,7 @@ pub fn list_share_cards_for_contact(
         .collect())
 }
 
+/// Lists share cards for a session.
 pub fn list_share_cards_for_session(
     storage_root: &Path,
     session_did: &str,
@@ -440,6 +449,7 @@ pub fn list_share_cards_for_session(
         .collect())
 }
 
+/// `import-from` URI.
 pub async fn import_from_uri(
     storage_root: &Path,
     uri: String,
@@ -532,10 +542,12 @@ pub async fn import_from_uri(
     })
 }
 
+/// Lists workbench entries.
 pub fn list_workbench_entries(storage_root: &Path) -> Result<Vec<OntologyWorkbenchEntry>, String> {
     load_entries(storage_root)
 }
 
+/// Sets torrent-policy.
 pub fn set_torrent_policy(
     storage_root: &Path,
     ontology_id: &str,
@@ -556,6 +568,7 @@ pub fn set_torrent_policy(
     Ok(updated)
 }
 
+/// Sets seed-active.
 pub fn set_seed_active(
     storage_root: &Path,
     ontology_id: &str,
@@ -590,6 +603,7 @@ fn effective_limit_kbps(entry: &OntologyWorkbenchEntry, global: &TorrentBandwidt
     }
 }
 
+/// Torrent telemetry.
 pub fn torrent_telemetry(storage_root: &Path) -> serde_json::Value {
     if let Ok(remote) = daemon_get("/torrent/telemetry") {
         return remote;

@@ -6,6 +6,7 @@ use super::super::super::native_daemon::is_daemon_connected;
 use super::super::personhood::owl_forbidden_for_person;
 use super::{banner, input_value, ledger, wrap, RDFS_RELATIONS};
 
+/// Builds shacl-shapes-view.
 pub fn build_shacl_shapes_view(document: &Document) -> Element {
     let wrapper = ledger(
         document,
@@ -38,6 +39,7 @@ pub fn build_shacl_shapes_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds shex-editor-view.
 pub fn build_shex_editor_view(document: &Document) -> Element {
     ledger(
         document,
@@ -56,6 +58,7 @@ pub fn build_shex_editor_view(document: &Document) -> Element {
     )
 }
 
+/// Builds relation-builder-view.
 pub fn build_relation_builder_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,

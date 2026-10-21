@@ -490,6 +490,7 @@ async fn send_chat_turn(
 }
 
 #[component]
+/// Dioxus `ConnectChat` component.
 pub fn ConnectChat() -> Element {
     let experience_mode = crate::components::experience_mode::use_experience_mode();
     let status = use_signal(String::new);

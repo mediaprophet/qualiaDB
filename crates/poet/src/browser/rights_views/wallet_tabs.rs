@@ -5,6 +5,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
+/// Builds balances-tab.
 pub fn build_balances_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel
@@ -97,6 +98,7 @@ pub fn build_balances_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds ilp-tab.
 pub fn build_ilp_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-wallet-panel", "ilp").unwrap();
@@ -154,6 +156,7 @@ pub fn build_ilp_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds tax-tab.
 pub fn build_tax_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-wallet-panel", "tax").unwrap();
@@ -215,6 +218,7 @@ pub fn build_tax_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds compute-tab.
 pub fn build_compute_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-wallet-panel", "compute").unwrap();

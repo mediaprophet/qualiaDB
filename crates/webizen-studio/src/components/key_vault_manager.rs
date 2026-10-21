@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `KeyVaultManager` component.
 pub fn KeyVaultManager() -> Element {
     rsx! {
         div {

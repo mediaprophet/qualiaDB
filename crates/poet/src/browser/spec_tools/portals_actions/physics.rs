@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "portals:add-collider" => Some(tag_attr(container, "data-collider", "box_shape_added")),

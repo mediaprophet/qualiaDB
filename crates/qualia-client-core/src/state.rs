@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 pub static APP_STATE: OnceLock<Arc<AppState>> = OnceLock::new();
 
+/// Initializes app state.
 pub fn init_app_state() -> Arc<AppState> {
     let config = load_config_from_disk();
     init_data_directories(&config.storage_path);
@@ -88,6 +89,7 @@ impl Default for AgentConfig {
     }
 }
 
+/// Default dirs path.
 pub fn dirs_default_path() -> String {
     #[cfg(target_os = "windows")]
     {
@@ -109,6 +111,7 @@ pub fn dirs_default_path() -> String {
     }
 }
 
+/// App metadata dir.
 pub fn app_meta_dir() -> PathBuf {
     // Tests and multi-profile installs may override the meta root without changing code.
     if let Ok(p) = std::env::var("QUALIA_APP_META_DIR") {
@@ -136,13 +139,16 @@ pub fn app_meta_dir() -> PathBuf {
     }
 }
 
+/// Config file path.
 pub fn config_file_path() -> PathBuf {
     app_meta_dir().join("config.json")
 }
+/// Identity file path.
 pub fn identity_file_path() -> PathBuf {
     app_meta_dir().join("identity.json")
 }
 
+/// Loads config-from-disk.
 pub fn load_config_from_disk() -> AgentConfig {
     std::fs::read_to_string(config_file_path())
         .ok()
@@ -150,6 +156,7 @@ pub fn load_config_from_disk() -> AgentConfig {
         .unwrap_or_else(AgentConfig::default)
 }
 
+/// Initializes data directories.
 pub fn init_data_directories(storage_path: &str) {
     let base = PathBuf::from(storage_path);
     for sub in &[
@@ -233,10 +240,12 @@ pub struct DelegationRule {
     pub is_active: bool,
 }
 
+/// Suite file path.
 pub fn suite_file_path(data_dir: &str) -> PathBuf {
     PathBuf::from(data_dir).join("tax_suite.json")
 }
 
+/// Loads suite-from-disk.
 pub fn load_suite_from_disk(data_dir: &str) -> TaxRecipientSuite {
     let path = suite_file_path(data_dir);
     std::fs::read_to_string(&path)

@@ -97,6 +97,7 @@ pub fn extract_catalog_ids(src: &str) -> Result<Vec<String>, ExtractError> {
     Ok(ids)
 }
 
+/// Families from IDs.
 pub fn families_from_ids(ids: &[String]) -> Vec<FamilyNode> {
     let mut counts: BTreeMap<String, u32> = BTreeMap::new();
     for id in ids {
@@ -110,6 +111,7 @@ pub fn families_from_ids(ids: &[String]) -> Vec<FamilyNode> {
         .collect()
 }
 
+/// Family of an item.
 pub fn family_of(id: &str) -> Option<&str> {
     let dot = id.find('.')?;
     if dot == 0 {
@@ -283,6 +285,7 @@ pub const ALL_BOUND: &[&str] = &[
     LTL_EVALUATE,
 ];
 
+/// Family bound.
 pub fn family_bound(name: &str) -> bool { true }
 "#;
 

@@ -27,11 +27,13 @@ SKIP_NAME_GLOBS = {
 
 
 def read_version() -> str:
+    """Reads the version."""
     data = tomllib.loads(CARGO.read_text(encoding="utf-8"))
     return data["package"]["version"]
 
 
 def should_skip(path: Path) -> bool:
+    """Returns True when the file should be skipped."""
     name = path.name
     for pat in SKIP_NAME_GLOBS:
         if Path(name).match(pat):
@@ -78,6 +80,7 @@ def build_replacements(version: str) -> list[tuple[re.Pattern[str], str]]:
 
 
 def sync_file(path: Path, version: str, replacements: list[tuple[re.Pattern[str], str]]) -> bool:
+    """Syncs the version in a file."""
     if should_skip(path):
         return False
     text = path.read_text(encoding="utf-8", errors="replace")
@@ -105,6 +108,7 @@ def sync_file(path: Path, version: str, replacements: list[tuple[re.Pattern[str]
 
 
 def main() -> None:
+    """CLI entry point."""
     version = read_version()
     print(f"Canonical engine version: {version}")
     replacements = build_replacements(version)

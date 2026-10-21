@@ -42,6 +42,7 @@ pub fn build_studio_dock(document: &Document) -> Element {
     wrap
 }
 
+/// Builds the view.
 pub fn build(document: &Document, kind: &str, width: u32, height: u32) -> Element {
     let handle0 = initial_handle(kind);
     let panel = document.create_element("div").unwrap();

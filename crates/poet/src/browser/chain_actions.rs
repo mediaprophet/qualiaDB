@@ -44,6 +44,7 @@ fn apply_style(container: &Element, property: &str, value: &str) {
     }
 }
 
+/// Parses numbers.
 pub(super) fn parse_numbers(source: &str) -> Vec<f64> {
     source
         .split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';' | '|'))
@@ -53,6 +54,7 @@ pub(super) fn parse_numbers(source: &str) -> Vec<f64> {
         .collect()
 }
 
+/// Local mean helper.
 pub(super) fn local_mean(values: &[f64]) -> Option<f64> {
     if values.is_empty() {
         return None;
@@ -60,6 +62,7 @@ pub(super) fn local_mean(values: &[f64]) -> Option<f64> {
     Some(values.iter().sum::<f64>() / values.len() as f64)
 }
 
+/// Local median helper.
 pub(super) fn local_median(values: &[f64]) -> Option<f64> {
     if values.is_empty() {
         return None;
@@ -74,6 +77,7 @@ pub(super) fn local_median(values: &[f64]) -> Option<f64> {
     }
 }
 
+/// Local variance helper.
 pub(super) fn local_variance(values: &[f64], sample: bool) -> Option<f64> {
     let mean = local_mean(values)?;
     let ss = values
@@ -91,10 +95,12 @@ pub(super) fn local_variance(values: &[f64], sample: bool) -> Option<f64> {
     Some(ss / denom)
 }
 
+/// Local std-dev helper.
 pub(super) fn local_std_dev(values: &[f64], sample: bool) -> Option<f64> {
     local_variance(values, sample).map(f64::sqrt)
 }
 
+/// Local min helper.
 pub(super) fn local_min(values: &[f64]) -> Option<f64> {
     values
         .iter()
@@ -102,6 +108,7 @@ pub(super) fn local_min(values: &[f64]) -> Option<f64> {
         .reduce(|a, b| if b < a { b } else { a })
 }
 
+/// Local max helper.
 pub(super) fn local_max(values: &[f64]) -> Option<f64> {
     values
         .iter()
@@ -193,6 +200,7 @@ fn run_sheet_stat<F>(
     });
 }
 
+/// Chain action: brush-stroke.
 pub(super) fn run_brush_stroke(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -216,6 +224,7 @@ pub(super) fn run_brush_stroke(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: brush-clear.
 pub(super) fn run_brush_clear(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -230,6 +239,7 @@ pub(super) fn run_brush_clear(document: &Document, label: &str) {
     super::interactions::show_tool_status(document, label, "Stroke cleared.", "success");
 }
 
+/// Chain action: fill.
 pub(super) fn run_fill(document: &Document, label: &str, token: &str) {
     let Some(container) =
         need_container(document, label, "Select a container before applying fill.")
@@ -251,6 +261,7 @@ pub(super) fn run_fill(document: &Document, label: &str, token: &str) {
     );
 }
 
+/// Chain action: heatmap.
 pub(super) fn run_heatmap(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -296,6 +307,7 @@ pub(super) fn run_heatmap(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: camera-reset.
 pub(super) fn run_camera_reset(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -316,6 +328,7 @@ pub(super) fn run_camera_reset(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: orbit-preview.
 pub(super) fn run_orbit_preview(document: &Document, label: &str) {
     let mut args = BTreeMap::new();
     args.insert("family".into(), Value::String("spatial_kinematics".into()));
@@ -343,6 +356,7 @@ pub(super) fn run_orbit_preview(document: &Document, label: &str) {
     }
 }
 
+/// Chain action: sheet-mean.
 pub(super) fn run_sheet_mean(document: &Document, label: &str) {
     run_sheet_stat(
         document,
@@ -354,6 +368,7 @@ pub(super) fn run_sheet_mean(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sheet-median.
 pub(super) fn run_sheet_median(document: &Document, label: &str) {
     run_sheet_stat(
         document,
@@ -365,6 +380,7 @@ pub(super) fn run_sheet_median(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sheet-variance.
 pub(super) fn run_sheet_variance(document: &Document, label: &str) {
     run_sheet_stat(
         document,
@@ -376,6 +392,7 @@ pub(super) fn run_sheet_variance(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sheet-std-dev.
 pub(super) fn run_sheet_std_dev(document: &Document, label: &str) {
     run_sheet_stat(
         document,
@@ -387,6 +404,7 @@ pub(super) fn run_sheet_std_dev(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sheet-min.
 pub(super) fn run_sheet_min(document: &Document, label: &str) {
     run_sheet_stat(
         document,
@@ -398,6 +416,7 @@ pub(super) fn run_sheet_min(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sheet-max.
 pub(super) fn run_sheet_max(document: &Document, label: &str) {
     run_sheet_stat(
         document,
@@ -409,6 +428,7 @@ pub(super) fn run_sheet_max(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sheet-import.
 pub(super) fn run_sheet_import(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -469,6 +489,7 @@ pub(super) fn run_sheet_import(document: &Document, label: &str) {
     }
 }
 
+/// Chain action: vibe-diagnose.
 pub(super) fn run_vibe_diagnose(document: &Document, label: &str) {
     let Some(source) = selected_source(document) else {
         super::interactions::show_tool_status(
@@ -485,6 +506,7 @@ pub(super) fn run_vibe_diagnose(document: &Document, label: &str) {
     super::interactions::show_tool_status(document, label, &json, kind);
 }
 
+/// Chain action: quin-statement.
 pub(super) fn run_quin_statement(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -519,6 +541,7 @@ pub(super) fn run_quin_statement(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: grounding.
 pub(super) fn run_grounding(document: &Document, label: &str) {
     let Some(text) = selected_source(document) else {
         super::interactions::show_tool_status(
@@ -598,6 +621,7 @@ pub(super) fn run_grounding(document: &Document, label: &str) {
     });
 }
 
+/// Chain action: epistemic-evaluate.
 pub(super) fn run_epistemic_evaluate(document: &Document, label: &str) {
     let container = selected_container(document);
     let agent = container
@@ -769,14 +793,17 @@ fn run_inference_draft_check(
     });
 }
 
+/// Chain action: detect-ungrounded.
 pub(super) fn run_detect_ungrounded(document: &Document, label: &str) {
     run_inference_draft_check(document, label, "Inference.detect_ungrounded", "draft");
 }
 
+/// Chain action: verify-turn.
 pub(super) fn run_verify_turn(document: &Document, label: &str) {
     run_inference_draft_check(document, label, "Inference.verify_turn", "draft");
 }
 
+/// Chain action: pulse-presence.
 pub(super) fn run_pulse_presence(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,
@@ -850,6 +877,7 @@ pub(super) fn run_pulse_presence(document: &Document, label: &str) {
     });
 }
 
+/// Chain action: deontic-obligate.
 pub(super) fn run_deontic_obligate(document: &Document, label: &str) {
     let Some(container) = need_container(
         document,

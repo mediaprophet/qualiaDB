@@ -8,6 +8,7 @@ use web_sys::{Document, Element, Event, HtmlInputElement, HtmlSelectElement};
 
 use crate::tool_chest::core::registry::{ManifoldSeed, SeedConnection};
 
+/// Opens transfer-dialog.
 pub fn open_transfer_dialog(document: &Document, copy: bool) {
     let return_focus = document.active_element();
     let selected = selected_container_ids(document);

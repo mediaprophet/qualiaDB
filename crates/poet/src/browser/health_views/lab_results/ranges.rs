@@ -169,6 +169,7 @@ const RANGES: &[RangeDataset] = &[
     },
 ];
 
+/// Builds ranges-tab.
 pub fn build_ranges_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-lab-panel", "ranges").unwrap();

@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "spatial3d:wireframe-toggle" => Some(toggle_wireframe(container)),
@@ -28,6 +29,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next focal-length.
 pub(crate) fn next_focal_length(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("50mm (Standard)") => "85mm (Portrait)",
@@ -37,6 +39,7 @@ pub(crate) fn next_focal_length(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next pbr-preset.
 pub(crate) fn next_pbr_preset(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("matte_plastic") => "brushed_metal",

@@ -10,6 +10,7 @@ use super::super::super::native_daemon::{
 };
 use super::{banner, input_value, wrap};
 
+/// Builds health-documents-view.
 pub fn build_health_documents_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();
@@ -206,6 +207,7 @@ pub fn build_health_documents_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds disclosure-log-view.
 pub fn build_disclosure_log_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,

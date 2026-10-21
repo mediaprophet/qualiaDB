@@ -17,6 +17,7 @@ pub struct PathVerifyResult {
 }
 
 impl PathVerifyResult {
+    /// Accepts.
     pub fn accept(reason: &'static str, detail: impl Into<String>) -> Self {
         Self {
             accepted: true,
@@ -24,6 +25,7 @@ impl PathVerifyResult {
             detail: detail.into(),
         }
     }
+    /// Rejects.
     pub fn reject(reason: &'static str, detail: impl Into<String>) -> Self {
         Self {
             accepted: false,
@@ -224,6 +226,7 @@ pub enum AgentTlsMode {
     SystemDefault,
 }
 
+/// Agent TLS mode.
 pub fn agent_tls_mode(store: &TrustStore) -> AgentTlsMode {
     let n = store
         .anchors
@@ -279,6 +282,8 @@ mod tests {
             enabled: true,
             notes: "".into(),
             added_unix: 1,
+            jurisdiction: None,
+            signature_algorithm: None,
         });
         match agent_tls_mode(&s) {
             AgentTlsMode::CustomRootsOnly { n_roots } => assert_eq!(n_roots, 1),

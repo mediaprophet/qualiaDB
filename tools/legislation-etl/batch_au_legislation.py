@@ -34,8 +34,10 @@ DEFAULT_OUT = Path(r"C:\Projects\webcivics\ns\ns\public\institutions\au-fed-legi
 
 
 def start_progress_server(batch_log: Path, port: int = 8080) -> None:
+    """Starts the progress server."""
     class ProgressHandler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
+            """Handles GET."""
             if self.path == "/":
                 self.send_response(200)
                 self.send_header("Content-type", "text/html")
@@ -84,9 +86,11 @@ def start_progress_server(batch_log: Path, port: int = 8080) -> None:
                 self.end_headers()
         
         def log_message(self, format, *args):
+            """Suppresses request logging."""
             pass # Suppress logging
 
     def run_server():
+        """Runs the HTTP server."""
         try:
             with socketserver.TCPServer(("", port), ProgressHandler) as httpd:
                 httpd.serve_forever()
@@ -112,6 +116,7 @@ def run_child(cmd: list[str], prefix: str, timeout: int) -> tuple[int | None, st
     timer: threading.Timer | None = None
     if timeout and timeout > 0:
         def _kill() -> None:
+            """Kills the child process."""
             nonlocal timed_out
             timed_out = True
             proc.kill()
@@ -142,6 +147,7 @@ def run_child(cmd: list[str], prefix: str, timeout: int) -> tuple[int | None, st
 
 
 def main() -> None:
+    """CLI entry point."""
     try:
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")

@@ -7,6 +7,7 @@
 use super::{uniform, SolverReport, WebGpuJobParams};
 use std::collections::HashMap;
 
+/// Solves.
 pub fn solve(params: &WebGpuJobParams) -> SolverReport {
     let m = uniform(params, "m", 4.0).max(1.0) as usize;
     let k = uniform(params, "k", 4.0).max(1.0) as usize;

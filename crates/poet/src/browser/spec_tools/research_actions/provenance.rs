@@ -3,6 +3,7 @@
 use super::util::count_within;
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(_document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "research:trace-provenance" => Some(trace_provenance(container)),

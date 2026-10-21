@@ -81,6 +81,7 @@ pub fn wrap_byte_spans(source: &str, spans: &[(u32, u32)]) -> String {
     out
 }
 
+/// Spans to report.
 pub fn report_spans(report: &DiagnoseReport) -> Vec<(u32, u32)> {
     report
         .errors
@@ -97,6 +98,7 @@ pub fn report_spans(report: &DiagnoseReport) -> Vec<(u32, u32)> {
         .collect()
 }
 
+/// Formats human-report.
 pub fn format_human_report(report: &DiagnoseReport) -> String {
     if report.valid {
         return format!(
@@ -129,6 +131,7 @@ fn push_diagnostic(out: &mut String, error: &Diagnostic) {
     }
 }
 
+/// `true` when the source mentions inference.
 pub fn source_mentions_inference(source: &str) -> bool {
     source.contains("Inference.")
 }
@@ -150,6 +153,7 @@ pub fn paint_source_element(el: &web_sys::Element, source: &str, report: &Diagno
         .ok();
 }
 
+/// Builds inference-trail.
 pub fn build_inference_trail(
     document: &web_sys::Document,
     honesty: &str,

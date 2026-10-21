@@ -45,14 +45,17 @@ pub fn held_why(why: &str) -> String {
 }
 
 #[cfg(test)]
+/// Copy flag: avoids unavailable.
 pub fn copy_avoids_unavailable(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("unavailable")
 }
 
+/// Mesh badge copy.
 pub fn mesh_badge_copy() -> String {
     format!("\u{25CF} Mesh \u{00B7} {}", held_why(MESH_HELD_WHY))
 }
 
+/// `mesh-badge` title.
 pub fn mesh_badge_title() -> String {
     held_why(MESH_HELD_WHY)
 }
@@ -66,6 +69,7 @@ pub fn pulse_empty_copy(daemon_connected: bool) -> String {
     }
 }
 
+/// Pulse badge copy.
 pub fn pulse_badge_copy(daemon_connected: bool, event_count: usize) -> String {
     if event_count > 0 {
         format!("{event_count} events")
@@ -85,6 +89,7 @@ pub fn aura_empty_copy(daemon_connected: bool) -> String {
     }
 }
 
+/// Aura badge copy.
 pub fn aura_badge_copy(daemon_connected: bool, result_count: usize, passed: usize) -> String {
     if result_count > 0 {
         format!("{passed}/{result_count} valid")
@@ -100,6 +105,7 @@ pub fn job_empty_copy() -> String {
     held_why(JOB_HELD_WHY)
 }
 
+/// Job badge copy.
 pub fn job_badge_copy(job_count: usize, running: usize) -> String {
     if job_count > 0 {
         format!("{running} running")
@@ -113,30 +119,37 @@ pub fn graph_held_copy() -> String {
     held_why(GRAPH_HELD_WHY)
 }
 
+/// Merkle-held copy.
 pub fn merkle_held_copy() -> String {
     held_why(MERKLE_HELD_WHY)
 }
 
+/// Gas-held copy.
 pub fn gas_held_copy() -> String {
     held_why(GAS_HELD_WHY)
 }
 
+/// Strata-held copy.
 pub fn strata_held_copy() -> String {
     held_why(STRATA_HELD_WHY)
 }
 
+/// Vibe-UI-held copy.
 pub fn vibe_ui_held_copy() -> String {
     held_why(VIBE_UI_HELD_WHY)
 }
 
+/// DAG-held copy.
 pub fn dag_held_copy() -> String {
     held_why(DAG_HELD_WHY)
 }
 
+/// Quads-held copy.
 pub fn quads_held_copy() -> String {
     held_why(QUADS_HELD_WHY)
 }
 
+/// Connection-ontology held copy.
 pub fn conn_ontology_held_copy() -> String {
     held_why(CONN_ONTO_HELD_WHY)
 }

@@ -10,6 +10,7 @@ use webizen_studio::tauri_ffi::invoke as tauri_invoke;
 pub const DESKTOP_HOST_PLANNED: &str = "Planned — desktop host not on this surface";
 
 #[cfg(target_arch = "wasm32")]
+/// Invokes json.
 pub async fn invoke_json<T: DeserializeOwned>(
     command: &str,
     args: serde_json::Value,
@@ -25,6 +26,7 @@ pub async fn invoke_json<T: DeserializeOwned>(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Invokes json.
 pub async fn invoke_json<T: DeserializeOwned>(
     _command: &str,
     _args: serde_json::Value,

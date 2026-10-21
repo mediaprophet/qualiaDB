@@ -4,6 +4,7 @@ use super::dialectical::DialecticalSidebarPane;
 use super::shared::*;
 
 #[component]
+/// Dioxus `WebBrowserPane` component.
 pub fn WebBrowserPane() -> Element {
     let mut tabs = use_signal(|| {
         #[cfg(target_arch = "wasm32")]

@@ -93,6 +93,7 @@ fn scalar_ivp(document: &Document) -> serde_json::Value {
     })
 }
 
+/// Chain action: rk4.
 pub(super) fn run_rk4(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -103,6 +104,7 @@ pub(super) fn run_rk4(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dopri5.
 pub(super) fn run_dopri5(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -113,6 +115,7 @@ pub(super) fn run_dopri5(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: bdf.
 pub(super) fn run_bdf(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -123,6 +126,7 @@ pub(super) fn run_bdf(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: symplectic-step.
 pub(super) fn run_symplectic_step(document: &Document, label: &str) {
     let dt = numeric_attr(el(document).as_ref(), "data-dt").unwrap_or(0.016);
     let method = string_attr(el(document).as_ref(), "data-method").unwrap_or_else(|| "verlet".into());

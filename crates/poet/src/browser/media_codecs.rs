@@ -22,6 +22,7 @@ pub enum CodecTier {
 }
 
 impl CodecTier {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::TierAPureRustWasm => "Tier A (Pure Rust / WASM)",
@@ -43,6 +44,7 @@ pub enum MediaDomain {
 }
 
 impl MediaDomain {
+    /// UI title.
     pub fn title(&self) -> &'static str {
         match self {
             Self::Audio => "Acoustic & Audio Streams",
@@ -54,6 +56,7 @@ impl MediaDomain {
         }
     }
 
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             Self::Audio => "\u{1F3A7}",          // 🎧
@@ -79,6 +82,7 @@ pub struct MediaCodecSpec {
 }
 
 impl MediaCodecSpec {
+    /// All variants.
     pub fn all() -> Vec<Self> {
         vec![
             Self {

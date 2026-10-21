@@ -22,6 +22,7 @@ fn hid_live_tool(
     ))
 }
 
+/// Registers communication-toolbox.
 pub(super) fn register_communication_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

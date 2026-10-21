@@ -8,6 +8,7 @@ use super::super::super::native_daemon::{
 };
 use super::IMPORT_FAMILIES;
 
+/// Builds bulk-import-view.
 pub fn build_bulk_import_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

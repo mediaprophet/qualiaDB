@@ -3,6 +3,7 @@
 use super::shared::{append_csv_attr, append_semicolon_attr, count_selector};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:create-hypothesis-graph" => Some(create_graph(container)),
@@ -35,6 +36,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next gap-kind.
 pub(crate) fn next_gap_kind(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("no-hypothesis") => "no-evidence",

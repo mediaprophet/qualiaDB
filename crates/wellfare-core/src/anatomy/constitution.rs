@@ -54,6 +54,7 @@ pub struct BodyCharacteristics {
 }
 
 impl BodyCharacteristics {
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         *self == Self::default()
     }
@@ -105,6 +106,7 @@ pub struct BodyAttributes {
 }
 
 impl BodyAttributes {
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         self.absent.is_empty()
             && self.pregnancy.is_none()
@@ -130,6 +132,7 @@ pub struct BodyConstitution {
 }
 
 impl BodyConstitution {
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         self.measurements.is_empty()
             && self.characteristics.is_empty()
@@ -383,6 +386,7 @@ pub struct BodyFit {
 }
 
 impl BodyFit {
+    /// Identity transform.
     pub fn identity() -> Self {
         Self {
             stature_scale: 1.0,
@@ -475,6 +479,7 @@ impl BodyFit {
         ]
     }
 
+    /// Applies in place.
     pub fn apply_in_place(&self, positions: &mut [[f32; 3]], gmin: [f32; 3], gmax: [f32; 3]) {
         if self.identity {
             return;

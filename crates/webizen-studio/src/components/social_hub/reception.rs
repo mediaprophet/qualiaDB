@@ -22,6 +22,7 @@ pub struct ReceptionSignals {
     pub turtle: Signal<String>,
 }
 
+/// Renders reception.
 pub fn render_reception(sig: ReceptionSignals) -> Element {
     let ReceptionSignals {
         status,

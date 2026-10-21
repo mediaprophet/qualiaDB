@@ -22,6 +22,7 @@ pub struct CopPanel<'a> {
     pub columns: Option<&'static [(&'static str, &'static str)]>,
 }
 
+/// Builds family-panel.
 pub fn build_family_panel(
     document: &Document,
     family: &'static str,
@@ -41,6 +42,7 @@ pub fn build_family_panel(
     )
 }
 
+/// Builds cop-panel.
 pub fn build_cop_panel(document: &Document, spec: &CopPanel<'_>) -> Element {
     let family = spec.family;
     let root = document.create_element("div").unwrap();
@@ -170,6 +172,7 @@ pub fn build_cop_panel(document: &Document, spec: &CopPanel<'_>) -> Element {
     root
 }
 
+/// Builds count-panel.
 pub fn build_count_panel(
     document: &Document,
     heading: &str,

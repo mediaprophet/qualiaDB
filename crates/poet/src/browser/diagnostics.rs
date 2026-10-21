@@ -113,6 +113,7 @@ pub struct ShaclResult {
 }
 
 impl ShaclResult {
+    /// Summary text.
     pub fn summary(&self) -> String {
         if self.conformant {
             format!("{} \u{00B7} {} nodes", self.shape, self.node_count)
@@ -341,6 +342,7 @@ pub enum PulseEventKind {
 }
 
 impl PulseEventKind {
+    /// CSS class.
     pub fn css_class(self) -> &'static str {
         match self {
             Self::Notification => "notification",
@@ -428,6 +430,7 @@ pub enum JobStatus {
 }
 
 impl JobStatus {
+    /// UI label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Queued => "queued",
@@ -438,6 +441,7 @@ impl JobStatus {
         }
     }
 
+    /// CSS class.
     pub fn css_class(self) -> &'static str {
         match self {
             Self::Queued => "honesty-partial",

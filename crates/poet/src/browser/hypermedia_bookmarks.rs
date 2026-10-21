@@ -134,21 +134,25 @@ impl Default for BookmarkLibrary {
 }
 
 impl BookmarkLibrary {
+    /// Adds an item.
     pub fn add(&mut self, mark: HypermediaBookmark) {
         self.bookmarks.retain(|b| b.id != mark.id);
         self.bookmarks.insert(0, mark);
     }
 
+    /// Removes an item.
     pub fn remove(&mut self, id: &str) {
         self.bookmarks.retain(|b| b.id != id);
     }
 
+    /// Toggles pinned state.
     pub fn toggle_pin(&mut self, id: &str) {
         if let Some(mark) = self.bookmarks.iter_mut().find(|b| b.id == id) {
             mark.is_pinned = !mark.is_pinned;
         }
     }
 
+    /// Filters by tag.
     pub fn filter_by_tag(&self, tag: &str) -> Vec<&HypermediaBookmark> {
         self.bookmarks
             .iter()
@@ -156,6 +160,7 @@ impl BookmarkLibrary {
             .collect()
     }
 
+    /// Filters by domain.
     pub fn filter_by_domain(&self, domain_substr: &str) -> Vec<&HypermediaBookmark> {
         self.bookmarks
             .iter()
@@ -163,6 +168,7 @@ impl BookmarkLibrary {
             .collect()
     }
 
+    /// Pinned bookmarks.
     pub fn pinned_bookmarks(&self) -> Vec<&HypermediaBookmark> {
         self.bookmarks.iter().filter(|b| b.is_pinned).collect()
     }

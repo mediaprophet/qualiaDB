@@ -4,6 +4,7 @@ use super::helpers::field_value;
 use super::request_parse::{optional_f64, optional_f64_list, optional_u64, required_assignment};
 use web_sys::Document;
 
+/// Infra request.
 pub(super) fn infra_request(
     document: &Document,
     mode: &str,

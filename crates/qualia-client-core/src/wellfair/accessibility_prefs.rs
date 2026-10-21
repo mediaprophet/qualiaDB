@@ -7,6 +7,7 @@ use super::host_state::AccessibilityPreferences;
 
 pub const PREFS_FILE: &str = "wellfair/accessibility.json";
 
+/// Loads.
 pub fn load(storage_root: impl AsRef<Path>) -> AccessibilityPreferences {
     let path = storage_root.as_ref().join(PREFS_FILE);
     if !path.exists() {
@@ -18,6 +19,7 @@ pub fn load(storage_root: impl AsRef<Path>) -> AccessibilityPreferences {
     }
 }
 
+/// Saves.
 pub fn save(
     storage_root: impl AsRef<Path>,
     prefs: &AccessibilityPreferences,

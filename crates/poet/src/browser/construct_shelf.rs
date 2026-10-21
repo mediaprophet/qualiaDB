@@ -140,6 +140,7 @@ pub fn build_construct_shelf_view(document: &Document) -> Element {
     root
 }
 
+/// Exports the construct.
 pub(crate) fn export_construct(document: &Document, construct_id: &str, archive: bool) {
     let Some(mut construct) = construct_by_id(construct_id) else {
         super::interactions::show_tool_status(

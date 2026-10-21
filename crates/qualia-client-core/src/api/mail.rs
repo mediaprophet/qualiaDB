@@ -172,16 +172,19 @@ pub fn mail_list(
     }))
 }
 
+/// Gets a mail message.
 pub fn mail_get(id: String) -> Result<serde_json::Value, String> {
     let m = crate::mail_store::get(&id).ok_or_else(|| format!("unknown message '{id}'"))?;
     serde_json::to_value(m).map_err(|e| e.to_string())
 }
 
+/// Marks mail read.
 pub fn mail_set_read(id: String, read: bool) -> Result<serde_json::Value, String> {
     let m = crate::mail_store::set_read(&id, read)?;
     serde_json::to_value(m).map_err(|e| e.to_string())
 }
 
+/// Deletes mail.
 pub fn mail_delete(id: String) -> Result<serde_json::Value, String> {
     crate::mail_store::delete(&id)?;
     Ok(serde_json::json!({ "deleted": id }))
@@ -198,6 +201,7 @@ pub fn mail_dns_forms(
     ))
 }
 
+/// Mail receiver status.
 pub fn mail_receiver_status() -> Result<serde_json::Value, String> {
     Ok(crate::mail_inbound::receiver_status())
 }
@@ -210,6 +214,7 @@ pub fn mail_receiver_start(bind: Option<String>) -> Result<serde_json::Value, St
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Stops the mail receiver.
 pub fn mail_receiver_stop() -> Result<serde_json::Value, String> {
     crate::mail_inbound::stop_receiver()
 }

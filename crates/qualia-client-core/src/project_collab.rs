@@ -126,6 +126,7 @@ pub fn add(
     Ok(row)
 }
 
+/// Removes.
 pub fn remove(project_id: &str, member_did: &str) -> Result<(), String> {
     let mut all = load();
     let before = all.len();

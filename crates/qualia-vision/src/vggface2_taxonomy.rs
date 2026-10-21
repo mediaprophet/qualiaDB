@@ -17,6 +17,7 @@ pub enum VGGFace2Pose {
 }
 
 impl VGGFace2Pose {
+    /// `&str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Frontal => "frontal",

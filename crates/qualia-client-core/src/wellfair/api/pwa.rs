@@ -46,6 +46,7 @@ impl WebizenHostApi {
         super::super::qapp_publish::write_pwa_bundle(std::path::Path::new(target_dir), &manifest)
     }
 
+    /// Adds life-event.
     pub fn add_life_event(&mut self, report: &LifeEventReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -62,6 +63,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds welfare-case.
     pub fn add_welfare_case(&mut self, report: &WelfareCaseReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -78,6 +80,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds case-task.
     pub fn add_case_task(&mut self, report: &CaseTaskReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -94,6 +97,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds wellbeing-observation.
     pub fn add_wellbeing_observation(
         &mut self,
         report: &WellbeingObservation,
@@ -113,6 +117,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds therapy-note.
     pub fn add_therapy_note(&mut self, report: &TherapyNote) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -129,6 +134,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Latest journal entry.
     pub(crate) fn latest_journal_entry(&self) -> Result<JournalEntry, String> {
         self.vault
             .list_health_records(1)

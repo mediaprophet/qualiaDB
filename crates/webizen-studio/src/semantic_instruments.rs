@@ -27,6 +27,7 @@ pub enum LibraryAction {
     ViewReceipt,
 }
 
+/// Action label.
 pub fn action_label(action: LibraryAction) -> &'static str {
     match action {
         LibraryAction::Inspect => "inspect",
@@ -60,10 +61,12 @@ pub enum LibraryOutcome {
     Ready(LibraryCard),
 }
 
+/// Catalog chips.
 pub fn catalog_chips() -> &'static [&'static str] {
     &[DEMO_CHIP, REFERENCE_CHIP]
 }
 
+/// Sanitizes a held reason.
 pub fn sanitize_held_why(raw: &str) -> String {
     let folded = raw.to_ascii_lowercase();
     if folded.contains("broken") || raw.trim().is_empty() || folded.contains("unavailable") {
@@ -131,6 +134,7 @@ fn extract_quoted_field(src: &str, key: &str) -> Option<String> {
     None
 }
 
+/// `true` when copy avoids broken terms.
 pub fn copy_avoids_broken(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("broken")
 }

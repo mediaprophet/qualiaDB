@@ -76,6 +76,7 @@ pub struct CredentialRecord {
 }
 
 impl CredentialRecord {
+    /// Creates a new instance.
     pub fn new(
         issuer_did: impl Into<String>,
         subject_did: impl Into<String>,
@@ -130,6 +131,7 @@ pub struct PresentationRequest {
 }
 
 impl PresentationRequest {
+    /// Creates a new instance.
     pub fn new(credential_id: impl Into<String>, selected_claim_keys: Vec<String>) -> Self {
         Self {
             credential_id: credential_id.into(),
@@ -214,6 +216,7 @@ pub fn build_presentation(
     }
 }
 
+///  record ID.
 pub fn credential_record_id(uuid: &str) -> String {
     format!("urn:wellfair:credential:{uuid}")
 }
@@ -252,6 +255,7 @@ pub fn build_credential_envelope(
     }
 }
 
+///  summary.
 pub fn credential_summary(cred: &CredentialRecord) -> String {
     serde_json::json!({
         "credential_type": cred.credential_type,
@@ -265,6 +269,7 @@ pub fn credential_summary(cred: &CredentialRecord) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn presentation_summary(pres: &FieldSelectedPresentation) -> String {
     serde_json::json!({
         "credential_id": pres.credential_id,

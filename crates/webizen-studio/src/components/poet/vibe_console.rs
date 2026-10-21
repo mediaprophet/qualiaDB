@@ -28,6 +28,7 @@ effect fn scene() {
 "#;
 
 #[component]
+/// Dioxus `VibeConsole` component.
 pub fn VibeConsole() -> Element {
     let mut source = use_signal(|| SAMPLE_CELL.to_string());
     let mut function_name = use_signal(|| String::new());
@@ -129,14 +130,17 @@ pub fn VibeConsole() -> Element {
     }
 }
 
+/// Chip descriptor.
 pub fn chip() -> &'static str {
     "border:1px solid #334155;background:#131822;color:#e8eef7;border-radius:999px;padding:4px 10px;font-size:.72rem;cursor:pointer;"
 }
 
+/// Primary action.
 pub fn primary() -> &'static str {
     "background:#00d2ff;color:#07090e;border:none;padding:8px 14px;border-radius:6px;font-weight:700;cursor:pointer;"
 }
 
+/// Secondary action.
 pub fn secondary() -> &'static str {
     "background:#1a2230;color:#e8eef7;border:1px solid #334155;padding:8px 14px;border-radius:6px;cursor:pointer;"
 }

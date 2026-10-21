@@ -43,6 +43,7 @@ fn image_edit_tool(
     ))
 }
 
+/// Registers image-toolbox.
 pub(super) fn register_image_toolbox(reg: &mut Registry) {
     let shape_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

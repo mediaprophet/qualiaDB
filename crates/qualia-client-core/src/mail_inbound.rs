@@ -244,6 +244,7 @@ pub fn start_receiver(bind: &str) -> Result<serde_json::Value, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Stops the inbound receiver.
 pub fn stop_receiver() -> Result<serde_json::Value, String> {
     SMTP_STOP.store(true, Ordering::Relaxed);
     // Give the accept loop a moment to notice.

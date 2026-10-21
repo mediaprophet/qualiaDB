@@ -20,10 +20,12 @@ pub struct QappCatalogEntry {
 }
 
 impl QappCatalogEntry {
+    /// `asset` URI.
     pub fn asset_uri(self) -> String {
         format!("qapp://studio/{}", self.id)
     }
 
+    /// Display title.
     pub fn display_title(self) -> String {
         self.title.to_string()
     }

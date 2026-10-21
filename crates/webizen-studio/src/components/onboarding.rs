@@ -442,6 +442,7 @@ fn comma_values(value: &str) -> Vec<String> {
 }
 
 #[component]
+/// Dioxus `OnboardingGate` component.
 pub fn OnboardingGate() -> Element {
     let mut loading = use_signal(|| true);
     let mut complete = use_signal(|| false);

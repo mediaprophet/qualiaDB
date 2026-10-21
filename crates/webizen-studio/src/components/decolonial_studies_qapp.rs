@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `DecolonialStudiesQapp` component.
 pub fn DecolonialStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

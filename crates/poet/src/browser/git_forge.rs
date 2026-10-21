@@ -21,6 +21,7 @@ pub enum GitRemoteTransport {
 }
 
 impl GitRemoteTransport {
+    /// UI label.
     pub fn label(&self) -> String {
         match self {
             Self::DomainSshHttps { domain_url } => format!("Domain: {}", domain_url),
@@ -69,6 +70,7 @@ pub struct GitForgeRepo {
 }
 
 impl GitForgeRepo {
+    /// `GitForgeRepo::new`.
     pub fn new(repo_name: &str, author_did: &str) -> Self {
         let root_commit = GitCommitEntry {
             hash: "0a42deadbeef1337".into(),
@@ -136,18 +138,21 @@ impl GitForgeRepo {
         }
     }
 
+    /// Toggles staged state.
     pub fn toggle_stage(&mut self, path: &str) {
         if let Some(diff) = self.file_diffs.iter_mut().find(|d| d.path == path) {
             diff.is_staged = !diff.is_staged;
         }
     }
 
+    /// Stages all.
     pub fn stage_all(&mut self) {
         for diff in &mut self.file_diffs {
             diff.is_staged = true;
         }
     }
 
+    /// Commits staged items.
     pub fn commit_staged(&mut self, message: &str, author_did: &str) -> Result<String, String> {
         let staged_count = self.file_diffs.iter().filter(|d| d.is_staged).count();
         if staged_count == 0 {

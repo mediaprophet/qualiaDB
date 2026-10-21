@@ -6,6 +6,7 @@ use super::super::core::registry::{
     DockPosition, ManifoldSeed, SeedConnection, SeedContainer, SeedPanel,
 };
 
+/// `ontology` manifold seed.
 pub fn ontology_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "ontology".into(),

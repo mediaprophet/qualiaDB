@@ -80,6 +80,7 @@ fn gpu_handle(document: &Document) -> u64 {
         .unwrap_or(0)
 }
 
+/// Chain action: gpu-upload-mesh-colored.
 pub(super) fn run_gpu_upload_mesh_colored(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -96,6 +97,7 @@ pub(super) fn run_gpu_upload_mesh_colored(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-set-standpoint.
 pub(super) fn run_gpu_set_standpoint(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -107,6 +109,7 @@ pub(super) fn run_gpu_set_standpoint(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-observer-standpoint.
 pub(super) fn run_gpu_observer_standpoint(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -118,6 +121,7 @@ pub(super) fn run_gpu_observer_standpoint(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-camera-state.
 pub(super) fn run_gpu_camera_state(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -129,6 +133,7 @@ pub(super) fn run_gpu_camera_state(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-surface-size.
 pub(super) fn run_gpu_surface_size(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -140,6 +145,7 @@ pub(super) fn run_gpu_surface_size(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-has-mesh.
 pub(super) fn run_gpu_has_mesh(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -151,6 +157,7 @@ pub(super) fn run_gpu_has_mesh(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-has-tensor.
 pub(super) fn run_gpu_has_tensor(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -162,6 +169,7 @@ pub(super) fn run_gpu_has_tensor(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-tensor-node-count.
 pub(super) fn run_gpu_tensor_node_count(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -173,6 +181,7 @@ pub(super) fn run_gpu_tensor_node_count(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-particle-count.
 pub(super) fn run_gpu_particle_count(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -184,6 +193,7 @@ pub(super) fn run_gpu_particle_count(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-sync-bloom.
 pub(super) fn run_gpu_sync_bloom(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -195,6 +205,7 @@ pub(super) fn run_gpu_sync_bloom(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-set-artefact-joint.
 pub(super) fn run_gpu_set_artefact_joint(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -206,6 +217,7 @@ pub(super) fn run_gpu_set_artefact_joint(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-set-artefact-world.
 pub(super) fn run_gpu_set_artefact_world(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -217,6 +229,7 @@ pub(super) fn run_gpu_set_artefact_world(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-artefact-refused.
 pub(super) fn run_gpu_artefact_refused(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -228,6 +241,7 @@ pub(super) fn run_gpu_artefact_refused(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-required-rgba8-bytes.
 pub(super) fn run_gpu_required_rgba8_bytes(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -239,6 +253,7 @@ pub(super) fn run_gpu_required_rgba8_bytes(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: emf-upload-field.
 pub(super) fn run_emf_upload_field(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -255,6 +270,7 @@ pub(super) fn run_emf_upload_field(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: emf-render-slice.
 pub(super) fn run_emf_render_slice(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(
@@ -266,6 +282,7 @@ pub(super) fn run_emf_render_slice(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: emf-field-info.
 pub(super) fn run_emf_field_info(document: &Document, label: &str) {
     let handle = gpu_handle(document);
     invoke_dual(

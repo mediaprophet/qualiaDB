@@ -240,6 +240,7 @@ fn draw_scene(
 }
 
 #[component]
+/// Dioxus `PhysicsSimulator` component.
 pub fn PhysicsSimulator() -> Element {
     let mut orbit_speed = use_signal(|| 1.15_f64);
     let mut wave_amplitude = use_signal(|| 2.8_f64);

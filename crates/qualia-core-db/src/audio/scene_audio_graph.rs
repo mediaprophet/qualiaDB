@@ -23,11 +23,14 @@ use std::f32::consts::{PI, TAU};
 use crate::audio::acoustic_plane::push_sonic_token;
 use crate::audio::dsp::biquad_df2t::{BiquadCoeffs, Df2tState, DENORMAL_DC_OFFSET};
 use crate::audio::holosonic::{
-    HolosonicEmitter, HolosonicModality, HolosonicPointSample, HolosonicSonicToken48,
+    HolosonicEmitter, HolosonicPointSample, HolosonicSonicToken48,
     HolosonicWavefield, SPEED_OF_SOUND_MPS,
 };
+#[allow(unused_imports)]
+use crate::audio::holosonic::HolosonicModality;
 use crate::audio::hrtf::{binaural_from_position, BinauralGains};
 use crate::container_10d::procedural_synthesis::evaluate_smooth_minimum_sdf;
+#[cfg(feature = "gpu-runtime")]
 use crate::render::gpu::holographic::{HolographicNodeGpu, HolographicPrimitive};
 use crate::render::pga::{sandwich_point, Motor};
 use crate::sonic_token::{SonicEventType, SonicToken, SONIC_MAGIC};
@@ -137,7 +140,7 @@ impl Default for HolosonicNode {
             origin_quin_hash: 0,
             deontic_permit: 0,
             is_ambient: false,
-            sdf_primitive: HolographicPrimitive::Sphere as u8,
+            sdf_primitive: 0, // HolographicPrimitive::Sphere as u8
             reserved_u8: 0,
             velocity: [0.0; 3],
             sdf_half_extents: [0.5, 0.5, 0.5],
@@ -148,6 +151,7 @@ impl Default for HolosonicNode {
 impl HolosonicNode {
     /// Synchronizes a [`HolosonicNode`] directly from a [`HolographicNodeGpu`] SDF proxy lens.
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub fn from_holographic_node(
         node_id: u32,
         origin_quin_hash: u64,
@@ -369,6 +373,7 @@ impl AcousticObstacle {
     /// Creates an obstacle directly from a [`HolographicNodeGpu`] SDF proxy lens so visual
     /// raymarching and acoustic occlusion share the exact same SDF primitive parameters.
     #[inline]
+    #[cfg(feature = "gpu-runtime")]
     pub fn from_holographic_node(node: &HolographicNodeGpu, material: AcousticMaterial) -> Self {
         let center = [
             node.position_scale[0],
@@ -401,7 +406,7 @@ impl AcousticObstacle {
         Self {
             shape,
             material,
-            thickness_m: (2.0 * he[0].min(he[1]).min(he[2])).max(0.25),
+            thickness_m: (2.0f32 * he[0].min(he[1]).min(he[2])).max(0.25f32),
             smooth_blend_radius: 0.25,
         }
     }
@@ -1440,6 +1445,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "gpu-runtime")]
     fn scene_audio_bus_graph_renders_binaural_reverb_and_emits_48b_sonic_tokens() {
         let mut graph = SceneAudioBusGraph::new();
         graph.sync_listener_from_motor(Motor::identity(), [0.0, 0.0, 0.0], 1.0);

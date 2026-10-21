@@ -22,6 +22,7 @@ pub enum DnsRecordType {
 }
 
 impl DnsRecordType {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::A => "A",
@@ -79,6 +80,7 @@ pub struct DomainConfig {
 }
 
 impl DomainConfig {
+    /// `DomainConfig::new`.
     pub fn new(domain_name: &str, owner_did: &str) -> Self {
         let default_mailboxes = vec![
             DomainMailbox {

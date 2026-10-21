@@ -13,6 +13,7 @@ use web_sys::{
     HtmlTextAreaElement, MouseEvent,
 };
 
+/// Builds rdfstar-panel.
 pub(super) fn build_rdfstar_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "rdfstar", false);
 
@@ -98,6 +99,7 @@ pub(super) fn build_rdfstar_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires the RDF-star editor.
 pub(super) fn wire_rdfstar_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("rdfstar-add") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -160,6 +162,7 @@ pub(super) fn wire_rdfstar_editor(document: &Document) {
     }
 }
 
+/// Builds ontology-builder-panel.
 pub(super) fn build_ontology_builder_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "ontology", false);
 
@@ -255,6 +258,7 @@ pub(super) fn build_ontology_builder_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires the ontology builder.
 pub(super) fn wire_ontology_builder(document: &Document) {
     if let Some(btn) = document.get_element_by_id("onto-compile") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -343,6 +347,7 @@ pub(super) fn wire_ontology_builder(document: &Document) {
     }
 }
 
+/// Builds modality-panel.
 pub(super) fn build_modality_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "modality", false);
 
@@ -406,6 +411,7 @@ pub(super) fn build_modality_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-modality` panel.
 pub(super) fn wire_modality_panel(document: &Document) {
     if let Some(sel) = document.get_element_by_id("modality-selector") {
         let sel_clone = sel.clone();
@@ -439,6 +445,7 @@ pub(super) fn wire_modality_panel(document: &Document) {
     }
 }
 
+/// Builds infer-panel.
 pub(super) fn build_infer_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "infer", false);
 
@@ -518,6 +525,7 @@ pub(super) fn build_infer_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-infer` panel.
 pub(super) fn wire_infer_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("infer-run") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

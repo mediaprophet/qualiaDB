@@ -3,6 +3,7 @@ use crate::benchmark_env;
 use crate::cli::BenchmarkAction;
 use crate::telemetry_server;
 
+/// Handles the  action.
 pub async fn handle_benchmark(action: &BenchmarkAction) {
     let (tx, rx) = tokio::sync::broadcast::channel(16);
 
@@ -95,6 +96,7 @@ pub async fn handle_benchmark(action: &BenchmarkAction) {
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 }
 
+/// Handles the  action.
 pub async fn handle_bench(suite: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("=====================================");
     println!(

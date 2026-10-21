@@ -6,6 +6,7 @@ use super::request_parse::{
 };
 use web_sys::Document;
 
+/// Spatial request.
 pub(super) fn spatial_request(
     document: &Document,
     mode: &str,

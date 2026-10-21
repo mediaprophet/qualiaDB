@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "audio:split-clip" => Some(set_marker(container, "data-clip-split", "split_at_playhead")),
@@ -46,6 +47,7 @@ fn cycle_fade(container: &Element, attr: &str) -> Result<(), String> {
         .map_err(|_| format!("Failed to update {attr}."))
 }
 
+/// Cycles to the next time-stretch.
 pub(crate) fn next_time_stretch(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("90%") => "100%",
@@ -63,6 +65,7 @@ fn cycle_time_stretch(container: &Element) -> Result<(), String> {
         .map_err(|_| "Failed to time-stretch clip.".to_string())
 }
 
+/// Cycles to the next pitch-shift.
 pub(crate) fn next_pitch_shift(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("-12st") => "-7st",

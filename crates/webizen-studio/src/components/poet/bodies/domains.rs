@@ -12,6 +12,7 @@ effect fn domain_status() {
 "#;
 
 #[component]
+/// Dioxus `DomainsBody` component.
 pub fn DomainsBody() -> Element {
     let mut out = use_signal(|| String::new());
     let mut busy = use_signal(|| false);

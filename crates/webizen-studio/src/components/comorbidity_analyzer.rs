@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ComorbidityAnalyzer` component.
 pub fn ComorbidityAnalyzer() -> Element {
     rsx! {
         div { style: "padding:1rem;",

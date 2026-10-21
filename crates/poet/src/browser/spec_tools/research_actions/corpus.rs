@@ -3,6 +3,7 @@
 use super::util::{append_csv_attr, append_nested, count_document, count_within, next_confidence};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "research:add-corpus-item" => Some(add_corpus_item(document, container)),

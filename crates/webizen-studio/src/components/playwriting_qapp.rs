@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `PlaywritingQapp` component.
 pub fn PlaywritingQapp() -> Element {
     rsx! {
         QAppEngine {

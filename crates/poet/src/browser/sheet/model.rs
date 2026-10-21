@@ -29,6 +29,7 @@ impl Default for SheetState {
 }
 
 impl SheetState {
+    /// Builds from settings.
     pub fn from_settings(settings: &BTreeMap<String, String>) -> Self {
         let mut state: Self = settings
             .get(SHEET_STATE_KEY)
@@ -44,10 +45,12 @@ impl SheetState {
         state
     }
 
+    /// Raw value.
     pub fn raw(&self, cell: &str) -> &str {
         self.cells.get(cell).map(String::as_str).unwrap_or("")
     }
 
+    /// Sets a value.
     pub fn set(&mut self, cell: &str, value: String) {
         let value = value.trim_end_matches(['\r', '\n']).to_string();
         if value.is_empty() {
@@ -57,6 +60,7 @@ impl SheetState {
         }
     }
 
+    /// Adds row.
     pub fn add_row(&mut self) -> bool {
         if self.rows >= MAX_ROWS {
             return false;
@@ -65,6 +69,7 @@ impl SheetState {
         true
     }
 
+    /// Adds col.
     pub fn add_col(&mut self) -> bool {
         if self.cols >= MAX_COLS {
             return false;
@@ -102,10 +107,12 @@ impl SheetState {
     }
 }
 
+/// Cell reference.
 pub fn cell_ref(col: usize, row: usize) -> String {
     format!("{}{}", col_label(col), row + 1)
 }
 
+/// `col` label.
 pub fn col_label(mut col: usize) -> String {
     let mut label = String::new();
     loop {
@@ -118,6 +125,7 @@ pub fn col_label(mut col: usize) -> String {
     label
 }
 
+/// Parses cell-ref.
 pub fn parse_cell_ref(value: &str) -> Option<(usize, usize)> {
     let value = value.trim();
     let split = value.find(|ch: char| ch.is_ascii_digit())?;

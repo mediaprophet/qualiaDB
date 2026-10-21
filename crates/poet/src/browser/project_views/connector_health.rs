@@ -10,6 +10,7 @@ use crate::browser::native_daemon::{
     NativeLibraryIngestRequest, NativeRecordQueryRequest,
 };
 
+/// Builds connector-health.
 pub fn build_connector_health(document: &Document, workspace: &Element) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-connector-health", "").ok();

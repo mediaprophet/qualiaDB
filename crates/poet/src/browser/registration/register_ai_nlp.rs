@@ -8,6 +8,7 @@
 
 use super::*;
 
+/// Registers NLP tools.
 pub(super) fn nlp_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         Box::new(SimpleTool::new(

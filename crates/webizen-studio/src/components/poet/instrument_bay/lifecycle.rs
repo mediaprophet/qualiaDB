@@ -18,11 +18,13 @@ pub struct LibraryLife {
     pub receipts_remain: bool,
 }
 
+/// Suspends the instrument.
 pub fn suspend(life: &mut LibraryLife) {
     life.suspended = true;
     life.activated = false;
 }
 
+/// Removes pack.
 pub fn remove_pack(life: &mut LibraryLife) {
     life.removed = true;
     life.activated = false;
@@ -30,6 +32,7 @@ pub fn remove_pack(life: &mut LibraryLife) {
     life.receipts_remain = true;
 }
 
+/// Updates pack.
 pub fn update_pack(life: &LibraryLife) -> Result<(), &'static str> {
     if life.removed || life.suspended {
         return Err(HELD_SUSPEND_UPDATE);
@@ -40,6 +43,7 @@ pub fn update_pack(life: &LibraryLife) -> Result<(), &'static str> {
     Ok(())
 }
 
+/// `true` when able to run.
 pub fn can_run(life: &LibraryLife) -> Result<(), &'static str> {
     if life.removed {
         return Err(HELD_REMOVED_RUN);
@@ -54,6 +58,7 @@ pub fn can_run(life: &LibraryLife) -> Result<(), &'static str> {
 }
 
 #[component]
+/// Dioxus `LifecyclePanel` component.
 pub fn LifecyclePanel() -> Element {
     let mut life = use_signal(|| LibraryLife {
         collected: true,

@@ -833,6 +833,7 @@ pub async fn daemon_render_preview(
     serde_json::from_str(&resp_str).map_err(|error| error.to_string())
 }
 
+/// Daemon capabilities call.
 pub async fn daemon_capabilities() -> Result<NativeCapabilityNegotiation, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -840,6 +841,7 @@ pub async fn daemon_capabilities() -> Result<NativeCapabilityNegotiation, String
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon library stats call.
 pub async fn daemon_library_stats() -> Result<NativeLibraryResponse, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -847,6 +849,7 @@ pub async fn daemon_library_stats() -> Result<NativeLibraryResponse, String> {
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon library query call.
 pub async fn daemon_library_query(
     request: NativeLibraryQueryRequest,
 ) -> Result<NativeLibraryResponse, String> {
@@ -857,6 +860,7 @@ pub async fn daemon_library_query(
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon library ingest call.
 pub async fn daemon_library_ingest(
     request: NativeLibraryIngestRequest,
 ) -> Result<NativeLibraryResponse, String> {
@@ -867,6 +871,7 @@ pub async fn daemon_library_ingest(
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon LLM generate call.
 pub async fn daemon_llm_generate(request: NativeLlmRequest) -> Result<NativeLlmResponse, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -875,6 +880,7 @@ pub async fn daemon_llm_generate(request: NativeLlmRequest) -> Result<NativeLlmR
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon LLM start call.
 pub async fn daemon_llm_start(
     request: NativeLlmRequest,
 ) -> Result<NativeLlmJobStartResponse, String> {
@@ -885,6 +891,7 @@ pub async fn daemon_llm_start(
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon LLM cancel call.
 pub async fn daemon_llm_cancel(job_id: &str) -> Result<NativeLibraryResponse, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -921,6 +928,7 @@ pub fn open_llm_job_stream(
     Ok(())
 }
 
+/// Closes llm-job-stream.
 pub fn close_llm_job_stream() {
     ACTIVE_LLM_STREAM.with(|stream| {
         if let Some(event_source) = stream.borrow_mut().take() {
@@ -929,6 +937,7 @@ pub fn close_llm_job_stream() {
     });
 }
 
+/// Daemon LLM models call.
 pub async fn daemon_llm_models() -> Result<NativeLlmModelsResponse, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -936,6 +945,7 @@ pub async fn daemon_llm_models() -> Result<NativeLlmModelsResponse, String> {
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon LLM activate call.
 pub async fn daemon_llm_activate(model_path: &str) -> Result<NativeLibraryResponse, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -945,6 +955,7 @@ pub async fn daemon_llm_activate(model_path: &str) -> Result<NativeLibraryRespon
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon LLM evict call.
 pub async fn daemon_llm_evict() -> Result<NativeLibraryResponse, String> {
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
@@ -952,18 +963,21 @@ pub async fn daemon_llm_evict() -> Result<NativeLibraryResponse, String> {
     serde_json::from_str(&response).map_err(|error| error.to_string())
 }
 
+/// Daemon records query call.
 pub async fn daemon_records_query(
     request: NativeRecordQueryRequest,
 ) -> Result<NativeRecordResponse, String> {
     post_record("/records/query", &request).await
 }
 
+/// Daemon records upsert call.
 pub async fn daemon_records_upsert(
     request: NativeRecordUpsertRequest,
 ) -> Result<NativeRecordResponse, String> {
     post_record("/records/upsert", &request).await
 }
 
+/// Daemon records delete call.
 pub async fn daemon_records_delete(
     request: NativeRecordDeleteRequest,
 ) -> Result<NativeRecordResponse, String> {

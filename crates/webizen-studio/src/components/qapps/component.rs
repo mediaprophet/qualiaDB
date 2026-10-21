@@ -4,6 +4,8 @@ use super::*;
 use crate::Route;
 use dioxus::prelude::*;
 
+const LAUNCH_BTN: &str = "display: inline-flex; align-items: center; gap: 0.35rem; background: var(--qualia-accent); color: white; border-radius: 8px; padding: 0.38rem 0.75rem; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: opacity 0.15s;";
+
 fn qapp_capabilities(id: &str) -> Vec<&'static str> {
     let lower = id.to_ascii_lowercase();
     let mut labels = vec!["Local execution", "Semantic Library"];
@@ -32,6 +34,7 @@ fn qapp_capabilities(id: &str) -> Vec<&'static str> {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
+/// Dioxus `QApps` component.
 pub fn QApps() -> Element {
     let all_apps = qapp_catalog();
     let mut selected_cat = use_signal(|| Cat::All);
@@ -68,6 +71,13 @@ pub fn QApps() -> Element {
                 (Stat::Active, Some(AppRoute::Nexus)) => BtnKind::LaunchNexus,
                 (Stat::Active, Some(AppRoute::TalkPeople)) => BtnKind::LaunchTalkPeople,
                 (Stat::Active, Some(AppRoute::TalkMail)) => BtnKind::LaunchTalkMail,
+                (Stat::Active, Some(AppRoute::Poet)) => BtnKind::LaunchPoet,
+                (Stat::Active, Some(AppRoute::WorkProjects)) => BtnKind::LaunchWorkProjects,
+                (Stat::Active, Some(AppRoute::WalletCrypto)) => BtnKind::LaunchWalletCrypto,
+                (Stat::Active, Some(AppRoute::HypermediaLibrary)) => BtnKind::LaunchHypermediaLibrary,
+                (Stat::Active, Some(AppRoute::LlmAgents)) => BtnKind::LaunchLlmAgents,
+                (Stat::Active, Some(AppRoute::WebBrowser)) => BtnKind::LaunchWebBrowser,
+                (Stat::Active, Some(AppRoute::JobsScheduler)) => BtnKind::LaunchJobsScheduler,
                 (Stat::Soon, _) => BtnKind::ComingSoon,
                 _ => BtnKind::OpenInStudio,
             };
@@ -97,7 +107,7 @@ pub fn QApps() -> Element {
                 div {
                     h1 {
                         style: "margin: 0 0 0.25rem 0; font-size: 1.4rem; font-weight: 700; color: var(--qualia-text); letter-spacing: -0.025em;",
-                        "QApps"
+                        "Qaps"
                     }
                     p {
                         style: "margin: 0 0 0.45rem 0; font-size: 0.82rem; color: var(--qualia-text-muted); max-width: 36rem; line-height: 1.45;",
@@ -131,6 +141,9 @@ pub fn QApps() -> Element {
                 }
             }
 
+            // ── OS-Shell Launchable Apps & Shared System Services ───────────────
+            super::os_services_panel::OsSharedServicesPanel {}
+
             // ── Featured Templates ──────────────────────────────────────────────
             div {
                 style: "display:grid;grid-template-columns:minmax(240px,1fr) repeat(3,minmax(150px,.45fr));gap:.6rem;margin-bottom:1.35rem;",
@@ -139,8 +152,8 @@ pub fn QApps() -> Element {
                     sl-icon { "name": "search", style: "position:absolute;left:.8rem;top:.72rem;color:var(--qualia-text-muted);" }
                     input {
                         r#type: "search",
-                        aria_label: "Search QApps",
-                        placeholder: "Search by task, domain, or capability…",
+                        aria_label: "Search Qaps",
+                        placeholder: "Search Qaps by task, domain, or capability…",
                         value: "{search}",
                         oninput: move |event| search.set(event.value()),
                         style: "width:100%;box-sizing:border-box;padding:.65rem .8rem .65rem 2.35rem;border:1px solid var(--qualia-border);border-radius:11px;background:var(--qualia-surface);color:var(--qualia-text);font:inherit;font-size:.78rem;",
@@ -318,12 +331,33 @@ pub fn QApps() -> Element {
                                                 "Edit"
                                             }
                                         },
+                                        BtnKind::LaunchPoet => rsx! {
+                                            Link { to: Route::PoetRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
+                                        BtnKind::LaunchWorkProjects => rsx! {
+                                            Link { to: Route::WorkRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
+                                        BtnKind::LaunchWalletCrypto => rsx! {
+                                            Link { to: Route::WalletRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
+                                        BtnKind::LaunchHypermediaLibrary => rsx! {
+                                            Link { to: Route::LibraryRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
+                                        BtnKind::LaunchLlmAgents => rsx! {
+                                            Link { to: Route::ToolsRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
+                                        BtnKind::LaunchWebBrowser => rsx! {
+                                            Link { to: Route::BrowserRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
+                                        BtnKind::LaunchJobsScheduler => rsx! {
+                                            Link { to: Route::JobsRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
+                                        },
                                         BtnKind::OpenInStudio => rsx! {
                                             Link {
                                                 to: Route::StudioEditRoute { app_id: app_id_str2 },
                                                 style: "display: inline-flex; align-items: center; gap: 0.35rem; background: var(--qualia-accent); color: white; border-radius: 8px; padding: 0.38rem 0.75rem; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: opacity 0.15s;",
                                                 sl-icon { "name": "layers", style: "font-size: 0.68rem;" }
-                                                "Run QApp"
+                                                "Run Qap"
                                             }
                                         },
                                         BtnKind::ComingSoon => rsx! {

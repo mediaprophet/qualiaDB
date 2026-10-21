@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `LandscapePhenomenologyQapp` component.
 pub fn LandscapePhenomenologyQapp() -> Element {
     rsx! {
         QAppEngine {

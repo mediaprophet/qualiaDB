@@ -56,6 +56,7 @@ fn arr(v: &serde_json::Value, key: &str) -> Vec<serde_json::Value> {
 }
 
 #[component]
+/// Dioxus `ConnectPane` component.
 pub fn ConnectPane() -> Element {
     // Section 1 — generate.
     let relation = use_signal(|| "spc:Collaboration".to_string());

@@ -89,6 +89,7 @@ pub struct ExtensionManager {
 }
 
 impl ExtensionManager {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             extensions: HashMap::new(),
@@ -96,11 +97,13 @@ impl ExtensionManager {
         }
     }
 
+    /// Registers extension.
     pub fn register_extension(&mut self, extension: Box<dyn Extension>) {
         let capability = extension.capability();
         self.extensions.insert(capability.name.clone(), extension);
     }
 
+    /// Executes a job.
     pub async fn execute_job(&self, job: ExtensionJob) -> Result<ExtensionResult, ExtensionError> {
         let extension =
             self.extensions
@@ -132,6 +135,7 @@ impl ExtensionManager {
         result
     }
 
+    /// Lists capabilities.
     pub fn list_capabilities(&self) -> Vec<ExtensionCapability> {
         self.extensions
             .values()
@@ -202,6 +206,7 @@ pub struct CExtensionResult {
     pub error_len: usize,
 }
 
+/// FFI: allocates an `ExtensionManager` and returns a raw pointer (caller frees via `extension_manager_free`).
 #[no_mangle]
 pub extern "C" fn extension_manager_new() -> *mut ExtensionManager {
     Box::into_raw(Box::new(ExtensionManager::new()))
@@ -357,6 +362,7 @@ pub extern "C" fn extension_result_free(result: CExtensionResult) {
     }
 }
 
+/// FFI: frees an `ExtensionManager` allocated by `extension_manager_new`; `NULL` is a no-op.
 #[no_mangle]
 pub extern "C" fn extension_manager_free(manager: *mut ExtensionManager) {
     if !manager.is_null() {

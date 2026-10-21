@@ -15,6 +15,7 @@ pub use model::{
     RESEARCH_EVIDENCE_BANNER,
 };
 
+/// Builds chemical-explorer-view.
 pub fn build_chemical_explorer_view(document: &web_sys::Document) -> web_sys::Element {
     workspace::build(document)
 }

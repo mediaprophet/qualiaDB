@@ -15,6 +15,7 @@ pub enum VisionAssetId {
 }
 
 impl VisionAssetId {
+    /// `&str` form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Yunet => "yunet",
@@ -27,11 +28,13 @@ impl VisionAssetId {
         }
     }
 
+    /// Licence tag.
     pub const fn licence_tag(self) -> AssetLicenceTag {
         // All current pack entries are PermissiveReady (MIT or Apache-2.0).
         AssetLicenceTag::PermissiveReady
     }
 
+    /// SPDX licence.
     pub const fn licence_spdx(self) -> &'static str {
         match self {
             Self::Yunet => "MIT",

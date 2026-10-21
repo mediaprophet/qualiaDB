@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `QpuOptimizer` component.
 pub fn QpuOptimizer() -> Element {
     rsx! {
         div {

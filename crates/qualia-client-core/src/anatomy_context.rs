@@ -344,6 +344,7 @@ pub fn build_anatomy_graph_context_json(
     build_anatomy_graph_context_json_with_dicom(qapp_name, user_prompt, agent_reply, None)
 }
 
+/// Builds anatomy-graph-context-json-with-dicom.
 pub fn build_anatomy_graph_context_json_with_dicom(
     qapp_name: String,
     user_prompt: String,
@@ -372,10 +373,12 @@ pub fn build_anatomy_graph_context_json_with_dicom(
     serde_json::to_string(&payload).map_err(|e| e.to_string())
 }
 
+/// Parses dicom-metadata-json.
 pub fn parse_dicom_metadata_json(file_path: String) -> Result<String, String> {
     qualia_core_db::dicom::metadata_json_from_file(std::path::Path::new(&file_path))
 }
 
+/// Builds dicom-overlay-spec-json.
 pub fn build_dicom_overlay_spec_json(file_path: String) -> Result<String, String> {
     qualia_core_db::dicom::overlay_spec_json_from_file(std::path::Path::new(&file_path))
 }

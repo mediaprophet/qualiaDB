@@ -8,6 +8,7 @@ use crate::browser::native_daemon::{
     NativeRecordQueryRequest,
 };
 
+/// Builds agent-session-browser.
 pub fn build_agent_session_browser(document: &Document, workspace: &Element) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-agent-session-browser", "").ok();

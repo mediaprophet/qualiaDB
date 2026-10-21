@@ -1,0 +1,26 @@
+[package]
+name = "qualia-mcp"
+version = "0.0.40"
+edition = "2021"
+authors = ["QualiaDB Project Team"]
+description = "QualiaDB Model Context Protocol (MCP) server library: standards-compliant JSON-RPC 2.0 interface exposing semantic graph, modalities, physics, geomechanics, and space weather simulations"
+license = "Apache-2.0"
+
+[dependencies]
+qualia-core-db = { workspace = true, default-features = true }
+qualia-sim = { workspace = true }
+qualia-geospatial = { workspace = true }
+qualia-vision = { workspace = true }
+qualia-audio = { workspace = true }
+vibe = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["std"] }
+bytemuck = { workspace = true, features = ["derive"] }
+log = { workspace = true }
+env_logger = "0.11"
+chrono = { workspace = true }
+rio_turtle = { workspace = true }
+rio_api = { workspace = true }
+
+[dev-dependencies]

@@ -27,6 +27,7 @@ extern "C" {
 }
 
 #[wasm_bindgen]
+/// Initializes panic-hook.
 pub fn init_panic_hook() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
@@ -41,6 +42,7 @@ pub struct WebEngine {
 #[wasm_bindgen]
 impl WebEngine {
     #[wasm_bindgen(constructor)]
+    /// Creates a new instance.
     pub fn new() -> Result<WebEngine, JsValue> {
         let canvas = create_canvas(800, 600)?;
         Ok(WebEngine {
@@ -48,28 +50,34 @@ impl WebEngine {
         })
     }
 
+    /// Loads q42.
     pub fn load_q42(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         self.inner.load_q42(bytes)
     }
 
+    /// Loads json-scene.
     pub fn load_json_scene(&mut self, json: &str) -> Result<JsValue, JsValue> {
         self.inner.load_json_scene(json)
     }
 
+    /// Renders to-canvas.
     pub fn render_to_canvas(&self, canvas: HtmlCanvasElement) -> Result<(), JsValue> {
         self.inner.paint_frame(&canvas)
     }
 
+    /// Last parsed value.
     pub fn last_parsed(&self) -> Option<JsValue> {
         self.inner.last_parsed()
     }
 
+    /// Mounts qapp.
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         self.inner.mount_qapp(root_id)
     }
 }
 
 #[wasm_bindgen]
+/// Creates canvas.
 pub fn create_canvas(width: u32, height: u32) -> Result<HtmlCanvasElement, JsValue> {
     let window = web_sys::window().ok_or("no window")?;
     let document = window.document().ok_or("no document")?;

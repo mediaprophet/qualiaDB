@@ -4,6 +4,7 @@ use web_sys::{Document, Element};
 
 use super::super::cop_records::{build_family_panel, CopField};
 
+/// Builds contribution-ledger-view.
 pub fn build_contribution_ledger_view(document: &Document) -> Element {
     build_family_panel(
         document,

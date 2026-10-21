@@ -8,6 +8,7 @@
 pub const GPU_INSTANCE_RECORD_ABI_VERSION: u32 = 2;
 pub const MAX_GPU_MESH_INSTANCES: usize = 10_000;
 
+#[cfg(feature = "gpu-runtime")]
 pub use crate::render::gpu::indirect_cull::{
     build_hzb_mip_chain_zero_heap, cull_and_select_lod_indirect_zero_heap,
     select_lod_tier_with_hysteresis, CullUniformsGpu, DrawIndexedIndirectCommand, HzbPyramidView,

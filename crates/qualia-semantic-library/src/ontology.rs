@@ -6,6 +6,7 @@ pub struct OntologyCompiler {
 }
 
 impl OntologyCompiler {
+    /// Creates a new instance.
     pub fn new(cache_dir: PathBuf) -> Self {
         std::fs::create_dir_all(&cache_dir).unwrap_or_default();
         Self { cache_dir }

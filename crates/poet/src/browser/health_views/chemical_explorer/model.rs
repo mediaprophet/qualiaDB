@@ -84,6 +84,7 @@ pub enum UncertaintyLabel {
 }
 
 impl UncertaintyLabel {
+    /// Views as str.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Known => "known",
@@ -136,6 +137,7 @@ impl ChemicalExplorerState {
         self.load.into()
     }
 
+    /// View phase.
     pub fn phase(&self) -> ExplorerPhase {
         match self.load {
             LoadState::NoAsset => ExplorerPhase::NoAsset,
@@ -152,6 +154,7 @@ impl ChemicalExplorerState {
         }
     }
 
+    /// Sets query.
     pub fn set_query(&mut self, raw: &str) {
         self.query = raw.to_string();
         if !self.load.allows_query() {
@@ -285,6 +288,7 @@ impl ChemicalExplorerState {
         }
     }
 
+    /// Selects a hit.
     pub fn select_hit(&mut self, accession: &str) -> bool {
         if !self.load.allows_query() {
             return false;
@@ -302,12 +306,14 @@ impl ChemicalExplorerState {
         true
     }
 
+    /// Clears the selection.
     pub fn clear_selection(&mut self) {
         self.selected = None;
         self.relations.clear();
         self.evidence.clear();
     }
 
+    /// Sets relations.
     pub fn set_relations(&mut self, relations: Vec<RelationHitView>) {
         if self.selected.is_none() || !self.load.allows_query() {
             self.relations.clear();
@@ -316,6 +322,7 @@ impl ChemicalExplorerState {
         self.relations = relations;
     }
 
+    /// Sets evidence.
     pub fn set_evidence(&mut self, evidence: Vec<EvidenceHitView>) {
         if self.selected.is_none() || !self.load.allows_query() {
             self.evidence.clear();
@@ -324,6 +331,7 @@ impl ChemicalExplorerState {
         self.evidence = evidence;
     }
 
+    /// Toggles the licence drawer.
     pub fn toggle_licence_drawer(&mut self) {
         self.licence_drawer_open = !self.licence_drawer_open;
     }
@@ -336,6 +344,7 @@ impl ChemicalExplorerState {
         }
     }
 
+    /// Status message.
     pub fn status_message(&self) -> String {
         match self.phase() {
             ExplorerPhase::NoAsset => NO_ASSET_GUIDANCE.to_string(),

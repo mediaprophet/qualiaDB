@@ -213,10 +213,12 @@ impl SystemRegistry {
         self.systems.iter().map(|s| s.id.as_str())
     }
 
+    /// Length.
     pub fn len(&self) -> usize {
         self.systems.len()
     }
 
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         self.systems.is_empty()
     }

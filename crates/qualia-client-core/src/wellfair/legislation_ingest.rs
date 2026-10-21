@@ -39,6 +39,7 @@ pub struct Provision {
 }
 
 impl Provision {
+    /// Source text.
     pub fn source_text(&self) -> &str {
         if !self.full_text.trim().is_empty() {
             &self.full_text
@@ -527,6 +528,7 @@ pub fn extract_pdf_pages(path: &Path) -> Result<Vec<(u32, String)>, String> {
     extract_pdf_pages_from_bytes(&bytes)
 }
 
+/// Extracts PDF pages from bytes.
 pub fn extract_pdf_pages_from_bytes(bytes: &[u8]) -> Result<Vec<(u32, String)>, String> {
     // pdf_extract gives whole-doc text; split on form feeds if present, else one page.
     let text = pdf_extract::extract_text_from_mem(bytes).map_err(|e| e.to_string())?;

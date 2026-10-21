@@ -29,10 +29,12 @@ pub fn diagnose_json(src: &str) -> String {
     diagnose(src).to_json()
 }
 
+/// Host version.
 pub fn host_version() -> &'static str {
     HOST_VERSION
 }
 
+/// Language version.
 pub fn language_version() -> &'static str {
     LANGUAGE_VERSION
 }

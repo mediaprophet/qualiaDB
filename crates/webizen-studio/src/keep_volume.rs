@@ -28,6 +28,7 @@ pub enum VolumeLook {
 }
 
 impl VolumeLook {
+    /// `&str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Closed => "closed",
@@ -38,6 +39,7 @@ impl VolumeLook {
         }
     }
 
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Closed => "closed",
@@ -47,6 +49,7 @@ impl VolumeLook {
         }
     }
 
+    /// Named beat.
     pub fn named_beat(self) -> &'static str {
         match self {
             Self::Open => "dwell",
@@ -91,6 +94,7 @@ pub enum KeepOutcome {
 }
 
 impl KeepOutcome {
+    /// Volume look.
     pub fn look(&self) -> VolumeLook {
         match self {
             Self::Held { .. } => VolumeLook::Held,
@@ -99,11 +103,13 @@ impl KeepOutcome {
         }
     }
 
+    /// `true` when the volume celebrates.
     pub fn celebrates(&self) -> bool {
         matches!(self, Self::Committed { written, .. } if *written > 0)
     }
 }
 
+/// Human-sayable name for a path.
 pub fn sayable_name(path: &str) -> String {
     let file = path.rsplit(['/', '\\']).next().unwrap_or(path).trim();
     let stem = file
@@ -119,12 +125,14 @@ pub fn sayable_name(path: &str) -> String {
     }
 }
 
+/// Held outcome.
 pub fn held_outcome(why: &str) -> KeepOutcome {
     KeepOutcome::Held {
         why: sanitize_held_why(why),
     }
 }
 
+/// Sanitizes a held reason.
 pub fn sanitize_held_why(raw: &str) -> String {
     let folded = raw.to_ascii_lowercase();
     if raw.trim().is_empty()
@@ -140,10 +148,12 @@ pub fn sanitize_held_why(raw: &str) -> String {
     }
 }
 
+/// `true` when copy avoids "unavailable".
 pub fn copy_avoids_unavailable(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("unavailable")
 }
 
+/// `true` when copy avoids broken terms.
 pub fn copy_avoids_broken(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("broken")
 }
@@ -153,6 +163,7 @@ pub fn celebrate_commit(ok: bool, written: u64) -> bool {
     ok && written > 0
 }
 
+/// Parses u64-field.
 pub fn parse_u64_field(src: &str, key: &str) -> u64 {
     let patterns = [
         format!("{key}: "),
@@ -172,6 +183,7 @@ pub fn parse_u64_field(src: &str, key: &str) -> u64 {
     0
 }
 
+/// Interprets an open action.
 pub fn interpret_open(ok: bool, value: &str, diagnostic: Option<&str>, path: &str) -> KeepOutcome {
     if ok {
         return KeepOutcome::Open {
@@ -183,6 +195,7 @@ pub fn interpret_open(ok: bool, value: &str, diagnostic: Option<&str>, path: &st
     held_outcome(HELD_WHY)
 }
 
+/// Interprets a commit action.
 pub fn interpret_commit(
     ok: bool,
     value: &str,
@@ -201,6 +214,7 @@ pub fn interpret_commit(
     held_outcome(HELD_WHY)
 }
 
+/// Remembers a recent item.
 pub fn remember_recent(recents: &[RecentVolume], path: &str) -> Vec<RecentVolume> {
     let path = path.trim();
     if path.is_empty() {
@@ -221,6 +235,7 @@ pub fn remember_recent(recents: &[RecentVolume], path: &str) -> Vec<RecentVolume
     out
 }
 
+/// Parses recents-json.
 pub fn parse_recents_json(raw: &str) -> Vec<RecentVolume> {
     serde_json::from_str::<Vec<RecentVolume>>(raw)
         .unwrap_or_default()
@@ -236,10 +251,12 @@ pub fn parse_recents_json(raw: &str) -> Vec<RecentVolume> {
         .collect()
 }
 
+/// Recents as JSON.
 pub fn recents_json(recents: &[RecentVolume]) -> String {
     serde_json::to_string(recents).unwrap_or_else(|_| "[]".into())
 }
 
+/// Merges a browse list.
 pub fn merge_browse_list(recents: &[RecentVolume], vault: &[VaultVolume]) -> Vec<RecentVolume> {
     let mut out = Vec::new();
     let mut seen = Vec::new();

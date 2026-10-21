@@ -12,6 +12,7 @@ pub struct LayoutUndo {
 }
 
 impl LayoutUndo {
+    /// `LayoutUndo::new`.
     pub fn new(max: usize) -> Self {
         Self {
             max,
@@ -46,6 +47,7 @@ impl LayoutUndo {
         self.frames.len() > 1
     }
 
+    /// `true` when a redo is available.
     pub fn can_redo(&self) -> bool {
         !self.redo_frames.is_empty()
     }
@@ -65,6 +67,7 @@ impl LayoutUndo {
         Some(restored)
     }
 
+    /// `LayoutUndo::len`.
     pub fn len(&self) -> usize {
         self.frames.len()
     }

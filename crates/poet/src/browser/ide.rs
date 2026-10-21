@@ -23,6 +23,7 @@ pub enum IdeActivityTab {
 }
 
 impl IdeActivityTab {
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             Self::Explorer => "\u{1F4C1}",      // 📁
@@ -35,6 +36,7 @@ impl IdeActivityTab {
         }
     }
 
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Explorer => "Explorer",

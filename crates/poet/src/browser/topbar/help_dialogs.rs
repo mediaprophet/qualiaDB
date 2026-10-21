@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Opens shortcuts-dialog.
 pub(super) fn open_shortcuts_dialog(document: &Document) {
     if let Some(existing) = document.get_element_by_id("shortcuts-dialog") {
         existing.remove();
@@ -95,6 +96,7 @@ pub(super) fn open_shortcuts_dialog(document: &Document) {
     }
 }
 
+/// Opens honesty-dialog.
 pub(super) fn open_honesty_dialog(document: &Document) {
     if let Some(existing) = document.get_element_by_id("honesty-dialog") {
         existing.remove();
@@ -214,6 +216,7 @@ pub(super) fn open_honesty_dialog(document: &Document) {
     }
 }
 
+/// Opens about-dialog.
 pub(super) fn open_about_dialog(document: &Document) {
     if let Some(existing) = document.get_element_by_id("about-dialog") {
         existing.remove();

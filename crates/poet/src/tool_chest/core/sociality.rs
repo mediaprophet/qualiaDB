@@ -18,6 +18,7 @@ pub enum ManifoldSociality {
 }
 
 impl ManifoldSociality {
+    /// Views as str.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Personal => "personal",
@@ -25,6 +26,7 @@ impl ManifoldSociality {
         }
     }
 
+    /// `true` when social.
     pub fn is_social(self) -> bool {
         matches!(self, Self::Social)
     }
@@ -44,6 +46,7 @@ pub struct ManifoldParticipant {
 }
 
 impl ManifoldParticipant {
+    /// `ManifoldParticipant::new`.
     pub fn new(did: impl Into<String>, role: impl Into<String>) -> Self {
         Self {
             did: did.into(),

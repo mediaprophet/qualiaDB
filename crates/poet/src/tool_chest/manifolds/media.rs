@@ -6,6 +6,7 @@
 
 use super::super::core::registry::{DockPosition, ManifoldSeed, SeedContainer, SeedPanel};
 
+/// `media` manifold seed.
 pub fn media_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "media".into(),

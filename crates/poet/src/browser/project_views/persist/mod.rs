@@ -107,6 +107,7 @@ pub const IMPORT_FAMILIES: &[(&str, &str)] = &[
     ("contribution", "Contributions"),
 ];
 
+/// Ledger.
 pub fn ledger(
     document: &Document,
     family: &'static str,
@@ -119,6 +120,7 @@ pub fn ledger(
     )
 }
 
+/// Wraps the payload.
 pub fn wrap(document: &Document, child: Element) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

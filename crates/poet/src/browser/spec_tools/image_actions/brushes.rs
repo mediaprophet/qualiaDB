@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "image:brush-select" => Some(select_brush(container)),
@@ -16,6 +17,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next brush-size.
 pub(crate) fn next_brush_size(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("5px") => "10px",
@@ -26,6 +28,7 @@ pub(crate) fn next_brush_size(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next brush-opacity.
 pub(crate) fn next_brush_opacity(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("100%") => "75%",

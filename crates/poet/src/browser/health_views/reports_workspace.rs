@@ -17,6 +17,7 @@ use web_sys::{
     Document, Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
+/// Builds clinical-reports-view.
 pub fn build_clinical_reports_view(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

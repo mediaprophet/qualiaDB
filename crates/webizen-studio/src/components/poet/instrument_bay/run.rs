@@ -20,6 +20,7 @@ pub enum RunPhase {
 }
 
 impl RunPhase {
+    /// `&str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Idle => "idle",
@@ -76,6 +77,7 @@ fn status_copy(phase: RunPhase, entry: &str) -> &'static str {
 }
 
 #[component]
+/// Dioxus `RunPanel` component.
 pub fn RunPanel(entry: String) -> Element {
     let mut phase = use_signal(|| RunPhase::Idle);
     let mut input = use_signal(|| String::new());

@@ -91,6 +91,7 @@ pub fn init_log_stream(enable_telemetry: bool) {
         .ok();
 }
 
+/// CLI: .
 pub fn run_list(vault_path: &Path) -> Result<(), String> {
     let entries = model_lifecycle::scan_vault_gguf(vault_path).map_err(|e| e.to_string())?;
     if entries.is_empty() {
@@ -119,6 +120,7 @@ pub fn run_list(vault_path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_duplicate_audit(vault_path: &Path) -> Result<(), String> {
     let groups = model_lifecycle::audit_vault_duplicates(vault_path).map_err(|e| e.to_string())?;
     if groups.is_empty() {
@@ -151,6 +153,7 @@ pub fn run_duplicate_audit(vault_path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_load(vault_path: &Path, model_ref: &str) -> Result<(), String> {
     let gguf =
         model_lifecycle::resolve_vault_model(vault_path, model_ref).map_err(|e| e.to_string())?;
@@ -197,6 +200,7 @@ pub fn run_load(vault_path: &Path, model_ref: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_status() -> Result<(), String> {
     let orch = model_lifecycle::task_orchestrator();
     let lifecycle = model_lifecycle::get_model_lifecycle_state();
@@ -235,6 +239,7 @@ pub fn run_status() -> Result<(), String> {
     Ok(())
 }
 
+/// CLI: .
 pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), String> {
     with_session(|session| {
         if orchestrated {
@@ -291,6 +296,7 @@ pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), St
     })
 }
 
+/// CLI: .
 pub fn run_evict(model_id_ref: &str) -> Result<(), String> {
     let profile_id = parse_model_id_ref(model_id_ref)?;
     println!("Evicting model 0x{profile_id:016x} …");

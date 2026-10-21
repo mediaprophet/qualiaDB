@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `LogicQapp` component.
 pub fn LogicQapp() -> Element {
     rsx! {
         QAppEngine {

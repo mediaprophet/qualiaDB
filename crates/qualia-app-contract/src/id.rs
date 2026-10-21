@@ -26,6 +26,7 @@ impl AppId {
         Ok(Self(s))
     }
 
+    /// `&str` form.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -81,14 +82,17 @@ impl CommandId {
         Self::parse(format!("{}::{}", app_id.as_str(), upstream_id))
     }
 
+    /// `&str` form.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    /// `app` ID.
     pub fn app_id(&self) -> &str {
         self.0.split("::").next().unwrap_or("")
     }
 
+    /// `upstream` ID.
     pub fn upstream_id(&self) -> &str {
         self.0.split("::").nth(1).unwrap_or("")
     }
@@ -113,10 +117,12 @@ impl FromStr for CommandId {
 pub struct DecimalU64(pub u64);
 
 impl DecimalU64 {
+    /// Creates a new instance.
     pub fn new(val: u64) -> Self {
         Self(val)
     }
 
+    /// Gets a value.
     pub fn get(&self) -> u64 {
         self.0
     }

@@ -14,6 +14,7 @@ struct AccessibilityPreferences {
     focus_mode: bool,
 }
 
+/// `?::restore`.
 pub fn restore(document: &Document) {
     apply(document, &load());
 }
@@ -112,6 +113,7 @@ fn focus_element(element: &Element) {
     }
 }
 
+/// Opens dialog.
 pub fn open_dialog(document: &Document) {
     if let Some(existing) = document.get_element_by_id("accessibility-dialog") {
         existing.remove();

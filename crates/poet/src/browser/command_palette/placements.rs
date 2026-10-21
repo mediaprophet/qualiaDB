@@ -3,6 +3,7 @@
 //! Keep this routing table separate from the catalogue so palette dispatch
 //! cannot silently drift back to notification-only behavior.
 
+/// Container for the element.
 pub(super) fn container_for(label: &str) -> Option<(&'static str, &str)> {
     Some(match label {
         "Browse Ontology" => ("ontology", "Ontology Browser"),

@@ -44,6 +44,7 @@ async fn load(mut ui: Signal<AssessUi>) {
 }
 
 #[component]
+/// Dioxus `WellfairAssessmentPanel` component.
 pub fn WellfairAssessmentPanel() -> Element {
     let mut ui = use_signal(AssessUi::default);
     let mut init_done = use_signal(|| false);

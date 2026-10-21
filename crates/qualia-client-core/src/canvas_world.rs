@@ -52,6 +52,7 @@ pub enum CanvasLayer {
 }
 
 impl CanvasLayer {
+    /// Canvas-world endpoint.
     pub fn endpoint(&self) -> &str {
         match self {
             Self::GeoSpatial { endpoint, .. }
@@ -65,6 +66,7 @@ impl CanvasLayer {
         }
     }
 
+    /// Canvas-world stratum.
     pub fn stratum(&self) -> WorldStratum {
         match self {
             Self::GeoSpatial { stratum, .. } | Self::Custom { stratum, .. } => *stratum,

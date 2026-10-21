@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SemanticsQapp` component.
 pub fn SemanticsQapp() -> Element {
     rsx! {
         QAppEngine {

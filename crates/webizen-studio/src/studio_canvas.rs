@@ -432,6 +432,7 @@ fn default_presentation_mode(app_id: Option<&str>) -> PresentationMode {
 // ─────────────────────────────────────────────────────────────
 
 #[component]
+/// Dioxus `DynamicPage` component.
 pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) -> Element {
     let mock_quin = use_signal(|| NQuin {
         subject: 0,

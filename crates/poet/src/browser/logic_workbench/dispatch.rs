@@ -3,6 +3,7 @@
 
 use web_sys::Document;
 
+/// Dispatches command.
 pub(super) fn dispatch_command(document: &Document, label: &str) -> bool {
     let tool = match label {
         "Logic Workbench" => {

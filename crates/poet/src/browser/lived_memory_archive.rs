@@ -48,6 +48,7 @@ pub struct LivedMemoryManager {
 }
 
 impl LivedMemoryManager {
+    /// `LivedMemoryManager::new`.
     pub fn new() -> Self {
         let sample_1 = MemoryArtifact {
             id: "mem-001".into(),

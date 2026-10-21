@@ -158,6 +158,7 @@ impl AgentSemanticProfile {
             .collect()
     }
 
+    /// Agent briefing.
     pub fn briefing(&self) -> String {
         if self.tags.is_empty() {
             return String::new();

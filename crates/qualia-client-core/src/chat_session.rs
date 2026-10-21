@@ -85,6 +85,7 @@ pub enum Role {
 }
 
 impl Role {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Role::User => "user",
@@ -92,6 +93,7 @@ impl Role {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Result<Self, ChatError> {
         match s.to_lowercase().as_str() {
             "user" => Ok(Role::User),
@@ -165,6 +167,7 @@ fn active_model_profile_id() -> u64 {
 }
 
 impl ChatEnvironment {
+    /// Default options for a session.
     pub fn default_for_session(session_id: &str, storage_root: &Path) -> Self {
         let catalog = qualia_core_db::resource_catalog::load_default()
             .unwrap_or_else(|_| qualia_core_db::resource_catalog::ResourceCatalog::empty());
@@ -207,6 +210,7 @@ impl ChatEnvironment {
         })
     }
 
+    /// Saves to-session-dir.
     pub fn save_to_session_dir(&self, storage_root: &Path) -> Result<(), ChatError> {
         let path = session_dir(storage_root, &self.session_id).join("environment.json");
         fs::write(path, serde_json::to_string_pretty(self)?)?;
@@ -244,6 +248,7 @@ pub struct ChatSessionShareTarget {
     pub participant_count: u64,
 }
 
+/// Compiles the session DID.
 pub fn compile_session_did(session_id: &str, kind: SessionKind) -> String {
     let scope = match kind {
         SessionKind::Solo => "solo",
@@ -328,6 +333,7 @@ struct LastSessionPrefs {
     last_session_id: Option<String>,
 }
 
+/// Chats directory.
 pub fn chats_dir(storage_root: &Path) -> PathBuf {
     storage_root.join("Chats")
 }
@@ -407,6 +413,7 @@ fn write_quins_to_q42(quins: &[NQuin], out_path: &Path) -> Result<u64, ChatError
     Ok(count as u64)
 }
 
+/// Gets last-session-id.
 pub fn get_last_session_id() -> Option<String> {
     let path = last_session_prefs_path();
     let text = fs::read_to_string(path).ok()?;
@@ -414,6 +421,7 @@ pub fn get_last_session_id() -> Option<String> {
     prefs.last_session_id
 }
 
+/// Sets last-session-id.
 pub fn set_last_session_id(id: &str) -> Result<(), ChatError> {
     let path = last_session_prefs_path();
     if let Some(parent) = path.parent() {
@@ -426,6 +434,7 @@ pub fn set_last_session_id(id: &str) -> Result<(), ChatError> {
     Ok(())
 }
 
+/// Creates session.
 pub fn create_session(
     storage_root: &Path,
     title: Option<String>,
@@ -476,6 +485,7 @@ pub fn create_session(
     Ok(id)
 }
 
+/// Lists chat sessions.
 pub fn list_sessions(storage_root: &Path) -> Result<Vec<ChatSessionSummary>, ChatError> {
     let root = chats_dir(storage_root);
     if !root.is_dir() {
@@ -562,6 +572,7 @@ fn load_environment_or_default(
     }
 }
 
+/// Loads session.
 pub fn load_session(storage_root: &Path, id: &str) -> Result<ChatSession, ChatError> {
     let meta_path = session_meta_path(storage_root, id);
     if !meta_path.is_file() {
@@ -578,6 +589,7 @@ pub fn load_session(storage_root: &Path, id: &str) -> Result<ChatSession, ChatEr
     })
 }
 
+/// Appends a message.
 pub fn append_message(
     storage_root: &Path,
     id: &str,
@@ -587,6 +599,7 @@ pub fn append_message(
     append_message_with_options(storage_root, id, role, content, None, None)
 }
 
+/// Appends a message with options.
 pub fn append_message_with_options(
     storage_root: &Path,
     id: &str,
@@ -608,6 +621,7 @@ pub fn append_message_with_options(
     )
 }
 
+/// Appends a message with an author.
 pub fn append_message_with_author(
     storage_root: &Path,
     id: &str,
@@ -777,6 +791,7 @@ pub fn append_relay_message_with_agent_meta(
     Ok(lamport)
 }
 
+/// Compacts a session to q42.
 pub fn compact_session_to_q42(storage_root: &Path, id: &str) -> Result<PathBuf, ChatError> {
     let dir = session_dir(storage_root, id);
     if !dir.is_dir() {
@@ -802,6 +817,7 @@ pub fn compact_session_to_q42(storage_root: &Path, id: &str) -> Result<PathBuf, 
     Ok(out)
 }
 
+/// Deletes a session.
 pub fn delete_session(storage_root: &Path, id: &str) -> Result<(), ChatError> {
     let dir = session_dir(storage_root, id);
     if !dir.is_dir() {
@@ -861,6 +877,7 @@ fn sync_participants_to_environment(
     Ok(())
 }
 
+/// Creates group-session.
 pub fn create_group_session(
     storage_root: &Path,
     title: Option<String>,
@@ -938,6 +955,7 @@ pub fn create_group_session(
     Ok(id)
 }
 
+/// Adds participant.
 pub fn add_participant(
     storage_root: &Path,
     id: &str,
@@ -969,6 +987,7 @@ pub fn add_participant(
     Ok(meta.participants.clone())
 }
 
+/// Removes participant.
 pub fn remove_participant(
     storage_root: &Path,
     id: &str,
@@ -991,6 +1010,7 @@ pub fn remove_participant(
     Ok(meta.participants.clone())
 }
 
+/// Gets participants.
 pub fn get_participants(storage_root: &Path, id: &str) -> Result<Vec<ChatParticipant>, ChatError> {
     let meta_path = session_meta_path(storage_root, id);
     if !meta_path.is_file() {
@@ -1017,6 +1037,7 @@ pub fn list_session_share_targets(
         .collect())
 }
 
+/// Gets session-did.
 pub fn get_session_did(storage_root: &Path, session_id: &str) -> Result<String, ChatError> {
     let meta_path = session_meta_path(storage_root, session_id);
     if !meta_path.is_file() {
@@ -1027,6 +1048,7 @@ pub fn get_session_did(storage_root: &Path, session_id: &str) -> Result<String, 
     Ok(meta.session_did)
 }
 
+/// Renames a session.
 pub fn rename_session(storage_root: &Path, id: &str, title: &str) -> Result<(), ChatError> {
     let meta_path = session_meta_path(storage_root, id);
     if !meta_path.is_file() {

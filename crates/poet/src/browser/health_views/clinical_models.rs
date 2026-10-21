@@ -14,6 +14,7 @@ pub enum ConditionStatus {
 }
 
 impl ConditionStatus {
+    /// Parses the payload.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_lowercase().as_str() {
             "resolved" => Self::Resolved,
@@ -24,6 +25,7 @@ impl ConditionStatus {
         }
     }
 
+    /// Views as str.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Active => "active",
@@ -34,6 +36,7 @@ impl ConditionStatus {
         }
     }
 
+    /// `display` label.
     pub fn display_label(&self) -> &'static str {
         match self {
             Self::Active => "Active",
@@ -44,10 +47,12 @@ impl ConditionStatus {
         }
     }
 
+    /// `true` when active.
     pub fn is_active(&self) -> bool {
         matches!(self, Self::Active | Self::Recurrence | Self::Relapse)
     }
 
+    /// `true` when history.
     pub fn is_history(&self) -> bool {
         matches!(self, Self::Remission | Self::Resolved)
     }
@@ -165,6 +170,7 @@ pub enum MedicationStatus {
 }
 
 impl MedicationStatus {
+    /// Parses the payload.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_lowercase().as_str() {
             "stopped" => Self::Stopped,
@@ -174,6 +180,7 @@ impl MedicationStatus {
         }
     }
 
+    /// Views as str.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Active => "active",
@@ -183,6 +190,7 @@ impl MedicationStatus {
         }
     }
 
+    /// `display` label.
     pub fn display_label(&self) -> &'static str {
         match self {
             Self::Active => "Active",
@@ -192,10 +200,12 @@ impl MedicationStatus {
         }
     }
 
+    /// `true` when active.
     pub fn is_active(&self) -> bool {
         matches!(self, Self::Active | Self::OnHold)
     }
 
+    /// `true` when history.
     pub fn is_history(&self) -> bool {
         matches!(self, Self::Completed | Self::Stopped)
     }

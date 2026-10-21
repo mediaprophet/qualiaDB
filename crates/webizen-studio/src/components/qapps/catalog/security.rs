@@ -1,5 +1,6 @@
 use super::{Cat, QApp, Stat};
 
+/// App catalog list.
 pub(super) fn apps() -> Vec<QApp> {
     vec![
         // ── Security & Governance ─────────────────────────────────────────────

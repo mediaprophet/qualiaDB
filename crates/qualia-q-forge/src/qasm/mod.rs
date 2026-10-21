@@ -52,6 +52,7 @@ impl Default for QasmStatement {
 }
 
 impl QasmProgram {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             statements: [QasmStatement::Empty; 256],
@@ -67,6 +68,7 @@ impl Default for QasmProgram {
 }
 
 impl QasmProgram {
+    /// Pushes an item.
     pub fn push(&mut self, statement: QasmStatement) -> Result<(), &'static str> {
         if self.statement_count >= 256 {
             return Err("AST capacity exceeded");

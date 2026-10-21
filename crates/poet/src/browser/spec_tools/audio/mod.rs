@@ -8,6 +8,7 @@ mod midi_effects;
 mod mixing_inspect;
 mod transport_tracks;
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     static ROWS: OnceLock<Vec<SpecTool>> = OnceLock::new();
     ROWS.get_or_init(|| {

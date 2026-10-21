@@ -26,6 +26,7 @@ pub enum HonestyLevel {
 }
 
 impl HonestyLevel {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Ready => "Ready",
@@ -38,6 +39,7 @@ impl HonestyLevel {
         }
     }
 
+    /// Background/foreground colours for the chip.
     pub fn bg_fg(self) -> (&'static str, &'static str) {
         match self {
             Self::Ready => ("#064e3b", "#a7f3d0"),

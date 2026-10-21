@@ -19,6 +19,7 @@ use crate::browser::native_daemon::{
 };
 use crate::browser::surface_states;
 
+/// Builds conditions-view.
 pub fn build_conditions_view(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

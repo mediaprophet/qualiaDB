@@ -18,6 +18,7 @@ pub use wasm_bindgen::JsCast;
 pub use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 pub use crate::components::qapp_engine::invoke_json;
 
+/// Invokes tauri.
 pub async fn invoke_tauri(cmd: &str, args: serde_json::Value) -> Result<String, String> {
     let res = invoke_json(cmd, args).await?;
     if let Some(s) = res.as_str() {
@@ -28,6 +29,7 @@ pub async fn invoke_tauri(cmd: &str, args: serde_json::Value) -> Result<String, 
     }
 }
 
+/// `true` when web-or-app-url.
 pub fn is_web_or_app_url(url: &str) -> bool {
     let u = url.trim().to_ascii_lowercase();
     u.starts_with("http://")
@@ -101,6 +103,7 @@ pub fn apply_cookie_summary(
     coverage.set(note.to_string());
 }
 
+/// Display title for a pane.
 pub fn display_title_for(url: &str) -> String {
     let u = url.trim();
     if u.is_empty() {
@@ -131,6 +134,7 @@ pub struct BrowserTab {
 }
 
 impl BrowserTab {
+    /// Creates a new instance.
     pub fn new(url: String) -> Self {
         let title = display_title_for(&url);
         Self {
@@ -142,14 +146,17 @@ impl BrowserTab {
         }
     }
 
+    /// `true` when able to go-back.
     pub fn can_go_back(&self) -> bool {
         self.history_index > 0
     }
 
+    /// `true` when able to go-forward.
     pub fn can_go_forward(&self) -> bool {
         self.history_index + 1 < self.history.len()
     }
 
+    /// Navigates back.
     pub fn go_back(&mut self) -> Option<String> {
         if self.can_go_back() {
             self.history_index -= 1;
@@ -161,6 +168,7 @@ impl BrowserTab {
         }
     }
 
+    /// Navigates forward.
     pub fn go_forward(&mut self) -> Option<String> {
         if self.can_go_forward() {
             self.history_index += 1;
@@ -172,6 +180,7 @@ impl BrowserTab {
         }
     }
 
+    /// Navigates to a URL.
     pub fn navigate(&mut self, url: String) {
         self.history.truncate(self.history_index + 1);
         self.history.push(url.clone());

@@ -205,6 +205,7 @@ pub enum WhoKind {
 }
 
 impl WhoKind {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Human => "human",
@@ -222,6 +223,7 @@ impl WhoKind {
         }
     }
 
+    /// Directory sort rank.
     pub fn sort_rank(self) -> u8 {
         match self {
             Self::Human => 0,
@@ -276,6 +278,7 @@ pub fn classify_who_kind(kinds: &[String], organization: &Option<String>) -> Who
     WhoKind::Human
 }
 
+/// Parses who-kind.
 pub fn parse_who_kind(raw: &str) -> WhoKind {
     match raw.trim().to_ascii_lowercase().as_str() {
         "organization" | "organisation" | "org" => WhoKind::Organization,

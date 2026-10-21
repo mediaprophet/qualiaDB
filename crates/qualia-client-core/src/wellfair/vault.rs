@@ -31,6 +31,7 @@ pub struct VaultService {
 }
 
 impl VaultService {
+    /// Opens.
     pub fn open<W: AsRef<Path>, S: AsRef<Path>>(
         wal_path: W,
         storage_root: S,
@@ -71,14 +72,17 @@ impl VaultService {
         })
     }
 
+    /// Graph quin count.
     pub fn graph_quin_count(&self) -> usize {
         self.graph.count()
     }
 
+    /// Lists graph quins.
     pub fn list_graph_quins(&self, limit: usize) -> std::io::Result<Vec<NQuin>> {
         self.graph.list_recent(limit)
     }
 
+    /// Graph coverage.
     pub fn graph_coverage(
         &self,
         journal_limit: usize,
@@ -89,26 +93,32 @@ impl VaultService {
         Ok(super::graph_query::coverage_for_journal(&journal, &quins))
     }
 
+    /// Journal count.
     pub fn journal_count(&self) -> std::io::Result<usize> {
         self.journal.count()
     }
 
+    /// Lists health records.
     pub fn list_health_records(&self, limit: usize) -> std::io::Result<Vec<JournalEntry>> {
         self.journal.list_recent(limit)
     }
 
+    /// Lists receipts.
     pub fn list_receipts(&self, limit: usize) -> std::io::Result<Vec<ReceiptRecord>> {
         self.receipts.list_recent(limit)
     }
 
+    /// Lists the outbox.
     pub fn list_outbox(&self, limit: usize) -> std::io::Result<Vec<SyncOutboxEntry>> {
         self.sync_outbox.list_recent(limit)
     }
 
+    /// Outbox queued count.
     pub fn outbox_queued_count(&self) -> std::io::Result<usize> {
         self.sync_outbox.count_queued()
     }
 
+    /// Lists active consents.
     pub fn list_active_consents(
         &self,
         now_unix: u64,
@@ -116,6 +126,7 @@ impl VaultService {
         self.consents.list_active(now_unix)
     }
 
+    /// Appends a consent.
     pub fn append_consent(
         &self,
         grant: &super::consent_store::ConsentGrantRecord,
@@ -123,10 +134,12 @@ impl VaultService {
         self.consents.append(grant)
     }
 
+    /// Revokes a consent.
     pub fn revoke_consent(&self, grant_id: &str) -> std::io::Result<bool> {
         self.consents.revoke(grant_id)
     }
 
+    /// WAL-buffered quins.
     pub fn wal_buffered_quins(&mut self) -> std::io::Result<usize> {
         self.wal.buffered_count()
     }
@@ -176,10 +189,12 @@ impl VaultService {
         Ok(hash)
     }
 
+    /// Last checkpoint hash.
     pub fn last_checkpoint_hash(&self) -> Option<[u8; 32]> {
         self.last_checkpoint_hash
     }
 
+    /// Checkpoint metadata.
     pub fn checkpoint_meta(&self) -> Option<checkpoint_store::CheckpointMeta> {
         load_meta(&self.storage_root)
     }
@@ -227,6 +242,7 @@ impl VaultService {
         Ok(committed)
     }
 
+    /// Appends a receipt.
     pub fn append_receipt(&self, receipt: &ReceiptRecord) -> std::io::Result<()> {
         self.receipts.append(receipt)
     }

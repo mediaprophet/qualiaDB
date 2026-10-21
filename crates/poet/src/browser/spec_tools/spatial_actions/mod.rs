@@ -19,10 +19,12 @@ pub fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Re
         .or_else(|| manifold::run(document, container, tool_id))
 }
 
+/// JS error value.
 pub(super) fn js_error(_: wasm_bindgen::JsValue) -> String {
     "DOM operation failed.".to_string()
 }
 
+/// Appends semicolon-attr.
 pub(super) fn append_semicolon_attr(container: &Element, attr: &str, item: &str) -> Result<(), String> {
     let current = container.get_attribute(attr).unwrap_or_default();
     let updated = if current.is_empty() {
@@ -35,6 +37,7 @@ pub(super) fn append_semicolon_attr(container: &Element, attr: &str, item: &str)
         .map_err(|_| format!("Failed to update {attr}."))
 }
 
+/// Ensures the scene root.
 pub(super) fn ensure_scene_root(document: &Document, container: &Element) -> Result<Element, String> {
     if let Ok(Some(existing)) = container.query_selector("[data-spatial-scene]") {
         return Ok(existing);
@@ -50,16 +53,19 @@ pub(super) fn ensure_scene_root(document: &Document, container: &Element) -> Res
     Ok(scene)
 }
 
+/// `active-node` id.
 pub(super) fn active_node_id(container: &Element) -> Option<String> {
     container.get_attribute("data-active-spatial-node")
 }
 
+/// Selects a node.
 pub(super) fn select_node(container: &Element, node_id: &str) -> Result<(), String> {
     container
         .set_attribute("data-active-spatial-node", node_id)
         .map_err(|_| "Failed to select spatial node.".to_string())
 }
 
+/// Finds a node.
 pub(super) fn find_node(container: &Element, node_id: &str) -> Result<Option<Element>, String> {
     let selector = format!("[data-spatial-node=\"{node_id}\"]");
     container
@@ -67,6 +73,7 @@ pub(super) fn find_node(container: &Element, node_id: &str) -> Result<Option<Ele
         .map_err(|_| "Failed to query spatial node.".to_string())
 }
 
+/// `node` count.
 pub(super) fn node_count(container: &Element) -> Result<u32, String> {
     Ok(container
         .query_selector_all("[data-spatial-node]")
@@ -74,6 +81,7 @@ pub(super) fn node_count(container: &Element) -> Result<u32, String> {
         .length())
 }
 
+/// `Ok(true)` helper.
 pub(super) fn ok_true(result: Result<(), String>) -> Result<bool, String> {
     result.map(|()| true)
 }

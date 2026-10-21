@@ -9,6 +9,7 @@ pub struct HealthStore {
 }
 
 impl HealthStore {
+    /// Creates a new instance.
     pub fn new() -> Result<Self, String> {
         Ok(Self {
             raw_turtle: String::new(),

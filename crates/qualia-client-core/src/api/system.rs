@@ -19,32 +19,39 @@ use sysinfo::System;
 
 pub use crate::setup::{SetupProfile, SetupState};
 
+/// Gets setup-state.
 pub fn get_setup_state() -> Result<SetupState, String> {
     crate::setup::get_setup_state()
 }
 
+/// Completes a setup step.
 pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
     crate::setup::complete_setup_step(step)
 }
 
+/// Updates the setup profile.
 pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String> {
     crate::setup::update_setup_profile(profile)
 }
 
+/// Finishes setup.
 pub fn finish_setup() -> Result<SetupState, String> {
     crate::setup::finish_setup()
 }
 
 // ── Person / apparatus identity plane (person ≠ machine ≠ OS account) ─────────
 
+/// Gets identity-plane.
 pub fn get_identity_plane() -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
     crate::identity_plane::get_identity_plane()
 }
 
+/// Lists apparatus devices.
 pub fn list_apparatus_devices() -> Result<Vec<crate::identity_plane::DeviceRecordPublic>, String> {
     crate::identity_plane::list_devices()
 }
 
+/// Exports a person public bundle.
 pub fn export_person_public() -> Result<crate::identity_plane::PersonPublic, String> {
     crate::identity_plane::export_person_public()
 }
@@ -55,34 +62,40 @@ pub fn export_person_transfer_bundle() -> Result<crate::identity_plane::PersonTr
     crate::identity_plane::export_person_transfer_bundle()
 }
 
+/// Imports a person transfer bundle.
 pub fn import_person_transfer_bundle(
     bundle: crate::identity_plane::PersonTransferBundle,
 ) -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
     crate::identity_plane::import_person_transfer_bundle(bundle)
 }
 
+/// Registers a remote apparatus device.
 pub fn register_remote_apparatus_device(
     device: crate::identity_plane::DeviceRecordPublic,
 ) -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
     crate::identity_plane::register_remote_device(device)
 }
 
+/// Resolves job device placement.
 pub fn resolve_job_device_placement(
     target_device_id: Option<String>,
 ) -> Result<crate::identity_plane::JobPlacement, String> {
     crate::identity_plane::resolve_job_placement(target_device_id.as_deref())
 }
 
+/// Sets local-control-base-url.
 pub fn set_local_control_base_url(
     url: String,
 ) -> Result<crate::identity_plane::IdentityPlaneSnapshot, String> {
     crate::identity_plane::set_local_control_base_url(url)
 }
 
+/// Lists the remote job outbox.
 pub fn list_remote_job_outbox() -> Result<Vec<crate::identity_plane::RemoteOutboxEntry>, String> {
     crate::identity_plane::list_remote_outbox()
 }
 
+/// Retries a remote job outbox entry.
 pub fn retry_remote_job_outbox() -> Result<usize, String> {
     crate::identity_plane::fleet_jobs::retry_remote_outbox()
 }
@@ -108,6 +121,7 @@ pub fn mint_person_webid_tls_cert() -> Result<serde_json::Value, String> {
     }))
 }
 
+/// Accepts a fleet job envelope.
 pub fn accept_fleet_job_envelope(
     envelope: crate::identity_plane::FleetJobEnvelope,
 ) -> Result<serde_json::Value, String> {
@@ -117,26 +131,32 @@ pub fn accept_fleet_job_envelope(
 
 pub use crate::qpu_oracle::{QpuChatCommandResult, QpuOracleSettings, QpuOracleSettingsInput};
 
+/// Gets qpu-settings.
 pub fn get_qpu_settings() -> QpuOracleSettings {
     crate::qpu_oracle::get_qpu_settings()
 }
 
+/// `true` when qpu-feature-unlocked.
 pub fn is_qpu_feature_unlocked() -> bool {
     crate::qpu_oracle::is_qpu_feature_unlocked()
 }
 
+/// Saves qpu-settings.
 pub fn save_qpu_settings(input: QpuOracleSettingsInput) -> Result<QpuOracleSettings, String> {
     crate::qpu_oracle::save_qpu_settings(input)
 }
 
+/// Handles qpu-chat-command.
 pub fn handle_qpu_chat_command(text: String) -> QpuChatCommandResult {
     crate::qpu_oracle::handle_qpu_chat_command(&text)
 }
 
+/// Handles engine-chat-command.
 pub fn handle_engine_chat_command(text: String) -> QpuChatCommandResult {
     crate::qpu_pipeline::handle_engine_chat_command(&text)
 }
 
+/// Profiles energy circumstance.
 pub fn profile_energy_circumstance() -> String {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -148,6 +168,7 @@ pub fn profile_energy_circumstance() -> String {
     )
 }
 
+/// Checks ollama-status.
 pub fn check_ollama_status() -> bool {
     std::process::Command::new("ollama")
         .arg("-v")
@@ -163,6 +184,7 @@ pub struct HardwareStatus {
     pub vram_estimated_gb: f64,
 }
 
+/// Gets hardware-status.
 pub fn get_hardware_status() -> HardwareStatus {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -204,6 +226,7 @@ pub struct EngineTelemetryFields {
     pub npu_total_mb: u32,
 }
 
+/// Gets engine-telemetry-fields.
 pub fn get_engine_telemetry_fields() -> EngineTelemetryFields {
     let (vram_used_mb, vram_total_mb) = probe_vram_usage_mb();
     let (npu_used_mb, npu_total_mb) = probe_npu_usage_mb();
@@ -247,6 +270,7 @@ fn probe_npu_usage_mb() -> (u32, u32) {
     (0, 0)
 }
 
+/// Downloads and vectorizes.
 pub async fn download_and_vectorize(
     url: String,
     filename: String,
@@ -361,6 +385,7 @@ pub async fn download_and_vectorize(
     Ok("Download and vectorization complete".to_string())
 }
 
+/// Downloads a model.
 pub async fn download_model(
     url: String,
     filename: String,
@@ -473,6 +498,7 @@ pub async fn download_model(
     Ok(dest_path.to_string_lossy().to_string())
 }
 
+/// Cancels a download.
 pub fn cancel_download(id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     if let Some(flag) = state.download_handles.lock().unwrap().get(&id) {
@@ -481,10 +507,12 @@ pub fn cancel_download(id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Starts the daemon.
 pub fn start_daemon() -> String {
     "Daemon Started".to_string()
 }
 
+/// Daemon status.
 pub fn daemon_status() -> String {
     let state = crate::state::APP_STATE.get().unwrap();
     if *state.daemon_running.lock().unwrap() {
@@ -494,11 +522,13 @@ pub fn daemon_status() -> String {
     }
 }
 
+/// Gets tax-suite.
 pub fn get_tax_suite() -> TaxRecipientSuite {
     let state = crate::state::APP_STATE.get().unwrap();
     state.tax_suite.lock().unwrap().clone()
 }
 
+/// Saves tax-suite.
 pub fn save_tax_suite(suite: TaxRecipientSuite) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     suite.validate()?;
@@ -513,6 +543,7 @@ pub fn save_tax_suite(suite: TaxRecipientSuite) -> Result<(), String> {
     Ok(())
 }
 
+/// Dispatches a tax payment.
 pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchResult, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let suite = state.tax_suite.lock().unwrap().clone();
@@ -523,11 +554,13 @@ pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchRes
     Ok(disp.dispatch(&plan))
 }
 
+/// Accepts a vault handshake.
 pub fn accept_vault_handshake(did_key: String, _payload: String) -> Result<String, String> {
     println!("[VC-8] Vault handshake from: {}", did_key);
     Ok("HANDSHAKE_SUCCESS".to_string())
 }
 
+/// Receives a vault job.
 pub fn receive_vault_job(
     job_id: String,
     task_type: String,
@@ -541,12 +574,14 @@ pub fn receive_vault_job(
     }
 }
 
+/// Ingests a PDF.
 pub async fn ingest_pdf(file_name: String) -> Result<ingestion::IngestionResult, String> {
     let result = ingestion::process_pdf(&file_name)?;
     q42_compiler::compile_to_q42(&file_name, &result.bookmarks)?;
     Ok(result)
 }
 
+/// Ingests literature.
 pub async fn ingest_literature(file_path: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
@@ -574,6 +609,7 @@ pub async fn ingest_literature(file_path: String) -> Result<String, String> {
     ))
 }
 
+/// Upserts a CMLD definition.
 pub async fn upsert_cmld_definition(term: String, context_did: String) -> Result<String, String> {
     Ok(format!(
         "Successfully mapped '{}' to Context: {}",
@@ -581,6 +617,7 @@ pub async fn upsert_cmld_definition(term: String, context_did: String) -> Result
     ))
 }
 
+/// Ingests an ontology.
 pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
@@ -641,6 +678,7 @@ pub async fn ingest_ontology(file_name: String) -> Result<serde_json::Value, Str
     }))
 }
 
+/// Imports a catalog ontology.
 pub async fn import_catalog_ontology(id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
@@ -679,6 +717,7 @@ pub async fn import_catalog_ontology(id: String) -> Result<serde_json::Value, St
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
+/// Exports to Solid.
 pub async fn export_to_solid(
     input_q42_path: String,
     output_dir_path: String,
@@ -755,10 +794,12 @@ pub async fn sync_to_solid_pod(
     ))
 }
 
+/// Ingests an image.
 pub async fn ingest_image(file_path: String) -> Result<serde_json::Value, String> {
     ingest_image_typed(file_path, "Generic Asset".to_string()).await
 }
 
+/// Ingests a typed image.
 pub async fn ingest_image_typed(
     file_path: String,
     typology: String,
@@ -776,6 +817,7 @@ pub async fn ingest_image_typed(
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
+/// Ingests an image (async).
 pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();

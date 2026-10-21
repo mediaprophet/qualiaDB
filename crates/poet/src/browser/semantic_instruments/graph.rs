@@ -55,6 +55,7 @@ pub fn layout_positions(n: usize) -> Vec<(f32, f32)> {
         .collect()
 }
 
+/// Builds graph-view.
 pub fn build_graph_view(document: &Document) -> Element {
     let nodes = flow_for_entry("assess");
     let root = document.create_element("div").unwrap();

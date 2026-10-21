@@ -68,6 +68,7 @@ pub struct QualiaPortal {
 #[wasm_bindgen]
 impl QualiaPortal {
     #[wasm_bindgen(constructor)]
+    /// Creates a new instance.
     pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
         let tier = detect_tier();
         let portal = QualiaPortal {
@@ -83,14 +84,17 @@ impl QualiaPortal {
         Ok(portal)
     }
 
+    /// Tier.
     pub fn tier(&self) -> u8 {
         self.tier
     }
 
+    /// `operational` mode.
     pub fn operational_mode(&self) -> u8 {
         global_vram_ledger().mode() as u8
     }
 
+    /// Resizes.
     pub fn resize(
         &self,
         canvas: HtmlCanvasElement,
@@ -102,12 +106,14 @@ impl QualiaPortal {
         self.paint_frame(&canvas)
     }
 
+    /// Ticks.
     pub fn tick(&mut self, canvas: HtmlCanvasElement, dt_ms: f32) -> Result<(), JsValue> {
         self.time += dt_ms as f64 * 0.001;
         self.refresh_telemetry_from_ledger();
         self.paint_frame(&canvas)
     }
 
+    /// Sets telemetry.
     pub fn set_telemetry(&mut self, floats: &[f32]) -> Result<(), JsValue> {
         for (i, slot) in self.telemetry.iter_mut().enumerate() {
             *slot = floats.get(i).copied().unwrap_or(0.0);
@@ -115,6 +121,7 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Sets display-mode.
     pub fn set_display_mode(&mut self, mode: &str) -> Result<(), JsValue> {
         self.display_mode = DisplayMode::from_str(mode);
         Ok(())
@@ -131,6 +138,7 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Uploads a tensor buffer.
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
         let count = tensor_node_count(bytes).unwrap_or(0);
         self.last_tensor = Some(bytes.to_vec());
@@ -141,10 +149,12 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Spatial encode.
     pub fn spatial_encode(&self, json: &str) -> Result<JsValue, JsValue> {
         spatial_encode_wasm(json)
     }
 
+    /// Loads q42.
     pub fn load_q42(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         let parsed = parse_cbor_ld_wasm(bytes);
         self.description = format!("loaded .q42 ({} bytes)", bytes.len());
@@ -152,6 +162,7 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Loads json-scene.
     pub fn load_json_scene(&mut self, json: &str) -> Result<JsValue, JsValue> {
         let parsed = parse_json_wasm(json);
         self.description = "loaded JSON scene".to_string();
@@ -159,10 +170,12 @@ impl QualiaPortal {
         Ok(parsed)
     }
 
+    /// Samples telemetry.
     pub fn sample_telemetry(&self) -> Result<JsValue, JsValue> {
         sample_browser_telemetry_wasm()
     }
 
+    /// Last parsed value.
     pub fn last_parsed(&self) -> Option<JsValue> {
         self.last_parsed.clone()
     }
@@ -213,6 +226,7 @@ impl QualiaPortal {
         self.telemetry[10] = ledger.mode() as u32 as f32;
     }
 
+    /// Paints a frame.
     pub(crate) fn paint_frame(&self, canvas: &HtmlCanvasElement) -> Result<(), JsValue> {
         let ctx = canvas
             .get_context("2d")?

@@ -41,6 +41,7 @@ pub struct ChoraManager {
 }
 
 impl ChoraManager {
+    /// `ChoraManager::new`.
     pub fn new() -> Self {
         let sample_pin_1 = ChoraEntityPin {
             id: "pin-001".into(),

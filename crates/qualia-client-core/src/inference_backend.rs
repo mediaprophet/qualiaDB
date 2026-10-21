@@ -85,10 +85,12 @@ impl InferenceBackendSettings {
         self.backend = AgentBackendKind::from_str(s);
     }
 
+    /// `agent-config-string` form.
     pub fn as_agent_config_string(&self) -> String {
         self.backend.as_str().to_string()
     }
 
+    /// Validates.
     pub fn validate(&self) -> Result<(), String> {
         match self.backend {
             AgentBackendKind::Ollama => {
@@ -117,6 +119,7 @@ fn settings_path() -> std::path::PathBuf {
     app_meta_dir().join(SETTINGS_FILE)
 }
 
+/// Loads inference-backend-settings.
 pub fn load_inference_backend_settings() -> InferenceBackendSettings {
     let path = settings_path();
     if !path.is_file() {
@@ -136,6 +139,7 @@ pub fn load_inference_backend_settings() -> InferenceBackendSettings {
         .unwrap_or_default()
 }
 
+/// Saves inference-backend-settings.
 pub fn save_inference_backend_settings(settings: &InferenceBackendSettings) -> Result<(), String> {
     settings.validate()?;
     let path = settings_path();
@@ -157,6 +161,7 @@ pub fn save_inference_backend_settings(settings: &InferenceBackendSettings) -> R
     Ok(())
 }
 
+/// `backend` label.
 pub fn backend_label(settings: &InferenceBackendSettings) -> &'static str {
     match settings.backend {
         AgentBackendKind::Local => "Local GGUF (in-process Qualia)",

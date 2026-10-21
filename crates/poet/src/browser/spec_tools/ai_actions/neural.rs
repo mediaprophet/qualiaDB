@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "ai:run-embedder" => Some(run_embedder(container)),
@@ -10,6 +11,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Computes fnv-vector.
 pub(crate) fn compute_fnv_vector(text: &str, dimensions: usize) -> Vec<f32> {
     if text.is_empty() {
         return vec![0.0; dimensions];

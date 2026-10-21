@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `IndigenousLanguageRevitalizationQapp` component.
 pub fn IndigenousLanguageRevitalizationQapp() -> Element {
     rsx! {
         QAppEngine {

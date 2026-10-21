@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:create-ug-instance" => Some(create_ug_instance(container)),
@@ -19,6 +20,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next ug-cause.
 pub(crate) fn next_ug_cause(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("training-data-gap") => "context-window-overflow",
@@ -31,6 +33,7 @@ pub(crate) fn next_ug_cause(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next ug-consequence.
 pub(crate) fn next_ug_consequence(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("enumerated-false-fact") => "enumerated-false-citation",

@@ -28,6 +28,7 @@ pub enum ConsentPersistError {
 }
 
 impl ConsentPersistError {
+    /// User-facing message.
     pub fn user_message(&self) -> String {
         match self {
             Self::Expired { .. } => "Consent grant is already expired (fail closed).".into(),
@@ -107,6 +108,7 @@ impl Default for InMemoryConsentLedger {
 }
 
 impl InMemoryConsentLedger {
+    /// `InMemoryConsentLedger::new`.
     pub const fn new() -> Self {
         Self {
             seen: [None; MAX_CONSENT_LEDGER],
@@ -116,10 +118,12 @@ impl InMemoryConsentLedger {
         }
     }
 
+    /// `seen` count.
     pub fn seen_count(&self) -> usize {
         self.n_seen
     }
 
+    /// `revoked` count.
     pub fn revoked_count(&self) -> usize {
         self.n_revoked
     }
@@ -219,6 +223,7 @@ pub mod scope {
     pub const MEDICATIONS: u32 = 1 << 3;
     pub const DOCUMENTS: u32 = 1 << 4;
 
+    /// `flag-for` label.
     pub fn flag_for_label(label: &str) -> Option<u32> {
         match label.trim() {
             "health_vital" | "vitals" => Some(VITALS),
@@ -230,6 +235,7 @@ pub mod scope {
         }
     }
 
+    /// Builds from labels.
     pub fn from_labels(labels: &[&str]) -> Result<u32, super::ConsentPersistError> {
         if labels.is_empty() {
             return Err(super::ConsentPersistError::ScopeViolation);
@@ -260,10 +266,12 @@ pub fn fingerprint32(input: &str) -> [u8; 32] {
     out
 }
 
+/// Grant id as hex.
 pub fn grant_id_hex(grant_id: &[u8; 32]) -> String {
     grant_id.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// Parses grant-id-hex.
 pub fn parse_grant_id_hex(hex: &str) -> Option<[u8; 32]> {
     let hex = hex.trim();
     if hex.len() != 64 {

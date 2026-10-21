@@ -4,6 +4,7 @@ use super::kinds::{ContainerInstance, ManifoldId, ToolSpec, ToolboxId};
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ToolChest` component.
 pub fn ToolChest(
     open: ToolboxId,
     on_open: EventHandler<ToolboxId>,
@@ -44,6 +45,7 @@ pub fn ToolChest(
     }
 }
 
+/// Places a node.
 pub fn place(
     next_id: &mut u32,
     on: ManifoldId,

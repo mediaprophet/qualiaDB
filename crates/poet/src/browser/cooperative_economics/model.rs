@@ -12,6 +12,7 @@ pub enum SocialRoutingLane {
 }
 
 impl SocialRoutingLane {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Commons => "Lane::Commons (Public Knowledge)",
@@ -56,6 +57,7 @@ pub enum AccessVerdict {
 pub struct OntologicalPricingEngine;
 
 impl OntologicalPricingEngine {
+    /// Evaluates peer.
     pub fn evaluate_peer(peer: &PeerOntologyClass) -> AccessVerdict {
         match peer {
             PeerOntologyClass::NaturalPerson {
@@ -110,6 +112,7 @@ impl Default for TrueCostModel {
 }
 
 impl TrueCostModel {
+    /// Hardware cost per hour.
     pub fn hardware_cost_per_hour(&self) -> f64 {
         let total_hours = self.lifespan_months * 730.0;
         if total_hours > 0.0 {
@@ -119,6 +122,7 @@ impl TrueCostModel {
         }
     }
 
+    /// Network cost per GB.
     pub fn network_cost_per_gb(&self) -> f64 {
         if self.monthly_data_cap_gb > 0.0 {
             self.monthly_isp_bill_aud / self.monthly_data_cap_gb
@@ -127,10 +131,12 @@ impl TrueCostModel {
         }
     }
 
+    /// Power cost per hour.
     pub fn power_cost_per_hour(&self) -> f64 {
         self.system_power_draw_kw * self.electricity_tariff_per_kwh_aud
     }
 
+    /// Total job cost.
     pub fn total_job_cost(&self, duration_hours: f64, transfer_gb: f64) -> f64 {
         (self.hardware_cost_per_hour() + self.power_cost_per_hour()) * duration_hours
             + self.network_cost_per_gb() * transfer_gb

@@ -3,6 +3,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlMediaElement};
 
+/// `?::run`.
 pub(super) fn run(
     document: &Document,
     container: &Element,
@@ -23,6 +24,7 @@ pub(super) fn run(
     }
 }
 
+/// Cycles to the next pan.
 pub(crate) fn next_pan(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("C (Center)") => "L50",
@@ -33,6 +35,7 @@ pub(crate) fn next_pan(current: Option<&str>) -> &'static str {
     }
 }
 
+/// `next-track` name.
 pub(crate) fn next_track_name(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("Track 1") => "Track 2",
@@ -42,6 +45,7 @@ pub(crate) fn next_track_name(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next routing.
 pub(crate) fn next_routing(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("master") => "bus_a",

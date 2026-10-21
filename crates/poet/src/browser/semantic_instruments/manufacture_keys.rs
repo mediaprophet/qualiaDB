@@ -23,19 +23,23 @@ pub struct ManufactureFocus {
 }
 
 impl ManufactureFocus {
+    /// Starts.
     pub fn start() -> Self {
         Self { index: 0 }
     }
 
+    /// `action` id.
     pub fn action_id(self) -> &'static str {
         ACTIONS[self.index.min(ACTIONS.len().saturating_sub(1))].0
     }
 
+    /// `action` name.
     pub fn action_name(self) -> &'static str {
         ACTIONS[self.index.min(ACTIONS.len().saturating_sub(1))].1
     }
 }
 
+/// Classifies.
 pub fn classify(key: &str, ctrl: bool) -> ManufactureKey {
     if ctrl {
         return ManufactureKey::Ignore;

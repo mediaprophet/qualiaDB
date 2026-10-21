@@ -8,6 +8,7 @@ use crate::browser::native_daemon::{
     NativeRecordUpsertRequest,
 };
 
+/// Builds agent-review-queue.
 pub fn build_agent_review_queue(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-agent-review", "").ok();

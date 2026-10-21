@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "research:new-research" => Some(new_research(container)),
@@ -18,6 +19,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next research-purpose.
 pub(crate) fn next_research_purpose(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("exploratory") => "explanatory",
@@ -30,6 +32,7 @@ pub(crate) fn next_research_purpose(current: Option<&str>) -> &'static str {
     }
 }
 
+/// `next-research` status.
 pub(crate) fn next_research_status(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("proposing") => "active",
@@ -40,6 +43,7 @@ pub(crate) fn next_research_status(current: Option<&str>) -> &'static str {
     }
 }
 
+/// `next-question` status.
 pub(crate) fn next_question_status(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("open") => "in_progress",

@@ -41,6 +41,7 @@ fn invoke_dual(
     });
 }
 
+/// Chain action: agency-evaluate.
 pub(super) fn run_agency_evaluate(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -51,6 +52,7 @@ pub(super) fn run_agency_evaluate(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: bio-align.
 pub(super) fn run_bio_align(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -61,6 +63,7 @@ pub(super) fn run_bio_align(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dmp-holds.
 pub(super) fn run_dmp_holds(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -71,6 +74,7 @@ pub(super) fn run_dmp_holds(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: poisson.
 pub(super) fn run_poisson(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -81,6 +85,7 @@ pub(super) fn run_poisson(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: t-norm.
 pub(super) fn run_t_norm(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -91,6 +96,7 @@ pub(super) fn run_t_norm(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: parse-bse.
 pub(super) fn run_parse_bse(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -101,6 +107,7 @@ pub(super) fn run_parse_bse(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: parse-did.
 pub(super) fn run_parse_did(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -111,6 +118,7 @@ pub(super) fn run_parse_did(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: board-project.
 pub(super) fn run_board_project(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -121,6 +129,7 @@ pub(super) fn run_board_project(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: econ-aggregate-wealth.
 pub(super) fn run_econ_aggregate_wealth(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -131,6 +140,7 @@ pub(super) fn run_econ_aggregate_wealth(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: econ-cumulative-wealth.
 pub(super) fn run_econ_cumulative_wealth(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -141,6 +151,7 @@ pub(super) fn run_econ_cumulative_wealth(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: econ-narrative-divergence.
 pub(super) fn run_econ_narrative_divergence(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -151,6 +162,7 @@ pub(super) fn run_econ_narrative_divergence(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: analyze-conduction.
 pub(super) fn run_analyze_conduction(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -161,6 +173,7 @@ pub(super) fn run_analyze_conduction(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: fem-static.
 pub(super) fn run_fem_static(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -171,6 +184,7 @@ pub(super) fn run_fem_static(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: peer-hash.
 pub(super) fn run_peer_hash(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -181,6 +195,7 @@ pub(super) fn run_peer_hash(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sonic-pack.
 pub(super) fn run_sonic_pack(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -191,6 +206,7 @@ pub(super) fn run_sonic_pack(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: simpson.
 pub(super) fn run_simpson(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -201,6 +217,7 @@ pub(super) fn run_simpson(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: ontology-align.
 pub(super) fn run_ontology_align(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -211,6 +228,7 @@ pub(super) fn run_ontology_align(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: units-convert.
 pub(super) fn run_units_convert(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -221,6 +239,7 @@ pub(super) fn run_units_convert(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: projectile.
 pub(super) fn run_projectile(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -231,6 +250,7 @@ pub(super) fn run_projectile(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: poly-coeffs.
 pub(super) fn run_poly_coeffs(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -241,6 +261,7 @@ pub(super) fn run_poly_coeffs(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: bessel-j.
 pub(super) fn run_bessel_j(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -251,6 +272,7 @@ pub(super) fn run_bessel_j(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: ltl-finally.
 pub(super) fn run_ltl_finally(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -261,6 +283,7 @@ pub(super) fn run_ltl_finally(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: ltl-globally.
 pub(super) fn run_ltl_globally(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -271,6 +294,7 @@ pub(super) fn run_ltl_globally(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: hash-iri.
 pub(super) fn run_hash_iri(document: &Document, label: &str) {
     invoke_dual(
         document,

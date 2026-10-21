@@ -8,6 +8,7 @@ use super::native_daemon::{
     NativeRecordUpsertRequest,
 };
 
+/// Builds social-lifecycle.
 pub fn build_social_lifecycle(document: &Document, workspace: &Element) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-social-lifecycle", "").ok();

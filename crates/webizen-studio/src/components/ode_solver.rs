@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `OdeSolver` component.
 pub fn OdeSolver() -> Element {
     let mut equation = use_signal(|| "dy/dt = -k * y".to_string());
 

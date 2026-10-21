@@ -118,6 +118,7 @@ fn entries_humans_first(entries: Vec<serde_json::Value>) -> Vec<serde_json::Valu
 }
 
 #[component]
+/// Dioxus `DirectoryPane` component.
 pub fn DirectoryPane() -> Element {
     let query = use_signal(String::new);
     // Selected facets: a JSON object { facet_id: [values] }, passed straight to search_directory.

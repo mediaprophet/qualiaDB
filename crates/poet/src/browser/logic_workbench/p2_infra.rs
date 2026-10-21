@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
+/// Appends panels.
 pub(super) fn append_panels(document: &Document, content: &Element) {
     content
         .append_child(&build_bytecode_vm_panel(document))
@@ -40,6 +41,7 @@ pub(super) fn append_panels(document: &Document, content: &Element) {
         .unwrap();
 }
 
+/// Wires all panels.
 pub(super) fn wire_all(document: &Document) {
     wire_bytecode_vm_panel(document);
     wire_slg_arena_panel(document);
@@ -52,6 +54,7 @@ pub(super) fn wire_all(document: &Document) {
     wire_p64_weight_panel(document);
 }
 
+/// Builds bytecode-vm-panel.
 pub(super) fn build_bytecode_vm_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "bytecode_vm", false);
     panel
@@ -98,6 +101,7 @@ pub(super) fn build_bytecode_vm_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-bytecode-vm` panel.
 pub(super) fn wire_bytecode_vm_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("bytecode-vm-trace") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -119,6 +123,7 @@ pub(super) fn wire_bytecode_vm_panel(document: &Document) {
     }
 }
 
+/// Builds slg-arena-panel.
 pub(super) fn build_slg_arena_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "slg_arena", false);
     panel
@@ -157,6 +162,7 @@ pub(super) fn build_slg_arena_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-slg-arena` panel.
 pub(super) fn wire_slg_arena_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("slg-arena-inspect") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -169,6 +175,7 @@ pub(super) fn wire_slg_arena_panel(document: &Document) {
     }
 }
 
+/// Builds forge-compute-panel.
 pub(super) fn build_forge_compute_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "forge_compute", false);
     panel
@@ -239,6 +246,7 @@ pub(super) fn build_forge_compute_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-forge-compute` panel.
 pub(super) fn wire_forge_compute_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("forge-compute-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -260,6 +268,7 @@ pub(super) fn wire_forge_compute_panel(document: &Document) {
     }
 }
 
+/// Builds compute-profile-panel.
 pub(super) fn build_compute_profile_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "compute_profile", false);
     panel
@@ -298,6 +307,7 @@ pub(super) fn build_compute_profile_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-compute-profile` panel.
 pub(super) fn wire_compute_profile_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("compute-profile-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -310,6 +320,7 @@ pub(super) fn wire_compute_profile_panel(document: &Document) {
     }
 }
 
+/// Builds privacy-panel.
 pub(super) fn build_privacy_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "privacy", false);
     panel
@@ -369,6 +380,7 @@ pub(super) fn build_privacy_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-privacy` panel.
 pub(super) fn wire_privacy_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("privacy-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -381,6 +393,7 @@ pub(super) fn wire_privacy_panel(document: &Document) {
     }
 }
 
+/// Builds model-lifecycle-panel.
 pub(super) fn build_model_lifecycle_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "model_lifecycle", false);
     panel
@@ -434,6 +447,7 @@ pub(super) fn build_model_lifecycle_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-model-lifecycle` panel.
 pub(super) fn wire_model_lifecycle_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("model-lifecycle-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -455,6 +469,7 @@ pub(super) fn wire_model_lifecycle_panel(document: &Document) {
     }
 }
 
+/// Builds inference-monitor-panel.
 pub(super) fn build_inference_monitor_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "inference_monitor", false);
     panel
@@ -493,6 +508,7 @@ pub(super) fn build_inference_monitor_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-inference-monitor` panel.
 pub(super) fn wire_inference_monitor_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("inference-monitor-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -505,6 +521,7 @@ pub(super) fn wire_inference_monitor_panel(document: &Document) {
     }
 }
 
+/// Builds gguf-tokenizer-panel.
 pub(super) fn build_gguf_tokenizer_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "gguf_tokenizer", false);
     panel
@@ -550,6 +567,7 @@ pub(super) fn build_gguf_tokenizer_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-gguf-tokenizer` panel.
 pub(super) fn wire_gguf_tokenizer_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("gguf-tokenizer-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -562,6 +580,7 @@ pub(super) fn wire_gguf_tokenizer_panel(document: &Document) {
     }
 }
 
+/// Builds p64-weight-panel.
 pub(super) fn build_p64_weight_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "p64_weight", false);
     panel
@@ -600,6 +619,7 @@ pub(super) fn build_p64_weight_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-p64-weight` panel.
 pub(super) fn wire_p64_weight_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("p64-weight-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

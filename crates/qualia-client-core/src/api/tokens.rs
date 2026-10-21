@@ -25,10 +25,12 @@ pub struct TokenEntry {
     fiat_usd: f64,
 }
 
+/// Tokens file path.
 pub fn tokens_file_path(storage_path: &str) -> PathBuf {
     PathBuf::from(storage_path).join("tokens.json")
 }
 
+/// Default token list.
 pub fn default_tokens() -> Vec<TokenEntry> {
     vec![
         TokenEntry {
@@ -111,6 +113,7 @@ pub fn default_tokens() -> Vec<TokenEntry> {
     ]
 }
 
+/// Loads tokens-from-disk.
 pub fn load_tokens_from_disk(storage_path: &str) -> Vec<TokenEntry> {
     let path = tokens_file_path(storage_path);
     std::fs::read_to_string(&path)
@@ -119,11 +122,13 @@ pub fn load_tokens_from_disk(storage_path: &str) -> Vec<TokenEntry> {
         .unwrap_or_else(default_tokens)
 }
 
+/// Saves tokens-to-disk.
 pub fn save_tokens_to_disk(storage_path: &str, tokens: &[TokenEntry]) -> Result<(), String> {
     let json = serde_json::to_string_pretty(tokens).map_err(|e| e.to_string())?;
     std::fs::write(tokens_file_path(storage_path), json).map_err(|e| e.to_string())
 }
 
+/// Gets tokens.
 pub fn get_tokens() -> Vec<TokenEntry> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
@@ -165,6 +170,7 @@ pub fn get_tokens() -> Vec<TokenEntry> {
     tokens
 }
 
+/// Adds token.
 pub fn add_token(
     chain: String,
     token_type: String,
@@ -212,6 +218,7 @@ pub fn add_token(
     Ok(entry)
 }
 
+/// Sends an eCash token.
 pub fn send_ecash_token(
     token_id: &str,
     destination_address: &str,
@@ -342,6 +349,7 @@ pub struct SendPreview {
     pub target_sats: i64,
 }
 
+/// Builds send-xec.
 pub fn build_send_xec(destination_address: &str, amount_sats: i64) -> Result<SendPreview, String> {
     use crate::wallet::coin_select;
     use crate::wallet::signer::{hash160, sign_p2pkh_input};
@@ -473,6 +481,7 @@ fn load_mnemonic_from_vault() -> Result<String, String> {
     })
 }
 
+/// Removes token.
 pub fn remove_token(id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
@@ -483,6 +492,7 @@ pub fn remove_token(id: String) -> Result<(), String> {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Reads identity.
 pub fn read_identity() -> Option<serde_json::Value> {
     std::fs::read_to_string(identity_file_path())
         .ok()
@@ -517,6 +527,7 @@ pub struct TxRecord {
     counterparty: String,
 }
 
+/// Gets coin-balances.
 pub fn get_coin_balances() -> Vec<CoinBalance> {
     let id = read_identity();
     let has_identity = id.is_some();
@@ -646,6 +657,7 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
     balances
 }
 
+/// Gets transaction-history.
 pub fn get_transaction_history(ticker: String) -> Vec<TxRecord> {
     // For XEC: query live transaction history from Chronik.
     // For other chains: return empty (no adapter yet).
@@ -796,10 +808,12 @@ fn format_unix_timestamp(ts: i64) -> String {
     format!("{:04}-{:02}-{:02} {:02}:{:02}", y, m, d, hours, minutes)
 }
 
+/// `true` when first-run.
 pub fn is_first_run() -> bool {
     !config_file_path().exists()
 }
 
+/// Saves identity.
 pub fn save_identity(wallets: serde_json::Value) -> Result<(), String> {
     let meta = app_meta_dir();
     std::fs::create_dir_all(&meta).map_err(|e| e.to_string())?;
@@ -808,6 +822,7 @@ pub fn save_identity(wallets: serde_json::Value) -> Result<(), String> {
     Ok(())
 }
 
+/// Loads identity.
 pub fn load_identity() -> Result<Option<serde_json::Value>, String> {
     let path = identity_file_path();
     if !path.exists() {
@@ -820,10 +835,12 @@ pub fn load_identity() -> Result<Option<serde_json::Value>, String> {
 
 use bip39::{Language, Mnemonic};
 
+/// Converts to hex.
 pub fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
+/// `generate-bip39` seed.
 pub async fn generate_bip39_seed() -> Result<String, String> {
     // Generate a secure, randomized 12-word seed phrase natively
     let mnemonic = Mnemonic::generate_in(Language::English, 12)
@@ -832,6 +849,7 @@ pub async fn generate_bip39_seed() -> Result<String, String> {
     Ok(words.join(" "))
 }
 
+/// `derive-wallets-from` seed.
 pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value, String> {
     let mnemonic = match Mnemonic::parse_in(Language::English, &seed) {
         Ok(m) => m,
@@ -872,11 +890,13 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
     }))
 }
 
+/// Generates a front-door invite.
 pub async fn generate_front_door_invite() -> Result<String, String> {
     let invite = crate::social_connect::generate_connect_invite(None)?;
     Ok(invite.invite_json)
 }
 
+/// Mints a semantic token.
 pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
     use crate::wallet::coin_select;
     use crate::wallet::signer::{hash160, sign_p2pkh_input};
@@ -982,6 +1002,7 @@ pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
     Ok(txid)
 }
 
+/// Fetches wallet-portfolio.
 pub async fn fetch_wallet_portfolio() -> Result<serde_json::Value, String> {
     // Compose real portfolio from live coin balances + token registry
     let balances = get_coin_balances();
@@ -1022,6 +1043,7 @@ pub async fn fetch_wallet_portfolio() -> Result<serde_json::Value, String> {
     Ok(serde_json::Value::Array(portfolio))
 }
 
+/// `import-external` seed.
 pub async fn import_external_seed(
     network: String,
     seed: String,
@@ -1060,6 +1082,7 @@ pub async fn import_external_seed(
     Ok(payload.address)
 }
 
+/// Toggles nym-relay.
 pub async fn toggle_nym_relay() -> Result<bool, String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -1071,6 +1094,7 @@ pub async fn toggle_nym_relay() -> Result<bool, String> {
     }
 }
 
+/// Enables the Nym relay.
 pub async fn enable_nym_relay(network: Option<String>) -> Result<serde_json::Value, String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -1084,6 +1108,7 @@ pub async fn enable_nym_relay(network: Option<String>) -> Result<serde_json::Val
     }
 }
 
+/// Disables the Nym relay.
 pub async fn disable_nym_relay() -> Result<serde_json::Value, String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -1096,6 +1121,7 @@ pub async fn disable_nym_relay() -> Result<serde_json::Value, String> {
     }
 }
 
+/// `nym-live-status` as JSON.
 pub fn nym_live_status_json() -> serde_json::Value {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -1133,6 +1159,7 @@ pub fn agent_request_mixnet_key_role() -> Result<serde_json::Value, String> {
     agent_request_key_role("mixnet".into())
 }
 
+/// Toggles stark-prover.
 pub async fn toggle_stark_prover() -> Result<bool, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let active = &state.stark_prover_active;
@@ -1176,11 +1203,13 @@ pub async fn toggle_stark_prover() -> Result<bool, String> {
     Ok(new_state)
 }
 
+/// Updates solar input.
 pub fn update_solar_input(watts: u32) {
     let state = crate::state::APP_STATE.get().unwrap();
     state.simulated_solar_watts.store(watts, Ordering::Relaxed);
 }
 
+/// Fetches torrent-telemetry.
 pub async fn fetch_torrent_telemetry() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1189,10 +1218,12 @@ pub async fn fetch_torrent_telemetry() -> Result<serde_json::Value, String> {
     )))
 }
 
+/// Syncs workbench torrent seeds.
 pub fn sync_workbench_torrent_seeds(storage_path: &str) -> Result<serde_json::Value, String> {
     crate::ontology_workbench::sync_workbench_seeds_to_daemon(Path::new(storage_path))
 }
 
+/// `workbench-import-ontology` URI.
 pub async fn workbench_import_ontology_uri(
     uri: String,
     ontology_id: Option<String>,
@@ -1212,6 +1243,7 @@ pub async fn workbench_import_ontology_uri(
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
+/// Lists workbench ontologies.
 pub fn list_workbench_ontologies() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1219,6 +1251,7 @@ pub fn list_workbench_ontologies() -> Result<serde_json::Value, String> {
     serde_json::to_value(entries).map_err(|e| e.to_string())
 }
 
+/// Sets workbench-torrent-policy.
 pub fn set_workbench_torrent_policy(
     ontology_id: String,
     policy_json: serde_json::Value,
@@ -1232,6 +1265,7 @@ pub fn set_workbench_torrent_policy(
     serde_json::to_value(updated).map_err(|e| e.to_string())
 }
 
+/// Sets workbench-seed.
 pub fn set_workbench_seed(ontology_id: String, active: bool) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1240,11 +1274,13 @@ pub fn set_workbench_seed(ontology_id: String, active: bool) -> Result<serde_jso
     serde_json::to_value(updated).map_err(|e| e.to_string())
 }
 
+/// Gets torrent-bandwidth-policy.
 pub fn get_torrent_bandwidth_policy() -> Result<serde_json::Value, String> {
     let policy = crate::ontology_workbench::load_bandwidth_policy();
     serde_json::to_value(policy).map_err(|e| e.to_string())
 }
 
+/// Sets torrent-bandwidth-policy.
 pub fn set_torrent_bandwidth_policy(
     policy_json: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
@@ -1254,6 +1290,7 @@ pub fn set_torrent_bandwidth_policy(
     serde_json::to_value(policy).map_err(|e| e.to_string())
 }
 
+/// Lists ontology shares for a contact.
 pub fn list_ontology_shares_for_contact(contact_did: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1262,6 +1299,7 @@ pub fn list_ontology_shares_for_contact(contact_did: String) -> Result<serde_jso
     serde_json::to_value(cards).map_err(|e| e.to_string())
 }
 
+/// Lists ontology shares for a session.
 pub fn list_ontology_shares_for_session(session_did: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1270,6 +1308,7 @@ pub fn list_ontology_shares_for_session(session_did: String) -> Result<serde_jso
     serde_json::to_value(cards).map_err(|e| e.to_string())
 }
 
+/// Lists chat-session share targets.
 pub fn list_chat_session_share_targets() -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1278,6 +1317,7 @@ pub fn list_chat_session_share_targets() -> Result<serde_json::Value, String> {
     serde_json::to_value(targets).map_err(|e| e.to_string())
 }
 
+/// Gets chat-session-did.
 pub fn get_chat_session_did(session_id: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -1285,6 +1325,7 @@ pub fn get_chat_session_did(session_id: String) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
+/// Updates chat contact categories.
 pub fn update_chat_contact_categories(
     contact_did: String,
     categories: Vec<String>,
@@ -1293,6 +1334,7 @@ pub fn update_chat_contact_categories(
     serde_json::to_value(contact).map_err(|e| e.to_string())
 }
 
+/// Discovers models.
 pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
     use std::collections::HashSet;
 
@@ -1409,6 +1451,7 @@ fn paths_refer_to_same_file(left: &str, right: &Path) -> bool {
                 .to_ascii_lowercase()
 }
 
+/// Runs agent inference.
 pub async fn run_agent_inference(
     prompt: String,
     model_name: String,

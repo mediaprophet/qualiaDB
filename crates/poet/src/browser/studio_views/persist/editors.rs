@@ -3,6 +3,7 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::CopField;
 use super::ledger;
 
+/// Builds scene-graph-view.
 pub fn build_scene_graph_view(document: &Document) -> Element {
     ledger(
         document,
@@ -33,6 +34,7 @@ pub fn build_scene_graph_view(document: &Document) -> Element {
     )
 }
 
+/// Builds material-editor-view.
 pub fn build_material_editor_view(document: &Document) -> Element {
     ledger(
         document,
@@ -55,6 +57,7 @@ pub fn build_material_editor_view(document: &Document) -> Element {
     )
 }
 
+/// Builds lighting-editor-view.
 pub fn build_lighting_editor_view(document: &Document) -> Element {
     ledger(
         document,
@@ -77,6 +80,7 @@ pub fn build_lighting_editor_view(document: &Document) -> Element {
     )
 }
 
+/// Builds shadow-settings-view.
 pub fn build_shadow_settings_view(document: &Document) -> Element {
     ledger(
         document,
@@ -95,6 +99,7 @@ pub fn build_shadow_settings_view(document: &Document) -> Element {
     )
 }
 
+/// Builds lod-chain-view.
 pub fn build_lod_chain_view(document: &Document) -> Element {
     ledger(
         document,
@@ -117,6 +122,7 @@ pub fn build_lod_chain_view(document: &Document) -> Element {
     )
 }
 
+/// Builds gis-maps-view.
 pub fn build_gis_maps_view(document: &Document) -> Element {
     ledger(
         document,
@@ -139,6 +145,7 @@ pub fn build_gis_maps_view(document: &Document) -> Element {
     )
 }
 
+/// Builds ragdoll-skin-view.
 pub fn build_ragdoll_skin_view(document: &Document) -> Element {
     ledger(
         document,
@@ -157,6 +164,7 @@ pub fn build_ragdoll_skin_view(document: &Document) -> Element {
     )
 }
 
+/// Builds tensor-inspector-view.
 pub fn build_tensor_inspector_view(document: &Document) -> Element {
     ledger(
         document,
@@ -175,6 +183,7 @@ pub fn build_tensor_inspector_view(document: &Document) -> Element {
     )
 }
 
+/// Builds spatial-10d-view.
 pub fn build_spatial_10d_view(document: &Document) -> Element {
     ledger(
         document,
@@ -197,6 +206,7 @@ pub fn build_spatial_10d_view(document: &Document) -> Element {
     )
 }
 
+/// Builds desk-surface-view.
 pub fn build_desk_surface_view(document: &Document) -> Element {
     ledger(
         document,

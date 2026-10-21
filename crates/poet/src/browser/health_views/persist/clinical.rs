@@ -3,6 +3,7 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::{build_family_panel, CopField};
 use super::wrap;
 
+/// Builds conditions-view.
 pub fn build_conditions_view(document: &Document) -> Element {
     wrap(
         document,
@@ -28,6 +29,7 @@ pub fn build_conditions_view(document: &Document) -> Element {
     )
 }
 
+/// Builds medications-view.
 pub fn build_medications_view(document: &Document) -> Element {
     wrap(
         document,
@@ -53,6 +55,7 @@ pub fn build_medications_view(document: &Document) -> Element {
     )
 }
 
+/// Builds lab-results-view.
 pub fn build_lab_results_view(document: &Document) -> Element {
     wrap(
         document,
@@ -82,6 +85,7 @@ pub fn build_lab_results_view(document: &Document) -> Element {
     )
 }
 
+/// Builds vitals-view.
 pub fn build_vitals_view(document: &Document) -> Element {
     wrap(
         document,
@@ -111,6 +115,7 @@ pub fn build_vitals_view(document: &Document) -> Element {
     )
 }
 
+/// Builds safeguards-view.
 pub fn build_safeguards_view(document: &Document) -> Element {
     wrap(
         document,
@@ -136,6 +141,7 @@ pub fn build_safeguards_view(document: &Document) -> Element {
     )
 }
 
+/// Builds clinical-reports-view.
 pub fn build_clinical_reports_view(document: &Document) -> Element {
     wrap(
         document,

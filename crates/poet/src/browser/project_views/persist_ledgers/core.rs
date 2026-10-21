@@ -5,6 +5,7 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::CopField;
 use super::super::persist::ledger;
 
+/// Builds issues-view.
 pub fn build_issues_view(document: &Document) -> Element {
     ledger(
         document,
@@ -35,6 +36,7 @@ pub fn build_issues_view(document: &Document) -> Element {
     )
 }
 
+/// Builds wiki-view.
 pub fn build_wiki_view(document: &Document) -> Element {
     ledger(
         document,
@@ -61,6 +63,7 @@ pub fn build_wiki_view(document: &Document) -> Element {
     )
 }
 
+/// Builds knowledge-base-view.
 pub fn build_knowledge_base_view(document: &Document) -> Element {
     ledger(
         document,
@@ -83,6 +86,7 @@ pub fn build_knowledge_base_view(document: &Document) -> Element {
     )
 }
 
+/// Builds doc-mgmt-view.
 pub fn build_doc_mgmt_view(document: &Document) -> Element {
     ledger(
         document,
@@ -105,6 +109,7 @@ pub fn build_doc_mgmt_view(document: &Document) -> Element {
     )
 }
 
+/// Builds deliverable-view.
 pub fn build_deliverable_view(document: &Document) -> Element {
     ledger(
         document,
@@ -127,6 +132,7 @@ pub fn build_deliverable_view(document: &Document) -> Element {
     )
 }
 
+/// Builds roadmap-view.
 pub fn build_roadmap_view(document: &Document) -> Element {
     ledger(
         document,
@@ -149,6 +155,7 @@ pub fn build_roadmap_view(document: &Document) -> Element {
     )
 }
 
+/// Builds risk-view.
 pub fn build_risk_view(document: &Document) -> Element {
     ledger(
         document,
@@ -175,6 +182,7 @@ pub fn build_risk_view(document: &Document) -> Element {
     )
 }
 
+/// Builds budget-view.
 pub fn build_budget_view(document: &Document) -> Element {
     ledger(
         document,
@@ -201,6 +209,7 @@ pub fn build_budget_view(document: &Document) -> Element {
     )
 }
 
+/// Builds cost-base-view.
 pub fn build_cost_base_view(document: &Document) -> Element {
     ledger(
         document,
@@ -223,6 +232,7 @@ pub fn build_cost_base_view(document: &Document) -> Element {
     )
 }
 
+/// Builds asset-mgr-view.
 pub fn build_asset_mgr_view(document: &Document) -> Element {
     ledger(
         document,
@@ -249,6 +259,7 @@ pub fn build_asset_mgr_view(document: &Document) -> Element {
     )
 }
 
+/// Builds discussion-view.
 pub fn build_discussion_view(document: &Document) -> Element {
     ledger(
         document,
@@ -271,6 +282,7 @@ pub fn build_discussion_view(document: &Document) -> Element {
     )
 }
 
+/// Builds governance-view.
 pub fn build_governance_view(document: &Document) -> Element {
     ledger(
         document,
@@ -293,6 +305,7 @@ pub fn build_governance_view(document: &Document) -> Element {
     )
 }
 
+/// Builds voting-view.
 pub fn build_voting_view(document: &Document) -> Element {
     ledger(
         document,
@@ -315,6 +328,7 @@ pub fn build_voting_view(document: &Document) -> Element {
     )
 }
 
+/// Builds awards-view.
 pub fn build_awards_view(document: &Document) -> Element {
     ledger(
         document,
@@ -337,6 +351,7 @@ pub fn build_awards_view(document: &Document) -> Element {
     )
 }
 
+/// Builds bounties-view.
 pub fn build_bounties_view(document: &Document) -> Element {
     ledger(
         document,

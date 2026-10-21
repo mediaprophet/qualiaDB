@@ -24,6 +24,7 @@ fn live_tool(
     ))
 }
 
+/// Registers the `med-live` tool set.
 pub(super) fn med_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("health:med_live_tanimoto", "Tanimoto", "Medical.tanimoto", "Fingerprint Tanimoto via Medical.tanimoto.", "health", "health"),
@@ -34,6 +35,7 @@ pub(super) fn med_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Too
     ]
 }
 
+/// Registers the `manifold-live` tool set.
 pub(super) fn manifold_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("spatial:manifold_live_axes", "Manifold axes", "Manifold.axes", "Axis taxonomy via Manifold.axes.", "3d", "geo"),
@@ -42,6 +44,7 @@ pub(super) fn manifold_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool
     ]
 }
 
+/// Registers the `crypto-priv` tool set.
 pub(super) fn crypto_priv_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("scientific:crypto_live_sha256", "SHA-256", "QuantumAndCryptographic.sha256", "SHA-256 of a string via QuantumAndCryptographic.sha256.", "lab", "sci"),
@@ -53,6 +56,7 @@ pub(super) fn crypto_priv_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::
     ]
 }
 
+/// Registers the `disc-dag` tool set.
 pub(super) fn disc_dag_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("ai:disc_live_catalog", "Capability catalog", "CapabilityDiscovery.catalog", "TTL catalog via CapabilityDiscovery.catalog.", "ai", "ai"),
@@ -63,6 +67,7 @@ pub(super) fn disc_dag_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Too
     ]
 }
 
+/// Registers the `fm-live` tool set.
 pub(super) fn fm_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("econ:fm_live_black_scholes", "Black–Scholes", "FinancialModeling.black_scholes", "ATM call via FinancialModeling.black_scholes.", "finance", "econ"),

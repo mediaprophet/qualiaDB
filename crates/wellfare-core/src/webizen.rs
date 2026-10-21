@@ -67,6 +67,7 @@ pub struct WebizenVM {
 }
 
 impl WebizenVM {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             registers: [None; 16],
@@ -75,6 +76,7 @@ impl WebizenVM {
         }
     }
 
+    /// Loads Webizen bytecode.
     pub fn load_bytecode(&mut self, ops: &[WebizenOpcode]) {
         for slot in self.bytecode_buf.iter_mut() {
             *slot = None;

@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `DeonticLogicEditor` component.
 pub fn DeonticLogicEditor() -> Element {
     rsx! {
         div {

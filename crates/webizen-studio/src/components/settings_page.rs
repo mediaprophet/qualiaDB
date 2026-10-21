@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SettingsPage` component.
 pub fn SettingsPage() -> Element {
     rsx! { crate::components::settings::SettingsShell {} }
 }

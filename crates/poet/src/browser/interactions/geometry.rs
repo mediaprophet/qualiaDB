@@ -6,6 +6,7 @@ use super::*;
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Parses position.
 pub(super) fn parse_position(style: &str) -> (f32, f32) {
     let mut x = 0.0;
     let mut y = 0.0;
@@ -20,6 +21,7 @@ pub(super) fn parse_position(style: &str) -> (f32, f32) {
     (x, y)
 }
 
+/// Updates z-index.
 pub(super) fn update_z_index(style: &str, z: u32) -> String {
     let mut found = false;
     let mut result = String::new();
@@ -39,10 +41,12 @@ pub(super) fn update_z_index(style: &str, z: u32) -> String {
     result
 }
 
+/// Pixels.
 pub(super) fn px(value: f32) -> String {
     format!("{}px", value.round() as i32)
 }
 
+/// Updates position.
 pub(super) fn update_position(style: &str, new_x: f32, new_y: f32) -> String {
     let mut result = String::new();
     for part in style.split(';') {
@@ -65,6 +69,7 @@ pub(super) fn update_position(style: &str, new_x: f32, new_y: f32) -> String {
     result
 }
 
+/// Parses size.
 pub(super) fn parse_size(style: &str) -> (f32, f32) {
     let mut w = 400.0;
     let mut h = 300.0;
@@ -79,6 +84,7 @@ pub(super) fn parse_size(style: &str) -> (f32, f32) {
     (w, h)
 }
 
+/// Updates size.
 pub(super) fn update_size(style: &str, new_w: f32, new_h: f32) -> String {
     let mut result = String::new();
     for part in style.split(';') {
@@ -108,6 +114,7 @@ pub(super) fn update_size(style: &str, new_w: f32, new_h: f32) -> String {
 /// Default grid size in pixels.
 const GRID_SIZE: f32 = 8.0;
 
+/// Current canvas zoom.
 pub(super) fn current_canvas_zoom(document: &Document) -> f32 {
     document
         .get_element_by_id("manifold-canvas")

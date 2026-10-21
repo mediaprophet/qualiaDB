@@ -13,6 +13,7 @@ use ToolKind::{Query as Look, RunAction};
 const T: &str = "epistemic";
 const TL: &str = "Epistemic Toolbox";
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     #[rustfmt::skip]
     static ROWS: &[SpecTool] = &[

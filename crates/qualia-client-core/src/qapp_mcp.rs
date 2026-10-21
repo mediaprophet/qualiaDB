@@ -78,6 +78,7 @@ fn catalogue_entry(manifest: &QappPackageManifest) -> QappCatalogueEntry {
     }
 }
 
+/// `list-qapp-catalogue` as JSON.
 pub fn list_qapp_catalogue_json() -> Result<String, String> {
     let mut installed = list_installed_qapps();
     installed.sort();
@@ -91,19 +92,23 @@ pub fn list_qapp_catalogue_json() -> Result<String, String> {
     serde_json::to_string(&entries).map_err(|e| e.to_string())
 }
 
+/// Gets qapp-manifest-json.
 pub fn get_qapp_manifest_json(qapp_name: &str) -> Result<String, String> {
     let manifest = load_installed_qapp_package(qapp_name)?;
     serde_json::to_string(&manifest).map_err(|e| e.to_string())
 }
 
+/// `inspect-qapp-readiness` as JSON.
 pub fn inspect_qapp_readiness_json(qapp_name: &str) -> Result<String, String> {
     inspect_installed_qapp_readiness(qapp_name.to_string())
 }
 
+/// `list-qapp-updates` as JSON.
 pub fn list_qapp_updates_json() -> Result<String, String> {
     list_qapp_update_offers()
 }
 
+/// `describe-qapp-surface-schema` as JSON.
 pub fn describe_qapp_surface_schema_json() -> Result<String, String> {
     let schema = QappHostSurfaceSchema {
         host_shell: "webizen-studio".to_string(),

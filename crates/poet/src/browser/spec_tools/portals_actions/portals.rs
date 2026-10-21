@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "portals:create-portal" => Some(tag_attr(container, "data-portal-created", "link_spawned")),
@@ -19,6 +20,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next pose.
 pub(crate) fn next_pose(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("pose:idle_standing") => "pose:conversational",

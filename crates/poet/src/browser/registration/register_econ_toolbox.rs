@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers econ-toolbox.
 pub(super) fn register_econ_toolbox(reg: &mut Registry) {
     reg.register_toolbox(Toolbox::new(
         ToolboxMetadata {

@@ -16,7 +16,7 @@ use types::{section_from_talk_tab, RelationsSection, ALL_SECTIONS};
 
 pub use mail::MailInboxPane;
 
-/// Palette / omnibox / QApp / Desktop-shell handoff.
+/// Palette / omnibox / Qap / Desktop-shell handoff.
 /// Writes both session and local storage so a parent chrome window and the
 /// studio iframe (same origin) share the flag. Prefer `/talk/directory` and
 /// `/talk/mail` routes — storage is only a fallback.
@@ -40,7 +40,7 @@ pub fn write_talk_handoff(tab: &str, open_directory: bool) {
     }
 }
 
-/// Palette / omnibox / QApp handoff: open Talk → People with Directory visible.
+/// Palette / omnibox / Qap handoff: open Talk → People with Directory visible.
 /// Not a new top-level IA name — Directory stays under Relations / People.
 pub fn stash_directory_handoff() {
     write_talk_handoff("people", true);
@@ -66,7 +66,9 @@ fn take_stored_talk_tab() -> Option<String> {
 }
 
 #[component]
+/// Dioxus `RelationsShell` component.
 pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
+    let nav = navigator();
     let mode = use_experience_mode();
     let mut section = use_signal(|| {
         let advanced = mode().is_advanced();
@@ -114,6 +116,39 @@ pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
                 }
             }
             main { style: "min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;",
+                div { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 14px;background:#060c17;border-bottom:1px solid #1e293b;font-size:.68rem;",
+                    span { style: "color:#64748b;font-weight:600;", "Quick Launch:" }
+                    button {
+                        r#type: "button",
+                        style: "padding:2px 8px;border-radius:4px;background:#1e293b;color:#38bdf8;border:1px solid #334155;cursor:pointer;",
+                        onclick: move |_| { nav.push(crate::Route::TalkRoute {}); },
+                        "💬 Chat & Mail"
+                    }
+                    button {
+                        r#type: "button",
+                        style: "padding:2px 8px;border-radius:4px;background:#1e293b;color:#a78bfa;border:1px solid #334155;cursor:pointer;",
+                        onclick: move |_| { nav.push(crate::Route::WorkRoute {}); },
+                        "💼 Collaborative Projects"
+                    }
+                    button {
+                        r#type: "button",
+                        style: "padding:2px 8px;border-radius:4px;background:#1e293b;color:#34d399;border:1px solid #334155;cursor:pointer;",
+                        onclick: move |_| { nav.push(crate::Route::WalletRoute {}); },
+                        "💳 Multi-Chain Wallet"
+                    }
+                    button {
+                        r#type: "button",
+                        style: "padding:2px 8px;border-radius:4px;background:#1e293b;color:#38bdf8;border:1px solid #334155;cursor:pointer;",
+                        onclick: move |_| { nav.push(crate::Route::QAppsRoute {}); },
+                        "📦 Qaps Launcher"
+                    }
+                    button {
+                        r#type: "button",
+                        style: "padding:2px 8px;border-radius:4px;background:#1e293b;color:#f59e0b;border:1px solid #334155;cursor:pointer;",
+                        onclick: move |_| { nav.push(crate::Route::PoetRoute {}); },
+                        "⬡ POET Shed"
+                    }
+                }
                 match section() {
                     RelationsSection::Inbox => rsx! { crate::components::connect_chat::ConnectChat {} },
                     RelationsSection::Mail => rsx! { MailInboxPane {} },
@@ -123,8 +158,11 @@ pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
                         }
                     },
                     RelationsSection::Groups => rsx! {
-                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:1.5rem;padding-bottom:2rem;",
                             GroupsOverview {}
+                            div { style: "padding:0 22px;",
+                                crate::components::wellfair::WellfairProjectsPanel {}
+                            }
                         }
                     },
                     RelationsSection::Requests => rsx! {
@@ -133,15 +171,19 @@ pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
                                 h2 { style: "margin:0;font-size:1.15rem;", "Requests" }
                                 p { style: "margin:5px 0 0;color:var(--qualia-text-muted);font-size:.76rem;", "Invitations, live-share consent and proposed changes that need a decision." }
                             }
-                            crate::components::wellfair::WellfairCommunicationsPanel {}
-                            details { style: "{crate::components::settings::PANEL}",
+                            crate::components::networking_setup_panel::NetworkingSetupPanel {}
+                            details {
+                                open: true,
+                                style: "{crate::components::settings::PANEL}",
                                 summary { style: "cursor:pointer;font-weight:750;", "Connection invitations" }
                                 crate::components::connect_pane::ConnectPane {}
                             }
+                            crate::components::wellfair::WellfairCommunicationsPanel {}
                         }
                     },
                     RelationsSection::Reception => rsx! {
-                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;",
+                        div { style: "flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:1.5rem;padding:16px 22px 3rem;",
+                            crate::components::networking_setup_panel::NetworkingSetupPanel {}
                             crate::components::domains_pane::DomainsPane {}
                         }
                     },

@@ -6,6 +6,7 @@ use super::spectral_hr_peak::{spectral_hr_peak, HrEstimate};
 use crate::biosense::consent::BiosenseConsent;
 use crate::cv::error::CvError;
 
+/// Ensemble heart rate.
 pub fn ensemble_hr(
     consent: BiosenseConsent,
     rgb_means: &[f32],

@@ -26,6 +26,7 @@ pub enum CmlCategory {
 }
 
 impl CmlCategory {
+    /// All variants.
     pub fn all() -> &'static [CmlCategory] {
         &[
             CmlCategory::NamedEntity,
@@ -43,6 +44,7 @@ impl CmlCategory {
         ]
     }
 
+    /// Short code.
     pub fn code(&self) -> &'static str {
         match self {
             CmlCategory::NamedEntity => "entity",
@@ -60,6 +62,7 @@ impl CmlCategory {
         }
     }
 
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             CmlCategory::NamedEntity => "Named Entity",
@@ -77,6 +80,7 @@ impl CmlCategory {
         }
     }
 
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             CmlCategory::NamedEntity => "\u{1F4CD}",        // 📍
@@ -94,6 +98,7 @@ impl CmlCategory {
         }
     }
 
+    /// Accent color.
     pub fn color_accent(&self) -> &'static str {
         match self {
             CmlCategory::NamedEntity => "var(--accent-primary, #6366f1)",
@@ -111,6 +116,7 @@ impl CmlCategory {
         }
     }
 
+    /// Builds from code.
     pub fn from_code(code: &str) -> Option<CmlCategory> {
         match code {
             "entity" => Some(CmlCategory::NamedEntity),

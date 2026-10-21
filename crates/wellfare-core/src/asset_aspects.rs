@@ -292,6 +292,7 @@ pub enum AssetKind {
 }
 
 impl AssetKind {
+    ///  form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Recording => "q42:Recording",

@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `GermanicLanguagesAndLiteraturesQapp` component.
 pub fn GermanicLanguagesAndLiteraturesQapp() -> Element {
     rsx! {
         QAppEngine {

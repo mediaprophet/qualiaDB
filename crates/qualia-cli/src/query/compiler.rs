@@ -41,10 +41,12 @@ pub struct SparqlCompiler {
 }
 
 impl SparqlCompiler {
+    /// Creates a new instance.
     pub fn new(lexicon: HashMap<String, u64>) -> Self {
         Self { lexicon }
     }
 
+    /// Compiles.
     pub fn compile(&self, sparql_string: &str) -> Result<Vec<u8>, String> {
         let query = spargebra::SparqlParser::new()
             .parse_query(sparql_string)

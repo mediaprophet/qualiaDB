@@ -4,6 +4,7 @@ use super::engine::{self, PoetRenderResult};
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `PoetGpuFrame` component.
 pub fn PoetGpuFrame(kind: &'static str, width: u32, height: u32) -> Element {
     let mut frame = use_signal(PoetRenderResult::default);
     let mut status = use_signal(|| "requesting Render.scene → webizen-render…".to_string());

@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use sysinfo::Disks;
 
+/// Lists installed qapps.
 pub fn list_installed_qapps() -> Vec<String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
@@ -27,30 +28,37 @@ pub fn list_installed_qapps() -> Vec<String> {
     qapps
 }
 
+/// MCP: lists qapps.
 pub fn mcp_list_qapps() -> Result<String, String> {
     crate::qapp_mcp::list_qapp_catalogue_json()
 }
 
+/// MCP: gets a qapp manifest.
 pub fn mcp_get_qapp_manifest(qapp_name: String) -> Result<String, String> {
     crate::qapp_mcp::get_qapp_manifest_json(&qapp_name)
 }
 
+/// MCP: inspects qapp readiness.
 pub fn mcp_inspect_qapp_readiness(qapp_name: String) -> Result<String, String> {
     crate::qapp_mcp::inspect_qapp_readiness_json(&qapp_name)
 }
 
+/// MCP: lists qapp updates.
 pub fn mcp_list_qapp_updates() -> Result<String, String> {
     crate::qapp_mcp::list_qapp_updates_json()
 }
 
+/// MCP: describes the qapp surface schema.
 pub fn mcp_describe_qapp_surface_schema() -> Result<String, String> {
     crate::qapp_mcp::describe_qapp_surface_schema_json()
 }
 
+/// Generates a qapp credential.
 pub fn generate_qapp_credential(qapp_name: String) -> String {
     format!("did:qualia:qapp:{}:signed_vc", qapp_name)
 }
 
+/// Verifies and installs a qapp.
 pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -117,6 +125,7 @@ pub struct WalletStatus {
     pub sync_status: String,
 }
 
+/// Gets wallet-status.
 pub fn get_wallet_status() -> WalletStatus {
     let nym_connected = crate::state::APP_STATE
         .get()
@@ -164,6 +173,7 @@ pub fn get_wallet_status() -> WalletStatus {
     }
 }
 
+/// `true` when Nym mixnet is opted in.
 pub fn nym_mixnet_opted_in() -> bool {
     crate::state::APP_STATE
         .get()
@@ -171,11 +181,13 @@ pub fn nym_mixnet_opted_in() -> bool {
         .unwrap_or(false)
 }
 
+/// Gets config.
 pub fn get_config() -> AgentConfig {
     let state = crate::state::APP_STATE.get().unwrap();
     state.config.lock().unwrap().clone()
 }
 
+/// Saves config.
 pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let disks = Disks::new_with_refreshed_list();

@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SocialPsychologyQapp` component.
 pub fn SocialPsychologyQapp() -> Element {
     rsx! {
         QAppEngine {

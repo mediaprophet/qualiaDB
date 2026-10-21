@@ -24,6 +24,7 @@ fn live_tool(
     ))
 }
 
+/// Registers the `longtail` tool set.
 pub(super) fn longtail_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("scientific:longtail_bio_align", "Bioinformatics align", "Bioinformatics.align", "SW align via Bioinformatics.align.", "lab", "sci"),
@@ -45,6 +46,7 @@ pub(super) fn longtail_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Too
     ]
 }
 
+/// Registers the `wealth-live` tool set.
 pub(super) fn wealth_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("econ:wealth_live_aggregate", "Aggregate wealth", "Econ.aggregate_wealth", "Availability via Econ.aggregate_wealth.", "finance", "econ"),
@@ -53,6 +55,7 @@ pub(super) fn wealth_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::
     ]
 }
 
+/// Registers the `net-live` tool set.
 pub(super) fn net_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("comm:net_live_peer_hash", "Peer hash", "Net.peer_hash", "DID hash via Net.peer_hash.", "comm", "comm"),
@@ -60,6 +63,7 @@ pub(super) fn net_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Too
     ]
 }
 
+/// Registers the `id-live` tool set.
 pub(super) fn id_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("rights:id_live_agency", "Agency evaluate", "Agency.evaluate", "Ed25519 agency via Agency.evaluate.", "evaluate", "rights"),

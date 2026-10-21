@@ -7,6 +7,7 @@ mod interactive_screens;
 mod social_packaging;
 mod sync_inspect;
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     static ROWS: OnceLock<Vec<SpecTool>> = OnceLock::new();
     ROWS.get_or_init(|| {

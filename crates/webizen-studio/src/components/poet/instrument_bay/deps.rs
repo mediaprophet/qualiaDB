@@ -31,10 +31,12 @@ const SEED: &[DepReq] = &[
     },
 ];
 
+/// `true` when the host dep is refused.
 pub fn refuse_host_dep(name: &str) -> bool {
     name.contains("Host.")
 }
 
+/// Election status.
 pub fn election_status(deps: &[DepReq]) -> &'static str {
     if deps
         .iter()
@@ -47,6 +49,7 @@ pub fn election_status(deps: &[DepReq]) -> &'static str {
 }
 
 #[component]
+/// Dioxus `DepsPanel` component.
 pub fn DepsPanel() -> Element {
     let mut resolved_exec = use_signal(|| false);
     let deps: Vec<DepReq> = SEED

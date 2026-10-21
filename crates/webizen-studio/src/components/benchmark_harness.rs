@@ -336,6 +336,7 @@ async fn run_benchmark_sweep() -> Result<BenchmarkReport, String> {
 }
 
 #[component]
+/// Dioxus `BenchmarkHarness` component.
 pub fn BenchmarkHarness() -> Element {
     let running = use_signal(|| false);
     #[cfg(target_arch = "wasm32")]

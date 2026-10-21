@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MediaTheoryQapp` component.
 pub fn MediaTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -19,6 +19,7 @@ pub struct GestureSession {
 }
 
 impl GestureSession {
+    /// Creates a new instance.
     pub fn new(
         gesture_id: impl Into<String>,
         session_id: impl Into<String>,
@@ -37,6 +38,7 @@ impl GestureSession {
         }
     }
 
+    /// Pushes sample.
     pub fn push_sample(&mut self, sample: PointerHit) -> Result<(), ContractError> {
         if self.is_cancelled {
             return Err(ContractError::MalformedParams("cannot push sample to cancelled gesture".into()));
@@ -45,6 +47,7 @@ impl GestureSession {
         Ok(())
     }
 
+    /// Cancels.
     pub fn cancel(&mut self) {
         self.is_cancelled = true;
     }

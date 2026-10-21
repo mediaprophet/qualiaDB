@@ -30,10 +30,12 @@ BOILERPLATE = ["Download: PDF", "Download:", "Print this page", "Share via"]
 
 
 def one(g, s, p, default=""):
+    """Single entry."""
     return str(next(g.objects(s, p), default))
 
 
 def main():
+    """CLI entry point."""
     files = []
     for d in DIRS:
         files += sorted(glob.glob(os.path.join(ROOT, d, "*.n3")))
@@ -95,6 +97,7 @@ def main():
     coverage = {fld: sum(1 for r in insts if r[fld].strip()) for fld in GOV_FIELDS}
 
     def dist(fld):
+        """Dist output dir."""
         out = {}
         for r in insts:
             out[r[fld] or "(missing)"] = out.get(r[fld] or "(missing)", 0) + 1

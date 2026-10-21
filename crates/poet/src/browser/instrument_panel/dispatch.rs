@@ -4,6 +4,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlElement};
 
+/// Dispatches instrument-action.
 pub(super) fn dispatch_instrument_action(document: &Document, tool_id: &str, label: &str) {
     match tool_id {
         "doc:bold" => super::commands::exec_document_command(document, "bold", None, label),

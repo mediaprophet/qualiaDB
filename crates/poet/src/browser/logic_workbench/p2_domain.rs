@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlSelectElement, MouseEvent};
 
+/// Appends panels.
 pub(super) fn append_panels(document: &Document, content: &Element) {
     content
         .append_child(&build_clinical_risk_panel(document))
@@ -40,6 +41,7 @@ pub(super) fn append_panels(document: &Document, content: &Element) {
         .unwrap();
 }
 
+/// Wires all panels.
 pub(super) fn wire_all(document: &Document) {
     wire_clinical_risk_panel(document);
     wire_dicom_viewer_panel(document);
@@ -52,6 +54,7 @@ pub(super) fn wire_all(document: &Document) {
     wire_diffusion_panel(document);
 }
 
+/// Builds clinical-risk-panel.
 pub(super) fn build_clinical_risk_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "clinical_risk", false);
     panel
@@ -108,6 +111,7 @@ pub(super) fn build_clinical_risk_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-clinical-risk` panel.
 pub(super) fn wire_clinical_risk_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("clinical-risk-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -129,6 +133,7 @@ pub(super) fn wire_clinical_risk_panel(document: &Document) {
     }
 }
 
+/// Builds dicom-viewer-panel.
 pub(super) fn build_dicom_viewer_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "dicom_viewer", false);
     panel
@@ -178,6 +183,7 @@ pub(super) fn build_dicom_viewer_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-dicom-viewer` panel.
 pub(super) fn wire_dicom_viewer_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("dicom-render") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -199,6 +205,7 @@ pub(super) fn wire_dicom_viewer_panel(document: &Document) {
     }
 }
 
+/// Builds comorbidity-panel.
 pub(super) fn build_comorbidity_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "comorbidity", false);
     panel
@@ -237,6 +244,7 @@ pub(super) fn build_comorbidity_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-comorbidity` panel.
 pub(super) fn wire_comorbidity_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("comorbidity-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -249,6 +257,7 @@ pub(super) fn wire_comorbidity_panel(document: &Document) {
     }
 }
 
+/// Builds chemistry-panel.
 pub(super) fn build_chemistry_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "chemistry", false);
     panel
@@ -325,6 +334,7 @@ pub(super) fn build_chemistry_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-chemistry` panel.
 pub(super) fn wire_chemistry_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("chemistry-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -342,6 +352,7 @@ pub(super) fn wire_chemistry_panel(document: &Document) {
     }
 }
 
+/// Builds physics-panel.
 pub(super) fn build_physics_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "physics", false);
     panel
@@ -406,6 +417,7 @@ pub(super) fn build_physics_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-physics` panel.
 pub(super) fn wire_physics_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("physics-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -423,6 +435,7 @@ pub(super) fn wire_physics_panel(document: &Document) {
     }
 }
 
+/// Builds ode-solver-panel.
 pub(super) fn build_ode_solver_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "ode_solver", false);
     panel
@@ -461,6 +474,7 @@ pub(super) fn build_ode_solver_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-ode-solver` panel.
 pub(super) fn wire_ode_solver_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("ode-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -473,6 +487,7 @@ pub(super) fn wire_ode_solver_panel(document: &Document) {
     }
 }
 
+/// Builds bioinformatics-panel.
 pub(super) fn build_bioinformatics_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "bioinformatics", false);
     panel
@@ -532,6 +547,7 @@ pub(super) fn build_bioinformatics_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-bioinformatics` panel.
 pub(super) fn wire_bioinformatics_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("bioinformatics-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -549,6 +565,7 @@ pub(super) fn wire_bioinformatics_panel(document: &Document) {
     }
 }
 
+/// Builds gbm-var-panel.
 pub(super) fn build_gbm_var_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "gbm_var", false);
     panel
@@ -587,6 +604,7 @@ pub(super) fn build_gbm_var_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-gbm-var` panel.
 pub(super) fn wire_gbm_var_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("gbm-var-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -599,6 +617,7 @@ pub(super) fn wire_gbm_var_panel(document: &Document) {
     }
 }
 
+/// Builds diffusion-panel.
 pub(super) fn build_diffusion_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "diffusion", false);
     panel
@@ -650,6 +669,7 @@ pub(super) fn build_diffusion_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-diffusion` panel.
 pub(super) fn wire_diffusion_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("diffusion-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

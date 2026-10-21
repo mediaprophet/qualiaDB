@@ -7,6 +7,7 @@ use super::*;
 use crate::qapp_registry;
 use crate::state::*;
 
+/// Runs an engine command.
 pub fn run_engine_command(cmd: String) -> String {
     match cmd.as_str() {
         "ingest_bench" => profile_energy_circumstance(),
@@ -21,6 +22,7 @@ pub fn run_engine_command(cmd: String) -> String {
 
 // Tray functionality removed with Tauri
 
+/// Toggles window.
 pub fn toggle_window() {
     // No-op without Tauri
 }
@@ -43,6 +45,7 @@ pub struct SignedDirectoryState {
     pub signature_hex: String,
 }
 
+/// Saves directory-state.
 pub fn save_directory_state() {
     let state = crate::state::APP_STATE.get().unwrap();
     let home = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string());
@@ -77,6 +80,7 @@ pub fn save_directory_state() {
     );
 }
 
+/// Loads directory-state.
 pub fn load_directory_state(vault: &qualia_core_db::key_vault::KeyVault) -> DirectoryState {
     let home = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string());
     let state_path = std::path::PathBuf::from(home)
@@ -117,12 +121,14 @@ pub fn load_directory_state(vault: &qualia_core_db::key_vault::KeyVault) -> Dire
     }
 }
 
+/// Gets front-doors.
 pub fn get_front_doors() -> Result<Vec<FrontDoor>, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let doors = state.front_doors.lock().unwrap().clone();
     Ok(doors)
 }
 
+/// Generates the front door.
 pub fn generate_front_door(label: String) -> Result<FrontDoor, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -154,12 +160,14 @@ pub fn generate_front_door(label: String) -> Result<FrontDoor, String> {
     Ok(door)
 }
 
+/// Gets directory-actors.
 pub fn get_directory_actors() -> Result<Vec<Actor>, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let actors = state.directory_actors.lock().unwrap().clone();
     Ok(actors)
 }
 
+/// Adds directory-actor.
 pub fn add_directory_actor(actor: Actor) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     state.directory_actors.lock().unwrap().push(actor);
@@ -167,12 +175,14 @@ pub fn add_directory_actor(actor: Actor) -> Result<(), String> {
     Ok(())
 }
 
+/// Gets delegation-rules.
 pub fn get_delegation_rules() -> Result<Vec<DelegationRule>, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let rules = state.delegation_rules.lock().unwrap().clone();
     Ok(rules)
 }
 
+/// Adds delegation-rule.
 pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
     state.delegation_rules.lock().unwrap().push(rule);

@@ -14,6 +14,7 @@ pub enum Layer {
 }
 
 impl Layer {
+    /// `&str` form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Source => "source",
@@ -44,6 +45,7 @@ pub const HELD_INVALID_PUBLISH: &str = "held / not yet — invalid pack cannot p
 pub const NEXT_PUBLISH: &str = "sign and publish";
 
 impl Draft {
+    /// `true` when the layer is ok.
     pub fn layer_ok(self, layer: Layer) -> bool {
         match layer {
             Layer::Source => self.source_ok,
@@ -52,11 +54,13 @@ impl Draft {
         }
     }
 
+    /// `true` when all layers are ready.
     pub fn layers_ready(self) -> bool {
         self.source_ok && self.graph_ok && self.executable_ok
     }
 }
 
+/// Toggles layer.
 pub fn toggle_layer(draft: &mut Draft, layer: Layer) {
     match layer {
         Layer::Source => draft.source_ok = !draft.source_ok,
@@ -95,6 +99,7 @@ pub fn can_publish(draft: &Draft) -> Result<(), &'static str> {
 }
 
 #[component]
+/// Dioxus `ManufacturePanel` component.
 pub fn ManufacturePanel() -> Element {
     let mut draft = use_signal(Draft::default);
     let current = draft();

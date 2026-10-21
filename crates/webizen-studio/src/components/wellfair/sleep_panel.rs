@@ -65,6 +65,7 @@ fn cell_rem(summary: Option<&String>) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairSleepPanel` component.
 pub fn WellfairSleepPanel() -> Element {
     let mut sleep_rows = use_signal(Vec::<HealthRecordDto>::new);
     let mut status = use_signal(|| "Loading sleep records…".to_string());

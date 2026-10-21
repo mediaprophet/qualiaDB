@@ -130,6 +130,7 @@ pub fn start_qualia_protocol() -> Result<u16, String> {
     Ok(port)
 }
 
+/// `qualia://` protocol port.
 pub fn qualia_protocol_port() -> u16 {
     QAPPS_SERVER_PORT.load(Ordering::SeqCst)
 }
@@ -159,11 +160,13 @@ pub fn qualia_qapp_asset_url(qapp_name: &str, asset_path: &str) -> Result<String
     Ok(format!("http://127.0.0.1:{port}/{qapp_name}/{launch_path}"))
 }
 
+/// `qualia-qapp-launch` URL.
 pub fn qualia_qapp_launch_url(qapp_name: &str) -> Result<String, String> {
     qualia_qapp_asset_url(qapp_name, "index.html")
 }
 
 #[cfg(windows)]
+/// Registers the `qualia://` URI handler.
 pub fn register_qualia_uri_handler(exe_path: &str) -> Result<(), String> {
     use winreg::enums::*;
     use winreg::RegKey;
@@ -195,6 +198,7 @@ pub fn register_qualia_uri_handler(exe_path: &str) -> Result<(), String> {
 }
 
 #[cfg(not(windows))]
+/// Registers the `qualia://` URI handler.
 pub fn register_qualia_uri_handler(_exe_path: &str) -> Result<(), String> {
     Ok(())
 }

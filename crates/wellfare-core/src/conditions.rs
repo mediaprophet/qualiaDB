@@ -34,6 +34,7 @@ pub struct ConditionReport {
 }
 
 impl ConditionReport {
+    /// Creates a new instance.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -59,6 +60,7 @@ pub struct AllergyReport {
 }
 
 impl AllergyReport {
+    /// Creates a new instance.
     pub fn new(substance: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -70,10 +72,12 @@ impl AllergyReport {
     }
 }
 
+///  record ID.
 pub fn condition_record_id(uuid: &str) -> String {
     format!("urn:wellfair:condition:{uuid}")
 }
 
+///  record ID.
 pub fn allergy_record_id(uuid: &str) -> String {
     format!("urn:wellfair:allergy:{uuid}")
 }
@@ -180,6 +184,7 @@ fn self_reported_envelope(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_condition_envelope(
     report: &ConditionReport,
     owner_did: &str,
@@ -191,6 +196,7 @@ pub fn build_condition_envelope(
     self_reported_envelope(&id, owner_did, author_did, asserted_unix, blob_hash)
 }
 
+/// Builds the  envelope.
 pub fn build_allergy_envelope(
     report: &AllergyReport,
     owner_did: &str,
@@ -202,6 +208,7 @@ pub fn build_allergy_envelope(
     self_reported_envelope(&id, owner_did, author_did, asserted_unix, blob_hash)
 }
 
+///  summary.
 pub fn condition_summary(report: &ConditionReport) -> String {
     serde_json::json!({
         "label": report.label,
@@ -211,6 +218,7 @@ pub fn condition_summary(report: &ConditionReport) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn allergy_summary(report: &AllergyReport) -> String {
     serde_json::json!({
         "substance": report.substance,

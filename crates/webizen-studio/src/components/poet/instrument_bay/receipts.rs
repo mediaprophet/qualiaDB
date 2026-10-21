@@ -13,6 +13,7 @@ pub struct ReceiptRow {
 }
 
 impl ReceiptRow {
+    /// Parent text.
     pub fn parent_text(self) -> &'static str {
         self.parent.unwrap_or("")
     }
@@ -55,6 +56,7 @@ pub fn visible_rows(revoked: bool, rows: &[ReceiptRow]) -> &[ReceiptRow] {
 }
 
 #[component]
+/// Dioxus `ReceiptPanel` component.
 pub fn ReceiptPanel() -> Element {
     let mut revoked = use_signal(|| false);
     let rows = visible_rows(revoked(), SEED_RECEIPTS);

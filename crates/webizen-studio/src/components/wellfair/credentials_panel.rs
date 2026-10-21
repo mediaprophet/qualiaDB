@@ -27,6 +27,7 @@ struct CredentialsUi {
 }
 
 #[component]
+/// Dioxus `WellfairCredentialsPanel` component.
 pub fn WellfairCredentialsPanel() -> Element {
     let mut ui = use_signal(CredentialsUi::default);
 

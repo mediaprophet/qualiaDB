@@ -13,6 +13,7 @@ fn selected_container(document: &Document) -> Option<Element> {
         .flatten()
 }
 
+/// Gated reason.
 pub fn gated_reason(tool: &SpecTool) -> Option<&'static str> {
     match tool.contract {
         Contract::Gated(reason) | Contract::Parked(reason) => Some(reason),
@@ -20,6 +21,7 @@ pub fn gated_reason(tool: &SpecTool) -> Option<&'static str> {
     }
 }
 
+/// `?::run`.
 pub fn run(document: &Document, tool: &SpecTool, label: &str) {
     match tool.contract {
         Contract::Gated(reason) | Contract::Parked(reason) => {

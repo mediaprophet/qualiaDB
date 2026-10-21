@@ -10,13 +10,14 @@ mod chrome;
 mod containers;
 pub(crate) mod engine;
 mod gpu_frame;
-mod host;
+pub(crate) mod host;
 pub mod icons;
 mod inspector;
 pub mod instrument_bay;
 mod kinds;
 pub mod lexicon_bay;
 mod manifolds;
+pub mod mindmap_links;
 mod radial_menu;
 mod stage;
 mod store;
@@ -31,6 +32,7 @@ pub use radial_menu::{RadialActionRing, RadialState};
 pub use workbench::PoetWorkbench;
 
 #[component]
+/// Dioxus `PoetHarness` component.
 pub fn PoetHarness() -> Element {
     rsx! { PoetWorkbench {} }
 }

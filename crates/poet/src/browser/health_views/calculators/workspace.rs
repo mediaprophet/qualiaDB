@@ -7,6 +7,7 @@ use super::model::{CalculatorDraft, CalculatorKind, NOT_DIAGNOSIS};
 use crate::browser::native_daemon::{daemon_invoke, is_daemon_connected};
 use crate::browser::surface_states;
 
+/// Builds the view.
 pub fn build(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

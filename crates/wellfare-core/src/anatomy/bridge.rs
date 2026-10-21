@@ -35,6 +35,7 @@ pub struct RecordRef {
 }
 
 impl RecordRef {
+    /// Creates a new instance.
     pub fn new(id: impl Into<String>, kind: impl Into<String>, label: impl Into<String>) -> Self {
         Self {
             id: id.into(),
@@ -45,11 +46,13 @@ impl RecordRef {
         }
     }
 
+    /// Element access.
     pub fn at(mut self, at_minute: i64) -> Self {
         self.at_minute = Some(at_minute);
         self
     }
 
+    ///  when dosed.
     pub fn dosed(mut self, dose_scale_pct: u32) -> Self {
         self.dose_scale_pct = Some(dose_scale_pct);
         self

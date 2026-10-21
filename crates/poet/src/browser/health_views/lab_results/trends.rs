@@ -167,6 +167,7 @@ const PAD_R: f64 = 4.0;
 const PAD_T: f64 = 6.0;
 const PAD_B: f64 = 6.0;
 
+/// Builds trends-tab.
 pub fn build_trends_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-lab-panel", "trends").unwrap();

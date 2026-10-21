@@ -4,6 +4,7 @@ use base64::Engine;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, HtmlAnchorElement, HtmlElement, HtmlInputElement};
 
+/// Builds checkpoint-tray-view.
 pub fn build_checkpoint_tray_view(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
     root.set_class_name("workflow-panel checkpoint-tray");
@@ -118,6 +119,7 @@ pub fn build_checkpoint_tray_view(document: &Document) -> Element {
     root
 }
 
+/// Builds checkpoint-indicator-view.
 pub fn build_checkpoint_indicator_view(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
     root.set_class_name("workflow-widget checkpoint-indicator");

@@ -6,6 +6,7 @@
 use serde_json::json;
 use web_sys::{Document, Element};
 
+/// Selected container.
 pub(super) fn selected_container(document: &Document) -> Option<Element> {
     document
         .query_selector(".canvas-container-node.selected")
@@ -13,6 +14,7 @@ pub(super) fn selected_container(document: &Document) -> Option<Element> {
         .flatten()
 }
 
+/// Selected source.
 pub(super) fn selected_source(document: &Document) -> Option<String> {
     let container = selected_container(document)?;
     let text = container
@@ -25,6 +27,7 @@ pub(super) fn selected_source(document: &Document) -> Option<String> {
     (!bounded.trim().is_empty()).then_some(bounded)
 }
 
+/// Parses numbers.
 pub(super) fn parse_numbers(source: &str) -> Vec<f64> {
     source
         .split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';' | '|' | '\n' | '\r'))
@@ -34,11 +37,13 @@ pub(super) fn parse_numbers(source: &str) -> Vec<f64> {
         .collect()
 }
 
+/// Numeric attribute.
 pub(super) fn numeric_attr(el: Option<&Element>, name: &str) -> Option<f64> {
     el.and_then(|e| e.get_attribute(name))
         .and_then(|v| v.parse::<f64>().ok())
 }
 
+/// usize attribute.
 pub(super) fn usize_attr(el: Option<&Element>, name: &str) -> Option<usize> {
     numeric_attr(el, name).and_then(|v| {
         if v.is_finite() && v >= 1.0 && v == v.floor() {
@@ -49,6 +54,7 @@ pub(super) fn usize_attr(el: Option<&Element>, name: &str) -> Option<usize> {
     })
 }
 
+/// Matrix as JSON.
 pub(super) fn mat_json(rows: usize, cols: usize, data: &[f64]) -> serde_json::Value {
     json!({ "rows": rows as u64, "cols": cols as u64, "data": data })
 }
@@ -81,6 +87,7 @@ pub(super) fn resolve_matrix(
     None
 }
 
+/// Default 2x2 matrix.
 pub(super) fn default_square2() -> (usize, usize, Vec<f64>) {
     (2, 2, vec![2.0, 1.0, 1.0, 2.0])
 }
@@ -310,6 +317,7 @@ fn local_qr_factor(rows: usize, cols: usize, a: &[f64]) -> Option<(Vec<f64>, Vec
     (r.iter().all(|x| x.is_finite()) && tau.iter().all(|x| x.is_finite())).then_some((r, tau))
 }
 
+/// Invokes the dual op.
 pub(super) fn invoke_dual(
     document: &Document,
     label: &str,

@@ -14,6 +14,7 @@ fn model_label(model: &serde_json::Value) -> String {
 }
 
 #[component]
+/// Dioxus `ModelSetupPanel` component.
 pub fn ModelSetupPanel() -> Element {
     let mut models = use_signal(Vec::<serde_json::Value>::new);
     let mut selected = use_signal(String::new);

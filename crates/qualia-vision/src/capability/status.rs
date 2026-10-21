@@ -17,6 +17,7 @@ pub enum CapabilityStatus {
 }
 
 impl CapabilityStatus {
+    /// `&str` form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Present => "present",

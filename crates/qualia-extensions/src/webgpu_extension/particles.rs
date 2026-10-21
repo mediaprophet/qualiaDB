@@ -64,6 +64,7 @@ impl System {
     }
 }
 
+/// Solves.
 pub fn solve(params: &WebGpuJobParams) -> SolverReport {
     let n = dim(params.grid_size.0, 16).max(2);
     let g = uniform(params, "gravity", 1.0) as f64;

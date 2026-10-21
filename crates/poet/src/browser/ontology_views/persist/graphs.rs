@@ -3,6 +3,7 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::CopField;
 use super::{banner, ledger};
 
+/// Builds ontology-graph-canvas-view.
 pub fn build_ontology_graph_canvas_view(document: &Document) -> Element {
     let wrapper = ledger(
         document,
@@ -31,6 +32,7 @@ pub fn build_ontology_graph_canvas_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds vocabulary-mapper-view.
 pub fn build_vocabulary_mapper_view(document: &Document) -> Element {
     ledger(
         document,
@@ -53,6 +55,7 @@ pub fn build_vocabulary_mapper_view(document: &Document) -> Element {
     )
 }
 
+/// Builds ontology-compare-view.
 pub fn build_ontology_compare_view(document: &Document) -> Element {
     ledger(
         document,
@@ -75,6 +78,7 @@ pub fn build_ontology_compare_view(document: &Document) -> Element {
     )
 }
 
+/// Builds project-ontology-selector-view.
 pub fn build_project_ontology_selector_view(document: &Document) -> Element {
     ledger(
         document,

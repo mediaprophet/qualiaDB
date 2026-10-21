@@ -8,6 +8,7 @@ use super::{
     TASK_COLUMNS, TASK_FIELDS,
 };
 
+/// Builds dashboard-view.
 pub fn build_dashboard_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,
@@ -37,6 +38,7 @@ pub fn build_dashboard_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds analytics-view.
 pub fn build_analytics_view(document: &Document) -> Element {
     wrap(
         document,
@@ -48,6 +50,7 @@ pub fn build_analytics_view(document: &Document) -> Element {
     )
 }
 
+/// Builds resource-report-view.
 pub fn build_resource_report_view(document: &Document) -> Element {
     wrap(
         document,
@@ -59,6 +62,7 @@ pub fn build_resource_report_view(document: &Document) -> Element {
     )
 }
 
+/// Builds portfolio-view.
 pub fn build_portfolio_view(document: &Document) -> Element {
     ledger(
         document,
@@ -85,6 +89,7 @@ pub fn build_portfolio_view(document: &Document) -> Element {
     )
 }
 
+/// Builds kanban-view.
 pub fn build_kanban_view(document: &Document) -> Element {
     wrap(
         document,
@@ -102,6 +107,7 @@ pub fn build_kanban_view(document: &Document) -> Element {
     )
 }
 
+/// Builds task-list-view.
 pub fn build_task_list_view(document: &Document) -> Element {
     wrap(
         document,
@@ -119,6 +125,7 @@ pub fn build_task_list_view(document: &Document) -> Element {
     )
 }
 
+/// Builds gantt-view.
 pub fn build_gantt_view(document: &Document) -> Element {
     wrap(
         document,
@@ -136,6 +143,7 @@ pub fn build_gantt_view(document: &Document) -> Element {
     )
 }
 
+/// Builds events-view.
 pub fn build_events_view(document: &Document) -> Element {
     ledger(
         document,
@@ -145,6 +153,7 @@ pub fn build_events_view(document: &Document) -> Element {
     )
 }
 
+/// Builds calendar-view.
 pub fn build_calendar_view(document: &Document) -> Element {
     ledger(
         document,
@@ -154,6 +163,7 @@ pub fn build_calendar_view(document: &Document) -> Element {
     )
 }
 
+/// Builds timeline-view.
 pub fn build_timeline_view(document: &Document) -> Element {
     ledger(
         document,
@@ -163,6 +173,7 @@ pub fn build_timeline_view(document: &Document) -> Element {
     )
 }
 
+/// Builds agent-console-view.
 pub fn build_agent_console_view(document: &Document) -> Element {
     wrap(
         document,

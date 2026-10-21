@@ -25,6 +25,7 @@ pub struct Extracted {
     pub notes: Vec<String>,
 }
 
+/// Extracts.
 pub fn extract(acq: &Acquired) -> Extracted {
     match acq.kind {
         SourceKind::Pdf => extract_pdf(acq),

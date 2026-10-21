@@ -27,6 +27,7 @@ pub async fn owner_envelope_public() -> Result<String, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn owner_envelope_public() -> Result<String, String> {
     Err("Envelope encryption requires the Tauri desktop host".into())
 }
@@ -70,6 +71,7 @@ pub async fn seal_and_grant_credential(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn seal_and_grant_credential(
     _agent_did: &str,
     _agent_public_hex: &str,
@@ -105,6 +107,7 @@ pub async fn open_owner_payload(credential_id: &str) -> Result<String, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Opens owner-payload.
 pub async fn open_owner_payload(_credential_id: &str) -> Result<String, String> {
     Err("Envelope encryption requires the Tauri desktop host".into())
 }

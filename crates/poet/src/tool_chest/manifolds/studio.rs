@@ -6,6 +6,7 @@ use super::super::core::registry::{
     DockPosition, ManifoldSeed, SeedConnection, SeedContainer, SeedPanel,
 };
 
+/// `studio` manifold seed.
 pub fn studio_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "studio".into(),

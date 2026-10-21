@@ -25,6 +25,7 @@ _JS_FILE = os.path.join(_PLAYGROUND, "qualia_core_db.js")
 
 
 def _check_deps():
+    """Internal helper."""
     if not shutil.which("node"):
         return "node not found — install Node.js >= 18"
     if not os.path.isfile(_WASM_FILE) or not os.path.isfile(_JS_FILE):
@@ -36,6 +37,7 @@ def _check_deps():
 
 
 def benchmark_set(n: int = 10_000, enforce_memory_limit: bool = True, dataset=None) -> dict:
+    """Benchmark set."""
     if dataset is None:
         dataset = {
             "n_triples": n,

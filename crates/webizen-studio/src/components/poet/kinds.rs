@@ -30,6 +30,7 @@ impl ManifoldId {
         Self::Vibe,
     ];
 
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::Research => "manifold-research-01",
@@ -45,6 +46,7 @@ impl ManifoldId {
         }
     }
 
+    /// Title.
     pub fn title(self) -> &'static str {
         match self {
             Self::Research => "Research & Epistemological Mindware",
@@ -60,6 +62,7 @@ impl ManifoldId {
         }
     }
 
+    /// Short descriptor.
     pub fn short(self) -> &'static str {
         match self {
             Self::Research => "Research",
@@ -75,6 +78,7 @@ impl ManifoldId {
         }
     }
 
+    /// Icon.
     pub fn icon(self) -> &'static str {
         match self {
             Self::Research => "🔬",
@@ -90,6 +94,7 @@ impl ManifoldId {
         }
     }
 
+    /// Blurb.
     pub fn blurb(self) -> &'static str {
         match self {
             Self::Research => {
@@ -115,6 +120,7 @@ impl ManifoldId {
         }
     }
 
+    /// Graph IRI.
     pub fn graph_iri(self) -> &'static str {
         match self {
             Self::Research => "graph:manifold:research_epistemology_01",
@@ -130,6 +136,7 @@ impl ManifoldId {
         }
     }
 
+    /// Default dimension mode.
     pub fn default_dim(self) -> DimMode {
         match self {
             Self::Media | Self::Knowledge => DimMode::D3,
@@ -138,6 +145,7 @@ impl ManifoldId {
         }
     }
 
+    /// Default toolboxes.
     pub fn default_toolboxes(self) -> &'static [ToolboxId] {
         match self {
             Self::Research => &[
@@ -217,9 +225,14 @@ pub enum ContainerKind {
     Shaders,
     Codecs,
     Domains,
+    Deck,
+    Pdf,
+    Vector,
+    SemanticInstrument,
 }
 
 impl ContainerKind {
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::Subcanvas => "subcanvas",
@@ -246,6 +259,10 @@ impl ContainerKind {
             Self::Shaders => "shaders",
             Self::Codecs => "codecs",
             Self::Domains => "domains",
+            Self::Deck => "deck",
+            Self::Pdf => "pdf",
+            Self::Vector => "vector",
+            Self::SemanticInstrument => "instrument",
         }
     }
 
@@ -276,10 +293,15 @@ impl ContainerKind {
             "shaders" => Self::Shaders,
             "codecs" => Self::Codecs,
             "domains" => Self::Domains,
+            "deck" => Self::Deck,
+            "pdf" => Self::Pdf,
+            "vector" => Self::Vector,
+            "instrument" => Self::SemanticInstrument,
             _ => return None,
         })
     }
 
+    /// Title.
     pub fn title(self) -> &'static str {
         match self {
             Self::Subcanvas => "Sub-manifold",
@@ -306,9 +328,14 @@ impl ContainerKind {
             Self::Shaders => "WGSL Forge",
             Self::Codecs => "Media Codecs",
             Self::Domains => "Domain Presence",
+            Self::Deck => "Slide Deck Studio",
+            Self::Pdf => "PDF Preflight & Sign Studio",
+            Self::Vector => "Vector & RAW Develop Studio",
+            Self::SemanticInstrument => "Semantic Instrument Studio",
         }
     }
 
+    /// Honesty label.
     pub fn honesty(self) -> &'static str {
         match self {
             Self::Code
@@ -328,7 +355,11 @@ impl ContainerKind {
             | Self::Bookmarks
             | Self::Shaders
             | Self::Codecs
-            | Self::Domains => "live",
+            | Self::Domains
+            | Self::Deck
+            | Self::Pdf
+            | Self::Vector
+            | Self::SemanticInstrument => "live",
             Self::Subcanvas | Self::Chora => "partial",
             Self::WebRtc | Self::Webview | Self::Portal | Self::Mesh3d => "present",
         }
@@ -373,6 +404,7 @@ impl ToolboxId {
         Self::Sdn,
     ];
 
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::Epistemic => "epistemic",
@@ -393,6 +425,7 @@ impl ToolboxId {
         }
     }
 
+    /// Title.
     pub fn title(self) -> &'static str {
         match self {
             Self::Epistemic => "Epistemic & Qualia Modalities",
@@ -413,6 +446,7 @@ impl ToolboxId {
         }
     }
 
+    /// Icon.
     pub fn icon(self) -> &'static str {
         match self {
             Self::Epistemic => "🎭",
@@ -452,6 +486,7 @@ impl Strata {
         Self::Technical,
     ];
 
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::Environmental => "environmental",
@@ -462,6 +497,7 @@ impl Strata {
         }
     }
 
+    /// Constructs from id.
     pub fn from_id(id: &str) -> Option<Self> {
         Some(match id {
             "environmental" => Self::Environmental,
@@ -473,6 +509,7 @@ impl Strata {
         })
     }
 
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Environmental => "🌿 Env",
@@ -483,6 +520,7 @@ impl Strata {
         }
     }
 
+    /// CSS class.
     pub fn css(self) -> &'static str {
         match self {
             Self::Environmental => "strata-env",
@@ -504,6 +542,7 @@ pub enum Epistemic {
 }
 
 impl Epistemic {
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::All => "all",
@@ -514,6 +553,7 @@ impl Epistemic {
         }
     }
 
+    /// Constructs from id.
     pub fn from_id(id: &str) -> Option<Self> {
         Some(match id {
             "all" => Self::All,
@@ -525,6 +565,7 @@ impl Epistemic {
         })
     }
 
+    /// Icon.
     pub fn icon(self) -> &'static str {
         match self {
             Self::All => "",
@@ -535,6 +576,7 @@ impl Epistemic {
         }
     }
 
+    /// CSS class.
     pub fn css(self) -> &'static str {
         match self {
             Self::All => "",
@@ -554,6 +596,7 @@ pub enum DimMode {
 }
 
 impl DimMode {
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::D2 => "2D",
@@ -562,6 +605,7 @@ impl DimMode {
         }
     }
 
+    /// CSS class.
     pub fn css(self) -> &'static str {
         match self {
             Self::D2 => "",
@@ -580,6 +624,7 @@ pub enum DockPos {
 }
 
 impl DockPos {
+    /// Identifier.
     pub fn id(self) -> &'static str {
         match self {
             Self::Left => "left",
@@ -641,5 +686,11 @@ mod tests {
         assert_eq!(ToolboxId::Communication.icon(), "📞");
         assert_eq!(ContainerKind::Code.honesty(), "live");
         assert_eq!(ContainerKind::WebRtc.honesty(), "present");
+        assert_eq!(ContainerKind::Deck.id(), "deck");
+        assert_eq!(ContainerKind::Pdf.id(), "pdf");
+        assert_eq!(ContainerKind::Vector.id(), "vector");
+        assert_eq!(ContainerKind::Deck.honesty(), "live");
+        assert_eq!(ContainerKind::SemanticInstrument.id(), "instrument");
+        assert_eq!(ContainerKind::SemanticInstrument.honesty(), "live");
     }
 }

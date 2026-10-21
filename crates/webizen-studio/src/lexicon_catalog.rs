@@ -25,6 +25,7 @@ pub enum Framing {
 }
 
 impl Framing {
+    /// `&str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::LivingShacl => "living-SHACL",
@@ -33,6 +34,7 @@ impl Framing {
         }
     }
 
+    /// Parses.
     pub fn parse(raw: &str) -> Option<Self> {
         match raw.trim() {
             "living-SHACL" | "living_shacl" | "living" => Some(Self::LivingShacl),
@@ -51,6 +53,7 @@ pub enum FramingChip {
 }
 
 impl FramingChip {
+    /// Token.
     pub fn token(self) -> &'static str {
         match self {
             Self::Living => LIVING_CHIP,
@@ -59,6 +62,7 @@ impl FramingChip {
         }
     }
 
+    /// Sayable name.
     pub fn sayable(self) -> &'static str {
         match self {
             Self::Living => LIVING_SAYABLE,
@@ -67,6 +71,7 @@ impl FramingChip {
         }
     }
 
+    /// Tone.
     pub fn tone(self) -> &'static str {
         match self {
             Self::Living => "warm",
@@ -108,6 +113,7 @@ pub enum RecipeBeat {
 }
 
 impl RecipeBeat {
+    /// `&str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Arrive => "arrive",
@@ -136,6 +142,7 @@ pub enum RecipeEvent {
     PackWriteHeld,
 }
 
+/// Recipe beat.
 pub fn recipe_beat(event: RecipeEvent) -> RecipeBeat {
     match event {
         RecipeEvent::PackOpen => RecipeBeat::Arrive,
@@ -160,6 +167,7 @@ pub enum ManifestOutcome {
     Open(PackCard),
 }
 
+/// Held outcome.
 pub fn held_outcome(why: impl Into<String>) -> ManifestOutcome {
     ManifestOutcome::Held {
         why: sanitize_held_why(&why.into()),
@@ -183,6 +191,7 @@ pub fn sanitize_held_why(raw: &str) -> String {
     }
 }
 
+/// Interprets an invoke.
 pub fn interpret_invoke(ok: bool, value: &str, diagnostic: Option<&str>) -> ManifestOutcome {
     if ok {
         if let Some(card) = parse_pack_card(value) {
@@ -224,6 +233,7 @@ fn extract_held_fix(blob: &str) -> Option<String> {
     None
 }
 
+/// Parses pack-card.
 pub fn parse_pack_card(src: &str) -> Option<PackCard> {
     let framing = extract_quoted_field(src, "framing").and_then(|s| Framing::parse(&s))?;
     let pack_semver = extract_quoted_field(src, "packSemVer")
@@ -321,15 +331,18 @@ fn extract_string_list(src: &str, key: &str) -> Option<Vec<String>> {
     None
 }
 
+/// `true` when copy avoids broken terms.
 pub fn copy_avoids_broken(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("broken")
 }
 
+/// `true` when copy avoids thing-wash.
 pub fn copy_avoids_thing_wash(text: &str) -> bool {
     let folded = text.to_ascii_lowercase();
     !folded.contains("owl:thing") && !folded.contains("a thing")
 }
 
+/// `true` when copy avoids "unavailable".
 pub fn copy_avoids_unavailable(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("unavailable")
 }
@@ -341,6 +354,7 @@ pub const HELD_BIND_MISSING: &str = "held / not yet";
 /// Desktop / Poet chrome when `127.0.0.1:4242` `/health` answers.
 pub const NATIVE_CONNECTED_LABEL: &str = "Native Connected to 127.0.0.1:4242";
 
+/// Framing copy.
 pub fn framing_copy(framing: Framing) -> &'static str {
     match framing {
         Framing::LivingShacl => LIVING_SAYABLE,

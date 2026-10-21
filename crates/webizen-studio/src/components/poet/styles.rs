@@ -10,6 +10,7 @@ const ICONS: &str = include_str!("css/icons.css");
 const LEXICON_BAY: &str = include_str!("css/lexicon_bay.css");
 
 #[component]
+/// Dioxus `HyperCanvasStyles` component.
 pub fn HyperCanvasStyles() -> Element {
     rsx! {
         style { "{THEME}\n{LAYOUT}\n{CANVAS}\n{TOOLBOXES}\n{ICONS}\n{LEXICON_BAY}" }

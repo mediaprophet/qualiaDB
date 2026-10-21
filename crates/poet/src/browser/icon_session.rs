@@ -126,6 +126,7 @@ pub fn register_session_icon(
     })
 }
 
+/// Session icon.
 pub fn session_icon(id: &str) -> Option<SessionIcon> {
     TABLE.with(|cell| {
         cell.borrow()
@@ -137,10 +138,12 @@ pub fn session_icon(id: &str) -> Option<SessionIcon> {
     })
 }
 
+/// `session-icon` count.
 pub fn session_icon_count() -> usize {
     TABLE.with(|cell| cell.borrow().used)
 }
 
+/// Clears session icons.
 pub fn clear_session_icons() {
     TABLE.with(|cell| *cell.borrow_mut() = SessionTable::new());
 }

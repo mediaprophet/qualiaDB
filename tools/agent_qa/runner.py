@@ -26,10 +26,12 @@ DEFAULT_BUDGET = 8 * 1024 * 1024
 
 
 def repo_root() -> pathlib.Path:
+    """Repository root path."""
     return pathlib.Path(__file__).resolve().parents[2]
 
 
 def load_scenario(name: str) -> dict[str, Any]:
+    """Loads a scenario manifest."""
     manifest = json.loads((pathlib.Path(__file__).parent / "scenarios.json").read_text("utf-8"))
     try:
         return manifest["scenarios"][name]
@@ -39,6 +41,7 @@ def load_scenario(name: str) -> dict[str, Any]:
 
 
 def classify(exit_code: int | None, timed_out: bool, budget_exceeded: bool, output: str) -> str:
+    """Classifies a run result."""
     if timed_out:
         return "timeout"
     if budget_exceeded:
@@ -76,6 +79,7 @@ def run_step(
     artifact_root: pathlib.Path,
     remaining_budget: int,
 ) -> tuple[dict[str, Any], int]:
+    """Runs a scenario step."""
     command = [str(part) for part in step["command"]]
     timeout_seconds = int(step.get("timeout_seconds", 300))
     log_path = artifact_root / f"{step['id']}.log"
@@ -123,6 +127,7 @@ def run_step(
     output_queue: queue.Queue[str | None] = queue.Queue()
 
     def read_output() -> None:
+        """Reads step output."""
         assert process.stdout is not None
         for output_line in process.stdout:
             output_queue.put(output_line)
@@ -184,6 +189,7 @@ def run_step(
 
 
 def render_report(result: dict[str, Any]) -> str:
+    """Renders the report."""
     lines = [
         "# Webizen agent QA report",
         "",
@@ -214,6 +220,7 @@ def render_report(result: dict[str, Any]) -> str:
 
 
 def git_value(root: pathlib.Path, args: list[str]) -> str | None:
+    """Reads a git value."""
     try:
         return subprocess.check_output(
             ["git", *args], cwd=root, text=True, encoding="utf-8", errors="replace"
@@ -223,6 +230,7 @@ def git_value(root: pathlib.Path, args: list[str]) -> str | None:
 
 
 def execute(args: argparse.Namespace, artifact_root: pathlib.Path) -> dict[str, Any]:
+    """Executes the scenario."""
     root = repo_root()
     scenario = load_scenario(args.scenario)
     artifact_root.mkdir(parents=True, exist_ok=True)
@@ -259,6 +267,7 @@ def execute(args: argparse.Namespace, artifact_root: pathlib.Path) -> dict[str, 
 
 
 def main() -> int:
+    """CLI entry point."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", default="contracts")
     parser.add_argument("--artifact-dir", type=pathlib.Path)

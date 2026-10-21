@@ -237,6 +237,7 @@ fn initial_claims() -> Vec<EClaim> {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
+/// Dioxus `Nexus` component.
 pub fn Nexus() -> Element {
     // Signals
     let mut lens = use_signal(|| Lens::Causal);

@@ -37,10 +37,12 @@ pub struct Workbench {
 }
 
 impl Workbench {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::from_seed(load_manifold(ManifoldId::Research))
     }
 
+    /// Constructs from a manifold seed.
     pub fn from_seed(seed: ManifoldSeed) -> Self {
         Self {
             active: seed.id,
@@ -70,14 +72,17 @@ impl Workbench {
         }
     }
 
+    /// Switches manifold.
     pub fn switch(&mut self, id: ManifoldId) {
         *self = Self::from_seed(load_manifold(id));
     }
 
+    /// `true` when the strata is on.
     pub fn strata_on(&self, s: Strata) -> bool {
         self.strata.contains(&s)
     }
 
+    /// Toggles a strata.
     pub fn toggle_strata(&mut self, s: Strata) {
         if let Some(i) = self.strata.iter().position(|x| *x == s) {
             self.strata.remove(i);
@@ -86,10 +91,12 @@ impl Workbench {
         }
     }
 
+    /// Selects all strata.
     pub fn select_all_strata(&mut self) {
         self.strata = Strata::ALL.to_vec();
     }
 
+    /// `true` when the node is dimmed.
     pub fn dimmed(&self, node: &CanvasNode) -> bool {
         let strata_off =
             !self.strata.is_empty() && self.strata.len() < 5 && !self.strata.contains(&node.strata);
@@ -97,6 +104,7 @@ impl Workbench {
         strata_off || epi_off
     }
 
+    /// Finds a smart placement slot.
     pub fn find_smart_placement_slot(&self, width: f64, height: f64) -> (f64, f64) {
         let margin = 24.0;
         let cols = 4;
@@ -138,6 +146,7 @@ impl Workbench {
         (start_x, start_y)
     }
 
+    /// Auto-arranges nodes.
     pub fn auto_arrange(&mut self) {
         let cols = 3;
         let start_x = 80.0;
@@ -155,6 +164,7 @@ impl Workbench {
         }
     }
 
+    /// Places a node.
     pub fn place(&mut self, kind: ContainerKind) {
         let n = self.next_id;
         self.next_id += 1;
@@ -181,6 +191,7 @@ impl Workbench {
         self.select_node(&id);
     }
 
+    /// Closes.
     pub fn close(&mut self, id: &str) {
         self.nodes.retain(|n| n.id != id);
         self.wires.retain(|w| w.from != id && w.to != id);
@@ -209,6 +220,7 @@ impl Workbench {
         self.selected = None;
     }
 
+    /// Clears selection.
     pub fn clear_selection(&mut self) {
         self.selected = None;
         self.selected_wire = None;
@@ -242,6 +254,7 @@ impl Workbench {
         Some(id)
     }
 
+    /// Removes wire.
     pub fn remove_wire(&mut self, id: &str) {
         self.wires.retain(|w| w.id != id);
         if self.selected_wire.as_deref() == Some(id) {
@@ -249,12 +262,14 @@ impl Workbench {
         }
     }
 
+    /// Renames a wire.
     pub fn rename_wire(&mut self, id: &str, label: String) {
         if let Some(w) = self.wires.iter_mut().find(|w| w.id == id) {
             w.label = label;
         }
     }
 
+    /// Adds/looks up a wire.
     pub fn wire(&self, id: &str) -> Option<&Wire> {
         self.wires.iter().find(|w| w.id == id)
     }
@@ -456,14 +471,17 @@ impl Workbench {
         out
     }
 
+    /// Node accessor.
     pub fn node(&self, id: &str) -> Option<&CanvasNode> {
         self.nodes.iter().find(|n| n.id == id)
     }
 
+    /// Mutable node accessor.
     pub fn node_mut(&mut self, id: &str) -> Option<&mut CanvasNode> {
         self.nodes.iter_mut().find(|n| n.id == id)
     }
 
+    /// Moves a node.
     pub fn move_node(&mut self, id: &str, x: f64, y: f64) {
         if let Some(n) = self.node_mut(id) {
             n.x = snap(x).max(0.0);
@@ -472,6 +490,7 @@ impl Workbench {
         self.select_node(id);
     }
 
+    /// Resizes a node.
     pub fn resize_node(&mut self, id: &str, width: f64, height: f64) {
         if let Some(n) = self.node_mut(id) {
             n.width = snap(width).max(320.0);
@@ -480,6 +499,7 @@ impl Workbench {
         self.select_node(id);
     }
 
+    /// Stage transform.
     pub fn stage_transform(&self) -> String {
         match self.dim {
             DimMode::D2 => format!(

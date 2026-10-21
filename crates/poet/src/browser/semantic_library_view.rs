@@ -9,6 +9,7 @@ use super::native_daemon::{
 };
 use super::semantic_library_render::{render_facets, render_results, show_error};
 
+/// Builds the view.
 pub fn build(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
     root.set_class_name("poet-semantic-library");
@@ -273,6 +274,7 @@ fn build_ingest_form(document: &Document, root: &Element, status: &Element) -> E
     form
 }
 
+/// Spawns a refresh task.
 pub(super) fn spawn_refresh(root: Element, status: Element) {
     if !super::native_daemon::is_daemon_connected() {
         status.set_text_content(Some(

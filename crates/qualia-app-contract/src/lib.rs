@@ -17,6 +17,7 @@ pub mod gesture;
 pub mod id;
 pub mod request;
 pub mod target;
+pub mod qap_package;
 
 pub use adapter::AppAdapter;
 pub use catalog::CommandCatalog;
@@ -28,6 +29,7 @@ pub use effects::{CommandEffect, EffectSet, InteractionKind, UndoPolicy};
 pub use error::ContractError;
 pub use gesture::{GestureCancel, GestureCommit, GestureSession, GestureUpdate};
 pub use id::{validate_finite_f64, AppId, CommandId, DecimalU64, JS_MAX_SAFE_INTEGER};
+pub use qap_package::*;
 pub use request::{
     AppSessionDescriptor, CommandReceipt, CommandRequest, CommandStatus, JobDescriptor, JobState,
     SurfaceDescriptor,

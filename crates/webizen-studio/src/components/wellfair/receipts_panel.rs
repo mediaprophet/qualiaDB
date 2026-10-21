@@ -9,6 +9,7 @@ fn cp_prefix(hash: &str) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairReceiptsPanel` component.
 pub fn WellfairReceiptsPanel() -> Element {
     let mut receipts = use_signal(Vec::<ReceiptDto>::new);
     let mut status = use_signal(|| String::new());

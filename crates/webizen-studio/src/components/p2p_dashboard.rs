@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `P2pDashboard` component.
 pub fn P2pDashboard() -> Element {
     rsx! {
         div { style: "padding: 30px; background-color: #121212; color: #e0e0e0; min-height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;",

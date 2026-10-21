@@ -74,6 +74,7 @@ fn get_toolbox_items() -> Vec<OntologicalDefinition> {
 }
 
 #[component]
+/// Dioxus `LogicModeler` component.
 pub fn LogicModeler() -> Element {
     let mut nodes = use_signal(|| {
         let items = get_toolbox_items();

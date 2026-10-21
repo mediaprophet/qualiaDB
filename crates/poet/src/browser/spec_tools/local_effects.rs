@@ -7,6 +7,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlDocument, HtmlElement};
 
+/// Applies.
 pub fn apply(
     document: &Document,
     element: &HtmlElement,

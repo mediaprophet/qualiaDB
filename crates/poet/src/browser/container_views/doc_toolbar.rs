@@ -5,6 +5,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
+/// Appends the doc toolbar.
 pub(super) fn append_doc_toolbar(document: &Document, wrapper: &Element) {
     // Toolbar (Visual mode)
     let toolbar = document.create_element("div").unwrap();

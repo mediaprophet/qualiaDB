@@ -27,6 +27,7 @@ impl FeedbackState {
         }
     }
 
+    /// Builds from label.
     pub(crate) fn from_label(label: &str) -> Self {
         match label {
             "working" | "pending" => Self::Pending,
@@ -55,6 +56,7 @@ const CSS: &str = r#"
 }
 "#;
 
+/// Installs.
 pub(crate) fn install(document: &Document) {
     if document.get_element_by_id(STYLE_ID).is_some() {
         return;
@@ -67,6 +69,7 @@ pub(crate) fn install(document: &Document) {
     }
 }
 
+/// Status element.
 pub(crate) fn status_element(document: &Document, message: &str) -> Element {
     install(document);
     let status = document.create_element("div").unwrap();
@@ -79,6 +82,7 @@ pub(crate) fn status_element(document: &Document, message: &str) -> Element {
     status
 }
 
+/// Applies.
 pub(crate) fn apply(root: &Element, status: &Element, state: FeedbackState, message: &str) {
     let (label, honesty, busy) = state.attributes();
     root.set_attribute("data-honesty", honesty).ok();

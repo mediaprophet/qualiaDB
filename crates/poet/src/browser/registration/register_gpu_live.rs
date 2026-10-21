@@ -22,6 +22,7 @@ fn gpu_live_tool(
     ))
 }
 
+/// Registers the `gpu-live` tool set.
 pub(super) fn gpu_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         gpu_live_tool("render:gpu_live_init", "GPU init", "Render.gpu_init", "Create an offscreen PortalGpu via Render.gpu_init."),

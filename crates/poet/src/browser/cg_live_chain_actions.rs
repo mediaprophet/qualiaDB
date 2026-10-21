@@ -179,6 +179,7 @@ fn run_pq(document: &Document, label: &str, cap: &'static str, sketch: &str) {
     );
 }
 
+/// Chain action: average-spacing-3d.
 pub(super) fn run_average_spacing_3d(document: &Document, label: &str) {
     run_points3_k(
         document,
@@ -188,6 +189,7 @@ pub(super) fn run_average_spacing_3d(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: local-density-3d.
 pub(super) fn run_local_density_3d(document: &Document, label: &str) {
     run_points3_k(
         document,
@@ -197,6 +199,7 @@ pub(super) fn run_local_density_3d(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: mean-knn-distance-3d.
 pub(super) fn run_mean_knn_distance_3d(document: &Document, label: &str) {
     run_points3_k(
         document,
@@ -206,6 +209,7 @@ pub(super) fn run_mean_knn_distance_3d(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: fisher-distance.
 pub(super) fn run_fisher_distance(document: &Document, label: &str) {
     run_pq(
         document,
@@ -215,6 +219,7 @@ pub(super) fn run_fisher_distance(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: kl-divergence.
 pub(super) fn run_kl_divergence(document: &Document, label: &str) {
     run_pq(
         document,
@@ -224,6 +229,7 @@ pub(super) fn run_kl_divergence(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: kl-bregman-form.
 pub(super) fn run_kl_bregman_form(document: &Document, label: &str) {
     run_pq(
         document,
@@ -233,6 +239,7 @@ pub(super) fn run_kl_bregman_form(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: triangle-signed-area.
 pub(super) fn run_triangle_signed_area(document: &Document, label: &str) {
     let n = nums(document);
     let a = pair2(&n, 0, [0.0, 0.0]);
@@ -261,6 +268,7 @@ fn run_dist_seg(document: &Document, label: &str, cap: &'static str, sketch: &st
     );
 }
 
+/// Chain action: dist-point-to-segment.
 pub(super) fn run_dist_point_to_segment(document: &Document, label: &str) {
     run_dist_seg(
         document,
@@ -270,6 +278,7 @@ pub(super) fn run_dist_point_to_segment(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dist-sq-point-to-segment.
 pub(super) fn run_dist_sq_point_to_segment(document: &Document, label: &str) {
     run_dist_seg(
         document,
@@ -279,6 +288,7 @@ pub(super) fn run_dist_sq_point_to_segment(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: incircle.
 pub(super) fn run_incircle(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -295,6 +305,7 @@ pub(super) fn run_incircle(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: tukey-depth.
 pub(super) fn run_tukey_depth(document: &Document, label: &str) {
     let n = nums(document);
     let query = pair2(&n, 0, [0.5, 0.5]);
@@ -312,6 +323,7 @@ pub(super) fn run_tukey_depth(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: directional-width.
 pub(super) fn run_directional_width(document: &Document, label: &str) {
     let n = nums(document);
     let pts = points2(&n, &SQUARE);
@@ -325,6 +337,7 @@ pub(super) fn run_directional_width(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: width.
 pub(super) fn run_width(document: &Document, label: &str) {
     let pts = points2(&nums(document), &SQUARE);
     invoke_dual(
@@ -336,6 +349,7 @@ pub(super) fn run_width(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: farthest-site-brute.
 pub(super) fn run_farthest_site_brute(document: &Document, label: &str) {
     let n = nums(document);
     let q = pair2(&n, 0, [0.5, 0.5]);
@@ -349,6 +363,7 @@ pub(super) fn run_farthest_site_brute(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: k-nearest-sites.
 pub(super) fn run_k_nearest_sites(document: &Document, label: &str) {
     let n = nums(document);
     let q = pair2(&n, 0, [0.5, 0.5]);
@@ -363,6 +378,7 @@ pub(super) fn run_k_nearest_sites(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: is-hull-site.
 pub(super) fn run_is_hull_site(document: &Document, label: &str) {
     let n = nums(document);
     let sites = points2(&n, &SQUARE);
@@ -378,6 +394,7 @@ pub(super) fn run_is_hull_site(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: diameter-and-width.
 pub(super) fn run_diameter_and_width(document: &Document, label: &str) {
     let pts = points2(&nums(document), &SQUARE);
     invoke_dual(

@@ -65,6 +65,7 @@ fn category_affinity(from: &PaneCategory, to: &PaneCategory) -> i32 {
 }
 
 #[component]
+/// Dioxus `SelectionSidebar` component.
 pub fn SelectionSidebar(
     page: Page,
     selected_idx: Option<usize>,

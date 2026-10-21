@@ -7,6 +7,7 @@ use super::request_parse::{
 };
 use web_sys::Document;
 
+/// Governance request.
 pub(super) fn governance_request(
     document: &Document,
     mode: &str,

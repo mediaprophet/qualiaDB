@@ -6,6 +6,7 @@ use crate::components::qapp_engine::tauri_invoke;
 use js_sys;
 
 #[cfg(target_arch = "wasm32")]
+/// Lists canvas-worlds.
 pub async fn list_canvas_worlds() -> Result<Vec<serde_json::Value>, String> {
     let js = tauri_invoke("chora_list_worlds", wasm_bindgen::JsValue::NULL)
         .await
@@ -16,11 +17,13 @@ pub async fn list_canvas_worlds() -> Result<Vec<serde_json::Value>, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists canvas-worlds.
 pub async fn list_canvas_worlds() -> Result<Vec<serde_json::Value>, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Gets canvas-world.
 pub async fn get_canvas_world(world_id: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -38,11 +41,13 @@ pub async fn get_canvas_world(world_id: &str) -> Result<serde_json::Value, Strin
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Gets canvas-world.
 pub async fn get_canvas_world(_world_id: &str) -> Result<serde_json::Value, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Saves canvas-world.
 pub async fn save_canvas_world(config_json: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -57,11 +62,13 @@ pub async fn save_canvas_world(config_json: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Saves canvas-world.
 pub async fn save_canvas_world(_config_json: &str) -> Result<(), String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Deletes canvas-world.
 pub async fn delete_canvas_world(world_id: &str) -> Result<bool, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -77,11 +84,13 @@ pub async fn delete_canvas_world(world_id: &str) -> Result<bool, String> {
         .ok_or_else(|| "delete response not bool".to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Deletes canvas-world.
 pub async fn delete_canvas_world(_world_id: &str) -> Result<bool, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn seed_canvas_demo() -> Result<bool, String> {
     let js = tauri_invoke("chora_seed_demo", wasm_bindgen::JsValue::NULL)
         .await
@@ -90,11 +99,13 @@ pub async fn seed_canvas_demo() -> Result<bool, String> {
         .ok_or_else(|| "seed response not bool".to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn seed_canvas_demo() -> Result<bool, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn canvas_navigation() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("chora_navigation", wasm_bindgen::JsValue::NULL)
         .await
@@ -105,11 +116,13 @@ pub async fn canvas_navigation() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn canvas_navigation() -> Result<serde_json::Value, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets canvas-temporal.
 pub async fn set_canvas_temporal(t_value: f64) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -124,11 +137,13 @@ pub async fn set_canvas_temporal(t_value: f64) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets canvas-temporal.
 pub async fn set_canvas_temporal(_t: f64) -> Result<(), String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets active-canvas-world.
 pub async fn set_active_canvas_world(world_id: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -143,11 +158,13 @@ pub async fn set_active_canvas_world(world_id: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets active-canvas-world.
 pub async fn set_active_canvas_world(_id: &str) -> Result<(), String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn query_canvas_region(
     x1: f64,
     y1: f64,
@@ -172,6 +189,7 @@ pub async fn query_canvas_region(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn query_canvas_region(
     _x1: f64,
     _y1: f64,
@@ -182,6 +200,7 @@ pub async fn query_canvas_region(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Publishes planted-asset.
 pub async fn publish_planted_asset(asset_json: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -196,11 +215,13 @@ pub async fn publish_planted_asset(asset_json: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Publishes planted-asset.
 pub async fn publish_planted_asset(_asset_json: &str) -> Result<(), String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn pull_spatial_assets(cell_id: u64) -> Result<Vec<serde_json::Value>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -218,6 +239,7 @@ pub async fn pull_spatial_assets(cell_id: u64) -> Result<Vec<serde_json::Value>,
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn pull_spatial_assets(_cell_id: u64) -> Result<Vec<serde_json::Value>, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
@@ -225,6 +247,7 @@ pub async fn pull_spatial_assets(_cell_id: u64) -> Result<Vec<serde_json::Value>
 // ── Layer library + asset download pipeline ─────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
+/// Lists layers.
 pub async fn list_layers() -> Result<Vec<serde_json::Value>, String> {
     let js = tauri_invoke("chora_list_layers", wasm_bindgen::JsValue::NULL)
         .await
@@ -235,11 +258,13 @@ pub async fn list_layers() -> Result<Vec<serde_json::Value>, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists layers.
 pub async fn list_layers() -> Result<Vec<serde_json::Value>, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn download_layer(layer_id: &str, resolution: u32) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -263,6 +288,7 @@ pub async fn download_layer(layer_id: &str, resolution: u32) -> Result<serde_jso
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn download_layer(
     _layer_id: &str,
     _resolution: u32,
@@ -271,6 +297,7 @@ pub async fn download_layer(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets gpu-camera-mode.
 pub async fn set_gpu_camera_mode(mode: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -285,6 +312,7 @@ pub async fn set_gpu_camera_mode(mode: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets gpu-camera-mode.
 pub async fn set_gpu_camera_mode(_mode: &str) -> Result<(), String> {
     Err("Chora requires the Tauri desktop host".into())
 }

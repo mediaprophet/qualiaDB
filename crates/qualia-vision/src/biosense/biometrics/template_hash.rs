@@ -13,6 +13,7 @@ pub struct BiometricTemplate {
     pub method: &'static str,
 }
 
+/// Template hash from ROI.
 pub fn template_hash_from_roi(
     consent: BiosenseConsent,
     src: RgbView<'_>,
@@ -42,6 +43,7 @@ pub fn template_hash_from_roi(
     })
 }
 
+/// `true` when templates match.
 pub fn templates_match(a: BiometricTemplate, b: BiometricTemplate) -> bool {
     a.hash == b.hash && a.principal_hash == b.principal_hash
 }

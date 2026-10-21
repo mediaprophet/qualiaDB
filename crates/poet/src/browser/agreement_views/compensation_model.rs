@@ -80,6 +80,7 @@ const SKILL_LEVELS: &[(&str, f64)] = &[
     ("specialist", 5.0),
 ];
 
+/// Builds compensation-model-view.
 pub fn build_compensation_model_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

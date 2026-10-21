@@ -24,6 +24,7 @@ pub const RR_MIN_SNR_DEFAULT: f32 = 3.0;
 pub const RR_SNR_FOR_FULL_CONF: f32 = 18.0;
 
 #[inline]
+/// SNR to confidence.
 pub fn snr_to_confidence(snr: f32) -> f32 {
     (snr / RR_SNR_FOR_FULL_CONF).clamp(0.0, 1.0)
 }

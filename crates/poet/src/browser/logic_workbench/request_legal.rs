@@ -7,6 +7,7 @@ use super::request_parse::{
 };
 use web_sys::Document;
 
+/// Legal request.
 pub(super) fn legal_request(
     document: &Document,
     mode: &str,

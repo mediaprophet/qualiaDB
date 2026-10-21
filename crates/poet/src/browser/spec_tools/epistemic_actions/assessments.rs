@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:create-assessment" => Some(create_assessment(container)),
@@ -18,6 +19,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next epistemic-mode.
 pub(crate) fn next_epistemic_mode(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("objective") => "intersubjective",
@@ -29,6 +31,7 @@ pub(crate) fn next_epistemic_mode(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next reality-category.
 pub(crate) fn next_reality_category(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("nonfiction") => "fiction",

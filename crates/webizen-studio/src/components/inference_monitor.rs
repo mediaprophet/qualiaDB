@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `InferenceMonitor` component.
 pub fn InferenceMonitor() -> Element {
     rsx! {
         div { style: "display: flex; flex-direction: column; height: 100%; background: #000; color: #0f0; font-family: monospace; padding: 16px; box-sizing: border-box;",

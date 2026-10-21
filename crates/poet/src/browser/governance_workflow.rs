@@ -6,6 +6,7 @@ use web_sys::{Document, Element, HtmlElement};
 
 use super::cop_records::{build_family_panel, CopField};
 
+/// Builds credential-view.
 pub fn build_credential_view(document: &Document) -> Element {
     let root = wrapper(document, "Credential Inspector");
     root.append_child(&build_family_panel(
@@ -31,6 +32,7 @@ pub fn build_credential_view(document: &Document) -> Element {
     root
 }
 
+/// Builds context-markup-view.
 pub fn build_context_markup_view(document: &Document) -> Element {
     let root = wrapper(document, "Context Markup Editor");
     root.append_child(&build_family_panel(
@@ -49,6 +51,7 @@ pub fn build_context_markup_view(document: &Document) -> Element {
     root
 }
 
+/// Builds provenance-view.
 pub fn build_provenance_view(document: &Document) -> Element {
     let root = wrapper(document, "Provenance & Derivative Chain");
     root.append_child(&build_family_panel(
@@ -68,6 +71,7 @@ pub fn build_provenance_view(document: &Document) -> Element {
     root
 }
 
+/// Builds constituency-view.
 pub fn build_constituency_view(document: &Document) -> Element {
     let root = wrapper(document, "Constituency Manager");
     root.append_child(&build_family_panel(
@@ -98,12 +102,14 @@ pub fn build_constituency_view(document: &Document) -> Element {
     root
 }
 
+/// Builds consent-view.
 pub fn build_consent_view(document: &Document) -> Element {
     let root = wrapper(document, "Consent State");
     root.append_child(&consent_records(document)).unwrap();
     root
 }
 
+/// Builds capability-badge-view.
 pub fn build_capability_badge_view(document: &Document) -> Element {
     build_credential_view(document)
 }

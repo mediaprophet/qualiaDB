@@ -109,6 +109,7 @@ fn resolve_front_door_did(profile: &crate::user_profile::UserProfile) -> String 
         .unwrap_or_else(|| profile.public_did.clone())
 }
 
+/// Generates a connect invite.
 pub fn generate_connect_invite(
     front_door_id: Option<String>,
 ) -> Result<ConnectInviteSummary, String> {
@@ -202,6 +203,7 @@ pub fn generate_connect_invite(
     })
 }
 
+/// Accepts a connect invite.
 pub fn accept_connect_invite(input: &str) -> Result<ChatContact, String> {
     let invite: ConnectInvitePayload = if input.trim().starts_with('{') {
         serde_json::from_str(input.trim()).map_err(|e| format!("Invalid invite JSON: {e}"))?
@@ -309,6 +311,7 @@ pub fn accept_connect_invite(input: &str) -> Result<ChatContact, String> {
     Ok(contact)
 }
 
+/// Loads contacts.
 pub fn load_contacts() -> Vec<ChatContact> {
     let path = contacts_path();
     fs::read_to_string(path)
@@ -326,10 +329,12 @@ fn save_contacts(contacts: &[ChatContact]) -> Result<(), String> {
     fs::write(path, text).map_err(|e| e.to_string())
 }
 
+/// Finds contact-by-did.
 pub fn find_contact_by_did(did: &str) -> Option<ChatContact> {
     list_chat_contacts().into_iter().find(|c| c.did == did)
 }
 
+/// Updates contact categories.
 pub fn update_contact_categories(
     did: &str,
     categories: Vec<String>,
@@ -348,6 +353,7 @@ pub fn update_contact_categories(
     Ok(contacts[idx].clone())
 }
 
+/// Lists chat contacts.
 pub fn list_chat_contacts() -> Vec<ChatContact> {
     let mut contacts = load_contacts();
     if contacts.is_empty() {

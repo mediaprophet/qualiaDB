@@ -109,6 +109,7 @@ pub struct AgentTlsStatus {
     pub note: String,
 }
 
+/// Agent TLS status.
 pub fn agent_tls_status(storage_root: &Path) -> AgentTlsStatus {
     use crate::webizen_x509::{agent_tls_mode, AgentTlsMode};
     let store = TrustStore::load(storage_root);
@@ -206,6 +207,7 @@ pub async fn fetch_page_text(url: &str) -> Result<String, String> {
     .await
 }
 
+/// Fetches page-text-with-storage.
 pub async fn fetch_page_text_with_storage(
     url: &str,
     storage_root: &Path,

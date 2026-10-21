@@ -11,6 +11,7 @@ use webizen_studio::semantic_instruments::{
     DEMO_CHIP, HELD_WHY, INSPECT_BEFORE_FETCH, REFERENCE_CHIP, WASM_Q42_HELD,
 };
 
+pub mod define;
 mod deps;
 mod flow;
 mod inspect;
@@ -24,6 +25,7 @@ mod shapes_canvas;
 pub mod undo;
 pub mod walkthrough;
 
+pub use define::{DefineInstrumentPanel, DefinedInstrument};
 use deps::DepsPanel;
 use inspect::InspectPanel;
 use lifecycle::LifecyclePanel;
@@ -66,6 +68,15 @@ const SEEDS: &[Seed] = &[
     },
 ];
 
+const EXTRA_SEEDS: &[Seed] = &[
+    Seed { slug: "nutrition-evidence-review", name: "Nutrition evidence review (demo)", chip: DEMO_CHIP, entry: "assess", a11y: "Nutrition evidence review demo instrument" },
+    Seed { slug: "meal-consideration-review", name: "Meal consideration review (demo)", chip: DEMO_CHIP, entry: "assess", a11y: "Meal consideration review demo instrument" },
+    Seed { slug: "clinical-mechanism-review", name: "Clinical mechanism review (demo)", chip: DEMO_CHIP, entry: "assess", a11y: "Clinical mechanism review demo instrument" },
+    Seed { slug: "simple-units", name: "Simple units (reference)", chip: REFERENCE_CHIP, entry: "assess", a11y: "Simple units reference pack" },
+    Seed { slug: "wellbeing-training", name: "Wellbeing training (reference)", chip: REFERENCE_CHIP, entry: "recognise", a11y: "Wellbeing training reference pack" },
+    Seed { slug: "tax-training", name: "Tax training (reference)", chip: REFERENCE_CHIP, entry: "recognise", a11y: "Tax training reference pack" },
+];
+
 const TOOLBAR: [LibraryAction; 6] = [
     LibraryAction::Inspect,
     LibraryAction::Collect,
@@ -76,8 +87,11 @@ const TOOLBAR: [LibraryAction; 6] = [
 ];
 
 #[component]
+/// Dioxus `InstrumentBay` component.
 pub fn InstrumentBay() -> Element {
     let mut selected = use_signal(|| Option::<&'static str>::None);
+    let mut selected_custom = use_signal(|| Option::<String>::None);
+    let defined_list = use_signal(Vec::<DefinedInstrument>::new);
     let mut flow_label = use_signal(|| "assess".to_string());
     let mut status = use_signal(|| HELD_WHY.to_string());
     let collected = use_signal(|| false);
@@ -108,7 +122,7 @@ pub fn InstrumentBay() -> Element {
             }
 
             div { class: "instrument-card-list", role: "list",
-                for seed in SEEDS {
+                for seed in SEEDS.iter().chain(EXTRA_SEEDS.iter()) {
                     button {
                         r#type: "button",
                         class: "lexicon-pack-card instrument-card",
@@ -116,6 +130,7 @@ pub fn InstrumentBay() -> Element {
                         "aria-pressed": "{selected() == Some(seed.slug)}",
                         onclick: move |_| {
                             selected.set(Some(seed.slug));
+                            selected_custom.set(None);
                             flow_label.set(seed.entry.to_string());
                             status.set(format!(
                                 "inspect {} · {} · entry {} · {INSPECT_BEFORE_FETCH} · artwork is not proof",
@@ -123,6 +138,27 @@ pub fn InstrumentBay() -> Element {
                             ));
                         },
                         "{seed.name} · {seed.chip} · {seed.entry}"
+                    }
+                }
+                for inst in defined_list() {
+                    button {
+                        r#type: "button",
+                        class: "lexicon-pack-card instrument-card",
+                        "aria-label": "{inst.name}",
+                        "aria-pressed": "{selected_custom().as_deref() == Some(inst.slug.as_str())}",
+                        onclick: {
+                            let s = inst.slug.clone();
+                            let n = inst.name.clone();
+                            let c = inst.chip.clone();
+                            let e = inst.entry.clone();
+                            move |_| {
+                                selected.set(None);
+                                selected_custom.set(Some(s.clone()));
+                                flow_label.set(e.clone());
+                                status.set(format!("inspect {n} · {c} · entry {e} · sealed · {INSPECT_BEFORE_FETCH}"));
+                            }
+                        },
+                        "{inst.name} · {inst.chip} · {inst.entry} [Defined]"
                     }
                 }
             }
@@ -181,6 +217,15 @@ pub fn InstrumentBay() -> Element {
             DepsPanel {}
             LifecyclePanel {}
             WalkthroughPanel {}
+            DefineInstrumentPanel {
+                defined_list,
+                on_select_defined: move |inst: DefinedInstrument| {
+                    selected.set(None);
+                    selected_custom.set(Some(inst.slug.clone()));
+                    flow_label.set(inst.entry.clone());
+                    status.set(format!("inspect {} · {} · entry {} · sealed", inst.name, inst.chip, inst.entry));
+                }
+            }
 
             div {
                 class: "lexicon-held-gate",
@@ -204,7 +249,7 @@ fn apply_action(
         status.set(HELD_WHY.to_string());
         return;
     };
-    let seed = SEEDS.iter().find(|s| s.slug == slug);
+    let seed = SEEDS.iter().chain(EXTRA_SEEDS.iter()).find(|s| s.slug == slug);
     if seed.is_some_and(|s| host_id_refused(s.entry)) {
         status.set("unknown entry point (not a Host ID)".into());
         return;

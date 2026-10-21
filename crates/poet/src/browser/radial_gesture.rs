@@ -61,6 +61,7 @@ pub fn selection_yields_to_text_popover(in_doc_editor: bool, selection_nonempty:
     in_doc_editor && selection_nonempty
 }
 
+/// Pointer intent.
 pub fn pointer_intent(pointer_type: &str, button: i16) -> PointerIntent {
     let mouse = pointer_type.is_empty() || pointer_type == "mouse";
     if mouse {
@@ -98,6 +99,7 @@ pub fn radial_overlay_style(cx: f64, cy: f64) -> String {
     )
 }
 
+/// `true` when the radial root is the visible contract.
 pub fn radial_root_is_visible_contract(style: &str) -> bool {
     style.contains("position:fixed")
         && style.contains(&format!("z-index:{}", RADIAL_Z_INDEX))
@@ -115,6 +117,7 @@ pub fn parse_bridge_coords(x: Option<f64>, y: Option<f64>) -> Option<(f64, f64)>
     }
 }
 
+/// `true` when studio-radial-surface.
 pub fn is_studio_radial_surface(id: Option<&str>, class_list: &[&str]) -> bool {
     if matches!(id, Some("manifold-canvas")) {
         return true;
@@ -408,6 +411,7 @@ pub fn bind_live_surfaces(document: &Document) {
     }
 }
 
+/// Binds an element surface.
 pub fn bind_element_surface(element: &Element) {
     if !super::dom_bindings::claim(element, "radial-surface") {
         return;

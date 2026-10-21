@@ -118,6 +118,7 @@ impl Default for SetupState {
     }
 }
 
+/// Updates the setup profile.
 pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String> {
     let mut state = get_setup_state()?;
     state.profile = profile;
@@ -127,14 +128,17 @@ pub fn update_setup_profile(profile: SetupProfile) -> Result<SetupState, String>
     Ok(state)
 }
 
+/// Setup state path.
 pub fn setup_state_path() -> PathBuf {
     app_meta_dir().join("setup-state.json")
 }
 
+/// Gets setup-state.
 pub fn get_setup_state() -> Result<SetupState, String> {
     load_setup_state_from(&setup_state_path(), config_file_path().exists())
 }
 
+/// Completes a setup step.
 pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
     let step = step.trim();
     let is_required = REQUIRED_SETUP_STEPS.contains(&step);
@@ -158,6 +162,7 @@ pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
     Ok(state)
 }
 
+/// Finishes setup.
 pub fn finish_setup() -> Result<SetupState, String> {
     let mut state = get_setup_state()?;
     let missing: Vec<&str> = REQUIRED_SETUP_STEPS

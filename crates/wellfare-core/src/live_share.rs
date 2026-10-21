@@ -19,6 +19,7 @@ pub struct UsageAgreement {
 }
 
 impl UsageAgreement {
+    /// Creates a new instance.
     pub fn new(
         device_id: impl Into<String>,
         purpose: impl Into<String>,
@@ -51,6 +52,7 @@ pub struct LiveSectionRequest {
 }
 
 impl LiveSectionRequest {
+    /// Creates a new instance.
     pub fn new(
         id: impl Into<String>,
         device_id: impl Into<String>,
@@ -86,6 +88,7 @@ pub struct LiveSectionDecision {
 }
 
 impl LiveSectionDecision {
+    ///  when approved.
     pub fn approved(
         request_id: impl Into<String>,
         projection_kinds: Vec<String>,
@@ -101,6 +104,7 @@ impl LiveSectionDecision {
         }
     }
 
+    /// Denied result.
     pub fn denied(
         request_id: impl Into<String>,
         reason: impl Into<String>,

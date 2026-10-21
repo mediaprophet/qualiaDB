@@ -183,6 +183,7 @@ fn backend_override_from_env() -> Option<wgpu::Backends> {
 }
 
 impl<'a> WgpuDiffusionBackend<'a> {
+    /// Creates a new instance.
     pub async fn new(config: DiffusionConfig) -> Result<Self, RuntimeError> {
         let instance = create_instance();
 

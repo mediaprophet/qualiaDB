@@ -10,6 +10,7 @@ use crate::tool_chest::core::registry::SeedContainer;
 
 const COLLAPSED_KEY: &str = "poet:collapsed";
 
+/// Builds header-actions.
 pub fn build_header_actions(document: &Document) -> Element {
     let actions = document.create_element("div").unwrap();
     actions.set_class_name("container-actions");
@@ -48,6 +49,7 @@ pub fn build_header_actions(document: &Document) -> Element {
     actions
 }
 
+/// `restore-chrome` state.
 pub fn restore_chrome_state(element: &Element, container: &SeedContainer) {
     if container
         .tool_settings

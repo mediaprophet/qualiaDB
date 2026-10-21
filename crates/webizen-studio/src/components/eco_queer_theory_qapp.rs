@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `EcoQueerTheoryQapp` component.
 pub fn EcoQueerTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

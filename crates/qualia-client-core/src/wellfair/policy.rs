@@ -28,6 +28,7 @@ pub struct DecisionReceipt {
 }
 
 impl DecisionResult {
+    /// Converts to dto.
     pub fn to_dto(&self) -> PolicyDecisionDto {
         match self {
             Self::Permit { obligations } => PolicyDecisionDto::Permit {
@@ -54,6 +55,7 @@ pub struct PolicyDecisionService {
 }
 
 impl PolicyDecisionService {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             health_writers: &[

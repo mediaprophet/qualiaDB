@@ -62,10 +62,12 @@ pub struct DeviceRecord {
 pub type DeviceRecordPublic = DeviceRecord;
 
 impl DeviceRecord {
+    /// Device DID from pubkey hex.
     pub fn device_did_from_pubkey_hex(pubkey_hex: &str) -> String {
         format!("did:q42:device:{}", pubkey_hex.trim().to_ascii_lowercase())
     }
 
+    /// New local instance.
     pub fn new_local(
         person_id: impl Into<String>,
         identity_pubkey_hex: impl Into<String>,
@@ -95,10 +97,12 @@ impl DeviceRecord {
         }
     }
 
+    /// Touches (updates timestamp).
     pub fn touch(&mut self) {
         self.last_seen_unix = now_unix();
     }
 
+    /// Builder — sets control-base-url.
     pub fn with_control_base_url(mut self, url: impl Into<String>) -> Self {
         self.control_base_url = url.into().trim().trim_end_matches('/').to_string();
         self

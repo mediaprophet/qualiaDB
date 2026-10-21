@@ -3,6 +3,7 @@
 use super::{active_node_id, append_semicolon_attr, find_node, ok_true};
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(_document: &web_sys::Document, container: &Element, tool_id: &str) -> Option<Result<bool, String>> {
     Some(match tool_id {
         "spatial:navigate-spatial" => ok_true(navigate_axis(container, "spatial", "dx=1,dy=0,dz=0")),
@@ -18,6 +19,7 @@ pub(super) fn run(_document: &web_sys::Document, container: &Element, tool_id: &
     })
 }
 
+/// Cycles to the next topology.
 pub(crate) fn next_topology(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("flat") => "loop",
@@ -27,6 +29,7 @@ pub(crate) fn next_topology(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next manifold-domain.
 pub(crate) fn next_manifold_domain(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("commons") => "bilateral",
@@ -37,6 +40,7 @@ pub(crate) fn next_manifold_domain(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next spectral-perception.
 pub(crate) fn next_spectral_perception(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("human_visible") => "extended_spectrum",

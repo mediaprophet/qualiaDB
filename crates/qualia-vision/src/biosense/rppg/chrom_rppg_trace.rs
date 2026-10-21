@@ -2,6 +2,7 @@
 
 use crate::cv::error::CvError;
 
+/// CHROM rPPG trace.
 pub fn chrom_rppg_trace(
     rgb_means: &[f32],
     n_frames: usize,

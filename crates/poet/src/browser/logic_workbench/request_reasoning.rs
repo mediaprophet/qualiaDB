@@ -4,6 +4,7 @@ use super::helpers::field_value;
 use super::request_parse::{assignment, optional_f64, required_assignment, required_string_list};
 use web_sys::Document;
 
+/// Reasoning request.
 pub(super) fn reasoning_request(
     document: &Document,
     mode: &str,

@@ -231,6 +231,7 @@ pub struct QappRegistryState {
 }
 
 impl QappRegistryState {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             installed_qapps: HashMap::new(),

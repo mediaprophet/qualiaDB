@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "ai:run-gazetteer" => Some(run_gazetteer(container)),
@@ -18,6 +19,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Extracts named entities.
 pub(crate) fn extract_named_entities(text: &str) -> Vec<String> {
     text.split_whitespace()
         .filter(|word| {
@@ -28,6 +30,7 @@ pub(crate) fn extract_named_entities(text: &str) -> Vec<String> {
         .collect()
 }
 
+/// Stems a word.
 pub(crate) fn stem_word(word: &str) -> String {
     let lower = word.to_lowercase();
     if let Some(stripped) = lower.strip_suffix("ing") {

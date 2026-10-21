@@ -52,6 +52,7 @@ pub enum MeasurementGroup {
 }
 
 impl MeasurementGroup {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::WholeBody => "Whole body",
@@ -64,6 +65,7 @@ impl MeasurementGroup {
         }
     }
 
+    /// Hint.
     pub fn hint(self) -> &'static str {
         match self {
             Self::WholeBody => {
@@ -110,14 +112,17 @@ pub struct MeasurementSpec {
 }
 
 impl MeasurementSpec {
+    ///  uses.
     pub fn uses_list(self) -> Vec<MeasurementUse> {
         decode_uses(self.uses)
     }
 
+    ///  when it serves the use.
     pub fn serves(self, use_: MeasurementUse) -> bool {
         self.uses & bit(use_) != 0
     }
 
+    /// Stores unit.
     pub fn store_unit(self) -> &'static str {
         match self.input {
             MeasurementInputUnit::Kg => "g",
@@ -273,15 +278,18 @@ pub struct BodyMeasurements {
 }
 
 impl BodyMeasurements {
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         *self == Self::default()
     }
 
+    /// Gets.
     pub fn get(&self, id: &str) -> Option<u32> {
         let v = serde_json::to_value(self).ok()?;
         v.get(id)?.as_u64().map(|n| n as u32)
     }
 
+    /// Declared entries.
     pub fn declared(&self) -> Vec<(&'static MeasurementSpec, u32)> {
         MEASUREMENT_CATALOG
             .iter()
@@ -289,6 +297,7 @@ impl BodyMeasurements {
             .collect()
     }
 
+    /// Values for a measurement.
     pub fn values_for(&self, use_: MeasurementUse) -> Vec<(&'static MeasurementSpec, u32)> {
         self.declared()
             .into_iter()
@@ -296,6 +305,7 @@ impl BodyMeasurements {
             .collect()
     }
 
+    ///  when it has beyond-anatomy-fit.
     pub fn has_beyond_anatomy_fit(&self) -> bool {
         self.declared()
             .into_iter()
@@ -308,11 +318,13 @@ impl BodyMeasurements {
             .or_else(|| max_opt(self.foot_left_mm, self.foot_right_mm))
     }
 
+    /// Foot width for a last size.
     pub fn foot_width_for_last(&self) -> Option<u16> {
         self.foot_width_mm
             .or_else(|| max_opt(self.foot_width_left_mm, self.foot_width_right_mm))
     }
 
+    /// Validates.
     pub fn validate(&self) -> Result<(), String> {
         for spec in MEASUREMENT_CATALOG {
             if let Some(n) = self.get(spec.id) {

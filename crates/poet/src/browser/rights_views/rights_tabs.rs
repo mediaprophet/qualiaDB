@@ -6,6 +6,7 @@ use web_sys::{Document, Element, HtmlElement};
 use super::super::cop_records::{build_family_panel, CopField};
 use super::super::live_invoke;
 
+/// Builds agreements-tab.
 pub fn build_agreements_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel
@@ -44,6 +45,7 @@ pub fn build_agreements_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds deontic-tab.
 pub fn build_deontic_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-rights-panel", "deontic").unwrap();
@@ -80,6 +82,7 @@ pub fn build_deontic_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds jural-tab.
 pub fn build_jural_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-rights-panel", "jural").unwrap();
@@ -127,6 +130,7 @@ pub fn build_jural_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds breach-tab.
 pub fn build_breach_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-rights-panel", "breach").unwrap();
@@ -167,6 +171,7 @@ pub fn build_breach_tab(document: &Document) -> Element {
     panel
 }
 
+/// Builds consents-tab.
 pub fn build_consents_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel

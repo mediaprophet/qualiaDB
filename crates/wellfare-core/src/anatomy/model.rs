@@ -259,6 +259,7 @@ pub fn secondary_organ_system_pairs() -> &'static [(&'static str, &'static str)]
     ORGAN_SECONDARY_SYSTEMS
 }
 
+/// System memberships for an organ.
 pub fn system_memberships_for_organ(organ: &str) -> Vec<(&'static str, bool)> {
     let key = normalize_organ_key(organ);
     let mut out: Vec<(&'static str, bool)> = Vec::new();

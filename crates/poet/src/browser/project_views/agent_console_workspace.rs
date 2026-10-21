@@ -45,6 +45,7 @@ const AGENT_FIELDS: &[CopField] = &[
     },
 ];
 
+/// Builds agent-console-view.
 pub fn build_agent_console_view(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-agent-console", "local-grounded")

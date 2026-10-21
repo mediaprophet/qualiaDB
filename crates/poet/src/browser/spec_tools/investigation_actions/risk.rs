@@ -3,6 +3,7 @@
 use super::shared::count_selector;
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:assess-risk" => Some(assess_risk(container)),
@@ -15,6 +16,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next risk-threshold.
 pub(crate) fn next_risk_threshold(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("low") => "medium",
@@ -24,6 +26,7 @@ pub(crate) fn next_risk_threshold(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Probability score.
 pub(crate) fn probability_score(label: Option<&str>) -> u32 {
     match label.map(str::trim) {
         Some("negligible") => 1,

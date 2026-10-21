@@ -10,6 +10,7 @@ use super::{
     model::{SheetState, SHEET_STATE_KEY},
 };
 
+/// Refreshes values.
 pub(super) fn refresh_values(root: &Element, state: &SheetState) {
     let Ok(cells) = root.query_selector_all(".sheet-cell") else {
         return;
@@ -40,6 +41,7 @@ pub(super) fn refresh_values(root: &Element, state: &SheetState) {
     }
 }
 
+/// Updates selection.
 pub(super) fn update_selection(
     root: &Element,
     formula: &HtmlInputElement,
@@ -69,6 +71,7 @@ pub(super) fn update_selection(
     status.set_text_content(Some(&status_text(&state.borrow(), &selected)));
 }
 
+/// Status text.
 pub(super) fn status_text(state: &SheetState, selected: &str) -> String {
     let display = display_value(state, selected);
     let summary = if display.is_empty() {
@@ -82,6 +85,7 @@ pub(super) fn status_text(state: &SheetState, selected: &str) -> String {
     )
 }
 
+/// Focuses a cell.
 pub(super) fn focus_cell(root: &Element, reference: &str, state: &SheetState) {
     let selector = format!(".sheet-cell[data-cell-ref=\"{reference}\"]");
     if let Ok(Some(cell)) = root.query_selector(&selector) {
@@ -94,6 +98,7 @@ pub(super) fn focus_cell(root: &Element, reference: &str, state: &SheetState) {
     }
 }
 
+/// Persists proficiency.
 pub(super) fn persist(root: &Element, state: &SheetState, history_label: &str) {
     let Some(container) = root.closest(".canvas-container-node").ok().flatten() else {
         return;
@@ -111,12 +116,14 @@ pub(super) fn persist(root: &Element, state: &SheetState, history_label: &str) {
     super::super::history::push_current_frame(history_label);
 }
 
+/// Element.
 pub(super) fn element(document: &Document, tag: &str, class_name: &str) -> Element {
     let element = document.create_element(tag).unwrap();
     element.set_class_name(class_name);
     element
 }
 
+/// Button element.
 pub(super) fn button(document: &Document, label: &str, aria_label: &str) -> Element {
     let button = element(document, "button", "sheet-toolbar-button");
     button.set_text_content(Some(label));

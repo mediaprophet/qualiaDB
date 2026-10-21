@@ -150,6 +150,7 @@ fn class_color(class: &str) -> &'static str {
 }
 
 #[component]
+/// Dioxus `Q42VolumeManager` component.
 pub fn Q42VolumeManager() -> Element {
     let mut workspace = use_signal(Workspace::default);
     let mut status = use_signal(|| "Loading vault volumes…".to_string());

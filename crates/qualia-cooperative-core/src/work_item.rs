@@ -93,6 +93,7 @@ pub struct WorkItem {
 }
 
 impl WorkItem {
+    /// Creates a new instance.
     pub fn new(
         project_id: impl Into<String>,
         item_type: WorkItemType,
@@ -124,6 +125,7 @@ pub struct WorkItemStatusEvent {
 }
 
 impl WorkItemStatusEvent {
+    /// Creates a new instance.
     pub fn new(
         work_item_id: impl Into<String>,
         status: WorkItemStatus,
@@ -142,10 +144,12 @@ impl WorkItemStatusEvent {
 // Record ids + envelopes
 // ---------------------------------------------------------------------------
 
+/// `work-item-record` ID.
 pub fn work_item_record_id(uuid: &str) -> String {
     format!("urn:qualia:work_item:{uuid}")
 }
 
+/// `work-item-status-record` ID.
 pub fn work_item_status_record_id(uuid: &str) -> String {
     format!("urn:qualia:work_item_status:{uuid}")
 }
@@ -177,6 +181,7 @@ fn cooperative_envelope(
     }
 }
 
+/// Builds work-item-envelope.
 pub fn build_work_item_envelope(
     item: &WorkItem,
     owner_did: &str,
@@ -192,6 +197,7 @@ pub fn build_work_item_envelope(
     )
 }
 
+/// Builds work-item-status-envelope.
 pub fn build_work_item_status_envelope(
     event: &WorkItemStatusEvent,
     owner_did: &str,
@@ -207,6 +213,7 @@ pub fn build_work_item_status_envelope(
     )
 }
 
+/// Work-item summary.
 pub fn work_item_summary(item: &WorkItem) -> String {
     serde_json::json!({
         "id": item.id,
@@ -221,6 +228,7 @@ pub fn work_item_summary(item: &WorkItem) -> String {
     .to_string()
 }
 
+/// Work-item status summary.
 pub fn work_item_status_summary(event: &WorkItemStatusEvent) -> String {
     serde_json::json!({
         "id": event.id,
@@ -237,6 +245,7 @@ pub fn parse_work_item_summary(summary: &str) -> Option<WorkItem> {
     serde_json::from_str(summary).ok()
 }
 
+/// Parses work-item-status-summary.
 pub fn parse_work_item_status_summary(summary: &str) -> Option<WorkItemStatusEvent> {
     serde_json::from_str(summary).ok()
 }

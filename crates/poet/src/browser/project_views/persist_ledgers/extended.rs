@@ -5,6 +5,7 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::{build_family_panel, CopField};
 use super::super::persist::{ledger, wrap};
 
+/// Builds credentials-view.
 pub fn build_credentials_view(document: &Document) -> Element {
     ledger(
         document,
@@ -27,6 +28,7 @@ pub fn build_credentials_view(document: &Document) -> Element {
     )
 }
 
+/// Builds integrations-view.
 pub fn build_integrations_view(document: &Document) -> Element {
     ledger(
         document,
@@ -49,6 +51,7 @@ pub fn build_integrations_view(document: &Document) -> Element {
     )
 }
 
+/// Builds data-sources-view.
 pub fn build_data_sources_view(document: &Document) -> Element {
     ledger(
         document,
@@ -71,6 +74,7 @@ pub fn build_data_sources_view(document: &Document) -> Element {
     )
 }
 
+/// Builds automation-view.
 pub fn build_automation_view(document: &Document) -> Element {
     ledger(
         document,
@@ -93,6 +97,7 @@ pub fn build_automation_view(document: &Document) -> Element {
     )
 }
 
+/// Builds token-mgr-view.
 pub fn build_token_mgr_view(document: &Document) -> Element {
     ledger(
         document,
@@ -115,6 +120,7 @@ pub fn build_token_mgr_view(document: &Document) -> Element {
     )
 }
 
+/// Builds time-tracking-view.
 pub fn build_time_tracking_view(document: &Document) -> Element {
     ledger(
         document,
@@ -141,6 +147,7 @@ pub fn build_time_tracking_view(document: &Document) -> Element {
     )
 }
 
+/// Builds news-view.
 pub fn build_news_view(document: &Document) -> Element {
     ledger(
         document,
@@ -163,6 +170,7 @@ pub fn build_news_view(document: &Document) -> Element {
     )
 }
 
+/// Builds onboarding-view.
 pub fn build_onboarding_view(document: &Document) -> Element {
     ledger(
         document,
@@ -185,6 +193,7 @@ pub fn build_onboarding_view(document: &Document) -> Element {
     )
 }
 
+/// Builds review-view.
 pub fn build_review_view(document: &Document) -> Element {
     ledger(
         document,
@@ -207,6 +216,7 @@ pub fn build_review_view(document: &Document) -> Element {
     )
 }
 
+/// Builds retrospective-view.
 pub fn build_retrospective_view(document: &Document) -> Element {
     ledger(
         document,
@@ -229,6 +239,7 @@ pub fn build_retrospective_view(document: &Document) -> Element {
     )
 }
 
+/// Builds ip-registry-view.
 pub fn build_ip_registry_view(document: &Document) -> Element {
     ledger(
         document,
@@ -251,6 +262,7 @@ pub fn build_ip_registry_view(document: &Document) -> Element {
     )
 }
 
+/// Builds commons-view.
 pub fn build_commons_view(document: &Document) -> Element {
     ledger(
         document,
@@ -273,6 +285,7 @@ pub fn build_commons_view(document: &Document) -> Element {
     )
 }
 
+/// Builds project-sheet-view.
 pub fn build_project_sheet_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,

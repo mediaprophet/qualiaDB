@@ -5,6 +5,7 @@ use crate::components::settings::types::{AgentQaModelProbe, AgentQaSnapshot};
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `AgentQaPanel` component.
 pub fn AgentQaPanel() -> Element {
     let mut snapshot = use_signal(|| Option::<AgentQaSnapshot>::None);
     let mut probe = use_signal(|| Option::<AgentQaModelProbe>::None);

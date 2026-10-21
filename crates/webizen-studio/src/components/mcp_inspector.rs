@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `McpInspector` component.
 pub fn McpInspector() -> Element {
     rsx! {
         div { style: "display: flex; height: 100vh; background: #282c34; color: #abb2bf; font-family: 'Consolas', monospace;",

@@ -10,6 +10,7 @@ use super::super::core::registry::ManifoldSeed;
 pub const STUDIO_BAY_ID: &str = "studio-bay";
 pub const STUDIO_BAY_LABEL: &str = "Studio bay";
 
+/// `studio-bay` manifold seed.
 pub fn studio_bay_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: STUDIO_BAY_ID.into(),

@@ -18,6 +18,7 @@ pub struct InferenceTelemetry {
     pub active_q42_context: String,
 }
 
+/// Discovers local models.
 pub async fn discover_local_models() -> Result<Vec<ModelInfo>, String> {
     Ok(vec![
         ModelInfo {
@@ -51,6 +52,7 @@ pub enum WebizenOp {
     DenyRollback,
 }
 
+/// Executes agent inference.
 pub async fn execute_agent_inference(
     _prompt: String,
     _model_name: String,

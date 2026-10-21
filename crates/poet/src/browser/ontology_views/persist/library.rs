@@ -8,6 +8,7 @@ use super::super::super::native_daemon::{
 use super::super::personhood::owl_person_source_violation;
 use super::{banner, ledger, PERSON_SAFE_N3};
 
+/// Builds ontology-library-view.
 pub fn build_ontology_library_view(document: &Document) -> Element {
     let wrapper = ledger(
         document,
@@ -112,6 +113,7 @@ pub fn build_ontology_library_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds n3-editor-view.
 pub fn build_n3_editor_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

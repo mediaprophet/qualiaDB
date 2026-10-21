@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "audio:note-draw" => Some(set_marker(container, "data-midi-note-added", "C4@0.0")),
@@ -23,6 +24,7 @@ fn set_marker(container: &Element, attr: &str, value: &str) -> Result<(), String
         .map_err(|_| format!("Failed to set {attr}."))
 }
 
+/// Cycles to the next velocity.
 pub(crate) fn next_velocity(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("64") => "96",
@@ -40,6 +42,7 @@ fn cycle_velocity(container: &Element) -> Result<(), String> {
         .map_err(|_| "Failed to update note velocity.".to_string())
 }
 
+/// Cycles to the next cc-lane.
 pub(crate) fn next_cc_lane(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("modulation") => "expression",
@@ -56,6 +59,7 @@ fn cycle_cc_lane(container: &Element) -> Result<(), String> {
         .map_err(|_| "Failed to update control lane.".to_string())
 }
 
+/// Cycles to the next transpose.
 pub(crate) fn next_transpose(current: Option<&str>) -> i8 {
     match current.map(str::trim) {
         Some("-12") => -7,

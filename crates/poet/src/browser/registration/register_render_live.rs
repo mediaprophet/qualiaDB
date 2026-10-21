@@ -22,6 +22,7 @@ fn render_live_tool(
     ))
 }
 
+/// Renders live-tools.
 pub(super) fn render_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         render_live_tool(

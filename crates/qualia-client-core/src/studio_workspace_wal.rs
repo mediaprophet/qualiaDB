@@ -55,6 +55,7 @@ struct WalManifest {
     pages: Vec<WalManifestPage>,
 }
 
+/// Studio WAL path.
 pub fn studio_wal_path(storage_path: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(storage_path).join(STUDIO_WAL_FILE)
 }
@@ -72,16 +73,19 @@ fn manifest_content_hash(manifest_json: &str) -> u64 {
     q_hash(manifest_json) & OBJECT_HASH_MASK
 }
 
+/// Undo-frame snapshot path.
 pub fn undo_frame_snapshot_path(storage_path: &str, frame_seq: u64) -> std::path::PathBuf {
     std::path::PathBuf::from(storage_path)
         .join(format!("{UNDO_FRAME_SNAPSHOT_PREFIX}{frame_seq}.json"))
 }
 
+/// Revision snapshot path.
 pub fn revision_snapshot_path(storage_path: &str, revision: u64) -> std::path::PathBuf {
     std::path::PathBuf::from(storage_path)
         .join(format!("{REVISION_SNAPSHOT_PREFIX}{revision}.json"))
 }
 
+/// Persists a revision snapshot.
 pub fn persist_revision_snapshot(
     storage_path: &str,
     revision: u64,
@@ -97,6 +101,7 @@ pub fn persist_revision_snapshot(
     Ok(())
 }
 
+/// Unpacks a placement.
 pub fn unpack_placement(object: u64) -> (u16, u16, u16, u16) {
     let o = object & OBJECT_HASH_MASK;
     (

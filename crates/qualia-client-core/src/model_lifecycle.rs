@@ -128,10 +128,12 @@ static LAST_DECODE_TOK_S_MILLI: AtomicU32 = AtomicU32::new(0);
 /// Unix-ish stamp (secs since process start not required — wall via duration store is enough).
 static LAST_DECODE_TOK_S_AT_SECS: AtomicU64 = AtomicU64::new(0);
 
+/// Records LLM memory bytes.
 pub fn record_llm_memory_bytes(bytes: u64) {
     LLM_MEMORY_BYTES.store(bytes, Ordering::Relaxed);
 }
 
+/// Records an LLM memory sample.
 pub fn record_llm_memory_sample(bytes: u64) {
     if bytes == 0 {
         return;
@@ -150,14 +152,17 @@ pub fn record_llm_memory_sample(bytes: u64) {
     }
 }
 
+/// Gets llm-memory-bytes.
 pub fn get_llm_memory_bytes() -> u64 {
     LLM_MEMORY_BYTES.load(Ordering::Relaxed)
 }
 
+/// Records KV-cache usage.
 pub fn record_kv_cache_used_mb(megabytes: u32) {
     KV_CACHE_USED_MB.store(megabytes, Ordering::Relaxed);
 }
 
+/// Gets kv-cache-used-mb.
 pub fn get_kv_cache_used_mb() -> u32 {
     KV_CACHE_USED_MB.load(Ordering::Relaxed)
 }
@@ -192,18 +197,22 @@ pub fn get_last_decode_tok_s() -> Option<f64> {
     }
 }
 
+/// Gets last-decode-tok-s-at-unix.
 pub fn get_last_decode_tok_s_at_unix() -> u64 {
     LAST_DECODE_TOK_S_AT_SECS.load(Ordering::Relaxed)
 }
 
+/// Gets thermal-state-label.
 pub fn get_thermal_state_label() -> &'static str {
     orchestrator().thermal_state_label()
 }
 
+/// Models directory.
 pub fn models_dir(storage_root: &Path) -> PathBuf {
     storage_root.join("Models")
 }
 
+/// `lifecycle` label.
 pub fn lifecycle_label(state: ModelLifecycle) -> &'static str {
     match state {
         ModelLifecycle::Discovered => "Discovered",
@@ -303,6 +312,7 @@ fn probe_and_activate_model(
     Ok(())
 }
 
+/// Unloads the active model.
 pub fn unload_active_model(profile_id: Option<u64>) {
     let orch = orchestrator();
     let resident = profile_id.or_else(|| orch.resident_model_id());
@@ -387,6 +397,7 @@ fn write_install_manifest(
     Ok(())
 }
 
+/// Finalizes an LLM install.
 pub fn finalize_llm_install(
     model: &LLMResource,
     gguf_path: &Path,
@@ -494,6 +505,7 @@ pub fn finalize_llm_install(
     })
 }
 
+/// Installs a catalog LLM.
 pub async fn install_catalog_llm(
     catalog: &ResourceCatalog,
     id: &str,
@@ -539,6 +551,7 @@ pub async fn install_catalog_llm(
     finalize_llm_install(model, &local_path, mmproj_path.as_deref(), storage_root)
 }
 
+/// Loads install-manifest.
 pub fn load_install_manifest(storage_root: &Path, model_id: &str) -> Option<InstallManifest> {
     let path = install_manifest_path(&models_dir(storage_root), model_id);
     let text = std::fs::read_to_string(path).ok()?;
@@ -589,6 +602,7 @@ pub struct VaultDuplicateGroup {
 }
 
 impl VaultDuplicateGroup {
+    /// Reclaimable byte count.
     pub fn reclaimable_bytes(&self) -> u64 {
         self.size_bytes
             .saturating_mul(self.duplicate_paths.len() as u64)
@@ -972,6 +986,7 @@ pub fn finalize_local_gguf(
     })
 }
 
+/// Activates a model by ID.
 pub fn activate_model_for_id(
     model_id: &str,
     storage_root: &Path,
@@ -1034,6 +1049,7 @@ pub fn activate_model_for_id(
     Ok(record)
 }
 
+/// Activates a model.
 pub fn activate_model(
     profile_id: u64,
     storage_root: &Path,
@@ -1065,10 +1081,12 @@ pub fn activate_model(
     )))
 }
 
+/// Gets model-lifecycle-state.
 pub fn get_model_lifecycle_state() -> ModelLifecycle {
     *orchestrator().current_model_state.lock().unwrap()
 }
 
+/// Gets model-status.
 pub fn get_model_status(active: Option<ActiveModelRecord>) -> ModelStatus {
     let lifecycle = get_model_lifecycle_state();
     ModelStatus {

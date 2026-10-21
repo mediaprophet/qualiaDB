@@ -4,6 +4,7 @@ use qualia_core_db::sparql_library::parsers::json_parser::{
 use std::fs::File;
 use std::io::BufReader;
 
+/// Streams JSON to quins.
 pub fn stream_json_to_quins(
     json_path: &str,
     output_path: &str,

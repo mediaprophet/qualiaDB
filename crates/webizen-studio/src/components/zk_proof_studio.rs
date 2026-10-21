@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ZkProofStudio` component.
 pub fn ZkProofStudio() -> Element {
     let mut is_generating = use_signal(|| false);
 

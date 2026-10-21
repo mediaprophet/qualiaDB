@@ -8,6 +8,7 @@ use super::native_daemon::{
     NativeRecordUpsertRequest,
 };
 
+/// Builds social-notifications.
 pub fn build_social_notifications(document: &Document, _workspace: &Element) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-social-notifications", "").ok();
@@ -39,6 +40,7 @@ pub fn build_social_notifications(document: &Document, _workspace: &Element) -> 
     root
 }
 
+/// Refreshes all-notifications.
 pub fn refresh_all_notifications() {
     let Some(document) = web_sys::window().and_then(|window| window.document()) else {
         return;

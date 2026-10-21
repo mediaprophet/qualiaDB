@@ -156,6 +156,7 @@ fn use_job_snapshot() -> (Signal<JobQueueSnapshot>, Signal<String>) {
 }
 
 #[component]
+/// Dioxus `JobIndicator` component.
 pub fn JobIndicator() -> Element {
     let (snapshot, note) = use_job_snapshot();
     let mut expanded = use_signal(|| false);
@@ -272,6 +273,7 @@ fn JobCompactRow(
 }
 
 #[component]
+/// Dioxus `JobCenterPage` component.
 pub fn JobCenterPage() -> Element {
     let (snapshot, note) = use_job_snapshot();
     let current = snapshot();

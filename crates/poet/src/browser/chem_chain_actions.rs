@@ -258,6 +258,7 @@ fn two_gto_args(document: &Document) -> (serde_json::Value, serde_json::Value, S
     }
 }
 
+/// Chain action: overlap-s.
 pub(super) fn run_overlap_s(document: &Document, label: &str) {
     let (a, b, note) = two_gto_args(document);
     invoke_dual(
@@ -269,6 +270,7 @@ pub(super) fn run_overlap_s(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: kinetic-s.
 pub(super) fn run_kinetic_s(document: &Document, label: &str) {
     let (a, b, note) = two_gto_args(document);
     invoke_dual(
@@ -280,6 +282,7 @@ pub(super) fn run_kinetic_s(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: nuclear-s.
 pub(super) fn run_nuclear_s(document: &Document, label: &str) {
     let (a, b, note) = two_gto_args(document);
     let nums = parse_numbers(&selected_source(document).unwrap_or_default());
@@ -298,6 +301,7 @@ pub(super) fn run_nuclear_s(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dipole-s.
 pub(super) fn run_dipole_s(document: &Document, label: &str) {
     let (a, b, note) = two_gto_args(document);
     invoke_dual(
@@ -309,6 +313,7 @@ pub(super) fn run_dipole_s(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: evaluate-eri.
 pub(super) fn run_evaluate_eri(document: &Document, label: &str) {
     let (a, b, note) = two_gto_args(document);
     // (ab|cd) with c=a, d=b demo when surface is short
@@ -321,6 +326,7 @@ pub(super) fn run_evaluate_eri(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: total-angular-momentum.
 pub(super) fn run_total_angular_momentum(document: &Document, label: &str) {
     let container = selected_container(document);
     let lx = usize_attr(container.as_ref(), "data-lx").unwrap_or(1) as u8;
@@ -337,6 +343,7 @@ pub(super) fn run_total_angular_momentum(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: letter.
 pub(super) fn run_letter(document: &Document, label: &str) {
     let container = selected_container(document);
     let nums = parse_numbers(&selected_source(document).unwrap_or_default());
@@ -357,6 +364,7 @@ pub(super) fn run_letter(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: n-cartesian.
 pub(super) fn run_n_cartesian(document: &Document, label: &str) {
     let container = selected_container(document);
     let nums = parse_numbers(&selected_source(document).unwrap_or_default());
@@ -374,6 +382,7 @@ pub(super) fn run_n_cartesian(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: n-spherical.
 pub(super) fn run_n_spherical(document: &Document, label: &str) {
     let container = selected_container(document);
     let nums = parse_numbers(&selected_source(document).unwrap_or_default());
@@ -391,6 +400,7 @@ pub(super) fn run_n_spherical(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: from-letter.
 pub(super) fn run_from_letter(document: &Document, label: &str) {
     let container = selected_container(document);
     let source = selected_source(document).unwrap_or_default();

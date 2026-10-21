@@ -1,5 +1,6 @@
 //! Capability requirements advertised by Logic Workbench controls.
 
+/// Capability contract for the button.
 pub(super) fn capability_contract_for_button(
     button_id: &str,
 ) -> Option<(&'static str, &'static str)> {

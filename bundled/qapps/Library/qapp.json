@@ -1,0 +1,49 @@
+{
+  "name": "Library",
+  "version": "0.1.0",
+  "required_shapes": [
+    "qualia:LivedMemoryRecord",
+    "qualia:HypermediaBook",
+    "qualia:SemanticShelf",
+    "qualia:ProvenanceAttestation"
+  ],
+  "x_qualia": {
+    "app_id": "did:qualia:qap:library",
+    "display_name": "Hypermedia Library",
+    "category": "hypermedia-memory",
+    "did_git": "did:git:github.com/webizen/qap-library",
+    "export_targets": [
+      "tauri-desktop",
+      "wasm-mobile",
+      "embedded"
+    ],
+    "launch_modes": [
+      "wasm-local",
+      "online-daemon-aware",
+      "static-web"
+    ],
+    "preferred_launch_mode": "wasm-local",
+    "supports_offline": true,
+    "requires": [
+      { "capability": "qualia.service.scheduler", "required": true },
+      { "capability": "qualia.service.networking", "required": true },
+      { "capability": "qualia.service.permissive_commons", "required": true },
+      { "capability": "qualia.service.communications", "required": true },
+      { "capability": "qualia.service.identifiers", "required": true }
+    ],
+    "required_ontologies": [
+      "q42:library",
+      "q42:memory",
+      "q42:provenance"
+    ],
+    "entrypoints": {
+      "web": "index.html",
+      "route": "/library"
+    },
+    "notes": [
+      "Hypermedia Library is developed in its own independent repository (did:git:github.com/webizen/qap-library).",
+      "Installs into {storage}/Qapps/Library and surfaces Lived Memory cards, hypermedia reading, and artifact provenance.",
+      "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
+    ]
+  }
+}

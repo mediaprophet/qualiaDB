@@ -2,6 +2,7 @@ use crate::components::qapp_engine::invoke_json;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `QaoaExplorer` component.
 pub fn QaoaExplorer() -> Element {
     let mut is_loading = use_signal(|| false);
     let mut result_text = use_signal(|| "Approximation Ratio: 0.87 (Mocked)".to_string());

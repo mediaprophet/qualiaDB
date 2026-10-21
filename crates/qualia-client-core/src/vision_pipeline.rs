@@ -234,6 +234,7 @@ pub fn run_synthetic_demo(
     run_synthetic_demo_with_backend(split, index, width, height, "reference")
 }
 
+/// Synthetic-vision demo with a chosen backend (self-marking).
 pub fn run_synthetic_demo_with_backend(
     split: DatasetSplit,
     index: u32,
@@ -245,10 +246,12 @@ pub fn run_synthetic_demo_with_backend(
     run_sample_demo_with_backend(&sample, backend)
 }
 
+/// Sample demo on the reference backend.
 pub fn run_sample_demo(sample: &SyntheticSampleId) -> Result<VisionDemoResult, String> {
     run_sample_demo_with_backend(sample, "reference")
 }
 
+/// Sample demo with a chosen backend.
 pub fn run_sample_demo_with_backend(
     sample: &SyntheticSampleId,
     backend: &str,
@@ -769,6 +772,7 @@ pub fn reject_instance(
     append_human_attestation(storage_root, &q).map_err(|e| e.to_string())
 }
 
+/// Appends a human-correct attestation quin.
 pub fn correct_instance(
     storage_root: &std::path::Path,
     human_did_hash: u64,
@@ -784,6 +788,7 @@ pub fn demo_train(index: u32) -> Result<VisionDemoResult, String> {
     run_synthetic_demo(DatasetSplit::Train, index, 96, 64)
 }
 
+/// Demo on the test split.
 pub fn demo_test(index: u32) -> Result<VisionDemoResult, String> {
     run_synthetic_demo(DatasetSplit::Test, index, 96, 64)
 }

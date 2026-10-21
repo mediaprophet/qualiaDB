@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `StorageDriverConfig` component.
 pub fn StorageDriverConfig() -> Element {
     let mut driver = use_signal(|| "io_uring".to_string());
 

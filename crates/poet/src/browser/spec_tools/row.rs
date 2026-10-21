@@ -37,6 +37,7 @@ pub struct SpecTool {
 }
 
 impl SpecTool {
+    /// `SpecTool::new`.
     pub const fn new(
         toolbox: &'static str,
         toolbox_label: &'static str,
@@ -67,10 +68,12 @@ impl SpecTool {
         }
     }
 
+    /// `chain` id.
     pub fn chain_id(&self) -> String {
         format!("{}:{}", self.toolbox, self.chain)
     }
 
+    /// Capability scope.
     pub fn capability_scope(&self) -> Option<String> {
         match self.contract {
             Contract::Place(_) => Some("Poet.container_place".into()),

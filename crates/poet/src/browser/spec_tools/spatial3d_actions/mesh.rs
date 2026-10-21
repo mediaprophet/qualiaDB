@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "spatial3d:add-mesh" | "spatial3d:cube" => Some(add_primitive(container, "cube")),

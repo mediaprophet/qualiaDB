@@ -90,6 +90,7 @@ pub fn host_entry_refused() -> bool {
 }
 
 #[component]
+/// Dioxus `WalkthroughPanel` component.
 pub fn WalkthroughPanel() -> Element {
     let mut steps = use_signal(Vec::<WalkStep>::new);
     let mut status = use_signal(|| "idle".to_string());

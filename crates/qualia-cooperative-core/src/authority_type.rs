@@ -123,6 +123,7 @@ pub struct AuthorityProfile {
 }
 
 impl AuthorityProfile {
+    /// Creates a new instance.
     pub fn new(modality: &str, trigger: &str, accountability: &str) -> Self {
         Self {
             modality: Some(modality.into()),
@@ -132,6 +133,7 @@ impl AuthorityProfile {
         }
     }
 
+    /// Builder — sets flag.
     pub fn with_flag(mut self, flag: &str) -> Self {
         self.flags.push(flag.into());
         self

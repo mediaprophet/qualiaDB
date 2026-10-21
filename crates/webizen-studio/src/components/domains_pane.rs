@@ -57,6 +57,7 @@ fn s(v: &serde_json::Value, key: &str) -> String {
 }
 
 #[component]
+/// Dioxus `DomainsPane` component.
 pub fn DomainsPane() -> Element {
     // Raw JSON responses held as Values; string fields read defensively via s(), and the top-level
     // list responses read directly with `.as_array()`.

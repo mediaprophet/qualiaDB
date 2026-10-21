@@ -42,6 +42,7 @@ enum Gesture {
 }
 
 #[component]
+/// Dioxus `CanvasStage` component.
 pub fn CanvasStage(wb: Signal<Workbench>) -> Element {
     let w = wb();
     let mode = w.dim.css();

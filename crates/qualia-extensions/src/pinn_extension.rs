@@ -223,6 +223,7 @@ pub struct PhysicsViolation {
 }
 
 impl PinnExtension {
+    /// Creates a new instance.
     pub fn new() -> Self {
         let quantization_config = TernaryQuantizationConfig {
             quantization_bits: 1.58,
@@ -292,6 +293,7 @@ impl PinnExtension {
     }
 
     #[cfg(feature = "pinn")]
+    /// Builder — sets native-backend.
     pub fn with_native_backend(mut self) -> Self {
         // Initialize native Qualia LLM backend for PINN inference
         // This uses the same wgpu + WGSL pipeline as the core LLM agent
@@ -752,10 +754,12 @@ impl PinnExtension {
 }
 
 impl TernaryPinnModelManager {
+    /// Gets model.
     pub fn get_model(&self, name: &str) -> Option<&TernaryPinnModel> {
         self.loaded_models.get(name)
     }
 
+    /// Loads model.
     pub fn load_model(&mut self, model: TernaryPinnModel) -> Result<(), ExtensionError> {
         // Load and quantize model to 1.58-bit ternary format
         let quantized_model = self.quantize_model(model.clone())?;
@@ -1024,6 +1028,7 @@ fn pde_residual(model: &TernaryPinnModel, input: &[f64], constraints: &[PhysicsC
 }
 
 impl SmxFormatter {
+    /// Formats output.
     pub fn format_output(
         &self,
         output_points: &[Vec<f64>],
@@ -1070,6 +1075,7 @@ impl SmxFormatter {
         })
     }
 
+    /// Exports model-smx.
     pub fn export_model_smx(&self, model: &TernaryPinnModel) -> Result<Vec<u8>, ExtensionError> {
         // Export model in SMX format
         let smx_data = SmxModelData {
@@ -1083,6 +1089,7 @@ impl SmxFormatter {
             .map_err(|e| ExtensionError::ExecutionFailed(format!("SMX export failed: {}", e)))
     }
 
+    /// Imports model-smx.
     pub fn import_model_smx(&self, smx_data: &[u8]) -> Result<TernaryPinnModel, ExtensionError> {
         // Import model from SMX format
         let smx_model: SmxModelData = serde_json::from_slice(smx_data)

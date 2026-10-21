@@ -22,6 +22,7 @@ fn cg_live_tool(
     ))
 }
 
+/// Registers the `cg-live` tool set.
 pub(super) fn cg_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         cg_live_tool(

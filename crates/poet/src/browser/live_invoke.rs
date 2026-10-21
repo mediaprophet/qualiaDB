@@ -5,6 +5,7 @@ use web_sys::{Document, Element, HtmlElement, HtmlInputElement};
 
 use super::native_daemon::{daemon_invoke, is_daemon_connected};
 
+/// Status line text.
 pub fn status_line(document: &Document) -> Element {
     let status = document.create_element("div").unwrap();
     status.set_attribute("role", "status").ok();
@@ -58,6 +59,7 @@ fn map_field_key(key: &str, value: &serde_json::Value) -> Vec<(String, serde_jso
     }
 }
 
+/// Collects cop fields.
 pub fn collect_cop_fields(root: &Element) -> serde_json::Map<String, serde_json::Value> {
     let mut fields = serde_json::Map::new();
     if let Ok(inputs) = root.query_selector_all("[data-cop-field]") {
@@ -119,6 +121,7 @@ fn merge_args(
     }
 }
 
+/// Invoke button.
 pub fn invoke_button(
     document: &Document,
     label: &str,
@@ -180,6 +183,7 @@ pub fn invoke_button(
     button
 }
 
+/// Action bar.
 pub fn action_bar(
     document: &Document,
     actions: &[(&str, &'static str, serde_json::Value)],

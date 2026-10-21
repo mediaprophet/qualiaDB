@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Builds canvas-control-bar.
 pub fn build_canvas_control_bar(document: &Document, seeds: &[ManifoldSeed]) -> Element {
     let bar = document.create_element("div").unwrap();
     bar.set_class_name("canvas-control-bar");

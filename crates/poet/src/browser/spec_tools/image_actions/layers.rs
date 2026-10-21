@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "image:add-layer" => Some(add_layer(container)),
@@ -15,6 +16,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next blend-mode.
 pub(crate) fn next_blend_mode(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("normal") => "multiply",

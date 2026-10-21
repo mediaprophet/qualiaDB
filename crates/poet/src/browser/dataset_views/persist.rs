@@ -30,6 +30,7 @@ fn ledger(
     )
 }
 
+/// Builds dataset-registry-view.
 pub fn build_dataset_registry_view(document: &Document) -> Element {
     ledger(
         document,
@@ -56,6 +57,7 @@ pub fn build_dataset_registry_view(document: &Document) -> Element {
     )
 }
 
+/// Builds annotation-panel-view.
 pub fn build_annotation_panel_view(document: &Document) -> Element {
     ledger(
         document,
@@ -78,6 +80,7 @@ pub fn build_annotation_panel_view(document: &Document) -> Element {
     )
 }
 
+/// Builds lineage-graph-view.
 pub fn build_lineage_graph_view(document: &Document) -> Element {
     ledger(
         document,
@@ -100,6 +103,7 @@ pub fn build_lineage_graph_view(document: &Document) -> Element {
     )
 }
 
+/// Builds view-canvas-view.
 pub fn build_view_canvas_view(document: &Document) -> Element {
     ledger(
         document,
@@ -122,6 +126,7 @@ pub fn build_view_canvas_view(document: &Document) -> Element {
     )
 }
 
+/// Builds presentation-editor-view.
 pub fn build_presentation_editor_view(document: &Document) -> Element {
     ledger(
         document,
@@ -144,6 +149,7 @@ pub fn build_presentation_editor_view(document: &Document) -> Element {
     )
 }
 
+/// Builds presentation-publish-view.
 pub fn build_presentation_publish_view(document: &Document) -> Element {
     ledger(
         document,
@@ -166,6 +172,7 @@ pub fn build_presentation_publish_view(document: &Document) -> Element {
     )
 }
 
+/// Builds video-view-view.
 pub fn build_video_view_view(document: &Document) -> Element {
     ledger(
         document,
@@ -188,6 +195,7 @@ pub fn build_video_view_view(document: &Document) -> Element {
     )
 }
 
+/// Builds super-resolve-view.
 pub fn build_super_resolve_view(document: &Document) -> Element {
     ledger(
         document,
@@ -210,6 +218,7 @@ pub fn build_super_resolve_view(document: &Document) -> Element {
     )
 }
 
+/// Builds cad-curation-view.
 pub fn build_cad_curation_view(document: &Document) -> Element {
     ledger(
         document,
@@ -232,6 +241,7 @@ pub fn build_cad_curation_view(document: &Document) -> Element {
     )
 }
 
+/// Builds dataset-importer-view.
 pub fn build_dataset_importer_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

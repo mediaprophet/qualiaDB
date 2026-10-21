@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
+/// Builds epistemic-panel.
 pub(super) fn build_epistemic_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "epistemic", false);
     panel
@@ -66,6 +67,7 @@ pub(super) fn build_epistemic_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-epistemic` panel.
 pub(super) fn wire_epistemic_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("epistemic-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -78,6 +80,7 @@ pub(super) fn wire_epistemic_panel(document: &Document) {
     }
 }
 
+/// Builds paraconsistent-panel.
 pub(super) fn build_paraconsistent_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "paraconsistent", false);
     panel
@@ -124,6 +127,7 @@ pub(super) fn build_paraconsistent_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-paraconsistent` panel.
 pub(super) fn wire_paraconsistent_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("paraconsistent-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -145,6 +149,7 @@ pub(super) fn wire_paraconsistent_panel(document: &Document) {
     }
 }
 
+/// Builds ltl-panel.
 pub(super) fn build_ltl_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "ltl", false);
     panel
@@ -191,6 +196,7 @@ pub(super) fn build_ltl_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-ltl` panel.
 pub(super) fn wire_ltl_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("ltl-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -212,6 +218,7 @@ pub(super) fn wire_ltl_panel(document: &Document) {
     }
 }
 
+/// Builds ctl-panel.
 pub(super) fn build_ctl_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "ctl", false);
     panel
@@ -250,6 +257,7 @@ pub(super) fn build_ctl_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-ctl` panel.
 pub(super) fn wire_ctl_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("ctl-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -262,6 +270,7 @@ pub(super) fn wire_ctl_panel(document: &Document) {
     }
 }
 
+/// Builds asp-panel.
 pub(super) fn build_asp_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "asp", false);
     panel
@@ -308,6 +317,7 @@ pub(super) fn build_asp_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-asp` panel.
 pub(super) fn wire_asp_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("asp-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -329,6 +339,7 @@ pub(super) fn wire_asp_panel(document: &Document) {
     }
 }
 
+/// Builds defeasible-panel.
 pub(super) fn build_defeasible_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "defeasible", false);
     panel
@@ -367,6 +378,7 @@ pub(super) fn build_defeasible_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-defeasible` panel.
 pub(super) fn wire_defeasible_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("defeasible-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -379,6 +391,7 @@ pub(super) fn wire_defeasible_panel(document: &Document) {
     }
 }
 
+/// Builds linear-panel.
 pub(super) fn build_linear_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "linear", false);
     panel
@@ -417,6 +430,7 @@ pub(super) fn build_linear_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-linear` panel.
 pub(super) fn wire_linear_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("linear-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -429,6 +443,7 @@ pub(super) fn wire_linear_panel(document: &Document) {
     }
 }
 
+/// Builds description-panel.
 pub(super) fn build_description_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "description", false);
     panel
@@ -467,6 +482,7 @@ pub(super) fn build_description_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-description` panel.
 pub(super) fn wire_description_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("dl-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -479,6 +495,7 @@ pub(super) fn wire_description_panel(document: &Document) {
     }
 }
 
+/// Builds dialectical-panel.
 pub(super) fn build_dialectical_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "dialectical", false);
     panel
@@ -525,6 +542,7 @@ pub(super) fn build_dialectical_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-dialectical` panel.
 pub(super) fn wire_dialectical_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("dialectical-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

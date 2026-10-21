@@ -368,6 +368,7 @@ impl WebizenHostApi {
         self.list_library_section(None)
     }
 
+    /// Lists a library section.
     pub fn list_library_section(
         &self,
         section: Option<&str>,

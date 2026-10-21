@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `TextualCriticismQapp` component.
 pub fn TextualCriticismQapp() -> Element {
     rsx! {
         QAppEngine {

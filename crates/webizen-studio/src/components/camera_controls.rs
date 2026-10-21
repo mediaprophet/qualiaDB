@@ -18,6 +18,7 @@ pub struct CameraControlState {
 }
 
 impl CameraControlState {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             rotation_speed: 0.1,

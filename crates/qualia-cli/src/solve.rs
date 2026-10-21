@@ -100,6 +100,7 @@ fn default_config(max_iters: u32, tol: f64) -> SolverConfig {
 
 // ── Linear algebra runners ────────────────────────────────────────────────────
 
+/// CLI: matrix multiply.
 pub fn run_matrix_multiply(a_str: &str, b_str: &str) {
     let (Some(a), Some(b)) = (parse_matrix4x4(a_str), parse_matrix4x4(b_str)) else {
         return;
@@ -109,6 +110,7 @@ pub fn run_matrix_multiply(a_str: &str, b_str: &str) {
     print_matrix4x4(&result);
 }
 
+/// CLI: determinant.
 pub fn run_determinant(m_str: &str) {
     let Some(m) = parse_matrix4x4(m_str) else {
         return;
@@ -117,6 +119,7 @@ pub fn run_determinant(m_str: &str) {
     println!("Determinant: {det:.10e}");
 }
 
+/// CLI: linear system solve.
 pub fn run_solve_system(m_str: &str, v_str: &str) {
     let (Some(a), Some(b)) = (parse_matrix4x4(m_str), parse_vector4(v_str)) else {
         return;
@@ -134,6 +137,7 @@ pub fn run_solve_system(m_str: &str, v_str: &str) {
     }
 }
 
+/// CLI: eigenvalues.
 pub fn run_eigenvalues(m_str: &str, count: usize) {
     let Some(m) = parse_matrix4x4(m_str) else {
         return;
@@ -151,6 +155,7 @@ pub fn run_eigenvalues(m_str: &str, count: usize) {
     }
 }
 
+/// CLI: tensor contraction.
 pub fn run_tensor_contract(t_str: &str) {
     let Some(ta) = parse_tensor3x3x3(t_str) else {
         return;
@@ -213,6 +218,7 @@ impl CurveFitFunction for CurveFn {
 
 // ── Optimization runners ──────────────────────────────────────────────────────
 
+/// CLI: simplex LP.
 pub fn run_simplex(initial_str: &str, iterations: u32) {
     let Some(x0) = parse_params4(initial_str) else {
         return;
@@ -240,6 +246,7 @@ pub fn run_simplex(initial_str: &str, iterations: u32) {
     }
 }
 
+/// CLI: root finding.
 pub fn run_root(initial: f64, lower: f64, upper: f64, tolerance: f64) {
     // f(x) = x³ − x − 1  (plastic constant, root ≈ 1.32472)
     let cfg = SolverConfig {
@@ -269,6 +276,7 @@ fn x_cubed_minus_x_minus_one(x: f64) -> f64 {
     x * x * x - x - 1.0
 }
 
+/// CLI: curve fit.
 pub fn run_curve_fit(params_str: &str, x_str: &str, y_str: &str) {
     let Some(p0) = parse_params4(params_str) else {
         return;
@@ -310,6 +318,7 @@ pub fn run_curve_fit(params_str: &str, x_str: &str, y_str: &str) {
 
 // ── ODE runners ───────────────────────────────────────────────────────────────
 
+/// CLI: ODE RK4.
 pub fn run_ode_rk4(lambda: f64, t_start: f64, t_end: f64, y0: f64, step_size: f64) {
     use qualia_core_db::modalities::calculus::ode_solver::{ExponentialDecay, Rk4Solver};
     let system = ExponentialDecay::new(lambda);
@@ -324,6 +333,7 @@ pub fn run_ode_rk4(lambda: f64, t_start: f64, t_end: f64, y0: f64, step_size: f6
     );
 }
 
+/// CLI: ODE harmonic oscillator.
 pub fn run_ode_harmonic(omega: f64, t_start: f64, t_end: f64, y0: f64, step_size: f64) {
     use qualia_core_db::modalities::calculus::ode_solver::{HarmonicOscillator, Rk4Solver};
     let system = HarmonicOscillator::new(omega);
@@ -334,6 +344,7 @@ pub fn run_ode_harmonic(omega: f64, t_start: f64, t_end: f64, y0: f64, step_size
     println!("  y(t_end) ≈ {result:.10e}");
 }
 
+/// CLI: .
 pub fn run_ode_bvp(t_start: f64, t_end: f64, y_left: f64, y_right: f64, threshold: f64) {
     use qualia_core_db::modalities::calculus::ode_solver::{BvpSystem, ShootingMethod};
 
@@ -365,6 +376,7 @@ pub fn run_ode_bvp(t_start: f64, t_end: f64, y_left: f64, y_right: f64, threshol
     }
 }
 
+/// CLI: .
 pub fn run_ode_quantum_spectrum(planck_mass: f64, coupling: f64, max_n: u64, frequency: f64) {
     use qualia_core_db::modalities::calculus::ode_solver::QuantizationMapper;
     let qh = QuantizationMapper::new(planck_mass, coupling);
@@ -416,6 +428,7 @@ impl QuantumCostFunction for DemoQaoa {
     }
 }
 
+/// CLI: .
 pub fn run_quantum_qaoa(depth: u8, beta_str: &str, gamma_str: &str) {
     let cfg = default_config(100, 1e-6);
     let mut opt = QAOAAngleOptimizer::new(depth, cfg);
@@ -458,6 +471,7 @@ impl SpsaCostFunction for DemoSpsa {
     }
 }
 
+/// CLI: .
 pub fn run_quantum_spsa(num_params: u8, initial_str: &str) {
     let vals = parse_f64s(initial_str);
     let mut params = [0.0f64; 20];
@@ -487,6 +501,7 @@ fn parse_u8s(s: &str) -> Vec<u8> {
         .collect()
 }
 
+/// CLI: .
 pub fn run_symbolic_defeasible(facts_str: &str, rules_str: &str) {
     let cfg = default_config(500, 1e-6);
     let mut solver = ForwardChainingDefeasible::new(cfg);
@@ -565,6 +580,7 @@ pub fn run_symbolic_defeasible(facts_str: &str, rules_str: &str) {
     }
 }
 
+/// CLI: .
 pub fn run_symbolic_sat(clauses_str: &str) {
     let cfg = default_config(1000, 1e-8);
     let mut solver = BoundedSatSolver::new(cfg);

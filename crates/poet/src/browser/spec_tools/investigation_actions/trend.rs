@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(_document: &web_sys::Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:detect-trends" => Some(detect_trends(container)),

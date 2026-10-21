@@ -27,6 +27,7 @@ const TIMELINE_FAMILIES: &[&str] = &[
     "health_revocation",
 ];
 
+/// Builds health-overview-view.
 pub fn build_health_overview_view(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

@@ -3,15 +3,17 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use super::bodies::{
-    BookmarksBody, CodecsBody, DocBody, DomainsBody, EconomicsBody, GitBody, HealthBody, IdeBody,
-    JobCenterBody, MapBody, MediaBody, OntologyBody, ShadersBody, SheetBody, SocialBody, SolidBody,
-    SubmanifoldBody,
+    BookmarksBody, CadStudioBody, CodecsBody, DeckStudioBody, DocBody, DomainsBody, EconomicsBody,
+    GitBody, HealthBody, IdeBody, JobCenterBody, MapBody, MediaBody, OntologyBody, PdfStudioBody,
+    ShadersBody, ShedToolboxRunner, SheetBody, SocialBody, SolidBody, SubmanifoldBody,
+    VectorRasterStudioBody,
 };
 use super::kinds::ContainerKind;
 use super::vibe_console::VibeConsole;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `NodeBody` component.
 pub fn NodeBody(kind: ContainerKind) -> Element {
     rsx! {
         match kind {
@@ -28,14 +30,13 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
             ContainerKind::Media => rsx! { MediaBody {} },
             ContainerKind::Social => rsx! { SocialBody {} },
             ContainerKind::Health => rsx! { HealthBody {} },
-            ContainerKind::Subcanvas => rsx! { SubmanifoldBody {} },
-            ContainerKind::Mesh3d => rsx! {
-                div { style: "padding:12px;",
-                    h4 { style: "margin:0 0 6px;color:var(--accent-cyan);font-size:12px;", "3D Kinematics & CCF Anatomy" }
-                    p { class: "held-bind-note", "held / not yet — mesh bind not on this desk." }
-                    p { style: muted(), "3D vocal-tract & cardiac .10d mesh representation. Projected via shared wgpu 30 device." }
+            ContainerKind::Subcanvas => rsx! {
+                div { style: "display:grid;gap:8px;",
+                    SubmanifoldBody {}
+                    ShedToolboxRunner { target_id: "submanifold-shed".to_string(), wb: None }
                 }
             },
+            ContainerKind::Mesh3d => rsx! { CadStudioBody {} },
             ContainerKind::WebRtc => rsx! {
                 div { style: "padding:12px;",
                     h4 { style: "margin:0 0 6px;color:var(--accent-emerald);font-size:12px;", "WebRTC P2P Data Mesh" }
@@ -57,9 +58,10 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
             },
             ContainerKind::Mail => rsx! { DomainsBody {} },
             ContainerKind::Chora => rsx! {
-                div { style: "padding:12px;",
+                div { style: "padding:12px;display:grid;gap:8px;",
                     h4 { style: "margin:0 0 6px;color:var(--accent-teal);font-size:12px;", "Chora 4D Dialectical Reader" }
                     p { style: muted(), "4D spatio-temporal knowledge graph reader with dialectical trust weights." }
+                    ShedToolboxRunner { target_id: "submanifold-shed".to_string(), wb: None }
                 }
             },
             ContainerKind::ErpKanban => rsx! {
@@ -86,6 +88,10 @@ pub fn NodeBody(kind: ContainerKind) -> Element {
             ContainerKind::Shaders => rsx! { ShadersBody {} },
             ContainerKind::Codecs => rsx! { CodecsBody {} },
             ContainerKind::Domains => rsx! { DomainsBody {} },
+            ContainerKind::Deck => rsx! { DeckStudioBody {} },
+            ContainerKind::Pdf => rsx! { PdfStudioBody {} },
+            ContainerKind::Vector => rsx! { VectorRasterStudioBody {} },
+            ContainerKind::SemanticInstrument => rsx! { crate::components::poet::instrument_bay::InstrumentBay {} },
         }
     }
 }

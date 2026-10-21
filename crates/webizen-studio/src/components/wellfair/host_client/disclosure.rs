@@ -32,6 +32,7 @@ pub async fn record_transparency_cc(
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Records transparency-cc.
 pub async fn record_transparency_cc(_c: &str, _a: &str, _p: &str) -> Result<(), String> {
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
@@ -79,6 +80,7 @@ pub async fn record_disclosure(
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Records disclosure.
 pub async fn record_disclosure(
     _c: &str,
     _cr: &str,
@@ -95,6 +97,7 @@ pub async fn disclosure_chain(commitment_hex: &str) -> Result<serde_json::Value,
     invoke_str_arg("wellfair_disclosure_chain", "commitmentHex", commitment_hex).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn disclosure_chain(_commitment_hex: &str) -> Result<serde_json::Value, String> {
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
@@ -110,6 +113,7 @@ pub async fn actors_with_access(commitment_hex: &str) -> Result<serde_json::Valu
     .await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn actors_with_access(_commitment_hex: &str) -> Result<serde_json::Value, String> {
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
@@ -120,6 +124,7 @@ pub async fn trace_leak(fingerprint_hex: &str) -> Result<serde_json::Value, Stri
     invoke_str_arg("wellfair_trace_leak", "fingerprintHex", fingerprint_hex).await
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn trace_leak(_fingerprint_hex: &str) -> Result<serde_json::Value, String> {
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
@@ -137,6 +142,7 @@ pub async fn list_transparency_ccs() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Lists transparency-ccs.
 pub async fn list_transparency_ccs() -> Result<serde_json::Value, String> {
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
@@ -170,6 +176,7 @@ pub async fn assess_duty_of_inquiry(duty_json: &str, conduct_json: &str) -> Resu
         .to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn assess_duty_of_inquiry(
     _duty_json: &str,
     _conduct_json: &str,

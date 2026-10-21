@@ -29,6 +29,7 @@ pub struct ProjectsSignals {
     pub tab: Signal<HubTab>,
 }
 
+/// Renders projects.
 pub fn render_projects(sig: ProjectsSignals) -> Element {
     let ProjectsSignals {
         mut status,

@@ -68,6 +68,7 @@ pub struct InstrumentCard {
     pub accessible_text: &'static str,
 }
 
+/// Seed cards.
 pub fn seed_cards() -> &'static [InstrumentCard] {
     &[
         InstrumentCard {

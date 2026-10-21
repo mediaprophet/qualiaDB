@@ -43,6 +43,7 @@ impl Default for BoardUi {
 }
 
 #[component]
+/// Dioxus `WellfairWorkBoardPanel` component.
 pub fn WellfairWorkBoardPanel() -> Element {
     let mut ui = use_signal(|| {
         #[allow(unused_mut)]

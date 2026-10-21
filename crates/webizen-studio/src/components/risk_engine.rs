@@ -10,6 +10,7 @@ struct RiskProps {
 }
 
 #[component]
+/// Dioxus `RiskEngine` component.
 pub fn RiskEngine() -> Element {
     let mut portfolio_value = use_signal(|| 1_000_000.0f64);
     let mut confidence_level = use_signal(|| 99.0f64);

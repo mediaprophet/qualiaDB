@@ -3,6 +3,7 @@
 use super::assessments::next_reality_category;
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:classify-reality" => Some(classify_reality(container)),

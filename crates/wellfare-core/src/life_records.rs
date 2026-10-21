@@ -40,6 +40,7 @@ pub struct LifeEventReport {
 }
 
 impl LifeEventReport {
+    /// Creates a new instance.
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -73,6 +74,7 @@ pub struct WelfareCaseReport {
 }
 
 impl WelfareCaseReport {
+    /// Creates a new instance.
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -100,6 +102,7 @@ pub struct CaseTaskReport {
 }
 
 impl CaseTaskReport {
+    /// Creates a new instance.
     pub fn new(case_id: impl Into<String>, title: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -119,14 +122,17 @@ impl CaseTaskReport {
     }
 }
 
+///  record ID.
 pub fn life_event_record_id(uuid: &str) -> String {
     format!("urn:wellfair:life_event:{uuid}")
 }
 
+///  record ID.
 pub fn welfare_case_record_id(uuid: &str) -> String {
     format!("urn:wellfair:welfare_case:{uuid}")
 }
 
+///  record ID.
 pub fn case_task_record_id(uuid: &str) -> String {
     format!("urn:wellfair:case_task:{uuid}")
 }
@@ -159,6 +165,7 @@ fn life_envelope(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_life_event_envelope(
     report: &LifeEventReport,
     owner_did: &str,
@@ -176,6 +183,7 @@ pub fn build_life_event_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_welfare_case_envelope(
     report: &WelfareCaseReport,
     owner_did: &str,
@@ -193,6 +201,7 @@ pub fn build_welfare_case_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_case_task_envelope(
     report: &CaseTaskReport,
     owner_did: &str,
@@ -210,6 +219,7 @@ pub fn build_case_task_envelope(
     )
 }
 
+///  summary.
 pub fn life_event_summary(report: &LifeEventReport) -> String {
     serde_json::json!({
         "title": report.title,
@@ -219,6 +229,7 @@ pub fn life_event_summary(report: &LifeEventReport) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn welfare_case_summary(report: &WelfareCaseReport) -> String {
     serde_json::json!({
         "title": report.title,
@@ -227,6 +238,7 @@ pub fn welfare_case_summary(report: &WelfareCaseReport) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn case_task_summary(report: &CaseTaskReport) -> String {
     serde_json::json!({
         "case_id": report.case_id,

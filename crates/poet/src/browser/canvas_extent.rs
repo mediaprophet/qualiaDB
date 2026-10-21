@@ -22,6 +22,7 @@ pub struct WorldExtent {
 }
 
 impl WorldExtent {
+    /// Builds from viewport.
     pub fn from_viewport(width: f32, height: f32) -> Self {
         let w = width.max(MIN_SPAN);
         let h = height.max(MIN_SPAN);
@@ -33,6 +34,7 @@ impl WorldExtent {
         }
     }
 
+    /// `true` when the rect is included.
     pub fn include_rect(&mut self, x: f32, y: f32, w: f32, h: f32) {
         self.min_x = self.min_x.min(x - WORLD_PAD);
         self.min_y = self.min_y.min(y - WORLD_PAD);
@@ -40,15 +42,18 @@ impl WorldExtent {
         self.max_y = self.max_y.max(y + h + WORLD_PAD);
     }
 
+    /// Width.
     pub fn width(self) -> f32 {
         (self.max_x - self.min_x).max(MIN_SPAN)
     }
 
+    /// Height.
     pub fn height(self) -> f32 {
         (self.max_y - self.min_y).max(MIN_SPAN)
     }
 }
 
+/// Pan of the element.
 pub fn pan_of(canvas: &Element) -> (f32, f32) {
     let x = canvas
         .get_attribute("data-pan-x")
@@ -61,6 +66,7 @@ pub fn pan_of(canvas: &Element) -> (f32, f32) {
     (x, y)
 }
 
+/// Zoom of the element.
 pub fn zoom_of(canvas: &Element) -> f32 {
     canvas
         .get_attribute("data-zoom")
@@ -68,6 +74,7 @@ pub fn zoom_of(canvas: &Element) -> f32 {
         .unwrap_or(1.0)
 }
 
+/// Sets view.
 pub fn set_view(canvas: &Element, pan_x: f32, pan_y: f32, zoom: f32) {
     let zoom = zoom.clamp(0.15, 4.0);
     let _ = canvas.set_attribute("data-pan-x", &format!("{pan_x:.2}"));
@@ -76,6 +83,7 @@ pub fn set_view(canvas: &Element, pan_x: f32, pan_y: f32, zoom: f32) {
     apply_view_transform(canvas, pan_x, pan_y, zoom);
 }
 
+/// Applies view-transform.
 pub fn apply_view_transform(canvas: &Element, pan_x: f32, pan_y: f32, zoom: f32) {
     if let Ok(Some(content)) = canvas.query_selector(".canvas-content-layer") {
         if let Ok(el) = content.dyn_into::<HtmlElement>() {
@@ -149,6 +157,7 @@ pub fn ensure_manifold_extent(document: &Document) {
     size_world_surface(&canvas, extent);
 }
 
+/// Pan that shows the rect.
 pub fn pan_to_show(document: &Document, x: f32, y: f32, w: f32, h: f32) {
     let Some(canvas) = document.get_element_by_id("manifold-canvas") else {
         return;

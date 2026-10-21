@@ -47,6 +47,7 @@ pub fn parse_version(raw: &str) -> Option<ParsedVersion> {
     })
 }
 
+/// Compares parsed versions.
 pub fn compare_parsed(a: &ParsedVersion, b: &ParsedVersion) -> Ordering {
     (a.major, a.minor, a.patch)
         .cmp(&(b.major, b.minor, b.patch))

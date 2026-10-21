@@ -33,6 +33,7 @@ pub struct BackupSummaryDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Synchronizes with-relay.
 pub async fn sync_with_relay(base_url: &str, since: u64) -> Result<SyncSummaryDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -57,11 +58,13 @@ pub async fn sync_with_relay(base_url: &str, since: u64) -> Result<SyncSummaryDt
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Synchronizes with-relay.
 pub async fn sync_with_relay(_base_url: &str, _since: u64) -> Result<SyncSummaryDto, String> {
     Err("Sync requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Exports backup.
 pub async fn export_backup(path: &str) -> Result<BackupSummaryDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -80,11 +83,13 @@ pub async fn export_backup(path: &str) -> Result<BackupSummaryDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Exports backup.
 pub async fn export_backup(_path: &str) -> Result<BackupSummaryDto, String> {
     Err("Backup requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Imports backup.
 pub async fn import_backup(path: &str) -> Result<BackupSummaryDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -103,6 +108,7 @@ pub async fn import_backup(path: &str) -> Result<BackupSummaryDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Imports backup.
 pub async fn import_backup(_path: &str) -> Result<BackupSummaryDto, String> {
     Err("Restore requires the Tauri desktop host".into())
 }
@@ -129,6 +135,7 @@ pub struct DiagnosticsDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches diagnostics.
 pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
     let js = tauri_invoke("wellfair_diagnostics", wasm_bindgen::JsValue::NULL)
         .await
@@ -140,6 +147,7 @@ pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches diagnostics.
 pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
     Ok(DiagnosticsDto::default())
 }

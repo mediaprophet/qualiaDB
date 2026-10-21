@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers ai-toolbox.
 pub(super) fn register_ai_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

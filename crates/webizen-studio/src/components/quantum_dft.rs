@@ -9,6 +9,7 @@ struct QuantumDftProps {
 }
 
 #[component]
+/// Dioxus `QuantumDft` component.
 pub fn QuantumDft() -> Element {
     let mut geometry =
         use_signal(|| "O 0.000 0.000 0.000\nH 0.757 0.586 0.000\nH -0.757 0.586 0.000".to_string());

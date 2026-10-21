@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlTextAreaElement, MouseEvent};
 
+/// Builds sparql-panel.
 pub(super) fn build_sparql_panel(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("search-mode-panel");
@@ -122,6 +123,7 @@ pub(super) fn build_sparql_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires sparql-editor.
 pub(super) fn wire_sparql_editor(document: &Document) {
     // Wire run button
     if let Some(run_btn) = document.get_element_by_id("sparql-run") {
@@ -160,6 +162,7 @@ pub(super) fn wire_sparql_editor(document: &Document) {
     }
 }
 
+/// Chain action: query.
 pub(super) fn run_query(document: &Document, results_id: &str) {
     let results = match document.get_element_by_id(results_id) {
         Some(r) => r,

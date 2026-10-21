@@ -199,6 +199,7 @@ const TAX_FIELDS: &[CopField] = &[
     },
 ];
 
+/// Builds budget-view.
 pub fn build_budget_view(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-project-budget-workspace", "live")

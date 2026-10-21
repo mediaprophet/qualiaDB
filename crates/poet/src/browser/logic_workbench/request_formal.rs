@@ -5,6 +5,7 @@ use super::request_advanced::named_pairs;
 use super::request_parse::{bool_assignment, optional_u64, required_assignment};
 use web_sys::Document;
 
+/// Formal request.
 pub(super) fn formal_request(
     document: &Document,
     mode: &str,

@@ -67,6 +67,7 @@ pub struct AssistanceNeed {
 }
 
 impl AssistanceNeed {
+    /// Creates a new instance.
     pub fn new(
         category: impl Into<String>,
         description: impl Into<String>,
@@ -109,6 +110,7 @@ pub struct WelfareStream {
 }
 
 impl WelfareStream {
+    /// Creates a new instance.
     pub fn new(program_name: impl Into<String>, started_at_unix: u32) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -148,6 +150,7 @@ pub struct GovernmentLetter {
 }
 
 impl GovernmentLetter {
+    /// Creates a new instance.
     pub fn new(
         sender: impl Into<String>,
         subject: impl Into<String>,
@@ -172,14 +175,17 @@ impl GovernmentLetter {
     }
 }
 
+///  record ID.
 pub fn assistance_need_record_id(uuid: &str) -> String {
     format!("urn:wellfair:assistance_need:{uuid}")
 }
 
+///  record ID.
 pub fn welfare_stream_record_id(uuid: &str) -> String {
     format!("urn:wellfair:welfare_stream:{uuid}")
 }
 
+///  record ID.
 pub fn government_letter_record_id(uuid: &str) -> String {
     format!("urn:wellfair:government_letter:{uuid}")
 }
@@ -213,6 +219,7 @@ fn self_reported_envelope(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_assistance_need_envelope(
     need: &AssistanceNeed,
     owner_did: &str,
@@ -231,6 +238,7 @@ pub fn build_assistance_need_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_welfare_stream_envelope(
     stream: &WelfareStream,
     owner_did: &str,
@@ -249,6 +257,7 @@ pub fn build_welfare_stream_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_government_letter_envelope(
     letter: &GovernmentLetter,
     owner_did: &str,
@@ -267,6 +276,7 @@ pub fn build_government_letter_envelope(
     )
 }
 
+///  summary.
 pub fn assistance_need_summary(need: &AssistanceNeed) -> String {
     serde_json::json!({
         "category": need.category,
@@ -277,6 +287,7 @@ pub fn assistance_need_summary(need: &AssistanceNeed) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn welfare_stream_summary(stream: &WelfareStream) -> String {
     serde_json::json!({
         "program_name": stream.program_name,
@@ -287,6 +298,7 @@ pub fn welfare_stream_summary(stream: &WelfareStream) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn government_letter_summary(letter: &GovernmentLetter) -> String {
     serde_json::json!({
         "sender": letter.sender,

@@ -28,6 +28,7 @@ pub enum CommandEffect {
 }
 
 impl CommandEffect {
+    /// `&str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Read => "read",
@@ -41,6 +42,7 @@ impl CommandEffect {
         }
     }
 
+    /// Constructs from str-strict.
     pub fn from_str_strict(s: &str) -> Result<Self, ContractError> {
         match s {
             "read" => Ok(Self::Read),
@@ -68,28 +70,34 @@ impl fmt::Display for CommandEffect {
 pub struct EffectSet(BTreeSet<CommandEffect>);
 
 impl EffectSet {
+    /// Empty instance.
     pub fn empty() -> Self {
         Self(BTreeSet::new())
     }
 
+    /// Single-element set.
     pub fn single(effect: CommandEffect) -> Self {
         let mut set = BTreeSet::new();
         set.insert(effect);
         Self(set)
     }
 
+    /// Inserts.
     pub fn insert(&mut self, effect: CommandEffect) {
         self.0.insert(effect);
     }
 
+    /// `true` when it contains the item.
     pub fn contains(&self, effect: CommandEffect) -> bool {
         self.0.contains(&effect)
     }
 
+    /// `true` when read-only.
     pub fn is_read_only(&self) -> bool {
         self.0.len() == 1 && self.0.contains(&CommandEffect::Read)
     }
 
+    /// Iterator.
     pub fn iter(&self) -> std::collections::btree_set::Iter<'_, CommandEffect> {
         self.0.iter()
     }

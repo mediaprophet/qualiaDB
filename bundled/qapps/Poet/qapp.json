@@ -1,0 +1,49 @@
+{
+  "name": "Poet",
+  "version": "0.1.0",
+  "required_shapes": [
+    "qualia:VibeScriptContract",
+    "qualia:SemanticInstrument",
+    "qualia:ToolchainBinding",
+    "qualia:LexiconPack"
+  ],
+  "x_qualia": {
+    "app_id": "did:qualia:qap:poet",
+    "display_name": "POET Authoring Shed",
+    "category": "semantic-authoring",
+    "did_git": "did:git:github.com/webizen/qap-poet",
+    "export_targets": [
+      "tauri-desktop",
+      "wasm-mobile",
+      "embedded"
+    ],
+    "launch_modes": [
+      "wasm-local",
+      "online-daemon-aware",
+      "static-web"
+    ],
+    "preferred_launch_mode": "wasm-local",
+    "supports_offline": true,
+    "requires": [
+      { "capability": "qualia.service.scheduler", "required": true },
+      { "capability": "qualia.service.networking", "required": true },
+      { "capability": "qualia.service.permissive_commons", "required": true },
+      { "capability": "qualia.service.communications", "required": true },
+      { "capability": "qualia.service.identifiers", "required": true }
+    ],
+    "required_ontologies": [
+      "q42:poet",
+      "q42:vibescript",
+      "q42:instruments"
+    ],
+    "entrypoints": {
+      "web": "index.html",
+      "route": "/poet"
+    },
+    "notes": [
+      "POET is developed in its own independent multi-repo package (did:git:github.com/webizen/qap-poet).",
+      "Installs into {storage}/Qapps/Poet and shares the QualiaDB NQuin / STUDIO_STORE zero-copy storage layer.",
+      "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
+    ]
+  }
+}

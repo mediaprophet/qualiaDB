@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ScreenwritingQapp` component.
 pub fn ScreenwritingQapp() -> Element {
     rsx! {
         QAppEngine {

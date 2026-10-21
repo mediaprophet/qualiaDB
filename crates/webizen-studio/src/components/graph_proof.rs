@@ -63,6 +63,7 @@ fn witness(record: &Option<Vec<u64>>) -> String {
 }
 
 #[component]
+/// Dioxus `GraphProof` component.
 pub fn GraphProof() -> Element {
     let mut source = use_signal(String::new);
     let mut volume = use_signal(String::new);

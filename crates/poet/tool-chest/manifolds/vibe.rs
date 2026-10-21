@@ -6,6 +6,7 @@
 
 use super::registry::{ManifoldSeed, SeedContainer, SeedPanel, DockPosition};
 
+/// `vibe` manifold seed — VibeScript console + diagnose.
 pub fn vibe_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "vibe".into(),

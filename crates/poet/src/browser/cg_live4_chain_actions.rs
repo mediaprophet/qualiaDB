@@ -109,6 +109,7 @@ fn triple(nums: &[f64], start: usize, fallback: [f64; 3]) -> [f64; 3] {
     }
 }
 
+/// Chain action: cross-ratio-1d.
 pub(super) fn run_cross_ratio_1d(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -125,6 +126,7 @@ pub(super) fn run_cross_ratio_1d(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: hyperplane-eval.
 pub(super) fn run_hyperplane_eval(document: &Document, label: &str) {
     let n = nums(document);
     let offset = numeric_attr(selected_container(document).as_ref(), "data-offset").unwrap_or(0.0);
@@ -141,6 +143,7 @@ pub(super) fn run_hyperplane_eval(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: householder-reflect.
 pub(super) fn run_householder_reflect(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -171,6 +174,7 @@ fn run_quat(document: &Document, label: &str, cap: &'static str, sketch: &str) {
     );
 }
 
+/// Chain action: quaternion-normalize.
 pub(super) fn run_quaternion_normalize(document: &Document, label: &str) {
     run_quat(
         document,
@@ -180,6 +184,7 @@ pub(super) fn run_quaternion_normalize(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: so3-exp.
 pub(super) fn run_so3_exp(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -190,6 +195,7 @@ pub(super) fn run_so3_exp(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: so3-log.
 pub(super) fn run_so3_log(document: &Document, label: &str) {
     run_quat(
         document,
@@ -199,6 +205,7 @@ pub(super) fn run_so3_log(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: projective-from-point.
 pub(super) fn run_projective_from_point(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -209,6 +216,7 @@ pub(super) fn run_projective_from_point(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: point-from-projective.
 pub(super) fn run_point_from_projective(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -225,6 +233,7 @@ pub(super) fn run_point_from_projective(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: frame-to-world.
 pub(super) fn run_frame_to_world(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -235,6 +244,7 @@ pub(super) fn run_frame_to_world(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: world-to-frame.
 pub(super) fn run_world_to_frame(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -245,6 +255,7 @@ pub(super) fn run_world_to_frame(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: barycentric-tetra.
 pub(super) fn run_barycentric_tetra(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -262,6 +273,7 @@ pub(super) fn run_barycentric_tetra(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: quaternion-slerp.
 pub(super) fn run_quaternion_slerp(document: &Document, label: &str) {
     let n = nums(document);
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.5);
@@ -284,6 +296,7 @@ pub(super) fn run_quaternion_slerp(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: quaternion-to-matrix.
 pub(super) fn run_quaternion_to_matrix(document: &Document, label: &str) {
     run_quat(
         document,
@@ -293,6 +306,7 @@ pub(super) fn run_quaternion_to_matrix(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: solve-diagonal-quadratic.
 pub(super) fn run_solve_diagonal_quadratic(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -307,6 +321,7 @@ pub(super) fn run_solve_diagonal_quadratic(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: schur-complement-2x2.
 pub(super) fn run_schur_complement_2x2(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -323,6 +338,7 @@ pub(super) fn run_schur_complement_2x2(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: separating-plane-aabb.
 pub(super) fn run_separating_plane_aabb(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(

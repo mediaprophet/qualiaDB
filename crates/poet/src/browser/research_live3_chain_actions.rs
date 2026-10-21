@@ -141,6 +141,7 @@ fn run_content(document: &Document, label: &str, cap_id: &'static str, field: &s
     );
 }
 
+/// Chain action: set-reality-category.
 pub(super) fn run_set_reality_category(document: &Document, label: &str) {
     let category = string_attr(selected_container(document).as_ref(), "data-category")
         .unwrap_or_else(|| "uncertain".into());
@@ -153,14 +154,17 @@ pub(super) fn run_set_reality_category(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: classify-reality.
 pub(super) fn run_classify_reality(document: &Document, label: &str) {
     run_content(document, label, "Research.classify_reality", "content");
 }
 
+/// Chain action: detect-blended.
 pub(super) fn run_detect_blended(document: &Document, label: &str) {
     run_content(document, label, "Research.detect_blended", "content");
 }
 
+/// Chain action: detect-deceptive-fiction.
 pub(super) fn run_detect_deceptive_fiction(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -171,6 +175,7 @@ pub(super) fn run_detect_deceptive_fiction(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: trace-fiction.
 pub(super) fn run_trace_fiction(document: &Document, label: &str) {
     let lines: Vec<String> = surface_text(document)
         .lines()
@@ -193,10 +198,12 @@ pub(super) fn run_trace_fiction(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: assess-sentiment.
 pub(super) fn run_assess_sentiment(document: &Document, label: &str) {
     run_content(document, label, "Research.assess_sentiment", "text");
 }
 
+/// Chain action: detect-sentiment-manipulation.
 pub(super) fn run_detect_sentiment_manipulation(document: &Document, label: &str) {
     let mut texts: Vec<String> = surface_text(document)
         .lines()
@@ -216,10 +223,12 @@ pub(super) fn run_detect_sentiment_manipulation(document: &Document, label: &str
     );
 }
 
+/// Chain action: detect-performed-sentiment.
 pub(super) fn run_detect_performed_sentiment(document: &Document, label: &str) {
     run_content(document, label, "Research.detect_performed_sentiment", "text");
 }
 
+/// Chain action: map-sentiment-network.
 pub(super) fn run_map_sentiment_network(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -230,6 +239,7 @@ pub(super) fn run_map_sentiment_network(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: analyse-sentiment-trends.
 pub(super) fn run_analyse_sentiment_trends(document: &Document, label: &str) {
     let mut values: Vec<f64> = surface_text(document)
         .split(|ch: char| ch.is_whitespace() || matches!(ch, ',' | ';' | '|'))
@@ -248,6 +258,7 @@ pub(super) fn run_analyse_sentiment_trends(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: register-perspective.
 pub(super) fn run_register_perspective(document: &Document, label: &str) {
     run_id(
         document,
@@ -258,6 +269,7 @@ pub(super) fn run_register_perspective(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: add-bias.
 pub(super) fn run_add_bias(document: &Document, label: &str) {
     run_id(
         document,
@@ -268,6 +280,7 @@ pub(super) fn run_add_bias(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: compare-perspectives.
 pub(super) fn run_compare_perspectives(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -278,6 +291,7 @@ pub(super) fn run_compare_perspectives(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: detect-perspective-conflict.
 pub(super) fn run_detect_perspective_conflict(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -288,6 +302,7 @@ pub(super) fn run_detect_perspective_conflict(document: &Document, label: &str) 
     );
 }
 
+/// Chain action: reconcile-perspectives.
 pub(super) fn run_reconcile_perspectives(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -298,6 +313,7 @@ pub(super) fn run_reconcile_perspectives(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: assess-intentionality.
 pub(super) fn run_assess_intentionality(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -313,6 +329,7 @@ pub(super) fn run_assess_intentionality(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: classify-mistake.
 pub(super) fn run_classify_mistake(document: &Document, label: &str) {
     invoke_dual(
         document,

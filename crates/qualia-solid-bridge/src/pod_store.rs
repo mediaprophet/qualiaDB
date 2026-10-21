@@ -21,10 +21,12 @@ pub struct PodStore {
 }
 
 impl PodStore {
+    /// Creates a new instance.
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
     }
 
+    /// Root.
     pub fn root(&self) -> &Path {
         &self.root
     }
@@ -168,6 +170,7 @@ impl PodStore {
         Ok(out)
     }
 
+    /// Reads bytes.
     pub fn read_bytes(&self, url_path: &str) -> io::Result<Vec<u8>> {
         let path = self.resolve(url_path)?;
         if path.is_dir() {
@@ -176,6 +179,7 @@ impl PodStore {
         fs::read(path)
     }
 
+    /// Writes bytes.
     pub fn write_bytes(&self, url_path: &str, body: &[u8]) -> io::Result<()> {
         let path = self.resolve(url_path)?;
         if let Some(parent) = path.parent() {
@@ -184,6 +188,7 @@ impl PodStore {
         fs::write(path, body)
     }
 
+    /// Deletes.
     pub fn delete(&self, url_path: &str) -> io::Result<()> {
         let path = self.resolve(url_path)?;
         if path.is_dir() {
@@ -195,10 +200,12 @@ impl PodStore {
         }
     }
 
+    /// `true` when it exists.
     pub fn exists(&self, url_path: &str) -> bool {
         self.resolve(url_path).map(|p| p.exists()).unwrap_or(false)
     }
 
+    /// `true` when container.
     pub fn is_container(&self, url_path: &str) -> bool {
         self.resolve(url_path)
             .map(|p| p.is_dir() || url_path.ends_with('/'))

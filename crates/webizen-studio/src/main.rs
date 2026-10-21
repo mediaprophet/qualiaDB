@@ -288,6 +288,9 @@ pub enum Route {
     #[route("/work")]
     WorkRoute {},
 
+    #[route("/wallet")]
+    WalletRoute {},
+
     #[route("/tools")]
     ToolsRoute {},
 
@@ -429,7 +432,8 @@ fn route_from_omnibox(query: &str) -> Route {
             crate::components::relations::stash_directory_handoff();
             return Route::TalkDirectoryRoute {};
         }
-        "reception" | "frontdoor" | "front-door" | "dns" => {
+        "reception" | "frontdoor" | "front-door" | "dns" | "nym" | "mixnet" | "domain"
+        | "domains" => {
             stash_talk_tab("reception");
             return Route::TalkRoute {};
         }
@@ -441,7 +445,7 @@ fn route_from_omnibox(query: &str) -> Route {
             stash_talk_tab("projects");
             return Route::TalkRoute {};
         }
-        "requests" | "live-share" => {
+        "requests" | "live-share" | "connect" | "connection" | "connections" | "peers" => {
             stash_talk_tab("requests");
             return Route::TalkRoute {};
         }
@@ -451,6 +455,7 @@ fn route_from_omnibox(query: &str) -> Route {
         }
         "keep" | "vault" => return Route::KeepRoute {},
         "wellfair" => return Route::WellfairRoute {},
+        "wallet" | "commerce" | "chains" | "crypto" | "blockchain" | "ledger" => return Route::WalletRoute {},
         "work" | "board" => return Route::WorkRoute {},
         "reach" | "browser" | "web" => return Route::BrowserRoute {},
         "universe" | "chora" | "stars" | "space" => return Route::ChoraRoute {},
@@ -462,7 +467,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "listen" | "audio" | "ears" => return Route::ListenRoute {},
         "health" => return Route::HealthRoute {},
         "nexus" | "knowledge-nexus" => return Route::NexusRoute {},
-        "qapps" | "apps" => return Route::QAppsRoute {},
+        "qap" | "qaps" | "qapps" | "apps" => return Route::QAppsRoute {},
         "logs" => return Route::LogsRoute {},
         "jobs" | "tasks" | "downloads" | "queue" => return Route::JobsRoute {},
         "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
@@ -471,7 +476,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "instruments" | "semantic-instrument" | "semantic-instruments" => {
             return Route::PoetInstrumentRoute {}
         }
-        "identity" => return Route::IdentityRoute {},
+        "identifiers" | "identifier" | "keys" | "selfhood" | "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
         _ => {}
     }
@@ -651,6 +656,11 @@ fn IdentityRoute() -> Element {
     rsx! {
         div {
             style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
+            DomainRouteHeader {
+                domain: "Selfhood",
+                title: "Identifiers, Keys & Enumerated Consequence",
+                blurb: "Public keys and did:q42 URIs are identifiers — identity is enumerated as a consequence of what entities do.",
+            }
             components::wellfair::WellfairPersonalPanel {}
             components::wellfair::WellfairSocialBookPanel {}
             components::wellfair::WellfairConsentPanel {}
@@ -694,8 +704,25 @@ fn WorkRoute() -> Element {
             }
             components::wellfair::WellfairProjectsPanel {}
             components::wellfair::WellfairWorkBoardPanel {}
+            components::wellfair::WellfairWalletCommercePanel {}
             components::wellfair::WellfairFinancePanel {}
             components::wellfair::WellfairCredentialsPanel {}
+        }
+    }
+}
+
+#[component]
+fn WalletRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 2rem 2rem 3rem; gap: 2rem;",
+            DomainRouteHeader {
+                domain: "Qap · Wallet & Commons",
+                title: "Multi-Chain Wallet & Permissive Commons",
+                blurb: "Crypto & blockchain wallets (did:q42, Bitcoin, Solana, Polkadot, Cosmos, Solid REA), SDN Permissive Commons metering, and cooperative settlement.",
+            }
+            components::wellfair::WellfairWalletCommercePanel {}
+            components::wellfair::WellfairFinancePanel {}
         }
     }
 }
@@ -737,6 +764,7 @@ fn ToolsRoute() -> Element {
                 }
                 components::settings::model_setup::ModelSetupPanel {}
             }
+            components::networking_setup_panel::NetworkingSetupPanel {}
             components::wellfair::WellfairToolsPanel {}
             components::wellfair::WellfairSyncBackupPanel {}
             components::wellfair::WellfairSyncPanel {}
@@ -1518,9 +1546,9 @@ fn AppLayout() -> Element {
                     Link {
                         to: Route::IdentityRoute {},
                         class: "qtab",
-                        title: "Selfhood — profile, rights, self-definition",
+                        title: "Selfhood & Identifiers — cryptographic keys & enumerated consequence",
                         sl-icon { "name": "person-badge", style: "font-size: 0.9rem;" }
-                        "Selfhood"
+                        "Identifiers"
                     }
                     Link {
                         to: Route::TalkRoute {},
@@ -1558,6 +1586,20 @@ fn AppLayout() -> Element {
                         title: "Practice — projects and work board",
                         sl-icon { "name": "kanban", style: "font-size: 0.9rem;" }
                         "Practice"
+                    }
+                    Link {
+                        to: Route::WalletRoute {},
+                        class: "qtab",
+                        title: "Wallet & Permissive Commons — multi-chain sovereign assets & SDN quota",
+                        sl-icon { "name": "wallet2", style: "font-size: 0.9rem;" }
+                        "Wallet"
+                    }
+                    Link {
+                        to: Route::QAppsRoute {},
+                        class: "qtab",
+                        title: "Qaps — sovereign modular applications",
+                        sl-icon { "name": "grid", style: "font-size: 0.9rem;" }
+                        "Qaps"
                     }
                     Link {
                         to: Route::ToolsRoute {},

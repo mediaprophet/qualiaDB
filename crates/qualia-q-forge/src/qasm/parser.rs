@@ -8,10 +8,12 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new instance.
     pub fn new(input: &'a str) -> Self {
         Self { input, pos: 0 }
     }
 
+    /// Parses.
     pub fn parse(&mut self) -> Result<QasmProgram, &'static str> {
         let mut program = QasmProgram::new();
         self.skip_whitespace();

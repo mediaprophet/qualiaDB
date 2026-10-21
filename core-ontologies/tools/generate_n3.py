@@ -20,10 +20,12 @@ TITLE_KW = ("Convention", "Declaration", "Covenant", "Charter", "Protocol",
             "Principles", "Rights", "Slavery")
 
 def slug(name):
+    """Slug helper."""
     s = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return re.sub(r"-+", "-", s)[:60]
 
 def esc(t):
+    """Escapes text."""
     t = t.replace("\\", "\\\\").replace('"', '\\"')
     return re.sub(r"\s+", " ", t).strip()   # collapse \r \n \t -> single space (valid Turtle literal)
 
@@ -38,6 +40,7 @@ def is_title(row):
     return has_date or has_url
 
 def deontic(text):
+    """Deontic helper."""
     t = text.lower()
     if re.match(r"^\s*(no one|no party|no person|nothing)\b", t) or "shall be prohibited" in t \
        or "shall not" in t or re.search(r"\bmay not be\b", t):
@@ -50,6 +53,7 @@ def deontic(text):
     return ("values:Undertaking", None)
 
 def main():
+    """CLI entry point."""
     if not os.path.exists(CSV):
         sys.exit(f"CSV not found: {CSV} (run from repo root)")
     rows = list(csv.reader(open(CSV, newline="", encoding="utf-8", errors="replace")))

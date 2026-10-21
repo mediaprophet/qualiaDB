@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Toggles the tech sidebar.
 pub fn toggle_tech_sidebar(document: &Document) {
     // If sidebar exists, remove it
     if let Some(existing) = document.get_element_by_id("tech-sidebar") {
@@ -145,6 +146,7 @@ pub fn toggle_tech_sidebar(document: &Document) {
     closure.forget();
 }
 
+/// Shows a11y-notification.
 pub(super) fn show_a11y_notification(document: &Document) {
     super::super::accessibility::open_dialog(document);
 }
@@ -161,6 +163,7 @@ pub(crate) struct TrayOverlayBox {
     pub max_height: f64,
 }
 
+/// Tray overlay box.
 pub(crate) fn tray_overlay_box(
     bar_left: f64,
     bar_bottom: f64,
@@ -177,6 +180,7 @@ pub(crate) fn tray_overlay_box(
     }
 }
 
+/// Hides the pod-drop tray.
 pub(super) fn hide_pod_drop_tray(document: &Document) {
     if let Some(tray) = document.get_element_by_id("top-pod-drop-tray") {
         let t_el: HtmlElement = tray.dyn_into().unwrap();
@@ -199,6 +203,7 @@ fn mount_pod_drop_tray_overlay(document: &Document, tray: &Element) {
     position_pod_drop_tray(document);
 }
 
+/// Positions the pod-drop tray.
 pub(super) fn position_pod_drop_tray(document: &Document) {
     let Some(tray) = document.get_element_by_id("top-pod-drop-tray") else {
         return;
@@ -225,6 +230,7 @@ pub(super) fn position_pod_drop_tray(document: &Document) {
     let _ = style.set_property("z-index", "6000");
 }
 
+/// Toggles the pod tray.
 pub(super) fn toggle_pod_tray(document: &Document, pod_id: &str) {
     let tray = match document.get_element_by_id("top-pod-drop-tray") {
         Some(t) => t,

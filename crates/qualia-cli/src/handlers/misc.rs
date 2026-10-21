@@ -10,6 +10,7 @@ use crate::cli::{
 };
 use crate::sparql::run_sparql_query;
 
+/// Handles the  action.
 pub fn handle_extension(action: &ExtensionAction) {
     match action {
         ExtensionAction::Register { manifest_path } => {
@@ -24,6 +25,7 @@ pub fn handle_extension(action: &ExtensionAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_governance(action: &GovernanceAction) {
     match action {
         GovernanceAction::WalAppend { quin, sign } => {
@@ -35,6 +37,7 @@ pub fn handle_governance(action: &GovernanceAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_compile(action: &CompileAction) {
     match action {
         CompileAction::N3ToDeontic { file } => {
@@ -53,6 +56,7 @@ pub fn handle_compile(action: &CompileAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_shacl(action: &ShaclAction) {
     match action {
         ShaclAction::List => {
@@ -77,6 +81,7 @@ pub fn handle_shacl(action: &ShaclAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_vault(init: bool) {
     if init {
         println!("Initializing Memory-Mapped Vault...");
@@ -87,6 +92,7 @@ pub fn handle_vault(init: bool) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_migrate(action: &MigrateAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         MigrateAction::Meta { path, dry_run } => {
@@ -115,12 +121,14 @@ pub fn handle_migrate(action: &MigrateAction) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_mem(inspect: bool) {
     if inspect {
         println!("Please use `qualia-cli inspect <superblock_path>` directly to inspect specific layouts.");
     }
 }
 
+/// Handles the  action.
 pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         Q42Action::Inspect { path } => {
@@ -266,6 +274,7 @@ pub fn handle_q42(action: &Q42Action) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_hmc(action: &crate::cli::HmcAction) -> Result<(), Box<dyn std::error::Error>> {
     use qualia_core_db::bundle::BundleMmap;
     match action {
@@ -340,6 +349,7 @@ pub fn handle_hmc(action: &crate::cli::HmcAction) -> Result<(), Box<dyn std::err
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     if qualia_core_db::q42_volume::is_unified_volume(file_path)? {
         let report = qualia_core_db::q42_volume::Q42InspectReport::from_path(file_path)?;
@@ -382,6 +392,7 @@ pub fn handle_inspect(file_path: &PathBuf) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_dump(out_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     println!("Dumping raw SuperBlock to: {:?}", out_path);
 
@@ -436,6 +447,7 @@ pub fn handle_dump(out_path: &PathBuf) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_export_solid(input: &PathBuf, output: &PathBuf) {
     println!("============================================================");
     println!("🌐 W3C Solid Exporter Bridge");
@@ -454,6 +466,7 @@ pub fn handle_export_solid(input: &PathBuf, output: &PathBuf) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_verify_integrity(input: &PathBuf, dataset: &PathBuf) {
     println!("============================================================");
     println!("🔒 QualiaDB Zero-Allocation Integrity Verification");
@@ -619,6 +632,7 @@ Use --require-isomorphism to fail closed until a canonicalization path exists."
     }
 }
 
+/// Handles the  action.
 pub fn handle_import(
     input: Option<&PathBuf>,
     output: Option<&PathBuf>,
@@ -781,6 +795,7 @@ pub fn handle_import(
     }
 }
 
+/// Handles the  action.
 pub fn handle_ingest_job(action: &IngestJobAction) -> Result<(), Box<dyn std::error::Error>> {
     use qualia_core_db::ingest::{streaming_import_rdf_with_job, IngestMode, IngestReport};
     use qualia_core_db::ingest_job::{
@@ -916,6 +931,7 @@ pub fn handle_ingest_job(action: &IngestJobAction) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
+/// Handles the  action.
 pub fn handle_ingest(format: &IngestFormat) {
     match format {
         IngestFormat::Semantic {
@@ -1040,6 +1056,7 @@ fn spawn_detached_publish(dir: &std::path::Path) -> Result<u32, Box<dyn std::err
     Ok(child.id())
 }
 
+/// Handles the  action.
 pub fn handle_query(dialect: &QueryDialect) {
     match dialect {
         QueryDialect::Sparql {
@@ -1073,6 +1090,7 @@ pub fn handle_query(dialect: &QueryDialect) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_compress(input: &PathBuf, output: &PathBuf) {
     let ext = input
         .extension()
@@ -1119,6 +1137,7 @@ pub fn handle_compress(input: &PathBuf, output: &PathBuf) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_profile(action: &ProfileAction) {
     match action {
         ProfileAction::Compile { input, out } => {
@@ -1225,6 +1244,7 @@ pub fn handle_profile(action: &ProfileAction) {
     }
 }
 
+/// Handles the  action.
 pub fn handle_capabilities(list: bool) {
     if list {
         println!("============================================================");

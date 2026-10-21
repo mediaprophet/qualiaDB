@@ -52,6 +52,7 @@ fn format_cents(cents: i64) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairFinancePanel` component.
 pub fn WellfairFinancePanel() -> Element {
     let mut ui = use_signal(FinanceUi::default);
 

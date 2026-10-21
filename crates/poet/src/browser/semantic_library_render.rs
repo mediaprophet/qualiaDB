@@ -70,6 +70,7 @@ fn render_construct_index(document: &Document, results: &Element, section: &str)
     }
 }
 
+/// Renders results.
 pub(super) fn render_results(root: &Element, data: &serde_json::Value) {
     let Ok(Some(results)) = root.query_selector(".poet-library-results") else {
         return;
@@ -139,6 +140,7 @@ pub(super) fn render_results(root: &Element, data: &serde_json::Value) {
     }
 }
 
+/// Renders facets.
 pub(super) fn render_facets(root: &Element, status: &Element, data: &serde_json::Value) {
     let Ok(Some(panel)) = root.query_selector(".poet-library-facets") else {
         return;
@@ -190,6 +192,7 @@ pub(super) fn render_facets(root: &Element, status: &Element, data: &serde_json:
     }
 }
 
+/// Shows an error.
 pub(super) fn show_error(root: &Element, status: &Element, message: &str) {
     status.set_text_content(Some(&format!("Semantic Library unavailable: {message}")));
     if let Ok(Some(results)) = root.query_selector(".poet-library-results") {

@@ -79,11 +79,13 @@ pub use imp::tauri_invoke;
 // Components that use serde_json can use this helper on native:
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Invokes json.
 pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
     tauri_invoke(cmd, args).await
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Invokes json.
 pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
     let js_args =
         serde_wasm_bindgen::to_value(&args).map_err(|e| format!("serialize args: {e}"))?;
@@ -121,6 +123,7 @@ struct OntologySchema {
 }
 
 #[component]
+/// Dioxus `QAppEngine` component.
 pub fn QAppEngine(props: QAppEngineProps) -> Element {
     let mut schema = use_signal(|| None::<OntologySchema>);
     let ontology_id = props.ontology_id.clone();

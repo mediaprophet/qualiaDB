@@ -1,0 +1,49 @@
+{
+  "name": "Browser",
+  "version": "0.1.0",
+  "required_shapes": [
+    "qualia:WebBookmark",
+    "qualia:BrowsingSession",
+    "qualia:SecureOriginPolicy",
+    "qualia:HypermediaTab"
+  ],
+  "x_qualia": {
+    "app_id": "did:qualia:qap:browser",
+    "display_name": "Webizen Web Browser",
+    "category": "web-reach",
+    "did_git": "did:git:github.com/webizen/qap-browser",
+    "export_targets": [
+      "tauri-desktop",
+      "wasm-mobile",
+      "embedded"
+    ],
+    "launch_modes": [
+      "wasm-local",
+      "online-daemon-aware",
+      "static-web"
+    ],
+    "preferred_launch_mode": "wasm-local",
+    "supports_offline": true,
+    "requires": [
+      { "capability": "qualia.service.scheduler", "required": true },
+      { "capability": "qualia.service.networking", "required": true },
+      { "capability": "qualia.service.permissive_commons", "required": true },
+      { "capability": "qualia.service.communications", "required": true },
+      { "capability": "qualia.service.identifiers", "required": true }
+    ],
+    "required_ontologies": [
+      "q42:browser",
+      "q42:hypermedia",
+      "q42:webizen-schemes"
+    ],
+    "entrypoints": {
+      "web": "index.html",
+      "route": "/browser"
+    },
+    "notes": [
+      "Webizen Web Browser is developed in its own independent repository (did:git:github.com/webizen/qap-browser).",
+      "Installs into {storage}/Qapps/Browser and enables secure, isolated web reach and hypermedia navigation.",
+      "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
+    ]
+  }
+}

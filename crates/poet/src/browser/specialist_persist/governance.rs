@@ -3,6 +3,7 @@
 use super::{ledger, CopField};
 use web_sys::{Document, Element};
 
+/// Builds meetings-view.
 pub fn build_meetings_view(document: &Document) -> Element {
     ledger(
         document,
@@ -26,6 +27,7 @@ pub fn build_meetings_view(document: &Document) -> Element {
     )
 }
 
+/// Builds disputes-view.
 pub fn build_disputes_view(document: &Document) -> Element {
     ledger(
         document,
@@ -49,6 +51,7 @@ pub fn build_disputes_view(document: &Document) -> Element {
     )
 }
 
+/// Builds complaints-view.
 pub fn build_complaints_view(document: &Document) -> Element {
     ledger(
         document,
@@ -72,6 +75,7 @@ pub fn build_complaints_view(document: &Document) -> Element {
     )
 }
 
+/// Builds coi-view.
 pub fn build_coi_view(document: &Document) -> Element {
     ledger(
         document,
@@ -95,6 +99,7 @@ pub fn build_coi_view(document: &Document) -> Element {
     )
 }
 
+/// Builds corrections-view.
 pub fn build_corrections_view(document: &Document) -> Element {
     ledger(
         document,

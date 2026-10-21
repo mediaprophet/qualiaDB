@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+/// Downloads and installs an update.
 pub async fn download_and_install_update(download_url: String) -> Result<(), String> {
     if download_url.is_empty() {
         return Err("Empty download URL".into());

@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "spatial3d:add-bone" => Some(tag_attr(container, "data-rig-bone", "bone_added")),

@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlInputElement, HtmlTextAreaElement, MouseEvent};
 
+/// Builds query-builder-panel.
 pub(super) fn build_query_builder_panel(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("search-mode-panel");
@@ -244,6 +245,7 @@ fn build_pattern_row(document: &Document, idx: usize) -> Element {
     row
 }
 
+/// Wires query-builder.
 pub(super) fn wire_query_builder(document: &Document) {
     // Wire add row button
     if let Some(add_btn) = document.get_element_by_id("builder-add-row") {

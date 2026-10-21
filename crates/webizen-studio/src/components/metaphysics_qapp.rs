@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MetaphysicsQapp` component.
 pub fn MetaphysicsQapp() -> Element {
     rsx! {
         QAppEngine {

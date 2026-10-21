@@ -14,6 +14,7 @@ pub struct PagedKvConfig {
 }
 
 impl PagedKvConfig {
+    /// Creates a new instance.
     pub fn new(n_layer: u32, n_kv_head: u32, head_dim: u32, max_context: u32) -> Option<Self> {
         let block_size = DEFAULT_BLOCK_SIZE;
         let logical = max_context.checked_add(block_size - 1)? / block_size;
@@ -29,6 +30,7 @@ impl PagedKvConfig {
         config.is_valid().then_some(config)
     }
 
+    /// `true` when valid.
     pub fn is_valid(&self) -> bool {
         self.block_size.is_power_of_two()
             && self.block_size <= 256
@@ -40,26 +42,31 @@ impl PagedKvConfig {
     }
 
     #[inline]
+    /// Logical blocks per layer.
     pub fn logical_blocks_per_layer(&self) -> u32 {
         self.max_context.div_ceil(self.block_size)
     }
 
     #[inline]
+    /// Required single-sequence blocks.
     pub fn required_single_sequence_blocks(&self) -> u32 {
         self.n_layer.saturating_mul(self.logical_blocks_per_layer())
     }
 
     #[inline]
+    /// Slot KV elements.
     pub fn slot_kv_elems(&self) -> u32 {
         self.n_kv_head.saturating_mul(self.head_dim)
     }
 
     #[inline]
+    /// Block elements.
     pub fn block_elems(&self) -> usize {
         self.block_size as usize * self.slot_kv_elems() as usize * 2
     }
 
     #[inline]
+    /// Arena bytes.
     pub fn arena_bytes(&self) -> Option<usize> {
         self.block_elems()
             .checked_mul(self.physical_blocks as usize)?

@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:assess-sentiment" => Some(assess_sentiment(container)),
@@ -20,6 +21,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next sentiment-type.
 pub(crate) fn next_sentiment_type(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("positive") => "negative",
@@ -29,6 +31,7 @@ pub(crate) fn next_sentiment_type(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next sentiment-dimension.
 pub(crate) fn next_sentiment_dimension(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("valence") => "arousal",

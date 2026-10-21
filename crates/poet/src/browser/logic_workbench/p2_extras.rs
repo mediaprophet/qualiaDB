@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlSelectElement, MouseEvent};
 
+/// Appends panels.
 pub(super) fn append_panels(document: &Document, content: &Element) {
     content
         .append_child(&build_allen_rcc8_panel(document))
@@ -21,12 +22,14 @@ pub(super) fn append_panels(document: &Document, content: &Element) {
         .unwrap();
 }
 
+/// Wires all panels.
 pub(super) fn wire_all(document: &Document) {
     wire_allen_rcc8_panel(document);
     wire_manifold_logic_panel(document);
     wire_calculus_panel(document);
 }
 
+/// Builds allen-rcc8-panel.
 pub(super) fn build_allen_rcc8_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "allen_rcc8", false);
     panel
@@ -84,6 +87,7 @@ pub(super) fn build_allen_rcc8_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-allen-rcc8` panel.
 pub(super) fn wire_allen_rcc8_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("allen-rcc8-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -101,6 +105,7 @@ pub(super) fn wire_allen_rcc8_panel(document: &Document) {
     }
 }
 
+/// Builds manifold-logic-panel.
 pub(super) fn build_manifold_logic_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "manifold_logic", false);
     panel
@@ -139,6 +144,7 @@ pub(super) fn build_manifold_logic_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-manifold-logic` panel.
 pub(super) fn wire_manifold_logic_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("manifold-logic-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -151,6 +157,7 @@ pub(super) fn wire_manifold_logic_panel(document: &Document) {
     }
 }
 
+/// Builds calculus-panel.
 pub(super) fn build_calculus_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "calculus", false);
     panel
@@ -214,6 +221,7 @@ pub(super) fn build_calculus_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-calculus` panel.
 pub(super) fn wire_calculus_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("calculus-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

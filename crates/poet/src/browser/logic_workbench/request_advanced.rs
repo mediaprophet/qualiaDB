@@ -4,6 +4,7 @@ use super::helpers::field_value;
 use super::request_parse::{optional_u64, required_assignment, required_f64, required_f64_list};
 use web_sys::Document;
 
+/// Advanced request.
 pub(super) fn advanced_request(
     document: &Document,
     mode: &str,
@@ -160,6 +161,7 @@ fn bracket_items(source: &str, key: &str) -> Result<Vec<String>, String> {
     }
 }
 
+/// Named pairs.
 pub(super) fn named_pairs(source: &str, key: &str) -> Result<Vec<Vec<String>>, String> {
     bracket_items(source, key)?
         .into_iter()

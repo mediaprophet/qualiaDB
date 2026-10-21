@@ -298,6 +298,7 @@ fn gbm_var_request(document: &Document) -> Result<(&'static str, serde_json::Val
     ))
 }
 
+/// Logic request.
 pub(super) fn logic_request(
     document: &Document,
     tool_name: &str,

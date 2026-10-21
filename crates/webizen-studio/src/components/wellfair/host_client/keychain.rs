@@ -11,6 +11,7 @@ use crate::components::qapp_engine::tauri_invoke;
 use js_sys;
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn sanctuary_vault_is_keychain_wrapped() -> Result<bool, String> {
     let js = tauri_invoke(
         "wellfair_sanctuary_vault_is_keychain_wrapped",
@@ -26,6 +27,7 @@ pub async fn sanctuary_vault_is_keychain_wrapped() -> Result<bool, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — returns an empty/default result (see STUBS.md).
 pub async fn sanctuary_vault_is_keychain_wrapped() -> Result<bool, String> {
     Ok(false)
 }
@@ -63,6 +65,7 @@ pub async fn setup_sanctuary_vault_wrapped(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn setup_sanctuary_vault_wrapped(
     _real_pin: &str,
     _decoy_pin: &str,
@@ -71,6 +74,7 @@ pub async fn setup_sanctuary_vault_wrapped(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn sanctuary_vault_unlock_with_recovery(
     pin: &str,
     recovery_code: &str,
@@ -98,6 +102,7 @@ pub async fn sanctuary_vault_unlock_with_recovery(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn sanctuary_vault_unlock_with_recovery(
     _pin: &str,
     _recovery_code: &str,
@@ -131,6 +136,7 @@ pub async fn sanctuary_vault_add_note(pin: &str, body: &str) -> Result<String, S
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn sanctuary_vault_add_note(_pin: &str, _body: &str) -> Result<String, String> {
     Err("Sanctuary vault requires the Tauri desktop host".into())
 }
@@ -154,6 +160,7 @@ pub async fn sanctuary_vault_list_notes(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn sanctuary_vault_list_notes(
     _pin: &str,
 ) -> Result<(String, Vec<SanctuaryVaultNoteDto>), String> {

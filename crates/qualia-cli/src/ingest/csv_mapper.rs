@@ -3,6 +3,7 @@ use qualia_core_db::sparql_library::parsers::csv_parser::{
 };
 use std::fs::File;
 
+/// Streams CSV to quins.
 pub fn stream_csv_to_quins(
     csv_path: &str,
     output_path: &str,

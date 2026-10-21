@@ -33,3 +33,10 @@ pub use vibe_host::{
     capability_invoke, check_cell, check_program, diagnose, diagnose_json, host_version,
     language_version, parse_cell, parse_program, CRATE_STAMP, HOST_VERSION, LANGUAGE_VERSION,
 };
+
+/// Canonical POET Authoring Studio Registry.
+pub mod studio_registry;
+pub use studio_registry::{
+    studio_by_domain, studio_by_id, studios_for_capability, InspectorPropertyBinding,
+    StudioDescriptor, StudioDomain, StudioToolbox, StudioToolchainStep, STUDIO_REGISTRY,
+};

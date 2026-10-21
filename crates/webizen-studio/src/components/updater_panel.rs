@@ -51,6 +51,7 @@ struct TauriEventPayload {
 }
 
 #[component]
+/// Dioxus `UpdaterPanel` component.
 pub fn UpdaterPanel() -> Element {
     let mut state = use_signal(|| UpdaterState::Idle);
 

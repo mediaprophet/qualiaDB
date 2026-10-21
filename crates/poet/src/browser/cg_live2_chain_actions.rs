@@ -130,6 +130,7 @@ fn points2(nums: &[f64], fallback: &[[f64; 2]]) -> Vec<serde_json::Value> {
 const SQUARE: [[f64; 2]; 4] = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
 const TRI: [[f64; 2]; 3] = [[0.0, 0.0], [1.0, 0.0], [0.5, 0.8]];
 
+/// Chain action: insphere.
 pub(super) fn run_insphere(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -147,6 +148,7 @@ pub(super) fn run_insphere(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: ham-sandwich-cut.
 pub(super) fn run_ham_sandwich_cut(document: &Document, label: &str) {
     let n = nums(document);
     let pts = points2(&n, &SQUARE);
@@ -168,6 +170,7 @@ pub(super) fn run_ham_sandwich_cut(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: smallest-enclosing-disk.
 pub(super) fn run_smallest_enclosing_disk(document: &Document, label: &str) {
     let pts = points2(&nums(document), &SQUARE);
     let seed = numeric_attr(selected_container(document).as_ref(), "data-seed")
@@ -193,6 +196,7 @@ fn run_poly_area(document: &Document, label: &str, cap: &'static str, sketch: &s
     );
 }
 
+/// Chain action: polygon-signed-area.
 pub(super) fn run_polygon_signed_area(document: &Document, label: &str) {
     run_poly_area(
         document,
@@ -202,6 +206,7 @@ pub(super) fn run_polygon_signed_area(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: polygon-area.
 pub(super) fn run_polygon_area(document: &Document, label: &str) {
     run_poly_area(
         document,
@@ -211,6 +216,7 @@ pub(super) fn run_polygon_area(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: point-in-polygon.
 pub(super) fn run_point_in_polygon(document: &Document, label: &str) {
     let n = nums(document);
     let point = pair2(&n, 0, [0.5, 0.5]);
@@ -224,6 +230,7 @@ pub(super) fn run_point_in_polygon(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: minkowski-sum-convex.
 pub(super) fn run_minkowski_sum_convex(document: &Document, label: &str) {
     let n = nums(document);
     let pts = points2(&n, &SQUARE);
@@ -242,6 +249,7 @@ pub(super) fn run_minkowski_sum_convex(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: nearest-segment-site.
 pub(super) fn run_nearest_segment_site(document: &Document, label: &str) {
     let n = nums(document);
     let q = pair2(&n, 0, [0.5, 0.5]);

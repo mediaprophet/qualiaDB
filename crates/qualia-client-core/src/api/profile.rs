@@ -4,11 +4,13 @@
 
 use super::*;
 
+/// Gets user-profile.
 pub fn get_user_profile() -> Result<serde_json::Value, String> {
     let profile = crate::user_profile::load_profile();
     serde_json::to_value(profile).map_err(|e| e.to_string())
 }
 
+/// Saves user-profile.
 pub fn save_user_profile(profile_json: String) -> Result<serde_json::Value, String> {
     // People tab (and other callers) may send a *partial* profile JSON — e.g. only
     // `display_name` + `sharing.allow_group_chat_invites`. Full-struct deserialize used
@@ -22,16 +24,19 @@ pub fn save_user_profile(profile_json: String) -> Result<serde_json::Value, Stri
     serde_json::to_value(profile).map_err(|e| e.to_string())
 }
 
+/// Generates a connect invite.
 pub fn generate_connect_invite(front_door_id: Option<String>) -> Result<serde_json::Value, String> {
     let invite = crate::social_connect::generate_connect_invite(front_door_id)?;
     serde_json::to_value(invite).map_err(|e| e.to_string())
 }
 
+/// Accepts a connect invite.
 pub fn accept_connect_invite(input: String) -> Result<serde_json::Value, String> {
     let contact = crate::social_connect::accept_connect_invite(&input)?;
     serde_json::to_value(contact).map_err(|e| e.to_string())
 }
 
+/// Lists chat contacts.
 pub fn list_chat_contacts() -> Result<serde_json::Value, String> {
     let contacts = crate::social_connect::list_chat_contacts();
     serde_json::to_value(contacts).map_err(|e| e.to_string())

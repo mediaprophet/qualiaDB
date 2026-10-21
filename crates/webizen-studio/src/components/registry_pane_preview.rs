@@ -12,6 +12,7 @@ const WRAP: &str = "height:100%;min-height:100px;padding:14px;border-radius:12px
 const INPUT: &str = "width:100%;box-sizing:border-box;background:#081222;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:9px 10px;";
 
 #[component]
+/// Dioxus `RegistryPanePreview` component.
 pub fn RegistryPanePreview(element_tag: String) -> Element {
     let mut checked = use_signal(|| true);
     let mut range = use_signal(|| 62_i32);

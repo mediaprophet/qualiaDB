@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `CryptographyQapp` component.
 pub fn CryptographyQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -55,6 +55,7 @@ enum Commands {
 }
 
 #[tokio::main]
+/// CLI entry point.
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
@@ -75,6 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
+/// Lists registered extensions.
 async fn list_extensions() -> Result<(), Box<dyn std::error::Error>> {
     let mut manager = ExtensionManager::new();
 
@@ -121,6 +123,7 @@ async fn list_extensions() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Executes an extension job.
 async fn execute_job(
     extension: &str,
     operation: &str,
@@ -196,6 +199,7 @@ async fn execute_job(
     Ok(())
 }
 
+/// Checks extension status.
 async fn check_status() -> Result<(), Box<dyn std::error::Error>> {
     info!("Checking extensions daemon status");
 
@@ -227,6 +231,7 @@ async fn check_status() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Starts the extension daemon.
 async fn start_daemon(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting extensions daemon on port {}", port);
 
@@ -237,6 +242,7 @@ async fn start_daemon(port: u16) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// Tests an extension.
 async fn test_extension(extension: &str) -> Result<(), Box<dyn std::error::Error>> {
     info!("Testing extension: {}", extension);
 

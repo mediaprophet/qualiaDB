@@ -263,6 +263,7 @@ fn persist_construct_id(id: &str) {
     storage_set(CONSTRUCT_STORAGE_KEY, id);
 }
 
+/// Persists construct extras.
 pub(crate) fn persist_construct_extras() {
     CONSTRUCT_EXTRAS.with(|slot| {
         if let Ok(json) = serde_json::to_string(&*slot.borrow()) {
@@ -279,6 +280,7 @@ fn load_construct_extras() {
     }
 }
 
+/// Persists subjects.
 pub(crate) fn persist_subjects() {
     SUBJECTS.with(|slot| {
         if let Ok(json) = serde_json::to_string(&*slot.borrow()) {
@@ -295,10 +297,12 @@ fn load_subjects() {
     }
 }
 
+/// Declared subjects.
 pub fn declared_subjects() -> Vec<SubjectSeed> {
     SUBJECTS.with(|slot| slot.borrow().clone())
 }
 
+/// Registers subject.
 pub(crate) fn register_subject(seed: SubjectSeed) {
     SUBJECTS.with(|slot| {
         let mut list = slot.borrow_mut();
@@ -311,14 +315,17 @@ pub(crate) fn register_subject(seed: SubjectSeed) {
     persist_subjects();
 }
 
+/// Current observer DID.
 pub fn current_observer_did() -> String {
     OBSERVER_DID.with(|slot| slot.borrow().clone())
 }
 
+/// Sets observer-did.
 pub fn set_observer_did(did: String) {
     OBSERVER_DID.with(|slot| *slot.borrow_mut() = did);
 }
 
+/// `true` when the current manifold is social.
 pub fn current_manifold_is_social() -> bool {
     let id = current_manifold_id();
     get_current_seeds()
@@ -328,6 +335,7 @@ pub fn current_manifold_is_social() -> bool {
         .unwrap_or(false)
 }
 
+/// Current participants.
 pub fn current_participants() -> Vec<ManifoldParticipant> {
     let id = current_manifold_id();
     get_current_seeds()
@@ -337,6 +345,7 @@ pub fn current_participants() -> Vec<ManifoldParticipant> {
         .unwrap_or_default()
 }
 
+/// Adds participant-to-current.
 pub(crate) fn add_participant_to_current(person: ManifoldParticipant) {
     let manifold_id = current_manifold_id();
     CURRENT_SEEDS.with(|slot| {
@@ -350,6 +359,7 @@ pub(crate) fn add_participant_to_current(person: ManifoldParticipant) {
     });
 }
 
+/// Binds the observer from the daemon.
 pub fn bind_observer_from_daemon() {
     if !native_daemon::is_daemon_connected() {
         return;
@@ -388,6 +398,7 @@ fn upgrade_bundled_sociality(seeds: &mut [ManifoldSeed]) {
     }
 }
 
+/// `current-manifold` id.
 pub fn current_manifold_id() -> String {
     CONSTRUCT_NAV.with(|slot| slot.borrow().current_manifold_id().to_string())
 }
@@ -415,6 +426,7 @@ pub fn visible_seeds() -> Vec<ManifoldSeed> {
         .collect()
 }
 
+/// Registers construct-manifold.
 pub fn register_construct_manifold(manifold_id: &str) {
     let construct_id = current_construct_id();
     if construct_id == "poet" {
@@ -479,6 +491,7 @@ pub fn replace_current_seed(seed: &ManifoldSeed) {
     });
 }
 
+/// Renames the current seed.
 pub fn rename_current_seed(id: &str, label: &str) {
     CURRENT_SEEDS.with(|slot| {
         if let Some(seed) = slot.borrow_mut().iter_mut().find(|seed| seed.id == id) {
@@ -553,6 +566,7 @@ pub fn pop_nested_to_depth(depth: usize) {
     }
 }
 
+/// Builds nav crumbs.
 pub fn construct_nav_crumbs() -> Vec<(String, String)> {
     CONSTRUCT_NAV.with(|slot| {
         slot.borrow()
@@ -563,6 +577,7 @@ pub fn construct_nav_crumbs() -> Vec<(String, String)> {
     })
 }
 
+/// Activates the manifold.
 pub fn activate_manifold(manifold_id: &str) {
     let seeds = get_current_seeds();
     switch_manifold(manifold_id, &seeds);
@@ -571,6 +586,7 @@ pub fn activate_manifold(manifold_id: &str) {
     }
 }
 
+/// `current-construct` id.
 pub fn current_construct_id() -> String {
     CURRENT_CONSTRUCT.with(|slot| slot.borrow().clone())
 }

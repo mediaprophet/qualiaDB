@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "hypermedia:toast-notify" => Some(trigger_toast(container)),

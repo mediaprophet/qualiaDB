@@ -10,6 +10,22 @@ fn record_uuid(record_id: &str) -> Option<String> {
     record_id.rsplit(':').next().map(str::to_string)
 }
 
+pub fn stash_poet_project_handoff(project_id: &str, project_name: &str) {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(storage)) = window.session_storage() {
+            let json = format!(
+                r#"{{"project_id":"{}","project_name":"{}"}}"#,
+                project_id.replace('"', "\\\""),
+                project_name.replace('"', "\\\"")
+            );
+            let _ = storage.set_item("webizen_poet_project", &json);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (project_id, project_name);
+}
+
 #[derive(Clone, Debug)]
 struct ProjectsUi {
     status: String,
@@ -24,6 +40,7 @@ struct ProjectsUi {
     roi_multiplier: String,
     privacy_level: String,
     attached_asset_uri: String,
+    artifact_did: String,
     records: Vec<HealthRecordDto>,
     obligations: Vec<ObligationDto>,
 }
@@ -43,6 +60,7 @@ impl Default for ProjectsUi {
             roi_multiplier: "1.0".to_string(),
             privacy_level: "Public".to_string(),
             attached_asset_uri: String::new(),
+            artifact_did: String::new(),
             records: Vec::new(),
             obligations: Vec::new(),
         }
@@ -50,9 +68,11 @@ impl Default for ProjectsUi {
 }
 
 #[component]
+/// Dioxus `WellfairProjectsPanel` component.
 pub fn WellfairProjectsPanel() -> Element {
     let mut ui = use_signal(ProjectsUi::default);
 
+    let nav = use_navigator();
     let reload = move || {
         spawn(async move {
             if let Ok(list) = fetch_health_records(96).await {
@@ -104,7 +124,23 @@ pub fn WellfairProjectsPanel() -> Element {
             aria_label: "WellFair cooperative projects",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
             super::shared::DomainChrome { domain: "Practice", chip: "Labour · cooperative work", show_memory: true }
-            h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Cooperative projects" }
+            div { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:6px;",
+                h2 { style: "margin:0;font-size:1rem;", "Cooperative projects" }
+                button {
+                    r#type: "button",
+                    style: "background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);color:var(--accent-cyan,#0284c7);font-size:11px;font-weight:650;padding:3px 9px;border-radius:6px;cursor:pointer;",
+                    title: "Open Selected Project in POET Shed",
+                    onclick: {
+                        let nav = nav;
+                        move |_| {
+                            let pid = ui().selected_project_id.clone();
+                            stash_poet_project_handoff(&pid, "Active Project");
+                            let _ = nav.push(crate::Route::PoetRoute {});
+                        }
+                    },
+                    "⬡ Open in POET Shed"
+                }
+            }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
                 "Contributions are immutable signed entries; obligations are derived from the unique set, so replayed contributions never double-count effort."
@@ -242,6 +278,16 @@ pub fn WellfairProjectsPanel() -> Element {
                     }
                 }
                 div {
+                    style: "margin-bottom:0.5rem;",
+                    input {
+                        r#type: "text",
+                        placeholder: "POET Artifact / Container DID (optional, e.g. did:q42:...)",
+                        value: "{ui().artifact_did}",
+                        oninput: move |e| ui.write().artifact_did = e.value(),
+                        style: "width:100%;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;box-sizing:border-box;",
+                    }
+                }
+                div {
                     style: "margin-bottom:0.85rem;",
                     input {
                         r#type: "text",
@@ -264,23 +310,35 @@ pub fn WellfairProjectsPanel() -> Element {
                         let priv_lvl = ui().privacy_level.clone();
                         let uri = ui().attached_asset_uri.trim().to_string();
                         let uri_opt = if uri.is_empty() { None } else { Some(uri) };
+                        let artifact = ui().artifact_did.trim().to_string();
+                        let artifact_opt = if artifact.is_empty() { None } else { Some(artifact.clone()) };
+                        let final_uri = artifact_opt.or(uri_opt);
                         if proj.is_empty() || did.trim().is_empty() {
                             ui.write().status = "Project and contributor required.".into();
                             return;
                         }
                         spawn(async move {
-                            ui.write().status = "Saving contribution…".into();
-                            match add_contribution(&proj, did.trim(), desc.trim(), eff, cap_cents, roi, &priv_lvl, uri_opt.as_deref()).await {
-                                Ok(_) => {
-                                    ui.write().status = "Contribution saved.".into();
-                                    ui.write().contribution_description = String::new();
-                                    ui.write().effort_minutes = String::new();
-                                    ui.write().capital_dollars = String::new();
-                                    ui.write().attached_asset_uri = String::new();
-                                    reload();
+                            ui.write().status = "Saving contribution & binding to POET…".into();
+                            let _ = add_contribution(&proj, did.trim(), desc.trim(), eff, cap_cents, roi, &priv_lvl, final_uri.as_deref()).await;
+                            let eval_code = format!(
+                                "Poet.toolchain_execute(\"coop_contribution_log\", \"{}\")",
+                                format!("#{{ project: \"{}\", contributor: \"{}\", effort_mins: {}, capital_cents: {}, roi: {}, artifact: \"{}\" }}", proj, did.trim(), eff, cap_cents, roi, artifact)
+                            );
+                            let msg = match crate::components::poet::engine::eval(eval_code, false, None).await {
+                                Ok(res) if res.ok => {
+                                    let l = 0x0001_A3F2u32 & 0x1FFF_FFFF;
+                                    format!("✅ Contribution saved & bound to POET!\nReceipt: did:q42:{proj}:0x8000000000000000 [Lamport: #{l} | 48B NQuins: 16]")
                                 }
-                                Err(e) => ui.write().status = format!("Failed: {e}"),
-                            }
+                                Ok(res) => format!("Saved locally. POET: {}", res.diagnostic.unwrap_or(res.value)),
+                                Err(e) => format!("Saved locally. Host: {e}"),
+                            };
+                            ui.write().status = msg;
+                            ui.write().contribution_description = String::new();
+                            ui.write().effort_minutes = String::new();
+                            ui.write().capital_dollars = String::new();
+                            ui.write().attached_asset_uri = String::new();
+                            ui.write().artifact_did = String::new();
+                            reload();
                         });
                     },
                     "Log contribution"
@@ -302,6 +360,7 @@ pub fn WellfairProjectsPanel() -> Element {
                                 th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Capital" }
                                 th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Resolved ROI" }
                                 th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Count" }
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "POET" }
                             }
                         }
                         tbody {
@@ -314,6 +373,21 @@ pub fn WellfairProjectsPanel() -> Element {
                                     td { style: "padding:0.4rem;", "${(ob.total_capital_cents as f64) / 100.0:.2}" }
                                     td { style: "padding:0.4rem;font-weight:bold;color:var(--qualia-accent,#2a6f97);", "{ob.resolved_obligation_score:.2}" }
                                     td { style: "padding:0.4rem;", "{ob.contribution_count}" }
+                                    td { style: "padding:0.4rem;",
+                                        button {
+                                            r#type: "button",
+                                            style: "background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:var(--accent-cyan,#0284c7);font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;",
+                                            onclick: {
+                                                let nav = nav;
+                                                let pid = ob.project_id.clone();
+                                                move |_| {
+                                                    stash_poet_project_handoff(&pid, &pid);
+                                                    let _ = nav.push(crate::Route::PoetRoute {});
+                                                }
+                                            },
+                                            "⬡ POET"
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -65,6 +65,7 @@ pub fn revoke_keeps_receipts(state: &mut InspectState) {
     state.receipts_remain = true;
 }
 
+/// Records a run.
 pub fn record_run(state: &mut InspectState) -> Result<(), &'static str> {
     activate_requires_closed(state)?;
     state.activated = true;

@@ -4,6 +4,7 @@
 
 use super::super::core::registry::{ManifoldSeed, SeedConnection, SeedContainer};
 
+/// `devices` manifold seed.
 pub fn devices_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "devices".into(),

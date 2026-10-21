@@ -3,6 +3,7 @@ use web_sys::{Document, Element};
 use super::super::super::cop_records::CopField;
 use super::ledger;
 
+/// Builds channel-strip-view.
 pub fn build_channel_strip_view(document: &Document) -> Element {
     ledger(
         document,
@@ -25,6 +26,7 @@ pub fn build_channel_strip_view(document: &Document) -> Element {
     )
 }
 
+/// Builds routing-matrix-view.
 pub fn build_routing_matrix_view(document: &Document) -> Element {
     ledger(
         document,
@@ -47,6 +49,7 @@ pub fn build_routing_matrix_view(document: &Document) -> Element {
     )
 }
 
+/// Builds meter-bridge-view.
 pub fn build_meter_bridge_view(document: &Document) -> Element {
     ledger(
         document,
@@ -69,6 +72,7 @@ pub fn build_meter_bridge_view(document: &Document) -> Element {
     )
 }
 
+/// Builds automation-lanes-view.
 pub fn build_automation_lanes_view(document: &Document) -> Element {
     ledger(
         document,
@@ -91,6 +95,7 @@ pub fn build_automation_lanes_view(document: &Document) -> Element {
     )
 }
 
+/// Builds spatial-audio-view.
 pub fn build_spatial_audio_view(document: &Document) -> Element {
     ledger(
         document,
@@ -113,6 +118,7 @@ pub fn build_spatial_audio_view(document: &Document) -> Element {
     )
 }
 
+/// Builds hrtf-personalization-view.
 pub fn build_hrtf_personalization_view(document: &Document) -> Element {
     ledger(
         document,
@@ -131,6 +137,7 @@ pub fn build_hrtf_personalization_view(document: &Document) -> Element {
     )
 }
 
+/// Builds manifold-transition-audio-view.
 pub fn build_manifold_transition_audio_view(document: &Document) -> Element {
     ledger(
         document,
@@ -153,6 +160,7 @@ pub fn build_manifold_transition_audio_view(document: &Document) -> Element {
     )
 }
 
+/// Builds desk-persistence-view.
 pub fn build_desk_persistence_view(document: &Document) -> Element {
     ledger(
         document,
@@ -171,6 +179,7 @@ pub fn build_desk_persistence_view(document: &Document) -> Element {
     )
 }
 
+/// Builds animation-timeline-view.
 pub fn build_animation_timeline_view(document: &Document) -> Element {
     ledger(
         document,
@@ -193,6 +202,7 @@ pub fn build_animation_timeline_view(document: &Document) -> Element {
     )
 }
 
+/// Builds animation-export-view.
 pub fn build_animation_export_view(document: &Document) -> Element {
     ledger(
         document,
@@ -215,6 +225,7 @@ pub fn build_animation_export_view(document: &Document) -> Element {
     )
 }
 
+/// Builds asset-library-view.
 pub fn build_asset_library_view(document: &Document) -> Element {
     ledger(
         document,

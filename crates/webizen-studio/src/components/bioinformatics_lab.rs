@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `BioinformaticsLab` component.
 pub fn BioinformaticsLab() -> Element {
     let mut sequence = use_signal(|| "ATCGATCGTACG".to_string());
 

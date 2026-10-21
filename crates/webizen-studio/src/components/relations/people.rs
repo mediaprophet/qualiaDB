@@ -14,6 +14,7 @@ fn text(value: &serde_json::Value, keys: &[&str]) -> String {
 }
 
 #[component]
+/// Dioxus `PeopleOverview` component.
 pub fn PeopleOverview() -> Element {
     let mut contacts = use_signal(Vec::<serde_json::Value>::new);
     let mut peers = use_signal(Vec::<serde_json::Value>::new);

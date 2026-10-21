@@ -68,6 +68,12 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         keywords: "practice work board projects",
     },
     PaletteDestination {
+        id: "wallet",
+        label: "Wallet & Commons",
+        hint: "Multi-chain sovereign wallet & SDN commons",
+        keywords: "wallet commerce chains crypto ada cardano bitcoin sdn permissive",
+    },
+    PaletteDestination {
         id: "instruments",
         label: "Instruments",
         hint: "Tools, vision, listen",
@@ -139,6 +145,7 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "care" | "wellfair" | "health" => Route::WellfairRoute {},
         "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
         "practice" | "work" | "board" => Route::WorkRoute {},
+        "wallet" | "commerce" => Route::WalletRoute {},
         "instruments" | "tools" => Route::ToolsRoute {},
         "sanctuary" | "vault" | "keep" => Route::SanctuaryRoute {},
         "10d-browser" | "10d" | "infosphere" => Route::TenDBrowserRoute {},

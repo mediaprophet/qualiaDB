@@ -7,6 +7,7 @@ mod cues_control_inspect;
 mod dmx_fixtures;
 mod lighting_projection;
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     static ROWS: OnceLock<Vec<SpecTool>> = OnceLock::new();
     ROWS.get_or_init(|| {

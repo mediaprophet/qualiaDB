@@ -17,6 +17,7 @@ use crate::browser::native_daemon::{
 };
 use crate::browser::surface_states;
 
+/// Builds medications-view.
 pub fn build_medications_view(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

@@ -12,6 +12,7 @@ fn resolve_storage_path(custom: Option<PathBuf>) -> PathBuf {
     custom.unwrap_or_else(|| PathBuf::from(qualia_client_core::state::dirs_default_path()))
 }
 
+/// Handles the subcommand action.
 pub fn handle(action: &AppAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         AppAction::List { storage } => {

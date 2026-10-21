@@ -131,6 +131,7 @@ pub struct HmcManifest {
 }
 
 impl HmcManifest {
+    /// Creates a new instance.
     pub fn new(source: SourceInfo) -> Self {
         let doc_id = source.blake3.clone();
         HmcManifest {

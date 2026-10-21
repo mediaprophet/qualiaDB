@@ -24,6 +24,7 @@ pub enum ThemePreset {
 }
 
 impl ThemePreset {
+    /// `ThemePreset::id`.
     pub fn id(self) -> &'static str {
         match self {
             Self::FiduciaryDark => "fiduciary-dark",
@@ -36,6 +37,7 @@ impl ThemePreset {
         }
     }
 
+    /// UI label.
     pub fn label(self) -> &'static str {
         match self {
             Self::FiduciaryDark => "Fiduciary Dark",
@@ -48,6 +50,7 @@ impl ThemePreset {
         }
     }
 
+    /// All variants.
     pub fn all() -> &'static [ThemePreset] {
         &[
             Self::FiduciaryDark,
@@ -77,6 +80,7 @@ pub enum PresentationLevel {
 }
 
 impl PresentationLevel {
+    /// `PresentationLevel::id`.
     pub fn id(self) -> &'static str {
         match self {
             Self::P0 => "P0",
@@ -105,6 +109,7 @@ pub enum SpatialGrammar {
 }
 
 impl SpatialGrammar {
+    /// `SpatialGrammar::id`.
     pub fn id(self) -> &'static str {
         match self {
             Self::List => "list",

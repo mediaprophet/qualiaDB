@@ -7,6 +7,7 @@ from rdflib import Graph
 
 
 def merge_domain(domain_dir: Path, out_nt: Path) -> int:
+    """Merges domain."""
     g = Graph()
     count = 0
     for rdf in sorted(domain_dir.rglob("*.rdf")):

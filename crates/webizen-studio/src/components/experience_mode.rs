@@ -16,6 +16,7 @@ pub enum ExperienceMode {
 }
 
 impl ExperienceMode {
+    /// Reads/writes the persisted storage value.
     pub const fn storage_value(self) -> &'static str {
         match self {
             Self::Naturalised => "naturalised",
@@ -23,11 +24,13 @@ impl ExperienceMode {
         }
     }
 
+    /// `true` when advanced.
     pub const fn is_advanced(self) -> bool {
         matches!(self, Self::AdvancedTechnical)
     }
 }
 
+/// Initial experience mode.
 pub fn initial_experience_mode() -> ExperienceMode {
     #[cfg(target_arch = "wasm32")]
     {
@@ -44,6 +47,7 @@ pub fn initial_experience_mode() -> ExperienceMode {
     ExperienceMode::Naturalised
 }
 
+/// Persists the experience mode.
 pub fn persist_experience_mode(mode: ExperienceMode) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -57,11 +61,13 @@ pub fn persist_experience_mode(mode: ExperienceMode) {
     let _ = mode;
 }
 
+/// Consumes the experience-mode signal/context.
 pub fn use_experience_mode() -> Signal<ExperienceMode> {
     consume_context::<Signal<ExperienceMode>>()
 }
 
 #[component]
+/// Dioxus `ExperienceModeSwitch` component.
 pub fn ExperienceModeSwitch() -> Element {
     let mut mode = use_experience_mode();
     let current = mode();

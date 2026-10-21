@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `IntegralStudiesQapp` component.
 pub fn IntegralStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

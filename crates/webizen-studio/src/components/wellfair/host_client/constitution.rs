@@ -22,11 +22,13 @@ pub async fn get_body_constitution() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Gets body-constitution.
 pub async fn get_body_constitution() -> Result<serde_json::Value, String> {
     Err("Body constitution requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets body-constitution.
 pub async fn set_body_constitution(constitution_json: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -44,11 +46,13 @@ pub async fn set_body_constitution(constitution_json: &str) -> Result<serde_json
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets body-constitution.
 pub async fn set_body_constitution(_constitution_json: &str) -> Result<serde_json::Value, String> {
     Err("Body constitution requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Resets body-constitution.
 pub async fn reset_body_constitution() -> Result<(), String> {
     tauri_invoke(
         "wellfair_reset_body_constitution",
@@ -59,6 +63,7 @@ pub async fn reset_body_constitution() -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Resets body-constitution.
 pub async fn reset_body_constitution() -> Result<(), String> {
     Err("Body constitution requires the Tauri desktop host".into())
 }

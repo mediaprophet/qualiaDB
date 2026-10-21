@@ -12,6 +12,7 @@ use web_sys::{
     MouseEvent,
 };
 
+/// Builds deontic-panel.
 pub(super) fn build_deontic_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "deontic", true);
 
@@ -89,6 +90,7 @@ pub(super) fn build_deontic_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires the deontic editor.
 pub(super) fn wire_deontic_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("deontic-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -110,6 +112,7 @@ pub(super) fn wire_deontic_editor(document: &Document) {
     }
 }
 
+/// Builds n3-panel.
 pub(super) fn build_n3_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "n3", false);
 
@@ -169,6 +172,7 @@ pub(super) fn build_n3_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires the N3 editor.
 pub(super) fn wire_n3_editor(document: &Document) {
     if let Some(btn) = document.get_element_by_id("n3-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -210,6 +214,7 @@ pub(super) fn wire_n3_editor(document: &Document) {
     }
 }
 
+/// Builds shacl-panel.
 pub(super) fn build_shacl_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "shacl", false);
 
@@ -324,6 +329,7 @@ pub(super) fn build_shacl_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires the SHACL validator.
 pub(super) fn wire_shacl_validator(document: &Document) {
     if let Some(add_btn) = document.get_element_by_id("shacl-add-constraint") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

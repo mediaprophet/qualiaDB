@@ -21,6 +21,7 @@ pub struct WasmProfile {
     pub q42_v3_loadable: bool,
 }
 
+/// WASM profile.
 pub fn wasm_profile() -> WasmProfile {
     WasmProfile {
         n3_inspectable: true,
@@ -29,6 +30,7 @@ pub fn wasm_profile() -> WasmProfile {
     }
 }
 
+/// `q42-v3` status.
 pub fn q42_v3_status() -> &'static str {
     WASM_Q42_HELD
 }

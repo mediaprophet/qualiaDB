@@ -9,6 +9,7 @@ use web_sys::{Document, Element};
 const HEAVY_MESH_MSG: &str =
     "Mesh editing and file import/export need the native geometry pipeline; not on this surface.";
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<bool, String>> {
     Some(match tool_id {
         "spatial:add-node" => ok_true(add_node(document, container)),
@@ -39,6 +40,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     })
 }
 
+/// Cycles to the next clear-colour.
 pub(crate) fn next_clear_colour(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("#0f172a") => "#1e293b",
@@ -49,6 +51,7 @@ pub(crate) fn next_clear_colour(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next post-process.
 pub(crate) fn next_post_process(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("none") => "bloom",
@@ -59,6 +62,7 @@ pub(crate) fn next_post_process(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next layout-mode.
 pub(crate) fn next_layout_mode(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("grid") => "ring",

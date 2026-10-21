@@ -150,6 +150,7 @@ pub fn index_root(root: &Path) -> Result<WorkGraph, IndexError> {
     })
 }
 
+/// `default-out` directory.
 pub fn default_out_dir(root: &Path) -> PathBuf {
     root.join(DEFAULT_OUT_REL)
 }

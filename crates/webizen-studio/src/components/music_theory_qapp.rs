@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MusicTheoryQapp` component.
 pub fn MusicTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

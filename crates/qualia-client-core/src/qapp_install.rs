@@ -122,10 +122,12 @@ impl From<io::Error> for QappInstallError {
     }
 }
 
+/// Package ID from a manifest.
 pub fn package_id_from_manifest(manifest: &QappPackageManifest) -> String {
     manifest.name.trim().to_string()
 }
 
+/// Validates a package ID.
 pub fn validate_package_id(package_id: &str) -> Result<(), QappInstallError> {
     if package_id.is_empty() {
         return Err(QappInstallError::InvalidPackageId("empty".into()));
@@ -168,6 +170,7 @@ fn staging_root(storage: &Path) -> PathBuf {
     qapps_dir(storage).join(".staging")
 }
 
+/// Loads install-registry.
 pub fn load_install_registry(storage: &Path) -> Result<QappInstallRegistry, QappInstallError> {
     let path = registry_path(storage);
     if !path.is_file() {
@@ -178,6 +181,7 @@ pub fn load_install_registry(storage: &Path) -> Result<QappInstallRegistry, Qapp
     serde_json::from_str(&content).map_err(|e| QappInstallError::RegistryCorrupt(e.to_string()))
 }
 
+/// Saves install-registry.
 pub fn save_install_registry(
     storage: &Path,
     registry: &QappInstallRegistry,
@@ -192,6 +196,7 @@ pub fn save_install_registry(
     Ok(())
 }
 
+/// Resolves the active package dir.
 pub fn resolve_active_package_dir(storage: &Path, package_id: &str) -> PathBuf {
     let active = active_package_dir(storage, package_id);
     if active.join(QAPP_PACKAGE_MANIFEST).is_file() {
@@ -200,6 +205,7 @@ pub fn resolve_active_package_dir(storage: &Path, package_id: &str) -> PathBuf {
     active
 }
 
+/// `true` when package-revoked.
 pub fn is_package_revoked(storage: &Path, package_id: &str) -> bool {
     load_install_registry(storage)
         .ok()
@@ -530,6 +536,7 @@ pub fn install_package_atomic(
     install_result
 }
 
+/// Revokes a package.
 pub fn revoke_package(storage: &Path, package_id: &str) -> Result<(), QappInstallError> {
     validate_package_id(package_id)?;
     let mut registry = load_install_registry(storage)?;
@@ -541,6 +548,7 @@ pub fn revoke_package(storage: &Path, package_id: &str) -> Result<(), QappInstal
     save_install_registry(storage, &registry)
 }
 
+/// Lists registry entries.
 pub fn list_registry_entries(storage: &Path) -> Result<Vec<QappRegistryEntry>, QappInstallError> {
     Ok(load_install_registry(storage)?
         .packages
@@ -548,6 +556,7 @@ pub fn list_registry_entries(storage: &Path) -> Result<Vec<QappRegistryEntry>, Q
         .collect())
 }
 
+/// Reconciles the registry with disk.
 pub fn reconcile_registry_with_disk(
     storage: &Path,
 ) -> Result<QappInstallRegistry, QappInstallError> {

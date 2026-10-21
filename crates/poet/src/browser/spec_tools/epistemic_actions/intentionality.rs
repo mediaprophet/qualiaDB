@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:assess-intentionality" => Some(assess_intentionality(container)),
@@ -14,6 +15,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next intentionality-type.
 pub(crate) fn next_intentionality_type(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("deliberate") => "intentional",
@@ -29,6 +31,7 @@ pub(crate) fn next_intentionality_type(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next mistake-type.
 pub(crate) fn next_mistake_type(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("false-belief") => "skill-deficit",

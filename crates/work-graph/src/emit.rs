@@ -11,6 +11,7 @@ pub const RDF_TYPE: &str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>";
 pub const NQ_NAME: &str = "impl-graph.nq";
 pub const JSON_NAME: &str = "impl-graph.json";
 
+/// Writes emit.
 pub fn write_emit(
     graph: &WorkGraph,
     out_dir: &Path,
@@ -23,6 +24,7 @@ pub fn write_emit(
     Ok((nq_path, json_path))
 }
 
+/// Converts to nquads.
 pub fn to_nquads(graph: &WorkGraph) -> String {
     let mut out = String::new();
     let project = iri("project");
@@ -131,6 +133,7 @@ pub fn to_nquads(graph: &WorkGraph) -> String {
     out
 }
 
+/// JSON form.
 pub fn to_json(graph: &WorkGraph) -> String {
     let mut w = Vec::new();
     let _ = write_json(&mut w, graph);

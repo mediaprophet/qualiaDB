@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `StructuralismQapp` component.
 pub fn StructuralismQapp() -> Element {
     rsx! {
         QAppEngine {

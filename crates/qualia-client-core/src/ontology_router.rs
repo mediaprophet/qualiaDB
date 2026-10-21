@@ -18,6 +18,7 @@ pub struct OntologyRoutingDecision {
     pub routing_brief: String,
 }
 
+/// Routes a prompt to ontologies.
 pub fn route_prompt_to_ontologies(env: &ChatEnvironment, prompt: &str) -> OntologyRoutingDecision {
     route_prompt_with_focus(env, prompt, &[])
 }

@@ -240,6 +240,7 @@ fn parse_nt_line(line: &str) -> Option<(&str, &str, &str)> {
     Some((s, p, o))
 }
 
+/// Ingests a checkpoint.
 pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let reader = File::open(input)?;
     let temp_dir = std::env::temp_dir().join("qualia_sort_chk");
@@ -259,6 +260,7 @@ pub fn ingest_chk(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
     })
 }
 
+/// Ingests CBOR.
 pub fn ingest_cbor(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
     let file = File::open(input)?;
     let file_size = file.metadata()?.len();
@@ -530,6 +532,7 @@ stream_ingest!(
     "qualia_sort_jsonld"
 );
 
+/// Ingests JSON-LD*.
 pub fn ingest_json_ld_star(
     input: &Path,
     output: &Path,

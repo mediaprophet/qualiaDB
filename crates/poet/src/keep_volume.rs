@@ -18,6 +18,7 @@ pub struct RecentVolume {
     pub sayable: String,
 }
 
+/// `sayable` name.
 pub fn sayable_name(path: &str) -> String {
     let file = path.rsplit(['/', '\\']).next().unwrap_or(path).trim();
     let stem = file
@@ -33,6 +34,7 @@ pub fn sayable_name(path: &str) -> String {
     }
 }
 
+/// Sanitizes the held-reason.
 pub fn sanitize_held_why(raw: &str) -> String {
     let folded = raw.to_ascii_lowercase();
     if raw.trim().is_empty()
@@ -48,6 +50,7 @@ pub fn sanitize_held_why(raw: &str) -> String {
     }
 }
 
+/// Copy flag: avoids unavailable.
 pub fn copy_avoids_unavailable(text: &str) -> bool {
     !text.to_ascii_lowercase().contains("unavailable")
 }
@@ -57,6 +60,7 @@ pub fn celebrate_commit(ok: bool, written: u64) -> bool {
     ok && written > 0
 }
 
+/// Parses u64-field.
 pub fn parse_u64_field(src: &str, key: &str) -> u64 {
     let patterns = [
         format!("{key}: "),
@@ -76,6 +80,7 @@ pub fn parse_u64_field(src: &str, key: &str) -> u64 {
     0
 }
 
+/// Remembers a recent item.
 pub fn remember_recent(recents: &[RecentVolume], path: &str) -> Vec<RecentVolume> {
     let path = path.trim();
     if path.is_empty() {
@@ -96,6 +101,7 @@ pub fn remember_recent(recents: &[RecentVolume], path: &str) -> Vec<RecentVolume
     out
 }
 
+/// Parses recents-json.
 pub fn parse_recents_json(raw: &str) -> Vec<RecentVolume> {
     serde_json::from_str::<Vec<RecentVolume>>(raw)
         .unwrap_or_default()
@@ -111,6 +117,7 @@ pub fn parse_recents_json(raw: &str) -> Vec<RecentVolume> {
         .collect()
 }
 
+/// Recents as JSON.
 pub fn recents_json(recents: &[RecentVolume]) -> String {
     serde_json::to_string(recents).unwrap_or_else(|_| "[]".into())
 }

@@ -9,6 +9,7 @@ use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `WellfairMedicationPanel` component.
 pub fn WellfairMedicationPanel() -> Element {
     let mut med_name = use_signal(String::new);
     let mut med_dose = use_signal(|| "1 tablet".to_string());

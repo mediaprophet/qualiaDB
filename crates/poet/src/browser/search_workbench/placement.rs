@@ -3,6 +3,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, HtmlElement, HtmlInputElement, HtmlTextAreaElement};
 
+/// Places query-container.
 pub(super) fn place_query_container(document: &Document) {
     // Get the current SPARQL query
     let query = document
@@ -20,6 +21,7 @@ pub(super) fn place_query_container(document: &Document) {
     place_query_container_on_canvas(document, &name, &query);
 }
 
+/// Places named-query-container.
 pub(super) fn place_named_query_container(document: &Document, query: &super::persist::SavedQuery) {
     place_query_container_on_canvas(document, &query.name, &query.query);
     // Close the workbench
@@ -29,6 +31,7 @@ pub(super) fn place_named_query_container(document: &Document, query: &super::pe
     }
 }
 
+/// Places query-container-on-canvas.
 pub(super) fn place_query_container_on_canvas(document: &Document, name: &str, query: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 

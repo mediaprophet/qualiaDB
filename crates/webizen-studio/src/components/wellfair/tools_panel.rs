@@ -12,6 +12,7 @@ struct ImportUiState {
 }
 
 #[component]
+/// Dioxus `WellfairToolsPanel` component.
 pub fn WellfairToolsPanel() -> Element {
     let mut state = use_signal(ImportUiState::default);
 

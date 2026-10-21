@@ -9,6 +9,7 @@ use crate::tool_chest::core::tool::ToolKind;
 const T: &str = "office";
 const TL: &str = "Writing";
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     static ROWS: &[SpecTool] = &[
         row(

@@ -253,6 +253,7 @@ const CONFLICTS: &[(&str, &str, &str, &str)] = &[
     ),
 ];
 
+/// Builds agreement-builder-view.
 pub fn build_agreement_builder_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

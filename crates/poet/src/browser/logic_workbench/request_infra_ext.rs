@@ -7,6 +7,7 @@ use super::request_parse::{
 };
 use web_sys::Document;
 
+/// Infra-ext request.
 pub(super) fn infra_ext_request(
     document: &Document,
     mode: &str,

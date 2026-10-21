@@ -71,10 +71,12 @@ impl Default for UserProfile {
     }
 }
 
+/// Profile path.
 pub fn profile_path() -> PathBuf {
     crate::state::app_meta_dir().join("profile.json")
 }
 
+/// Loads profile.
 pub fn load_profile() -> UserProfile {
     let path = profile_path();
     if let Ok(text) = fs::read_to_string(&path) {
@@ -92,6 +94,7 @@ pub fn load_profile() -> UserProfile {
     profile
 }
 
+/// Saves profile.
 pub fn save_profile(profile: &UserProfile) -> Result<(), String> {
     let path = profile_path();
     if let Some(parent) = path.parent() {
@@ -192,6 +195,7 @@ fn apply_sharing_patch(
     Ok(())
 }
 
+/// Resolves the public DID.
 pub fn resolve_public_did(profile: &UserProfile) -> String {
     let state = match crate::state::APP_STATE.get() {
         Some(s) => s,
@@ -216,6 +220,7 @@ pub fn resolve_public_did(profile: &UserProfile) -> String {
     format!("did:qualia:root:{pub_hex}")
 }
 
+/// Public profile card.
 pub fn public_profile_card(profile: &UserProfile) -> serde_json::Value {
     let mut card = serde_json::json!({
         "version": 1,

@@ -24,6 +24,7 @@ pub enum FileVisibility {
 }
 
 impl FileVisibility {
+    /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
             FileVisibility::OwnerOnly => "owner_only",
@@ -33,6 +34,7 @@ impl FileVisibility {
         }
     }
 
+    /// Constructs from str.
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s {
             "owner_only" => Ok(FileVisibility::OwnerOnly),
@@ -72,6 +74,7 @@ impl Default for ChatFileSharing {
     }
 }
 
+/// Default sharing for a session.
 pub fn default_sharing_for_session(kind: SessionKind) -> ChatFileSharing {
     match kind {
         SessionKind::Solo => ChatFileSharing {
@@ -238,18 +241,22 @@ fn mime_for_extension(ext: &str) -> &'static str {
     }
 }
 
+/// `true` when image-extension.
 pub fn is_image_extension(ext: &str) -> bool {
     matches!(ext, "png" | "jpg" | "jpeg" | "webp" | "gif")
 }
 
+/// `true` when image-record.
 pub fn is_image_record(record: &ChatFileRecord) -> bool {
     record.media_kind == MediaKind::Image || is_image_extension(&record.extension)
 }
 
+/// Parses document-bytes.
 pub fn parse_document_bytes(name: &str, bytes: &[u8]) -> ParsedDocument {
     parse_document_bytes_with_dir(name, bytes, None)
 }
 
+/// Parses document-bytes-with-dir.
 pub fn parse_document_bytes_with_dir(
     name: &str,
     bytes: &[u8],
@@ -512,6 +519,7 @@ fn session_participant_dids(storage_root: &Path, session_id: &str) -> Vec<String
         .collect()
 }
 
+/// `true` when able to view-file.
 pub fn can_view_file(
     record: &ChatFileRecord,
     viewer_did: &str,
@@ -536,6 +544,7 @@ pub fn can_view_file(
     }
 }
 
+/// `true` when able to use-in-llm-context.
 pub fn can_use_in_llm_context(
     record: &ChatFileRecord,
     viewer_did: &str,
@@ -544,6 +553,7 @@ pub fn can_use_in_llm_context(
     record.sharing.allow_llm_context && can_view_file(record, viewer_did, participants)
 }
 
+/// Attaches a file to a chat.
 pub fn attach_chat_file(
     storage_root: &Path,
     session_id: &str,
@@ -741,6 +751,7 @@ fn append_file_wal_quin(
     Ok(())
 }
 
+/// Sets chat-file-sharing.
 pub fn set_chat_file_sharing(
     storage_root: &Path,
     session_id: &str,
@@ -766,6 +777,7 @@ pub fn set_chat_file_sharing(
     Ok(updated)
 }
 
+/// Lists chat files.
 pub fn list_chat_files(
     storage_root: &Path,
     session_id: &str,
@@ -782,6 +794,7 @@ pub fn list_chat_files(
         .collect())
 }
 
+/// Reads a chat file as text.
 pub fn read_file_text(
     storage_root: &Path,
     session_id: &str,
@@ -806,6 +819,7 @@ pub fn read_file_text(
     fs::read_to_string(text_path).map_err(|e| e.to_string())
 }
 
+/// Builds chat-files-context-block.
 pub fn build_chat_files_context_block(
     storage_root: &Path,
     session_id: &str,
@@ -885,6 +899,7 @@ pub fn build_chat_files_context_block(
     lines.join("\n")
 }
 
+/// Resolves a chat file path.
 pub fn resolve_chat_file_path(
     storage_root: &Path,
     session_id: &str,

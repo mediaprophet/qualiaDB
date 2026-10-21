@@ -66,6 +66,7 @@ struct McpServiceRecord {
     qpu_enabled: bool,
 }
 
+/// Handles the subcommand action.
 pub async fn handle(action: &McpAction, qpu_enabled: bool) {
     match action {
         McpAction::Serve {
@@ -85,7 +86,7 @@ pub async fn handle(action: &McpAction, qpu_enabled: bool) {
             }
             match transport {
                 McpTransport::Stdio => {
-                    qualia_core_db::mcp_server::start_mcp_listener_with_flags(qpu_enabled, true)
+                    let _ = qualia_mcp::start_mcp_listener_with_flags(qpu_enabled, true)
                         .await;
                 }
                 McpTransport::Tcp => {
@@ -179,6 +180,11 @@ async fn handle_tcp_client(stream: TokioTcpStream, qpu_enabled: bool) {
     let (reader_half, mut writer_half) = stream.into_split();
     let mut reader = TokioBufReader::new(reader_half);
     let mut line = String::new();
+    let intent = qualia_mcp::McpIntentFrame {
+        qpu_enabled,
+        llm_enabled: true,
+        ..Default::default()
+    };
 
     loop {
         line.clear();
@@ -190,7 +196,7 @@ async fn handle_tcp_client(stream: TokioTcpStream, qpu_enabled: bool) {
                     continue;
                 }
                 if let Some(reply) =
-                    qualia_core_db::mcp_server::handle_jsonrpc_message(request, qpu_enabled, true)
+                    qualia_mcp::process_jsonrpc_message(request, &intent)
                 {
                     let _ = writer_half.write_all(reply.as_bytes()).await;
                     let _ = writer_half.write_all(b"\n").await;
@@ -201,6 +207,7 @@ async fn handle_tcp_client(stream: TokioTcpStream, qpu_enabled: bool) {
     }
 }
 
+/// Starts in the background.
 pub fn start_background(bind: &str, qpu_enabled: bool, force: bool) -> Result<(), String> {
     ensure_runtime_dir()?;
 
@@ -325,6 +332,7 @@ fn spawn_detached_service_portable(bind: &str, qpu_enabled: bool) -> Result<Opti
     Ok(Some(child.id()))
 }
 
+/// Stops the background service.
 pub fn stop_background() -> Result<(), String> {
     let Some(record) = read_service_record()? else {
         println!("MCP service is not running.");
@@ -368,6 +376,7 @@ pub fn stop_background() -> Result<(), String> {
     Ok(())
 }
 
+/// Prints status.
 pub fn print_status() -> Result<(), String> {
     let Some(record) = read_service_record()? else {
         println!("stopped");
@@ -396,6 +405,7 @@ pub fn print_status() -> Result<(), String> {
     Ok(())
 }
 
+/// Prints diagnostics.
 pub fn print_doctor() -> Result<(), String> {
     println!("MCP doctor");
     println!("  foreground stdio : qualia-cli mcp serve");

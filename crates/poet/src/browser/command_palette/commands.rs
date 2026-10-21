@@ -6,6 +6,7 @@ pub(super) struct CommandEntry {
     pub shortcut: &'static str,
 }
 
+/// Builds command-list.
 pub(super) fn build_command_list() -> Vec<CommandEntry> {
     vec![
         CommandEntry {

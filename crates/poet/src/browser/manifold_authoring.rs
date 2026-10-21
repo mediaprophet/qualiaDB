@@ -292,6 +292,7 @@ pub fn create_manifold(spec: &ManifoldCreate) -> String {
     manifold_id
 }
 
+/// Invites a participant.
 pub fn invite_participant(spec: &ParticipantInvite) {
     let manifold_id = super::current_manifold_id();
     let person = crate::tool_chest::core::ManifoldParticipant {
@@ -317,6 +318,7 @@ pub fn invite_participant(spec: &ParticipantInvite) {
     persist_authored();
 }
 
+/// Places a container.
 pub fn place_container(spec: &ContainerPlace) -> String {
     let container = SeedContainer {
         id: super::canvas_state::next_container_id(&spec.container_type),
@@ -335,6 +337,7 @@ pub fn place_container(spec: &ContainerPlace) -> String {
     id
 }
 
+/// Places a nested link.
 pub fn place_nested_link(spec: &NestedLink) -> String {
     let is_construct = !spec.target_construct.is_empty();
     let container_type = if is_construct {
@@ -361,6 +364,7 @@ pub fn place_nested_link(spec: &NestedLink) -> String {
     id
 }
 
+/// Declares a subject.
 pub fn declare_subject(spec: &SubjectDeclare) -> String {
     let id = format!(
         "subject-{}",
@@ -487,6 +491,7 @@ pub fn open_authoring_dialog(document: &Document) {
     open_authoring_dialog_kind(document, "lens");
 }
 
+/// Opens authoring-dialog-kind.
 pub fn open_authoring_dialog_kind(document: &Document, kind: &str) {
     if let Some(existing) = document.get_element_by_id("manifold-authoring-dialog") {
         existing.remove();

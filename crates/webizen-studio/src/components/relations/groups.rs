@@ -10,6 +10,7 @@ fn value_text(value: &serde_json::Value, key: &str) -> String {
 }
 
 #[component]
+/// Dioxus `GroupsOverview` component.
 pub fn GroupsOverview() -> Element {
     let mut sessions = use_signal(Vec::<serde_json::Value>::new);
     let mut projects = use_signal(Vec::<serde_json::Value>::new);

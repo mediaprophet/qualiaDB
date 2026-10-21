@@ -7,6 +7,7 @@ use web_sys::{Document, Element, HtmlElement};
 
 use crate::browser::cml_document::CmlDocument;
 
+/// Builds doc-view.
 pub fn build_doc_view(document: &Document) -> Element {
     let cml_doc = CmlDocument::default();
     let report = cml_doc.validate_shacl();

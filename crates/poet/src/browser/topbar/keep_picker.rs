@@ -8,6 +8,7 @@ use crate::keep_volume::{
     parse_recents_json, recents_json, remember_recent, sayable_name, HELD_WHY, RECENT_STORAGE_KEY,
 };
 
+/// Mounts the volume browser.
 pub fn mount_volume_browse(document: &Document, panel: &Element) {
     let recents = load_recents();
 
@@ -124,6 +125,7 @@ pub fn mount_volume_browse(document: &Document, panel: &Element) {
     panel.append_child(&vol_div).unwrap();
 }
 
+/// Selected path.
 pub fn selected_path(document: &Document) -> String {
     document
         .get_element_by_id("save-volume-path")
@@ -134,6 +136,7 @@ pub fn selected_path(document: &Document) -> String {
         .to_string()
 }
 
+/// Remembers the path.
 pub fn remember_path(path: &str) {
     let path = path.trim();
     if path.is_empty() {

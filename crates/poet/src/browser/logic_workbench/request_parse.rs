@@ -1,5 +1,6 @@
 //! Small, validated parsers for the Logic Workbench's text-oriented panels.
 
+/// Call arguments.
 pub(super) fn call_arguments(source: &str, call: &str) -> Option<Vec<String>> {
     let marker = format!("{call}(");
     let start = source.find(&marker)? + marker.len();
@@ -13,6 +14,7 @@ pub(super) fn call_arguments(source: &str, call: &str) -> Option<Vec<String>> {
     (!values.is_empty()).then_some(values)
 }
 
+/// Assignment.
 pub(super) fn assignment<'a>(source: &'a str, key: &str) -> Option<&'a str> {
     let marker = format!("{key}=");
     let start = source.match_indices(&marker).find_map(|(index, _)| {
@@ -29,12 +31,14 @@ pub(super) fn assignment<'a>(source: &'a str, key: &str) -> Option<&'a str> {
     (!value.is_empty()).then_some(value)
 }
 
+/// Required assignment.
 pub(super) fn required_assignment(source: &str, key: &str) -> Result<String, String> {
     assignment(source, key)
         .map(str::to_string)
         .ok_or_else(|| format!("Enter `{key}=...` in the panel input."))
 }
 
+/// Required f64.
 pub(super) fn required_f64(source: &str, key: &str) -> Result<f64, String> {
     let value = required_assignment(source, key)?;
     value
@@ -48,12 +52,14 @@ pub(super) fn required_f64(source: &str, key: &str) -> Result<f64, String> {
         })
 }
 
+/// Optional f64.
 pub(super) fn optional_f64(source: &str, key: &str) -> Result<Option<f64>, String> {
     assignment(source, key)
         .map(|_| required_f64(source, key))
         .transpose()
 }
 
+/// Optional f64 aliases.
 pub(super) fn optional_f64_aliases(source: &str, keys: &[&str]) -> Result<Option<f64>, String> {
     for key in keys {
         if assignment(source, key).is_some() {
@@ -63,6 +69,7 @@ pub(super) fn optional_f64_aliases(source: &str, keys: &[&str]) -> Result<Option
     Ok(None)
 }
 
+/// Optional u64.
 pub(super) fn optional_u64(source: &str, key: &str) -> Result<Option<u64>, String> {
     let Some(value) = assignment(source, key) else {
         return Ok(None);
@@ -73,6 +80,7 @@ pub(super) fn optional_u64(source: &str, key: &str) -> Result<Option<u64>, Strin
         .map_err(|_| format!("`{key}` must be a non-negative integer."))
 }
 
+/// Optional f64 list.
 pub(super) fn optional_f64_list(source: &str, key: &str) -> Result<Option<Vec<f64>>, String> {
     let marker = format!("{key}=[");
     let Some(start) = source.find(&marker).map(|index| index + marker.len()) else {
@@ -104,15 +112,18 @@ pub(super) fn optional_f64_list(source: &str, key: &str) -> Result<Option<Vec<f6
         .map(Some)
 }
 
+/// Required u64.
 pub(super) fn required_u64(source: &str, key: &str) -> Result<u64, String> {
     optional_u64(source, key)?.ok_or_else(|| format!("Enter `{key}=...` in the panel input."))
 }
 
+/// Required f64 list.
 pub(super) fn required_f64_list(source: &str, key: &str) -> Result<Vec<f64>, String> {
     optional_f64_list(source, key)?
         .ok_or_else(|| format!("Enter `{key}=[...]` in the panel input."))
 }
 
+/// Required string list.
 pub(super) fn required_string_list(source: &str, key: &str) -> Result<Vec<String>, String> {
     let marker = format!("{key}=[");
     let start = source
@@ -134,6 +145,7 @@ pub(super) fn required_string_list(source: &str, key: &str) -> Result<Vec<String
     Ok(parsed)
 }
 
+/// Bool assignment.
 pub(super) fn bool_assignment(source: &str, key: &str) -> Result<bool, String> {
     match required_assignment(source, key)?
         .to_ascii_lowercase()
@@ -145,12 +157,14 @@ pub(super) fn bool_assignment(source: &str, key: &str) -> Result<bool, String> {
     }
 }
 
+/// Optional `bool`.
 pub(super) fn optional_bool(source: &str, key: &str) -> Result<Option<bool>, String> {
     assignment(source, key)
         .map(|_| bool_assignment(source, key))
         .transpose()
 }
 
+/// Optional `string-list`.
 pub(super) fn optional_string_list(source: &str, key: &str) -> Result<Option<Vec<String>>, String> {
     let marker = format!("{key}=[");
     let Some(start) = source.find(&marker).map(|index| index + marker.len()) else {

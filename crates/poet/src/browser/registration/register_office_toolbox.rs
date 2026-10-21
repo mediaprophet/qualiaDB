@@ -22,6 +22,7 @@ fn office_live_tool(
     ))
 }
 
+/// Registers office-toolbox.
 pub(super) fn register_office_toolbox(reg: &mut Registry) {
     let typography_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

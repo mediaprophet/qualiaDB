@@ -1,5 +1,6 @@
 //! Modality descriptions for the Evaluate Modality panel.
 
+/// Gets the description.
 pub(super) fn get(key: &str) -> &'static str {
     match key {
         "deontic" => {

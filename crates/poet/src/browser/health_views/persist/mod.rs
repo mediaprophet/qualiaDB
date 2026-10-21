@@ -57,6 +57,7 @@ mod records;
 pub use clinical::*;
 pub use records::*;
 
+/// Builds health-overview-view.
 pub fn build_health_overview_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,

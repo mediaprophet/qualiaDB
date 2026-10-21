@@ -74,6 +74,7 @@ pub const SECTORS: [RadialSector; 8] = [
 ];
 
 #[component]
+/// Dioxus `RadialActionRing` component.
 pub fn RadialActionRing(wb: Signal<Workbench>, state: Signal<RadialState>) -> Element {
     let s = state();
     if !s.visible {

@@ -24,6 +24,7 @@ pub enum WgslPipelineKind {
 }
 
 impl WgslPipelineKind {
+    /// `file` name.
     pub fn file_name(&self) -> &'static str {
         match self {
             Self::CyberGlass => "cyber_glass.wgsl",
@@ -37,6 +38,7 @@ impl WgslPipelineKind {
         }
     }
 
+    /// UI title.
     pub fn title(&self) -> &'static str {
         match self {
             Self::CyberGlass => "Frosted Glassmorphism & Refraction",
@@ -50,6 +52,7 @@ impl WgslPipelineKind {
         }
     }
 
+    /// Stage index.
     pub fn stage(&self) -> &'static str {
         match self {
             Self::CyberGlass => "Compute + Fragment",
@@ -63,6 +66,7 @@ impl WgslPipelineKind {
         }
     }
 
+    /// Sample source.
     pub fn sample_source(&self) -> &'static str {
         match self {
             Self::CyberGlass => {
@@ -183,6 +187,7 @@ pub struct WgslPipelineDesc {
 }
 
 impl WgslPipelineDesc {
+    /// All variants.
     pub fn all() -> Vec<Self> {
         vec![
             Self {

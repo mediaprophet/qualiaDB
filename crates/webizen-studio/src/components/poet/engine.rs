@@ -64,6 +64,7 @@ pub struct PoetRenderResult {
     pub diagnostic: Option<String>,
 }
 
+/// `poet_eval` seam — evaluates VibeScript source via the host.
 pub async fn eval(
     source: String,
     as_cell: bool,
@@ -76,10 +77,12 @@ pub async fn eval(
     .await
 }
 
+/// `poet_gazetteer` seam — gazetteer lookup over source.
 pub async fn gazetteer(source: String) -> Result<PoetGazetteerResult, String> {
     invoke_json("poet_gazetteer", json!({ "source": source })).await
 }
 
+/// Renders preview.
 pub async fn render_preview(
     kind: String,
     width: u32,
@@ -183,10 +186,12 @@ pub async fn volume_commit(path: String) -> Result<PoetEvalResult, String> {
     invoke_json("poet_volume_commit", json!({ "path": path })).await
 }
 
+/// Opens the q42 file picker.
 pub async fn browse_q42_volume() -> Result<Option<String>, String> {
     invoke_json("open_q42_file_picker", json!({})).await
 }
 
+/// Starts q42-volume.
 pub async fn start_q42_volume() -> Result<Option<String>, String> {
     invoke_json("save_q42_file_picker", json!({})).await
 }
@@ -209,6 +214,7 @@ pub struct DaemonProbe {
     pub label: String,
 }
 
+/// `poet_daemon_probe` seam — HTTP `/health` on local QualiaDB.
 pub async fn daemon_probe() -> Result<DaemonProbe, String> {
     invoke_json("poet_daemon_probe", json!({})).await
 }

@@ -19,6 +19,7 @@ pub struct DisputedDiagnosisReport {
 }
 
 impl DisputedDiagnosisReport {
+    /// Creates a new instance.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -65,6 +66,7 @@ pub struct HousingSafetyReport {
 }
 
 impl HousingSafetyReport {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -78,14 +80,17 @@ impl HousingSafetyReport {
     }
 }
 
+///  record ID.
 pub fn disputed_diagnosis_record_id(uuid: &str) -> String {
     format!("urn:wellfair:disputed_diagnosis:{uuid}")
 }
 
+///  record ID.
 pub fn housing_safety_record_id(uuid: &str) -> String {
     format!("urn:wellfair:housing_safety:{uuid}")
 }
 
+///  record ID.
 pub fn journal_kind_for_personal_record_id(record_id: &str) -> Option<&'static str> {
     if record_id.contains(":disputed_diagnosis:") {
         Some("disputed_diagnosis")
@@ -125,6 +130,7 @@ fn envelope_with_epistemic(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_disputed_diagnosis_envelope(
     report: &DisputedDiagnosisReport,
     owner_did: &str,
@@ -144,6 +150,7 @@ pub fn build_disputed_diagnosis_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_housing_safety_envelope(
     report: &HousingSafetyReport,
     owner_did: &str,
@@ -163,6 +170,7 @@ pub fn build_housing_safety_envelope(
     )
 }
 
+///  summary.
 pub fn disputed_diagnosis_summary(report: &DisputedDiagnosisReport) -> String {
     serde_json::json!({
         "label": report.label,
@@ -173,6 +181,7 @@ pub fn disputed_diagnosis_summary(report: &DisputedDiagnosisReport) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn housing_safety_summary(report: &HousingSafetyReport) -> String {
     serde_json::json!({
         "dwelling_type": report.dwelling_type,

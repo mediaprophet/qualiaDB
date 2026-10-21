@@ -13,6 +13,7 @@ pub enum RelationsSection {
 }
 
 impl RelationsSection {
+    /// Label.
     pub const fn label(self) -> &'static str {
         match self {
             Self::Inbox => "Inbox",
@@ -27,6 +28,7 @@ impl RelationsSection {
         }
     }
 
+    /// `true` for advanced-only items.
     pub const fn advanced_only(self) -> bool {
         matches!(self, Self::Topology | Self::ExistingTools)
     }

@@ -57,6 +57,7 @@ pub struct AgencyDecisionDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches agency-domains.
 pub async fn fetch_agency_domains() -> Result<Vec<AgencyDomainDto>, String> {
     let js = tauri_invoke("wellfair_list_agency_domains", wasm_bindgen::JsValue::NULL)
         .await
@@ -68,11 +69,13 @@ pub async fn fetch_agency_domains() -> Result<Vec<AgencyDomainDto>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches agency-domains.
 pub async fn fetch_agency_domains() -> Result<Vec<AgencyDomainDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches agency-delegations.
 pub async fn fetch_agency_delegations() -> Result<Vec<AgencyDelegationDto>, String> {
     let js = tauri_invoke(
         "wellfair_list_agency_delegations",
@@ -87,12 +90,14 @@ pub async fn fetch_agency_delegations() -> Result<Vec<AgencyDelegationDto>, Stri
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches agency-delegations.
 pub async fn fetch_agency_delegations() -> Result<Vec<AgencyDelegationDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
 #[allow(clippy::too_many_arguments)]
+/// Creates agency-delegation.
 pub async fn create_agency_delegation(
     principal_did: &str,
     domain: &str,
@@ -120,6 +125,7 @@ pub async fn create_agency_delegation(
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
+/// Creates agency-delegation.
 pub async fn create_agency_delegation(
     _principal_did: &str,
     _domain: &str,
@@ -132,6 +138,7 @@ pub async fn create_agency_delegation(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets agency-delegation-consent.
 pub async fn set_agency_delegation_consent(
     delegation_id: &str,
     consent: &str,
@@ -156,6 +163,7 @@ pub async fn set_agency_delegation_consent(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets agency-delegation-consent.
 pub async fn set_agency_delegation_consent(
     _delegation_id: &str,
     _consent: &str,
@@ -164,6 +172,7 @@ pub async fn set_agency_delegation_consent(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Revokes agency-delegation.
 pub async fn revoke_agency_delegation(delegation_id: &str) -> Result<(), String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -179,11 +188,13 @@ pub async fn revoke_agency_delegation(delegation_id: &str) -> Result<(), String>
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Revokes agency-delegation.
 pub async fn revoke_agency_delegation(_delegation_id: &str) -> Result<(), String> {
     Err("Revoking a delegation requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn evaluate_agency_access(
     delegation_id: &str,
     action: &str,
@@ -218,6 +229,7 @@ pub async fn evaluate_agency_access(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn evaluate_agency_access(
     _delegation_id: &str,
     _action: &str,

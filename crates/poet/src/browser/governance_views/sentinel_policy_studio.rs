@@ -18,6 +18,7 @@ pub enum DeonticOp {
 }
 
 impl DeonticOp {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Obligate => "OBLIGATE (0x10)",
@@ -26,6 +27,7 @@ impl DeonticOp {
         }
     }
 
+    /// Accent color.
     pub fn color(&self) -> &'static str {
         match self {
             Self::Obligate => "#38bdf8", // Sky blue
@@ -49,6 +51,7 @@ pub struct SentinelRule {
 }
 
 impl SentinelRule {
+    /// Converts to n3-syntax.
     pub fn to_n3_syntax(&self) -> String {
         let arrow = if self.is_defeater { "^>" } else { "=>" };
         let cond = match &self.condition {

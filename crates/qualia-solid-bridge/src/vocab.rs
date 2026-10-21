@@ -69,12 +69,15 @@ pub mod hash {
     static SOLID_OIDC_ISSUER: OnceLock<u64> = OnceLock::new();
     static PIM_STORAGE: OnceLock<u64> = OnceLock::new();
 
+    /// `ldp:contains` IRI.
     pub fn ldp_contains() -> u64 {
         *LDP_CONTAINS.get_or_init(|| h(super::LDP_CONTAINS))
     }
+    /// Solid OIDC issuer IRI.
     pub fn solid_oidc_issuer() -> u64 {
         *SOLID_OIDC_ISSUER.get_or_init(|| h(super::SOLID_OIDC_ISSUER))
     }
+    /// `pim:storage` IRI.
     pub fn pim_storage() -> u64 {
         *PIM_STORAGE.get_or_init(|| h(super::PIM_STORAGE))
     }

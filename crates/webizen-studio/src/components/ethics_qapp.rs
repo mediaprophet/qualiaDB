@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `EthicsQapp` component.
 pub fn EthicsQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `EnvironmentalScienceQapp` component.
 pub fn EnvironmentalScienceQapp() -> Element {
     rsx! {
         QAppEngine {

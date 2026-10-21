@@ -9,6 +9,7 @@ use js_sys;
 
 #[cfg(target_arch = "wasm32")]
 #[allow(clippy::too_many_arguments)]
+/// Publishes qapp-pwa.
 pub async fn publish_qapp_pwa(
     target_dir: &str,
     id: &str,
@@ -42,6 +43,7 @@ pub async fn publish_qapp_pwa(
 
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
+/// Publishes qapp-pwa.
 pub async fn publish_qapp_pwa(
     _target_dir: &str,
     _id: &str,

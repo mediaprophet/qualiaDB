@@ -23,6 +23,7 @@ pub enum CellStatus {
 }
 
 impl CellStatus {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             CellStatus::Idle => "Idle",
@@ -32,6 +33,7 @@ impl CellStatus {
         }
     }
 
+    /// Accent color.
     pub fn color(&self) -> &'static str {
         match self {
             CellStatus::Idle => "var(--text-muted, #5e7394)",
@@ -55,6 +57,7 @@ pub enum CellValue {
 }
 
 impl CellValue {
+    /// Display string.
     pub fn display_string(&self) -> String {
         match self {
             CellValue::Integer(i) => format!("{}", i),
@@ -67,6 +70,7 @@ impl CellValue {
         }
     }
 
+    /// `type` name.
     pub fn type_name(&self) -> &'static str {
         match self {
             CellValue::Integer(_) => "i64",

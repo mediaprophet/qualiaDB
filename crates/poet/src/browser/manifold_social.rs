@@ -135,6 +135,7 @@ pub fn refresh_people_chrome(document: &Document) {
     host.append_child(&invite).unwrap();
 }
 
+/// Opens invite-dialog.
 pub fn open_invite_dialog(document: &Document) {
     if let Some(existing) = document.get_element_by_id("participant-invite-dialog") {
         existing.remove();
@@ -251,6 +252,7 @@ pub fn open_invite_dialog(document: &Document) {
     add_closure.forget();
 }
 
+/// Persists the participant cop.
 pub fn persist_participant_cop(person: &ManifoldParticipant, manifold_id: &str) {
     if !is_daemon_connected() {
         return;

@@ -21,11 +21,13 @@ pub struct HdWallet {
 }
 
 impl HdWallet {
+    /// Constructs from seed.
     pub fn from_seed(seed_bytes: &[u8]) -> Result<Self, String> {
         let master_key = XPrv::new(seed_bytes).map_err(|e| e.to_string())?;
         Ok(Self { master_key })
     }
 
+    /// Derives an address.
     pub fn derive_address(&self, network: &str, path: &str) -> Result<AddressPayload, String> {
         let derivation_path = Bip32Path::from_str(path).map_err(|e| e.to_string())?;
         let mut child_xprv = self.master_key.clone();

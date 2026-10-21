@@ -50,6 +50,7 @@ pub struct CookieGraph {
 }
 
 impl CookieGraph {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             version: 1,
@@ -58,10 +59,12 @@ impl CookieGraph {
         }
     }
 
+    /// Path.
     pub fn path(storage_root: &Path) -> PathBuf {
         storage_root.join(COOKIE_GRAPH_FILE)
     }
 
+    /// Loads.
     pub fn load(storage_root: &Path) -> Self {
         let p = Self::path(storage_root);
         match fs::read_to_string(&p) {
@@ -70,6 +73,7 @@ impl CookieGraph {
         }
     }
 
+    /// Saves.
     pub fn save(&self, storage_root: &Path) -> Result<(), String> {
         let p = Self::path(storage_root);
         if let Some(parent) = p.parent() {
@@ -81,6 +85,7 @@ impl CookieGraph {
         fs::rename(&tmp, &p).map_err(|e| e.to_string())
     }
 
+    /// Upserts a record.
     pub fn upsert(&mut self, node: CookieNode) {
         if let Some(existing) = self
             .nodes
@@ -93,6 +98,7 @@ impl CookieGraph {
         }
     }
 
+    /// Records for an origin.
     pub fn for_origin(&self, origin: &str) -> Vec<&CookieNode> {
         let o = origin.trim().trim_end_matches('/');
         self.nodes
@@ -101,6 +107,7 @@ impl CookieGraph {
             .collect()
     }
 
+    /// Third parties for a host.
     pub fn third_parties_for_host(&self, host: &str) -> Vec<String> {
         let host = host.trim().to_ascii_lowercase();
         let mut out = Vec::new();
@@ -334,6 +341,7 @@ pub fn clear_graph_for_origin(
     }))
 }
 
+/// Clears the whole graph.
 pub fn clear_graph_all(storage_root: &Path) -> Result<serde_json::Value, String> {
     let mut g = CookieGraph::load(storage_root);
     let n = g.clear_all();

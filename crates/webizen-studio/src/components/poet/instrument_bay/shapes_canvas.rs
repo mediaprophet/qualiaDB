@@ -139,6 +139,7 @@ fn row_centres(n: usize, y: f32) -> Vec<(f32, f32)> {
 }
 
 #[component]
+/// Dioxus `InstrumentShapesCanvas` component.
 pub fn InstrumentShapesCanvas(
     entry: String,
     #[props(default = "pipeline".to_string())] rail: String,

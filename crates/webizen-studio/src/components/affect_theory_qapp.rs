@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `AffectTheoryQapp` component.
 pub fn AffectTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

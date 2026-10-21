@@ -289,6 +289,7 @@ fn inforg_reply(q: &str) -> String {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
+/// Dioxus `ContextualWorkspace` component.
 pub fn ContextualWorkspace() -> Element {
     // Canvas state
     let mut pan_x = use_signal(|| 0.0_f64);

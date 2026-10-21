@@ -35,6 +35,7 @@ pub struct SupervisorState {
 }
 
 #[component]
+/// Dioxus `ProblemsPane` component.
 pub fn ProblemsPane() -> Element {
     let mut state = use_signal(|| SupervisorState::default());
     let mut error = use_signal(|| None::<String>);

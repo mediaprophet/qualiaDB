@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `PublicPolicyQapp` component.
 pub fn PublicPolicyQapp() -> Element {
     rsx! {
         QAppEngine {

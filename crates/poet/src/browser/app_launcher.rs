@@ -32,6 +32,7 @@ pub struct AppShortcut {
 }
 
 impl AppShortcut {
+    /// Builds a manifold shortcut.
     pub fn new_manifold_shortcut(title: &str, construct_id: &str, manifold_id: &str) -> Self {
         Self {
             id: format!("sc_{}", construct_id),
@@ -102,6 +103,7 @@ pub enum AdminOperatorHub {
 }
 
 impl AdminOperatorHub {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::HardwareCompute => "Hub 1: Hardware & Compute",
@@ -114,6 +116,7 @@ impl AdminOperatorHub {
         }
     }
 
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             Self::HardwareCompute => "\u{2699}\u{FE0F}", // ⚙️
@@ -126,6 +129,7 @@ impl AdminOperatorHub {
         }
     }
 
+    /// Summary text.
     pub fn summary(&self) -> &'static str {
         match self {
             Self::HardwareCompute => "wgpu 30 contexts, GPU device roles, thermal triad governor",

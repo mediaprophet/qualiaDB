@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "portals:world-create" | "portals:create-world" => Some(create_world(container)),
@@ -26,6 +27,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next skybox.
 pub(crate) fn next_skybox(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("sky:clear_noon") => "sky:golden_sunset",

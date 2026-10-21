@@ -19,12 +19,14 @@ fn agent_roster_storage() -> Result<String, String> {
     Ok(storage)
 }
 
+/// Lists the agent roster.
 pub fn agent_roster_list() -> Result<serde_json::Value, String> {
     let storage = agent_roster_storage()?;
     let roster = crate::agent_registry::load_roster(Path::new(&storage));
     serde_json::to_value(roster).map_err(|e| e.to_string())
 }
 
+/// Gets an agent-roster entry.
 pub fn agent_roster_get(slug: String) -> Result<serde_json::Value, String> {
     let storage = agent_roster_storage()?;
     match crate::agent_registry::get_agent(Path::new(&storage), &slug) {
@@ -33,6 +35,7 @@ pub fn agent_roster_get(slug: String) -> Result<serde_json::Value, String> {
     }
 }
 
+/// Upserts an agent-roster entry.
 pub fn agent_roster_upsert(agent_json: String) -> Result<(), String> {
     let storage = agent_roster_storage()?;
     let agent: crate::agent_registry::AgentDefinition =
@@ -40,6 +43,7 @@ pub fn agent_roster_upsert(agent_json: String) -> Result<(), String> {
     crate::agent_registry::upsert_agent(Path::new(&storage), agent)
 }
 
+/// Removes an agent-roster entry.
 pub fn agent_roster_remove(slug: String) -> Result<(), String> {
     let storage = agent_roster_storage()?;
     crate::agent_registry::remove_agent(Path::new(&storage), &slug)

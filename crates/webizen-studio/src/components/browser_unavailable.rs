@@ -2,6 +2,7 @@ use crate::Route;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `BrowserUnavailable` component.
 pub fn BrowserUnavailable() -> Element {
     rsx! {
         div {

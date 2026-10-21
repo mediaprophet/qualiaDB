@@ -178,6 +178,7 @@ pub(super) fn container_type_filter_attrs(container_type: &str) -> (&'static str
     }
 }
 
+/// Media surface for the element.
 pub(super) fn media_surface_for(container_type: &str) -> &'static str {
     match container_type {
         "media" | "video_view" | "animation_timeline" | "animation_export" | "transport"
@@ -191,6 +192,7 @@ pub(super) fn media_surface_for(container_type: &str) -> &'static str {
     }
 }
 
+/// Container type tag.
 pub(super) fn container_type_tag(container_type: &str) -> (&'static str, &'static str) {
     match container_type {
         "social" => ("tag-social", "SOCIAL"),

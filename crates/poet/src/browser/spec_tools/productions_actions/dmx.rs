@@ -4,6 +4,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "productions:dmx-universe" => Some(step_universe(container)),
@@ -17,6 +18,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next dmx-universe.
 pub(crate) fn next_dmx_universe(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("Universe 1 (Main Stage)") => "Universe 2 (Balcony & Truss)",

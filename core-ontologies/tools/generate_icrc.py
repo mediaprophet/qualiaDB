@@ -23,9 +23,12 @@ OUT  = "core-ontologies/un-instruments"
 CORPUS = os.path.join(AUTH, "icrc_corpus.txt")
 CATEGORY = "International Humanitarian Law (Law of War)"
 
-def esc(s): return re.sub(r"\s+", " ", s.replace("\\","\\\\").replace('"','\\"')).strip()
+def esc(s):
+    """Escapes text for N3 output."""
+    return re.sub(r"\s+", " ", s.replace("\\","\\\\").replace('"','\\"')).strip()
 
 def deontic(t):
+    """Deontic helper."""
     t = t.lower()
     if re.match(r"^\s*(no one|no party|no person|nothing|in no )\b", t) or "shall be prohibited" in t \
        or "shall not" in t or "are prohibited" in t or "is prohibited" in t or re.search(r"\bmay not be\b", t):
@@ -57,6 +60,7 @@ def clean_header(h):
     return h
 
 def parse_block(slug, block):
+    """Parses block."""
     lines = block.split("\n")
     title = date = source = ""
     body_start = 0
@@ -76,6 +80,7 @@ def parse_block(slug, block):
     cur = None           # ('preamble'|('art',n)|label, [body lines])
 
     def flush():
+        """Flushes."""
         if not cur: return
         kind, n, label, buf = cur
         text = "\n".join(buf).strip()
@@ -119,6 +124,7 @@ def parse_block(slug, block):
     return title, date, source, preamble, segs, annex
 
 def emit(slug, title, date, source, preamble, segs, annex):
+    """Emits."""
     ns = "https://ns.webcivics.net/values/" + slug + "#"
     L = ['@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .',
          '@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .',
@@ -165,6 +171,7 @@ def emit(slug, title, date, source, preamble, segs, annex):
     return "\n".join(L)
 
 def main():
+    """CLI entry point."""
     if not os.path.exists(CORPUS):
         sys.exit("Corpus not found: " + CORPUS)
     os.makedirs(OUT, exist_ok=True)

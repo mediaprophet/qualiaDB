@@ -6,6 +6,7 @@ pub struct GibsRequest {
 }
 
 impl GibsRequest {
+    /// URL.
     pub fn url(&self) -> String {
         let bbox = if self.projection == "epsg4326" {
             "-90,-180,90,180"
@@ -35,6 +36,7 @@ pub struct EarthTexture {
 }
 
 impl EarthTexture {
+    /// Samples.
     pub fn sample(&self, lat_deg: f32, lon_deg: f32) -> [f32; 3] {
         let lat = lat_deg.clamp(-90.0, 90.0);
         let lon = lon_deg.clamp(-180.0, 180.0);
@@ -47,6 +49,7 @@ impl EarthTexture {
         [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0]
     }
 
+    /// Samples a vertex.
     pub fn sample_vertex(&self, x: f32, y: f32, z: f32) -> [f32; 3] {
         let lat = y.asin().to_degrees();
         let lon = z.atan2(x).to_degrees();
@@ -54,6 +57,7 @@ impl EarthTexture {
     }
 }
 
+/// Decodes JPEG to RGB.
 pub fn decode_jpeg_rgb(data: &[u8]) -> Result<EarthTexture, String> {
     let img = image::load_from_memory_with_format(data, image::ImageFormat::Jpeg)
         .map_err(|e| format!("JPEG decode: {e}"))?;
@@ -67,6 +71,7 @@ pub fn decode_jpeg_rgb(data: &[u8]) -> Result<EarthTexture, String> {
     Ok(EarthTexture { width, height, rgb })
 }
 
+/// Downloads a GIBS texture.
 pub async fn download_gibs_texture(req: &GibsRequest) -> Result<EarthTexture, String> {
     let url = req.url();
     let response = reqwest::get(&url)

@@ -26,6 +26,7 @@ pub struct IncrementalIngestor {
 }
 
 impl IncrementalIngestor {
+    /// Creates a new instance.
     pub fn new(scratch_dir: &Path, memory_limit: usize) -> Self {
         assert!(
             memory_limit <= 512 * 1024 * 1024,
@@ -37,6 +38,7 @@ impl IncrementalIngestor {
         }
     }
 
+    /// Executes stream compilation.
     pub fn execute_stream_compilation(
         &self,
         input_path: &Path,
@@ -158,6 +160,7 @@ pub struct IngestionCellWorkerPool {
 }
 
 impl IngestionCellWorkerPool {
+    /// Executes parallel cell resolution.
     pub fn execute_parallel_cell_resolution(
         &self,
         wal_path: &Path,

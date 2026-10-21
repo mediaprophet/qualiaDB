@@ -3,6 +3,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlMediaElement};
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "video:mark-in" | "video:set-in-point" => Some(set_in_point(container)),
@@ -25,6 +26,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next video-speed.
 pub(crate) fn next_video_speed(current: Option<&str>) -> (f64, &'static str) {
     match current.map(str::trim) {
         Some("1.0x") => (1.25, "1.25x"),
@@ -35,6 +37,7 @@ pub(crate) fn next_video_speed(current: Option<&str>) -> (f64, &'static str) {
     }
 }
 
+/// Cycles to the next shuttle.
 pub(crate) fn next_shuttle(current: Option<&str>) -> (&'static str, f64) {
     match current.map(str::trim) {
         Some("2x forward") => ("4x forward", 4.0),

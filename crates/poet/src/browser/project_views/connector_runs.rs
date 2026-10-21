@@ -8,6 +8,7 @@ use crate::browser::native_daemon::{
     NativeRecordUpsertRequest,
 };
 
+/// Builds connector-runs.
 pub fn build_connector_runs(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-connector-runs", "").ok();
@@ -37,6 +38,7 @@ pub fn build_connector_runs(document: &Document) -> Element {
     root
 }
 
+/// Executes and-record.
 pub fn execute_and_record(
     status: &Element,
     output: Option<Element>,

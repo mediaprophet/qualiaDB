@@ -14,20 +14,24 @@ const PERSON_LOCAL_NAMES: &[&str] = &[
     "contributor",
 ];
 
+/// `true` when the entry looks like a natural person.
 pub fn looks_like_natural_person(term: &str) -> bool {
     local_name(term).is_some_and(|local| PERSON_LOCAL_NAMES.iter().any(|marker| local == *marker))
 }
 
+/// `true` when owl-construct.
 pub fn is_owl_construct(term: &str) -> bool {
     let lower = term.trim().to_ascii_lowercase();
     lower.starts_with("owl:") || lower.contains("/owl#") || lower == "owl"
 }
 
+/// `true` when shacl-negation.
 pub fn is_shacl_negation(predicate: &str) -> bool {
     let lower = predicate.to_ascii_lowercase();
     lower.contains("sh:not") || lower.ends_with("#not") || lower == "not"
 }
 
+/// `true` when OWL is forbidden for a person.
 pub fn owl_forbidden_for_person(subject: &str, predicate: &str, object: &str) -> bool {
     if is_shacl_negation(predicate) {
         return false;
@@ -39,6 +43,7 @@ pub fn owl_forbidden_for_person(subject: &str, predicate: &str, object: &str) ->
     is_owl_construct(predicate) || (is_type_predicate(predicate) && is_owl_construct(object))
 }
 
+/// OWL person-source violation probe.
 pub fn owl_person_source_violation(source: &str) -> Option<&'static str> {
     for raw in source.lines() {
         let line = strip_comment(raw);

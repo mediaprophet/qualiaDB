@@ -76,6 +76,7 @@ fn band_color(band: &str, is_resilience: bool) -> &'static str {
 }
 
 #[component]
+/// Dioxus `WellfairScorecardPanel` component.
 pub fn WellfairScorecardPanel() -> Element {
     let mut report = use_signal(|| serde_json::Value::Null);
     let mut threshold = use_signal(|| 2usize);

@@ -51,6 +51,7 @@ pub enum DockPosition {
 }
 
 impl DockPosition {
+    /// Views as str.
     pub fn as_str(&self) -> &'static str {
         match self {
             DockPosition::Left => "left",
@@ -60,6 +61,7 @@ impl DockPosition {
         }
     }
 
+    /// Builds from str.
     pub fn from_str(s: &str) -> Self {
         match s {
             "top" => DockPosition::Top,
@@ -210,6 +212,7 @@ pub fn store_toolbox_views(views: Vec<ToolboxView>) {
     });
 }
 
+/// `find-stored-toolbox` view.
 pub(super) fn find_stored_toolbox_view(toolbox_id: &str) -> Option<ToolboxView> {
     TOOLBOX_VIEWS.with(|v| {
         v.borrow()

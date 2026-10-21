@@ -51,22 +51,27 @@ pub struct TaskDelegation {
 }
 
 impl TaskDelegation {
+    /// `true` when active.
     pub fn is_active(&self) -> bool {
         matches!(self.state, DelegationLifecycle::Approved | DelegationLifecycle::Running)
     }
 
+    /// `true` when effect-allowed.
     pub fn is_effect_allowed(&self, effect: &CommandEffect) -> bool {
         self.allowed_effects.contains(effect)
     }
 
+    /// `true` when command-allowed.
     pub fn is_command_allowed(&self, command_id: &str) -> bool {
         self.allowed_command_ids.is_empty() || self.allowed_command_ids.iter().any(|id| id == command_id)
     }
 
+    /// Revokes.
     pub fn revoke(&mut self) {
         self.state = DelegationLifecycle::Revoked;
     }
 
+    /// Pauses.
     pub fn pause(&mut self) {
         if self.state == DelegationLifecycle::Running {
             self.state = DelegationLifecycle::Paused;

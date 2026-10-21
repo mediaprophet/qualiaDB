@@ -44,6 +44,7 @@ pub struct SubmanifoldNavigator {
 }
 
 impl SubmanifoldNavigator {
+    /// `SubmanifoldNavigator::new`.
     pub fn new(root_id: &str, root_title: &str) -> Self {
         Self {
             breadcrumb_stack: vec![ManifoldBreadcrumb {

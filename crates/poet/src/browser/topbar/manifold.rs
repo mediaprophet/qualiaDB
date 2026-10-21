@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Shows menu-notification.
 pub(super) fn show_menu_notification(document: &Document, message: &str) {
     let notif = document.create_element("div").unwrap();
     let n_el: HtmlElement = notif.clone().dyn_into().unwrap();
@@ -23,6 +24,7 @@ pub(super) fn show_menu_notification(document: &Document, message: &str) {
     timeout.forget();
 }
 
+/// Appends manifold-option.
 pub(super) fn append_manifold_option(
     document: &Document,
     select: &Element,
@@ -191,6 +193,7 @@ pub(super) fn add_new_manifold(document: &Document) {
 // File I/O & Dialog Helpers
 // ---------------------------------------------------------------------------
 
+/// Triggers a file download.
 pub(super) fn trigger_file_download(document: &Document, filename: &str, text: &str) {
     let a = document.create_element("a").unwrap();
     let encoded = js_sys::encode_uri_component(text);
@@ -205,6 +208,7 @@ pub(super) fn trigger_file_download(document: &Document, filename: &str, text: &
     }
 }
 
+/// Triggers a file-import dialog.
 pub(super) fn trigger_file_import_dialog(document: &Document) {
     let input = document.create_element("input").unwrap();
     input.set_attribute("type", "file").unwrap();
@@ -232,6 +236,7 @@ pub(super) fn trigger_file_import_dialog(document: &Document) {
     }
 }
 
+/// Opens new-manifold-dialog.
 pub(super) fn open_new_manifold_dialog(document: &Document) {
     if let Some(existing) = document.get_element_by_id("new-manifold-dialog") {
         existing.remove();

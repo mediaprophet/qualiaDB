@@ -2,6 +2,7 @@
 
 #![allow(non_snake_case)]
 
+/// Lists project collaborators.
 pub fn list_project_collaborators(project_id: Option<String>) -> Result<serde_json::Value, String> {
     let rows = crate::project_collab::list(project_id.as_deref());
     serde_json::to_value(rows).map_err(|e| e.to_string())
@@ -37,6 +38,7 @@ pub fn add_project_collaborator(
     serde_json::to_value(row).map_err(|e| e.to_string())
 }
 
+/// Removes project-collaborator.
 pub fn remove_project_collaborator(
     project_id: String,
     member_did: String,

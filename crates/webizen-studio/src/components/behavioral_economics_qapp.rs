@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `BehavioralEconomicsQapp` component.
 pub fn BehavioralEconomicsQapp() -> Element {
     rsx! {
         QAppEngine {

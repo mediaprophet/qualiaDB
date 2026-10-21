@@ -47,6 +47,7 @@ const ASSESS_RECOGNISE_OUTPUT: &[ShapeConstraint] = &[
     },
 ];
 
+/// Input constraints.
 pub fn input_constraints(entry: &str) -> &'static [ShapeConstraint] {
     if is_assess_or_recognise(entry) {
         ASSESS_RECOGNISE_INPUT
@@ -55,6 +56,7 @@ pub fn input_constraints(entry: &str) -> &'static [ShapeConstraint] {
     }
 }
 
+/// Output constraints.
 pub fn output_constraints(entry: &str) -> &'static [ShapeConstraint] {
     if is_assess_or_recognise(entry) {
         ASSESS_RECOGNISE_OUTPUT
@@ -63,6 +65,7 @@ pub fn output_constraints(entry: &str) -> &'static [ShapeConstraint] {
     }
 }
 
+/// Living-safe guard.
 pub fn living_safe_guard() -> &'static str {
     "Living-safe: a NaturalPerson is never owl:Thing; persons are rdfs:Class, not the OWL universal superclass."
 }
@@ -77,6 +80,7 @@ fn is_owl_thing(value: &str) -> bool {
     lower == "owl:thing" || lower.ends_with("#thing") || lower.contains("owl:thing")
 }
 
+/// Parses min-count.
 pub fn parse_min_count(raw: &str) -> u8 {
     raw.trim().parse::<u8>().unwrap_or(1).max(1)
 }
@@ -105,6 +109,7 @@ pub fn add_authored(
 }
 
 #[component]
+/// Dioxus `InstrumentShapes` component.
 pub fn InstrumentShapes(
     #[props(default = "assess".to_string())] entry: String,
     #[props(default = "pipeline".to_string())] rail: String,

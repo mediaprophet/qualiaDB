@@ -61,6 +61,7 @@ fn arr_hex_short(v: &serde_json::Value, key: &str) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairSafeguardsPanel` component.
 pub fn WellfairSafeguardsPanel() -> Element {
     let mut dm_list = use_signal(Vec::<serde_json::Value>::new);
     let mut ic_list = use_signal(Vec::<serde_json::Value>::new);

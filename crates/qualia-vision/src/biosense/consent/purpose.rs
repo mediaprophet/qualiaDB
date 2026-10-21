@@ -13,6 +13,7 @@ pub enum BiosensePurpose {
 }
 
 impl BiosensePurpose {
+    /// `&str` form.
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::WellfairSelfMonitor => "wellfair_self_monitor",

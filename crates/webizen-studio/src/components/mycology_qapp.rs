@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MycologyQapp` component.
 pub fn MycologyQapp() -> Element {
     rsx! {
         QAppEngine {

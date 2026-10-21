@@ -3,6 +3,7 @@
 use super::{gbm_var_args, gray_ahash_args, hu_window_demo_args, ledger, CopField};
 use web_sys::{Document, Element};
 
+/// Builds finance-view.
 pub fn build_finance_view(document: &Document) -> Element {
     ledger(
         document,
@@ -49,6 +50,7 @@ pub fn build_finance_view(document: &Document) -> Element {
     )
 }
 
+/// Builds wallet-view.
 pub fn build_wallet_view(document: &Document) -> Element {
     ledger(
         document,
@@ -95,6 +97,7 @@ pub fn build_wallet_view(document: &Document) -> Element {
     )
 }
 
+/// Builds aura-view.
 pub fn build_aura_view(document: &Document) -> Element {
     ledger(
         document,
@@ -118,6 +121,7 @@ pub fn build_aura_view(document: &Document) -> Element {
     )
 }
 
+/// Builds webview-view.
 pub fn build_webview_view(document: &Document) -> Element {
     ledger(
         document,
@@ -141,6 +145,7 @@ pub fn build_webview_view(document: &Document) -> Element {
     )
 }
 
+/// Builds webrtc-view.
 pub fn build_webrtc_view(document: &Document) -> Element {
     ledger(
         document,
@@ -164,6 +169,7 @@ pub fn build_webrtc_view(document: &Document) -> Element {
     )
 }
 
+/// Builds vision-view.
 pub fn build_vision_view(document: &Document) -> Element {
     ledger(
         document,
@@ -187,6 +193,7 @@ pub fn build_vision_view(document: &Document) -> Element {
     )
 }
 
+/// Builds listen-view.
 pub fn build_listen_view(document: &Document) -> Element {
     ledger(
         document,
@@ -215,6 +222,7 @@ pub fn build_listen_view(document: &Document) -> Element {
     )
 }
 
+/// Builds triad-view.
 pub fn build_triad_view(document: &Document) -> Element {
     ledger(
         document,
@@ -238,6 +246,7 @@ pub fn build_triad_view(document: &Document) -> Element {
     )
 }
 
+/// Builds portal-view.
 pub fn build_portal_view(document: &Document) -> Element {
     ledger(
         document,
@@ -261,6 +270,7 @@ pub fn build_portal_view(document: &Document) -> Element {
     )
 }
 
+/// Builds 3d-view.
 pub fn build_3d_view(document: &Document) -> Element {
     ledger(
         document,
@@ -284,6 +294,7 @@ pub fn build_3d_view(document: &Document) -> Element {
     )
 }
 
+/// Builds health-vault-view.
 pub fn build_health_vault_view(document: &Document) -> Element {
     ledger(
         document,
@@ -307,6 +318,7 @@ pub fn build_health_vault_view(document: &Document) -> Element {
     )
 }
 
+/// Builds anatomy-view.
 pub fn build_anatomy_view(document: &Document) -> Element {
     ledger(
         document,

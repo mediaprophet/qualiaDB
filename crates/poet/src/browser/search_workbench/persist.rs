@@ -9,6 +9,7 @@ pub(super) struct SavedQuery {
     pub(super) timestamp: String,
 }
 
+/// Loads saved-queries.
 pub(super) fn load_saved_queries() -> Vec<SavedQuery> {
     let window = match web_sys::window() {
         Some(w) => w,
@@ -94,6 +95,7 @@ fn extract_json_str(json: &str, key: &str) -> Option<String> {
     )
 }
 
+/// Saves query-to-storage.
 pub(super) fn save_query_to_storage(query: &SavedQuery) {
     let window = match web_sys::window() {
         Some(w) => w,
@@ -121,6 +123,7 @@ pub(super) fn save_query_to_storage(query: &SavedQuery) {
     let _ = storage.set_item("qualia-ui:saved-queries", &format!("[{}]", json));
 }
 
+/// Deletes saved-query-from-storage.
 pub(super) fn delete_saved_query_from_storage(id: &str) {
     let window = match web_sys::window() {
         Some(w) => w,

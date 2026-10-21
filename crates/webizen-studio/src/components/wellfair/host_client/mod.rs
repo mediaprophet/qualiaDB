@@ -14,6 +14,7 @@ use crate::components::qapp_engine::tauri_invoke;
 use js_sys;
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches host-snapshot.
 pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
     match tauri_invoke("wellfair_host_snapshot", wasm_bindgen::JsValue::NULL).await {
         Ok(js) => {
@@ -29,11 +30,13 @@ pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches host-snapshot.
 pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
     super::host_dto::fixture_snapshot()
 }
 
 #[component]
+/// Dioxus `HostSnapshotProvider` component.
 pub fn HostSnapshotProvider(children: Element) -> Element {
     let mut snapshot = use_signal(WellfairHostSnapshot::default);
     let mut loaded = use_signal(|| false);
@@ -59,11 +62,13 @@ pub fn HostSnapshotProvider(children: Element) -> Element {
     }
 }
 
+/// Consumes the host-snapshot signal.
 pub fn use_host_snapshot() -> Signal<WellfairHostSnapshot> {
     consume_context::<Signal<WellfairHostSnapshot>>()
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Ingests companion-health.
 pub async fn ingest_companion_health(bundle_json: &str) -> Result<String, String> {
     let args = wasm_bindgen::JsValue::from_str(bundle_json);
     let js = tauri_invoke("wellfair_ingest_companion_health", args)
@@ -74,11 +79,13 @@ pub async fn ingest_companion_health(bundle_json: &str) -> Result<String, String
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Ingests companion-health.
 pub async fn ingest_companion_health(_bundle_json: &str) -> Result<String, String> {
     Err("Companion ingest requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Imports samsung-folder.
 pub async fn import_samsung_folder(folder_path: &str) -> Result<String, String> {
     let args = wasm_bindgen::JsValue::from_str(folder_path);
     let js = tauri_invoke("wellfair_import_samsung_folder", args)
@@ -89,11 +96,13 @@ pub async fn import_samsung_folder(folder_path: &str) -> Result<String, String> 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Imports samsung-folder.
 pub async fn import_samsung_folder(_folder_path: &str) -> Result<String, String> {
     Err("Samsung folder import requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches companion-pairing.
 pub async fn fetch_companion_pairing() -> Result<String, String> {
     let js = tauri_invoke("wellfair_companion_pairing", wasm_bindgen::JsValue::NULL)
         .await
@@ -103,11 +112,13 @@ pub async fn fetch_companion_pairing() -> Result<String, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches companion-pairing.
 pub async fn fetch_companion_pairing() -> Result<String, String> {
     Err("Companion pairing requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches health-records.
 pub async fn fetch_health_records(limit: usize) -> Result<Vec<HealthRecordDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -126,11 +137,13 @@ pub async fn fetch_health_records(limit: usize) -> Result<Vec<HealthRecordDto>, 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches health-records.
 pub async fn fetch_health_records(_limit: usize) -> Result<Vec<HealthRecordDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches receipts.
 pub async fn fetch_receipts(limit: usize) -> Result<Vec<ReceiptDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -149,11 +162,13 @@ pub async fn fetch_receipts(limit: usize) -> Result<Vec<ReceiptDto>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches receipts.
 pub async fn fetch_receipts(_limit: usize) -> Result<Vec<ReceiptDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches graph-coverage.
 pub async fn fetch_graph_coverage(limit: usize) -> Result<Vec<GraphCoverageDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -172,11 +187,13 @@ pub async fn fetch_graph_coverage(limit: usize) -> Result<Vec<GraphCoverageDto>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches graph-coverage.
 pub async fn fetch_graph_coverage(_limit: usize) -> Result<Vec<GraphCoverageDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Exports health-package.
 pub async fn export_health_package(limit: usize) -> Result<String, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -193,11 +210,13 @@ pub async fn export_health_package(limit: usize) -> Result<String, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Exports health-package.
 pub async fn export_health_package(_limit: usize) -> Result<String, String> {
     Err("Health export requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches identity.
 pub async fn fetch_identity() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("read_identity", wasm_bindgen::JsValue::NULL)
         .await
@@ -209,11 +228,13 @@ pub async fn fetch_identity() -> Result<serde_json::Value, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches identity.
 pub async fn fetch_identity() -> Result<serde_json::Value, String> {
     Ok(serde_json::Value::Null)
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Saves accessibility.
 pub async fn save_accessibility(
     prefs: &super::host_dto::AccessibilityPreferences,
 ) -> Result<(), String> {
@@ -236,6 +257,7 @@ pub async fn save_accessibility(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Saves accessibility.
 pub async fn save_accessibility(
     _prefs: &super::host_dto::AccessibilityPreferences,
 ) -> Result<(), String> {
@@ -243,6 +265,7 @@ pub async fn save_accessibility(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches directory-actors.
 pub async fn fetch_directory_actors() -> Result<Vec<ActorDto>, String> {
     let js = tauri_invoke("get_directory_actors", wasm_bindgen::JsValue::NULL)
         .await
@@ -251,11 +274,13 @@ pub async fn fetch_directory_actors() -> Result<Vec<ActorDto>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches directory-actors.
 pub async fn fetch_directory_actors() -> Result<Vec<ActorDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches delegation-rules.
 pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> {
     let js = tauri_invoke("get_delegation_rules", wasm_bindgen::JsValue::NULL)
         .await
@@ -264,6 +289,7 @@ pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches delegation-rules.
 pub async fn fetch_delegation_rules() -> Result<Vec<DelegationRuleDto>, String> {
     Ok(vec![])
 }
@@ -299,6 +325,7 @@ struct DelegationRuleWire {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds directory-actor.
 pub async fn add_directory_actor(
     name: &str,
     actor_type: &str,
@@ -328,6 +355,7 @@ pub async fn add_directory_actor(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds directory-actor.
 pub async fn add_directory_actor(
     _name: &str,
     _actor_type: &str,
@@ -338,6 +366,7 @@ pub async fn add_directory_actor(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds delegation-rule.
 pub async fn add_delegation_rule(
     actor_id: &str,
     legal_basis: &str,
@@ -362,6 +391,7 @@ pub async fn add_delegation_rule(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds delegation-rule.
 pub async fn add_delegation_rule(
     _actor_id: &str,
     _legal_basis: &str,
@@ -371,6 +401,7 @@ pub async fn add_delegation_rule(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn evaluate_policy(
     qapp_id: &str,
     scope: &str,
@@ -397,6 +428,7 @@ pub async fn evaluate_policy(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn evaluate_policy(
     _qapp_id: &str,
     _scope: &str,
@@ -407,6 +439,7 @@ pub async fn evaluate_policy(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Grants consent.
 pub async fn grant_consent(
     draft: &ConsentGrantDraft,
     scope: &str,
@@ -435,6 +468,7 @@ pub async fn grant_consent(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Grants consent.
 pub async fn grant_consent(
     _draft: &ConsentGrantDraft,
     _scope: &str,
@@ -443,6 +477,7 @@ pub async fn grant_consent(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Revokes consent.
 pub async fn revoke_consent(grant_id: &str) -> Result<bool, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -462,11 +497,13 @@ pub async fn revoke_consent(grant_id: &str) -> Result<bool, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Revokes consent.
 pub async fn revoke_consent(_grant_id: &str) -> Result<bool, String> {
     Err("Consent revoke requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches consents.
 pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
     let js = tauri_invoke("wellfair_list_consents", wasm_bindgen::JsValue::NULL)
         .await
@@ -478,6 +515,7 @@ pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches consents.
 pub async fn fetch_consents() -> Result<Vec<ConsentGrantDto>, String> {
     Ok(vec![])
 }
@@ -503,6 +541,7 @@ pub struct AddAllergyRequest {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds condition.
 pub async fn add_condition(req: &AddConditionRequest) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
@@ -522,11 +561,13 @@ pub async fn add_condition(req: &AddConditionRequest) -> Result<HealthRecordDto,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds condition.
 pub async fn add_condition(_req: &AddConditionRequest) -> Result<HealthRecordDto, String> {
     Err("Add condition requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds allergy.
 pub async fn add_allergy(req: &AddAllergyRequest) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
@@ -546,6 +587,7 @@ pub async fn add_allergy(req: &AddAllergyRequest) -> Result<HealthRecordDto, Str
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds allergy.
 pub async fn add_allergy(_req: &AddAllergyRequest) -> Result<HealthRecordDto, String> {
     Err("Add allergy requires the Tauri desktop host".into())
 }
@@ -578,6 +620,7 @@ pub struct AddHousingSafetyRequest {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds disputed-diagnosis.
 pub async fn add_disputed_diagnosis(
     req: &AddDisputedDiagnosisRequest,
 ) -> Result<HealthRecordDto, String> {
@@ -599,6 +642,7 @@ pub async fn add_disputed_diagnosis(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds disputed-diagnosis.
 pub async fn add_disputed_diagnosis(
     _req: &AddDisputedDiagnosisRequest,
 ) -> Result<HealthRecordDto, String> {
@@ -606,6 +650,7 @@ pub async fn add_disputed_diagnosis(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds housing-safety.
 pub async fn add_housing_safety(req: &AddHousingSafetyRequest) -> Result<HealthRecordDto, String> {
     let json = serde_json::to_string(req).map_err(|e| e.to_string())?;
     let args = js_sys::Object::new();
@@ -625,6 +670,7 @@ pub async fn add_housing_safety(req: &AddHousingSafetyRequest) -> Result<HealthR
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds housing-safety.
 pub async fn add_housing_safety(_req: &AddHousingSafetyRequest) -> Result<HealthRecordDto, String> {
     Err("Housing/safety requires the Tauri desktop host".into())
 }
@@ -645,6 +691,7 @@ pub struct DueMedReminderDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches med-reminder-prefs.
 pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
     let js = tauri_invoke("wellfair_med_reminder_prefs", wasm_bindgen::JsValue::NULL)
         .await
@@ -656,6 +703,7 @@ pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches med-reminder-prefs.
 pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
     Ok(MedReminderPrefsDto {
         enabled: false,
@@ -665,6 +713,7 @@ pub async fn fetch_med_reminder_prefs() -> Result<MedReminderPrefsDto, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Grants med-reminder-permission.
 pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, String> {
     let js = tauri_invoke(
         "wellfair_grant_med_reminder_permission",
@@ -679,11 +728,13 @@ pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, Stri
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Grants med-reminder-permission.
 pub async fn grant_med_reminder_permission() -> Result<MedReminderPrefsDto, String> {
     Err("Med reminders require the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Sets med-reminders-enabled.
 pub async fn set_med_reminders_enabled(enabled: bool) -> Result<MedReminderPrefsDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -702,11 +753,13 @@ pub async fn set_med_reminders_enabled(enabled: bool) -> Result<MedReminderPrefs
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets med-reminders-enabled.
 pub async fn set_med_reminders_enabled(_enabled: bool) -> Result<MedReminderPrefsDto, String> {
     Err("Med reminders require the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches due-med-reminders.
 pub async fn fetch_due_med_reminders(
     window_minutes: i32,
 ) -> Result<Vec<DueMedReminderDto>, String> {
@@ -727,6 +780,7 @@ pub async fn fetch_due_med_reminders(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches due-med-reminders.
 pub async fn fetch_due_med_reminders(
     _window_minutes: i32,
 ) -> Result<Vec<DueMedReminderDto>, String> {
@@ -751,6 +805,7 @@ pub struct SleepAnalyticsDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds medication.
 pub async fn add_medication(
     name: &str,
     dose: &str,
@@ -777,6 +832,7 @@ pub async fn add_medication(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds medication.
 pub async fn add_medication(
     _name: &str,
     _dose: &str,
@@ -787,6 +843,7 @@ pub async fn add_medication(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Records administration.
 pub async fn record_administration(
     medication_id: &str,
     medication_name: &str,
@@ -826,6 +883,7 @@ pub async fn record_administration(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Records administration.
 pub async fn record_administration(
     _medication_id: &str,
     _medication_name: &str,
@@ -836,6 +894,7 @@ pub async fn record_administration(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds diet-entry.
 pub async fn add_diet_entry(
     description: &str,
     meal_type: &str,
@@ -872,6 +931,7 @@ pub async fn add_diet_entry(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds diet-entry.
 pub async fn add_diet_entry(
     _description: &str,
     _meal_type: &str,
@@ -881,6 +941,7 @@ pub async fn add_diet_entry(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches sleep-analytics.
 pub async fn fetch_sleep_analytics() -> Result<SleepAnalyticsDto, String> {
     let js = tauri_invoke("wellfair_sleep_analytics", wasm_bindgen::JsValue::NULL)
         .await
@@ -892,11 +953,13 @@ pub async fn fetch_sleep_analytics() -> Result<SleepAnalyticsDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches sleep-analytics.
 pub async fn fetch_sleep_analytics() -> Result<SleepAnalyticsDto, String> {
     Err("Sleep analytics requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds emergency-contact.
 pub async fn add_emergency_contact(
     display_name: &str,
     relationship: &str,
@@ -934,6 +997,7 @@ pub async fn add_emergency_contact(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds emergency-contact.
 pub async fn add_emergency_contact(
     _display_name: &str,
     _relationship: &str,
@@ -944,6 +1008,7 @@ pub async fn add_emergency_contact(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches emergency-contacts.
 pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, String> {
     let js = tauri_invoke(
         "wellfair_list_emergency_contacts",
@@ -958,6 +1023,7 @@ pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, Stri
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches emergency-contacts.
 pub async fn fetch_emergency_contacts() -> Result<Vec<EmergencyContactDto>, String> {
     Ok(vec![])
 }
@@ -1034,6 +1100,7 @@ async fn invoke_report_json(command: &str, report_json: &str) -> Result<HealthRe
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds life-event.
 pub async fn add_life_event(title: &str, notes: Option<&str>) -> Result<HealthRecordDto, String> {
     let wire = LifeEventWire {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1045,11 +1112,13 @@ pub async fn add_life_event(title: &str, notes: Option<&str>) -> Result<HealthRe
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds life-event.
 pub async fn add_life_event(_title: &str, _notes: Option<&str>) -> Result<HealthRecordDto, String> {
     Err("Life events require the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds welfare-case.
 pub async fn add_welfare_case(
     title: &str,
     summary: Option<&str>,
@@ -1064,6 +1133,7 @@ pub async fn add_welfare_case(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds welfare-case.
 pub async fn add_welfare_case(
     _title: &str,
     _summary: Option<&str>,
@@ -1072,6 +1142,7 @@ pub async fn add_welfare_case(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds case-task.
 pub async fn add_case_task(case_id: &str, title: &str) -> Result<HealthRecordDto, String> {
     let wire = CaseTaskWire {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1083,11 +1154,13 @@ pub async fn add_case_task(case_id: &str, title: &str) -> Result<HealthRecordDto
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds case-task.
 pub async fn add_case_task(_case_id: &str, _title: &str) -> Result<HealthRecordDto, String> {
     Err("Case tasks require the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds wellbeing-observation.
 pub async fn add_wellbeing_observation(
     mood: &str,
     intensity: Option<u8>,
@@ -1102,6 +1175,7 @@ pub async fn add_wellbeing_observation(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds wellbeing-observation.
 pub async fn add_wellbeing_observation(
     _mood: &str,
     _intensity: Option<u8>,
@@ -1110,6 +1184,7 @@ pub async fn add_wellbeing_observation(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds therapy-note.
 pub async fn add_therapy_note(
     notes: &str,
     provider: Option<&str>,
@@ -1124,6 +1199,7 @@ pub async fn add_therapy_note(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds therapy-note.
 pub async fn add_therapy_note(
     _notes: &str,
     _provider: Option<&str>,
@@ -1132,6 +1208,7 @@ pub async fn add_therapy_note(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches sanctuary-prefs.
 pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
     let js = tauri_invoke("wellfair_sanctuary_prefs", wasm_bindgen::JsValue::NULL)
         .await
@@ -1143,11 +1220,13 @@ pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches sanctuary-prefs.
 pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
     Ok(SanctuaryPrefsDto::default())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn setup_sanctuary(real_pin: &str, decoy_pin: &str) -> Result<SanctuaryPrefsDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -1172,6 +1251,7 @@ pub async fn setup_sanctuary(real_pin: &str, decoy_pin: &str) -> Result<Sanctuar
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn setup_sanctuary(
     _real_pin: &str,
     _decoy_pin: &str,
@@ -1180,6 +1260,7 @@ pub async fn setup_sanctuary(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn lock_sanctuary() -> Result<SanctuaryPrefsDto, String> {
     let js = tauri_invoke("wellfair_lock_sanctuary", wasm_bindgen::JsValue::NULL)
         .await
@@ -1191,11 +1272,13 @@ pub async fn lock_sanctuary() -> Result<SanctuaryPrefsDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn lock_sanctuary() -> Result<SanctuaryPrefsDto, String> {
     Err("Sanctuary lock requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn unlock_sanctuary(pin: &str) -> Result<SanctuaryPrefsDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &"pin".into(), &wasm_bindgen::JsValue::from_str(pin))
@@ -1210,6 +1293,7 @@ pub async fn unlock_sanctuary(pin: &str) -> Result<SanctuaryPrefsDto, String> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn unlock_sanctuary(_pin: &str) -> Result<SanctuaryPrefsDto, String> {
     Err("Sanctuary unlock requires the Tauri desktop host".into())
 }
@@ -1225,6 +1309,7 @@ pub struct LiveShareRequestDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches pending-live-shares.
 pub async fn fetch_pending_live_shares(limit: usize) -> Result<Vec<LiveShareRequestDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -1243,6 +1328,7 @@ pub async fn fetch_pending_live_shares(limit: usize) -> Result<Vec<LiveShareRequ
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches pending-live-shares.
 pub async fn fetch_pending_live_shares(_limit: usize) -> Result<Vec<LiveShareRequestDto>, String> {
     Ok(vec![])
 }
@@ -1288,6 +1374,7 @@ async fn decide_live_share(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn approve_live_share(
     request_id: &str,
     projection_kinds: &[String],
@@ -1296,6 +1383,7 @@ pub async fn approve_live_share(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn approve_live_share(
     _request_id: &str,
     _projection_kinds: &[String],
@@ -1304,11 +1392,13 @@ pub async fn approve_live_share(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn deny_live_share(request_id: &str, reason: &str) -> Result<(), String> {
     decide_live_share(request_id, false, &[], Some(reason)).await
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn deny_live_share(_request_id: &str, _reason: &str) -> Result<(), String> {
     Err("Live share denial requires the Tauri desktop host".into())
 }

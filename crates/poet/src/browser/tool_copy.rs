@@ -13,6 +13,7 @@ pub struct Presentation {
     pub min_proficiency: Proficiency,
 }
 
+/// Presentation text.
 pub fn presentation(id: &str, fallback_label: &str, fallback_tooltip: &str) -> Presentation {
     if let Some(spec) = super::spec_tools::lookup(id) {
         return Presentation {
@@ -39,6 +40,7 @@ pub fn presentation(id: &str, fallback_label: &str, fallback_tooltip: &str) -> P
     }
 }
 
+/// Kind badge.
 pub fn kind_badge(kind: ToolKind) -> &'static str {
     match (super::tool_proficiency::current(), kind) {
         (Proficiency::Expert, ToolKind::PlaceContainer) => "place",
@@ -54,6 +56,7 @@ pub fn kind_badge(kind: ToolKind) -> &'static str {
     }
 }
 
+/// Decorates the copy.
 pub fn decorate(
     button: &Element,
     id: &str,

@@ -113,6 +113,7 @@ pub struct ExportReceipt {
 }
 
 impl ExportReceipt {
+    /// Constructs from package.
     pub fn from_package(pkg: &HealthExportPackage) -> Self {
         Self {
             export_sha256_hex: pkg.content_sha256_hex.clone(),
@@ -123,6 +124,7 @@ impl ExportReceipt {
     }
 }
 
+/// Exports a policy receipt.
 pub fn export_policy_receipt(pkg: &HealthExportPackage, timestamp_unix: u32) -> ReceiptRecord {
     ReceiptRecord {
         id: format!(

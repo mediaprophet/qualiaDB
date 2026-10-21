@@ -21,6 +21,7 @@ pub enum LandmarkBufferLayout {
 
 impl LandmarkBufferLayout {
     #[inline]
+    /// Components per landmark.
     pub const fn components_per_landmark(self) -> usize {
         match self {
             Self::XyInterleaved => 2,
@@ -29,6 +30,7 @@ impl LandmarkBufferLayout {
     }
 
     #[inline]
+    /// `expected` length.
     pub const fn expected_len(self) -> usize {
         MEDIAPIPE_FACE_MESH_COUNT * self.components_per_landmark()
     }

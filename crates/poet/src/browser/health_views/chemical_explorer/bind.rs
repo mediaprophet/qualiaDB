@@ -24,6 +24,7 @@ pub enum LoadState {
 }
 
 impl LoadState {
+    /// Views as str.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::NoAsset => "no_asset",
@@ -34,6 +35,7 @@ impl LoadState {
         }
     }
 
+    /// Parses the payload.
     pub fn parse(raw: &str) -> Self {
         match raw {
             "loading" => Self::Loading,
@@ -70,10 +72,12 @@ pub struct LocalChebiSession {
 }
 
 impl LocalChebiSession {
+    /// `compound` count.
     pub fn compound_count(&self) -> usize {
         self.compounds.len()
     }
 
+    /// Finds by accession.
     pub fn find_by_accession(&self, accession: &str) -> Option<&FixtureCompound> {
         let canonical = normalize_accession_query(accession)?;
         self.compounds
@@ -107,6 +111,7 @@ impl LocalChebiSession {
         out
     }
 
+    /// Relations for the entry.
     pub fn relations_for(&self, accession: &str, max_hits: usize) -> Vec<RelationHitView> {
         let Some(selected) = self.find_by_accession(accession) else {
             return Vec::new();
@@ -153,6 +158,7 @@ impl LocalChebiSession {
         out
     }
 
+    /// Evidence for the entry.
     pub fn evidence_for(&self, accession: &str) -> Vec<EvidenceHitView> {
         let Some(selected) = self.find_by_accession(accession) else {
             return Vec::new();

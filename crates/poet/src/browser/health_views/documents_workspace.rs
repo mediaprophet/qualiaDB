@@ -21,6 +21,7 @@ use web_sys::{
     Document, Element, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement, MouseEvent,
 };
 
+/// Builds documents-view.
 pub fn build_documents_view(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

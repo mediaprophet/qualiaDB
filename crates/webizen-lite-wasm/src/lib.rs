@@ -1174,6 +1174,7 @@ fn parse_named_quins(args: &Value, field: &str) -> Result<Vec<NQuin>, String> {
         .collect()
 }
 
+/// Parses quin.
 pub(crate) fn parse_quin(value: &Value, field: &str) -> Result<NQuin, String> {
     if let Some(items) = value.as_array() {
         if items.len() != 6 {
@@ -1222,6 +1223,7 @@ pub(crate) fn parse_quin(value: &Value, field: &str) -> Result<NQuin, String> {
     })
 }
 
+/// `quin` as JSON.
 pub(crate) fn quin_json(quin: &NQuin) -> Value {
     json!({
         "subject": quin.subject.to_string(),
@@ -1233,6 +1235,7 @@ pub(crate) fn quin_json(quin: &NQuin) -> Value {
     })
 }
 
+/// Required string arg.
 pub(crate) fn required_str<'a>(object: &'a Value, field: &str) -> Result<&'a str, String> {
     object
         .get(field)
@@ -1240,6 +1243,7 @@ pub(crate) fn required_str<'a>(object: &'a Value, field: &str) -> Result<&'a str
         .ok_or_else(|| format!("{field} must be a string"))
 }
 
+/// Required u64 arg.
 pub(crate) fn required_u64(object: &Value, field: &str) -> Result<u64, String> {
     object
         .get(field)
@@ -1247,6 +1251,7 @@ pub(crate) fn required_u64(object: &Value, field: &str) -> Result<u64, String> {
         .and_then(|value| parse_u64(value, field))
 }
 
+/// Optional u64 arg.
 pub(crate) fn optional_u64(object: &Value, field: &str) -> Result<Option<u64>, String> {
     object
         .get(field)
@@ -1254,6 +1259,7 @@ pub(crate) fn optional_u64(object: &Value, field: &str) -> Result<Option<u64>, S
         .transpose()
 }
 
+/// Required u32 arg.
 pub(crate) fn required_u32(object: &Value, field: &str) -> Result<u32, String> {
     let value = required_u64(object, field)?;
     u32::try_from(value).map_err(|_| format!("{field} exceeds u32"))
@@ -1264,6 +1270,7 @@ fn required_u8(object: &Value, field: &str) -> Result<u8, String> {
     u8::try_from(value).map_err(|_| format!("{field} exceeds u8"))
 }
 
+/// Parses u64.
 pub(crate) fn parse_u64(value: &Value, field: &str) -> Result<u64, String> {
     if let Some(number) = value.as_u64() {
         return Ok(number);

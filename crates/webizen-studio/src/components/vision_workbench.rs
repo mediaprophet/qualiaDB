@@ -111,6 +111,7 @@ fn humanize_vision_error(raw: &str) -> String {
 }
 
 #[component]
+/// Dioxus `VisionWorkbench` component.
 pub fn VisionWorkbench() -> Element {
     let mut demo = use_signal(|| None::<VisionDemoResult>);
     let mut status = use_signal(|| {

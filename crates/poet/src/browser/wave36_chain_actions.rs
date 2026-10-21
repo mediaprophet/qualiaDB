@@ -59,6 +59,7 @@ fn invoke_dual(
     });
 }
 
+/// Chain action: social-gini.
 pub(super) fn run_social_gini(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -69,6 +70,7 @@ pub(super) fn run_social_gini(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: social-lorenz.
 pub(super) fn run_social_lorenz(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -79,6 +81,7 @@ pub(super) fn run_social_lorenz(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: social-degree-centrality.
 pub(super) fn run_social_degree_centrality(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -89,6 +92,7 @@ pub(super) fn run_social_degree_centrality(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: social-lww.
 pub(super) fn run_social_lww(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -103,6 +107,7 @@ pub(super) fn run_social_lww(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: finance-convert-currency.
 pub(super) fn run_finance_convert_currency(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -113,6 +118,7 @@ pub(super) fn run_finance_convert_currency(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: finance-multisig-check.
 pub(super) fn run_finance_multisig_check(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -123,6 +129,7 @@ pub(super) fn run_finance_multisig_check(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: finance-ledger-balance.
 pub(super) fn run_finance_ledger_balance(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -136,6 +143,7 @@ pub(super) fn run_finance_ledger_balance(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: forensic-malfeasance-delta.
 pub(super) fn run_forensic_malfeasance_delta(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -146,6 +154,7 @@ pub(super) fn run_forensic_malfeasance_delta(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: forensic-narrative-divergence.
 pub(super) fn run_forensic_narrative_divergence(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -159,6 +168,7 @@ pub(super) fn run_forensic_narrative_divergence(document: &Document, label: &str
     );
 }
 
+/// Chain action: corpus-load.
 pub(super) fn run_corpus_load(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -169,6 +179,7 @@ pub(super) fn run_corpus_load(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: corpus-parse.
 pub(super) fn run_corpus_parse(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -179,6 +190,7 @@ pub(super) fn run_corpus_parse(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: chat-validate-fragment.
 pub(super) fn run_chat_validate_fragment(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -195,6 +207,7 @@ pub(super) fn run_chat_validate_fragment(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: chat-link-reply.
 pub(super) fn run_chat_link_reply(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -209,6 +222,7 @@ pub(super) fn run_chat_link_reply(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: interactive-add-social-post.
 pub(super) fn run_interactive_add_social_post(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -219,6 +233,7 @@ pub(super) fn run_interactive_add_social_post(document: &Document, label: &str) 
     );
 }
 
+/// Chain action: interactive-add-trigger.
 pub(super) fn run_interactive_add_trigger(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -229,6 +244,7 @@ pub(super) fn run_interactive_add_trigger(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: second-screen-sync.
 pub(super) fn run_second_screen_sync(document: &Document, label: &str) {
     invoke_dual(
         document,

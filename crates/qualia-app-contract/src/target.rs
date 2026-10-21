@@ -25,6 +25,7 @@ pub struct PointerHit {
 }
 
 impl PointerHit {
+    /// Creates a new instance.
     pub fn new(x: f64, y: f64, surface_id: impl Into<String>) -> Result<Self, ContractError> {
         let x = validate_finite_f64(x, "x")?;
         let y = validate_finite_f64(y, "y")?;
@@ -36,6 +37,7 @@ impl PointerHit {
         })
     }
 
+    /// Builder — sets pressure.
     pub fn with_pressure(mut self, pressure: f64) -> Result<Self, ContractError> {
         let p = validate_finite_f64(pressure, "pressure")?;
         if !(0.0..=1.0).contains(&p) {

@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "audio:bpm-tempo" | "audio:tempo-set" => Some(step_bpm(container)),
@@ -18,6 +19,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next bpm.
 pub(crate) fn next_bpm(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("120 BPM") => "128 BPM",
@@ -28,6 +30,7 @@ pub(crate) fn next_bpm(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next quantize.
 pub(crate) fn next_quantize(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("1/4") => "1/8",
@@ -37,6 +40,7 @@ pub(crate) fn next_quantize(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next fader.
 pub(crate) fn next_fader(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("0.0dB (Unity)") => "-6.0dB",
@@ -46,6 +50,7 @@ pub(crate) fn next_fader(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next output-bus.
 pub(crate) fn next_output_bus(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("master") => "bus_a",

@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers rights-toolbox.
 pub(super) fn register_rights_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

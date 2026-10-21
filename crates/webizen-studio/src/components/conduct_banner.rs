@@ -19,6 +19,7 @@ pub enum ConductKind {
 }
 
 impl ConductKind {
+    /// Title.
     pub fn title(self) -> &'static str {
         match self {
             Self::GateDeny => "Gate deny",
@@ -45,6 +46,7 @@ pub struct ConductNotice {
 }
 
 impl ConductNotice {
+    /// Gate-deny banner copy.
     pub fn gate_deny(reason: impl Into<String>) -> Self {
         Self {
             kind: ConductKind::GateDeny,
@@ -52,6 +54,7 @@ impl ConductNotice {
         }
     }
 
+    /// Shield-alert banner copy.
     pub fn shield_alert(reason: impl Into<String>) -> Self {
         Self {
             kind: ConductKind::ShieldAlert,
@@ -59,6 +62,7 @@ impl ConductNotice {
         }
     }
 
+    /// Inference-block banner copy.
     pub fn inference_block(reason: impl Into<String>) -> Self {
         Self {
             kind: ConductKind::InferenceBlock,

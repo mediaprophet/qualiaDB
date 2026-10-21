@@ -925,6 +925,7 @@ fn input_value(document: &Document, id: &str) -> String {
         .unwrap_or_default()
 }
 
+/// Hides the inspector.
 pub fn hide_inspector(document: &Document) {
     if let Some(existing) = document.get_element_by_id("wire-inspector") {
         existing.remove();

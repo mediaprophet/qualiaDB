@@ -146,6 +146,7 @@ pub enum SentinelCapability {
 }
 
 impl SentinelCapability {
+    /// Name.
     pub fn name(&self) -> &'static str {
         match self {
             SentinelCapability::GraphRead => "graph.read",

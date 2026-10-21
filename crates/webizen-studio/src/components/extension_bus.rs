@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ExtensionBus` component.
 pub fn ExtensionBus() -> Element {
     let mut extensions = use_signal(|| {
         vec![

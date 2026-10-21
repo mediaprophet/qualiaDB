@@ -64,9 +64,11 @@ impl EnvelopeKeypair {
         })
     }
 
+    /// Public key as hex.
     pub fn public_hex(&self) -> String {
         hex::encode(self.public)
     }
+    /// Secret key as hex.
     pub fn secret_hex(&self) -> String {
         hex::encode(self.secret)
     }
@@ -99,6 +101,68 @@ impl EnvelopeKeypair {
 
 /// Domain tag for deriving the owner's envelope keypair from their ed25519 signing-key seed.
 pub const OWNER_ENVELOPE_DOMAIN: &[u8] = b"qualia:accountability:envelope:owner:v1";
+
+/// Domain tag for deriving the owner's post-quantum hybrid KEM key seed (X-Wing: ML-KEM-768 + X25519).
+pub const OWNER_PQ_KEM_DOMAIN: &[u8] = b"qualia:accountability:pq-kem:xwing-mlkem768:v1";
+/// Domain tag for deriving the owner's post-quantum digital signature key seed (ML-DSA-65).
+pub const OWNER_PQ_DSA_DOMAIN: &[u8] = b"qualia:accountability:pq-dsa:mldsa65:v1";
+
+/// Post-quantum key material deterministically derived from a root secret.
+/// Provides domain-separated seeds for X-Wing (ML-KEM-768 + X25519) and ML-DSA-65,
+/// enabling the host keystore to derive keys at runtime without storing plaintext secret keys on disk.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PostQuantumKeyMaterial {
+    /// 64-byte seed for X-Wing: 32 bytes for ML-KEM-768 (d || z) and 32 bytes for X25519 per X-Wing spec.
+    pub xwing_seed: [u8; 64],
+    /// 32-byte seed for ML-DSA-65.
+    pub mldsa65_seed: [u8; 32],
+}
+
+impl PostQuantumKeyMaterial {
+    /// Deterministically derive post-quantum key seeds from a root secret (e.g. ed25519 signing seed).
+    /// Uses domain separation to generate distinct seeds for X-Wing (ML-KEM-768 + X25519) and ML-DSA-65.
+    pub fn derive_from_root(root_secret: &[u8; 32]) -> Self {
+        // ML-KEM-768 seed component of X-Wing (32 bytes)
+        let mut h_kem = Sha256::new();
+        h_kem.update(OWNER_PQ_KEM_DOMAIN);
+        h_kem.update(b"\x00");
+        h_kem.update(root_secret);
+        let kem_seed: [u8; 32] = h_kem.finalize().into();
+
+        // X25519 seed component of X-Wing (32 bytes)
+        let mut h_x25519 = Sha256::new();
+        h_x25519.update(OWNER_PQ_KEM_DOMAIN);
+        h_x25519.update(b"\x01");
+        h_x25519.update(root_secret);
+        let x25519_seed: [u8; 32] = h_x25519.finalize().into();
+
+        let mut xwing_seed = [0u8; 64];
+        xwing_seed[..32].copy_from_slice(&kem_seed);
+        xwing_seed[32..].copy_from_slice(&x25519_seed);
+
+        // ML-DSA-65 seed (32 bytes)
+        let mut h_dsa = Sha256::new();
+        h_dsa.update(OWNER_PQ_DSA_DOMAIN);
+        h_dsa.update(b"\x1f");
+        h_dsa.update(root_secret);
+        let mldsa65_seed: [u8; 32] = h_dsa.finalize().into();
+
+        Self {
+            xwing_seed,
+            mldsa65_seed,
+        }
+    }
+
+    /// Key ID for the post-quantum key material, deterministically computed from the seeds.
+    pub fn key_id(&self) -> String {
+        let mut h = Sha256::new();
+        h.update(b"qualia:accountability:pq-key-id:v1\x1f");
+        h.update(&self.xwing_seed);
+        h.update(&self.mldsa65_seed);
+        let d = h.finalize();
+        format!("pq:{}", hex::encode(&d[..16]))
+    }
+}
 
 fn parse_key_hex(s: &str, which: &str) -> Result<[u8; 32], String> {
     let bytes = hex::decode(s.trim()).map_err(|e| format!("{which} key not hex: {e}"))?;
@@ -315,5 +379,47 @@ mod tests {
         let back = EnvelopeKeypair::from_hex(&kp.public_hex(), &kp.secret_hex()).unwrap();
         assert_eq!(kp, back);
         assert!(EnvelopeKeypair::from_hex("zz", &kp.secret_hex()).is_err());
+    }
+
+    #[test]
+    fn pq_key_material_deterministic_derivation() {
+        let root = [99u8; 32];
+        let pq1 = PostQuantumKeyMaterial::derive_from_root(&root);
+        let pq2 = PostQuantumKeyMaterial::derive_from_root(&root);
+        assert_eq!(pq1, pq2, "derivation must be deterministic");
+        assert_eq!(pq1.key_id(), pq2.key_id(), "key_id must be deterministic");
+
+        let root_other = [100u8; 32];
+        let pq_other = PostQuantumKeyMaterial::derive_from_root(&root_other);
+        assert_ne!(pq1, pq_other);
+        assert_ne!(pq1.key_id(), pq_other.key_id());
+    }
+
+    #[test]
+    fn pq_key_material_domain_separation() {
+        let root = [42u8; 32];
+        let pq = PostQuantumKeyMaterial::derive_from_root(&root);
+        let classical = EnvelopeKeypair::derive(&root, OWNER_ENVELOPE_DOMAIN);
+
+        // ML-KEM vs X25519 within X-Wing
+        assert_ne!(&pq.xwing_seed[..32], &pq.xwing_seed[32..]);
+        // X-Wing parts vs ML-DSA
+        assert_ne!(&pq.xwing_seed[..32], &pq.mldsa65_seed[..]);
+        assert_ne!(&pq.xwing_seed[32..], &pq.mldsa65_seed[..]);
+        // PQ seeds vs classical secret
+        assert_ne!(&pq.xwing_seed[..32], &classical.secret[..]);
+        assert_ne!(&pq.xwing_seed[32..], &classical.secret[..]);
+        assert_ne!(&pq.mldsa65_seed[..], &classical.secret[..]);
+    }
+
+    #[test]
+    fn pq_key_material_key_id_stability() {
+        let root = [1u8; 32];
+        let pq = PostQuantumKeyMaterial::derive_from_root(&root);
+        let id = pq.key_id();
+        assert!(id.starts_with("pq:"));
+        assert_eq!(id.len(), 3 + 32); // "pq:" + 16 bytes hex (32 chars)
+        // Repeat to ensure stability
+        assert_eq!(id, pq.key_id());
     }
 }

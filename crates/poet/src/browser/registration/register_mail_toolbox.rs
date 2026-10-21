@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers mail-toolbox.
 pub(super) fn register_mail_toolbox(reg: &mut Registry) {
     register_compact_toolbox(
         reg,

@@ -3,6 +3,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement};
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "code:vibe-syntax-check" => Some(syntax_check(container)),
@@ -13,6 +14,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Checks delimiter-balance.
 pub(crate) fn check_delimiter_balance(text: &str) -> Result<(), &'static str> {
     let mut stack = Vec::new();
     for ch in text.chars() {
@@ -43,6 +45,7 @@ pub(crate) fn check_delimiter_balance(text: &str) -> Result<(), &'static str> {
     }
 }
 
+/// Cleans a VibeScript.
 pub(crate) fn clean_vibe_script(text: &str) -> String {
     let mut lines = Vec::new();
     for line in text.lines() {
@@ -51,6 +54,7 @@ pub(crate) fn clean_vibe_script(text: &str) -> String {
     lines.join("\n")
 }
 
+/// Extracts a script outline.
 pub(crate) fn extract_script_outline(text: &str) -> Vec<String> {
     if let Ok(prog) = vibe::parse_program(text) {
         let mut out = Vec::new();

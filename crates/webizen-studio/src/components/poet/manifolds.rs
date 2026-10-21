@@ -13,6 +13,7 @@ pub struct ManifoldSeed {
     pub wires: Vec<Wire>,
 }
 
+/// Loads manifold.
 pub fn load_manifold(id: ManifoldId) -> ManifoldSeed {
     match id {
         ManifoldId::Research => research(),

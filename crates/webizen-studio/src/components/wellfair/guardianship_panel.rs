@@ -47,6 +47,7 @@ fn state_style(state: &str) -> &'static str {
 }
 
 #[component]
+/// Dioxus `WellfairGuardianshipPanel` component.
 pub fn WellfairGuardianshipPanel() -> Element {
     let mut ui = use_signal(GuardUi::default);
 

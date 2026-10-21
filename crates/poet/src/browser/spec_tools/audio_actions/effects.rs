@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "audio:add-effect" => Some(append_effect(container)),
@@ -70,6 +71,7 @@ fn append_effect(container: &Element) -> Result<(), String> {
         .map_err(|_| "Failed to add effect.".to_string())
 }
 
+/// Cycles to the next eq-preset.
 pub(crate) fn next_eq_preset(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("flat") => "low_shelf_boost",

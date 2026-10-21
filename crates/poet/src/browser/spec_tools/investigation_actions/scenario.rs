@@ -3,6 +3,7 @@
 use super::shared::{append_csv_attr, append_semicolon_attr, count_selector};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:create-scenario" => Some(create_scenario(container)),
@@ -18,6 +19,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next scenario-kind.
 pub(crate) fn next_scenario_kind(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("best-case") => "worst-case",
@@ -28,6 +30,7 @@ pub(crate) fn next_scenario_kind(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next probability-band.
 pub(crate) fn next_probability_band(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("negligible") => "low",

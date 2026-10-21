@@ -42,6 +42,7 @@ impl Default for ClinicalUi {
 }
 
 #[component]
+/// Dioxus `WellfairClinicalPanel` component.
 pub fn WellfairClinicalPanel() -> Element {
     let mut ui = use_signal(ClinicalUi::default);
 

@@ -79,6 +79,7 @@ pub const ICONS: &[IconDescriptor] = &[
 ];
 
 #[inline]
+/// Looks up an icon.
 pub fn lookup_icon(id: &str) -> Option<&'static IconDescriptor> {
     let hash = q_hash(id);
     let mut i = 0;
@@ -92,6 +93,7 @@ pub fn lookup_icon(id: &str) -> Option<&'static IconDescriptor> {
 }
 
 #[component]
+/// Dioxus `IconBadge` component.
 pub fn IconBadge(
     id: &'static str,
     #[props(default)] state: Option<String>,

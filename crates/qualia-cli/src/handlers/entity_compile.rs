@@ -16,6 +16,7 @@ use qualia_core_db::bundle::{
 };
 use crate::cli::EntityCompileArgs;
 
+/// Handles the subcommand action.
 pub fn handle(args: &EntityCompileArgs) -> Result<(), Box<dyn std::error::Error>> {
     println!("============================================================");
     println!("🌐 QualiaDB Ontological Entity Compiler");

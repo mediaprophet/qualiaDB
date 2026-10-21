@@ -13,6 +13,7 @@ effect fn repl_demo() {
 "#;
 
 #[component]
+/// Dioxus `IdeBody` component.
 pub fn IdeBody() -> Element {
     let mut out = use_signal(|| String::new());
     let mut busy = use_signal(|| false);

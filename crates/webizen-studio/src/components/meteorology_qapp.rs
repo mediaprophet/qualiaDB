@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MeteorologyQapp` component.
 pub fn MeteorologyQapp() -> Element {
     rsx! {
         QAppEngine {

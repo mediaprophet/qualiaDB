@@ -292,6 +292,7 @@ fn SelectControl(
 }
 
 #[component]
+/// Dioxus `TechnicalSettingsPage` component.
 pub fn TechnicalSettingsPage() -> Element {
     let mut theme_state = consume_context::<Signal<ResolvedTheme>>();
     let custom_themes = use_signal(read_custom_themes);

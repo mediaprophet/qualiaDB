@@ -3,6 +3,7 @@
 use super::shared::{append_csv_attr, append_semicolon_attr, count_selector};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:propose-hypothesis" => Some(propose_hypothesis(container)),
@@ -16,6 +17,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// `next-hypothesis` status.
 pub(crate) fn next_hypothesis_status(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("proposed") => "testing",
@@ -28,6 +30,7 @@ pub(crate) fn next_hypothesis_status(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Cycles to the next evaluation-verdict.
 pub(crate) fn next_evaluation_verdict(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("supports") => "contradicts",

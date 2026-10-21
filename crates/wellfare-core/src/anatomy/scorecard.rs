@@ -73,6 +73,7 @@ impl Aspect {
         ]
     }
 
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Aspect::SystemicLoad => "Systemic load",

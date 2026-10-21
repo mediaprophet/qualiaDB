@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SolidBody` component.
 pub fn SolidBody() -> Element {
     let mut pod_url = use_signal(|| "https://pod.example.org/inbox/".to_string());
     let generated_ttl = use_signal(|| {

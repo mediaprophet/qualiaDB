@@ -31,6 +31,7 @@ fn status(document: &Document, message: &str, kind: &str) {
     super::super::super::interactions::show_tool_status(document, "Media", message, kind);
 }
 
+/// Stops transport.
 pub fn stop(document: &Document, container: &Element) -> bool {
     let Some(media) = media_in(container) else {
         status(document, "Choose a local media file with Play first.", "unavailable");
@@ -42,6 +43,7 @@ pub fn stop(document: &Document, container: &Element) -> bool {
     true
 }
 
+/// Toggles loop.
 pub fn toggle_loop(document: &Document, container: &Element) -> bool {
     let Some(media) = media_in(container) else {
         status(document, "Choose a local audio file with Play first.", "unavailable");
@@ -60,6 +62,7 @@ pub fn toggle_loop(document: &Document, container: &Element) -> bool {
     true
 }
 
+/// Steps volume.
 pub fn step_volume(document: &Document, container: &Element) -> bool {
     let Some(media) = media_in(container) else {
         status(document, "Choose a local audio file with Play first.", "unavailable");
@@ -76,6 +79,7 @@ pub fn step_volume(document: &Document, container: &Element) -> bool {
     true
 }
 
+/// Jogs transport.
 pub fn jog(document: &Document, container: &Element) -> bool {
     let Some(media) = media_in(container) else {
         status(document, "Choose a local video file with Play first.", "unavailable");

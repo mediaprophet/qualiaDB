@@ -2,6 +2,7 @@ use super::types::AgentQaSnapshot;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SetupHealthPanel` component.
 pub fn SetupHealthPanel(
     snapshot: Option<AgentQaSnapshot>,
     loading: bool,

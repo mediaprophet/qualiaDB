@@ -11,26 +11,31 @@ pub struct GraphFocus {
 }
 
 impl GraphFocus {
+    /// `GraphFocus::new`.
     pub fn new(len: usize) -> Self {
         Self { index: 0, len }
     }
 
+    /// `GraphFocus::right`.
     pub fn right(&mut self) {
         if self.len > 0 && self.index + 1 < self.len {
             self.index += 1;
         }
     }
 
+    /// `GraphFocus::left`.
     pub fn left(&mut self) {
         if self.index > 0 {
             self.index -= 1;
         }
     }
 
+    /// Home descriptor.
     pub fn home(&mut self) {
         self.index = 0;
     }
 
+    /// `GraphFocus::end`.
     pub fn end(&mut self) {
         self.index = self.len.saturating_sub(1);
     }

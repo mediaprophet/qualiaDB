@@ -23,6 +23,7 @@ pub struct SubjectSeed {
 }
 
 impl SubjectSeed {
+    /// Library URI.
     pub fn library_uri(&self) -> String {
         format!("urn:poet:subject:{}", self.id)
     }

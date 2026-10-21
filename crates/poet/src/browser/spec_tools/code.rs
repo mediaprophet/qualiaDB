@@ -9,6 +9,7 @@ use crate::tool_chest::core::tool::ToolKind;
 const T: &str = "code";
 const TL: &str = "Scripts";
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     #[rustfmt::skip]
     static ROWS: &[SpecTool] = &[

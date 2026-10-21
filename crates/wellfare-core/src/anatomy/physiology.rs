@@ -101,6 +101,7 @@ impl Trimester {
         }
     }
 
+    /// Plain-language label.
     pub fn plain_label(self) -> &'static str {
         match self {
             Trimester::First => "first trimester",
@@ -198,6 +199,7 @@ pub enum PhysiologicalState {
 }
 
 impl PhysiologicalState {
+    /// Plain-language label.
     pub fn plain_label(self) -> String {
         match self {
             PhysiologicalState::Baseline => "no reproductive-state modulation".to_string(),

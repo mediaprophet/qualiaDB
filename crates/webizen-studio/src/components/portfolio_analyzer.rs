@@ -33,6 +33,7 @@ enum McPhase {
 }
 
 #[component]
+/// Dioxus `PortfolioAnalyzer` component.
 pub fn PortfolioAnalyzer() -> Element {
     let mut assets = use_signal(|| {
         vec![

@@ -10,6 +10,7 @@ effect fn list_codecs() {
 "#;
 
 #[component]
+/// Dioxus `CodecsBody` component.
 pub fn CodecsBody() -> Element {
     let mut out = use_signal(|| String::new());
     let mut busy = use_signal(|| false);

@@ -3,6 +3,7 @@
 import sys
 
 def read_leb128(data, idx):
+    """Reads an unsigned LEB128."""
     result = 0
     shift = 0
     while True:
@@ -15,6 +16,7 @@ def read_leb128(data, idx):
     return result, idx
 
 def read_leb128_signed(data, idx):
+    """Reads a signed LEB128."""
     result = 0
     shift = 0
     while True:
@@ -29,6 +31,7 @@ def read_leb128_signed(data, idx):
     return result, idx
 
 def main(path):
+    """CLI entry point."""
     with open(path, 'rb') as f:
         data = f.read()
     

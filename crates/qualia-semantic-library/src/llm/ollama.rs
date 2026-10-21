@@ -49,6 +49,7 @@ pub struct OllamaBackend {
 }
 
 impl OllamaBackend {
+    /// Creates a new instance.
     pub fn new(cfg: OllamaConfig) -> anyhow::Result<Self> {
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(cfg.timeout_secs))

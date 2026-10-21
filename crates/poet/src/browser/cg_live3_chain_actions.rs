@@ -122,6 +122,7 @@ fn points2(nums: &[f64], fallback: &[[f64; 2]]) -> Vec<serde_json::Value> {
 const SQUARE: [[f64; 2]; 4] = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
 const TRI: [[f64; 2]; 3] = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.8]];
 
+/// Chain action: width-coreset.
 pub(super) fn run_width_coreset(document: &Document, label: &str) {
     let pts = points2(&nums(document), &SQUARE);
     let epsilon = numeric_attr(selected_container(document).as_ref(), "data-epsilon").unwrap_or(0.25);
@@ -134,6 +135,7 @@ pub(super) fn run_width_coreset(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dual-point-to-line.
 pub(super) fn run_dual_point_to_line(document: &Document, label: &str) {
     let point = pair2(&nums(document), 0, [1.0, 0.5]);
     invoke_dual(
@@ -145,6 +147,7 @@ pub(super) fn run_dual_point_to_line(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dual-round-trip.
 pub(super) fn run_dual_round_trip(document: &Document, label: &str) {
     let point = pair2(&nums(document), 0, [1.0, 0.5]);
     invoke_dual(
@@ -156,6 +159,7 @@ pub(super) fn run_dual_round_trip(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: is-convex-polygon.
 pub(super) fn run_is_convex_polygon(document: &Document, label: &str) {
     let verts = points2(&nums(document), &SQUARE);
     invoke_dual(
@@ -167,6 +171,7 @@ pub(super) fn run_is_convex_polygon(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: point-in-or-on-polygon.
 pub(super) fn run_point_in_or_on_polygon(document: &Document, label: &str) {
     let n = nums(document);
     let point = pair2(&n, 0, [0.5, 0.5]);
@@ -198,6 +203,7 @@ fn run_boolean(document: &Document, label: &str, cap: &'static str, sketch: &str
     );
 }
 
+/// Chain action: boolean-union-area.
 pub(super) fn run_boolean_union_area(document: &Document, label: &str) {
     run_boolean(
         document,
@@ -207,6 +213,7 @@ pub(super) fn run_boolean_union_area(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: boolean-intersection-area.
 pub(super) fn run_boolean_intersection_area(document: &Document, label: &str) {
     run_boolean(
         document,
@@ -216,6 +223,7 @@ pub(super) fn run_boolean_intersection_area(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: boolean-difference-area.
 pub(super) fn run_boolean_difference_area(document: &Document, label: &str) {
     run_boolean(
         document,

@@ -137,6 +137,7 @@ fn run_node(
     invoke_dual(document, label, cap_id, format!("{sketch} node={id}"), extra);
 }
 
+/// Chain action: new-investigation.
 pub(super) fn run_new_investigation(document: &Document, label: &str) {
     run_merge(
         document,
@@ -147,6 +148,7 @@ pub(super) fn run_new_investigation(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: collect-evidence.
 pub(super) fn run_collect_evidence(document: &Document, label: &str) {
     let description = first_line(&surface_text(document));
     run_merge(
@@ -161,6 +163,7 @@ pub(super) fn run_collect_evidence(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-reliability.
 pub(super) fn run_set_reliability(document: &Document, label: &str) {
     let reliability = string_attr(selected_container(document).as_ref(), "data-reliability")
         .unwrap_or_else(|| "possible".into());
@@ -173,6 +176,7 @@ pub(super) fn run_set_reliability(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: propose-hypothesis.
 pub(super) fn run_propose_hypothesis(document: &Document, label: &str) {
     let statement = first_line(&surface_text(document));
     run_merge(
@@ -184,6 +188,7 @@ pub(super) fn run_propose_hypothesis(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: evaluate-evidence.
 pub(super) fn run_evaluate_evidence(document: &Document, label: &str) {
     run_merge(
         document,
@@ -194,6 +199,7 @@ pub(super) fn run_evaluate_evidence(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: create-timeline.
 pub(super) fn run_create_timeline(document: &Document, label: &str) {
     let event = first_line(&surface_text(document));
     run_merge(
@@ -208,6 +214,7 @@ pub(super) fn run_create_timeline(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: add-link.
 pub(super) fn run_add_link(document: &Document, label: &str) {
     run_merge(
         document,
@@ -218,6 +225,7 @@ pub(super) fn run_add_link(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: find-path.
 pub(super) fn run_find_path(document: &Document, label: &str) {
     run_merge(
         document,
@@ -228,6 +236,7 @@ pub(super) fn run_find_path(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: create-hypothesis-graph.
 pub(super) fn run_create_hypothesis_graph(document: &Document, label: &str) {
     run_merge(
         document,
@@ -238,6 +247,7 @@ pub(super) fn run_create_hypothesis_graph(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: contribute-evaluation.
 pub(super) fn run_contribute_evaluation(document: &Document, label: &str) {
     run_node(
         document,
@@ -248,6 +258,7 @@ pub(super) fn run_contribute_evaluation(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: bridge-dark-link.
 pub(super) fn run_bridge_dark_link(document: &Document, label: &str) {
     run_node(
         document,
@@ -258,6 +269,7 @@ pub(super) fn run_bridge_dark_link(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: reframe-hypothesis.
 pub(super) fn run_reframe_hypothesis(document: &Document, label: &str) {
     let statement = first_line(&surface_text(document));
     run_node(
@@ -269,6 +281,7 @@ pub(super) fn run_reframe_hypothesis(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: merge-hypotheses.
 pub(super) fn run_merge_hypotheses(document: &Document, label: &str) {
     let merged = first_line(&surface_text(document));
     invoke_dual(
@@ -284,6 +297,7 @@ pub(super) fn run_merge_hypotheses(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: flag-gap.
 pub(super) fn run_flag_gap(document: &Document, label: &str) {
     let gap = first_line(&surface_text(document));
     run_node(
@@ -295,6 +309,7 @@ pub(super) fn run_flag_gap(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: close-gap.
 pub(super) fn run_close_gap(document: &Document, label: &str) {
     let gap = first_line(&surface_text(document));
     run_node(
@@ -306,6 +321,7 @@ pub(super) fn run_close_gap(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: create-revision.
 pub(super) fn run_create_revision(document: &Document, label: &str) {
     let statement = first_line(&surface_text(document));
     run_node(
@@ -317,6 +333,7 @@ pub(super) fn run_create_revision(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: diff-revisions.
 pub(super) fn run_diff_revisions(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -327,6 +344,7 @@ pub(super) fn run_diff_revisions(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: subscribe-updates.
 pub(super) fn run_subscribe_updates(document: &Document, label: &str) {
     run_node(
         document,
@@ -337,6 +355,7 @@ pub(super) fn run_subscribe_updates(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: create-assessment.
 pub(super) fn run_create_assessment(document: &Document, label: &str) {
     let content_ref = first_line(&surface_text(document));
     run_merge(
@@ -348,6 +367,7 @@ pub(super) fn run_create_assessment(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-epistemic-mode.
 pub(super) fn run_set_epistemic_mode(document: &Document, label: &str) {
     let mode = string_attr(selected_container(document).as_ref(), "data-epistemic-mode")
         .unwrap_or_else(|| "empirical".into());

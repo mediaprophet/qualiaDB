@@ -95,6 +95,7 @@ def stage_anatomy_assets(docs: Path) -> list[dict[str, object]]:
 
 
 def lan_ipv4() -> str:
+    """LAN IPv4 address."""
     probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         probe.connect(("8.8.8.8", 80))
@@ -109,6 +110,7 @@ def lan_ipv4() -> str:
 
 
 def safe_session(value: str | None) -> str:
+    """Safe session slug."""
     if value and 8 <= len(value) <= 64 and all(c.isalnum() or c in "-_" for c in value):
         return value
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -126,6 +128,7 @@ class LabState:
         ca_url: str | None,
         anatomy_assets: list[dict[str, object]],
     ) -> None:
+        """Initializes the instance."""
         self.docs = docs
         self.session = session
         self.phone_url = phone_url
@@ -154,6 +157,7 @@ class LabState:
         )
 
     def append(self, remote: str, event: object) -> None:
+        """Appends an event."""
         with self.lock:
             if self.event_count >= MAX_EVENTS:
                 raise ValueError("event budget exhausted")
@@ -175,6 +179,7 @@ class LabServer(http.server.ThreadingHTTPServer):
     allow_reuse_address = True
 
     def __init__(self, address: tuple[str, int], state: LabState):
+        """Initializes the instance."""
         self.state = state
         super().__init__(address, LabHandler)
 
@@ -192,9 +197,11 @@ class LabHandler(http.server.SimpleHTTPRequestHandler):
     }
 
     def __init__(self, *args, **kwargs):
+        """Initializes the instance."""
         super().__init__(*args, directory=str(args[2].state.docs), **kwargs)
 
     def end_headers(self) -> None:
+        """Ends HTTP headers."""
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         if not self.path.startswith("/__qualia/lab"):
@@ -204,6 +211,7 @@ class LabHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
+        """Handles GET."""
         parsed = urllib.parse.urlsplit(self.path)
         if parsed.path == "/__qualia/lab":
             self._landing()
@@ -225,6 +233,7 @@ class LabHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
+        """Handles POST."""
         parsed = urllib.parse.urlsplit(self.path)
         if parsed.path != "/__qualia/mobile-log":
             self.send_error(404)
@@ -250,6 +259,7 @@ class LabHandler(http.server.SimpleHTTPRequestHandler):
         self._json(202, {"ok": True})
 
     def _landing(self) -> None:
+        """Landing page HTML."""
         state = self.server.state
         encoded = urllib.parse.quote(state.phone_url, safe="")
         qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=280x280&data={encoded}"
@@ -281,6 +291,7 @@ Only the public certificate is downloadable; the private key remains on this com
         self.wfile.write(encoded_body)
 
     def _root_ca(self) -> None:
+        """Root CA handler."""
         ca_cert = self.server.state.ca_cert
         if ca_cert is None:
             self.send_error(404)
@@ -298,6 +309,7 @@ Only the public certificate is downloadable; the private key remains on this com
         self.wfile.write(body)
 
     def _json(self, status: int, value: object) -> None:
+        """JSON response helper."""
         body = json.dumps(value, separators=(",", ":")).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -306,11 +318,13 @@ Only the public certificate is downloadable; the private key remains on this com
         self.wfile.write(body)
 
     def log_message(self, fmt: str, *args) -> None:
+        """Suppresses request logging."""
         if self.command == "POST" or (args and any(code in str(args[0]) for code in ("400", "403", "404", "413", "500"))):
             super().log_message(fmt, *args)
 
 
 def parse_args() -> argparse.Namespace:
+    """Parses args."""
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="0.0.0.0")
@@ -328,6 +342,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """CLI entry point."""
     args = parse_args()
     use_tls = args.cert is not None or args.key is not None
     if use_tls and (args.cert is None or args.key is None):

@@ -41,6 +41,7 @@ pub struct Vision10dManager {
 }
 
 impl Vision10dManager {
+    /// `Vision10dManager::new`.
     pub fn new() -> Self {
         let header = TenDContainerHeader {
             magic: "10D\x01".into(),

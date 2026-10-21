@@ -47,6 +47,7 @@ pub enum JobKindInfo {
 }
 
 impl JobKindInfo {
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             Self::ModelDownload { .. } => "\u{2B07}\u{FE0F}", // ⬇️
@@ -60,6 +61,7 @@ impl JobKindInfo {
         }
     }
 
+    /// UI title.
     pub fn title(&self) -> String {
         match self {
             Self::ModelDownload { model_name, .. } => format!("Download Model: {}", model_name),
@@ -89,6 +91,7 @@ pub enum JobStatus {
 }
 
 impl JobStatus {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Queued => "Queued",
@@ -99,6 +102,7 @@ impl JobStatus {
         }
     }
 
+    /// Accent color.
     pub fn color(&self) -> &'static str {
         match self {
             Self::Queued => "#94a3b8",    // Slate

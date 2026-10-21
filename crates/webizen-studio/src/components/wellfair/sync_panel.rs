@@ -19,6 +19,7 @@ fn outcome_color(state: &str) -> &'static str {
 }
 
 #[component]
+/// Dioxus `WellfairSyncPanel` component.
 pub fn WellfairSyncPanel() -> Element {
     let mut ui = use_signal(SyncUi::default);
 

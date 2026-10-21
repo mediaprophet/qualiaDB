@@ -83,12 +83,14 @@ def apply_512mb_limit():
 
 
 def file_size_bytes(path: Optional[str]) -> Optional[int]:
+    """File size in bytes."""
     if not path or not os.path.isfile(path):
         return None
     return os.path.getsize(path)
 
 
 def file_size_mb(path: Optional[str]) -> Optional[float]:
+    """File size in MB."""
     nbytes = file_size_bytes(path)
     if nbytes is None:
         return None

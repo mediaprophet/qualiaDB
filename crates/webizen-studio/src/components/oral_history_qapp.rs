@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `OralHistoryQapp` component.
 pub fn OralHistoryQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -4,6 +4,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement};
 
+/// Local instrument-action helper.
 pub(super) fn local_instrument_action(tool_id: &str) -> bool {
     matches!(
         tool_id,
@@ -78,6 +79,7 @@ pub(super) fn local_instrument_action(tool_id: &str) -> bool {
     )
 }
 
+/// `true` when the instrument requires the daemon.
 pub(super) fn instrument_requires_daemon(tool_id: &str) -> bool {
     matches!(
         tool_id,
@@ -114,6 +116,7 @@ pub(super) fn instrument_requires_daemon(tool_id: &str) -> bool {
     )
 }
 
+/// Selected container.
 pub(super) fn selected_container(document: &Document) -> Option<Element> {
     document
         .query_selector(".canvas-container-node.selected")
@@ -121,6 +124,7 @@ pub(super) fn selected_container(document: &Document) -> Option<Element> {
         .flatten()
 }
 
+/// Clicks the selected tool.
 pub(super) fn click_selected(document: &Document, selector: &str, label: &str) {
     let target = selected_container(document)
         .and_then(|container| container.query_selector(selector).ok().flatten());
@@ -136,6 +140,7 @@ pub(super) fn click_selected(document: &Document, selector: &str, label: &str) {
     }
 }
 
+/// Executes a document command.
 pub(super) fn exec_document_command(
     document: &Document,
     command: &str,
@@ -169,6 +174,7 @@ pub(super) fn exec_document_command(
     }
 }
 
+/// Inserts into-editor.
 pub(super) fn insert_into_editor(document: &Document, snippet: &str, label: &str) {
     let editor = selected_container(document)
         .and_then(|container| container.query_selector(".vibe-editor").ok().flatten());
@@ -197,6 +203,7 @@ pub(super) fn insert_into_editor(document: &Document, snippet: &str, label: &str
     }
 }
 
+/// Sheet-grid args.
 pub(super) fn sheet_grid_args(document: &Document) -> serde_json::Value {
     let mut grid = Vec::new();
     let root = selected_container(document);
@@ -216,6 +223,7 @@ pub(super) fn sheet_grid_args(document: &Document) -> serde_json::Value {
     serde_json::json!({ "grid": grid, "range": "A1:E6" })
 }
 
+/// Invokes the session.
 pub(super) fn invoke_session(
     document: &Document,
     label: &str,

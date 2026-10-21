@@ -8,6 +8,7 @@ mod narrative_inspect;
 mod object_modelling;
 mod rigging_animation;
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     static ROWS: OnceLock<Vec<SpecTool>> = OnceLock::new();
     ROWS.get_or_init(|| {

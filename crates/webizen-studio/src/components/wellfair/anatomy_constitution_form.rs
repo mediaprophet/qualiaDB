@@ -291,6 +291,7 @@ fn declared_count(form: &FormState) -> usize {
 }
 
 #[component]
+/// Dioxus `AnatomyConstitutionForm` component.
 pub fn AnatomyConstitutionForm(model: String) -> Element {
     let mut form = use_signal(FormState::default);
     let mut loaded = use_signal(|| false);

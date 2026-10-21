@@ -1,0 +1,54 @@
+{
+  "name": "Wallet",
+  "version": "0.1.0",
+  "required_shapes": [
+    "qualia:SovereignWallet",
+    "qualia:PermissiveCommonsQuota",
+    "qualia:LedgerEntry",
+    "qualia:ReaCommitment"
+  ],
+  "x_qualia": {
+    "app_id": "did:qualia:qap:wallet",
+    "display_name": "Multi-Chain Wallet & Permissive Commons",
+    "category": "finance-commons",
+    "did_git": "did:git:github.com/webizen/qap-wallet",
+    "export_targets": [
+      "tauri-desktop",
+      "wasm-mobile",
+      "embedded"
+    ],
+    "launch_modes": [
+      "wasm-local",
+      "online-daemon-aware",
+      "static-web"
+    ],
+    "preferred_launch_mode": "wasm-local",
+    "supports_offline": true,
+    "requires": [
+      { "capability": "qualia.service.scheduler", "required": true },
+      { "capability": "qualia.service.networking", "required": true },
+      { "capability": "qualia.service.permissive_commons", "required": true },
+      { "capability": "qualia.service.communications", "required": true },
+      { "capability": "qualia.service.identifiers", "required": true }
+    ],
+    "required_ontologies": [
+      "q42:permissive-commons",
+      "q42:rea-accounting",
+      "q42:utxo-taproot",
+      "q42:solana",
+      "q42:polkadot",
+      "q42:cosmos",
+      "q42:cardano"
+    ],
+    "entrypoints": {
+      "web": "index.html",
+      "route": "/wallet"
+    },
+    "notes": [
+      "Multi-Chain Wallet & Permissive Commons is developed in its own independent repository (did:git:github.com/webizen/qap-wallet).",
+      "Installs into {storage}/Qapps/Wallet and operates on QualiaDB NQuin zero-heap buffers.",
+      "Integrates non-custodial UTXO/Substrate ledgers (did:q42, Bitcoin, Solana, Cardano, Polkadot, Cosmos, Solid REA) and enforces SDN 25GB Commons quotas.",
+      "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
+    ]
+  }
+}

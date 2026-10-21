@@ -63,10 +63,12 @@ fn all_rows() -> Vec<&'static SpecTool> {
         .collect()
 }
 
+/// `?::lookup`.
 pub fn lookup(id: &str) -> Option<&'static SpecTool> {
     all_rows().into_iter().find(|row| row.id == id)
 }
 
+/// Registers all.
 pub fn register_all(reg: &mut Registry) {
     for tool in all_rows() {
         merge_row(reg, tool);

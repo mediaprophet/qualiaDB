@@ -6,6 +6,7 @@ use web_sys::{
     Document, Element, HtmlElement, HtmlInputElement, HtmlSelectElement, HtmlTextAreaElement,
 };
 
+/// Makes a textarea.
 pub(super) fn make_textarea(document: &Document, id: &str, value: &str, height: &str) -> Element {
     let ta = document.create_element("textarea").unwrap();
     ta.set_id(id);
@@ -23,6 +24,7 @@ pub(super) fn make_textarea(document: &Document, id: &str, value: &str, height: 
     ta
 }
 
+/// Makes a button.
 pub(super) fn make_button(document: &Document, id: &str, label: &str, primary: bool) -> Element {
     let btn = document.create_element("button").unwrap();
     btn.set_id(id);
@@ -71,6 +73,7 @@ pub(super) fn make_button(document: &Document, id: &str, label: &str, primary: b
     btn
 }
 
+/// Makes a results area.
 pub(super) fn make_results_area(document: &Document, id: &str, placeholder: &str) -> Element {
     let results = document.create_element("div").unwrap();
     results.set_id(id);
@@ -89,6 +92,7 @@ pub(super) fn make_results_area(document: &Document, id: &str, placeholder: &str
     results
 }
 
+/// `make-section` label.
 pub(super) fn make_section_label(document: &Document, text: &str) -> Element {
     let lbl = document.create_element("div").unwrap();
     let l_el: HtmlElement = lbl.clone().dyn_into().unwrap();
@@ -100,6 +104,7 @@ pub(super) fn make_section_label(document: &Document, text: &str) -> Element {
     lbl
 }
 
+/// `make-tool` panel.
 pub(super) fn make_tool_panel(document: &Document, tool_id: &str, visible: bool) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("logic-tool-panel");
@@ -112,6 +117,7 @@ pub(super) fn make_tool_panel(document: &Document, tool_id: &str, visible: bool)
     panel
 }
 
+/// Makes a select.
 pub(super) fn make_select(document: &Document, id: &str, options: &[(&str, &str)]) -> Element {
     let sel = document.create_element("select").unwrap();
     sel.set_id(id);
@@ -130,6 +136,7 @@ pub(super) fn make_select(document: &Document, id: &str, options: &[(&str, &str)
     sel
 }
 
+/// Makes a text input.
 pub(super) fn make_text_input(document: &Document, id: &str, placeholder: &str) -> Element {
     let input = document.create_element("input").unwrap();
     input.set_id(id);
@@ -144,6 +151,7 @@ pub(super) fn make_text_input(document: &Document, id: &str, placeholder: &str) 
     input
 }
 
+/// Shows a logic notification.
 pub(super) fn show_logic_notification(document: &Document, message: &str) {
     if message.to_ascii_lowercase().contains("mock") {
         crate::browser::interactions::show_tool_status(
@@ -175,6 +183,7 @@ pub(super) fn show_logic_notification(document: &Document, message: &str) {
     timeout.forget();
 }
 
+/// Field value.
 pub(super) fn field_value(document: &Document, id: &str) -> String {
     let Some(element) = document.get_element_by_id(id) else {
         return String::new();
@@ -190,6 +199,7 @@ pub(super) fn field_value(document: &Document, id: &str) -> String {
     }
 }
 
+/// Shows live results; honestly "Unavailable" when the daemon is down (name is a misnomer — no mock data).
 pub(super) fn show_mock_results(document: &Document, results_id: &str, tool_name: &str) {
     let results = match document.get_element_by_id(results_id) {
         Some(r) => r,

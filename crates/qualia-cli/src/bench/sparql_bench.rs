@@ -19,6 +19,7 @@ impl std::fmt::Display for BenchError {
 }
 impl std::error::Error for BenchError {}
 
+/// CLI: .
 pub fn run_sparql_suite(database_volume_path: &Path) -> Result<(), BenchError> {
     println!(
         "Initializing Memory-Mapped Volume: {:?}",

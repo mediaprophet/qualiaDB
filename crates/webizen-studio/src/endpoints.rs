@@ -41,6 +41,7 @@ fn settings_port() -> u16 {
     DEFAULT_DAEMON_PORT
 }
 
+/// Manifest URL.
 pub fn manifest_url() -> String {
     format!("{}/manifest", daemon_http())
 }
@@ -55,18 +56,22 @@ pub fn portal_design_studio_url() -> String {
     format!("{}/design-studio.html", daemon_http())
 }
 
+/// Assets catalog URL.
 pub fn assets_catalog_url() -> String {
     format!("{}/api/assets/catalog", daemon_http())
 }
 
+/// Assets enqueue URL.
 pub fn assets_enqueue_url() -> String {
     format!("{}/api/assets/enqueue", daemon_http())
 }
 
+/// Job URL.
 pub fn job_url(job_id: &str) -> String {
     format!("{}/api/jobs/{job_id}", daemon_http())
 }
 
+/// Manifest replay URL.
 pub fn manifest_replay_url(revision: u64) -> String {
     format!("{}/manifest/replay/{revision}", daemon_http())
 }
@@ -76,10 +81,12 @@ pub fn generate_pane_url() -> String {
     format!("{}/generate_pane", daemon_http())
 }
 
+/// Manifest undo-chain URL.
 pub fn manifest_undo_chain_url() -> String {
     format!("{}/manifest/undo-chain", daemon_http())
 }
 
+/// Manifest undo-frame URL.
 pub fn manifest_undo_frame_url(stack_index: u16) -> String {
     format!(
         "{}/manifest/undo-frame?stack_index={stack_index}",
@@ -92,6 +99,7 @@ pub fn telemetry_url() -> String {
     format!("{}/telemetry", daemon_http())
 }
 
+/// Logs page URL.
 pub fn logs_page_url() -> String {
     format!("{}/logs", daemon_http())
 }
@@ -124,6 +132,7 @@ pub fn probe_native_handshake_port() -> bool {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub fn probe_native_handshake_port() -> bool {
     false
 }
@@ -133,6 +142,7 @@ pub const SHOELACE_VENDOR_BASE: &str = "/vendor/shoelace";
 pub const SHOELACE_CDN_BASE: &str =
     "https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn";
 
+/// Shoelace base URL.
 pub fn shoelace_base() -> &'static str {
     if is_native_host() {
         SHOELACE_VENDOR_BASE
@@ -141,10 +151,12 @@ pub fn shoelace_base() -> &'static str {
     }
 }
 
+/// Shoelace stylesheet href.
 pub fn shoelace_stylesheet_href() -> String {
     format!("{}/themes/dark.css", shoelace_base())
 }
 
+/// Shoelace autoloader src.
 pub fn shoelace_autoloader_src() -> String {
     format!("{}/shoelace-autoloader.js", shoelace_base())
 }
@@ -166,6 +178,7 @@ pub fn is_native_host() -> bool {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub fn current_host_surface() -> HostSurface {
     let tauri_present = js_sys::Reflect::get(
         &js_sys::global(),
@@ -182,10 +195,12 @@ pub fn current_host_surface() -> HostSurface {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback.
 pub fn current_host_surface() -> HostSurface {
     HostSurface::DesktopWebview
 }
 
+/// `true` when the pane supports the browser.
 pub fn supports_browser_pane() -> bool {
     matches!(current_host_surface(), HostSurface::DesktopWebview)
 }

@@ -16,6 +16,7 @@ use std::sync::Mutex;
 /// Process-wide session for webizen-desktop (shell, studio, browser share one).
 static SESSION: Mutex<Option<ViewSession>> = Mutex::new(None);
 
+/// Builder — sets session.
 pub fn with_session<R>(f: impl FnOnce(&mut ViewSession) -> R) -> R {
     let mut g = SESSION.lock().unwrap_or_else(|e| e.into_inner());
     if g.is_none() {
@@ -24,18 +25,22 @@ pub fn with_session<R>(f: impl FnOnce(&mut ViewSession) -> R) -> R {
     f(g.as_mut().expect("session just set"))
 }
 
+/// Gets session-snapshot.
 pub fn get_session_snapshot() -> ViewSession {
     with_session(|s| s.clone())
 }
 
+/// Sets observer.
 pub fn set_observer(status: ObserverStatus) {
     with_session(|s| s.observer = status);
 }
 
+/// Sets presentation-level.
 pub fn set_presentation_level(level: u8) {
     with_session(|s| s.presentation_level = PresentationLevel::from_u8(level));
 }
 
+/// Selects an entity.
 pub fn select_entity(entity_id: u64) {
     with_session(|s| {
         s.selection.clear();
@@ -53,6 +58,7 @@ pub fn select_entity_uri(uri: &str) {
     });
 }
 
+/// Clears the selection.
 pub fn clear_selection() {
     with_session(|s| {
         s.selection.clear();
@@ -80,6 +86,7 @@ pub struct ProjectWebLocusRequest {
     pub observer: Option<String>,
 }
 
+/// Parses observer.
 pub fn parse_observer(s: &str) -> ObserverStatus {
     match s.trim().to_ascii_lowercase().as_str() {
         "peer" => ObserverStatus::Peer,
@@ -109,6 +116,7 @@ pub fn project_library_json(
     })
 }
 
+/// `project-web-locus` as JSON.
 pub fn project_web_locus_json(
     url: &str,
     observer: ObserverStatus,
@@ -125,6 +133,7 @@ pub fn project_web_locus_json(
     })
 }
 
+/// `morph` as JSON.
 pub fn morph_json(mode: &str) -> Result<serde_json::Value, String> {
     with_session(|s| {
         let Some(ref proj) = s.last_projection else {

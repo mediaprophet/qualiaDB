@@ -3,6 +3,7 @@
 use crate::tool_chest::core::registry::SeedContainer;
 use web_sys::{Document, Element};
 
+/// Tries fill.
 pub(super) fn try_fill(document: &Document, container: &SeedContainer, body: &Element) -> bool {
     match container.container_type.as_str() {
         "health_overview" => {

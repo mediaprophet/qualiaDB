@@ -18,10 +18,12 @@ pub struct CurrencySummary {
 }
 
 impl CurrencySummary {
+    /// Variance.
     pub fn variance(&self) -> i64 {
         self.approved_plan.saturating_sub(self.verified_actual)
     }
 
+    /// Funding position.
     pub fn funding_position(&self) -> i64 {
         self.received_funding.saturating_sub(self.verified_actual)
     }
@@ -35,6 +37,7 @@ pub struct BudgetSummary {
     pub invalid_rows: usize,
 }
 
+/// Summarizes payloads.
 pub fn summarize_payloads(payloads: &[(&str, &Value)]) -> BudgetSummary {
     let mut currencies = BTreeMap::<String, CurrencySummary>::new();
     let mut summary = BudgetSummary::default();
@@ -115,6 +118,7 @@ pub fn summarize_payloads(payloads: &[(&str, &Value)]) -> BudgetSummary {
     summary
 }
 
+/// Parses amount-micros.
 pub fn parse_amount_micros(value: &Value) -> Option<i64> {
     let owned;
     let text = match value {
@@ -148,6 +152,7 @@ pub fn parse_amount_micros(value: &Value) -> Option<i64> {
     whole.checked_mul(1_000_000)?.checked_add(fraction_value)
 }
 
+/// Formats amount.
 pub fn format_amount(micros: i64) -> String {
     let negative = micros < 0;
     let absolute = micros.unsigned_abs();

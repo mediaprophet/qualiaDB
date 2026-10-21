@@ -3,6 +3,7 @@
 use super::helpers::field_value;
 use web_sys::Document;
 
+/// Authoring request.
 pub(super) fn authoring_request(
     document: &Document,
     mode: &str,

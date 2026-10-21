@@ -35,6 +35,7 @@ impl Default for DeviceType {
 }
 
 impl DeviceType {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Desktop => "Desktop",
@@ -47,6 +48,7 @@ impl DeviceType {
         }
     }
 
+    /// Icon glyph.
     pub fn icon(&self) -> &'static str {
         match self {
             Self::Desktop => "\u{1F5A5}",
@@ -147,6 +149,7 @@ impl Default for DeviceStatus {
 }
 
 impl DeviceStatus {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Online => "Online",
@@ -157,6 +160,7 @@ impl DeviceStatus {
         }
     }
 
+    /// Accent color.
     pub fn color(&self) -> &'static str {
         match self {
             Self::Online => "rgba(100, 200, 100, 0.8)",

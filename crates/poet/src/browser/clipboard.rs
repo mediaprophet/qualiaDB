@@ -47,6 +47,7 @@ pub enum ClipCategory {
 }
 
 impl ClipCategory {
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             Self::Text => "\u{1F4C4}",           // 📄
@@ -58,6 +59,7 @@ impl ClipCategory {
         }
     }
 
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Text => "Text Span",
@@ -182,6 +184,7 @@ pub struct ClipboardRingBuffer {
 }
 
 impl ClipboardRingBuffer {
+    /// `ClipboardRingBuffer::new`.
     pub fn new() -> Self {
         Self {
             items: Vec::with_capacity(MAX_RING_BUFFER_CAPACITY),
@@ -274,6 +277,7 @@ pub fn stage_container(container: &SeedContainer) -> usize {
     })
 }
 
+/// Wires the clipboard shortcut.
 pub fn wire_clipboard_shortcut(document: &Document) {
     let Some(body) = document.body() else { return };
     let body_element: Element = body.dyn_into().unwrap();
@@ -306,6 +310,7 @@ pub fn wire_clipboard_shortcut(document: &Document) {
     closure.forget();
 }
 
+/// Shows the clipboard HUD.
 pub fn show_clipboard_hud(document: &Document) {
     let hud = CLIPBOARD_RING.with(|ring| build_clipboard_hud_modal(document, &ring.borrow()));
     hud.set_id("poet-clipboard-hud");
@@ -329,6 +334,7 @@ pub enum PasteAsOption {
 }
 
 impl PasteAsOption {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::PlainText => "Plain Text (Strip formatting)",
@@ -371,18 +377,22 @@ pub struct ClipCollectTray {
 }
 
 impl ClipCollectTray {
+    /// `ClipCollectTray::new`.
     pub fn new() -> Self {
         Self { staged: Vec::new() }
     }
 
+    /// Adds an item.
     pub fn add(&mut self, item: ClipboardItem) {
         self.staged.push(item);
     }
 
+    /// Item list.
     pub fn items(&self) -> &[ClipboardItem] {
         &self.staged
     }
 
+    /// `ClipCollectTray::clear`.
     pub fn clear(&mut self) {
         self.staged.clear();
     }

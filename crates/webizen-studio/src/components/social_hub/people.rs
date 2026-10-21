@@ -35,6 +35,7 @@ pub struct PeopleSignals {
     pub tab: Signal<HubTab>,
 }
 
+/// Renders people.
 pub fn render_people(sig: PeopleSignals) -> Element {
     let PeopleSignals {
         mut status,

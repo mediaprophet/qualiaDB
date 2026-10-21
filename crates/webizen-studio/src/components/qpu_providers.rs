@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `QpuProviders` component.
 pub fn QpuProviders() -> Element {
     rsx! {
         div {

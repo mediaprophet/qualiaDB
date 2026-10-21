@@ -8,6 +8,7 @@ use super::native_daemon::{
     NativeRecordUpsertRequest,
 };
 
+/// Builds social-moderation.
 pub fn build_social_moderation(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-social-moderation", "").ok();
@@ -59,6 +60,7 @@ pub fn build_social_moderation(document: &Document) -> Element {
     root
 }
 
+/// Hidden notice.
 pub fn hidden_notice(data: &serde_json::Value, message_id: &str) -> Option<String> {
     data.get("records")
         .and_then(serde_json::Value::as_array)?

@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:set-spatio-temporal-context" => Some(set_spatio_temporal_context(container)),
@@ -18,6 +19,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next access-level.
 pub(crate) fn next_access_level(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("public") => "commons",

@@ -17,6 +17,7 @@ use crate::components::qapp_engine::invoke_json;
 use crate::Route;
 
 #[component]
+/// Dioxus `KeepHub` component.
 pub fn KeepHub() -> Element {
     let mut recents = use_signal(load_recents);
     let mut browse = use_signal(Vec::<RecentVolume>::new);

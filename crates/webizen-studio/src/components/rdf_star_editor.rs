@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `RdfStarEditor` component.
 pub fn RdfStarEditor() -> Element {
     let mut expanded = use_signal(|| false);
 

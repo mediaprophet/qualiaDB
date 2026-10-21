@@ -27,6 +27,7 @@ enum QueryPhase {
 }
 
 #[component]
+/// Dioxus `SparqlExplorer` component.
 pub fn SparqlExplorer() -> Element {
     let mut query = use_signal(|| SAMPLE_SELECT.to_string());
     let mut results = use_signal(|| Vec::<(String, String, String)>::new());

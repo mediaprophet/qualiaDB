@@ -27,6 +27,7 @@ pub enum SemanticFormat {
 }
 
 impl SemanticFormat {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             SemanticFormat::NTriples => "N-Triples",

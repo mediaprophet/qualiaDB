@@ -9,6 +9,7 @@ use super::store::Workbench;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `TopMenubar` component.
 pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
     let open = wb().menu;
     let nav = use_navigator();
@@ -62,16 +63,14 @@ pub fn TopMenubar(wb: Signal<Workbench>) -> Element {
                     Item { left: "Export Solid Pod Turtle", right: "held", held: true }
                 }
                 Menu { name: "canvases", label: "Manifolds", open, wb,
-                    CanvasItem { wb, id: ManifoldId::Research, hint: "Alt+1" }
-                    CanvasItem { wb, id: ManifoldId::Social, hint: "Alt+2" }
-                    CanvasItem { wb, id: ManifoldId::Knowledge, hint: "Alt+3" }
-                    CanvasItem { wb, id: ManifoldId::Projects, hint: "Alt+4" }
-                    CanvasItem { wb, id: ManifoldId::Rights, hint: "Alt+5" }
-                    CanvasItem { wb, id: ManifoldId::Sanctuary, hint: "Alt+6" }
-                    CanvasItem { wb, id: ManifoldId::Media, hint: "Alt+7" }
-                    CanvasItem { wb, id: ManifoldId::Communications, hint: "Alt+8" }
-                    CanvasItem { wb, id: ManifoldId::Settings, hint: "Alt+9" }
-                    CanvasItem { wb, id: ManifoldId::Vibe, hint: "Alt+0" }
+                    for (id, hint) in [
+                        (ManifoldId::Research, "Alt+1"), (ManifoldId::Social, "Alt+2"), (ManifoldId::Knowledge, "Alt+3"),
+                        (ManifoldId::Projects, "Alt+4"), (ManifoldId::Rights, "Alt+5"), (ManifoldId::Sanctuary, "Alt+6"),
+                        (ManifoldId::Media, "Alt+7"), (ManifoldId::Communications, "Alt+8"), (ManifoldId::Settings, "Alt+9"),
+                        (ManifoldId::Vibe, "Alt+0"),
+                    ] {
+                        CanvasItem { wb, id, hint }
+                    }
                     Divider {}
                     div { class: "dropdown-item",
                         onclick: move |_| { let mut w = wb(); w.auto_arrange(); w.menu = None; wb.set(w); },
@@ -198,6 +197,7 @@ fn set_dim(mut wb: Signal<Workbench>, dim: DimMode) {
 }
 
 #[component]
+/// Dioxus `ControlBar` component.
 pub fn ControlBar(wb: Signal<Workbench>) -> Element {
     let w = wb();
     let secs = (w.time_progress.clamp(0.0, 1.0) * 86399.0) as u64;
@@ -261,6 +261,7 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
                 }
                 span { class: "graph-address-badge", "{w.graph_iri}" }
             }
+            super::bodies::ShedConstructSelector { wb }
             div { class: "strata-deck-selector",
                 button {
                     class: if w.strata.len() >= 5 { "strata-deck-btn active" } else { "strata-deck-btn" },
@@ -357,6 +358,7 @@ pub fn ControlBar(wb: Signal<Workbench>) -> Element {
 }
 
 #[component]
+/// Dioxus `NativeDaemonChip` component.
 pub fn NativeDaemonChip() -> Element {
     let mut probe = use_signal(DaemonProbe::default);
     use_effect(move || {
@@ -413,6 +415,7 @@ pub fn NativeDaemonChip() -> Element {
 }
 
 #[component]
+/// Dioxus `StatusBar` component.
 pub fn StatusBar(wb: Signal<Workbench>) -> Element {
     let w = wb();
     let node = w.selected.clone().unwrap_or_else(|| "none".into());
@@ -465,6 +468,7 @@ fn NativeGraphHint() -> Element {
 }
 
 #[component]
+/// Dioxus `Expose` component.
 pub fn Expose(wb: Signal<Workbench>) -> Element {
     if !wb().expose {
         return rsx! {};
@@ -473,23 +477,15 @@ pub fn Expose(wb: Signal<Workbench>) -> Element {
         div { class: "expose-overview-grid", style: "display:flex;",
             div { class: "expose-header",
                 h2 { "🗂️ Manifold Overview" }
-                button { class: "pager-expose-btn",
-                    onclick: move |_| { let mut s = wb(); s.expose = false; wb.set(s); },
-                    "Close"
-                }
+                button { class: "pager-expose-btn", onclick: move |_| { let mut s = wb(); s.expose = false; wb.set(s); }, "Close" }
             }
             div { class: "expose-grid",
                 for id in ManifoldId::ALL {
                     div {
                         class: if wb().active == id { "expose-card active" } else { "expose-card" },
                         onclick: move |_| { let mut s = wb(); s.switch(id); s.expose = false; wb.set(s); },
-                        div { class: "expose-card-header",
-                            span { "{id.icon()} {id.short()}" }
-                            span { class: "graph-address-badge", "{id.graph_iri()}" }
-                        }
-                        div { class: "expose-card-preview",
-                            p { style: "color:var(--text-secondary);font-size:12px;", "{id.title()}" }
-                        }
+                        div { class: "expose-card-header", span { "{id.icon()} {id.short()}" } span { class: "graph-address-badge", "{id.graph_iri()}" } }
+                        div { class: "expose-card-preview", p { style: "color:var(--text-secondary);font-size:12px;", "{id.title()}" } }
                     }
                 }
             }

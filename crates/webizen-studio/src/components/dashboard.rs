@@ -78,6 +78,7 @@ pub struct SocialEvent {
 use crate::components::qapp_engine::invoke_json;
 
 #[component]
+/// Dioxus `Dashboard` component.
 pub fn Dashboard() -> Element {
     let mut snapshot = use_signal(|| DashboardSnapshot::default());
 

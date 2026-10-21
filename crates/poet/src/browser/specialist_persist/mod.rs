@@ -8,12 +8,14 @@ use web_sys::{Document, Element};
 use super::cop_records::{build_family_panel, CopField};
 use super::live_invoke;
 
+/// Wraps the payload.
 pub(super) fn wrap(document: &Document, child: Element) -> Element {
     let wrapper = document.create_element("div").unwrap();
     wrapper.append_child(&child).unwrap();
     wrapper
 }
 
+/// Ledger.
 pub(super) fn ledger(
     document: &Document,
     family: &'static str,
@@ -30,6 +32,7 @@ pub(super) fn ledger(
     wrap(document, panel)
 }
 
+/// Gray-ahash args.
 pub(super) fn gray_ahash_args() -> serde_json::Value {
     serde_json::json!({
         "bytes": vec![128u64; 64],
@@ -38,6 +41,7 @@ pub(super) fn gray_ahash_args() -> serde_json::Value {
     })
 }
 
+/// HU-window demo args.
 pub(super) fn hu_window_demo_args() -> serde_json::Value {
     serde_json::json!({
         "study_uid": "urn:poet:anatomy:demo-slice",
@@ -49,6 +53,7 @@ pub(super) fn hu_window_demo_args() -> serde_json::Value {
     })
 }
 
+/// GBM-VaR args.
 pub(super) fn gbm_var_args() -> serde_json::Value {
     serde_json::json!({
         "s0": 100.0,

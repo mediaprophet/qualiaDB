@@ -16,6 +16,7 @@ struct CommunicationsUi {
 }
 
 #[component]
+/// Dioxus `WellfairCommunicationsPanel` component.
 pub fn WellfairCommunicationsPanel() -> Element {
     let mut ui = use_signal(CommunicationsUi::default);
 

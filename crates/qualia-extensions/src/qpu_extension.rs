@@ -106,6 +106,7 @@ impl DqcScheduler {
 }
 
 impl QpuExtension {
+    /// Creates a new instance.
     pub fn new() -> Self {
         let mut providers = HashMap::new();
 

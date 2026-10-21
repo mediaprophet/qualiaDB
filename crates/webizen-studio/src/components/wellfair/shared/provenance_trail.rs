@@ -2,6 +2,7 @@ use super::super::host_dto::ProvenanceHop;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ProvenanceTrail` component.
 pub fn ProvenanceTrail(hops: Vec<ProvenanceHop>) -> Element {
     if hops.is_empty() {
         return rsx! {

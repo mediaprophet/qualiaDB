@@ -10,6 +10,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+/// Tauri `invoke` FFI seam.
 pub async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("window unavailable"))?;
     let tauri = js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?;
@@ -22,6 +23,7 @@ pub async fn invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue> {
     wasm_bindgen_futures::JsFuture::from(promise).await
 }
 
+/// Listens.
 pub async fn listen(event: &str, handler: &js_sys::Function) -> Result<js_sys::Function, JsValue> {
     let window = web_sys::window().ok_or_else(|| JsValue::from_str("window unavailable"))?;
     let tauri = js_sys::Reflect::get(&window, &JsValue::from_str("__TAURI__"))?;

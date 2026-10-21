@@ -5,6 +5,7 @@ use std::{cell::Cell, rc::Rc};
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, HtmlElement, HtmlTextAreaElement};
 
+/// Builds latex-view.
 pub fn build_latex_view(document: &Document) -> Element {
     let wrapper = column(document);
     let bar = document.create_element("div").unwrap();
@@ -93,6 +94,7 @@ fn update_latex_status(editor: &HtmlTextAreaElement, status: &Element) {
     )));
 }
 
+/// Builds slide-view.
 pub fn build_slide_view(document: &Document) -> Element {
     let wrapper = column(document);
     let bar = document.create_element("div").unwrap();

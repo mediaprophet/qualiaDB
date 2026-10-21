@@ -154,6 +154,7 @@ pub struct ManifoldSeed {
 }
 
 impl ManifoldSeed {
+    /// `true` when social.
     pub fn is_social(&self) -> bool {
         self.sociality.is_social() || super::sociality::bundled_social_manifold(&self.id)
     }

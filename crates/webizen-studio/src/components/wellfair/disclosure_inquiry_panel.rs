@@ -54,6 +54,7 @@ fn verdict_label(v: &str) -> (&'static str, &'static str) {
 }
 
 #[component]
+/// Dioxus `WellfairDisclosureInquiryPanel` component.
 pub fn WellfairDisclosureInquiryPanel() -> Element {
     let mut status = use_signal(String::new);
     let mut ccs = use_signal(Vec::<serde_json::Value>::new);

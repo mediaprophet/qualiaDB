@@ -16,6 +16,7 @@
 use super::{dim, uniform, SolverReport, WebGpuJobParams};
 use std::collections::HashMap;
 
+/// Solves.
 pub fn solve(params: &WebGpuJobParams) -> SolverReport {
     let n = dim(params.grid_size.0, 200);
     let dx = 1.0f64;

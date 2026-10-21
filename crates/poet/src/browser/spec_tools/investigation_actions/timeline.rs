@@ -3,6 +3,7 @@
 use super::shared::{append_semicolon_attr, count_selector};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:create-timeline" => Some(create_timeline(container)),
@@ -16,6 +17,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next time-precision.
 pub(crate) fn next_time_precision(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("exact") => "approximate",

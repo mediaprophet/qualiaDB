@@ -25,6 +25,7 @@ pub struct EmergencyContactStore {
 }
 
 impl EmergencyContactStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(CONTACTS_FILE);
         if let Some(parent) = path.parent() {
@@ -36,6 +37,7 @@ impl EmergencyContactStore {
         Ok(Self { path })
     }
 
+    /// Appends.
     pub fn append(&self, contact: &EmergencyContact) -> std::io::Result<()> {
         let line =
             serde_json::to_string(contact).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -45,6 +47,7 @@ impl EmergencyContactStore {
         Ok(())
     }
 
+    /// Lists.
     pub fn list(&self) -> std::io::Result<Vec<EmergencyContact>> {
         let file = fs::File::open(&self.path)?;
         let reader = BufReader::new(file);
@@ -65,6 +68,7 @@ impl EmergencyContactStore {
     }
 }
 
+/// New contact ID.
 pub fn new_contact_id(name: &str, unix: u32) -> String {
     use sha2::{Digest, Sha256};
     let digest = Sha256::digest(format!("{name}:{unix}").as_bytes());

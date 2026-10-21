@@ -266,6 +266,7 @@ pub static LAYER_CATALOG: &[LayerDefinition] = &[
     },
 ];
 
+/// Layers by category.
 pub fn layers_by_category(category: &LayerCategory) -> Vec<&'static LayerDefinition> {
     LAYER_CATALOG
         .iter()
@@ -273,6 +274,7 @@ pub fn layers_by_category(category: &LayerCategory) -> Vec<&'static LayerDefinit
         .collect()
 }
 
+/// All categories.
 pub fn all_categories() -> Vec<LayerCategory> {
     use LayerCategory::*;
     vec![
@@ -289,6 +291,7 @@ pub fn all_categories() -> Vec<LayerCategory> {
     ]
 }
 
+/// Finds layer.
 pub fn find_layer(id: &str) -> Option<&'static LayerDefinition> {
     LAYER_CATALOG.iter().find(|l| l.id == id)
 }

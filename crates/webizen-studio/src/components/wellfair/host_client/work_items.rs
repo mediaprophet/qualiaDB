@@ -24,6 +24,7 @@ pub struct BoardColumnDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds work-item.
 pub async fn add_work_item(
     project_id: &str,
     item_type: &str,
@@ -58,6 +59,7 @@ pub async fn add_work_item(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds work-item.
 pub async fn add_work_item(
     _project_id: &str,
     _item_type: &str,
@@ -67,6 +69,7 @@ pub async fn add_work_item(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds work-item-status.
 pub async fn add_work_item_status(
     work_item_id: &str,
     status: &str,
@@ -94,6 +97,7 @@ pub async fn add_work_item_status(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds work-item-status.
 pub async fn add_work_item_status(
     _work_item_id: &str,
     _status: &str,
@@ -102,6 +106,7 @@ pub async fn add_work_item_status(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches work-item-board.
 pub async fn fetch_work_item_board(project_id: &str) -> Result<Vec<BoardColumnDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -122,6 +127,7 @@ pub async fn fetch_work_item_board(project_id: &str) -> Result<Vec<BoardColumnDt
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches work-item-board.
 pub async fn fetch_work_item_board(_project_id: &str) -> Result<Vec<BoardColumnDto>, String> {
     Ok(vec![])
 }

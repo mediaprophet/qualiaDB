@@ -10,12 +10,14 @@ use wellfare_core::anatomy::{BodyConstitution, BodyFit, PhysiologicalState};
 /// Where the constitution lives (prefs-style, under the `wellfair/` prefix).
 pub const CONSTITUTION_FILE: &str = "wellfair/body_constitution.json";
 
+/// Loads.
 pub fn load(storage_root: impl AsRef<Path>) -> Option<BodyConstitution> {
     let path = storage_root.as_ref().join(CONSTITUTION_FILE);
     let bytes = std::fs::read(path).ok()?;
     serde_json::from_slice(&bytes).ok()
 }
 
+/// Saves.
 pub fn save(storage_root: impl AsRef<Path>, body: &BodyConstitution) -> Result<(), String> {
     body.validate()?;
     let path = storage_root.as_ref().join(CONSTITUTION_FILE);
@@ -26,6 +28,7 @@ pub fn save(storage_root: impl AsRef<Path>, body: &BodyConstitution) -> Result<(
     std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
+/// Clears.
 pub fn clear(storage_root: impl AsRef<Path>) -> Result<(), String> {
     let path = storage_root.as_ref().join(CONSTITUTION_FILE);
     match std::fs::remove_file(path) {

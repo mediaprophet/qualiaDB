@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SyntaxQapp` component.
 pub fn SyntaxQapp() -> Element {
     rsx! {
         QAppEngine {

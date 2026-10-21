@@ -69,6 +69,7 @@ pub struct FactorKnowledge {
 }
 
 impl FactorKnowledge {
+    /// Creates a new instance.
     pub fn new(
         key: impl Into<String>,
         kind: FactorKind,
@@ -86,6 +87,7 @@ impl FactorKnowledge {
         }
     }
 
+    /// Entries targeting a node.
     pub fn targeting(
         mut self,
         system_id: impl Into<String>,
@@ -177,6 +179,7 @@ pub struct KnowledgeSource {
 }
 
 impl KnowledgeSource {
+    /// Creates a new instance.
     pub fn new(
         id: impl Into<String>,
         title: impl Into<String>,
@@ -199,10 +202,12 @@ pub struct KnowledgeBase {
 }
 
 impl KnowledgeBase {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a knowledge source.
     pub fn register_source(&mut self, source: KnowledgeSource) {
         if let Some(existing) = self.sources.iter_mut().find(|s| s.id == source.id) {
             *existing = source;
@@ -234,22 +239,27 @@ impl KnowledgeBase {
         self.entries.insert(sealed.key.clone(), sealed);
     }
 
+    /// Gets.
     pub fn get(&self, key: &str) -> Option<&FactorKnowledge> {
         self.entries.get(key)
     }
 
+    /// Length.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    ///  when empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
+    /// Iterator.
     pub fn iter(&self) -> impl Iterator<Item = &FactorKnowledge> {
         self.entries.values()
     }
 
+    /// Entries by kind.
     pub fn by_kind<'a>(
         &'a self,
         kind: &'a FactorKind,

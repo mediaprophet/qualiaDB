@@ -20,6 +20,7 @@ DEFAULT_ROOT = Path(
 
 
 def refresh_file(path: Path) -> bool:
+    """Refreshes a file."""
     register_id = path.parent.name
     original = path.read_text(encoding="utf-8")
     updated = re.sub(
@@ -79,6 +80,7 @@ def refresh_file(path: Path) -> bool:
 
 
 def main() -> None:
+    """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Refresh notices in generated AU legislation CML HTML files"
     )

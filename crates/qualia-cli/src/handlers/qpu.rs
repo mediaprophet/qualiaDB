@@ -1,6 +1,7 @@
 use crate::cli::QpuAction;
 use crate::qpu;
 
+/// Handles the subcommand action.
 pub fn handle(action: &QpuAction, enable_qpu: bool) {
     if !enable_qpu {
         eprintln!("QPU commands require the --enable-qpu flag:");

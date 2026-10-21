@@ -139,6 +139,7 @@ fn parse_f64s(source: &str) -> Vec<f64> {
         .collect()
 }
 
+/// Chain action: define-social-dynamics.
 pub(super) fn run_define_social_dynamics(document: &Document, label: &str) {
     run_id(
         document,
@@ -149,6 +150,7 @@ pub(super) fn run_define_social_dynamics(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: define-economic-dynamics.
 pub(super) fn run_define_economic_dynamics(document: &Document, label: &str) {
     run_id(
         document,
@@ -159,6 +161,7 @@ pub(super) fn run_define_economic_dynamics(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: define-spatiotemporal-dynamics.
 pub(super) fn run_define_spatiotemporal_dynamics(document: &Document, label: &str) {
     run_id(
         document,
@@ -169,6 +172,7 @@ pub(super) fn run_define_spatiotemporal_dynamics(document: &Document, label: &st
     );
 }
 
+/// Chain action: analyse-social-network.
 pub(super) fn run_analyse_social_network(document: &Document, label: &str) {
     let mut agents: Vec<String> = surface_text(document)
         .lines()
@@ -188,6 +192,7 @@ pub(super) fn run_analyse_social_network(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: analyse-inequality.
 pub(super) fn run_analyse_inequality(document: &Document, label: &str) {
     let mut values = parse_f64s(&surface_text(document));
     if values.is_empty() {
@@ -202,6 +207,7 @@ pub(super) fn run_analyse_inequality(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: analyse-diffusion.
 pub(super) fn run_analyse_diffusion(document: &Document, label: &str) {
     let mut initial = parse_f64s(&surface_text(document));
     if initial.is_empty() {
@@ -216,6 +222,7 @@ pub(super) fn run_analyse_diffusion(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: assess-grounding.
 pub(super) fn run_assess_grounding(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -226,6 +233,7 @@ pub(super) fn run_assess_grounding(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: verify-grounding.
 pub(super) fn run_verify_grounding(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -236,6 +244,7 @@ pub(super) fn run_verify_grounding(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: detect-ungrounded-behaviour.
 pub(super) fn run_detect_ungrounded_behaviour(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -246,6 +255,7 @@ pub(super) fn run_detect_ungrounded_behaviour(document: &Document, label: &str) 
     );
 }
 
+/// Chain action: create-ug-instance.
 pub(super) fn run_create_ug_instance(document: &Document, label: &str) {
     run_id(
         document,
@@ -256,6 +266,7 @@ pub(super) fn run_create_ug_instance(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-ug-cause.
 pub(super) fn run_set_ug_cause(document: &Document, label: &str) {
     run_id(
         document,
@@ -266,6 +277,7 @@ pub(super) fn run_set_ug_cause(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-ug-consequence.
 pub(super) fn run_set_ug_consequence(document: &Document, label: &str) {
     run_id(
         document,
@@ -276,6 +288,7 @@ pub(super) fn run_set_ug_consequence(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-ug-detection.
 pub(super) fn run_set_ug_detection(document: &Document, label: &str) {
     run_id(
         document,
@@ -286,6 +299,7 @@ pub(super) fn run_set_ug_detection(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-ug-mitigation.
 pub(super) fn run_set_ug_mitigation(document: &Document, label: &str) {
     run_id(
         document,
@@ -296,6 +310,7 @@ pub(super) fn run_set_ug_mitigation(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-ug-calibration.
 pub(super) fn run_set_ug_calibration(document: &Document, label: &str) {
     run_id(
         document,
@@ -306,6 +321,7 @@ pub(super) fn run_set_ug_calibration(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: detect-ug-patterns.
 pub(super) fn run_detect_ug_patterns(document: &Document, label: &str) {
     run_id(
         document,

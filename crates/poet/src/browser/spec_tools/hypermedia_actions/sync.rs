@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "hypermedia:timeline-sync" => Some(cycle_timeline_sync(container)),
@@ -19,6 +20,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next timeline-sync.
 pub(crate) fn next_timeline_sync(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("master_clock") => "wall_clock",

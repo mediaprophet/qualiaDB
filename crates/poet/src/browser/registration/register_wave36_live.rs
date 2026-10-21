@@ -24,6 +24,7 @@ fn live_tool(
     ))
 }
 
+/// Registers the `social` tool set.
 pub(super) fn social_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("social:live_gini", "Social Gini", "Social.gini", "Inequality via Social.gini.", "finance", "soc"),
@@ -35,6 +36,7 @@ pub(super) fn social_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>
     ]
 }
 
+/// Registers the `finance` tool set.
 pub(super) fn finance_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("finance:live_convert_currency", "Convert currency", "Finance.convert_currency", "Convert via Finance.convert_currency (rate_micros).", "finance", "econ"),
@@ -43,6 +45,7 @@ pub(super) fn finance_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool
     ]
 }
 
+/// Registers the `graph-live` tool set.
 pub(super) fn graph_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("comm:graph_live_corpus_load", "Corpus load", "Corpus.load", "Load a corpus path via Corpus.load.", "comm", "comm"),

@@ -10,6 +10,7 @@ use super::native_daemon::{
     NativeRecordQueryRequest, NativeRecordUpsertRequest,
 };
 
+/// Builds social-view.
 pub fn build_social_view(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-social-workspace", "live").ok();

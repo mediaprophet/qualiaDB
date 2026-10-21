@@ -36,6 +36,7 @@ pub struct VisionQuin {
 
 impl VisionQuin {
     #[inline]
+    /// Builder — sets parity.
     pub fn with_parity(
         subject: u64,
         predicate: u64,
@@ -76,6 +77,7 @@ pub fn q_hash(s: &str) -> u64 {
 }
 
 #[inline]
+/// q_hash of bytes.
 pub fn q_hash_bytes(bytes: &[u8]) -> u64 {
     const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const FNV_PRIME: u64 = 0x100_0000_01b3;
@@ -87,6 +89,7 @@ pub fn q_hash_bytes(bytes: &[u8]) -> u64 {
     h
 }
 
+/// Media digest.
 pub fn media_digest(bytes: &[u8]) -> MediaDigest {
     let take = bytes.len().min(65_536);
     let mut h = q_hash_bytes(&bytes[..take]);
@@ -130,6 +133,7 @@ pub fn pack_bbox_u64(det: &Detection) -> u64 {
 }
 
 #[inline]
+/// Unpacks a u64 bbox.
 pub fn unpack_bbox_u64(v: u64) -> (u16, u16, u16, u16) {
     (
         (v & 0xFFFF) as u16,

@@ -38,6 +38,7 @@ pub struct BatchVerificationReport {
     pub results: Vec<FileVerificationResult>,
 }
 
+/// Handles the subcommand action.
 pub fn handle(args: &EntityVerifyArgs) -> Result<(), Box<dyn std::error::Error>> {
     let path = &args.path;
 

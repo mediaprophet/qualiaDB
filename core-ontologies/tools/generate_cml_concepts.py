@@ -40,15 +40,18 @@ NORMATIVE = {"values:Obligation", "values:Prohibition", "values:Right", "values:
 
 
 def esc(s):
+    """Escapes text."""
     return re.sub(r"\s+", " ", s.replace("\\", "\\\\").replace('"', '\\"')).strip()
 
 
 def field(block, pat):
+    """Field helper."""
     m = re.search(pat, block)
     return m.group(1) if m else None
 
 
 def parse(text):
+    """Parses."""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     doc_ns = field(text, r"@prefix doc:\s+<([^>]+)>")
     title = date = source = category = None
@@ -73,6 +76,7 @@ def parse(text):
 
 
 def emit(slug, doc_ns, title, date, source, category, provisions):
+    """Emits."""
     L = [
         "@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .",
         "@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .",
@@ -128,6 +132,7 @@ def emit(slug, doc_ns, title, date, source, category, provisions):
 
 
 def main():
+    """CLI entry point."""
     os.makedirs(OUT, exist_ok=True)
     files = tot_c = tot_n = 0
     for f in sorted(glob.glob(os.path.join(SRC, "*.n3"))):

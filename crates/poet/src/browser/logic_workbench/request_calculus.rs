@@ -4,6 +4,7 @@ use super::helpers::field_value;
 use super::request_parse::{optional_f64, optional_u64, required_f64, required_u64};
 use web_sys::Document;
 
+/// Calculus request.
 pub(super) fn calculus_request(
     document: &Document,
     operation: &str,

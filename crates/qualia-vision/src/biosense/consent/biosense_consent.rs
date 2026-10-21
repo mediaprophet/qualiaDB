@@ -12,6 +12,7 @@ pub struct BiosenseConsent {
 }
 
 impl BiosenseConsent {
+    /// Denied result.
     pub fn denied(purpose: BiosensePurpose) -> Self {
         Self {
             purpose,
@@ -22,6 +23,7 @@ impl BiosenseConsent {
         }
     }
 
+    /// Grants process.
     pub fn grant_process(purpose: BiosensePurpose, principal_hash: u64) -> Self {
         Self {
             purpose,
@@ -32,6 +34,7 @@ impl BiosenseConsent {
         }
     }
 
+    /// Grants security-template.
     pub fn grant_security_template(principal_hash: u64) -> Self {
         Self {
             purpose: BiosensePurpose::Security,
@@ -42,12 +45,14 @@ impl BiosenseConsent {
         }
     }
 
+    /// Revokes.
     pub fn revoke(&mut self) {
         self.allow_process = false;
         self.allow_store_template = false;
         self.allow_graph_observation = false;
     }
 
+    /// `true` when processing may proceed.
     pub fn may_process(self) -> bool {
         self.allow_process
     }

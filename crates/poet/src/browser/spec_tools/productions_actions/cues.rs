@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "productions:cue-record" | "productions:add-cue" => Some(record_cue(container)),
@@ -22,6 +23,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next fade-time.
 pub(crate) fn next_fade_time(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("0.0s (Cut)") => "2.0s (Fast Dissolve)",

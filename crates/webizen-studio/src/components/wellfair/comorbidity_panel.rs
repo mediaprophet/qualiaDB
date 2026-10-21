@@ -14,6 +14,7 @@ fn status_label(status: u8) -> &'static str {
 }
 
 #[component]
+/// Dioxus `WellfairComorbidityPanel` component.
 pub fn WellfairComorbidityPanel() -> Element {
     let mut organ = use_signal(|| "Whole body".to_string());
     let mut report = use_signal(|| None::<ComorbidityReportDto>);

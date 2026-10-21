@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
+/// Builds socioeconomics-panel.
 pub(super) fn build_socioeconomics_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "socioeconomics", false);
     panel
@@ -55,6 +56,7 @@ pub(super) fn build_socioeconomics_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-socioeconomics` panel.
 pub(super) fn wire_socioeconomics_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("socioeconomics-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -76,6 +78,7 @@ pub(super) fn wire_socioeconomics_panel(document: &Document) {
     }
 }
 
+/// Builds interaction-gov-panel.
 pub(super) fn build_interaction_gov_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "interaction_gov", false);
     panel
@@ -142,6 +145,7 @@ pub(super) fn build_interaction_gov_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-interaction-gov` panel.
 pub(super) fn wire_interaction_gov_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("interaction-gov-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -154,6 +158,7 @@ pub(super) fn wire_interaction_gov_panel(document: &Document) {
     }
 }
 
+/// Builds identity-fabric-panel.
 pub(super) fn build_identity_fabric_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "identity_fabric", false);
     panel
@@ -200,6 +205,7 @@ pub(super) fn build_identity_fabric_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-identity-fabric` panel.
 pub(super) fn wire_identity_fabric_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("identity-fabric-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -221,6 +227,7 @@ pub(super) fn wire_identity_fabric_panel(document: &Document) {
     }
 }
 
+/// Builds capability-gap-panel.
 pub(super) fn build_capability_gap_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "capability_gap", false);
     panel
@@ -259,6 +266,7 @@ pub(super) fn build_capability_gap_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-capability-gap` panel.
 pub(super) fn wire_capability_gap_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("capability-gap-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -271,6 +279,7 @@ pub(super) fn wire_capability_gap_panel(document: &Document) {
     }
 }
 
+/// Builds legal-compose-panel.
 pub(super) fn build_legal_compose_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "legal_compose", false);
     panel
@@ -317,6 +326,7 @@ pub(super) fn build_legal_compose_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-legal-compose` panel.
 pub(super) fn wire_legal_compose_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("legal-compose-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -338,6 +348,7 @@ pub(super) fn wire_legal_compose_panel(document: &Document) {
     }
 }
 
+/// Builds deontic-compose-panel.
 pub(super) fn build_deontic_compose_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "deontic_compose", false);
     panel
@@ -384,6 +395,7 @@ pub(super) fn build_deontic_compose_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-deontic-compose` panel.
 pub(super) fn wire_deontic_compose_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("deontic-compose-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

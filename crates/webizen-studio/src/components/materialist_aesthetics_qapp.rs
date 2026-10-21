@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MaterialistAestheticsQapp` component.
 pub fn MaterialistAestheticsQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -11,6 +11,7 @@ use super::{
     ui::{button, element, focus_cell, persist, refresh_values, status_text, update_selection},
 };
 
+/// Builds the view.
 pub fn build(document: &Document, settings: &BTreeMap<String, String>) -> Element {
     let state = Rc::new(RefCell::new(SheetState::from_settings(settings)));
     let active = Rc::new(RefCell::new(String::from("A1")));

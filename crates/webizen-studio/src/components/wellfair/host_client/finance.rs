@@ -34,6 +34,7 @@ pub struct ObligationDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds ledger-entry.
 pub async fn add_ledger_entry(
     description: &str,
     amount_cents: i64,
@@ -86,6 +87,7 @@ pub async fn add_ledger_entry(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds ledger-entry.
 pub async fn add_ledger_entry(
     _description: &str,
     _amount_cents: i64,
@@ -97,6 +99,7 @@ pub async fn add_ledger_entry(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches ledger-balance.
 pub async fn fetch_ledger_balance(limit: usize) -> Result<BalanceReportDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -115,11 +118,13 @@ pub async fn fetch_ledger_balance(limit: usize) -> Result<BalanceReportDto, Stri
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches ledger-balance.
 pub async fn fetch_ledger_balance(_limit: usize) -> Result<BalanceReportDto, String> {
     Ok(BalanceReportDto::default())
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds project.
 pub async fn add_project(
     name: &str,
     description: &str,
@@ -156,6 +161,7 @@ pub async fn add_project(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds project.
 pub async fn add_project(
     _name: &str,
     _description: &str,
@@ -165,6 +171,7 @@ pub async fn add_project(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds contribution.
 pub async fn add_contribution(
     project_id: &str,
     contributor_did: &str,
@@ -236,6 +243,7 @@ pub async fn add_contribution(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds contribution.
 pub async fn add_contribution(
     _project_id: &str,
     _contributor_did: &str,
@@ -250,6 +258,7 @@ pub async fn add_contribution(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches project-obligations.
 pub async fn fetch_project_obligations(limit: usize) -> Result<Vec<ObligationDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -268,11 +277,13 @@ pub async fn fetch_project_obligations(limit: usize) -> Result<Vec<ObligationDto
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches project-obligations.
 pub async fn fetch_project_obligations(_limit: usize) -> Result<Vec<ObligationDto>, String> {
     Ok(vec![])
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Adds credential.
 pub async fn add_credential(
     issuer_did: &str,
     subject_did: &str,
@@ -324,6 +335,7 @@ pub async fn add_credential(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Adds credential.
 pub async fn add_credential(
     _issuer_did: &str,
     _subject_did: &str,
@@ -354,6 +366,7 @@ pub struct PresentationDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Gets credential.
 pub async fn get_credential(record_id: &str) -> Result<Option<CredentialFullDto>, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -377,11 +390,13 @@ pub async fn get_credential(record_id: &str) -> Result<Option<CredentialFullDto>
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Gets credential.
 pub async fn get_credential(_record_id: &str) -> Result<Option<CredentialFullDto>, String> {
     Ok(None)
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn present_credential(
     record_id: &str,
     selected_keys: &[String],
@@ -410,6 +425,7 @@ pub async fn present_credential(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn present_credential(
     _record_id: &str,
     _selected_keys: &[String],

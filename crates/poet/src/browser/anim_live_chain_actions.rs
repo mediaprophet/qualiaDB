@@ -100,6 +100,7 @@ fn nums(document: &Document) -> Vec<f64> {
     parse_f64s(&selected_source(document).unwrap_or_default())
 }
 
+/// Chain action: spring-step.
 pub(super) fn run_spring_step(document: &Document, label: &str) {
     let n = nums(document);
     let current = n.first().copied().unwrap_or(0.0);
@@ -113,6 +114,7 @@ pub(super) fn run_spring_step(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sclerp-step.
 pub(super) fn run_sclerp_step(document: &Document, label: &str) {
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.5);
     invoke_dual(
@@ -124,6 +126,7 @@ pub(super) fn run_sclerp_step(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: squad-step.
 pub(super) fn run_squad_step(document: &Document, label: &str) {
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.5);
     invoke_dual(
@@ -135,6 +138,7 @@ pub(super) fn run_squad_step(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: list-presets.
 pub(super) fn run_list_presets(document: &Document, label: &str) {
     invoke_dual(
         document,

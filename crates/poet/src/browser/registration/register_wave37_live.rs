@@ -24,6 +24,7 @@ fn live_tool(
     ))
 }
 
+/// Registers the `graph-reason` tool set.
 pub(super) fn graph_reason_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("scientific:graph_live_fuzzy_jaccard", "Fuzzy Jaccard", "GraphMatch.fuzzy_jaccard", "Fuzzy Jaccard via GraphMatch.fuzzy_jaccard.", "lab", "sci"),
@@ -38,6 +39,7 @@ pub(super) fn graph_reason_tools() -> Vec<Box<dyn crate::tool_chest::core::tool:
     ]
 }
 
+/// Registers the `sampler-cap` tool set.
 pub(super) fn sampler_cap_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool("ai:sampler_live_configure", "Sampler configure", "sampler.configure", "Install sampler config via sampler.configure.", "ai", "ai"),

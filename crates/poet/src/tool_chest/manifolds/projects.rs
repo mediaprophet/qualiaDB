@@ -7,6 +7,7 @@ use super::super::core::registry::{
 };
 use super::super::core::ManifoldSociality;
 
+/// `projects` manifold seed.
 pub fn projects_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "projects".into(),

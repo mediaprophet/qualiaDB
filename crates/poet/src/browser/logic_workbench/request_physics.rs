@@ -141,6 +141,7 @@ fn build_request(source: &str, operation: &str) -> Result<serde_json::Value, Str
     Ok(serde_json::Value::Object(arguments))
 }
 
+/// Physics request.
 pub(super) fn physics_request(
     document: &Document,
     operation: &str,
@@ -152,6 +153,7 @@ pub(super) fn physics_request(
     ))
 }
 
+/// ODE request.
 pub(super) fn ode_request(
     document: &Document,
 ) -> Result<(&'static str, serde_json::Value), String> {

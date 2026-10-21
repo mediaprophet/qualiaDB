@@ -69,6 +69,7 @@ impl WebizenHostApi {
         Ok(destination.display().to_string())
     }
 
+    /// Creates a new instance.
     pub fn new(
         vault: VaultService,
         policy: PolicyDecisionService,
@@ -87,14 +88,17 @@ impl WebizenHostApi {
         }
     }
 
+    /// Saves accessibility.
     pub fn save_accessibility(&self, prefs: &AccessibilityPreferences) -> Result<(), String> {
         accessibility_prefs::save(&self.storage_root, prefs).map_err(|e| e.to_string())
     }
 
+    /// Loads accessibility.
     pub fn load_accessibility(&self) -> AccessibilityPreferences {
         accessibility_prefs::load(&self.storage_root)
     }
 
+    /// Snapshot from the vault.
     pub fn snapshot_from_vault(
         key_vault: &KeyVault,
         owner_label: &str,
@@ -103,6 +107,7 @@ impl WebizenHostApi {
         build_host_snapshot(key_vault, true, owner_label, demo_mode)
     }
 
+    /// Builds snapshot.
     pub fn build_snapshot(
         &mut self,
         key_vault: &KeyVault,
@@ -145,6 +150,7 @@ impl WebizenHostApi {
         Ok(Vec::new())
     }
 
+    /// Chora storage root.
     pub(crate) fn chora_storage_root(&self) -> &std::path::Path {
         &self.storage_root
     }
@@ -160,14 +166,17 @@ impl WebizenHostApi {
         qualia_core_db::q_hash(&self.owner_did)
     }
 
+    /// Chora signing key.
     pub(crate) fn chora_signing_key(&self) -> &SigningKey {
         &self.signing_key
     }
 
+    /// Chora owner DID.
     pub(crate) fn chora_owner_did(&self) -> &str {
         &self.owner_did
     }
 
+    /// Now (unix time).
     pub(crate) fn now_unix() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -175,6 +184,7 @@ impl WebizenHostApi {
             .unwrap_or(0)
     }
 
+    /// Evaluates policy.
     pub fn evaluate_policy(
         &self,
         qapp_id: &str,
@@ -199,6 +209,7 @@ impl WebizenHostApi {
         Ok(decision.to_dto())
     }
 
+    /// Grants consent.
     pub fn grant_consent(
         &mut self,
         draft: &ConsentGrantDraft,
@@ -225,6 +236,7 @@ impl WebizenHostApi {
         Ok(grant)
     }
 
+    /// Revokes a consent.
     pub fn revoke_consent(&mut self, grant_id: &str) -> Result<bool, String> {
         let revoked = self
             .vault
@@ -249,12 +261,14 @@ impl WebizenHostApi {
         Ok(revoked)
     }
 
+    /// Lists consents.
     pub fn list_consents(&self) -> Result<Vec<ConsentGrantRecord>, String> {
         self.vault
             .list_active_consents(Self::now_unix())
             .map_err(|e| e.to_string())
     }
 
+    /// Submits a record.
     pub fn submit_record(
         &mut self,
         qapp_id: &str,
@@ -264,6 +278,7 @@ impl WebizenHostApi {
         self.submit_record_with_summary(qapp_id, envelope, source, None)
     }
 
+    /// Submits a record with summary.
     pub fn submit_record_with_summary(
         &mut self,
         qapp_id: &str,
@@ -359,11 +374,13 @@ impl WebizenHostApi {
         Ok(committed)
     }
 
+    /// Finalizes a batch.
     pub fn finalize_batch(&mut self) -> Result<String, String> {
         let hash = self.vault.checkpoint().map_err(|e| e.to_string())?;
         Ok(hex::encode(hash))
     }
 
+    /// Lists health records.
     pub fn list_health_records(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         let entries = self
             .vault
@@ -373,10 +390,12 @@ impl WebizenHostApi {
         Ok(apply_sanctuary_projection(&prefs, entries))
     }
 
+    /// Lists receipts.
     pub fn list_receipts(&self, limit: usize) -> Result<Vec<ReceiptRecord>, String> {
         self.vault.list_receipts(limit).map_err(|e| e.to_string())
     }
 
+    /// Lists the outbox.
     pub fn list_outbox(&self, limit: usize) -> Result<Vec<SyncOutboxEntry>, String> {
         self.vault.list_outbox(limit).map_err(|e| e.to_string())
     }
@@ -418,10 +437,12 @@ impl WebizenHostApi {
             .collect())
     }
 
+    /// Payload hash as hex.
     pub(crate) fn payload_hash_hex(payload: &str) -> String {
         hex::encode(Sha256::digest(payload.as_bytes()).as_slice())
     }
 
+    /// Adds condition.
     pub fn add_condition(&mut self, report: &ConditionReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -442,6 +463,7 @@ impl WebizenHostApi {
             .ok_or_else(|| "condition committed but not found in journal".to_string())
     }
 
+    /// Adds disputed-diagnosis.
     pub fn add_disputed_diagnosis(
         &mut self,
         report: &DisputedDiagnosisReport,
@@ -464,6 +486,7 @@ impl WebizenHostApi {
             .ok_or_else(|| "disputed diagnosis committed but not found in journal".to_string())
     }
 
+    /// Adds housing-safety.
     pub fn add_housing_safety(
         &mut self,
         report: &HousingSafetyReport,
@@ -486,6 +509,7 @@ impl WebizenHostApi {
             .ok_or_else(|| "housing/safety committed but not found in journal".to_string())
     }
 
+    /// Adds allergy.
     pub fn add_allergy(&mut self, report: &AllergyReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -506,10 +530,12 @@ impl WebizenHostApi {
             .ok_or_else(|| "allergy committed but not found in journal".to_string())
     }
 
+    /// Graph quin count.
     pub fn graph_quin_count(&self) -> usize {
         self.vault.graph_quin_count()
     }
 
+    /// Imports a Samsung Health folder.
     pub fn import_samsung_health_folder(&mut self, folder: &Path) -> SamsungImportReport {
         let owner = self.owner_did.clone();
         let author = self.author_did.clone();
@@ -548,6 +574,7 @@ impl WebizenHostApi {
 
     const QAPP_MEDICATION: &'static str = "wellfair-medication";
 
+    /// Adds medication.
     pub fn add_medication(
         &mut self,
         name: &str,
@@ -582,6 +609,7 @@ impl WebizenHostApi {
             .ok_or_else(|| "medication committed but journal empty".into())
     }
 
+    /// Records an administration.
     pub fn record_administration(
         &mut self,
         medication_id: &str,
@@ -613,6 +641,7 @@ impl WebizenHostApi {
             .ok_or_else(|| "administration committed but journal empty".into())
     }
 
+    /// Adds diet-entry.
     pub fn add_diet_entry(
         &mut self,
         description: &str,
@@ -642,6 +671,7 @@ impl WebizenHostApi {
             .ok_or_else(|| "diet entry committed but journal empty".into())
     }
 
+    /// Lists journal entries by kind.
     pub fn list_journal_by_kind(
         &self,
         kind: &str,

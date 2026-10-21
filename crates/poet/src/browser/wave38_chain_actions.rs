@@ -41,6 +41,7 @@ fn invoke_dual(
     });
 }
 
+/// Chain action: tanimoto.
 pub(super) fn run_tanimoto(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -51,6 +52,7 @@ pub(super) fn run_tanimoto(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: structural-fingerprint.
 pub(super) fn run_structural_fingerprint(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -61,6 +63,7 @@ pub(super) fn run_structural_fingerprint(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: analyze-intensity-grid.
 pub(super) fn run_analyze_intensity_grid(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -71,6 +74,7 @@ pub(super) fn run_analyze_intensity_grid(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: analyze-differential.
 pub(super) fn run_analyze_differential(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -81,6 +85,7 @@ pub(super) fn run_analyze_differential(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: screen-compounds.
 pub(super) fn run_screen_compounds(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -91,6 +96,7 @@ pub(super) fn run_screen_compounds(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: manifold-axes.
 pub(super) fn run_manifold_axes(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -101,6 +107,7 @@ pub(super) fn run_manifold_axes(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: manifold-distance.
 pub(super) fn run_manifold_distance(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -111,6 +118,7 @@ pub(super) fn run_manifold_distance(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: manifold-project.
 pub(super) fn run_manifold_project(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -121,6 +129,7 @@ pub(super) fn run_manifold_project(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sha256.
 pub(super) fn run_sha256(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -131,6 +140,7 @@ pub(super) fn run_sha256(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sha512.
 pub(super) fn run_sha512(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -141,6 +151,7 @@ pub(super) fn run_sha512(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: blake3.
 pub(super) fn run_blake3(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -151,6 +162,7 @@ pub(super) fn run_blake3(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gaussian-sigma.
 pub(super) fn run_gaussian_sigma(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -161,6 +173,7 @@ pub(super) fn run_gaussian_sigma(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sentinel-gate.
 pub(super) fn run_sentinel_gate(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -171,6 +184,7 @@ pub(super) fn run_sentinel_gate(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-catalog.
 pub(super) fn run_cap_catalog(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -181,6 +195,7 @@ pub(super) fn run_cap_catalog(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-coverage.
 pub(super) fn run_cap_coverage(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -191,6 +206,7 @@ pub(super) fn run_cap_coverage(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dag-execute.
 pub(super) fn run_dag_execute(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -201,6 +217,7 @@ pub(super) fn run_dag_execute(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dag-validate.
 pub(super) fn run_dag_validate(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -211,6 +228,7 @@ pub(super) fn run_dag_validate(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: dag-status.
 pub(super) fn run_dag_status(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -221,6 +239,7 @@ pub(super) fn run_dag_status(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: fm-black-scholes.
 pub(super) fn run_fm_black_scholes(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -231,6 +250,7 @@ pub(super) fn run_fm_black_scholes(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: fm-portfolio-risk.
 pub(super) fn run_fm_portfolio_risk(document: &Document, label: &str) {
     invoke_dual(
         document,

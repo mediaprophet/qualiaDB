@@ -47,6 +47,7 @@ pub enum LibrarySection {
 }
 
 impl LibrarySection {
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::All => "all",
@@ -60,6 +61,7 @@ impl LibrarySection {
         }
     }
 
+    /// Parses.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
             "secret" | "sanctuary" | "private" => Self::Secret,
@@ -75,6 +77,7 @@ impl LibrarySection {
         }
     }
 
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::All => "All",
@@ -88,6 +91,7 @@ impl LibrarySection {
         }
     }
 
+    /// Blurb.
     pub fn blurb(self) -> &'static str {
         match self {
             Self::All => "Everything on this device you have rights to see.",
@@ -116,6 +120,7 @@ pub enum CommonsVisibility {
 }
 
 impl CommonsVisibility {
+    /// Parses.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
             "peers" | "peer" | "bilateral" => Self::Peers,
@@ -124,6 +129,7 @@ impl CommonsVisibility {
         }
     }
 
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
@@ -337,6 +343,7 @@ impl LibraryEntry {
         }
     }
 
+    /// `true` when secret.
     pub fn is_secret(&self) -> bool {
         self.section == LibrarySection::Secret.as_str()
             || matches!(
@@ -352,6 +359,7 @@ pub struct HypermediaStore {
 }
 
 impl HypermediaStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(LIBRARY_FILE);
         if let Some(parent) = path.parent() {
@@ -360,6 +368,7 @@ impl HypermediaStore {
         Ok(Self { path })
     }
 
+    /// Loads.
     pub fn load(&self) -> std::io::Result<Vec<LibraryEntry>> {
         match fs::read(&self.path) {
             Ok(bytes) => {
@@ -694,6 +703,7 @@ pub struct FacetFilter {
 }
 
 impl FacetFilter {
+    /// `true` when it matches.
     pub fn matches(&self, e: &LibraryEntry) -> bool {
         if let Some(sec) = self.section.as_deref() {
             let sec = sec.trim();
@@ -761,6 +771,7 @@ pub enum LibrarySort {
 }
 
 impl LibrarySort {
+    /// Parses.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
             "oldest" | "old" => Self::Oldest,
@@ -772,6 +783,7 @@ impl LibrarySort {
         }
     }
 
+    /// `str` form.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Newest => "newest",

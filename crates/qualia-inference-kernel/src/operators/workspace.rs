@@ -70,6 +70,7 @@ pub fn workspace_requirement(
 }
 
 impl OperatorWorkspace<'_> {
+    /// Checks.
     pub fn check(&self, need: WorkspaceRequirement) -> Result<(), OperatorError> {
         if self.numeric.len() < need.numeric_f32 || self.bytes.len() < need.bytes {
             return Err(OperatorError::WorkspaceTooSmall);
@@ -79,10 +80,12 @@ impl OperatorWorkspace<'_> {
 }
 
 impl MatrixView<'_> {
+    /// Length.
     pub fn len(&self) -> usize {
         self.rows.saturating_mul(self.cols)
     }
 
+    /// Checks len.
     pub fn check_len(&self) -> Result<(), OperatorError> {
         if self.data.len() < self.len() {
             return Err(OperatorError::UnsupportedShape);
@@ -92,10 +95,12 @@ impl MatrixView<'_> {
 }
 
 impl MatrixViewMut<'_> {
+    /// Length.
     pub fn len(&self) -> usize {
         self.rows.saturating_mul(self.cols)
     }
 
+    /// Checks len.
     pub fn check_len(&self) -> Result<(), OperatorError> {
         if self.data.len() < self.len() {
             return Err(OperatorError::UnsupportedShape);

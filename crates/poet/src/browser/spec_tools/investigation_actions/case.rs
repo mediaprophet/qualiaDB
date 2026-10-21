@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:new-investigation" => Some(new_investigation(container)),
@@ -19,6 +20,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next case-mode.
 pub(crate) fn next_case_mode(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("retrospective") => "prospective",
@@ -27,6 +29,7 @@ pub(crate) fn next_case_mode(current: Option<&str>) -> &'static str {
     }
 }
 
+/// `next-case` status.
 pub(crate) fn next_case_status(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("open") => "active",

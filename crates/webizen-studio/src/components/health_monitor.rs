@@ -3,6 +3,7 @@ use crate::components::shoelace::*;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `HealthVitalMonitor` component.
 pub fn HealthVitalMonitor() -> Element {
     rsx! {
         div { class: "health-monitor-pane flex flex-col h-full",

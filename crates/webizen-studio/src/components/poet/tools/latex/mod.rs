@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `LatexToolbar` component.
 pub fn LatexToolbar() -> Element {
     rsx! {
         div { style: bar(),

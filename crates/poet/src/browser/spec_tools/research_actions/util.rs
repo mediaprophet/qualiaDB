@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// Appends csv-attr.
 pub(crate) fn append_csv_attr(container: &Element, attr: &str, item: &str) -> Result<(), String> {
     let current = container.get_attribute(attr).unwrap_or_default();
     let updated = if current.is_empty() {
@@ -14,6 +15,7 @@ pub(crate) fn append_csv_attr(container: &Element, attr: &str, item: &str) -> Re
         .map_err(|_| format!("Failed to update {attr}."))
 }
 
+/// Appends nested.
 pub(crate) fn append_nested(
     document: &Document,
     container: &Element,
@@ -37,6 +39,7 @@ pub(crate) fn append_nested(
     Ok(())
 }
 
+/// Next confidence level.
 pub(crate) fn next_confidence(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("low") => "moderate",
@@ -47,6 +50,7 @@ pub(crate) fn next_confidence(current: Option<&str>) -> &'static str {
     }
 }
 
+/// Count within range.
 pub(crate) fn count_within(container: &Element, selector: &str) -> Result<u32, String> {
     container
         .query_selector_all(selector)
@@ -54,6 +58,7 @@ pub(crate) fn count_within(container: &Element, selector: &str) -> Result<u32, S
         .map_err(|_| format!("Failed to query {selector}."))
 }
 
+/// Document count.
 pub(crate) fn count_document(document: &Document, selector: &str) -> Result<u32, String> {
     document
         .query_selector_all(selector)

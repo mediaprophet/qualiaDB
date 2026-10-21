@@ -45,6 +45,7 @@ impl Default for WelfareUi {
 }
 
 #[component]
+/// Dioxus `WellfairWelfarePanel` component.
 pub fn WellfairWelfarePanel() -> Element {
     let mut ui = use_signal(WelfareUi::default);
 

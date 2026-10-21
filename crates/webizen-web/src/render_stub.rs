@@ -24,6 +24,7 @@ pub struct SimpleCanvasRenderer {
 }
 
 impl SimpleCanvasRenderer {
+    /// Creates a new instance.
     pub fn new(canvas: HtmlCanvasElement) -> Result<Self, JsValue> {
         let ctx = canvas
             .get_context("2d")?
@@ -36,17 +37,20 @@ impl SimpleCanvasRenderer {
         Ok(Self { ctx, width, height })
     }
 
+    /// Clears.
     pub fn clear(&self, color: &str) {
         self.ctx.set_fill_style(&JsValue::from_str(color));
         self.ctx.fill_rect(0.0, 0.0, self.width, self.height);
     }
 
+    /// Draws label.
     pub fn draw_label(&self, text: &str, x: f64, y: f64, color: &str) {
         self.ctx.set_fill_style(&JsValue::from_str(color));
         self.ctx.set_font("14px Inter, system-ui, sans-serif");
         let _ = self.ctx.fill_text(text, x, y);
     }
 
+    /// Draws node.
     pub fn draw_node(&self, x: f64, y: f64, radius: f64, color: &str, label: Option<&str>) {
         self.ctx.begin_path();
         let _ = self.ctx.arc(x, y, radius, 0.0, std::f64::consts::TAU);
@@ -58,6 +62,7 @@ impl SimpleCanvasRenderer {
         }
     }
 
+    /// Draws edge.
     pub fn draw_edge(&self, x1: f64, y1: f64, x2: f64, y2: f64, color: &str, width: f64) {
         self.ctx.begin_path();
         self.ctx.move_to(x1, y1);

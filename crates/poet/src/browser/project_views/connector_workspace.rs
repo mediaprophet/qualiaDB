@@ -67,6 +67,7 @@ const CONNECTOR_FIELDS: &[CopField] = &[
     },
 ];
 
+/// Builds integrations-view.
 pub fn build_integrations_view(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-connector-workspace", "semantic")

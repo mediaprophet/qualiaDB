@@ -11,6 +11,7 @@ pub struct Honesty {
 }
 
 impl Honesty {
+    /// `presence` index.
     pub fn presence_index() -> Self {
         Self {
             vocabulary: ["Present", "Live", "Planned"],
@@ -76,6 +77,7 @@ pub struct WorkGraph {
 }
 
 impl WorkGraph {
+    /// Catalog-only IDs.
     pub fn catalog_only_ids(&self) -> Vec<&str> {
         let bound: std::collections::BTreeSet<&str> =
             self.invoke_ids.iter().map(String::as_str).collect();
@@ -86,6 +88,7 @@ impl WorkGraph {
             .collect()
     }
 
+    /// Bound IDs missing from catalog.
     pub fn bound_missing_from_catalog(&self) -> Vec<&str> {
         if !self.catalog_present {
             return Vec::new();

@@ -11,6 +11,7 @@ use crate::components::poet::host;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `AuraTray` component.
 pub fn AuraTray(
     #[props(default = true)] conformant: bool,
     #[props(default = 98)] certainty: u8,

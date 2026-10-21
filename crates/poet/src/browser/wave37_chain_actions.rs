@@ -63,6 +63,7 @@ fn tiny_fuzzy() -> serde_json::Value {
     json!([{ "s": 0, "p": 1, "o": 0, "degree": 1.0 }])
 }
 
+/// Chain action: fuzzy-jaccard.
 pub(super) fn run_fuzzy_jaccard(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -73,6 +74,7 @@ pub(super) fn run_fuzzy_jaccard(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: fuzzy-dice.
 pub(super) fn run_fuzzy_dice(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -83,6 +85,7 @@ pub(super) fn run_fuzzy_dice(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: approximate-match.
 pub(super) fn run_approximate_match(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -100,6 +103,7 @@ pub(super) fn run_approximate_match(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: shortest-path.
 pub(super) fn run_shortest_path(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -110,6 +114,7 @@ pub(super) fn run_shortest_path(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: spreading-activation.
 pub(super) fn run_spreading_activation(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -125,6 +130,7 @@ pub(super) fn run_spreading_activation(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: top-k.
 pub(super) fn run_top_k(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -135,6 +141,7 @@ pub(super) fn run_top_k(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: hill-climb.
 pub(super) fn run_hill_climb(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -145,6 +152,7 @@ pub(super) fn run_hill_climb(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: simulated-annealing.
 pub(super) fn run_simulated_annealing(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -160,6 +168,7 @@ pub(super) fn run_simulated_annealing(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: artificial-bee-colony.
 pub(super) fn run_artificial_bee_colony(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -174,6 +183,7 @@ pub(super) fn run_artificial_bee_colony(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sampler-configure.
 pub(super) fn run_sampler_configure(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -184,6 +194,7 @@ pub(super) fn run_sampler_configure(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sampler-constrain-enable.
 pub(super) fn run_sampler_constrain_enable(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -194,6 +205,7 @@ pub(super) fn run_sampler_constrain_enable(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sampler-constrain-disable.
 pub(super) fn run_sampler_constrain_disable(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -204,6 +216,7 @@ pub(super) fn run_sampler_constrain_disable(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sampler-constrain-reset.
 pub(super) fn run_sampler_constrain_reset(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -214,6 +227,7 @@ pub(super) fn run_sampler_constrain_reset(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: sampler-sample.
 pub(super) fn run_sampler_sample(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -224,6 +238,7 @@ pub(super) fn run_sampler_sample(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-grant.
 pub(super) fn run_cap_grant(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -239,6 +254,7 @@ pub(super) fn run_cap_grant(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-revoke.
 pub(super) fn run_cap_revoke(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -249,6 +265,7 @@ pub(super) fn run_cap_revoke(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-test-gating.
 pub(super) fn run_cap_test_gating(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -259,6 +276,7 @@ pub(super) fn run_cap_test_gating(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-audit.
 pub(super) fn run_cap_audit(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -269,6 +287,7 @@ pub(super) fn run_cap_audit(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: cap-declare.
 pub(super) fn run_cap_declare(document: &Document, label: &str) {
     invoke_dual(
         document,

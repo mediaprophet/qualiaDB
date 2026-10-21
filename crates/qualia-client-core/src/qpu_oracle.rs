@@ -65,6 +65,7 @@ pub enum QpuProvider {
 }
 
 impl QpuProvider {
+    /// Name.
     pub fn name(self) -> &'static str {
         match self {
             Self::Ibm => "IBM Quantum",
@@ -78,6 +79,7 @@ impl QpuProvider {
         }
     }
 
+    /// Architecture.
     pub fn architecture(self) -> QpuArchitecture {
         match self {
             Self::DWave => QpuArchitecture::Annealer,
@@ -87,6 +89,7 @@ impl QpuProvider {
         }
     }
 
+    /// `docs` URL.
     pub fn docs_url(self) -> &'static str {
         match self {
             Self::Ibm => "https://quantum.cloud.ibm.com",
@@ -287,6 +290,7 @@ fn cached_state() -> QpuOracleState {
     cache.clone().unwrap()
 }
 
+/// Cached QPU-oracle state.
 pub(crate) fn cached_state_internal() -> QpuOracleState {
     cached_state()
 }
@@ -374,6 +378,7 @@ pub fn activate_with_commitment(commitment_text: &str) -> Result<QpuOracleSettin
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+/// Converts to public-settings.
 pub fn to_public_settings(state: &QpuOracleState) -> QpuOracleSettings {
     let providers = vec![
         QpuProviderStatus {
@@ -466,14 +471,17 @@ pub fn to_public_settings(state: &QpuOracleState) -> QpuOracleSettings {
     }
 }
 
+/// Gets qpu-settings.
 pub fn get_qpu_settings() -> QpuOracleSettings {
     to_public_settings(&cached_state())
 }
 
+/// `true` when qpu-feature-unlocked.
 pub fn is_qpu_feature_unlocked() -> bool {
     cached_state().feature_unlocked
 }
 
+/// Saves qpu-settings.
 pub fn save_qpu_settings(input: QpuOracleSettingsInput) -> Result<QpuOracleSettings, String> {
     if input.max_shots_per_task == 0 || input.max_shots_per_task > 1000 {
         return Err("max_shots_per_task must be between 1 and 1000 (SHACL bound)".into());
@@ -512,14 +520,17 @@ pub fn save_qpu_settings(input: QpuOracleSettingsInput) -> Result<QpuOracleSetti
     .map(|s| to_public_settings(&s))
 }
 
+/// Enables the QPU feature.
 pub fn enable_qpu_feature() -> Result<QpuOracleSettings, String> {
     update_state(|state| state.feature_unlocked = true).map(|s| to_public_settings(&s))
 }
 
+/// Disables the QPU feature.
 pub fn disable_qpu_feature() -> Result<QpuOracleSettings, String> {
     update_state(|state| state.feature_unlocked = false).map(|s| to_public_settings(&s))
 }
 
+/// Records usage.
 pub fn record_usage(arch: QpuArchitecture, minutes: f64) -> Result<(), String> {
     update_state(|state| match arch {
         QpuArchitecture::GateModel => state.ibm_minutes_used += minutes,
@@ -531,6 +542,7 @@ pub fn record_usage(arch: QpuArchitecture, minutes: f64) -> Result<(), String> {
     .map(|_| ())
 }
 
+/// Records provider usage.
 pub fn record_provider_usage(provider: QpuProvider, minutes: f64) -> Result<(), String> {
     update_state(|state| match provider {
         QpuProvider::Ibm => state.ibm_minutes_used += minutes,
@@ -547,6 +559,7 @@ pub fn record_provider_usage(provider: QpuProvider, minutes: f64) -> Result<(), 
 
 // ── Token resolution ──────────────────────────────────────────────────────────
 
+/// Resolves the IBM token.
 pub fn resolve_ibm_token() -> Option<String> {
     let state = cached_state();
     if !state.feature_unlocked || state.ibm_token_enc.is_empty() {
@@ -555,6 +568,7 @@ pub fn resolve_ibm_token() -> Option<String> {
     decrypt_secret(&state.ibm_token_enc).ok()
 }
 
+/// Resolves the D-Wave token.
 pub fn resolve_dwave_token() -> Option<String> {
     let state = cached_state();
     if !state.feature_unlocked || state.dwave_token_enc.is_empty() {
@@ -563,6 +577,7 @@ pub fn resolve_dwave_token() -> Option<String> {
     decrypt_secret(&state.dwave_token_enc).ok()
 }
 
+/// Resolves the IonQ token.
 pub fn resolve_ionq_token() -> Option<String> {
     let state = cached_state();
     if !state.feature_unlocked || state.ionq_token_enc.is_empty() {
@@ -571,6 +586,7 @@ pub fn resolve_ionq_token() -> Option<String> {
     decrypt_secret(&state.ionq_token_enc).ok()
 }
 
+/// Resolves the Rigetti token.
 pub fn resolve_rigetti_token() -> Option<String> {
     let state = cached_state();
     if !state.feature_unlocked || state.rigetti_token_enc.is_empty() {
@@ -618,6 +634,7 @@ pub fn resolve_braket_credentials() -> Option<(String, String, String)> {
     }
 }
 
+/// Resolves the Google token.
 pub fn resolve_google_token() -> Option<String> {
     let state = cached_state();
     if !state.feature_unlocked || state.google_token_enc.is_empty() {
@@ -626,6 +643,7 @@ pub fn resolve_google_token() -> Option<String> {
     decrypt_secret(&state.google_token_enc).ok()
 }
 
+/// Resolves the Quantinuum token.
 pub fn resolve_quantinuum_token() -> Option<String> {
     let state = cached_state();
     if !state.feature_unlocked || state.quantinuum_token_enc.is_empty() {
@@ -636,6 +654,7 @@ pub fn resolve_quantinuum_token() -> Option<String> {
 
 // ── Architecture routing ──────────────────────────────────────────────────────
 
+/// Target architecture.
 pub fn target_architecture(task: &str) -> Option<QpuArchitecture> {
     let state = cached_state();
     if !state.feature_unlocked {

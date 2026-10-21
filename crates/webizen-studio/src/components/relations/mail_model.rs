@@ -37,6 +37,7 @@ pub struct ReplyDraft {
 }
 
 impl ReceiverState {
+    /// `true` when running.
     pub fn is_running(&self) -> bool {
         matches!(self, Self::Running { .. })
     }
@@ -67,6 +68,7 @@ pub fn receiver_from_status(value: &serde_json::Value) -> ReceiverState {
     ReceiverState::Running { bind }
 }
 
+/// Text.
 pub fn text(value: &serde_json::Value, key: &str) -> String {
     value
         .get(key)
@@ -75,6 +77,7 @@ pub fn text(value: &serde_json::Value, key: &str) -> String {
         .to_string()
 }
 
+/// Mailbox kind.
 pub fn mailbox_kind(value: &serde_json::Value) -> MailboxKind {
     match value.get("kind").and_then(serde_json::Value::as_str) {
         Some("Purpose") => MailboxKind::Purpose,
@@ -83,6 +86,7 @@ pub fn mailbox_kind(value: &serde_json::Value) -> MailboxKind {
     }
 }
 
+/// `mailbox` label.
 pub fn mailbox_label(local: &str) -> String {
     match local.trim().to_ascii_lowercase().as_str() {
         "frontdoor" => "Front door".into(),
@@ -142,6 +146,7 @@ fn kind_rank(kind: MailboxKind) -> u8 {
     }
 }
 
+/// Mailbox for a message.
 pub fn message_mailbox(message: &serde_json::Value) -> String {
     let mailbox = text(message, "mailbox");
     if mailbox.is_empty() {
@@ -179,6 +184,7 @@ pub fn filter_messages<'a>(
         .collect()
 }
 
+/// Unread count in a mailbox.
 pub fn unread_in_mailbox(messages: &[serde_json::Value], mailbox: Option<&str>) -> usize {
     filter_messages(messages, mailbox, true)
         .into_iter()
@@ -191,6 +197,7 @@ pub fn unread_in_mailbox(messages: &[serde_json::Value], mailbox: Option<&str>) 
         .count()
 }
 
+/// Reply draft.
 pub fn reply_draft(message: &serde_json::Value) -> ReplyDraft {
     let from = {
         let mailbox = message_mailbox(message);
@@ -223,6 +230,7 @@ pub fn reply_draft(message: &serde_json::Value) -> ReplyDraft {
     }
 }
 
+/// Reply subject.
 pub fn reply_subject(subject: &str) -> String {
     let trimmed = subject.trim();
     if trimmed.is_empty() {
@@ -244,6 +252,7 @@ pub fn smtp_ready(transport: &serde_json::Value) -> bool {
         .unwrap_or(false)
 }
 
+/// Extracts messages.
 pub fn extract_messages(list: &serde_json::Value) -> Vec<serde_json::Value> {
     list.get("messages")
         .and_then(serde_json::Value::as_array)
@@ -252,6 +261,7 @@ pub fn extract_messages(list: &serde_json::Value) -> Vec<serde_json::Value> {
         .unwrap_or_default()
 }
 
+/// Extracts addresses.
 pub fn extract_addresses(list: &serde_json::Value) -> Vec<serde_json::Value> {
     list.as_array()
         .cloned()
@@ -263,6 +273,7 @@ pub fn extract_addresses(list: &serde_json::Value) -> Vec<serde_json::Value> {
         .unwrap_or_default()
 }
 
+/// Inbox counts line.
 pub fn inbox_counts_line(list: &serde_json::Value) -> String {
     if let Some(counts) = list.get("counts") {
         let total = counts.get("total").and_then(|v| v.as_u64()).unwrap_or(0);

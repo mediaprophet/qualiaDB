@@ -10,6 +10,7 @@ pub enum RichCommand {
 }
 
 impl RichCommand {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Bold => "B",
@@ -20,6 +21,7 @@ impl RichCommand {
         }
     }
 
+    /// Title.
     pub fn title(self) -> &'static str {
         match self {
             Self::Bold => "Bold",

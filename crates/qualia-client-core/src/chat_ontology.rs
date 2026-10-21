@@ -148,6 +148,7 @@ const DISCOURSE_TYPES: &[(&str, &str, &str, &str, &[&str], &[&str])] = &[
     ),
 ];
 
+/// Local wordnet-dir.
 pub fn local_wordnet_dir() -> PathBuf {
     if let Ok(dir) = std::env::var("QUALIA_WORDNET_DIR") {
         let trimmed = dir.trim();
@@ -158,6 +159,7 @@ pub fn local_wordnet_dir() -> PathBuf {
     PathBuf::from("Local_LIbraries/wordnet")
 }
 
+/// Resolves a WordNet entry to q42.
 pub fn resolve_wordnet_q42(storage: &Path) -> Option<PathBuf> {
     let index = resource_import::index_dir(storage);
     let local = local_wordnet_dir();
@@ -175,6 +177,7 @@ pub fn resolve_wordnet_q42(storage: &Path) -> Option<PathBuf> {
     candidates.into_iter().find(|p| p.is_file())
 }
 
+/// Resolves a WordNet lex entry.
 pub fn resolve_wordnet_lex(q42_path: &Path) -> Option<PathBuf> {
     if qualia_core_db::q42_volume::is_unified_volume(q42_path).ok() == Some(true) {
         return Some(q42_path.to_path_buf());
@@ -214,10 +217,12 @@ fn wordnet_lexicon() -> Option<&'static qualia_core_db::q42_lex::Q42Lexicon> {
         .as_ref()
 }
 
+/// `true` when WordNet data is available.
 pub fn wordnet_available(storage: &Path) -> bool {
     resolve_wordnet_q42(storage).is_some()
 }
 
+/// Lists branch types.
 pub fn list_branch_types(storage: &Path) -> Vec<ChatBranchType> {
     let lex = wordnet_lexicon();
     DISCOURSE_TYPES
@@ -248,6 +253,7 @@ pub fn list_branch_types(storage: &Path) -> Vec<ChatBranchType> {
         .collect()
 }
 
+/// Classifies a branch.
 pub fn classify_branch(
     storage: &Path,
     anchor_text: &str,
@@ -309,6 +315,7 @@ pub fn classify_branch(
     }
 }
 
+/// Builds chat-ontology-briefing.
 pub fn build_chat_ontology_briefing(storage: &Path) -> String {
     let q42 = resolve_wordnet_q42(storage);
     let types = list_branch_types(storage);
@@ -353,6 +360,7 @@ fn unix_now() -> u64 {
         .as_secs()
 }
 
+/// Adds reaction.
 pub fn add_reaction(
     storage_root: &Path,
     session_id: &str,
@@ -435,6 +443,7 @@ pub fn add_reaction(
     Ok(reactions)
 }
 
+/// Toggles reaction.
 pub fn toggle_reaction(
     storage_root: &Path,
     session_id: &str,
@@ -485,6 +494,7 @@ fn remove_reaction(
     Ok(reactions)
 }
 
+/// Lists reactions.
 pub fn list_reactions(storage_root: &Path, session_id: &str) -> Result<Vec<ChatReaction>, String> {
     let path = reactions_path(storage_root, session_id);
     if !path.is_file() {
@@ -503,6 +513,7 @@ pub fn list_reactions(storage_root: &Path, session_id: &str) -> Result<Vec<ChatR
     Ok(out)
 }
 
+/// Lists reactions for a message.
 pub fn list_reactions_for_message(
     storage_root: &Path,
     session_id: &str,

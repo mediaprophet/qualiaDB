@@ -10,6 +10,7 @@ use super::model::{
 };
 use crate::browser::surface_states;
 
+/// Builds the view.
 pub fn build(document: &Document) -> Element {
     surface_states::install(document);
     let root = document.create_element("section").unwrap();

@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers compact-toolbox.
 pub(super) fn register_compact_toolbox(
     reg: &mut Registry,
     id: &str,

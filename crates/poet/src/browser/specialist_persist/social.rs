@@ -3,6 +3,7 @@
 use super::{ledger, CopField};
 use web_sys::{Document, Element};
 
+/// Builds social-view.
 pub fn build_social_view(document: &Document) -> Element {
     ledger(
         document,
@@ -26,6 +27,7 @@ pub fn build_social_view(document: &Document) -> Element {
     )
 }
 
+/// Builds connection-requests-view.
 pub fn build_connection_requests_view(document: &Document) -> Element {
     ledger(
         document,
@@ -49,6 +51,7 @@ pub fn build_connection_requests_view(document: &Document) -> Element {
     )
 }
 
+/// Builds reputation-view.
 pub fn build_reputation_view(document: &Document) -> Element {
     ledger(
         document,
@@ -72,6 +75,7 @@ pub fn build_reputation_view(document: &Document) -> Element {
     )
 }
 
+/// Builds presence-view.
 pub fn build_presence_view(document: &Document) -> Element {
     ledger(
         document,
@@ -95,6 +99,7 @@ pub fn build_presence_view(document: &Document) -> Element {
     )
 }
 
+/// Builds channels-view.
 pub fn build_channels_view(document: &Document) -> Element {
     ledger(
         document,
@@ -118,6 +123,7 @@ pub fn build_channels_view(document: &Document) -> Element {
     )
 }
 
+/// Builds conversations-view.
 pub fn build_conversations_view(document: &Document) -> Element {
     ledger(
         document,
@@ -141,6 +147,7 @@ pub fn build_conversations_view(document: &Document) -> Element {
     )
 }
 
+/// Builds settings-view.
 pub fn build_settings_view(document: &Document) -> Element {
     ledger(
         document,
@@ -164,6 +171,7 @@ pub fn build_settings_view(document: &Document) -> Element {
     )
 }
 
+/// Builds capabilities-view.
 pub fn build_capabilities_view(document: &Document) -> Element {
     ledger(
         document,
@@ -187,6 +195,7 @@ pub fn build_capabilities_view(document: &Document) -> Element {
     )
 }
 
+/// Builds protection-policies-view.
 pub fn build_protection_policies_view(document: &Document) -> Element {
     ledger(
         document,

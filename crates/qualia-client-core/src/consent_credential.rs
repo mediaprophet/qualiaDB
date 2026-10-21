@@ -72,6 +72,7 @@ pub struct EncryptedCommonsPayload {
 }
 
 impl EncryptedCommonsPayload {
+    /// Creates a new instance.
     pub fn new(commitment: PayloadCommitment, ciphertext: Vec<u8>, storers: Vec<String>) -> Self {
         Self {
             commitment,
@@ -173,6 +174,7 @@ pub struct ExerciseRequest {
 }
 
 impl ExerciseRequest {
+    /// Creates a new instance.
     pub fn new(instigator_did: impl Into<String>, signatures: Vec<String>) -> Self {
         Self {
             instigator_did: instigator_did.into(),

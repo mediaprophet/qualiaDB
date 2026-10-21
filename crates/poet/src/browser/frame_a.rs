@@ -34,6 +34,7 @@ pub fn first_arrive_seed() -> ManifoldSeed {
     studio_bay_manifold_seed()
 }
 
+/// `true` when first-arrive.
 pub fn is_first_arrive(id: &str) -> bool {
     id == FIRST_ARRIVE_MANIFOLD_ID
 }
@@ -224,6 +225,7 @@ fn dispatch_play(document: &Document) {
     }
 }
 
+/// `true` when the primary copy is sayable.
 pub fn primary_copy_is_sayable(label: &str) -> bool {
     matches!(label, SAYABLE_ASK | SAYABLE_KEEP | SAYABLE_PLAY)
 }

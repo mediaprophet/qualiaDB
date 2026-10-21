@@ -156,6 +156,7 @@ pub struct AgentTurnExecutor {
 }
 
 impl AgentTurnExecutor {
+    /// Creates a new instance.
     pub fn new(session_id: &str, agent_slug: &str) -> Self {
         Self {
             session_id: session_id.to_string(),

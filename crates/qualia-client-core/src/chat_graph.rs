@@ -68,6 +68,7 @@ fn unix_now() -> u64 {
         .as_secs()
 }
 
+/// Fragment ID for a span.
 pub fn fragment_id_for_span(session_id: &str, lamport: u64, start: u32, end: u32) -> String {
     let raw = q_hash(&format!("frag:{session_id}:{lamport}:{start}:{end}"));
     format!("{raw:016x}")
@@ -159,6 +160,7 @@ fn read_edges(path: &Path) -> Result<Vec<ChatGraphEdge>, ChatError> {
     Ok(out)
 }
 
+/// Loads graph.
 pub fn load_graph(storage_root: &Path, session_id: &str) -> Result<ChatGraphSnapshot, ChatError> {
     Ok(ChatGraphSnapshot {
         fragments: read_fragments(&fragments_path(storage_root, session_id))?,
@@ -166,6 +168,7 @@ pub fn load_graph(storage_root: &Path, session_id: &str) -> Result<ChatGraphSnap
     })
 }
 
+/// Creates fragment-from-selection.
 pub fn create_fragment_from_selection(
     storage_root: &Path,
     session_id: &str,
@@ -219,6 +222,7 @@ pub fn create_fragment_from_selection(
     Ok(fragment)
 }
 
+/// Links a reply to a fragment.
 pub fn link_reply_to_fragment(
     storage_root: &Path,
     session_id: &str,
@@ -279,6 +283,7 @@ pub fn link_reply_to_fragment(
     Ok(edge)
 }
 
+/// Builds thread-context-block.
 pub fn build_thread_context_block(
     storage_root: &Path,
     session_id: &str,
@@ -436,6 +441,7 @@ pub fn format_thread_context_to<W: std::fmt::Write>(
     Ok(())
 }
 
+/// Appends a message with reply linkage.
 pub fn append_message_with_reply(
     storage_root: &Path,
     session_id: &str,

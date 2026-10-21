@@ -49,6 +49,7 @@ fn existing_media(container: &Element) -> Option<HtmlMediaElement> {
         .ok()
 }
 
+/// Choose-or-play action.
 pub fn choose_or_play(document: &Document, container: &Element, kind: MediaKind) -> bool {
     if let Some(media) = existing_media(container) {
         play(document.clone(), media);

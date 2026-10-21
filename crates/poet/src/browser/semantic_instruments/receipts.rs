@@ -18,6 +18,7 @@ pub struct ReceiptRow {
 }
 
 impl ReceiptRow {
+    /// Parent text.
     pub fn parent_text(self) -> &'static str {
         self.parent.unwrap_or("")
     }

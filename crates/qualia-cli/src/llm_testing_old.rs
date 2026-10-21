@@ -40,10 +40,12 @@ pub struct LlmModelTester {
 }
 
 impl LlmModelTester {
+    /// Creates a new instance.
     pub fn new(configs: Vec<ModelTestConfig>) -> Self {
         Self { configs }
     }
 
+    /// CLI: .
     pub fn run_all_tests(&self) -> Result<Vec<TestResult>, String> {
         let mut results = Vec::new();
         for config in &self.configs {

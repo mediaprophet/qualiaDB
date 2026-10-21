@@ -65,6 +65,7 @@ impl Default for OllamaHarness {
 }
 
 impl OllamaHarness {
+    /// Constructs from settings.
     pub fn from_settings(settings: &InferenceBackendSettings) -> Self {
         let base = settings
             .ollama_base_url
@@ -101,6 +102,7 @@ impl OllamaHarness {
         }
     }
 
+    /// Constructs from loaded-settings.
     pub fn from_loaded_settings() -> Self {
         Self::from_settings(&crate::inference_backend::load_inference_backend_settings())
     }
@@ -441,6 +443,7 @@ pub fn probe_configured_ollama() -> OllamaStatus {
     OllamaHarness::from_loaded_settings().probe_status()
 }
 
+/// Probes the configured Ollama instance.
 pub async fn probe_configured_ollama_async() -> OllamaStatus {
     OllamaHarness::from_loaded_settings()
         .probe_status_async()

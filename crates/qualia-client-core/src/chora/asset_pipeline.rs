@@ -19,6 +19,7 @@ pub struct CompiledLayerAsset {
     pub license: String,
 }
 
+/// Downloads and compiles a layer.
 pub async fn download_and_compile_layer(
     layer_id: &str,
     resolution: u32,

@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SheetToolbar` component.
 pub fn SheetToolbar() -> Element {
     rsx! {
         div { style: bar(),

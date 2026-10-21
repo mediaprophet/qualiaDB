@@ -35,6 +35,7 @@ impl Default for DeviceRole {
 }
 
 impl DeviceRole {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::Primary => "Primary",
@@ -46,6 +47,7 @@ impl DeviceRole {
         }
     }
 
+    /// Description.
     pub fn description(&self) -> &'static str {
         match self {
             Self::Primary => "Full manifold canvas with all containers and panels.",
@@ -59,6 +61,7 @@ impl DeviceRole {
         }
     }
 
+    /// Icon glyph.
     pub fn icon(&self) -> &'static str {
         match self {
             Self::Primary => "\u{1F5A5}",

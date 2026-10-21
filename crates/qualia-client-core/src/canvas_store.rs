@@ -21,6 +21,7 @@ pub struct CanvasWorldStore {
 }
 
 impl CanvasWorldStore {
+    /// Opens.
     pub fn open(storage_root: impl AsRef<Path>) -> std::io::Result<Self> {
         let path = storage_root.as_ref().join(WORLDS_FILE);
         if let Some(parent) = path.parent() {
@@ -29,6 +30,7 @@ impl CanvasWorldStore {
         Ok(Self { path })
     }
 
+    /// Loads all.
     pub fn load_all(&self) -> std::io::Result<Vec<CanvasWorldRecord>> {
         match fs::read(&self.path) {
             Ok(bytes) => {
@@ -48,10 +50,12 @@ impl CanvasWorldStore {
         Ok(())
     }
 
+    /// Lists.
     pub fn list(&self) -> std::io::Result<Vec<CanvasWorldConfig>> {
         Ok(self.load_all()?.into_iter().map(|r| r.config).collect())
     }
 
+    /// Gets.
     pub fn get(&self, world_id: &str) -> std::io::Result<Option<CanvasWorldConfig>> {
         Ok(self
             .load_all()?
@@ -60,6 +64,7 @@ impl CanvasWorldStore {
             .map(|r| r.config))
     }
 
+    /// Upserts a record.
     pub fn upsert(&self, config: CanvasWorldConfig, now_unix: u64) -> Result<(), UpsertError> {
         config.validate().map_err(UpsertError::Invalid)?;
         let mut records = self.load_all().map_err(UpsertError::Io)?;
@@ -76,6 +81,7 @@ impl CanvasWorldStore {
         self.save_all(&records).map_err(UpsertError::Io)
     }
 
+    /// Removes.
     pub fn remove(&self, world_id: &str) -> std::io::Result<bool> {
         let mut records = self.load_all()?;
         let before = records.len();

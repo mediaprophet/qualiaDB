@@ -3,6 +3,7 @@
 use super::shared::{append_csv_attr, count_selector};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "investigation:collect-evidence" => Some(collect_evidence(container)),
@@ -17,6 +18,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next admiralty-reliability.
 pub(crate) fn next_admiralty_reliability(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("A1 (Completely reliable / Confirmed)") => "B2 (Usually reliable / Probably true)",

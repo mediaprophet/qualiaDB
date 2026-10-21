@@ -176,11 +176,13 @@ CLOSING = (
 
 
 def esc(t):
+    """Escapes text."""
     t = t.replace("\\", "\\\\").replace('"', '\\"')
     return re.sub(r"\s+", " ", t).strip()
 
 
 def deontic(t):
+    """Deontic helper."""
     tl = t.lower()
     if "has the right" in tl or "have the right" in tl or "the right of" in tl \
        or "inalienable right" in tl or "entitled to" in tl:
@@ -192,6 +194,7 @@ def deontic(t):
 
 
 def main():
+    """CLI entry point."""
     os.makedirs(OUT, exist_ok=True)
     ns = f"https://ns.webcivics.net/values/{SLUG}#"
     L = [

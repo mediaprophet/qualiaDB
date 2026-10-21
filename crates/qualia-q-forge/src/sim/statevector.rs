@@ -77,6 +77,7 @@ pub struct StateVectorSimulator {
 }
 
 impl StateVectorSimulator {
+    /// Creates a new instance.
     pub fn new(num_qubits: u32) -> Self {
         Self { num_qubits }
     }

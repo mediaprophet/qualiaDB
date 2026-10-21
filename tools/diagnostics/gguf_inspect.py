@@ -13,6 +13,7 @@ from gguf_reader import GgufError, inspect_gguf
 
 
 def sha256_file(path: Path, chunk_bytes: int = 1024 * 1024) -> str:
+    """SHA-256 of a file."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(chunk_bytes), b""):
@@ -21,6 +22,7 @@ def sha256_file(path: Path, chunk_bytes: int = 1024 * 1024) -> str:
 
 
 def parser() -> argparse.ArgumentParser:
+    """Argument parser."""
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("input", type=Path, help="GGUF model to inspect")
     result.add_argument("--json", action="store_true", help="write a JSON report to stdout")
@@ -34,6 +36,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """CLI entry point."""
     args = parser().parse_args()
     if not args.input.is_file():
         print(f"error: not a file: {args.input}", file=sys.stderr)

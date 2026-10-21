@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `HealthVitalMonitor` component.
 pub fn HealthVitalMonitor() -> Element {
     let heart_rate = use_signal(|| 72);
     let sp_o2 = use_signal(|| 98);

@@ -13,6 +13,7 @@ use ToolKind::{Query as Look, RunAction};
 const T: &str = "investigation";
 const TL: &str = "Investigation";
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     #[rustfmt::skip]
     static ROWS: &[SpecTool] = &[

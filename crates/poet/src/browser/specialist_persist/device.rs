@@ -3,6 +3,7 @@
 use super::{ledger, CopField};
 use web_sys::{Document, Element};
 
+/// Builds device-manager-view.
 pub fn build_device_manager_view(document: &Document) -> Element {
     ledger(
         document,
@@ -30,6 +31,7 @@ pub fn build_device_manager_view(document: &Document) -> Element {
     )
 }
 
+/// Builds display-layout-view.
 pub fn build_display_layout_view(document: &Document) -> Element {
     ledger(
         document,
@@ -53,6 +55,7 @@ pub fn build_display_layout_view(document: &Document) -> Element {
     )
 }
 
+/// Builds workspace-sync-view.
 pub fn build_workspace_sync_view(document: &Document) -> Element {
     ledger(
         document,
@@ -76,6 +79,7 @@ pub fn build_workspace_sync_view(document: &Document) -> Element {
     )
 }
 
+/// Builds device-role-assigner-view.
 pub fn build_device_role_assigner_view(document: &Document) -> Element {
     ledger(
         document,
@@ -103,6 +107,7 @@ pub fn build_device_role_assigner_view(document: &Document) -> Element {
     )
 }
 
+/// Builds remote-control-view.
 pub fn build_remote_control_view(document: &Document) -> Element {
     ledger(
         document,

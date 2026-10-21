@@ -252,6 +252,7 @@ async fn process_selected_file(path: &str) -> Result<String, String> {
 }
 
 #[component]
+/// Dioxus `SemanticLibrary` component.
 pub fn SemanticLibrary() -> Element {
     let mut collection = use_signal(|| Collection::Overview);
     let mut rows = use_signal(Vec::<serde_json::Value>::new);

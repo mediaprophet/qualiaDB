@@ -42,6 +42,7 @@ impl Default for CameraStreamAttestation {
 }
 
 impl CameraStreamAttestation {
+    /// Physical-attested stream integrity.
     pub fn physical_attested() -> Self {
         Self {
             source: CameraStreamSource::PhysicalSensor,
@@ -50,6 +51,7 @@ impl CameraStreamAttestation {
         }
     }
 
+    /// Virtual-camera stream integrity (still requires physical).
     pub fn virtual_camera() -> Self {
         Self {
             source: CameraStreamSource::VirtualOrInjected,

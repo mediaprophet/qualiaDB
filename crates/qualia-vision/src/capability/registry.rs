@@ -8,10 +8,12 @@ pub fn all_capabilities() -> &'static [CapabilityEntry] {
     REGISTRY
 }
 
+/// `by` ID.
 pub fn by_id(id: &str) -> Option<&'static CapabilityEntry> {
     REGISTRY.iter().find(|e| e.id == id)
 }
 
+/// `count-by` status.
 pub fn count_by_status(status: CapabilityStatus) -> usize {
     REGISTRY.iter().filter(|e| e.status == status).count()
 }

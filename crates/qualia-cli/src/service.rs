@@ -24,6 +24,7 @@ pub enum ServiceAction {
     Doctor,
 }
 
+/// Handles the subcommand action.
 pub async fn handle(action: &ServiceAction, qpu_enabled: bool) {
     match action {
         ServiceAction::Start {

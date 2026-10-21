@@ -22,6 +22,7 @@ struct SanctuaryUi {
 }
 
 #[component]
+/// Dioxus `WellfairSanctuaryPanel` component.
 pub fn WellfairSanctuaryPanel() -> Element {
     let mut ui = use_signal(SanctuaryUi::default);
     let mut loaded = use_signal(|| false);

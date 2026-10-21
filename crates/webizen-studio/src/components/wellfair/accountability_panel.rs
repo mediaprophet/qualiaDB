@@ -39,6 +39,7 @@ fn str_field(v: &serde_json::Value, key: &str) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairAccountabilityPanel` component.
 pub fn WellfairAccountabilityPanel() -> Element {
     // Ledger state.
     let mut ledger = use_signal(Vec::<serde_json::Value>::new);

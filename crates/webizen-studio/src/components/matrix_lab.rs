@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `MatrixLab` component.
 pub fn MatrixLab() -> Element {
     rsx! {
         div {

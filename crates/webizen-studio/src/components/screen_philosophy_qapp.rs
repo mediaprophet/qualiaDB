@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ScreenPhilosophyQapp` component.
 pub fn ScreenPhilosophyQapp() -> Element {
     rsx! {
         QAppEngine {

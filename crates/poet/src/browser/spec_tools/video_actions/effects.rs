@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// `?::run`.
 pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "video:cross-dissolve" | "video:crossfade" | "video:dissolve" => {
@@ -41,6 +42,7 @@ pub(super) fn run(container: &Element, tool_id: &str) -> Option<Result<(), Strin
     }
 }
 
+/// Cycles to the next aspect-ratio.
 pub(crate) fn next_aspect_ratio(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("16:9") => "9:16",

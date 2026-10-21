@@ -17,6 +17,7 @@ const LIST_ROW: &str = "width:100%;display:flex;flex-direction:column;align-item
 const LIST_ROW_ON: &str = "width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border:1px solid var(--qualia-accent);border-radius:10px;background:var(--qualia-accent-glow);color:var(--qualia-text);font:inherit;text-align:left;cursor:pointer;";
 
 #[component]
+/// Dioxus `MailInboxPane` component.
 pub fn MailInboxPane() -> Element {
     let mut addresses = use_signal(Vec::<serde_json::Value>::new);
     let mut messages = use_signal(Vec::<serde_json::Value>::new);

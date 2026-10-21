@@ -57,6 +57,7 @@ fn summary_preview(summary: &Option<String>) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairPersonalPanel` component.
 pub fn WellfairPersonalPanel() -> Element {
     let snapshot = use_host_snapshot();
     let snap = snapshot();

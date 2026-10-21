@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
+/// Builds abductive-panel.
 pub(super) fn build_abductive_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "abductive", false);
     panel
@@ -47,6 +48,7 @@ pub(super) fn build_abductive_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-abductive` panel.
 pub(super) fn wire_abductive_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("abductive-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -59,6 +61,7 @@ pub(super) fn wire_abductive_panel(document: &Document) {
     }
 }
 
+/// Builds fuzzy-panel.
 pub(super) fn build_fuzzy_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "fuzzy", false);
     panel
@@ -97,6 +100,7 @@ pub(super) fn build_fuzzy_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-fuzzy` panel.
 pub(super) fn wire_fuzzy_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("fuzzy-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -109,6 +113,7 @@ pub(super) fn wire_fuzzy_panel(document: &Document) {
     }
 }
 
+/// Builds probabilistic-panel.
 pub(super) fn build_probabilistic_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "probabilistic", false);
     panel
@@ -147,6 +152,7 @@ pub(super) fn build_probabilistic_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-probabilistic` panel.
 pub(super) fn wire_probabilistic_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("probabilistic-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -159,6 +165,7 @@ pub(super) fn wire_probabilistic_panel(document: &Document) {
     }
 }
 
+/// Builds graph-theory-panel.
 pub(super) fn build_graph_theory_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "graph_theory", false);
     panel
@@ -197,6 +204,7 @@ pub(super) fn build_graph_theory_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-graph-theory` panel.
 pub(super) fn wire_graph_theory_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("graph-theory-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -209,6 +217,7 @@ pub(super) fn wire_graph_theory_panel(document: &Document) {
     }
 }
 
+/// Builds interval-panel.
 pub(super) fn build_interval_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "interval", false);
     panel
@@ -247,6 +256,7 @@ pub(super) fn build_interval_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-interval` panel.
 pub(super) fn wire_interval_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("interval-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -259,6 +269,7 @@ pub(super) fn wire_interval_panel(document: &Document) {
     }
 }
 
+/// Builds manifold-10d-panel.
 pub(super) fn build_manifold_10d_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "manifold_10d", false);
     panel
@@ -297,6 +308,7 @@ pub(super) fn build_manifold_10d_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-manifold-10d` panel.
 pub(super) fn wire_manifold_10d_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("manifold-10d-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -309,6 +321,7 @@ pub(super) fn wire_manifold_10d_panel(document: &Document) {
     }
 }
 
+/// Builds epistemic-boundaries-panel.
 pub(super) fn build_epistemic_boundaries_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "epistemic_boundaries", false);
     panel
@@ -347,6 +360,7 @@ pub(super) fn build_epistemic_boundaries_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-epistemic-boundaries` panel.
 pub(super) fn wire_epistemic_boundaries_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("epistemic-boundaries-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -359,6 +373,7 @@ pub(super) fn wire_epistemic_boundaries_panel(document: &Document) {
     }
 }
 
+/// Builds modal-panel.
 pub(super) fn build_modal_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "modal", false);
     panel
@@ -397,6 +412,7 @@ pub(super) fn build_modal_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-modal` panel.
 pub(super) fn wire_modal_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("modal-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

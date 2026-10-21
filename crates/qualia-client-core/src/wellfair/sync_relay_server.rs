@@ -71,10 +71,12 @@ impl SyncRelayServer {
         })
     }
 
+    /// Address.
     pub fn addr(&self) -> SocketAddr {
         self.addr
     }
 
+    /// `base` URL.
     pub fn base_url(&self) -> String {
         format!("http://{}", self.addr)
     }

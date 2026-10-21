@@ -2,6 +2,7 @@
 
 use super::super::core::registry::{ManifoldSeed, SeedConnection, SeedContainer};
 
+/// `anatomy` manifold seed.
 pub fn anatomy_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "anatomy".into(),

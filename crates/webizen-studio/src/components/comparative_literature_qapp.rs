@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ComparativeLiteratureQapp` component.
 pub fn ComparativeLiteratureQapp() -> Element {
     rsx! {
         QAppEngine {

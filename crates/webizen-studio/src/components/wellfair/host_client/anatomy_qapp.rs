@@ -87,6 +87,7 @@ pub struct ComorbidityReportDto {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Fetches anatomy-view.
 pub async fn fetch_anatomy_view(
     lens: &str,
     threshold: u32,
@@ -114,6 +115,7 @@ pub async fn fetch_anatomy_view(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub async fn evaluate_comorbidity(target_organ: &str) -> Result<ComorbidityReportDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(
@@ -132,6 +134,7 @@ pub async fn evaluate_comorbidity(target_organ: &str) -> Result<ComorbidityRepor
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Fetches anatomy-view.
 pub async fn fetch_anatomy_view(
     _lens: &str,
     _threshold: u32,
@@ -140,6 +143,7 @@ pub async fn fetch_anatomy_view(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn evaluate_comorbidity(_target_organ: &str) -> Result<ComorbidityReportDto, String> {
     Err("Comorbidity evaluation requires the Tauri desktop host".into())
 }

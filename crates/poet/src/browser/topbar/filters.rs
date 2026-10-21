@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Populates the strata tray.
 pub(super) fn populate_strata_tray(document: &Document, tray: &Element) {
     let title = document.create_element("div").unwrap();
     title.set_class_name("tray-title");
@@ -45,6 +46,7 @@ pub(super) fn populate_strata_tray(document: &Document, tray: &Element) {
     }
 }
 
+/// Populates the epistemic tray.
 pub(super) fn populate_epistemic_tray(document: &Document, tray: &Element) {
     let title = document.create_element("div").unwrap();
     title.set_class_name("tray-title");
@@ -189,6 +191,7 @@ fn apply_epistemic_filter(document: &Document, key: &str) {
     }
 }
 
+/// Populates the dim tray.
 pub(super) fn populate_dim_tray(document: &Document, tray: &Element) {
     let title = document.create_element("div").unwrap();
     title.set_class_name("tray-title");

@@ -3,6 +3,7 @@ use crate::Route;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `LibraryOverview` component.
 pub(super) fn LibraryOverview(
     documents: usize,
     ontologies: usize,
@@ -51,6 +52,7 @@ fn Metric(label: String, value: String, icon: String) -> Element {
 }
 
 #[component]
+/// Dioxus `SemanticPipeline` component.
 pub(super) fn SemanticPipeline() -> Element {
     let steps = [
         ("1", "Source", "Original file and provenance"),
@@ -84,6 +86,7 @@ pub(super) fn SemanticPipeline() -> Element {
 }
 
 #[component]
+/// Dioxus `ItemInspector` component.
 pub(super) fn ItemInspector(item: serde_json::Value) -> Element {
     let topics = string_list(&item, "topics");
     rsx! {
@@ -117,6 +120,7 @@ fn InspectorField(label: String, value: String) -> Element {
 }
 
 #[component]
+/// Dioxus `EmptyCollection` component.
 pub(super) fn EmptyCollection(collection: String) -> Element {
     rsx! {
         div { style: "border:1px dashed var(--qualia-border);border-radius:15px;padding:34px;text-align:center;background:rgba(127,127,127,.025);",

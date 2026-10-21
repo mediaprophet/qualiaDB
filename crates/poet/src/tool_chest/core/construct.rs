@@ -27,6 +27,7 @@ impl Default for ConstructSource {
 }
 
 impl ConstructSource {
+    /// Views as str.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Bundled => "bundled",
@@ -59,6 +60,7 @@ pub struct ConstructSeed {
 }
 
 impl ConstructSeed {
+    /// `true` when containing a manifold.
     pub fn contains_manifold(&self, manifold_id: &str) -> bool {
         self.manifold_ids.iter().any(|id| id == manifold_id)
     }

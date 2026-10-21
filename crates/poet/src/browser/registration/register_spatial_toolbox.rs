@@ -22,6 +22,7 @@ fn dmx_live_tool(
     ))
 }
 
+/// Registers spatial-toolbox.
 pub(super) fn register_spatial_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers audio-toolbox.
 pub(super) fn register_audio_toolbox(reg: &mut Registry) {
     let session_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

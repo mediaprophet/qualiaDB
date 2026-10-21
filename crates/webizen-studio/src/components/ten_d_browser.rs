@@ -156,6 +156,7 @@ fn humanize_host_error(raw: &str) -> String {
 }
 
 #[component]
+/// Dioxus `TenDBrowser` component.
 pub fn TenDBrowser() -> Element {
     let mut containers = use_signal(Vec::<TenDContainerEntry>::new);
     let mut selected_path = use_signal(|| None::<String>);

@@ -15,6 +15,7 @@ impl WebizenHostApi {
     // across parties (commons replication) and real envelope encryption of the wrapped key are the deferred
     // composition steps (coordinate) — the wrapped key is carried as opaque bytes here, as the model intends.
 
+    /// Accountability store.
     pub(crate) fn accountability_store(
         &self,
     ) -> Result<crate::accountability_store::AccountabilityStore, String> {

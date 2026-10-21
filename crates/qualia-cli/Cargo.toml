@@ -16,6 +16,7 @@ mock-agent = []
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
 qualia-core-db = { workspace = true, default-features = true }
+qualia-mcp = { workspace = true }
 qualia-client-core = { workspace = true }
 qualia-solid-bridge = { workspace = true }
 webizen-render = { workspace = true }

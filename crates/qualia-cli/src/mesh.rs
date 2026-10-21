@@ -103,6 +103,7 @@ fn derive_secret(role: &str, pass: &str) -> [u8; 32] {
     out
 }
 
+/// Runs the command.
 pub fn run(action: &MeshAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         MeshAction::Keygen => {

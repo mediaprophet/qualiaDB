@@ -22,6 +22,7 @@ pub async fn get_physiological_state() -> Result<serde_json::Value, String> {
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Gets physiological-state.
 pub async fn get_physiological_state() -> Result<serde_json::Value, String> {
     Err("The physiological state requires the Tauri desktop host".into())
 }
@@ -42,6 +43,7 @@ pub async fn set_physiological_state(state_json: &str) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets physiological-state.
 pub async fn set_physiological_state(_state_json: &str) -> Result<(), String> {
     Err("The physiological state requires the Tauri desktop host".into())
 }
@@ -58,6 +60,7 @@ pub async fn reset_physiological_state() -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_arch = "wasm32"))]
+/// Resets physiological-state.
 pub async fn reset_physiological_state() -> Result<(), String> {
     Err("The physiological state requires the Tauri desktop host".into())
 }

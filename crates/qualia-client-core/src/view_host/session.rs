@@ -149,6 +149,7 @@ pub fn project_library_for_observer(
     })
 }
 
+/// Projects a web locus.
 pub fn project_web_locus(url: &str, observer: ObserverStatus) -> serde_json::Value {
     let id = EntityId::from_uri(url);
     let meta = EntityViewMeta {
@@ -172,6 +173,7 @@ pub fn project_web_locus(url: &str, observer: ObserverStatus) -> serde_json::Val
     })
 }
 
+/// Flattens to 2D.
 pub fn morph_flatten(proj: &ProjectionResult) -> serde_json::Value {
     json!({
         "morph": "flatten",
@@ -182,6 +184,7 @@ pub fn morph_flatten(proj: &ProjectionResult) -> serde_json::Value {
     })
 }
 
+/// Spatializes to 3D.
 pub fn morph_spatialize(proj: &ProjectionResult) -> serde_json::Value {
     json!({
         "morph": "spatialize",

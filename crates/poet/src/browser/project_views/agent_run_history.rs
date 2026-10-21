@@ -5,6 +5,7 @@ use web_sys::{Document, Element};
 
 use crate::browser::native_daemon::{daemon_records_query, NativeRecordQueryRequest};
 
+/// Builds agent-run-history.
 pub fn build_agent_run_history(document: &Document) -> Element {
     let root = document.create_element("section").unwrap();
     root.set_attribute("data-agent-run-history", "").ok();
@@ -36,6 +37,7 @@ pub fn build_agent_run_history(document: &Document) -> Element {
     root
 }
 
+/// Refreshes all-agent-runs.
 pub fn refresh_all_agent_runs() {
     let Some(document) = web_sys::window().and_then(|window| window.document()) else {
         return;

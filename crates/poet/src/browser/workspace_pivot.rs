@@ -18,6 +18,7 @@ pub enum UiParadigm {
 }
 
 impl UiParadigm {
+    /// UI label.
     pub fn label(self) -> &'static str {
         match self {
             Self::PoetHyperCanvas => "Poet HyperCanvas",
@@ -25,6 +26,7 @@ impl UiParadigm {
         }
     }
 
+    /// Icon glyph.
     pub fn icon(self) -> &'static str {
         match self {
             Self::PoetHyperCanvas => "\u{2728}",
@@ -42,6 +44,7 @@ pub struct WorkspacePivotManager {
 }
 
 impl WorkspacePivotManager {
+    /// `WorkspacePivotManager::new`.
     pub fn new() -> Self {
         Self {
             active_paradigm: UiParadigm::PoetHyperCanvas,

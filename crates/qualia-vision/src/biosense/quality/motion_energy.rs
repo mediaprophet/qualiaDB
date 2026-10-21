@@ -3,6 +3,7 @@
 use crate::cv::buffer::GrayView;
 use crate::cv::error::CvError;
 
+/// Motion energy.
 pub fn motion_energy(prev: GrayView<'_>, next: GrayView<'_>) -> Result<f32, CvError> {
     if prev.width != next.width || prev.height != next.height {
         return Err(CvError::DimensionMismatch);

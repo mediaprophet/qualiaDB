@@ -16,6 +16,7 @@ pub enum SettingsSection {
 }
 
 impl SettingsSection {
+    /// Label.
     pub const fn label(self) -> &'static str {
         match self {
             Self::Health => "Setup health",
@@ -31,6 +32,7 @@ impl SettingsSection {
         }
     }
 
+    /// Searches terms.
     pub const fn search_terms(self) -> &'static str {
         match self {
             Self::Health => "setup ready attention repair status",

@@ -21,6 +21,7 @@ pub struct CompanionHealthBundle {
 }
 
 impl CompanionHealthBundle {
+    /// Creates a new instance.
     pub fn new(
         device_id: impl Into<String>,
         captured_at_unix: u32,
@@ -35,6 +36,7 @@ impl CompanionHealthBundle {
         }
     }
 
+    /// Validates.
     pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != COMPANION_HEALTH_BUNDLE_SCHEMA {
             return Err(format!(

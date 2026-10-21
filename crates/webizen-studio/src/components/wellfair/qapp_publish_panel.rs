@@ -1,6 +1,6 @@
-//! WP2 — Package & Publish: author a qapp and generate its installable PWA bundle.
+//! WP2 — Package & Publish: author a Qap and generate its installable PWA bundle.
 //!
-//! This is the P0/WP2 authoring surface of the companion-PWA feature: describe a qapp (identity,
+//! This is the P0/WP2 authoring surface of the companion-PWA feature: describe a Qap (identifiers,
 //! kind, least-privilege capabilities, wasm entry) and write a standards-compliant PWA scaffold
 //! (manifest + service worker + loader) to a chosen folder. Serving it over a secure origin so a
 //! phone can install it is the next stage (P1) — see the companion-PWA plan.
@@ -41,8 +41,8 @@ impl Default for PublishUi {
     fn default() -> Self {
         Self {
             status: String::new(),
-            id: "coop.qualia.myqapp".into(),
-            name: "My Qapp".into(),
+            id: "coop.qualia.myqap".into(),
+            name: "My Qap".into(),
             kind: "cooperative".into(),
             description: String::new(),
             wasm_filename: "app.wasm".into(),
@@ -54,18 +54,19 @@ impl Default for PublishUi {
 }
 
 #[component]
+/// Dioxus `WellfairQappPublishPanel` component.
 pub fn WellfairQappPublishPanel() -> Element {
     let mut ui = use_signal(PublishUi::default);
 
     rsx! {
         section {
-            aria_label: "Package and publish a qapp",
+            aria_label: "Package and publish a Qap",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
-            super::shared::DomainChrome { domain: "Instruments", chip: "Qapps · least-privilege package", show_memory: false }
-            h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Package & Publish a qapp" }
+            super::shared::DomainChrome { domain: "Instruments", chip: "Qaps · least-privilege package", show_memory: false }
+            h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Package & Publish a Qap" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
-                "Describe a qapp and generate an installable PWA scaffold (manifest + service worker + loader) into a folder. Capabilities are least-privilege — the qapp only gets what you tick. Serving the bundle over a secure origin so a phone can install it is the next step."
+                "Describe a Qap and generate an installable PWA scaffold (manifest + service worker + loader) into a folder. Capabilities are least-privilege — the Qap only gets what you tick. Serving the bundle over a secure origin so a phone can install it is the next step."
             }
             p { style: "margin:0 0 0.5rem;font-size:0.76rem;", "{ui().status}" }
 

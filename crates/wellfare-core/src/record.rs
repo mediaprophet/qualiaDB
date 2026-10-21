@@ -12,6 +12,7 @@ pub const fn q_hash(bytes: &[u8]) -> u64 {
     hash
 }
 
+/// q_hash of a string.
 pub const fn q_hash_str(s: &str) -> u64 {
     q_hash(s.as_bytes())
 }
@@ -28,6 +29,7 @@ pub struct NQuin {
 }
 
 impl NQuin {
+    /// Creates a new instance.
     pub fn new(s: u64, p: u64, o: u64, c: u64, m: u64) -> Self {
         let parity = s ^ p ^ o ^ c;
         Self {
@@ -65,6 +67,7 @@ pub enum SensitivityClass {
 }
 
 impl SensitivityClass {
+    /// Converts to metadata-mask.
     pub fn to_metadata_mask(&self) -> u64 {
         match self {
             SensitivityClass::Public => 0,

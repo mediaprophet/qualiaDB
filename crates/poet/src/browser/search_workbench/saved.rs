@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlInputElement, HtmlTextAreaElement, MouseEvent};
 
+/// Builds saved-queries-panel.
 pub(super) fn build_saved_queries_panel(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("search-mode-panel");
@@ -43,6 +44,7 @@ pub(super) fn build_saved_queries_panel(document: &Document) -> Element {
     panel
 }
 
+/// Wires saved queries.
 pub(super) fn wire_saved_queries(document: &Document) {
     if let Some(refresh_btn) = document.get_element_by_id("saved-refresh") {
         let r_closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -56,6 +58,7 @@ pub(super) fn wire_saved_queries(document: &Document) {
     }
 }
 
+/// Renders saved-queries.
 pub(super) fn render_saved_queries(document: &Document) {
     let list = match document.get_element_by_id("saved-queries-list") {
         Some(l) => l,
@@ -179,6 +182,7 @@ pub(super) fn render_saved_queries(document: &Document) {
     }
 }
 
+/// Saves current-query.
 pub(super) fn save_current_query(document: &Document, mode: &str) {
     // Get query text based on mode
     let (query_text, name) = match mode {

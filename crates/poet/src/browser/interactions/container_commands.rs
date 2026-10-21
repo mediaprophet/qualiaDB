@@ -174,6 +174,7 @@ pub fn delete_wire_element(document: &Document, wire_path: &Element) {
     delete_wire(document, wire_path);
 }
 
+/// Deletes container-by-id.
 pub fn delete_container_by_id(document: &Document, container_id: &str) {
     if let Ok(Some(container)) = document.query_selector(&format!(
         ".canvas-container-node[data-id=\"{}\"]",
@@ -183,6 +184,7 @@ pub fn delete_container_by_id(document: &Document, container_id: &str) {
     }
 }
 
+/// `duplicate-container-by` id.
 pub fn duplicate_container_by_id(document: &Document, container_id: &str) {
     if let Ok(Some(container)) = document.query_selector(&format!(
         ".canvas-container-node[data-id=\"{}\"]",
@@ -198,6 +200,7 @@ pub fn duplicate_container_by_id(document: &Document, container_id: &str) {
     }
 }
 
+/// Begins a wire connection.
 pub fn begin_wire_connection(document: &Document, container_id: &str) {
     clear_pending_wire(document);
     if let Ok(Some(source)) = document.query_selector(&format!(
@@ -221,6 +224,7 @@ fn clear_pending_wire(document: &Document) {
     }
 }
 
+/// Cancels the wire connection.
 pub fn cancel_wire_connection(document: &Document) {
     clear_pending_wire(document);
 }

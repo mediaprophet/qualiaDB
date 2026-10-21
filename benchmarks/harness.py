@@ -106,6 +106,7 @@ def _qualia_format_engines(dataset_profile: dict) -> list[str]:
 
 
 def _qualia_daemon_healthy() -> bool:
+    """Internal helper."""
     try:
         import urllib.request
         req = urllib.request.Request("http://127.0.0.1:4242/health", method="GET")
@@ -116,6 +117,7 @@ def _qualia_daemon_healthy() -> bool:
 
 
 def normalize_result(engine: str, raw: dict, dataset_profile: dict) -> dict:
+    """Normalizes result."""
     result = dict(raw)
     result.setdefault("engine", engine)
     result.setdefault("schema_version", SCHEMA_VERSION)
@@ -156,6 +158,7 @@ def normalize_result(engine: str, raw: dict, dataset_profile: dict) -> dict:
 
 
 def run_engine(engine: str, n: int, enforce_memory_limit: bool, dataset_profile: dict) -> dict:
+    """Runs engine."""
     if engine == "oxigraph":
         from oxigraph.runner import benchmark_set
     elif engine == "surrealdb":
@@ -180,6 +183,7 @@ def run_engine(engine: str, n: int, enforce_memory_limit: bool, dataset_profile:
 
 
 def merge_into_output(output_path: str, engine: str, result: dict, dataset_profile: dict, daemon_env=None) -> None:
+    """Merges into output."""
     existing: dict = {}
     if os.path.exists(output_path):
         with open(output_path) as f:
@@ -212,6 +216,7 @@ def merge_into_output(output_path: str, engine: str, result: dict, dataset_profi
 
 
 def main() -> None:
+    """CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Qualia-DB comparative benchmark harness",
         formatter_class=argparse.RawDescriptionHelpFormatter,

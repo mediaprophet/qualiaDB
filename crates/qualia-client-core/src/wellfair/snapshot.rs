@@ -15,6 +15,7 @@ pub fn build_host_snapshot(
     build_host_snapshot_with_storage(key_vault, host_api_ready, owner_label, demo_mode, None)
 }
 
+/// Builds host-snapshot-with-storage.
 pub fn build_host_snapshot_with_storage(
     key_vault: &KeyVault,
     host_api_ready: bool,

@@ -21,6 +21,7 @@ pub enum PurposeInboxKind {
 }
 
 impl PurposeInboxKind {
+    /// Address suffix.
     pub fn address_suffix(self) -> &'static str {
         match self {
             Self::InquiryPublic => "inquiry",
@@ -31,6 +32,7 @@ impl PurposeInboxKind {
         }
     }
 
+    /// UI label.
     pub fn label(self) -> &'static str {
         match self {
             Self::InquiryPublic => "Inquiry (Public Commons)",
@@ -41,6 +43,7 @@ impl PurposeInboxKind {
         }
     }
 
+    /// `true` when sanctuary.
     pub fn is_sanctuary(self) -> bool {
         matches!(self, Self::MedicalSanctuary)
     }
@@ -70,6 +73,7 @@ pub struct MailboxManager {
 }
 
 impl MailboxManager {
+    /// `MailboxManager::new`.
     pub fn new(domain: &str) -> Self {
         let sample_msg_1 = MailMessage {
             id: "msg-001".into(),

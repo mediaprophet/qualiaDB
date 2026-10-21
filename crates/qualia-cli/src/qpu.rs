@@ -138,6 +138,7 @@ fn config_path(data_dir: &str) -> std::path::PathBuf {
     Path::new(data_dir).join(CONFIG_FILE)
 }
 
+/// Loads config.
 pub fn load_config(data_dir: &str) -> QpuConfigStore {
     let path = config_path(data_dir);
     if !path.exists() {
@@ -189,6 +190,7 @@ fn display_opt(v: &Option<String>, sensitive: bool) -> String {
 
 // ── Command handlers ──────────────────────────────────────────────────────────
 
+/// CLI: .
 pub fn run_list_providers() {
     println!("================================================================");
     println!(
@@ -212,6 +214,7 @@ pub fn run_list_providers() {
 }
 
 #[allow(clippy::too_many_arguments)]
+/// CLI: .
 pub fn run_configure(
     data_dir: &str,
     provider: &str,
@@ -324,6 +327,7 @@ pub fn run_configure(
     }
 }
 
+/// CLI: .
 pub fn run_show(data_dir: &str, provider: Option<&str>) {
     let store = load_config(data_dir);
 
@@ -463,6 +467,7 @@ pub fn run_show(data_dir: &str, provider: Option<&str>) {
     println!("\n================================================================");
 }
 
+/// CLI: .
 pub fn run_clear(data_dir: &str, provider: &str) {
     if find_provider(provider).is_none() {
         eprintln!(
@@ -483,6 +488,7 @@ pub fn run_clear(data_dir: &str, provider: &str) {
     }
 }
 
+/// CLI: .
 pub fn run_test_connection(data_dir: &str, provider: &str) {
     let Some(info) = find_provider(provider) else {
         eprintln!(
@@ -590,6 +596,7 @@ fn auth_type_for(provider: &str) -> &'static str {
     }
 }
 
+/// CLI: .
 pub fn run_submit(data_dir: &str, provider: &str, problem_type: &str, qubits: u32, shots: u32) {
     let Some(info) = find_provider(provider) else {
         eprintln!(

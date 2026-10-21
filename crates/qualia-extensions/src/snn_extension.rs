@@ -383,6 +383,7 @@ fn group_into_spike_trains(events: &[(u32, Duration)]) -> Vec<SpikeTrain> {
 }
 
 impl SnnExtension {
+    /// Creates a new instance.
     pub fn new() -> Self {
         let node_id = Uuid::new_v4();
         let crdt_synchronizer = NoisyGradientCrdt::new(node_id);
@@ -721,10 +722,12 @@ impl SnnExtension {
 }
 
 impl SnnNetworkManager {
+    /// Gets network.
     pub fn get_network(&self, name: &str) -> Option<&SpikingNetwork> {
         self.loaded_networks.get(name)
     }
 
+    /// Loads network.
     pub fn load_network(&mut self, network: SpikingNetwork) -> Result<(), ExtensionError> {
         self.loaded_networks.insert(network.name.clone(), network);
         Ok(())
@@ -732,6 +735,7 @@ impl SnnNetworkManager {
 }
 
 impl NoisyGradientCrdt {
+    /// Creates a new instance.
     pub fn new(node_id: Uuid) -> Self {
         Self {
             node_id,
@@ -741,6 +745,7 @@ impl NoisyGradientCrdt {
         }
     }
 
+    /// Synchronizes gradients.
     pub async fn synchronize_gradients(
         &mut self,
         result: &SnnExecutionResult,
@@ -905,6 +910,7 @@ impl NoisyGradientCrdt {
 }
 
 impl NoiseGenerator {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             noise_type: NoiseType::Gaussian,
@@ -914,6 +920,7 @@ impl NoiseGenerator {
         }
     }
 
+    /// Generates noise (real RNG).
     pub fn generate_noise(&mut self) -> f64 {
         use rand::RngExt;
         let mut rng = rand::rng();
@@ -933,6 +940,7 @@ impl NoiseGenerator {
 }
 
 impl TemporalConfig {
+    /// Creates processor.
     pub fn create_processor(&self) -> TemporalProcessor {
         TemporalProcessor {
             spike_queue: VecDeque::new(),
@@ -948,6 +956,7 @@ impl TemporalConfig {
 }
 
 impl TemporalProcessor {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self {
             spike_queue: VecDeque::new(),
@@ -957,6 +966,7 @@ impl TemporalProcessor {
         }
     }
 
+    /// Processes an input spike.
     pub fn process_input_spike(&mut self, neuron_id: u32, spike_time: Duration) {
         let spike_event = SpikeEvent {
             neuron_id,
@@ -967,6 +977,7 @@ impl TemporalProcessor {
         self.spike_queue.push_back(spike_event);
     }
 
+    /// Emits spike.
     pub fn emit_spike(&mut self, neuron_id: u32, current_time: Duration) {
         let spike_event = SpikeEvent {
             neuron_id,
@@ -1007,6 +1018,7 @@ impl Default for GradientCrdtState {
 }
 
 impl GradientCrdtState {
+    /// Creates a new instance.
     pub fn new() -> Self {
         Self::default()
     }

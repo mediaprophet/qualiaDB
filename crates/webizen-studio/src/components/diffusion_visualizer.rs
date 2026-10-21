@@ -128,6 +128,7 @@ async fn draw_snapshot(snapshot: RuntimeSnapshotRecord) -> Result<(), String> {
 }
 
 #[component]
+/// Dioxus `DiffusionVisualizer` component.
 pub fn DiffusionVisualizer() -> Element {
     let latest_epoch = use_signal(|| 0u64);
     let dimensions = use_signal(|| (128u32, 128u32));

@@ -107,6 +107,7 @@ fn nums(document: &Document) -> Vec<f64> {
     parse_f64s(&selected_source(document).unwrap_or_default())
 }
 
+/// Chain action: scene.
 pub(super) fn run_scene(document: &Document, label: &str) {
     let kind = string_attr(selected_container(document).as_ref(), "data-scene-kind")
         .unwrap_or_else(|| "research".into());
@@ -119,6 +120,7 @@ pub(super) fn run_scene(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: css-animation.
 pub(super) fn run_css_animation(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -133,6 +135,7 @@ pub(super) fn run_css_animation(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: css-color.
 pub(super) fn run_css_color(document: &Document, label: &str) {
     let n = nums(document);
     let alpha = n.first().copied().unwrap_or(1.0);
@@ -147,6 +150,7 @@ pub(super) fn run_css_color(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: css-transform.
 pub(super) fn run_css_transform(document: &Document, label: &str) {
     let n = nums(document);
     let tx = n.first().copied().unwrap_or(8.0);
@@ -161,6 +165,7 @@ pub(super) fn run_css_transform(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-eval-curve.
 pub(super) fn run_animation_eval_curve(document: &Document, label: &str) {
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.5);
     invoke_dual(
@@ -172,6 +177,7 @@ pub(super) fn run_animation_eval_curve(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-spring-step.
 pub(super) fn run_animation_spring_step(document: &Document, label: &str) {
     let n = nums(document);
     let current = n.first().copied().unwrap_or(0.0);
@@ -185,6 +191,7 @@ pub(super) fn run_animation_spring_step(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-sclerp.
 pub(super) fn run_animation_sclerp(document: &Document, label: &str) {
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.5);
     invoke_dual(
@@ -196,6 +203,7 @@ pub(super) fn run_animation_sclerp(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-eval-preset.
 pub(super) fn run_animation_eval_preset(document: &Document, label: &str) {
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.0);
     invoke_dual(
@@ -207,6 +215,7 @@ pub(super) fn run_animation_eval_preset(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-squad-step.
 pub(super) fn run_animation_squad_step(document: &Document, label: &str) {
     let t = numeric_attr(selected_container(document).as_ref(), "data-t").unwrap_or(0.5);
     invoke_dual(
@@ -218,6 +227,7 @@ pub(super) fn run_animation_squad_step(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-list-presets.
 pub(super) fn run_animation_list_presets(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -228,6 +238,7 @@ pub(super) fn run_animation_list_presets(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: animation-compute-pass.
 pub(super) fn run_animation_compute_pass(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -238,6 +249,7 @@ pub(super) fn run_animation_compute_pass(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: svg-path.
 pub(super) fn run_svg_path(document: &Document, label: &str) {
     let mut points = nums(document);
     if points.len() < 4 {
@@ -252,6 +264,7 @@ pub(super) fn run_svg_path(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: svg-circle.
 pub(super) fn run_svg_circle(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -267,6 +280,7 @@ pub(super) fn run_svg_circle(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: svg-rect.
 pub(super) fn run_svg_rect(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -283,6 +297,7 @@ pub(super) fn run_svg_rect(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: svg-line.
 pub(super) fn run_svg_line(document: &Document, label: &str) {
     let n = nums(document);
     invoke_dual(
@@ -299,6 +314,7 @@ pub(super) fn run_svg_line(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: svg-bezier.
 pub(super) fn run_svg_bezier(document: &Document, label: &str) {
     let mut cp = nums(document);
     if cp.len() < 6 {
@@ -316,6 +332,7 @@ pub(super) fn run_svg_bezier(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: svg-field.
 pub(super) fn run_svg_field(document: &Document, label: &str) {
     let mut amplitudes = nums(document);
     if amplitudes.is_empty() {

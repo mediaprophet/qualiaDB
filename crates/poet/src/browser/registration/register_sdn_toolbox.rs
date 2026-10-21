@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers sdn-toolbox.
 pub(super) fn register_sdn_toolbox(reg: &mut Registry) {
     register_compact_toolbox(
         reg,

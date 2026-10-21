@@ -83,6 +83,7 @@ pub fn hide(document: &Document) {
     }
 }
 
+/// Configures a tool button.
 pub(super) fn configure_tool_button(button: &Element, tool: &super::ribbon::RibbonTool) {
     if !super::commands::local_instrument_action(tool.id) {
         button.set_attribute("disabled", "").unwrap();

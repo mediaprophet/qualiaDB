@@ -4,6 +4,7 @@ use web_sys::{Document, Element, HtmlElement};
 use super::super::super::cop_records::{build_family_panel, CopField};
 use super::{banner, invoke_on_click, wrap};
 
+/// Builds audio-session-view.
 pub fn build_audio_session_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,
@@ -21,6 +22,7 @@ pub fn build_audio_session_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds transport-view.
 pub fn build_transport_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,
@@ -80,6 +82,7 @@ pub fn build_transport_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds scene-view.
 pub fn build_scene_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,
@@ -134,6 +137,7 @@ pub fn build_scene_view(document: &Document) -> Element {
     wrapper
 }
 
+/// Builds audio-synth-view.
 pub fn build_audio_synth_view(document: &Document) -> Element {
     let wrapper = wrap(
         document,

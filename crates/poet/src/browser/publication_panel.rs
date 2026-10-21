@@ -4,6 +4,7 @@
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, Element, HtmlElement};
 
+/// Builds publication-workflow-view.
 pub fn build_publication_workflow_view(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
     root.set_class_name("workflow-panel publication-workflow");

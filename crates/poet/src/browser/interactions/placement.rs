@@ -12,6 +12,7 @@ pub struct ContainerRect {
 }
 
 impl ContainerRect {
+    /// `true` when overlapping.
     pub fn overlaps(&self, other: &ContainerRect, margin: f32) -> bool {
         let left_a = self.x - margin;
         let right_a = self.x + self.w + margin;
@@ -147,6 +148,7 @@ pub fn place_container_via_menu(document: &Document, container_type: &str, label
     place_container_on_canvas(document, container_type, label);
 }
 
+/// Places a container on the canvas.
 pub(super) fn place_container_on_canvas(document: &Document, container_type: &str, label: &str) {
     use crate::tool_chest::core::registry::SeedContainer;
 

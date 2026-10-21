@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, HtmlSelectElement, MouseEvent};
 
+/// Builds jural-panel.
 pub(super) fn build_jural_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "jural", false);
 
@@ -108,6 +109,7 @@ pub(super) fn build_jural_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-jural` panel.
 pub(super) fn wire_jural_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("jural-analyze") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -120,6 +122,7 @@ pub(super) fn wire_jural_panel(document: &Document) {
     }
 }
 
+/// Builds stit-panel.
 pub(super) fn build_stit_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "stit", false);
     panel
@@ -189,6 +192,7 @@ pub(super) fn build_stit_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-stit` panel.
 pub(super) fn wire_stit_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("stit-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -210,6 +214,7 @@ pub(super) fn wire_stit_panel(document: &Document) {
     }
 }
 
+/// Builds causal-panel.
 pub(super) fn build_causal_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "causal", false);
     panel
@@ -256,6 +261,7 @@ pub(super) fn build_causal_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-causal` panel.
 pub(super) fn wire_causal_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("causal-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -277,6 +283,7 @@ pub(super) fn wire_causal_panel(document: &Document) {
     }
 }
 
+/// Builds responsibility-panel.
 pub(super) fn build_responsibility_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "responsibility", false);
     panel
@@ -323,6 +330,7 @@ pub(super) fn build_responsibility_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-responsibility` panel.
 pub(super) fn wire_responsibility_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("resp-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -344,6 +352,7 @@ pub(super) fn wire_responsibility_panel(document: &Document) {
     }
 }
 
+/// Builds capacity-panel.
 pub(super) fn build_capacity_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "capacity", false);
     panel
@@ -399,6 +408,7 @@ pub(super) fn build_capacity_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-capacity` panel.
 pub(super) fn wire_capacity_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("capacity-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -411,6 +421,7 @@ pub(super) fn wire_capacity_panel(document: &Document) {
     }
 }
 
+/// Builds delegation-panel.
 pub(super) fn build_delegation_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "delegation", false);
     panel
@@ -457,6 +468,7 @@ pub(super) fn build_delegation_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-delegation` panel.
 pub(super) fn wire_delegation_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("deleg-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -478,6 +490,7 @@ pub(super) fn wire_delegation_panel(document: &Document) {
     }
 }
 
+/// Builds contract-panel.
 pub(super) fn build_contract_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "contract", false);
     panel
@@ -516,6 +529,7 @@ pub(super) fn build_contract_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-contract` panel.
 pub(super) fn wire_contract_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("contract-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -528,6 +542,7 @@ pub(super) fn wire_contract_panel(document: &Document) {
     }
 }
 
+/// Builds consensus-panel.
 pub(super) fn build_consensus_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "consensus", false);
     panel
@@ -587,6 +602,7 @@ pub(super) fn build_consensus_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-consensus` panel.
 pub(super) fn wire_consensus_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("consensus-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -599,6 +615,7 @@ pub(super) fn wire_consensus_panel(document: &Document) {
     }
 }
 
+/// Builds meta-deontic-panel.
 pub(super) fn build_meta_deontic_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "meta_deontic", false);
     panel
@@ -645,6 +662,7 @@ pub(super) fn build_meta_deontic_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-meta-deontic` panel.
 pub(super) fn wire_meta_deontic_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("meta-deontic-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -666,6 +684,7 @@ pub(super) fn wire_meta_deontic_panel(document: &Document) {
     }
 }
 
+/// Builds argumentation-panel.
 pub(super) fn build_argumentation_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "argumentation", false);
 
@@ -744,6 +763,7 @@ pub(super) fn build_argumentation_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-argumentation` panel.
 pub(super) fn wire_argumentation_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("arg-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

@@ -51,6 +51,7 @@ pub struct Project {
 }
 
 impl Project {
+    /// Creates a new instance.
     pub fn new(
         name: impl Into<String>,
         description: impl Into<String>,
@@ -91,6 +92,7 @@ pub struct ProjectMembership {
 }
 
 impl ProjectMembership {
+    /// Creates a new instance.
     pub fn new(
         project_id: impl Into<String>,
         member_did: impl Into<String>,
@@ -163,6 +165,7 @@ fn default_roi() -> f32 {
 }
 
 impl Contribution {
+    /// Creates a new instance.
     pub fn new(
         project_id: impl Into<String>,
         contributor_did: impl Into<String>,
@@ -222,14 +225,17 @@ pub struct Obligation {
 // Record-id helpers
 // ---------------------------------------------------------------------------
 
+///  record ID.
 pub fn project_record_id(uuid: &str) -> String {
     format!("urn:wellfair:project:{uuid}")
 }
 
+///  record ID.
 pub fn project_membership_record_id(uuid: &str) -> String {
     format!("urn:wellfair:project_membership:{uuid}")
 }
 
+///  record ID.
 pub fn contribution_record_id(uuid: &str) -> String {
     format!("urn:wellfair:contribution:{uuid}")
 }
@@ -336,6 +342,7 @@ fn project_envelope(
     }
 }
 
+/// Builds the  envelope.
 pub fn build_project_envelope(
     project: &Project,
     owner_did: &str,
@@ -355,6 +362,7 @@ pub fn build_project_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_membership_envelope(
     membership: &ProjectMembership,
     owner_did: &str,
@@ -374,6 +382,7 @@ pub fn build_membership_envelope(
     )
 }
 
+/// Builds the  envelope.
 pub fn build_contribution_envelope(
     contribution: &Contribution,
     owner_did: &str,
@@ -402,6 +411,7 @@ pub fn build_contribution_envelope(
 // Summaries (serde_json object strings, as stored on the journal row)
 // ---------------------------------------------------------------------------
 
+///  summary.
 pub fn project_summary(project: &Project) -> String {
     serde_json::json!({
         "name": project.name,
@@ -411,6 +421,7 @@ pub fn project_summary(project: &Project) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn membership_summary(membership: &ProjectMembership) -> String {
     serde_json::json!({
         "project_id": membership.project_id,
@@ -421,6 +432,7 @@ pub fn membership_summary(membership: &ProjectMembership) -> String {
     .to_string()
 }
 
+///  summary.
 pub fn contribution_summary(contribution: &Contribution) -> String {
     serde_json::json!({
         "project_id": contribution.project_id,

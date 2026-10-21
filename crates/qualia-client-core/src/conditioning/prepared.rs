@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 pub const ACTIVE_PROFILE_DIR: &str = "conditioning";
 pub const ACTIVE_PROFILE_FILENAME: &str = "active-profile.json";
 
+/// Active profile path.
 pub fn active_profile_path(storage: &Path) -> PathBuf {
     storage
         .join(ACTIVE_PROFILE_DIR)
@@ -58,6 +59,7 @@ pub struct PreparedRouteReceipt {
 }
 
 impl PreparedSemanticRequest {
+    /// Receipt.
     pub fn receipt(
         &self,
         route: &str,
@@ -153,6 +155,7 @@ pub fn prepare_semantic_request(
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Prepares a semantic request.
 pub fn prepare_semantic_request(
     _profile: &serde_json::Value,
     _prompt: &str,

@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "hypermedia:add-trigger" => Some(tag_attr(container, "data-trigger-added", "cue_on_timeline")),

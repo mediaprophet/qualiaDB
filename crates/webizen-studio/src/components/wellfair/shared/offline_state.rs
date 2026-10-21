@@ -2,6 +2,7 @@ use super::super::host_dto::{NetworkExposure, WellfairHostSnapshot};
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `OfflineState` component.
 pub fn OfflineState(snapshot: WellfairHostSnapshot) -> Element {
     let (label, detail, tone) = match snapshot.network {
         NetworkExposure::Offline => (

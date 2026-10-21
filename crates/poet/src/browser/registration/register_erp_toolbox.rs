@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers erp-toolbox.
 pub(super) fn register_erp_toolbox(reg: &mut Registry) {
     register_compact_toolbox(
         reg,

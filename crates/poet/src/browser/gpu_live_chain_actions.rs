@@ -82,6 +82,7 @@ fn handle(document: &Document) -> u64 {
 
 const TINY_WGSL: &str = "@compute @workgroup_size(1) fn main() {}";
 
+/// Chain action: gpu-init.
 pub(super) fn run_gpu_init(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -92,6 +93,7 @@ pub(super) fn run_gpu_init(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-init-surface.
 pub(super) fn run_gpu_init_surface(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -102,6 +104,7 @@ pub(super) fn run_gpu_init_surface(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-render-frame.
 pub(super) fn run_gpu_render_frame(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -113,6 +116,7 @@ pub(super) fn run_gpu_render_frame(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-read-pixels.
 pub(super) fn run_gpu_read_pixels(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -124,6 +128,7 @@ pub(super) fn run_gpu_read_pixels(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-upload-mesh.
 pub(super) fn run_gpu_upload_mesh(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -139,6 +144,7 @@ pub(super) fn run_gpu_upload_mesh(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-upload-tensor.
 pub(super) fn run_gpu_upload_tensor(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -150,6 +156,7 @@ pub(super) fn run_gpu_upload_tensor(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-pick.
 pub(super) fn run_gpu_pick(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -161,6 +168,7 @@ pub(super) fn run_gpu_pick(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-poll-pick.
 pub(super) fn run_gpu_poll_pick(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -172,6 +180,7 @@ pub(super) fn run_gpu_poll_pick(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-resize.
 pub(super) fn run_gpu_resize(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -183,6 +192,7 @@ pub(super) fn run_gpu_resize(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-set-ambient.
 pub(super) fn run_gpu_set_ambient(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -194,6 +204,7 @@ pub(super) fn run_gpu_set_ambient(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-destroy.
 pub(super) fn run_gpu_destroy(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -205,6 +216,7 @@ pub(super) fn run_gpu_destroy(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-compute-dispatch.
 pub(super) fn run_gpu_compute_dispatch(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -221,6 +233,7 @@ pub(super) fn run_gpu_compute_dispatch(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-compute-readback.
 pub(super) fn run_gpu_compute_readback(document: &Document, label: &str) {
     let handle = handle(document);
     invoke_dual(
@@ -232,6 +245,7 @@ pub(super) fn run_gpu_compute_readback(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-validate-shader.
 pub(super) fn run_gpu_validate_shader(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -242,6 +256,7 @@ pub(super) fn run_gpu_validate_shader(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-compile-shader.
 pub(super) fn run_gpu_compile_shader(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -252,6 +267,7 @@ pub(super) fn run_gpu_compile_shader(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-compile-to-glsl.
 pub(super) fn run_gpu_compile_to_glsl(document: &Document, label: &str) {
     invoke_dual(
         document,
@@ -262,6 +278,7 @@ pub(super) fn run_gpu_compile_to_glsl(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: gpu-backend-info.
 pub(super) fn run_gpu_backend_info(document: &Document, label: &str) {
     invoke_dual(
         document,

@@ -5,6 +5,7 @@ use crate::llm_lifecycle;
 use crate::llm_testing;
 use crate::qwen_testing;
 
+/// Handles the subcommand action.
 pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>> {
     let vault = |opt: &Option<PathBuf>| {
         opt.clone()

@@ -17,6 +17,7 @@ pub enum TalkHoldLevel {
 }
 
 impl TalkHoldLevel {
+    /// Label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Held => "held / not yet",
@@ -24,6 +25,7 @@ impl TalkHoldLevel {
         }
     }
 
+    /// `true` when the background is panic-red.
     pub fn bg_is_panic_red(self) -> bool {
         false
     }

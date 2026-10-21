@@ -23,6 +23,7 @@ pub enum SwarmPeerState {
 }
 
 impl SwarmPeerState {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::New => "New (Awaiting SDP)",
@@ -34,6 +35,7 @@ impl SwarmPeerState {
         }
     }
 
+    /// Accent color.
     pub fn color(&self) -> &'static str {
         match self {
             Self::New => "#94a3b8",
@@ -100,6 +102,7 @@ pub struct SwarmPeerDescriptor {
 }
 
 impl SwarmPeerDescriptor {
+    /// **Demo-only** mock peer list — not live WebRTC data (see STUBS).
     pub fn mock_swarm() -> Vec<Self> {
         vec![
             Self {

@@ -6,6 +6,7 @@ use web_sys::{Document, Element};
 
 use super::{body_core, body_health, body_ontology, body_project, body_studio};
 
+/// Fills the body.
 pub(super) fn fill_body(document: &Document, container: &SeedContainer, body: &Element) {
     if body_project::try_fill(document, container, body)
         || body_health::try_fill(document, container, body)

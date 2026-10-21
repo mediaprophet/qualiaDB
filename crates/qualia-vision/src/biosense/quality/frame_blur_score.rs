@@ -2,6 +2,7 @@
 
 use crate::cv::buffer::GrayView;
 
+/// `frame-blur` score.
 pub fn frame_blur_score(src: GrayView<'_>) -> f32 {
     if src.width < 3 || src.height < 3 {
         return 0.0;

@@ -94,6 +94,7 @@ async fn acquire_assets(mut ui: Signal<Anatomy3dUi>) {
 }
 
 #[component]
+/// Dioxus `WellfairAnatomy3dPanel` component.
 pub fn WellfairAnatomy3dPanel() -> Element {
     let experience_mode = use_experience_mode();
     let advanced = experience_mode().is_advanced();

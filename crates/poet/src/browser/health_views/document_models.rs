@@ -22,6 +22,7 @@ pub enum DocumentType {
 }
 
 impl DocumentType {
+    /// Parses the payload.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_lowercase().as_str() {
             "discharge_summary" | "discharge" => Self::DischargeSummary,
@@ -33,6 +34,7 @@ impl DocumentType {
         }
     }
 
+    /// Views as str.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::DischargeSummary => "discharge_summary",
@@ -44,6 +46,7 @@ impl DocumentType {
         }
     }
 
+    /// `display` label.
     pub fn display_label(&self) -> &'static str {
         match self {
             Self::DischargeSummary => "Discharge Summary",
@@ -218,6 +221,7 @@ pub enum ReportType {
 }
 
 impl ReportType {
+    /// Parses the payload.
     pub fn parse(s: &str) -> Self {
         match s.trim().to_lowercase().as_str() {
             "consultation" | "consult" => Self::Consultation,
@@ -229,6 +233,7 @@ impl ReportType {
         }
     }
 
+    /// Views as str.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Consultation => "consultation",
@@ -240,6 +245,7 @@ impl ReportType {
         }
     }
 
+    /// `display` label.
     pub fn display_label(&self) -> &'static str {
         match self {
             Self::Consultation => "Consultation",

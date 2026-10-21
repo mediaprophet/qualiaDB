@@ -24,6 +24,7 @@ fn live_tool(
     ))
 }
 
+/// Registers the `anim-live` tool set.
 pub(super) fn anim_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool(
@@ -61,6 +62,7 @@ pub(super) fn anim_live_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::To
     ]
 }
 
+/// Registers the `ode-num` tool set.
 pub(super) fn ode_num_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool(
@@ -98,6 +100,7 @@ pub(super) fn ode_num_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool
     ]
 }
 
+/// Registers the `hbbtv` tool set.
 pub(super) fn hbbtv_tools() -> Vec<Box<dyn crate::tool_chest::core::tool::Tool>> {
     vec![
         live_tool(

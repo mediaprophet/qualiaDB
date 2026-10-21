@@ -57,6 +57,7 @@ pub fn card_for(slug: &str) -> Option<InspectCard> {
 }
 
 #[component]
+/// Dioxus `InspectPanel` component.
 pub fn InspectPanel(slug: String) -> Element {
     let card = card_for(&slug);
     rsx! {

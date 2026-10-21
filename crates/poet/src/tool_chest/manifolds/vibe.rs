@@ -8,6 +8,7 @@ use super::super::core::registry::{
     DockPosition, ManifoldSeed, SeedConnection, SeedContainer, SeedPanel,
 };
 
+/// `vibe` manifold seed.
 pub fn vibe_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "vibe".into(),

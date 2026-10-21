@@ -22,6 +22,7 @@ fn sci_live_tool(
     ))
 }
 
+/// Registers scientific-toolbox.
 pub(super) fn register_scientific_toolbox(reg: &mut Registry) {
     let lab_tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

@@ -11,6 +11,7 @@ use web_sys::{Document, Element};
 
 use model::SheetState;
 
+/// Builds sheet-view.
 pub fn build_sheet_view(document: &Document, settings: &BTreeMap<String, String>) -> Element {
     view::build(document, settings)
 }

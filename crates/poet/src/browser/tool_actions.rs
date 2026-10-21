@@ -5,6 +5,7 @@ use web_sys::{Document, Element, HtmlElement};
 
 use crate::tool_chest::core::intent_bus::ActionType;
 
+/// `true` when the tool requires the daemon.
 pub fn requires_daemon(_tool_id: &str) -> bool {
     false
 }
@@ -1147,6 +1148,7 @@ pub fn unavailable_reason(tool_id: &str) -> Option<&'static str> {
     }
 }
 
+/// Current disabled reason.
 pub fn current_disabled_reason(tool_id: &str) -> Option<&'static str> {
     unavailable_reason(tool_id)
 }
@@ -1571,6 +1573,7 @@ fn run_sentinel(document: &Document, label: &str) {
     });
 }
 
+/// `?::dispatch`.
 pub fn dispatch(document: &Document, tool_id: &str, label: &str, action: ActionType) {
     if let Some(reason) = current_disabled_reason(tool_id) {
         super::interactions::show_tool_status(document, label, reason, "unavailable");

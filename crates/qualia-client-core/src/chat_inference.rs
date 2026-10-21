@@ -103,14 +103,17 @@ impl Default for ChatInferenceResult {
     }
 }
 
+/// Requests inference cancellation.
 pub fn request_cancel_inference() {
     INFERENCE_CANCEL.store(true, Ordering::SeqCst);
 }
 
+/// Clears the cancellation flag.
 pub fn clear_cancel_inference() {
     INFERENCE_CANCEL.store(false, Ordering::SeqCst);
 }
 
+/// `true` when inference-cancelled.
 pub fn is_inference_cancelled() -> bool {
     INFERENCE_CANCEL.load(Ordering::SeqCst)
 }
@@ -128,6 +131,7 @@ pub struct ChatInferenceOptions {
     pub allowed_ontology_ids: Vec<String>,
 }
 
+/// Runs chat inference with options.
 pub fn run_chat_inference_with_options(
     session_id: &str,
     prompt: &str,
@@ -221,6 +225,7 @@ pub fn run_chat_inference_for_agent(
     )
 }
 
+/// Runs full chat inference.
 pub fn run_chat_inference_full(
     session_id: &str,
     prompt: &str,
@@ -1277,10 +1282,12 @@ pub fn stream_event_token(delta: &str) -> String {
     serde_json::json!({"event":"token","data":delta}).to_string()
 }
 
+/// Done stream event.
 pub fn stream_event_done(result: &ChatInferenceResult) -> String {
     serde_json::json!({"event":"done","data":result}).to_string()
 }
 
+/// Error stream event.
 pub fn stream_event_error(msg: &str) -> String {
     serde_json::json!({"event":"error","data":msg}).to_string()
 }

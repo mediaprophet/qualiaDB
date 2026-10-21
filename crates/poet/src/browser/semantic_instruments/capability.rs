@@ -21,6 +21,7 @@ pub enum GapKind {
 }
 
 impl GapKind {
+    /// Views as str.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Satisfied => "Satisfied",
@@ -61,6 +62,7 @@ pub fn may_issue_award(kind: GapKind, issuer_declared: bool) -> bool {
     issuer_declared && matches!(kind, GapKind::Satisfied | GapKind::Equivalent)
 }
 
+/// Evidence chips.
 pub fn evidence_chips(kind: GapKind) -> [EvidenceChip; 4] {
     [
         EvidenceChip {

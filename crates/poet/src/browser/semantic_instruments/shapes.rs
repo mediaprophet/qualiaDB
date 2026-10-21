@@ -48,6 +48,7 @@ const CLASS_SUGGESTIONS: &[&str] = &["si:InstrumentRelease", "values:NaturalPers
 
 const CONSTRAINT_TYPES: &[&str] = &["minCount", "class", "datatype"];
 
+/// Input constraints.
 pub fn input_constraints(entry: &str) -> &'static [ShapeConstraint] {
     if is_assess_or_recognise(entry) {
         ASSESS_RECOGNISE_INPUT
@@ -56,6 +57,7 @@ pub fn input_constraints(entry: &str) -> &'static [ShapeConstraint] {
     }
 }
 
+/// Output constraints.
 pub fn output_constraints(entry: &str) -> &'static [ShapeConstraint] {
     if is_assess_or_recognise(entry) {
         ASSESS_RECOGNISE_OUTPUT
@@ -64,6 +66,7 @@ pub fn output_constraints(entry: &str) -> &'static [ShapeConstraint] {
     }
 }
 
+/// Living-safe guard.
 pub fn living_safe_guard() -> &'static str {
     "Living-safe: a NaturalPerson is never owl:Thing; persons are rdfs:Class, not the OWL universal superclass."
 }

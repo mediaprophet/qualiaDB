@@ -24,6 +24,7 @@ replacements = {
 }
 
 def replace_in_file(filepath):
+    """Replaces in a file."""
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     

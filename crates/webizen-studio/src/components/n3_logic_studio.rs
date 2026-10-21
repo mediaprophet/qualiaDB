@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `N3LogicStudio` component.
 pub fn N3LogicStudio() -> Element {
     let mut rule_text = use_signal(|| "{ ?x a <Person> } => { ?x a <Mortal> }.".to_string());
     let mut validation_msg = use_signal(|| String::new());

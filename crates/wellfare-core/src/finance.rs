@@ -38,6 +38,7 @@ pub struct LedgerEntry {
 }
 
 impl LedgerEntry {
+    /// Creates a new instance.
     pub fn new(
         description: impl Into<String>,
         amount_cents: i64,
@@ -80,6 +81,7 @@ pub struct BalanceReport {
     pub total_entries: usize,
 }
 
+///  record ID.
 pub fn ledger_entry_record_id(uuid: &str) -> String {
     format!("urn:wellfair:ledger_entry:{uuid}")
 }
@@ -133,6 +135,7 @@ pub fn derived_balance(entries: &[LedgerEntry]) -> BalanceReport {
     }
 }
 
+/// Builds the  envelope.
 pub fn build_ledger_entry_envelope(
     entry: &LedgerEntry,
     owner_did: &str,
@@ -160,6 +163,7 @@ pub fn build_ledger_entry_envelope(
     }
 }
 
+///  summary.
 pub fn ledger_entry_summary(entry: &LedgerEntry) -> String {
     serde_json::json!({
         "description": entry.description,

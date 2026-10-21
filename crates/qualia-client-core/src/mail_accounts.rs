@@ -32,6 +32,7 @@ fn path() -> std::path::PathBuf {
     app_meta_dir().join(ACCOUNTS_FILE)
 }
 
+/// Lists.
 pub fn list() -> Vec<MailAccount> {
     fs::read_to_string(path())
         .ok()
@@ -39,6 +40,7 @@ pub fn list() -> Vec<MailAccount> {
         .unwrap_or_default()
 }
 
+/// Saves.
 pub fn save(account: MailAccount) -> Result<Vec<MailAccount>, String> {
     if account.id.trim().is_empty()
         || account.label.trim().is_empty()
@@ -69,6 +71,7 @@ pub fn save(account: MailAccount) -> Result<Vec<MailAccount>, String> {
     Ok(accounts)
 }
 
+/// Finds.
 pub fn find(id: &str) -> Option<MailAccount> {
     list().into_iter().find(|account| account.id == id)
 }
@@ -90,6 +93,7 @@ pub fn has_pop3_receipt(account_id: &str, uid: &str) -> bool {
     pop3_receipts().contains(&format!("{account_id}:{uid}"))
 }
 
+/// Records a POP3 receipt.
 pub fn record_pop3_receipt(account_id: &str, uid: &str) -> Result<(), String> {
     let mut receipts = pop3_receipts();
     receipts.insert(format!("{account_id}:{uid}"));

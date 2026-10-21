@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `EbpfFilterManager` component.
 pub fn EbpfFilterManager() -> Element {
     let filters = vec![
         ("TCP RST Dropper", "XDP", "Loaded", 14502),

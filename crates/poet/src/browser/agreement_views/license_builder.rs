@@ -128,6 +128,7 @@ const PROVENANCE_ENTRIES: &[(&str, &str, &str, &str, &str)] = &[
     ),
 ];
 
+/// Builds license-builder-view.
 pub fn build_license_builder_view(document: &Document) -> Element {
     let wrapper = document.create_element("div").unwrap();
     let wrapper_el: HtmlElement = wrapper.clone().dyn_into().unwrap();

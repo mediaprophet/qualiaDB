@@ -2,6 +2,7 @@ use crate::components::QAppEngine;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `ComputationalLinguisticsQapp` component.
 pub fn ComputationalLinguisticsQapp() -> Element {
     rsx! {
         QAppEngine {

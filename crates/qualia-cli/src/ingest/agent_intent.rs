@@ -23,6 +23,7 @@ use qualia_core_db::specialized_libs::physics_simulation::PhysicsSimulationLibra
 
 use crate::ingest::IngestStats;
 
+/// Ingests an agent intent.
 pub fn ingest_agent_intent(
     input: &Path,
     output: &Path,

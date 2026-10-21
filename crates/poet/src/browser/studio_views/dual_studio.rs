@@ -23,6 +23,7 @@ pub enum PresetFamily {
 }
 
 impl PresetFamily {
+    /// All variants.
     pub fn all() -> &'static [PresetFamily] {
         &[
             PresetFamily::HudGlassUi,
@@ -32,6 +33,7 @@ impl PresetFamily {
         ]
     }
 
+    /// Short code.
     pub fn code(&self) -> &'static str {
         match self {
             Self::HudGlassUi => "hud-glass-ui",
@@ -41,6 +43,7 @@ impl PresetFamily {
         }
     }
 
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             Self::HudGlassUi => "HUD Glass UI",
@@ -50,6 +53,7 @@ impl PresetFamily {
         }
     }
 
+    /// Default preset.
     pub fn default_preset(&self) -> &'static str {
         match self {
             Self::HudGlassUi => "glass_reveal",
@@ -59,6 +63,7 @@ impl PresetFamily {
         }
     }
 
+    /// Preset list.
     pub fn presets(&self) -> &'static [(&'static str, &'static str)] {
         match self {
             Self::HudGlassUi => &[

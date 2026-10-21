@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `StatisticalAnalysis` component.
 pub fn StatisticalAnalysis() -> Element {
     let mut data = use_signal(|| "1.2, 2.3, 3.4, 4.5, 5.6".to_string());
 

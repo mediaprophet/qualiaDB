@@ -29,6 +29,7 @@ pub struct ImportProgressCtx {
 }
 
 impl ImportProgressCtx {
+    /// Emits an event.
     pub fn emit(&self, payload: ProgressPayload) {
         let _ = self.download_events.send(payload.clone());
         self.active_downloads
@@ -37,6 +38,7 @@ impl ImportProgressCtx {
             .insert(self.id.clone(), payload);
     }
 
+    /// Clears.
     pub fn clear(&self) {
         self.handles.lock().unwrap().remove(&self.id);
         self.active_downloads.lock().unwrap().remove(&self.id);
@@ -104,6 +106,7 @@ struct OntologyMetaSidecar {
     q42_path: String,
 }
 
+/// Index directory.
 pub fn index_dir(storage_root: &Path) -> PathBuf {
     storage_root.join("Index")
 }
@@ -157,12 +160,14 @@ fn write_meta_sidecar(
     Ok(())
 }
 
+/// Streams a download.
 pub async fn stream_download(url: &str, dest: &Path) -> Result<(), String> {
     stream_download_with_progress(url, dest, None)
         .await
         .map_err(|e| e.to_string())
 }
 
+/// Streams a download with progress events.
 pub async fn stream_download_with_progress(
     url: &str,
     dest: &Path,

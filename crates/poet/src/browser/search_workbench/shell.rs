@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, KeyboardEvent, MouseEvent};
 
+/// Builds search-workbench.
 pub fn build_search_workbench(document: &Document) -> Element {
     let overlay = document.create_element("div").unwrap();
     overlay.set_id("search-workbench");
@@ -169,6 +170,7 @@ pub fn build_search_workbench(document: &Document) -> Element {
     overlay
 }
 
+/// `show-mode` panel.
 pub(super) fn show_mode_panel(document: &Document, mode: &str) {
     let panels = document.query_selector_all(".search-mode-panel").unwrap();
     for i in 0..panels.length() {
@@ -231,6 +233,7 @@ fn wire_mode_tabs(document: &Document) {
     }
 }
 
+/// Shows search-notification.
 pub(super) fn show_search_notification(document: &Document, message: &str) {
     let notif = document.create_element("div").unwrap();
     let n_el: HtmlElement = notif.clone().dyn_into().unwrap();

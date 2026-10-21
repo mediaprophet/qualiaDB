@@ -77,10 +77,12 @@ impl Default for AxiomBounds {
 }
 
 impl AxiomBounds {
+    /// Label.
     pub fn label(&self) -> String {
         format!("[{}–{}]", self.start_year, self.end_year)
     }
 
+    /// Builder — sets spatial-label.
     pub fn with_spatial_label(mut self, label: &str) -> Self {
         self.spatial_context_label = label.trim().to_string();
         self.spatial_context_hash = if self.spatial_context_label.is_empty() {
@@ -129,6 +131,7 @@ pub struct InferenceContextPacket {
     pub axiom_bounds: AxiomBounds,
 }
 
+/// Compiles the chat environment.
 pub fn compile_chat_environment(
     storage: &Path,
     catalog: &ResourceCatalog,
@@ -245,6 +248,7 @@ pub fn compile_chat_environment(
     Ok(env)
 }
 
+/// Refreshes the session environment.
 pub fn refresh_session_environment(
     storage: &Path,
     catalog: &ResourceCatalog,
@@ -273,6 +277,7 @@ pub fn refresh_session_environment(
     Ok(env)
 }
 
+/// Builds inference-packet.
 pub fn build_inference_packet(
     env: &ChatEnvironment,
     user_prompt: &str,
@@ -330,6 +335,7 @@ pub fn build_inference_packet(
     })
 }
 
+/// Loads active-model-record.
 pub fn load_active_model_record() -> Option<model_lifecycle::ActiveModelRecord> {
     let path = crate::state::app_meta_dir().join("active_model.json");
     let text = fs::read_to_string(path).ok()?;
@@ -358,6 +364,7 @@ fn list_qapp_names(storage: &Path) -> Vec<String> {
     names
 }
 
+/// Lists installed ontology IDs.
 pub fn list_installed_ontology_ids(storage: &Path) -> Vec<String> {
     let index = resource_import::index_dir(storage);
     let mut ids = Vec::new();

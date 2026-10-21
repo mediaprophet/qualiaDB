@@ -13,6 +13,7 @@ pub enum ShellKind {
 }
 
 impl ShellKind {
+    /// Reads/writes the persisted storage value.
     pub const fn storage_value(self) -> &'static str {
         match self {
             Self::Classic => "classic",
@@ -20,10 +21,12 @@ impl ShellKind {
         }
     }
 
+    /// `true` when poet.
     pub const fn is_poet(self) -> bool {
         matches!(self, Self::Poet)
     }
 
+    /// Constructs from storage.
     pub fn from_storage(value: &str) -> Option<Self> {
         match value {
             "classic" => Some(Self::Classic),
@@ -33,6 +36,7 @@ impl ShellKind {
     }
 }
 
+/// Initial shell kind.
 pub fn initial_shell_kind() -> ShellKind {
     #[cfg(target_arch = "wasm32")]
     {
@@ -49,6 +53,7 @@ pub fn initial_shell_kind() -> ShellKind {
     ShellKind::Classic
 }
 
+/// Persists the shell kind.
 pub fn persist_shell_kind(kind: ShellKind) {
     #[cfg(target_arch = "wasm32")]
     {
@@ -62,11 +67,13 @@ pub fn persist_shell_kind(kind: ShellKind) {
     let _ = kind;
 }
 
+/// Consumes the shell-kind signal/context.
 pub fn use_shell_kind() -> Signal<ShellKind> {
     consume_context::<Signal<ShellKind>>()
 }
 
 #[component]
+/// Dioxus `ShellKindSwitch` component.
 pub fn ShellKindSwitch() -> Element {
     let mut kind = use_shell_kind();
     let current = kind();

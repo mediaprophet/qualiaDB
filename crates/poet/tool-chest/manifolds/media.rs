@@ -6,6 +6,7 @@
 
 use super::registry::{ManifoldSeed, SeedContainer, SeedPanel, DockPosition};
 
+/// `media` manifold seed — 3D kinematics, grapheme, acoustic.
 pub fn media_manifold_seed() -> ManifoldSeed {
     ManifoldSeed {
         id: "media".into(),

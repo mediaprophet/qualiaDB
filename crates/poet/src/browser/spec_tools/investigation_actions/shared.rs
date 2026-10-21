@@ -2,6 +2,7 @@
 
 use web_sys::Element;
 
+/// Appends csv-attr.
 pub(crate) fn append_csv_attr(container: &Element, attr: &str, item: &str) -> Result<(), String> {
     let current = container.get_attribute(attr).unwrap_or_default();
     let updated = if current.is_empty() {
@@ -14,6 +15,7 @@ pub(crate) fn append_csv_attr(container: &Element, attr: &str, item: &str) -> Re
         .map_err(|_| format!("Failed to update {attr}."))
 }
 
+/// Appends semicolon-attr.
 pub(crate) fn append_semicolon_attr(container: &Element, attr: &str, item: &str) -> Result<(), String> {
     let current = container.get_attribute(attr).unwrap_or_default();
     let updated = if current.is_empty() {
@@ -26,6 +28,7 @@ pub(crate) fn append_semicolon_attr(container: &Element, attr: &str, item: &str)
         .map_err(|_| format!("Failed to update {attr}."))
 }
 
+/// Count selector.
 pub(crate) fn count_selector(document: &web_sys::Document, selector: &str) -> Result<u32, String> {
     document
         .query_selector_all(selector)

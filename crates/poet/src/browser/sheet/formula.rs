@@ -25,6 +25,7 @@ impl FormulaError {
     }
 }
 
+/// Display value.
 pub fn display_value(state: &SheetState, cell: &str) -> String {
     let raw = state.raw(cell);
     let Some(expression) = raw.strip_prefix('=') else {

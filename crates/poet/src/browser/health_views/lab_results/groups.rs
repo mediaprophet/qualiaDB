@@ -272,6 +272,7 @@ pub(super) const RESULTS: &[(&str, &str, &str, &str, &str, &str, &str)] = &[
     ),
 ];
 
+/// Builds groups-tab.
 pub fn build_groups_tab(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_attribute("data-lab-panel", "groups").unwrap();

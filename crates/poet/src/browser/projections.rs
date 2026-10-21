@@ -28,6 +28,7 @@ pub enum PresentationDomain {
 }
 
 impl PresentationDomain {
+    /// UI label.
     pub fn label(&self) -> &'static str {
         match self {
             PresentationDomain::Hierarchical => "Hierarchical Explorers",
@@ -43,6 +44,7 @@ impl PresentationDomain {
         }
     }
 
+    /// UI glyph.
     pub fn glyph(&self) -> &'static str {
         match self {
             PresentationDomain::Hierarchical => "\u{1F332}", // 🌲

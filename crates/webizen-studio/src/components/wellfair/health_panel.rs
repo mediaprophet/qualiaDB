@@ -24,6 +24,7 @@ fn kind_label(kind: &str) -> &str {
 }
 
 #[component]
+/// Dioxus `WellfairHealthPanel` component.
 pub fn WellfairHealthPanel() -> Element {
     let mut records = use_signal(Vec::<HealthRecordDto>::new);
     let mut status = use_signal(|| "Loading health records…".to_string());

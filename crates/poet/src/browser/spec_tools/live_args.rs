@@ -12,6 +12,7 @@ const MAX_LIVE_PIXELS: u64 = 512 * 512;
 const MAX_N3_SOURCE_BYTES: usize = 256 * 1024;
 const MAX_INFERENCE_TEXT_BYTES: usize = 64 * 1024;
 
+/// `true` when the tool supports the arg.
 pub fn supports(capability: &str) -> bool {
     matches!(
         capability,
@@ -55,6 +56,7 @@ pub fn supports(capability: &str) -> bool {
     )
 }
 
+/// Builds the view.
 pub fn build(
     selected: Option<&Element>,
     tool: &SpecTool,

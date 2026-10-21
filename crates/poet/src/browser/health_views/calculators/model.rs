@@ -8,6 +8,7 @@ pub enum CalculatorKind {
 }
 
 impl CalculatorKind {
+    /// Parses the payload.
     pub fn parse(raw: &str) -> Option<Self> {
         match raw.trim() {
             "framingham" => Some(Self::Framingham),
@@ -17,6 +18,7 @@ impl CalculatorKind {
         }
     }
 
+    /// Capability descriptor.
     pub fn capability(self) -> &'static str {
         match self {
             Self::Framingham => "ClinicalRisk.framingham",
@@ -25,6 +27,7 @@ impl CalculatorKind {
         }
     }
 
+    /// UI label.
     pub fn label(self) -> &'static str {
         match self {
             Self::Framingham => "Framingham 10-year CVD risk",
@@ -33,6 +36,7 @@ impl CalculatorKind {
         }
     }
 
+    /// `CalculatorKind::version`.
     pub fn version(self) -> &'static str {
         match self {
             Self::Framingham => "wilson-1998-atp3",
@@ -41,6 +45,7 @@ impl CalculatorKind {
         }
     }
 
+    /// Applicability.
     pub fn applicability(self) -> &'static str {
         match self {
             Self::Framingham => "Adults 30–74 years. Lipids in mmol/L. Blood pressure in mmHg.",
@@ -74,6 +79,7 @@ pub struct CalculatorDraft {
 }
 
 impl CalculatorDraft {
+    /// Parses number.
     pub fn parse_number(raw: &str) -> Option<f64> {
         let trimmed = raw.trim();
         if trimmed.is_empty() {
@@ -85,6 +91,7 @@ impl CalculatorDraft {
             .filter(|value| value.is_finite())
     }
 
+    /// Parses bool.
     pub fn parse_bool(raw: &str) -> Option<bool> {
         match raw.trim().to_ascii_lowercase().as_str() {
             "true" | "yes" | "1" | "male" => Some(true),
@@ -93,6 +100,7 @@ impl CalculatorDraft {
         }
     }
 
+    /// Incomplete reason.
     pub fn incomplete_reason(&self) -> Option<&'static str> {
         let Some(kind) = self.kind else {
             return Some(
@@ -171,6 +179,7 @@ impl CalculatorDraft {
         None
     }
 
+    /// Invoke args.
     pub fn invoke_args(&self) -> Result<(CalculatorKind, serde_json::Value), &'static str> {
         if let Some(reason) = self.incomplete_reason() {
             return Err(reason);

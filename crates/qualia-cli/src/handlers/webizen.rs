@@ -1,5 +1,6 @@
 use crate::cli::WebizenAction;
 
+/// Handles the subcommand action.
 pub async fn handle(action: &WebizenAction) -> Result<(), Box<dyn std::error::Error>> {
     match action {
         WebizenAction::Init { path } => {

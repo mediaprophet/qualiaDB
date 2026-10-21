@@ -123,6 +123,7 @@ fn semantic_tags_from_draft(draft: &str) -> Result<Vec<serde_json::Value>, Strin
 }
 
 #[component]
+/// Dioxus `AgentConfig` component.
 pub fn AgentConfig() -> Element {
     let agents = use_signal(Vec::<serde_json::Value>::new);
     let tools = use_signal(Vec::<serde_json::Value>::new);

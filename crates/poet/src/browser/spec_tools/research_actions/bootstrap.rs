@@ -3,6 +3,7 @@
 use super::util::{append_csv_attr, append_nested, count_within};
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "research:assess-deficit" => Some(assess_deficit(container)),

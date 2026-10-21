@@ -151,10 +151,12 @@ pub fn list(mailbox: Option<&str>, include_quarantine: bool) -> Vec<StoredMail> 
         .collect()
 }
 
+/// Gets.
 pub fn get(id: &str) -> Option<StoredMail> {
     load_all().into_iter().find(|m| m.id == id)
 }
 
+/// Sets read.
 pub fn set_read(id: &str, read: bool) -> Result<StoredMail, String> {
     let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = load_all();
@@ -168,6 +170,7 @@ pub fn set_read(id: &str, read: bool) -> Result<StoredMail, String> {
     Ok(out)
 }
 
+/// Deletes.
 pub fn delete(id: &str) -> Result<(), String> {
     let _guard = STORE_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
     let mut all = load_all();

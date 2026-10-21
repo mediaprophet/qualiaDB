@@ -118,6 +118,7 @@ fn has_semantic_annotation(container: &Element) -> bool {
             .is_some()
 }
 
+/// Chain action: n3-evaluate.
 pub(super) fn run_n3_evaluate(document: &Document, label: &str) {
     let label = label.to_string();
     let source = selected_text(document).unwrap_or_else(|| DEFAULT_N3.to_string());
@@ -176,6 +177,7 @@ pub(super) fn run_n3_evaluate(document: &Document, label: &str) {
     });
 }
 
+/// Chain action: shacl-validate.
 pub(super) fn run_shacl_validate(document: &Document, label: &str) {
     let Some(container) = selected_container(document) else {
         super::interactions::show_tool_status(

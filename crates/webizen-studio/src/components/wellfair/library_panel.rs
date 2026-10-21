@@ -322,6 +322,7 @@ fn category_label(slug: &str) -> String {
 }
 
 #[component]
+/// Dioxus `WellfairLibraryPanel` component.
 pub fn WellfairLibraryPanel() -> Element {
     let mut results = use_signal(Vec::<serde_json::Value>::new);
     let mut stats = use_signal(|| serde_json::json!({}));

@@ -25,6 +25,7 @@ pub enum Realm {
 }
 
 impl Realm {
+    /// Views as str.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Earth => "earth",
@@ -33,6 +34,7 @@ impl Realm {
         }
     }
 
+    /// Builds from str.
     pub fn from_str(s: &str) -> Option<Self> {
         // Unicode case-fold; never ASCII-only. Machine ids stay earth/cosmos/fictional.
         match s.trim().to_lowercase().as_str() {
@@ -55,6 +57,7 @@ impl Realm {
         }
     }
 
+    /// System descriptor.
     pub fn system(self) -> &'static str {
         match self {
             Self::Earth => "wgs84",
@@ -64,6 +67,7 @@ impl Realm {
     }
 }
 
+/// Evaluates realm.
 pub fn evaluate_realm(realm: Realm) -> Result<Value, String> {
     let mut args = BTreeMap::new();
     match realm {

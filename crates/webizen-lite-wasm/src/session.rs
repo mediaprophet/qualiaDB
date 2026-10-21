@@ -92,6 +92,7 @@ fn graph_summary(g: &SessionGraph) -> Value {
 
 // ─── Public MCP tools ────────────────────────────────────────────────────────
 
+/// Lists graphs.
 pub fn list_graphs(_args: &Value) -> Result<Value, String> {
     with_graphs(|map| {
         let mut graphs: Vec<Value> = map.values().map(graph_summary).collect();
@@ -110,6 +111,7 @@ pub fn list_graphs(_args: &Value) -> Result<Value, String> {
     })
 }
 
+/// Unloads the graph.
 pub fn unload_graph(args: &Value) -> Result<Value, String> {
     let id = required_str(args, "graphId")?;
     with_graphs_mut(|map| {

@@ -90,6 +90,7 @@ pub enum RepresentationBindSeed {
 }
 
 impl RepresentationBindSeed {
+    /// Converts into a bind.
     pub fn into_bind(self) -> RepresentationBind {
         match self {
             Self::None => RepresentationBind::None,
@@ -165,6 +166,7 @@ pub fn bind_for_code(code: &str) -> RepresentationBind {
         .unwrap_or(RepresentationBind::None)
 }
 
+///  when known-code.
 pub fn is_known_code(code: &str) -> bool {
     KNOWN_OBSERVATION_CODES
         .iter()

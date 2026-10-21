@@ -267,6 +267,7 @@ const RDFSTAR_ROLES: &[(&str, &str)] = &[
 // Build the logic workbench overlay
 // ---------------------------------------------------------------------------
 
+/// Builds logic-workbench.
 pub fn build_logic_workbench(document: &Document) -> Element {
     let overlay = document.create_element("div").unwrap();
     overlay.set_id("logic-workbench");
@@ -710,6 +711,7 @@ pub fn build_domain_lab_view(document: &Document) -> Element {
     root
 }
 
+/// Toggles the logic workbench.
 pub fn toggle_logic_workbench(document: &Document) {
     if let Some(wb) = document.get_element_by_id("logic-workbench") {
         let wb_el: HtmlElement = wb.dyn_into().unwrap();
@@ -725,6 +727,7 @@ pub fn toggle_logic_workbench(document: &Document) {
     }
 }
 
+/// Opens to-tool.
 pub fn open_to_tool(document: &Document, tool: &str) {
     if let Some(wb) = document.get_element_by_id("logic-workbench") {
         let wb_el: HtmlElement = wb.dyn_into().unwrap();
@@ -762,10 +765,12 @@ pub fn open_to_tool(document: &Document, tool: &str) {
     show_tool_panel(document, tool);
 }
 
+/// Dispatches command.
 pub fn dispatch_command(document: &Document, label: &str) -> bool {
     dispatch::dispatch_command(document, label)
 }
 
+/// Wires the logic-workbench shortcut.
 pub fn wire_logic_workbench_shortcut(document: &Document) {
     let closure = Closure::wrap(Box::new(move |e: KeyboardEvent| {
         if e.key() == "L" && e.shift_key() && (e.ctrl_key() || e.meta_key()) {

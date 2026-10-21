@@ -21,6 +21,7 @@ pub enum Proficiency {
 }
 
 impl Proficiency {
+    /// Views as token.
     pub fn as_token(self) -> &'static str {
         match self {
             Self::Novice => "novice",
@@ -29,6 +30,7 @@ impl Proficiency {
         }
     }
 
+    /// `human` label.
     pub fn human_label(self) -> &'static str {
         match self {
             Self::Novice => "Getting started",
@@ -37,6 +39,7 @@ impl Proficiency {
         }
     }
 
+    /// Tooltip text.
     pub fn tooltip(self) -> &'static str {
         match self {
             Self::Novice => "Show a short set of everyday tools with plain-language names.",
@@ -46,6 +49,7 @@ impl Proficiency {
     }
 
     #[allow(dead_code)]
+    /// Builds from token.
     pub fn from_token(token: &str) -> Self {
         match token {
             "intermediate" => Self::Intermediate,
@@ -54,6 +58,7 @@ impl Proficiency {
         }
     }
 
+    /// Proficiency rank.
     pub fn rank(self) -> u8 {
         match self {
             Self::Novice => 0,
@@ -62,6 +67,7 @@ impl Proficiency {
         }
     }
 
+    /// Shown tools.
     pub fn shows(self, minimum: Self) -> bool {
         self.rank() >= minimum.rank()
     }
@@ -73,14 +79,17 @@ struct Preference {
     global: Proficiency,
 }
 
+/// Current proficiency.
 pub fn current() -> Proficiency {
     load().global
 }
 
+/// `Proficiency::restore`.
 pub fn restore(document: &Document) {
     apply(document, current());
 }
 
+/// Applies.
 pub fn apply(document: &Document, level: Proficiency) {
     let token = level.as_token();
     if let Some(root) = document.document_element() {
@@ -112,6 +121,7 @@ pub fn apply(document: &Document, level: Proficiency) {
     }
 }
 
+/// Persists proficiency.
 pub fn persist(level: Proficiency) {
     let preference = Preference { global: level };
     if let Ok(json) = serde_json::to_string(&preference) {
@@ -125,6 +135,7 @@ fn load() -> Preference {
         .unwrap_or_default()
 }
 
+/// Sets a value.
 pub fn set(document: &Document, level: Proficiency) {
     persist(level);
     apply(document, level);
@@ -135,6 +146,7 @@ pub fn set(document: &Document, level: Proficiency) {
     }
 }
 
+/// Renders switcher.
 pub fn render_switcher(document: &Document) -> Element {
     let row = document.create_element("div").unwrap();
     row.set_class_name("tool-proficiency-switcher");
@@ -180,6 +192,7 @@ pub fn render_switcher(document: &Document) -> Element {
     row
 }
 
+/// Agent catalog as JSON.
 pub fn agent_catalog_json(level: Proficiency) -> String {
     let registry = super::registration::build_registry();
     let mut tools = Vec::new();

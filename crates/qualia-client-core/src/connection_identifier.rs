@@ -98,6 +98,7 @@ impl ConnectionIdentifier {
             .map_err(|_| "signature verification failed".to_string())
     }
 
+    /// `true` when expired.
     pub fn is_expired(&self, now_unix: u64) -> bool {
         self.expires_at != 0 && now_unix > self.expires_at
     }

@@ -22,6 +22,7 @@ use super::*;
 impl WebizenHostApi {
     // --- Welfare support (Phase 3 / LIF-08..) ---
 
+    /// Adds assistance-need.
     pub fn add_assistance_need(
         &mut self,
         category: &str,
@@ -46,6 +47,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds welfare-stream.
     pub fn add_welfare_stream(
         &mut self,
         program_name: &str,
@@ -71,6 +73,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Adds government-letter.
     pub fn add_government_letter(
         &mut self,
         sender: &str,
@@ -178,6 +181,7 @@ impl WebizenHostApi {
     // derivations already live in `qualia-cooperative-core` so the Cooperative Qapp and the
     // WellFair panels share one implementation.
 
+    /// Adds work-item.
     pub fn add_work_item(&mut self, item: &WorkItem) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
         let envelope = build_work_item_envelope(item, &self.owner_did, &self.author_did, asserted);
@@ -212,6 +216,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Lists work items.
     pub fn list_work_items(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("work_item", limit)
     }

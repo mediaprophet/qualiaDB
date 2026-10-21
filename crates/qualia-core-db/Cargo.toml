@@ -20,7 +20,17 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-dx12"
 # Browser model runtime:            --features wasm-llm
 # API explorer / playground:        --features wasm-full
 # Native-only stays native: daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF.
-gpu-runtime = ["dep:wgpu", "dep:etalon", "dep:raw-window-handle"]
+gpu-runtime = [
+    "dep:wgpu",
+    "dep:etalon",
+    "dep:etalon-agent",
+    "dep:etalon-wgsl-forge",
+    "dep:etalon-nquin",
+    "dep:etalon-tensor",
+    "dep:etalon-render",
+    "dep:etalon-wasm",
+    "dep:raw-window-handle",
+]
 # DX12 remains enabled in the default Windows build. The portable native profile
 # can omit it and use the renderer-only GLES/Vulkan selection path instead.
 gpu-native-dx12 = ["wgpu/dx12", "etalon?/dx12"]
@@ -186,12 +196,12 @@ rand_distr = "0.6.0"
 fast_qr = { workspace = true, features = ["svg"] }
 wgpu = { workspace = true, default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"], optional = true }
 etalon = { workspace = true, default-features = false, features = ["std", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"], optional = true }
-etalon-agent = { workspace = true }
-etalon-wgsl-forge = { workspace = true }
-etalon-nquin = { workspace = true }
-etalon-tensor = { workspace = true }
-etalon-render = { workspace = true }
-etalon-wasm = { workspace = true }
+etalon-agent = { workspace = true, optional = true }
+etalon-wgsl-forge = { workspace = true, optional = true }
+etalon-nquin = { workspace = true, optional = true }
+etalon-tensor = { workspace = true, optional = true }
+etalon-render = { workspace = true, optional = true }
+etalon-wasm = { workspace = true, optional = true }
 naga = { workspace = true, features = ["wgsl-in", "spv-out", "glsl-out"], optional = true }
 raw-window-handle = { workspace = true, optional = true }
 cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }

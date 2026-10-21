@@ -420,21 +420,25 @@ impl CompiledCell {
     }
 
     #[wasm_bindgen(getter)]
+    /// `code` size.
     pub fn code_size(&self) -> usize {
         self.chunk.code.len()
     }
 
     #[wasm_bindgen(getter)]
+    /// Constants.
     pub fn constants(&self) -> usize {
         self.chunk.constants.len()
     }
 
     #[wasm_bindgen(getter)]
+    /// Functions.
     pub fn functions(&self) -> usize {
         self.chunk.functions.len()
     }
 
     #[wasm_bindgen(getter)]
+    /// Top-level locals.
     pub fn top_locals(&self) -> u16 {
         self.chunk.top_locals
     }

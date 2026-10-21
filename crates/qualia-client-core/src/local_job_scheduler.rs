@@ -80,6 +80,7 @@ pub enum LocalJobKind {
 }
 
 impl LocalJobKind {
+    /// `true` when ontology-work.
     pub fn is_ontology_work(&self) -> bool {
         matches!(
             self,
@@ -159,6 +160,7 @@ fn jobs_store_path() -> PathBuf {
 }
 
 impl LocalJobScheduler {
+    /// Creates a new instance.
     pub fn new() -> Self {
         let path = jobs_store_path();
         let mut jobs = load_jobs(&path);
@@ -181,6 +183,7 @@ impl LocalJobScheduler {
         }
     }
 
+    /// Global singleton.
     pub fn global() -> Arc<Self> {
         GLOBAL.get_or_init(|| Arc::new(Self::new())).clone()
     }
@@ -222,6 +225,7 @@ impl LocalJobScheduler {
         scheduler.inner.notify.notify_one();
     }
 
+    /// Enqueues a job.
     pub fn enqueue(&self, kind: LocalJobKind) -> Result<LocalJob, String> {
         self.enqueue_for_device(kind, None)
     }
@@ -339,6 +343,7 @@ impl LocalJobScheduler {
         Ok(job)
     }
 
+    /// State snapshot.
     pub fn snapshot(&self) -> Result<JobQueueSnapshot, String> {
         let jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
         let mut queued = 0usize;
@@ -362,11 +367,13 @@ impl LocalJobScheduler {
         })
     }
 
+    /// Gets.
     pub fn get(&self, id: &str) -> Result<Option<LocalJob>, String> {
         let jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
         Ok(jobs.iter().find(|j| j.id == id).cloned())
     }
 
+    /// Cancels.
     pub fn cancel(&self, id: &str) -> Result<bool, String> {
         let mut jobs = self.inner.jobs.lock().map_err(|e| e.to_string())?;
         let Some(job) = jobs.iter_mut().find(|j| j.id == id) else {

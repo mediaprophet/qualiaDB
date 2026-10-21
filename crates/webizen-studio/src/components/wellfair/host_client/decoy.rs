@@ -33,6 +33,7 @@ pub async fn get_decoy_retention_mode(real_pin: &str) -> Result<String, String> 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Gets decoy-retention-mode.
 pub async fn get_decoy_retention_mode(_real_pin: &str) -> Result<String, String> {
     // Fail closed like every other wrapper in this file: never fabricate a
     // security-relevant duress-audit-retention value off the desktop host. A
@@ -65,6 +66,7 @@ pub async fn set_decoy_retention_mode(real_pin: &str, mode: &str) -> Result<(), 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Sets decoy-retention-mode.
 pub async fn set_decoy_retention_mode(_real_pin: &str, _mode: &str) -> Result<(), String> {
     // Fail closed like every other mutating wrapper in this file: never report
     // a security-relevant duress-audit-retention write as succeeding when
@@ -130,6 +132,7 @@ pub async fn review_decoy_activity(real_pin: &str) -> Result<DecoyActivityReport
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn review_decoy_activity(_real_pin: &str) -> Result<DecoyActivityReportDto, String> {
     Err("Decoy review requires the Tauri desktop host".into())
 }
@@ -158,6 +161,7 @@ pub async fn curate_decoy_note(real_pin: &str, body: &str) -> Result<(), String>
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn curate_decoy_note(_real_pin: &str, _body: &str) -> Result<(), String> {
     Err("Decoy curation requires the Tauri desktop host".into())
 }

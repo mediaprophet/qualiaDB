@@ -44,6 +44,7 @@ pub struct SolidPodBundle {
 }
 
 impl SolidPodBundle {
+    /// `SolidPodBundle::new`.
     pub fn new(webid_uri: &str) -> Self {
         let default_items = vec![
             SolidExportItem {

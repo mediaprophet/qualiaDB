@@ -6,6 +6,7 @@ use web_sys::{Document, Element, HtmlElement};
 
 use super::native_daemon::PulseEvent;
 
+/// Builds live-stream.
 pub fn build_live_stream(document: &Document) -> Element {
     let root = document.create_element("div").unwrap();
     root.set_attribute("data-pulse-live-stream", "").ok();

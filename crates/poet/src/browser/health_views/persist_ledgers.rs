@@ -22,6 +22,7 @@ fn panel(
     )
 }
 
+/// Builds mental-wellbeing-view.
 pub fn build_mental_wellbeing_view(document: &Document) -> Element {
     panel(
         document,
@@ -44,6 +45,7 @@ pub fn build_mental_wellbeing_view(document: &Document) -> Element {
     )
 }
 
+/// Builds therapy-notes-view.
 pub fn build_therapy_notes_view(document: &Document) -> Element {
     panel(
         document,
@@ -62,6 +64,7 @@ pub fn build_therapy_notes_view(document: &Document) -> Element {
     )
 }
 
+/// Builds sleep-view.
 pub fn build_sleep_view(document: &Document) -> Element {
     panel(
         document,
@@ -84,6 +87,7 @@ pub fn build_sleep_view(document: &Document) -> Element {
     )
 }
 
+/// Builds diet-view.
 pub fn build_diet_view(document: &Document) -> Element {
     panel(
         document,
@@ -106,6 +110,7 @@ pub fn build_diet_view(document: &Document) -> Element {
     )
 }
 
+/// Builds physical-activity-view.
 pub fn build_physical_activity_view(document: &Document) -> Element {
     panel(
         document,
@@ -128,6 +133,7 @@ pub fn build_physical_activity_view(document: &Document) -> Element {
     )
 }
 
+/// Builds immunizations-view.
 pub fn build_immunizations_view(document: &Document) -> Element {
     panel(
         document,
@@ -150,6 +156,7 @@ pub fn build_immunizations_view(document: &Document) -> Element {
     )
 }
 
+/// Builds procedures-view.
 pub fn build_procedures_view(document: &Document) -> Element {
     panel(
         document,
@@ -172,6 +179,7 @@ pub fn build_procedures_view(document: &Document) -> Element {
     )
 }
 
+/// Builds family-history-view.
 pub fn build_family_history_view(document: &Document) -> Element {
     panel(
         document,
@@ -194,6 +202,7 @@ pub fn build_family_history_view(document: &Document) -> Element {
     )
 }
 
+/// Builds hypotheses-view.
 pub fn build_hypotheses_view(document: &Document) -> Element {
     panel(
         document,
@@ -216,6 +225,7 @@ pub fn build_hypotheses_view(document: &Document) -> Element {
     )
 }
 
+/// Builds biometrics-view.
 pub fn build_biometrics_view(document: &Document) -> Element {
     panel(
         document,
@@ -238,6 +248,7 @@ pub fn build_biometrics_view(document: &Document) -> Element {
     )
 }
 
+/// Builds welfare-support-view.
 pub fn build_welfare_support_view(document: &Document) -> Element {
     panel(
         document,
@@ -260,6 +271,7 @@ pub fn build_welfare_support_view(document: &Document) -> Element {
     )
 }
 
+/// Builds life-records-view.
 pub fn build_life_records_view(document: &Document) -> Element {
     panel(
         document,
@@ -278,6 +290,7 @@ pub fn build_life_records_view(document: &Document) -> Element {
     )
 }
 
+/// Builds authority-attestations-view.
 pub fn build_authority_attestations_view(document: &Document) -> Element {
     panel(
         document,

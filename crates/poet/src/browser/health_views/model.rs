@@ -14,6 +14,7 @@ pub struct HealthRecord {
 }
 
 impl HealthRecord {
+    /// Field text.
     pub fn field_text(&self, key: &str) -> Option<String> {
         self.fields.get(key).and_then(|value| match value {
             Value::String(text) if !text.trim().is_empty() => Some(text.clone()),
@@ -23,6 +24,7 @@ impl HealthRecord {
         })
     }
 
+    /// Field number.
     pub fn field_number(&self, key: &str) -> Option<f64> {
         self.fields.get(key).and_then(|value| match value {
             Value::Number(number) => number.as_f64(),
@@ -31,6 +33,7 @@ impl HealthRecord {
         })
     }
 
+    /// `occurred` label.
     pub fn occurred_label(&self) -> String {
         for key in ["measured_at", "occurred_at", "date"] {
             if let Some(value) = self.field_text(key) {
@@ -45,6 +48,7 @@ impl HealthRecord {
         "Date not recorded".into()
     }
 
+    /// Sort key.
     pub fn sort_key(&self) -> i64 {
         for key in ["measured_at", "occurred_at", "date"] {
             let Some(raw) = self.field_text(key) else {
@@ -66,6 +70,7 @@ impl HealthRecord {
         self.updated_at
     }
 
+    /// Summary text.
     pub fn summary(&self) -> String {
         let keys: &[&str] = match self.family.as_str() {
             "health_vital" => &["sys_bp", "dia_bp", "hr", "glucose", "unit"],
@@ -98,6 +103,7 @@ pub struct VitalPoint {
     pub heart_rate: Option<f64>,
 }
 
+/// Records from the payload.
 pub fn records_from_payload(family: &str, data: &Value) -> Vec<HealthRecord> {
     data.get("records")
         .and_then(Value::as_array)
@@ -134,6 +140,7 @@ pub fn records_from_payload(family: &str, data: &Value) -> Vec<HealthRecord> {
         .collect()
 }
 
+/// Sorts recent records.
 pub fn sort_recent(records: &mut [HealthRecord]) {
     records.sort_by_key(|record| std::cmp::Reverse(record.sort_key()));
 }
@@ -147,6 +154,7 @@ pub enum MetricKind {
 }
 
 impl MetricKind {
+    /// `MetricKind::id`.
     pub fn id(&self) -> String {
         match self {
             MetricKind::BloodPressure => "bp".into(),
@@ -156,6 +164,7 @@ impl MetricKind {
         }
     }
 
+    /// UI label.
     pub fn label(&self) -> String {
         match self {
             MetricKind::BloodPressure => "Blood pressure".into(),
@@ -165,6 +174,7 @@ impl MetricKind {
         }
     }
 
+    /// Default unit.
     pub fn default_unit(&self) -> &str {
         match self {
             MetricKind::BloodPressure => "mmHg",
@@ -346,6 +356,7 @@ pub fn extract_metric_series(records: &[HealthRecord], kind: &MetricKind) -> Vec
     result
 }
 
+/// Vital points.
 pub fn vital_points(records: &[HealthRecord]) -> Vec<VitalPoint> {
     let mut points = records
         .iter()

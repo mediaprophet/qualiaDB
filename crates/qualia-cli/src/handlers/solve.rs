@@ -3,6 +3,7 @@ use crate::cli::{
 };
 use crate::solve;
 
+/// Handles the subcommand action.
 pub fn handle(action: &SolveAction) {
     match action {
         SolveAction::Linalg { action } => match action {

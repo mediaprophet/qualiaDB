@@ -3,6 +3,7 @@
 
 use super::ribbon::RibbonTool;
 
+/// Tools for the type.
 pub(super) fn tools_for_type(container_type: &str) -> Vec<RibbonTool> {
     match container_type {
         "doc" => vec![

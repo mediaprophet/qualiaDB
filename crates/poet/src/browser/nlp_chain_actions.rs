@@ -101,10 +101,12 @@ fn invoke_dual(
 
 // ── Pure local fallback sketches ──────────────────────────────────────────
 
+/// Local word-count helper.
 pub(crate) fn local_word_count(text: &str) -> usize {
     text.split_whitespace().count()
 }
 
+/// Local sentence-count helper.
 pub(crate) fn local_sentence_count(text: &str) -> usize {
     let count = text
         .split(|c| c == '.' || c == '!' || c == '?')

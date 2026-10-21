@@ -221,6 +221,7 @@ fn parse_checkpoint_history(raw: &str) -> Vec<CheckpointMeta> {
         .unwrap_or_default()
 }
 
+/// Checkpoint history.
 pub fn checkpoint_history() -> Result<Vec<CheckpointMeta>, String> {
     let storage = web_sys::window()
         .ok_or("no window")?
@@ -234,6 +235,7 @@ pub fn checkpoint_history() -> Result<Vec<CheckpointMeta>, String> {
     Ok(parse_checkpoint_history(&raw))
 }
 
+/// Loads checkpoint-seeds.
 pub fn load_checkpoint_seeds(id: &str) -> Result<Vec<ManifoldSeed>, String> {
     if id.is_empty() || id.len() > 256 {
         return Err("invalid checkpoint id".into());
@@ -301,6 +303,7 @@ pub struct MemoryManifestStore {
 }
 
 impl MemoryManifestStore {
+    /// `MemoryManifestStore::new`.
     pub fn new() -> Self {
         Self {
             records: std::cell::RefCell::new(Vec::new()),

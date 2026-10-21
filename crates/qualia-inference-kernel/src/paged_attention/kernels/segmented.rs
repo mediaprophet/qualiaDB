@@ -4,6 +4,7 @@ pub const PAGED_GQA_SEGMENTED_PARTIAL_ENTRY: &str = "paged_gqa_segmented_partial
 pub const PAGED_GQA_SEGMENTED_MERGE_ENTRY: &str = "paged_gqa_segmented_merge";
 pub const MAX_ATTENTION_SEGMENTS: usize = 8;
 
+/// Segments for a position.
 pub fn segments_for_position(position: u32) -> usize {
     match position {
         0..=511 => 1,

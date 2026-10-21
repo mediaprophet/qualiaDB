@@ -8,6 +8,7 @@ use crate::browser::native_daemon::{
 const MAX_HISTORY_TURNS: usize = 8;
 const MAX_HISTORY_BYTES: usize = 16 * 1024;
 
+/// Loads conversation-context.
 pub async fn load_conversation_context(conversation: &str) -> Result<String, String> {
     let response = daemon_records_query(NativeRecordQueryRequest {
         family: "project_agent".into(),
@@ -63,6 +64,7 @@ pub async fn load_conversation_context(conversation: &str) -> Result<String, Str
     Ok(context)
 }
 
+/// Persists the turn.
 pub fn persist_turn(
     conversation: &str,
     prompt: &str,

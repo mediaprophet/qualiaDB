@@ -7,6 +7,7 @@ mod physics_inspect;
 mod portals_avatars;
 mod worlds_objects;
 
+/// Spec-tool rows.
 pub fn rows() -> &'static [SpecTool] {
     static ROWS: OnceLock<Vec<SpecTool>> = OnceLock::new();
     ROWS.get_or_init(|| {

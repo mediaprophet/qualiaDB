@@ -158,6 +158,7 @@ pub fn agent_request_key_role(role: &str) -> Result<KeyRoleGrant, String> {
     Ok(vault.agent_request_role(role))
 }
 
+/// Nym live status.
 pub fn nym_live_status() -> NymLiveStatus {
     let enabled_wanted = APP_STATE
         .get()
@@ -262,6 +263,7 @@ pub async fn enable_nym(network: Option<String>) -> Result<NymLiveStatus, String
     Ok(nym_live_status())
 }
 
+/// Disables Nym.
 pub async fn disable_nym() -> Result<NymLiveStatus, String> {
     let stop = {
         let mut g = runtime().lock().unwrap();

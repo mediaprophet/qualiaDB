@@ -16,6 +16,7 @@ use super::types::s;
 // ── Tauri invoke bridge ───────────────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
+/// Invokes json.
 pub async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
@@ -175,6 +176,7 @@ pub fn project_display_name(summary: Option<&str>, fallback: &str) -> String {
     fallback.to_string()
 }
 
+/// Stores the active project.
 pub fn store_active_project(id: &str, name: &str) {
     #[cfg(target_arch = "wasm32")]
     if let Some(win) = web_sys::window() {
@@ -194,6 +196,7 @@ pub fn store_active_project(id: &str, name: &str) {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Lists project-records.
 pub async fn list_project_records() -> Result<Vec<(String, String)>, String> {
     // Prefer local-first coop registry (works without vault).
     let mut out: Vec<(String, String)> = Vec::new();
@@ -236,6 +239,7 @@ pub async fn list_project_records() -> Result<Vec<(String, String)>, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
+/// Creates project-record.
 pub async fn create_project_record(
     name: &str,
     description: &str,
@@ -342,6 +346,7 @@ pub async fn remember_project_to_memory(label: &str, board_id: &str) -> Result<S
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback — fails closed (requires the Tauri desktop host).
 pub async fn remember_project_to_memory(_label: &str, _board_id: &str) -> Result<String, String> {
     Err("Remember in Lived Memory requires the desktop host.".into())
 }
@@ -349,6 +354,7 @@ pub async fn remember_project_to_memory(_label: &str, _board_id: &str) -> Result
 // ── Vault helpers ─────────────────────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
+/// Tauri bridge — invokes the host command and decodes the JSON response.
 pub fn vault_hint(err: &str) -> String {
     let e = err.to_lowercase();
     if e.contains("unlock")
@@ -374,6 +380,7 @@ pub fn vault_state_label(v: crate::components::wellfair::host_dto::VaultLifecycl
     }
 }
 
+/// Vault state detail.
 pub fn vault_state_detail(
     v: crate::components::wellfair::host_dto::VaultLifecycle,
 ) -> &'static str {
@@ -389,6 +396,7 @@ pub fn vault_state_detail(
     }
 }
 
+/// `true` when the vault needs attention.
 pub fn vault_needs_attention(v: crate::components::wellfair::host_dto::VaultLifecycle) -> bool {
     use crate::components::wellfair::host_dto::VaultLifecycle;
     !matches!(v, VaultLifecycle::Unlocked)
@@ -415,6 +423,7 @@ pub fn copy_to_clipboard(text: &str, mut status: Signal<String>, ok_msg: &str) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+/// Non-desktop fallback.
 pub fn copy_to_clipboard(_text: &str, mut status: Signal<String>, _ok_msg: &str) {
     status.set("Copy is available in the desktop webview.".into());
 }

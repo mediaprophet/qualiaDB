@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
+/// Appends panels.
 pub(super) fn append_panels(document: &Document, content: &Element) {
     content
         .append_child(&build_crdt_sync_panel(document))
@@ -41,6 +42,7 @@ pub(super) fn append_panels(document: &Document, content: &Element) {
         .unwrap();
 }
 
+/// Wires all panels.
 pub(super) fn wire_all(document: &Document) {
     wire_crdt_sync_panel(document);
     wire_agency_merkle_panel(document);
@@ -54,6 +56,7 @@ pub(super) fn wire_all(document: &Document) {
     wire_owl_converter_panel(document);
 }
 
+/// Builds crdt-sync-panel.
 pub(super) fn build_crdt_sync_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "crdt_sync", false);
     panel
@@ -92,6 +95,7 @@ pub(super) fn build_crdt_sync_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-crdt-sync` panel.
 pub(super) fn wire_crdt_sync_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("crdt-sync-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -104,6 +108,7 @@ pub(super) fn wire_crdt_sync_panel(document: &Document) {
     }
 }
 
+/// Builds agency-merkle-panel.
 pub(super) fn build_agency_merkle_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "agency_merkle", false);
     panel
@@ -149,6 +154,7 @@ pub(super) fn build_agency_merkle_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-agency-merkle` panel.
 pub(super) fn wire_agency_merkle_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("agency-merkle-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -161,6 +167,7 @@ pub(super) fn wire_agency_merkle_panel(document: &Document) {
     }
 }
 
+/// Builds key-vault-panel.
 pub(super) fn build_key_vault_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "key_vault", false);
     panel
@@ -199,6 +206,7 @@ pub(super) fn build_key_vault_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-key-vault` panel.
 pub(super) fn wire_key_vault_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("key-vault-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -211,6 +219,7 @@ pub(super) fn wire_key_vault_panel(document: &Document) {
     }
 }
 
+/// Builds policy-evaluator-panel.
 pub(super) fn build_policy_evaluator_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "policy_evaluator", false);
     panel
@@ -249,6 +258,7 @@ pub(super) fn build_policy_evaluator_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-policy-evaluator` panel.
 pub(super) fn wire_policy_evaluator_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("policy-evaluator-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -261,6 +271,7 @@ pub(super) fn wire_policy_evaluator_panel(document: &Document) {
     }
 }
 
+/// Builds consent-manager-panel.
 pub(super) fn build_consent_manager_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "consent_manager", false);
     panel
@@ -321,6 +332,7 @@ pub(super) fn build_consent_manager_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-consent-manager` panel.
 pub(super) fn wire_consent_manager_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("consent-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -333,6 +345,7 @@ pub(super) fn wire_consent_manager_panel(document: &Document) {
     }
 }
 
+/// Builds carrier-panel.
 pub(super) fn build_carrier_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "carrier", false);
     panel
@@ -371,6 +384,7 @@ pub(super) fn build_carrier_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-carrier` panel.
 pub(super) fn wire_carrier_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("carrier-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -383,6 +397,7 @@ pub(super) fn wire_carrier_panel(document: &Document) {
     }
 }
 
+/// Builds control-feedback-panel.
 pub(super) fn build_control_feedback_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "control_feedback", false);
     panel
@@ -421,6 +436,7 @@ pub(super) fn build_control_feedback_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-control-feedback` panel.
 pub(super) fn wire_control_feedback_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("control-feedback-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -433,6 +449,7 @@ pub(super) fn wire_control_feedback_panel(document: &Document) {
     }
 }
 
+/// Builds likeliness-panel.
 pub(super) fn build_likeliness_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "likeliness", false);
     panel
@@ -471,6 +488,7 @@ pub(super) fn build_likeliness_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-likeliness` panel.
 pub(super) fn wire_likeliness_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("likeliness-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -483,6 +501,7 @@ pub(super) fn wire_likeliness_panel(document: &Document) {
     }
 }
 
+/// Builds qubo-panel.
 pub(super) fn build_qubo_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "qubo", false);
     panel
@@ -521,6 +540,7 @@ pub(super) fn build_qubo_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-qubo` panel.
 pub(super) fn wire_qubo_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("qubo-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {
@@ -533,6 +553,7 @@ pub(super) fn wire_qubo_panel(document: &Document) {
     }
 }
 
+/// Builds owl-converter-panel.
 pub(super) fn build_owl_converter_panel(document: &Document) -> Element {
     let panel = make_tool_panel(document, "owl_converter", false);
     panel
@@ -587,6 +608,7 @@ pub(super) fn build_owl_converter_panel(document: &Document) -> Element {
     panel
 }
 
+/// `wire-owl-converter` panel.
 pub(super) fn wire_owl_converter_panel(document: &Document) {
     if let Some(btn) = document.get_element_by_id("owl-evaluate") {
         let closure = Closure::wrap(Box::new(move |_e: MouseEvent| {

@@ -13,11 +13,13 @@ pub struct Landmark2 {
 
 impl Landmark2 {
     #[inline]
+    /// Creates a new instance.
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
     #[inline]
+    /// Distance.
     pub fn dist(self, other: Self) -> f32 {
         let dx = self.x - other.x;
         let dy = self.y - other.y;
@@ -25,6 +27,7 @@ impl Landmark2 {
     }
 
     #[inline]
+    /// Midpoint.
     pub fn midpoint(self, other: Self) -> Self {
         Self {
             x: 0.5 * (self.x + other.x),
@@ -76,6 +79,7 @@ pub struct LandmarkFrame {
 }
 
 impl LandmarkFrame {
+    /// Empty instance.
     pub fn empty(t_ms: u32) -> Self {
         Self {
             t_ms,
@@ -85,6 +89,7 @@ impl LandmarkFrame {
     }
 
     #[inline]
+    /// Sets a value.
     pub fn set(&mut self, id: PadLandmarkId, p: Landmark2) {
         let i = id as usize;
         self.points[i] = p;
@@ -92,6 +97,7 @@ impl LandmarkFrame {
     }
 
     #[inline]
+    /// Gets a value.
     pub fn get(self, id: PadLandmarkId) -> Option<Landmark2> {
         let i = id as usize;
         if (self.valid_mask & (1u8 << i)) != 0 {

@@ -7,6 +7,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{Document, Element, HtmlElement, MouseEvent};
 
+/// Builds faceted-panel.
 pub(super) fn build_faceted_panel(document: &Document) -> Element {
     let panel = document.create_element("div").unwrap();
     panel.set_class_name("search-mode-panel");
@@ -164,6 +165,7 @@ fn build_facet_group(
     group
 }
 
+/// Wires faceted-search.
 pub(super) fn wire_faceted_search(document: &Document) {
     // Wire facet chip toggling
     let chips = document.query_selector_all(".facet-chip").unwrap();
@@ -265,6 +267,7 @@ pub(super) fn wire_faceted_search(document: &Document) {
     svb_closure.forget();
 }
 
+/// Gets active-facets.
 pub(super) fn get_active_facets(document: &Document) -> Vec<(String, Vec<String>)> {
     let chips = document.query_selector_all(".facet-chip.active").unwrap();
     let mut facet_map: std::collections::HashMap<String, Vec<String>> =

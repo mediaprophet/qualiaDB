@@ -124,6 +124,7 @@ fn sigma_rgb(sigma: f32) -> (u8, u8, u8) {
 }
 
 #[component]
+/// Dioxus `AmbientFieldCanvas` component.
 pub fn AmbientFieldCanvas(canvas_id: String, height_px: u32) -> Element {
     let mut telemetry = use_signal(AmbientTelemetry::default);
     let mut frame = use_signal(|| 0u64);

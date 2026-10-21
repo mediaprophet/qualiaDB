@@ -2,6 +2,7 @@ use super::super::host_dto::SensitivityClassDto;
 use dioxus::prelude::*;
 
 #[component]
+/// Dioxus `SensitivityBadge` component.
 pub fn SensitivityBadge(class: SensitivityClassDto) -> Element {
     let (label, color) = match class {
         SensitivityClassDto::Public => ("Public", "#2a9d8f"),

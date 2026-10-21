@@ -15,6 +15,8 @@ mod sheet;
 mod social;
 mod solid;
 mod spatial;
+mod studio_workbenches;
+pub mod specialized_lab;
 
 pub use bookmarks::BookmarksBody;
 pub use codecs::CodecsBody;
@@ -31,3 +33,7 @@ pub use sheet::SheetBody;
 pub use social::SocialBody;
 pub use solid::SolidBody;
 pub use spatial::{MapBody, MediaBody, SubmanifoldBody};
+pub use specialized_lab::{ShedConstructSelector, ShedToolboxRunner};
+pub use studio_workbenches::{
+    CadStudioBody, DeckStudioBody, PdfStudioBody, VectorRasterStudioBody,
+};

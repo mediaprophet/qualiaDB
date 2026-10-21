@@ -2,6 +2,7 @@
 
 use super::*;
 
+/// Registers epistemic-toolbox.
 pub(super) fn register_epistemic_toolbox(reg: &mut Registry) {
     let tools: Vec<Box<dyn crate::tool_chest::core::tool::Tool>> = vec![
         Box::new(SimpleTool::new(

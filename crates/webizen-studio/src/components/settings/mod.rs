@@ -28,6 +28,7 @@ pub const SELECTED_ROW: &str = "width:100%;display:flex;align-items:center;gap:1
 pub const FIELD: &str = "width:100%;box-sizing:border-box;border:1px solid var(--qualia-border);border-radius:9px;background:color-mix(in srgb,var(--qualia-bg) 72%,transparent);color:var(--qualia-text);padding:10px 11px;font:inherit;font-size:.75rem;";
 
 #[component]
+/// Dioxus `SettingsShell` component.
 pub fn SettingsShell() -> Element {
     let initial_section = {
         #[cfg(target_arch = "wasm32")]

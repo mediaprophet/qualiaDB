@@ -2,6 +2,7 @@
 
 use web_sys::{Document, Element};
 
+/// `?::run`.
 pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Option<Result<(), String>> {
     match tool_id {
         "epistemic:compare-perspectives" => Some(compare_perspectives(document, container)),
@@ -12,6 +13,7 @@ pub(super) fn run(document: &Document, container: &Element, tool_id: &str) -> Op
     }
 }
 
+/// Cycles to the next reconcile-strategy.
 pub(crate) fn next_reconcile_strategy(current: Option<&str>) -> &'static str {
     match current.map(str::trim) {
         Some("consensus") => "weighted_average",

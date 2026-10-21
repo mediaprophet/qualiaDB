@@ -100,6 +100,7 @@ fn first_line(document: &Document) -> String {
         .unwrap_or_default()
 }
 
+/// Chain action: new-app.
 pub(super) fn run_new_app(document: &Document, label: &str) {
     let id = app_id(document);
     let name = first_line(document);
@@ -117,6 +118,7 @@ pub(super) fn run_new_app(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: add-page.
 pub(super) fn run_add_page(document: &Document, label: &str) {
     let id = app_id(document);
     let title = first_line(document);
@@ -134,6 +136,7 @@ pub(super) fn run_add_page(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: navigate.
 pub(super) fn run_navigate(document: &Document, label: &str) {
     let id = app_id(document);
     let page_id = string_attr(selected_container(document).as_ref(), "data-page-id")
@@ -147,6 +150,7 @@ pub(super) fn run_navigate(document: &Document, label: &str) {
     );
 }
 
+/// Chain action: set-state.
 pub(super) fn run_set_state(document: &Document, label: &str) {
     let id = app_id(document);
     let key = string_attr(selected_container(document).as_ref(), "data-key")
