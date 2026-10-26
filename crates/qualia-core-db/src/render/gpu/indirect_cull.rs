@@ -750,12 +750,16 @@ mod tests {
     }
 
     fn perspective_view_proj() -> [[f32; 4]; 4] {
-        // Simple symmetric clip-space projection looking down -Z from origin
+        // Finite WebGPU [0,w] clip depth, looking down -Z. The former -0.01
+        // z coefficient put the near plane at z=-10 and correctly culled the
+        // fixture's radius-1 LOD0/LOD1 and holographic objects at z=-3,-8,-5.
+        const NEAR: f32 = 0.1;
+        const FAR: f32 = 100.0;
         [
             [1.0, 0.0, 0.0, 0.0],
             [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, -0.01, -1.0],
-            [0.0, 0.0, -0.1, 0.0],
+            [0.0, 0.0, FAR / (NEAR - FAR), -1.0],
+            [0.0, 0.0, NEAR * FAR / (NEAR - FAR), 0.0],
         ]
     }
 

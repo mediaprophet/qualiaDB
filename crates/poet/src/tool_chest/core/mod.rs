@@ -18,6 +18,7 @@ pub mod subject;
 pub mod tool;
 pub mod tool_chain;
 pub mod toolbox;
+pub mod topology;
 pub mod workspace;
 
 pub use construct::{ConstructSeed, ConstructSource};
@@ -36,6 +37,7 @@ pub use subject::SubjectSeed;
 pub use tool::{build_payload, SimpleTool, Tool, ToolKind, ToolMetadata};
 pub use tool_chain::{ToolChain, ToolChainMetadata};
 pub use toolbox::{Toolbox, ToolboxMetadata};
+pub use topology::*;
 pub use workspace::{
     ContainerOverride, DeviceAssignment, DeviceRole, WorkspaceDelta, WorkspaceState,
 };

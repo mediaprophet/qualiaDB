@@ -7,7 +7,9 @@
 //! Output is strictly cache-aligned (64-byte records) and little-endian.
 
 pub mod banked_lut;
+pub mod checked_reader;
 pub mod chunk_directory;
+pub mod georaster;
 pub mod holo_record;
 pub mod layout;
 pub mod lut_entry;
@@ -18,7 +20,11 @@ pub mod strata_record;
 mod tests;
 
 pub use banked_lut::*;
+pub use checked_reader::{
+    M64Chunk, M64PayloadInterval, M64ReadError, M64ReadLimits, M64Reader, M64Verification,
+};
 pub use chunk_directory::*;
+pub use georaster::*;
 pub use holo_record::*;
 pub use layout::*;
 pub use lut_entry::*;

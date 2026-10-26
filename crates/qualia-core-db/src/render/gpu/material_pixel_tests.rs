@@ -426,6 +426,36 @@ fn native_mask_hole_preserves_receiver_depth_in_ao_prepass() {
         hole_depth > solid_depth.saturating_add(100),
         "transparent cutout must leave the rear receiver in the AO surface, not the front caster: hole={hole_depth}, solid={solid_depth}"
     );
+    // Independent geometry oracle: intersect this AO pixel's camera ray with
+    // each known world-space plane, then compare the actual GPU packed code.
+    // The threshold above remains unchanged; no full-suite failure is waived.
+    let camera = renderer.camera_state();
+    let eye = crate::render::camera::orbit_eye_position_target(
+        camera.yaw,
+        camera.pitch,
+        camera.zoom,
+        camera.target,
+    );
+    let forward = crate::render::camera::orbit_forward(camera.yaw, camera.pitch);
+    let uniform = super::ao::make_uniform(64, 64, eye, forward, 0.5, 1.0, 0.0, 4, true);
+    let ndc = [
+        2.0 * 13.5 / uniform.viewport[0] - 1.0,
+        1.0 - 2.0 * 16.5 / uniform.viewport[1],
+    ];
+    let ray_z = uniform.camera_forward[2]
+        + ndc[0] * uniform.depth[3] * uniform.depth[2] * uniform.camera_right[2]
+        + ndc[1] * uniform.depth[2] * uniform.camera_up[2];
+    for (actual, plane_z) in [(hole_depth, -0.35), (solid_depth, 0.35)] {
+        let expected_view_depth = (plane_z - eye[2]) / ray_z;
+        let expected_code = super::ao::encode_depth(expected_view_depth).unwrap();
+        assert!(
+            actual.abs_diff(expected_code) <= 1,
+            "AO GPU/CPU depth mismatch: plane={plane_z} expected={expected_code} actual={actual}"
+        );
+        let decoded = super::ao::decode_depth(actual).unwrap();
+        assert!((decoded - expected_view_depth).abs() < 0.001,
+            "AO depth must retain near-object precision: expected={expected_view_depth} actual={decoded}");
+    }
 }
 
 #[test]

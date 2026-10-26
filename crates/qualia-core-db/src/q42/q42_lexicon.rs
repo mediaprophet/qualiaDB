@@ -92,8 +92,8 @@ impl Q42Context {
                 break;
             };
             if let Some(text) = lex_view
-                .lookup_webizen_identity(hash)
-                .or_else(|| lex_view.lookup_hash(hash))
+                .lookup_webizen_identity(hash).map(str::to_owned)
+                .or_else(|| lex_view.lookup_owned(hash))
             {
                 if let Some(colon_pos) = text.find(':') {
                     let prefix = &text[..colon_pos];
@@ -231,7 +231,8 @@ pub struct Q42Lexicon {
     pub terms: HashMap<String, u64>,
     /// Hash to term mapping (reverse lookup)
     pub reverse: HashMap<u64, String>,
-    /// Lexicon version
+    /// Legacy CBOR-LD processing-profile marker. This is not the Q42LEX wire
+    /// version; native v2/v4 bytes are interpreted by Q42LexMmap before adaptation.
     pub version: LexiconVersion,
     /// Context URI
     pub context_uri: String,
@@ -310,11 +311,11 @@ impl Q42Lexicon {
                 break;
             };
             if let Some(text) = lex_view
-                .lookup_webizen_identity(hash)
-                .or_else(|| lex_view.lookup_hash(hash))
+                .lookup_webizen_identity(hash).map(str::to_owned)
+                .or_else(|| lex_view.lookup_owned(hash))
             {
-                terms.insert(text.to_string(), hash);
-                reverse.insert(hash, text.to_string());
+                terms.insert(text.clone(), hash);
+                reverse.insert(hash, text);
             }
         }
 
@@ -379,3 +380,7 @@ impl Default for Q42Lexicon {
         Self::new()
     }
 }
+
+#[cfg(test)]
+#[path = "q42_lexicon_tests.rs"]
+mod tests;

@@ -4,6 +4,47 @@
 //! deterministic operations for image editing.
 
 use std::collections::BTreeMap;
+#[path = "image_source_over.rs"]
+mod source_over;
+#[path = "image_filters.rs"]
+mod filters;
+#[path = "image_composite.rs"]
+mod composite;
+pub use filters::{filter_plan, filter_rgba8_into};
+pub use composite::{composite_into, validate_document};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ImageError { Dimensions, Storage, Parameters, Budget, Output, Scratch }
+impl std::fmt::Display for ImageError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "image operation: {self:?}") }
+}
+impl std::error::Error for ImageError {}
+#[derive(Clone, Copy, Debug)]
+pub struct ImageLimits { pub max_pixels: usize, pub max_work: usize, pub max_bytes: usize }
+impl Default for ImageLimits {
+    fn default() -> Self { Self { max_pixels:4*1024*1024, max_work:1024*1024*1024, max_bytes:256*1024*1024 } }
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ImageFilterOp {
+    GaussianBlur { sigma:f32 }, Sharpen { sigma:f32, amount:f32 },
+    HueRotate { degrees:f32 }, Emboss { azimuth_degrees:f32, strength:f32 },
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FilterPlan { pub scratch_pixels:usize, pub work:usize, pub bytes:usize }
+/// Cold checked adapter. All admission precedes allocation and source mutation.
+pub fn try_apply_image_filter(layer:&mut ImageLayer, op:ImageFilterOp, limits:ImageLimits)->Result<(),ImageError> {
+    let plan=filter_plan(layer.width,layer.height,op,limits)?;
+    let count=(layer.width as usize).checked_mul(layer.height as usize).ok_or(ImageError::Dimensions)?;
+    if layer.pixels.len()!=count {return Err(ImageError::Storage);}
+    let mut output=Vec::new(); output.try_reserve_exact(count).map_err(|_|ImageError::Budget)?;
+    output.resize(count,[0;4]);
+    let mut scratch=Vec::new(); scratch.try_reserve_exact(plan.scratch_pixels).map_err(|_|ImageError::Budget)?;
+    scratch.resize(plan.scratch_pixels,[0.0;4]);
+    filter_rgba8_into(&layer.pixels,layer.width,layer.height,op,limits,&mut output,&mut scratch)?;
+    layer.pixels=output;
+    Ok(())
+}
+
 
 /// Blend mode for layer compositing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,8 +144,8 @@ impl ImageLayer {
     /// Apply a rectangular selection mask.
     pub fn set_rect_mask(&mut self, x: u32, y: u32, w: u32, h: u32) {
         let mut mask = vec![0u8; (self.width as usize) * (self.height as usize)];
-        for my in y..(y + h).min(self.height) {
-            for mx in x..(x + w).min(self.width) {
+        for my in y..y.saturating_add(h).min(self.height) {
+            for mx in x..x.saturating_add(w).min(self.width) {
                 let idx = (my as usize) * (self.width as usize) + (mx as usize);
                 mask[idx] = 255;
             }
@@ -159,7 +200,7 @@ impl BrushStroke {
                     let dy = y as f32 - py;
                     let dist = (dx * dx + dy * dy).sqrt();
                     if dist <= radius {
-                        let alpha = if dist < radius * self.hardness {
+                        let alpha = if dist <= radius * self.hardness {
                             self.opacity
                         } else {
                             self.opacity
@@ -167,18 +208,8 @@ impl BrushStroke {
                                     - (dist - radius * self.hardness)
                                         / (radius * (1.0 - self.hardness)))
                         };
-                        let mut px_val = layer.get_pixel(x, y);
-                        px_val[0] = (self.colour[0] as f32 * alpha
-                            + px_val[0] as f32 * (1.0 - alpha))
-                            as u8;
-                        px_val[1] = (self.colour[1] as f32 * alpha
-                            + px_val[1] as f32 * (1.0 - alpha))
-                            as u8;
-                        px_val[2] = (self.colour[2] as f32 * alpha
-                            + px_val[2] as f32 * (1.0 - alpha))
-                            as u8;
-                        px_val[3] = ((alpha * 255.0) as u8).max(px_val[3]);
-                        layer.set_pixel(x, y, px_val);
+                        let pixel = source_over::rgba(self.colour, layer.get_pixel(x, y), alpha);
+                        layer.set_pixel(x, y, pixel);
                     }
                 }
             }
@@ -228,9 +259,25 @@ pub enum ImageFilter {
     Emboss,
 }
 
-/// Apply a filter to a layer's pixels.
+/// Legacy normalized-intensity convenience operation on a valid bounded layer.
+/// Completed mappings: blur sigma=4*i; sharpen sigma=1/amount=i; hue=360*i
+/// degrees; emboss azimuth=135 degrees/strength=i. Other operations retain their
+/// established semantics. Use try_apply_image_filter for typed, fallible edits.
+/// Panics on malformed/out-of-budget input for the four completed mappings.
 pub fn apply_filter(layer: &mut ImageLayer, filter: ImageFilter, intensity: f32) {
     let intensity = intensity.clamp(0.0, 1.0);
+    let completed = match filter {
+        ImageFilter::GaussianBlur => Some(ImageFilterOp::GaussianBlur {sigma:4.0*intensity}),
+        ImageFilter::Sharpen => Some(ImageFilterOp::Sharpen {sigma:1.0,amount:intensity}),
+        ImageFilter::HueRotate => Some(ImageFilterOp::HueRotate {degrees:360.0*intensity}),
+        ImageFilter::Emboss => Some(ImageFilterOp::Emboss {azimuth_degrees:135.0,strength:intensity}),
+        _ => None,
+    };
+    if let Some(op)=completed {
+        try_apply_image_filter(layer,op,ImageLimits::default())
+            .expect("legacy apply_filter requires valid bounded input; use checked image APIs for fallible admission");
+        return;
+    }
     match filter {
         ImageFilter::Grayscale => {
             for px in &mut layer.pixels {
@@ -299,10 +346,7 @@ pub fn apply_filter(layer: &mut ImageLayer, filter: ImageFilter, intensity: f32)
                 }
             }
         }
-        _ => {
-            // GaussianBlur, Sharpen, HueRotate, Emboss — would need convolution kernels.
-            // For now, these are no-ops with the intensity parameter stored.
-        }
+        ImageFilter::GaussianBlur | ImageFilter::Sharpen | ImageFilter::HueRotate | ImageFilter::Emboss => unreachable!("completed filters returned above"),
     }
 }
 
@@ -362,23 +406,24 @@ impl ImageDocument {
         self.layers.len()
     }
 
-    /// Composite all visible layers into a single RGBA buffer.
-    pub fn composite(&self) -> Vec<[u8; 4]> {
-        let mut result = vec![[0u8; 4]; (self.width as usize) * (self.height as usize)];
-        for layer in &self.layers {
-            if !layer.visible {
-                continue;
-            }
-            for (i, px) in layer.pixels.iter().enumerate() {
-                let alpha = (px[3] as f32 / 255.0) * layer.opacity;
-                let r = (px[0] as f32 * alpha + result[i][0] as f32 * (1.0 - alpha)) as u8;
-                let g = (px[1] as f32 * alpha + result[i][1] as f32 * (1.0 - alpha)) as u8;
-                let b = (px[2] as f32 * alpha + result[i][2] as f32 * (1.0 - alpha)) as u8;
-                let a = ((alpha * 255.0) as u8).max(result[i][3]);
-                result[i] = [r, g, b, a];
-            }
-        }
-        result
+    /// Fallible, bounded cold authoring composition. Source layers remain immutable.
+    pub fn try_composite(&self, limits:ImageLimits)->Result<Vec<[u8;4]>,ImageError> {
+        let count=validate_document(self,limits)?;
+        let mut output=Vec::new(); output.try_reserve_exact(count).map_err(|_|ImageError::Budget)?;
+        output.resize(count,[0;4]);
+        composite_into(self,&mut output,limits)?;
+        Ok(output)
+    }
+    /// Caller-buffered composition; admission finishes before any output changes.
+    pub fn composite_into(&self,out:&mut[[u8;4]],limits:ImageLimits)->Result<(),ImageError> {
+        composite_into(self,out,limits)
+    }
+    /// Composite valid layers with their blend modes, masks and signed placement.
+    /// # Panics
+    /// A malformed/out-of-budget legacy document panics before producing output.
+    /// Use try_composite or composite_into for explicit non-panicking refusal.
+    pub fn composite(&self)->Vec<[u8;4]> {
+        self.try_composite(ImageLimits::default()).expect("invalid legacy image document; use checked composition for fallible admission")
     }
 
     /// Adds a selection region.

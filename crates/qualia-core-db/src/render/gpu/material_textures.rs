@@ -113,12 +113,13 @@ pub(super) fn create_defaults(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
 ) -> Result<MaterialTextureDefaults, String> {
-    // base colour=white, normal=(0.5,0.5,1), metallic-roughness=(0,1,0), AO=white,
+    // base colour=white, normal=(0.5,0.5,1), metallic-roughness=(0,1,1), AO=white,
+    // G/B are neutral multipliers for authored roughness/metallic factors.
     // emissive=black, stylized ramp=white. One pixel per semantic slot.
     const DEFAULTS: [[u8; 4]; 6] = [
         [255, 255, 255, 255],
         [128, 128, 255, 255],
-        [0, 255, 0, 255],
+        [0, 255, 255, 255],
         [255, 255, 255, 255],
         [0, 0, 0, 255],
         [255, 255, 255, 255],

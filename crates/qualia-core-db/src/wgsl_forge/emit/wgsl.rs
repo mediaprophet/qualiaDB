@@ -80,7 +80,7 @@ fn emit_kernel_body(
 
     if kernel.id == "ray-probe" {
         // The ray-query enable extension must precede any other item.
-        writeln!(source, "enable wgpu_ray_query;")
+        writeln!(source, "enable etalon_ray_query;")
             .map_err(|error| ForgeError::Emission(error.to_string()))?;
     }
 

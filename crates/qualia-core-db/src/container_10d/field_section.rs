@@ -1,51 +1,26 @@
-//! `.10d` Field section encoder — ontology reserved (T32).
+//! FIEL v0 field descriptors and optional raster sample payloads.
 //!
-//! The Field section carries field declarations (pressure, temperature,
-//! EMF, etc.) into the `.10d` container so that "fields live on the
-//! manifold" is a byte-inseparable claim, not just a graph convention.
+//! `encode_field_section` writes a declaration-only payload (12-byte header,
+//! 32-byte descriptors). `encode_field_section_with_rasters` also appends grid
+//! metadata (16 bytes) and little-endian f32 samples, with descriptor sample
+//! offsets locating them inside the same payload. Both existing APIs use the
+//! current version-zero schema; raster support is not a new format version.
 //!
-//! ## Design
+//! `decode_field_section` reads declarations; `decode_field_raster_samples`
+//! resolves the selected raster. Envelope, range, codec and domain validation
+//! are separate obligations. A successful declaration read does not establish
+//! scientific accuracy, meaningful units or authentication of sample data.
 //!
-//! The section starts with a [`FieldSectionHeader`] followed by zero or
-//! more [`FieldDescriptor`] entries. Each descriptor names a field and
-//! records its type, unit IRI, support, and representation. The actual
-//! field sample data (grid values, mesh values, etc.) is NOT stored in
-//! this section — it lives in a separate data section (or out-of-band).
-//! This section is the **ontology table**: it declares what fields exist
-//! and their metadata, not the samples themselves.
-//!
-//! ## Binary layout (v0 — ontology only, no sample bytes)
-//!
-//! ```text
-//! ┌─────────────────────────────────────────────┐
-//! │ FieldSectionHeader (16 bytes)               │
-//! │   magic: u32        = 0x4649454C ("FIEL")   │
-//! │   version: u16      = 0                     │
-//! │   field_count: u16                          │
-//! │   reserved: u32     = 0                     │
-//! ├─────────────────────────────────────────────┤
-//! │ FieldDescriptor[0] (32 bytes each)          │
-//! │   name_hash: u64     (FNV-1a of field name) │
-//! │   unit_hash: u64     (FNV-1a of unit IRI)   │
-//! │   type_kind: u8      (0=scalar,1=vector,...)│
-//! │   support: u8        (0=region,1=point,...) │
-//! │   representation: u8 (0=grid,1=mesh,...)    │
-//! │   reserved: u8       = 0                    │
-//! │   reserved: u32      = 0                    │
-//! │   sample_offset: u64 (into data section)    │
-//! ├─────────────────────────────────────────────┤
-//! │ FieldDescriptor[1] ...                      │
-//! │ ...                                         │
-//! └─────────────────────────────────────────────┘
-//! ```
-//!
-//! **Status: v0 — ontology only.** No sample bytes are encoded yet.
-//! The `sample_offset` field is reserved for future use (always 0 in v0).
-//! This is the "ontology reserved, no bytes yet" state from the plan.
-//!
-//! Reference: `docs/vibescript-full-impl-PLAN.md` §8.5 T32.
+//! Preserve field names, unit hashes, support/representation and sample bytes.
+//! Do not infer that a FIEL unit hash and a MID2 registry identifier are
+//! equivalent without a qualified mapping. See the typed payload companion in
+//! `docs/manuals/standards/10d-typed-field-payloads.md` for coexistence contracts.
 
 use bytemuck::{Pod, Zeroable};
+
+#[path = "field_section/checked.rs"]
+mod checked;
+pub use checked::{inspect_field_section, FieldInspection, FieldInspectionError, FieldInspectionLimits};
 
 /// Magic bytes for the Field section: "FIEL" in little-endian.
 pub const FIELD_SECTION_MAGIC: u32 = 0x4649454C;

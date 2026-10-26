@@ -67,6 +67,8 @@ pub enum Compile10dError {
     Mesh(MeshSectionError),
     /// The optional vertex-normal field sidecar failed validation or encoding.
     Normals(NormalSectionError),
+    /// Typed MID2 payload selection or codec admission failed.
+    TypedPayload(crate::container_10d::TypedPayloadError),
     /// The container section table encode/decode failed.
     Section(SectionTableError),
     /// Encoding the provenance sidecar section failed.
@@ -99,6 +101,7 @@ impl std::fmt::Display for Compile10dError {
             Self::Import(e) => write!(f, ".10d compile: source import: {e}"),
             Self::Mesh(e) => write!(f, ".10d compile: mesh section: {e}"),
             Self::Normals(e) => write!(f, ".10d compile: normal field: {e}"),
+            Self::TypedPayload(e) => write!(f, ".10d compile: {e}"),
             Self::Section(e) => write!(f, ".10d compile: section table: {e:?}"),
             Self::Provenance(e) => write!(f, ".10d compile: provenance section: {e}"),
             Self::Nodes(e) => write!(f, ".10d compile: Tensor10DNodes section: {e}"),
@@ -636,39 +639,20 @@ pub fn decode_10d_mesh_frames(
     container_10d: &[u8],
     expected_vertex_count: usize,
 ) -> Result<Option<crate::container_10d::MeshFrameStreams>, Compile10dError> {
-    let header =
-        Container10dHeader::parse(container_10d).map_err(|_| Compile10dError::BadHeader)?;
-    let descs = parse_section_table(container_10d, &header).map_err(Compile10dError::Section)?;
-    for desc in descs {
-        if desc.typ() == Some(SectionType::FieldSidecar) {
-            let start = desc.byte_offset as usize;
-            let end = start
-                .checked_add(desc.byte_length as usize)
-                .ok_or(Compile10dError::SectionOutOfBounds)?;
-            let payload = container_10d
-                .get(start..end)
-                .ok_or(Compile10dError::SectionOutOfBounds)?;
-            if !crate::container_10d::normal_section::is_normal_section(payload) {
-                continue;
-            }
-            let frames = crate::container_10d::normal_section::decode_mesh_frames(payload)
-                .map_err(Compile10dError::Normals)?;
-            let count = frames
-                .normals
-                .as_ref()
-                .map(Vec::len)
-                .or_else(|| frames.tangents.as_ref().map(Vec::len))
-                .unwrap_or(0);
-            if count != expected_vertex_count {
-                return Err(Compile10dError::NormalVertexCountMismatch {
-                    expected: expected_vertex_count,
-                    got: count,
-                });
-            }
-            return Ok(Some(frames));
-        }
-    }
-    Ok(None)
+    // Selection/codec admission lives in the focused shared SDK; this oversized
+    // legacy compiler retains only compatibility error projection (see SDK note).
+    crate::container_10d::read_container_mesh_frames_with_limits(
+        container_10d, expected_vertex_count,
+        crate::container_10d::MeshFrameDecodeLimits::COMPATIBILITY,
+    )
+        .map_err(|error| match error {
+            crate::container_10d::TypedPayloadError::Header(_) => Compile10dError::BadHeader,
+            crate::container_10d::TypedPayloadError::Sections(e) => Compile10dError::Section(e),
+            crate::container_10d::TypedPayloadError::Frames(e) => Compile10dError::Normals(e),
+            crate::container_10d::TypedPayloadError::VertexCount { expected, got } =>
+                Compile10dError::NormalVertexCountMismatch { expected, got },
+            other => Compile10dError::TypedPayload(other),
+        })
 }
 
 /// Read Tensor10D nodes from a sealed `.10d` (first Tensor10DNodes section).

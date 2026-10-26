@@ -36,13 +36,17 @@ pub fn multisig_check(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
-/// `Finance.ledger_balance` — compute account balances from postings.
-/// Takes `accounts` (list of {id, type}) and `postings` (list of {entry_id,
-/// account_id, debit, credit}). Returns a list of balances.
+/// `Finance.ledger_balance` — compute account balances from double-entry postings.
+///
+/// Validates per-entry journal balance (`validate_balanced_entry`) and overall
+/// `trial_balance` by default unless `allow_unbalanced_projection: true` (or
+/// `validate_entries: false`) is explicitly set. Performs checked `i128 -> i64`
+/// conversion (`i64::try_from`) so wide totals never silently truncate.
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::accounting::{
-        account_balances_into, Account, AccountType, Posting,
+        account_balances_into, trial_balance, validate_balanced_entry, Account, AccountType,
+        Posting,
     };
 
     let accounts_val = args::rec(args, "accounts")
@@ -54,6 +58,9 @@ pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         .ok_or_else(|| args::bad(span, "Finance.ledger_balance accounts must be a list"))?;
     let postings_list = args::list(postings_val)
         .ok_or_else(|| args::bad(span, "Finance.ledger_balance postings must be a list"))?;
+
+    let allow_unbalanced_projection = args::rec_bool(args, "allow_unbalanced_projection")
+        .unwrap_or_else(|| !args::rec_bool(args, "validate_entries").unwrap_or(true));
 
     let accounts: Vec<Account> = accounts_list
         .iter()
@@ -73,15 +80,51 @@ pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
         })
         .collect();
 
-    let postings: Vec<Posting> = postings_list
-        .iter()
-        .map(|p| Posting {
-            entry_id: args::rec_u64(p, "entry_id").unwrap_or(0),
+    let mut postings = Vec::with_capacity(postings_list.len());
+    let mut entry_ids = Vec::new();
+    for p in postings_list {
+        let entry_id = args::rec_u64(p, "entry_id").unwrap_or(0);
+        if !entry_ids.contains(&entry_id) {
+            entry_ids.push(entry_id);
+        }
+        postings.push(Posting {
+            entry_id,
             account_id: args::rec_u64(p, "account_id").unwrap_or(0),
             debit: args::rec_i64(p, "debit").unwrap_or(0),
             credit: args::rec_i64(p, "credit").unwrap_or(0),
-        })
-        .collect();
+        });
+    }
+
+    let mut entries_balanced = true;
+    for &eid in &entry_ids {
+        if let Err(e) = validate_balanced_entry(eid, &postings) {
+            entries_balanced = false;
+            if !allow_unbalanced_projection {
+                return Err(Diagnostic::new(
+                    DiagCode::E400,
+                    span,
+                    format!(
+                        "Finance.ledger_balance: journal entry {eid} failed double-entry validation: {e:?}"
+                    ),
+                ));
+            }
+        }
+    }
+
+    let trial_ok = match trial_balance(&accounts, &postings) {
+        Ok(_) => true,
+        Err(e) => {
+            if !allow_unbalanced_projection {
+                return Err(Diagnostic::new(
+                    DiagCode::E400,
+                    span,
+                    format!("Finance.ledger_balance: trial balance failed: {e:?}"),
+                ));
+            }
+            false
+        }
+    };
+    let journal_balanced = !accounts.is_empty() && !postings.is_empty() && entries_balanced && trial_ok;
 
     let mut out = vec![
         crate::specialized_libs::computational_economics::accounting::AccountBalance {
@@ -95,25 +138,60 @@ pub fn ledger_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     ];
     match account_balances_into(&accounts, &postings, &mut out) {
         Ok(count) => {
-            let balances: Vec<Value> = out[..count]
-                .iter()
-                .map(|b| {
-                    let ty_str = match b.account_type {
-                        AccountType::Asset => "asset",
-                        AccountType::Liability => "liability",
-                        AccountType::Equity => "equity",
-                        AccountType::Revenue => "revenue",
-                        AccountType::Expense => "expense",
-                    };
-                    args::record([
-                        ("account_id", Value::U64(b.account_id)),
-                        ("type", Value::String(ty_str.into())),
-                        ("balance", Value::I64(b.balance as i64)),
-                        ("debit_total", Value::I64(b.debit_total as i64)),
-                        ("credit_total", Value::I64(b.credit_total as i64)),
-                    ])
-                })
-                .collect();
+            let mut balances = Vec::with_capacity(count);
+            for b in &out[..count] {
+                let ty_str = match b.account_type {
+                    AccountType::Asset => "asset",
+                    AccountType::Liability => "liability",
+                    AccountType::Equity => "equity",
+                    AccountType::Revenue => "revenue",
+                    AccountType::Expense => "expense",
+                };
+                let balance_i64 = i64::try_from(b.balance).map_err(|_| {
+                    Diagnostic::new(
+                        DiagCode::E400,
+                        span,
+                        format!(
+                            "Finance.ledger_balance: account {} balance {} overflows i64",
+                            b.account_id, b.balance
+                        ),
+                    )
+                })?;
+                let debit_i64 = i64::try_from(b.debit_total).map_err(|_| {
+                    Diagnostic::new(
+                        DiagCode::E400,
+                        span,
+                        format!(
+                            "Finance.ledger_balance: account {} debit_total {} overflows i64",
+                            b.account_id, b.debit_total
+                        ),
+                    )
+                })?;
+                let credit_i64 = i64::try_from(b.credit_total).map_err(|_| {
+                    Diagnostic::new(
+                        DiagCode::E400,
+                        span,
+                        format!(
+                            "Finance.ledger_balance: account {} credit_total {} overflows i64",
+                            b.account_id, b.credit_total
+                        ),
+                    )
+                })?;
+                balances.push(args::record([
+                    ("account_id", Value::U64(b.account_id)),
+                    ("type", Value::String(ty_str.into())),
+                    ("balance", Value::I64(balance_i64)),
+                    ("debit_total", Value::I64(debit_i64)),
+                    ("credit_total", Value::I64(credit_i64)),
+                    ("balance_i128", Value::String(b.balance.to_string())),
+                    ("debit_total_i128", Value::String(b.debit_total.to_string())),
+                    ("credit_total_i128", Value::String(b.credit_total.to_string())),
+                    ("entries_balanced", Value::Bool(entries_balanced)),
+                    ("trial_balance_ok", Value::Bool(trial_ok)),
+                    ("journal_balanced", Value::Bool(journal_balanced)),
+                    ("projection_only", Value::Bool(!journal_balanced)),
+                ]));
+            }
             Ok(Value::List(balances))
         }
         Err(e) => Err(Diagnostic::new(
@@ -181,5 +259,114 @@ mod tests {
             },
             _ => panic!("expected record"),
         }
+    }
+
+    #[test]
+    fn ledger_balance_validates_entries_and_checks_wide_totals_lx64b() {
+        let accounts = Value::List(vec![
+            args::record([("id", Value::U64(1)), ("type", Value::String("asset".into()))]),
+            args::record([("id", Value::U64(2)), ("type", Value::String("revenue".into()))]),
+        ]);
+
+        // 1. Valid balanced entry succeeds and reports journal_balanced = true
+        let balanced_postings = Value::List(vec![
+            args::record([
+                ("entry_id", Value::U64(100)),
+                ("account_id", Value::U64(1)),
+                ("debit", Value::I64(2_500)),
+                ("credit", Value::I64(0)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(100)),
+                ("account_id", Value::U64(2)),
+                ("debit", Value::I64(0)),
+                ("credit", Value::I64(2_500)),
+            ]),
+        ]);
+        let ok_args = args::record([
+            ("accounts", accounts.clone()),
+            ("postings", balanced_postings),
+        ]);
+        let res = ledger_balance(&ok_args, Span { start: 0, end: 0 }).unwrap();
+        let Value::List(rows) = res else {
+            panic!("expected list");
+        };
+        assert_eq!(rows.len(), 2);
+        let Value::Record(r0) = &rows[0] else {
+            panic!("expected record");
+        };
+        assert_eq!(r0.get("balance"), Some(&Value::I64(2_500)));
+        assert_eq!(r0.get("journal_balanced"), Some(&Value::Bool(true)));
+        assert_eq!(r0.get("projection_only"), Some(&Value::Bool(false)));
+
+        // 2. Offsetting unbalanced entries (Entry 1: Debit 500; Entry 2: Credit 500) are rejected by default!
+        let offsetting_postings = Value::List(vec![
+            args::record([
+                ("entry_id", Value::U64(1)),
+                ("account_id", Value::U64(1)),
+                ("debit", Value::I64(500)),
+                ("credit", Value::I64(0)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(2)),
+                ("account_id", Value::U64(2)),
+                ("debit", Value::I64(0)),
+                ("credit", Value::I64(500)),
+            ]),
+        ]);
+        let bad_args = args::record([
+            ("accounts", accounts.clone()),
+            ("postings", offsetting_postings.clone()),
+        ]);
+        assert!(ledger_balance(&bad_args, Span { start: 0, end: 0 }).is_err());
+
+        // 3. Explicit `allow_unbalanced_projection: true` permits projection but marks `journal_balanced: false`
+        let proj_args = args::record([
+            ("accounts", accounts.clone()),
+            ("postings", offsetting_postings),
+            ("allow_unbalanced_projection", Value::Bool(true)),
+        ]);
+        let proj_res = ledger_balance(&proj_args, Span { start: 0, end: 0 }).unwrap();
+        let Value::List(proj_rows) = proj_res else {
+            panic!("expected list");
+        };
+        let Value::Record(pr0) = &proj_rows[0] else {
+            panic!("expected record");
+        };
+        assert_eq!(pr0.get("entries_balanced"), Some(&Value::Bool(false)));
+        assert_eq!(pr0.get("journal_balanced"), Some(&Value::Bool(false)));
+        assert_eq!(pr0.get("projection_only"), Some(&Value::Bool(true)));
+
+        // 4. Out-of-range i128 totals (> i64::MAX) fail closed with DiagCode::E400 instead of truncating with `as i64`
+        let overflow_postings = Value::List(vec![
+            args::record([
+                ("entry_id", Value::U64(10)),
+                ("account_id", Value::U64(1)),
+                ("debit", Value::I64(i64::MAX)),
+                ("credit", Value::I64(0)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(10)),
+                ("account_id", Value::U64(2)),
+                ("debit", Value::I64(0)),
+                ("credit", Value::I64(i64::MAX)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(11)),
+                ("account_id", Value::U64(1)),
+                ("debit", Value::I64(100)),
+                ("credit", Value::I64(0)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(11)),
+                ("account_id", Value::U64(2)),
+                ("debit", Value::I64(0)),
+                ("credit", Value::I64(100)),
+            ]),
+        ]);
+        let ovf_args = args::record([("accounts", accounts), ("postings", overflow_postings)]);
+        let ovf_err = ledger_balance(&ovf_args, Span { start: 0, end: 0 })
+            .expect_err("i128 total exceeding i64::MAX must fail closed");
+        assert_eq!(ovf_err.code, DiagCode::E400);
     }
 }

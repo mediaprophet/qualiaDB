@@ -532,6 +532,14 @@ impl Value {
         }
     }
 
+    /// Extract a string slice if this value is a `String` or `Iri`.
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Value::String(s) | Value::Iri(s) => Some(s.as_str()),
+            _ => None,
+        }
+    }
+
     /// Extract an Instant if this value is one.
     pub fn as_instant(&self) -> Option<&Instant> {
         match self {

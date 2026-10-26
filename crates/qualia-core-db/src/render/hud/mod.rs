@@ -4,7 +4,13 @@
 //! painting, pointer hit testing, and focus traversal; applications own action semantics.
 //! Parsing may allocate, while paint and hit testing reuse the parsed document.
 
+pub mod cbor_ld_doc;
+
 use crate::render::camera::CameraState;
+pub use cbor_ld_doc::{
+    decode_hud_document_cbor_ld, encode_hud_document_cbor_ld, HUD_CBOR_LD_TAG_COMPRESSED,
+    HUD_CBOR_LD_TAG_UNCOMPRESSED,
+};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -24,7 +30,7 @@ struct HudDocument {
     items: Vec<HudItem>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct HudItem {
     #[serde(default)]
     pub id: String,
@@ -244,6 +250,23 @@ impl QualiaHud {
 
     /// Solves flex layout for all HUD items using the Etalon 2D vector HUD layout engine.
     /// Updates position and dimensions for auto-sized items (`w == 0.0` or `h == 0.0`).
+    /// Replace the presentation document directly from binary W3C CBOR-LD (`0xD9 0x0501`).
+    pub fn set_document_cbor_ld(&mut self, bytes: &[u8]) -> Result<(), JsValue> {
+        let items = decode_hud_document_cbor_ld(bytes).map_err(|e| JsValue::from_str(&e))?;
+        self.items = items;
+        #[cfg(feature = "gpu-runtime")]
+        {
+            let cw = self.canvas.width() as f32;
+            let ch = self.canvas.height() as f32;
+            if cw > 0.0 && ch > 0.0 {
+                compute_hud_flex_layout(&mut self.items, cw, ch);
+            }
+        }
+        self.focus = None;
+        self.paint();
+        Ok(())
+    }
+
     pub fn layout_items_flex(&mut self, viewport_w: f32, viewport_h: f32) {
         #[cfg(feature = "gpu-runtime")]
         {
@@ -436,6 +459,38 @@ fn inside(item: &HudItem, x: f64, y: f64) -> bool {
     x >= item.x && y >= item.y && x < item.x + item.w && y < item.y + item.h
 }
 
+pub(crate) fn validate_hud_items(items: &[HudItem]) -> Result<(), &'static str> {
+    if items.len() > 256 {
+        return Err("HUD has too many items");
+    }
+    for item in items {
+        if !matches!(
+            item.kind.as_str(),
+            "panel" | "label" | "button" | "meter" | "marker" | "mirror"
+        ) || item.id.len() > 96
+            || item.text.len() > 512
+            || item.icon.len() > 24
+            || (item.kind == "marker" && !valid_color(&item.color))
+            || (item.kind == "label" && !item.color.is_empty() && !valid_color(&item.color))
+            || ![item.x, item.y, item.z, item.w, item.h, item.value]
+                .iter()
+                .all(|v| v.is_finite())
+            || item.w < 0.0
+            || item.h < 0.0
+            || item.w > 8192.0
+            || item.h > 8192.0
+            || item.x < -8192.0
+            || item.y < -8192.0
+            || (matches!(item.kind.as_str(), "meter" | "mirror")
+                && !item.color.is_empty()
+                && !valid_color(&item.color))
+        {
+            return Err("invalid HUD item");
+        }
+    }
+    Ok(())
+}
+
 fn valid_color(color: &str) -> bool {
     color.len() == 7 && color.starts_with('#') && color[1..].bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -578,6 +633,64 @@ fn draw_marker(ctx: &CanvasRenderingContext2d, item: &HudItem, x: f64, y: f64, f
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_hud_cbor_ld_encode_decode_round_trip_and_bounds() {
+        let items = vec![
+            HudItem {
+                id: "panel_main".into(),
+                kind: "panel".into(),
+                text: "".into(),
+                x: 12.0,
+                y: 24.0,
+                z: 0.0,
+                w: 320.0,
+                h: 180.0,
+                value: 0.0,
+                disabled: false,
+                icon: "".into(),
+                color: "".into(),
+            },
+            HudItem {
+                id: "btn_submit".into(),
+                kind: "button".into(),
+                text: "Confirm".into(),
+                x: 20.0,
+                y: 40.0,
+                z: 0.0,
+                w: 120.0,
+                h: 36.0,
+                value: 1.0,
+                disabled: false,
+                icon: "civic".into(),
+                color: "#78c6a3".into(),
+            },
+        ];
+
+        let encoded = encode_hud_document_cbor_ld(&items);
+        // Must start with W3C CBOR-LD compressed tag 0xD9 0x0501
+        assert_eq!(&encoded[0..3], &[0xD9, 0x05, 0x01]);
+        let decoded = decode_hud_document_cbor_ld(&encoded).unwrap();
+        assert_eq!(decoded, items);
+
+        // Invalid HUD item kind must fail validation on decode
+        let bad_items = vec![HudItem {
+            id: "bad".into(),
+            kind: "script_injection".into(),
+            text: "".into(),
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 100.0,
+            h: 40.0,
+            value: 0.0,
+            disabled: false,
+            icon: "".into(),
+            color: "".into(),
+        }];
+        let bad_bytes = encode_hud_document_cbor_ld(&bad_items);
+        assert!(decode_hud_document_cbor_ld(&bad_bytes).is_err());
+    }
 
     #[test]
     #[cfg(feature = "gpu-runtime")]

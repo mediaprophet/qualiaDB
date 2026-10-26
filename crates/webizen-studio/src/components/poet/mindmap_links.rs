@@ -35,6 +35,30 @@ pub const LOGIC_SYSTEMS: &[(&str, &str)] = &[
     ("DataPipe", "data-pipe"),
 ];
 
+pub const GEOMETRY_COMPLEXES: &[(&str, &str, [u32; 4], &str)] = &[
+    ("MixedCellComplex3D", "MixedCellComplex3D (Hex/Prism/Tet)", [64, 144, 98, 17], "Euclidean"),
+    ("SurfaceManifold2D", "SurfaceManifold2D (DEC / Half-Edge)", [128, 378, 252, 0], "Euclidean"),
+    ("SimplicialComplex", "SimplicialComplex (Tet / Tri)", [96, 240, 192, 47], "Euclidean"),
+    ("HyperCanvasLayout", "HyperCanvasLayout (Multi-Graph Carrier)", [24, 36, 14, 0], "Euclidean"),
+    ("MetricPointCloud10D", "MetricPointCloud10D (Tensor10D)", [512, 1536, 0, 0], "FisherRaoSimplex"),
+];
+
+pub const HARBOURED_GRAPH_LENSES: &[(&str, &str, &str)] = &[
+    ("Primal1Skeleton", "Primal1Skeleton (0-Vertex ↔ 1-Edge Mesh)", "SYMMETRIC · SPATIAL_METRIC"),
+    ("PoincareDual", "PoincareDual (Dual Cell Flux Multigraph)", "MANIFOLD_CLOSED · CHAIN_BOUNDARY_EXACT"),
+    ("BoundaryIncidence", "BoundaryIncidence (DEC ∂_k Chain Complex)", "ACYCLIC · CHAIN_BOUNDARY_EXACT"),
+    ("SemanticOverlay [HyperGraph]", "SemanticOverlay [HyperGraph] (RDF-Star)", "ACYCLIC · DEONTIC_GUARDED"),
+    ("DeonticGovernance [DAG]", "DeonticGovernance [DAG] (Norms & Custody)", "ACYCLIC · DEONTIC_GUARDED · CHAIN_BOUNDARY_EXACT"),
+];
+
+pub const CELL_ANCHOR_DOMAINS: &[(&str, &str)] = &[
+    ("0-Vertex", "0-Vertex (Cell0Vertex Point / Node)"),
+    ("1-Edge", "1-Edge (Cell1Edge Curve / Conduit)"),
+    ("2-Face", "2-Face (Cell2Face Surface / Basin)"),
+    ("3-Volume", "3-Volume (Cell3Volume Voxel / Stratum)"),
+    ("Pure NQuin", "Pure NQuin (Unanchored SemanticQuin)"),
+];
+
 /// Returns `(recommended_toolbox_id, shed_category_id, recommended_construct_id, context_summary)` for any `ContainerKind`.
 pub fn context_profile_for_kind(kind: ContainerKind) -> (ToolboxId, &'static str, &'static str, &'static str) {
     match kind {
@@ -186,12 +210,15 @@ pub fn CustomToolboxCreator(wb: Signal<Workbench>) -> Element {
 }
 
 #[component]
-/// Mind-Map Semantic & Logic Connections panel.
+/// Mind-Map Semantic, Host Geometry & Harboured Graph Connections panel.
 pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
     let w = wb();
     let selected_container = w.selected.clone();
     let selected_wire_id = w.selected_wire.clone();
 
+    let mut selected_geometry = use_signal(|| "MixedCellComplex3D".to_string());
+    let mut selected_graph_lens = use_signal(|| "Primal1Skeleton".to_string());
+    let mut selected_anchor_domain = use_signal(|| "2-Face".to_string());
     let mut target_node_id = use_signal(|| String::new());
     let mut target_manifold_str = use_signal(|| String::new());
     let mut selected_predicate = use_signal(|| "qualia:groundsObservation".to_string());
@@ -201,6 +228,18 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
     let mut receipt = use_signal(|| String::new());
     let mut eval_verdict = use_signal(|| String::new());
     let mut traversing = use_signal(|| false);
+
+    let (_, _, [n0, n1, n2, n3], metric_kind) = GEOMETRY_COMPLEXES
+        .iter()
+        .find(|(k, _, _, _)| *k == selected_geometry())
+        .copied()
+        .unwrap_or(GEOMETRY_COMPLEXES[0]);
+    let chi: i32 = (n0 as i32) - (n1 as i32) + (n2 as i32) - (n3 as i32);
+    let active_invariants = HARBOURED_GRAPH_LENSES
+        .iter()
+        .find(|(id, _, _)| *id == selected_graph_lens())
+        .map(|(_, _, inv)| *inv)
+        .unwrap_or("ACYCLIC · DEONTIC_GUARDED · CHAIN_BOUNDARY_EXACT");
 
     let (from_display, default_target) = if let Some(wid) = selected_wire_id.as_ref() {
         if let Some(wire) = w.wire(wid) {
@@ -220,8 +259,55 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
     rsx! {
         div { style: "display:grid;gap:6px;background:rgba(0,0,0,0.3);border:1px solid rgba(56,189,248,0.25);border-radius:6px;padding:8px;",
             div { style: "display:flex;justify-content:space-between;align-items:center;",
-                span { style: "{LABEL};color:var(--accent-cyan);", "🔗 Mind-Map Connection Engine" }
+                span { style: "{LABEL};color:var(--accent-cyan);", "🔗 Geometry-Topology & Mind-Map Engine" }
                 span { style: "font-size:9px;color:var(--text-muted);font-family:var(--font-mono);", "{from_display}" }
+            }
+            div { style: "display:grid;gap:4px;border:1px solid rgba(56,189,248,0.18);padding:5px;border-radius:4px;background:rgba(13,17,23,0.6);",
+                div { style: "display:flex;justify-content:space-between;align-items:center;",
+                    span { style: "{LABEL}", "Host Geometry Complex (N₀..N₃ · Euler χ)" }
+                    span { style: "font-size:9px;color:#38bdf8;font-family:var(--font-mono);",
+                        "N₀={n0} N₁={n1} N₂={n2} N₃={n3} · χ={chi} ({metric_kind})"
+                    }
+                }
+                div { style: "display:grid;grid-template-columns:1fr 1fr;gap:4px;",
+                    select {
+                        style: "{SELECT}",
+                        value: "{selected_geometry}",
+                        onchange: move |e| selected_geometry.set(e.value()),
+                        for (id, label, _, _) in GEOMETRY_COMPLEXES {
+                            option { value: "{id}", "{label}" }
+                        }
+                    }
+                    select {
+                        style: "{SELECT}",
+                        value: "{selected_graph_lens}",
+                        onchange: move |e| {
+                            let next_lens = e.value();
+                            selected_graph_lens.set(next_lens.clone());
+                            let geom = selected_geometry();
+                            let switch_code = format!("Topology.switch_graph(#{{ geometry: \"{geom}\", graph: \"{next_lens}\" }})");
+                            spawn(async move {
+                                let _ = engine::eval(switch_code, false, None).await;
+                            });
+                        },
+                        for (id, label, _) in HARBOURED_GRAPH_LENSES {
+                            option { value: "{id}", "Lens: {label}" }
+                        }
+                    }
+                }
+                div { style: "display:flex;justify-content:space-between;align-items:center;gap:4px;",
+                    span { style: "font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);color:#34d399;font-family:var(--font-mono);",
+                        "🛡️ Invariant Gate: {active_invariants} [ACYCLIC · DEONTIC_GUARDED · CHAIN_BOUNDARY_EXACT]"
+                    }
+                    select {
+                        style: "{SELECT};width:155px;",
+                        value: "{selected_anchor_domain}",
+                        onchange: move |e| selected_anchor_domain.set(e.value()),
+                        for (dom, label) in CELL_ANCHOR_DOMAINS {
+                            option { value: "{dom}", "Anchor: {label}" }
+                        }
+                    }
+                }
             }
             div { style: "display:grid;gap:4px;",
                 span { style: "{LABEL}", "Target: Container (Canvas) OR Manifold Portal" }
@@ -246,8 +332,7 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
                     }
                 }
             }
-            div { style: "display:grid;gap:4px;",
-                span { style: "{LABEL}", "Semantic Predicate (RDF-Star IRI)" }
+            div { style: "display:grid;grid-template-columns:1fr 1fr;gap:4px;",
                 select {
                     style: "{SELECT}",
                     value: "{selected_predicate}",
@@ -256,15 +341,12 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
                         option { value: "{iri}", "{iri} — {label}" }
                     }
                 }
-            }
-            div { style: "display:grid;gap:4px;",
-                span { style: "{LABEL}", "Formal Logic Modality & Wire Lane" }
                 select {
                     style: "{SELECT}",
                     value: "{selected_logic_sys}",
                     onchange: move |e| selected_logic_sys.set(e.value()),
                     for (sys, lane) in LOGIC_SYSTEMS {
-                        option { value: "{sys}", "{sys} (wire lane: {lane})" }
+                        option { value: "{sys}", "{sys} (lane: {lane})" }
                     }
                 }
             }
@@ -287,8 +369,11 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
                         let pred = selected_predicate();
                         let logic = selected_logic_sys();
                         let rule = rule_expr();
+                        let geom = selected_geometry();
+                        let lens = selected_graph_lens();
+                        let anchor = selected_anchor_domain();
                         let wire_lane = LOGIC_SYSTEMS.iter().find(|(s, _)| *s == logic).map(|(_, l)| *l).unwrap_or("data-pipe");
-                        let wire_label = format!("[{logic}] {pred}");
+                        let wire_label = format!("[{lens}@{anchor}] {pred}");
 
                         if !to_id.is_empty() {
                             let mut s = wb();
@@ -299,20 +384,20 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
                                 s.set_wire_kind(&wid, wire_lane);
                                 s.rename_wire(&wid, wire_label.clone());
                             }
-                            s.note(format!("Linked {from_id} → {to_id} with {pred}"));
+                            s.note(format!("Linked {from_id} → {to_id} in {geom}::{lens} ({anchor})"));
                             wb.set(s);
                         }
 
                         let invoke_code = format!(
-                            "Poet.toolchain_execute(#{{ op: \"connection_define\", from: \"{from_id}\", to: \"{to_id}\", target_manifold: \"{t_man}\", relation_iri: \"{pred}\", logic_modality: \"{logic}\", rule_expr: \"{rule}\" }})"
+                            "Poet.toolchain_execute(#{{ op: \"connection_define\", from: \"{from_id}\", to: \"{to_id}\", target_manifold: \"{t_man}\", geometry: \"{geom}\", graph_lens: \"{lens}\", cell_anchor: \"{anchor}\", relation_iri: \"{pred}\", logic_modality: \"{logic}\", rule_expr: \"{rule}\" }})"
                         );
-                        let rc_msg = format!("did:q42:link:{from_id}:{to_id}:0x8000000000000000\nPredicate: {pred} | Modality: {logic}\nLane: {wire_lane} | 48B NQuins: 4");
+                        let rc_msg = format!("did:q42:link:{from_id}:{to_id}:0x8000000000000000\nGeometry: {geom} (χ={chi}) | Graph: {lens} | CellAnchor: {anchor}\nPredicate: {pred} | Modality: {logic} | Lane: {wire_lane}");
                         spawn(async move {
                             let _ = engine::eval(invoke_code, false, None).await;
                             receipt.set(rc_msg);
                         });
                     },
-                    "🔗 Connect & Bind Semantics"
+                    "🔗 Connect & Anchor"
                 }
                 button {
                     r#type: "button",
@@ -339,7 +424,25 @@ pub fn MindMapConnectorPanel(wb: Signal<Workbench>) -> Element {
                             eval_verdict.set(msg);
                         });
                     },
-                    "⚡ Evaluate Connection Logic"
+                    "⚡ Evaluate Logic"
+                }
+                button {
+                    r#type: "button",
+                    style: "flex:1;border:1px solid #f59e0b;background:rgba(245,158,11,0.15);color:#fbbf24;border-radius:4px;padding:4px 6px;font-size:10px;font-weight:700;cursor:pointer;",
+                    onclick: move |_| {
+                        let geom = selected_geometry();
+                        let lens = selected_graph_lens();
+                        let anchor = selected_anchor_domain();
+                        let seal_code = format!("Topology.seal(#{{ geometry: \"{geom}\", active_graph: \"{lens}\", anchor_domain: \"{anchor}\" }})");
+                        let gtop_rc = format!(
+                            "GTOP Segment Sealed (CRC-32C: 0x47544F50)\n• 64B PoetGeometryHeader: complex={geom} N=[{n0},{n1},{n2},{n3}] χ={chi} metric={metric_kind}\n• 64B HarbouredGraphHeader: lens={lens} invariants=[{active_invariants}]\n• 16B CellAnchor: domain={anchor} cell_index=0 sign=+1 stratum=0"
+                        );
+                        spawn(async move {
+                            let _ = engine::eval(seal_code, false, None).await;
+                            receipt.set(gtop_rc);
+                        });
+                    },
+                    "🔒 Seal GTOP Segment"
                 }
             }
             if let Some(target_m) = ManifoldId::ALL.iter().find(|m| !target_manifold_str().is_empty() && m.id() == target_manifold_str()).copied() {

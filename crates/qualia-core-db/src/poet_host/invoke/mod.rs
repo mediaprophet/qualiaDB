@@ -50,6 +50,7 @@ mod stats;
 mod vision;
 mod studio_domains;
 pub mod studio_store;
+pub mod topology_bind;
 mod wgsl_forge_seam;
 
 use super::PoetSnapshot;
@@ -773,6 +774,15 @@ pub fn dispatch(
         ids::POET_TIMELINE_SCRUB => poet_shell::timeline_scrub(args, span),
         ids::POET_VIEWPORT_CONFIGURE => poet_shell::viewport_configure(args, span),
         ids::POET_EXPORT_BUNDLE => poet_shell::export_bundle(args, span),
+        ids::POET_TOPOLOGY_BIND => poet_shell::topology_bind(args, span),
+        ids::TOPOLOGY_DEFINE_GEOMETRY => topology_bind::define_geometry(args, span),
+        ids::TOPOLOGY_HARBOUR_GRAPH => topology_bind::harbour_graph(args, span),
+        ids::TOPOLOGY_SWITCH_GRAPH => topology_bind::switch_graph(args, span),
+        ids::TOPOLOGY_ANCHOR_BIND => topology_bind::anchor_bind(args, span),
+        ids::TOPOLOGY_DELTA_EDIT => topology_bind::delta_edit(args, span),
+        ids::TOPOLOGY_SEAL => topology_bind::seal(args, span),
+        ids::TOPOLOGY_TRAVERSE => topology_bind::traverse(args, span),
+        ids::TOPOLOGY_ANALYZE_HOMOLOGY => topology_bind::analyze_homology(args, span),
         ids::SHADERS_LIST | ids::WGSL_FORGE_LIST_KERNELS => wgsl_forge_seam::list_kernels(args, span),
         ids::WGSL_FORGE_GENERATE => wgsl_forge_seam::generate(args, span),
         ids::WGSL_FORGE_VALIDATE => wgsl_forge_seam::validate(args, span),

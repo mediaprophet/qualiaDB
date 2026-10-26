@@ -24,5 +24,14 @@ effect fn spin(t: f64) {
 
 `capability.invoke("Family.method", { ... })` remains the agent/compiled form.
 
+Compatibility correction, 2026-10-25: pinned `vibe-0.1` statement assignment
+supports a mutable whole binding (`name = value`). Member/index assignment is
+not implemented and now fails closed with E701 in both checker and interpreter,
+before evaluating its right-hand side. Earlier interpreter code evaluated the
+right-hand side and silently ignored those unsupported targets. Assignment to
+an immutable binding is also rejected before right-hand-side effects. Construct
+an updated record/list and assign the whole mutable binding instead. This is an
+admission correction, not a released new dialect or nested-lvalue feature.
+
 Agent loop: `vibe::diagnose(src)` → JSON (`error_code`, `span`, `suggested_fix`).
 Grammar: `grammar/vibe-0.1.ebnf`, `grammar/vibe-0.1.gbnf`, `grammar/source.schema.json`.

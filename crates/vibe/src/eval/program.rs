@@ -195,7 +195,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 format!("no function {name}"),
             )
         })?;
-        if let Some(steps) = budget_steps(&f.budget, env, self) {
+        if let Some(steps) = budget_steps(&f.budget, env, self)? {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
         let mut local = Env::default();
@@ -210,8 +210,8 @@ impl<'a, H: Host> Engine<'a, H> {
             local.vars.insert(p.name.clone(), a);
         }
         // Attach the program so nested calls can resolve sibling functions.
-        let prev = self.program;
-        self.program = Some(program as *const Program);
+        let prev = self.program.take();
+        self.program = Some(std::sync::Arc::new(program.clone()));
         let r = self.finish_block(&f.body, &mut local);
         self.program = prev;
         r
@@ -238,7 +238,7 @@ impl<'a, H: Host> Engine<'a, H> {
             Some(h) => h,
             None => return Ok(Value::Null),
         };
-        if let Some(steps) = budget_steps(&h.budget, env, self) {
+        if let Some(steps) = budget_steps(&h.budget, env, self)? {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
         let mut local = Env::default();
@@ -248,8 +248,8 @@ impl<'a, H: Host> Engine<'a, H> {
             local.vars.insert(p.name.clone(), a);
         }
         // Attach the program so the hook body can call sibling functions.
-        let prev = self.program;
-        self.program = Some(program as *const Program);
+        let prev = self.program.take();
+        self.program = Some(std::sync::Arc::new(program.clone()));
         let r = self.finish_block(&h.body, &mut local);
         self.program = prev;
         r

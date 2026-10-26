@@ -259,7 +259,11 @@ impl Compiler {
             ExprKind::Await(inner) => {
                 // Await in 0.1 bytecode: evaluate the inner expression.
                 // True async scheduling is handled by the host.
-                self.compile_expr(inner)
+                let path_idx = self.add_string("task.await")?;
+                self.compile_expr(inner)?;
+                self.emit_op(Op::CallHost)?;
+                self.emit_u16(path_idx)?;
+                self.emit_u8(1)
             }
             ExprKind::Member { recv, name } => {
                 self.compile_expr(recv)?;

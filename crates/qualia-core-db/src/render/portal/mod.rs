@@ -1292,8 +1292,7 @@ impl QualiaPortal {
             .map_err(|e| JsValue::from_str(&format!("10d section table: {e}")))?;
 
         let mut mesh = None;
-        let mut authored_normals = None;
-        let mut authored_tangents = None;
+
         let mut provenance_mu: f32 = 0.0;
         let mut has_attestation = false;
 
@@ -1327,19 +1326,23 @@ impl QualiaPortal {
                         }
                     }
                 }
-                container_10d::SectionType::FieldSidecar => {
-                    if container_10d::is_normal_section(payload) {
-                        let frames = container_10d::decode_mesh_frames(payload)
-                            .map_err(|e| JsValue::from_str(&format!("10d frames decode: {e}")))?;
-                        authored_normals = frames.normals;
-                        authored_tangents = frames.tangents;
-                    }
-                }
                 _ => {}
             }
         }
 
         let mesh = mesh.ok_or_else(|| JsValue::from_str("10d: no mesh section"))?;
+        // Shared SDK owns legacy/MID2 selection; keep this oversized portal as glue.
+        let frames = container_10d::read_container_mesh_frames_with_limits(
+            &bytes_mut, mesh.vertex_count(),
+            container_10d::MeshFrameDecodeLimits {
+                max_vertices: container_10d::MAX_NORMAL_COUNT,
+                max_payload_bytes: 64 * 1024 * 1024,
+                max_decoded_bytes: 256 * 1024 * 1024,
+            },
+        )
+            .map_err(|e| JsValue::from_str(&format!("10d frames decode: {e}")))?;
+        let (authored_normals, authored_tangents) = frames
+            .map(|frames| (frames.normals, frames.tangents)).unwrap_or((None, None));
         if authored_normals
             .as_ref()
             .is_some_and(|normals: &Vec<[f32; 3]>| normals.len() != mesh.vertex_count())

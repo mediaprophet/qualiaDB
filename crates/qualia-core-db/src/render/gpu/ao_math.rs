@@ -1,5 +1,6 @@
 //! Fixed-size ambient-visibility uniforms and target sizing.
 
+use super::depth::{log2_depth_step, AODEPTH_LOG1P_BA16};
 use super::AoUniform;
 use crate::render::camera::{CAMERA_FAR_PLANE, CAMERA_TAN_HALF_FOV};
 
@@ -31,7 +32,12 @@ pub fn make_uniform(
             1.0 / height as f32,
         ],
         eye: [eye[0], eye[1], eye[2], sample_count as f32],
-        camera_forward: [forward[0], forward[1], forward[2], 0.0],
+        camera_forward: [
+            forward[0],
+            forward[1],
+            forward[2],
+            AODEPTH_LOG1P_BA16 as f32,
+        ],
         camera_right: [right[0], right[1], right[2], 0.0],
         camera_up: [up[0], up[1], up[2], 0.0],
         params: [
@@ -42,7 +48,7 @@ pub fn make_uniform(
         ],
         depth: [
             CAMERA_FAR_PLANE,
-            CAMERA_FAR_PLANE / 65_534.0,
+            log2_depth_step(),
             CAMERA_TAN_HALF_FOV,
             aspect,
         ],
@@ -107,6 +113,7 @@ pub(super) fn target_bytes_at_half(width: u32, height: u32) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::{half_extent, make_uniform, target_bytes, CAMERA_FAR_PLANE, CAMERA_TAN_HALF_FOV};
+    use super::{log2_depth_step, AODEPTH_LOG1P_BA16};
 
     #[test]
     fn target_sizing_is_half_resolution_and_checked() {
@@ -121,7 +128,10 @@ mod tests {
         let uniform = make_uniform(1, 1, [0.0; 3], [0.0, 0.0, -1.0], 0.5, 0.7, 0.02, 8, true);
         assert_eq!(uniform.viewport, [1.0, 1.0, 1.0, 1.0]);
         assert_eq!(uniform.eye[3], 8.0);
-        assert_eq!(uniform.camera_forward, [0.0, 0.0, -1.0, 0.0]);
+        assert_eq!(
+            uniform.camera_forward,
+            [0.0, 0.0, -1.0, AODEPTH_LOG1P_BA16 as f32]
+        );
         assert_eq!(uniform.camera_right, [1.0, -0.0, 0.0, 0.0]);
         assert_eq!(uniform.camera_up, [0.0, 1.0, 0.0, 0.0]);
         assert_eq!(uniform.params, [0.5, 0.7, 0.02, 1.0]);
@@ -129,7 +139,7 @@ mod tests {
             uniform.depth,
             [
                 CAMERA_FAR_PLANE,
-                CAMERA_FAR_PLANE / 65_534.0,
+                log2_depth_step(),
                 CAMERA_TAN_HALF_FOV,
                 1.0,
             ]

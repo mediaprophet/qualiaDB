@@ -1214,3 +1214,125 @@ cargo test
 - Built the game WASM package and regenerated the Storybook, Earthlight and Community Grounds HMC packs (566 assets, 40 scene states each); the exporter verified each HMC with Qualia's reader. The same release includes 27 profile-selected Australian flora assets.
 
 **Verification:** `rustfmt --edition 2021` and the game release WASM build succeeded. User requested no tests/browser self-test, so none were run. Visual/browser acceptance remains open. The root `HANDOVER.md` referenced above is absent from this checkout; this inventory and session note are recorded here.
+
+
+### 2026-10-25 — Ecopunk native Poet/Craft authoring and engine failure repair
+
+**Authority and preservation:** Timothy explicitly authorised saving QualiaDB and
+Etalon changes after an earlier repository-boundary approval rejection. Reviewed
+repairs were saved with original/candidate hashes and receipts. Existing user
+changes and the running Poet window were preserved. No commits, pushes,
+publication, payments, Computer Use or Chora source changes were made.
+
+**Saved implementation:** canonical Vibe pre-promotion session validation;
+host-bound cooperative authoring policy and thin MCP transport; durable exact
+source/private-journal HMC checkpoints with fresh authorised activation; native
+Poet shared-session authoring and material factors. Engine repairs cover Q42 v4
+lexicon resolution, local graph SERVICE handling, honest C2PA verification status,
+bounded CML parsing/roundtrip, explicitly authorised host effects, glTF rest/skin
+admission, AO depth precision, and chemistry construction/prediction. Forge WGSL
+consumers now emit the developed Etalon extension spellings; no Etalon source
+defect was established. Invalid tests were corrected against actual contracts;
+unsupported shader fallback paths now report unavailability instead of success.
+
+**Executed verification on saved source snapshot e4e2e18c8cba:** full selected
+native/GPU/Forge/privacy core suite 9,782 passed, zero failed, three explicitly
+ignored dataset/integration probes. Native Poet 62 library plus 15 CLI tests
+passed; its separate actual GPU material readback passed for base colour,
+roughness, metallic and emissive edits. Native library build and WASM library
+check passed. The actual source-linked CLI passed help, no-window source checking
+and strict MCP framing/unbound-authority denial. All owned verification commands
+finished. The final source audit reconciled 94 saved files and 120 guarded source
+transitions. Evidence lives in C:/github/ecopunk/docs/qa/implementation-2026-10-25/batch-3.
+
+**Remaining product work:** verified native authentication/admission-provider
+binding and durable contribution/review commit; complete HMC graph/resources and
+editable-master retention; usable contributor/reviewer graphical acceptance;
+high-grade complete embodiments and reviewed game-demo derivatives. The checkpoint
+profile is source-only and rejects overwriting richer resource packages. No GUI
+or human acceptance, complete model, Vibe dialect release, universal Etalon
+capability or mission-delivery claim is made. All 120 production packets remain
+open. HANDOVER.md is absent, so this session note is recorded here under section 7.
+
+
+### 2026-10-25 — RUN09 native authentication and resource-preserving Poet HMC editing
+
+**Saved implementation:** canonical `poet_host::native_authority` verifies a
+host-pinned project authority's signed admissions and a fresh one-use native
+controller-key challenge before issuing a local QDNF execution grant. Current
+qualified identifiers, membership, review scope, expiry and revocation govern
+actions. An exclusively locked bounded native journal retains source successors,
+contributions, source-only reviews and separately attributed package-write audit
+records with expected/result HMC digests. These records never restore a live
+session. One active principal/session per owner is supported in this scope.
+
+Poet's NativeProject composes the real authority with one shared canonical
+editor/session for native UI and MCP. HMC checkpoints retain all inert resources,
+including unknown payloads/metadata and editable masters, across source edits,
+reopen and Save As. Both native controls and MCP support explicit 1–64-entry
+atomic resource plans, with package/resource SHA guards, preflight before imports,
+one aggregate import budget and one canonical save. Known native texture and
+10d/Q42 dependency refusals are implemented; explicit companion-graph updates
+may retain identical authoritative bytes. Immutable origins are not overwritten.
+
+**Executed on frozen source snapshot 130ad0c42d5e:** full selected Core suite
+9,800 passed, zero failed, three ignored in 339.05 seconds. Native Poet 69 library
+and 15 CLI tests passed, including signed project/source/HMC/MCP cooperation,
+revocation and atomic native 10d/Q42 resource edits. The separately invoked actual
+GPU material readback passed. Native library build, WASM library check and actual
+source-linked CLI help/no-window source checking/MCP framing and unbound denial
+passed. All commands finished and source hashes remained unchanged. Independent
+source review covers 51 files; the final qualification snapshot pins 127 inputs.
+
+**Limits and next work:** actual adopted project anchors/admissions and native
+contributor/reviewer key enrollment/signing still require real host inputs. Test
+actors are software-agent fixtures, not enrolled people or human reviewers.
+Native graphical usability, whole-HMC semantic/rights-partition admission,
+complete models and accepted high-grade masters/derivatives remain open. Source
+review does not approve package resources. Unknown dependencies remain unassessed.
+The journal is host-owned local evidence, not an external anti-rollback oracle;
+cross-store persistence failures require reconciliation and withhold publication.
+Windows power-loss directory durability remains unqualified. No GUI/Computer Use,
+commits, pushes, payment, publication or Chora source changes occurred. All 120
+production packets remain open. Evidence and remaining requirements are in
+C:/github/ecopunk/docs/qa/implementation-2026-10-25/batch-4/README.md.
+
+
+### RUN10 native contributor enrollment and Poet review — 2026-10-25
+
+Saved canonical signed enrollment requests, explicit steward decisions and
+separate source-review grants, native key-owner signing, retained admission and
+fresh login. Strict Windows native vault selection has no plaintext fallback.
+Poet now exposes `studio --native-project EXISTING_DIRECTORY` in its native
+operator shell, with explicit fingerprint adoption/profile creation/login and
+contributor/reviewer controls sharing one authority/session/editor owner.
+Contributions and decisions target exact source revisions; actor handoff
+preserves private drafts and rejects stale replies. Accepted-source replacement
+requires confirmation. This remains source-only review, not whole-HMC acceptance.
+
+Windows checkpoint installation now retries only bounded OS 5/32/33 refusals,
+retaining the staged file and writer lock and rechecking expected destination
+bytes before every attempt. Real deny-delete tests cover transient release,
+persistent refusal and external destination changes. An earlier full-suite
+OS5 failure and the initial child-selector failure remain in the QA history;
+the original OS5 cause is unproven, and no OS protection was disabled.
+The network-restricted full run is also preserved. The identical hashed
+loopback test failed inside the sandbox and passed with native socket access;
+the final full-suite run uses that native boundary without skips or source edits.
+
+Executed on frozen snapshot 2e7ab1b867bfa3ac4e5ed49f8dd2d99e46e27113a77fdf7a0752cb9a3263f1bc:
+selected Core 9855 passed, zero failed, 3 ignored;
+native Poet 77 library tests and 15 CLI tests passed.
+Native library build, WASM library check, actual source-linked CLI help,
+public-config-only entry and MCP checks, plus actual GPU material readback
+passed. Independent saved-source review and final receipt hashes are recorded
+under C:/github/ecopunk/docs/qa/implementation-2026-10-25/batch-5/README.md.
+
+Tests use software-agent fixtures. Real OS credential-provider execution and
+persistence, external anchor adoption, human verification/enrollment and native
+GUI acceptance remain unqualified. Fresh-process encrypted-key possession/login
+is exercised; full operator HMC/source recovery remains separate. IP-03 C1–C8,
+complete HMC semantics/model dossiers, high-grade masters and reviewed film,
+open-world game and cartoon derivatives remain open. All 120 production packets
+remain open. No GUI/Computer Use, commits, pushes, payment, publication or Chora
+source changes were performed. Existing user work and running Poet were preserved.

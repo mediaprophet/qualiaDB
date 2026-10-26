@@ -42,7 +42,7 @@ const SHED_PREFIXES: &[&str] = &[
     "Econ", "CooperativeDelegation", "CooperativeWork", "Agency", "Physics", "Chemistry",
     "Bioinformatics", "ClinicalRisk", "EngineeringAnalysis", "Simulation", "Cosmic", "Statistics",
     "MachineLearning", "NLP", "Research", "Inference", "Document", "Sheet", "Deck", "Pdf",
-    "Raster", "RawDevelop", "Vector", "Cad", "Timeline", "WgslForge", "Studio", "Scene", "Audio", "Video", "Image", "HID",
+    "Raster", "RawDevelop", "Vector", "Cad", "Timeline", "WgslForge", "Studio", "Scene", "Audio", "Video", "Image", "HID", "Topology",
 ];
 
 /// `poet_authoring` tool — executes POET shell authoring operations and layout receipts.
@@ -61,7 +61,15 @@ pub fn poet_authoring(raw_args: &[u8]) -> Result<String, McpSystemError> {
         | "si_catalog" | "si_define" | "si_inspect" | "si_collect" | "si_activate" | "si_run" | "si_rpl_eval" => {
             "Poet.toolchain_execute".to_string()
         }
-        _ if op.starts_with("Poet.") => op.to_string(),
+        _ if op.starts_with("Poet.") || op.starts_with("Topology.") => op.to_string(),
+        "define_geometry" | "poet_define_geometry" => "Topology.define_geometry".to_string(),
+        "harbour_graph" | "poet_harbour_graph" => "Topology.harbour_graph".to_string(),
+        "switch_graph" | "switch_harboured_graph" | "poet_switch_harboured_graph" => "Topology.switch_graph".to_string(),
+        "anchor_bind" | "topology_anchor_bind" => "Topology.anchor_bind".to_string(),
+        "delta_edit" | "edit_delta" | "topology_edit_delta" => "Topology.delta_edit".to_string(),
+        "seal_topology" | "poet_seal_topology" => "Topology.seal".to_string(),
+        "traverse_topology" | "topology_traverse" => "Topology.traverse".to_string(),
+        "analyze_homology" | "poet_analyze_homology" => "Topology.analyze_homology".to_string(),
         _ => format!("Poet.{op}"),
     };
 

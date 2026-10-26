@@ -327,7 +327,8 @@ pub fn decode_morph_section_into(
         });
     }
 
-    for (index, slot) in out_deltas[..delta_count].iter_mut().enumerate() {
+    // Validate the entire payload before publishing any caller output.
+    for index in 0..delta_count {
         let start = MORPH_SECTION_HEADER_SIZE + index * QUANTIZED_MORPH_DELTA_SIZE;
         let d: QuantizedMorphDelta =
             bytemuck::pod_read_unaligned(&payload[start..start + QUANTIZED_MORPH_DELTA_SIZE]);
@@ -345,7 +346,10 @@ pub fn decode_morph_section_into(
                 vertex_count: header.vertex_count,
             });
         }
-        *slot = d;
+    }
+    for (index, slot) in out_deltas[..delta_count].iter_mut().enumerate() {
+        let start = MORPH_SECTION_HEADER_SIZE + index * QUANTIZED_MORPH_DELTA_SIZE;
+        *slot = bytemuck::pod_read_unaligned(&payload[start..start + QUANTIZED_MORPH_DELTA_SIZE]);
     }
 
     Ok((header, delta_count))

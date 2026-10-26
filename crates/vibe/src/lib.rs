@@ -20,6 +20,7 @@ pub mod bytecode;
 pub mod capability_schema;
 pub mod catalog;
 mod cbor_ast;
+#[path = "check.rs"]
 mod check;
 mod degrade;
 mod diagnose;
@@ -31,6 +32,7 @@ mod lex;
 mod lexicon_pin;
 mod parse;
 mod span;
+pub mod session;
 mod types;
 mod unicode_ident;
 mod value;
@@ -59,10 +61,14 @@ pub mod reactive_cell;
 pub mod reflection;
 pub mod replay_clock;
 pub mod sheaf;
+pub mod stdlib_v2;
+pub mod task_scheduler;
 pub mod tick_policy;
+pub mod topology_decl;
 pub mod translate;
 pub mod trivia;
 pub mod vocab;
+pub mod web_runtime;
 
 pub use accel::{
     add_f64_slices, cell_batch_cap, detect_available_tier, CELL_BATCH_NATIVE, CELL_BATCH_WASM,
@@ -80,7 +86,13 @@ pub use ast_query::{
 };
 pub use bind::{AccelerationTier, Host, HostEnvironment, LocalHost};
 pub use budget::{Budget, SENTINEL_BYTES};
-pub use cbor_ast::{decode, encode, DecodeError, TAG_VIBE_AST};
+pub use cbor_ast::{
+    call_cbor_ld, compress_iri, decode, decode_value_cbor_ld, derive_provider_namespace, encode,
+    encode_value_cbor_ld, expand_term, ingest_json_with_provider_ns, DecodeError,
+    DEFAULT_CONTEXT_IRI, TAG_CBOR_LD_COMPRESSED, TAG_CBOR_LD_UNCOMPRESSED, TAG_VIBE_AST,
+    TAG_VIBE_DISCLOSURE_DENIED, TAG_VIBE_DURATION, TAG_VIBE_INSTANT, TAG_VIBE_IRI,
+    TAG_VIBE_QUANTITY, TAG_VIBE_QUIN_REF,
+};
 pub use check::{
     check_cell, check_program, check_program_all, check_program_with_vocab, CheckResult,
     MAX_DIAGNOSTICS,
@@ -106,6 +118,10 @@ pub use lexicon_pin::{
     PackManifest, EXAMPLE_PIN, HELD_OPEN_PACK, LEXICON_MANIFEST_ID,
 };
 pub use parse::{parse_cell, parse_program};
+pub use topology_decl::{
+    parse_geometry_blocks, parse_geometry_or_topology, BoundaryDecl, GeometryDecl,
+    HarbouredGraphDecl, TopologyInvokeDescriptor,
+};
 pub use projectional::{
     apply_edit, apply_edits, make_binary, make_call, make_field, make_float, make_ident, make_int,
     make_law, make_material, make_member, make_string, project_program, Edit, ProjectOptions,

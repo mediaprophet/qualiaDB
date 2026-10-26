@@ -33,6 +33,17 @@ impl Effect {
 pub fn binding_effect(path: &str) -> Effect {
     match path {
         p if p.starts_with("math.") || p.starts_with("rdf.") => Effect::Pure,
+        p if p.starts_with("web.")
+            || p.starts_with("ui.")
+            || p.starts_with("form.")
+            || p.starts_with("input.")
+            || p.starts_with("validate.")
+            || p.starts_with("selection.")
+            || p.starts_with("layout.")
+            || p.starts_with("cbor_ld.") =>
+        {
+            Effect::Pure
+        }
         "vec2" | "vec3" | "vec4" | "mat3" | "mat4" | "oklch" | "Ok" | "Err" => Effect::Pure,
         "quin.statement" | "receipt_empty" | "capability.resolve" => Effect::Pure,
         "graph.snapshot" | "graph.query" => Effect::Pure,

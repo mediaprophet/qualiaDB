@@ -215,6 +215,7 @@ pub mod triangulation_opt;
 /// P20.4 — Stack-bounded 3-D L-system turtle with gravitropism/phototropism
 /// bending and generalized-cylinder / polygon meshing.
 pub mod turtle_3d;
+pub mod uv_atlas;
 mod voronoi_2;
 /// P11.11 — Segment-site, farthest-site and higher-order Voronoi diagrams.
 pub mod voronoi_variants;

@@ -408,7 +408,9 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let emissive = material.emissive.rgb * emissive_sample;
 
     let mr_sample = select(
-        vec4<f32>(0.0, 1.0, 0.0, 1.0),
+        // G and B multiply authored roughness and metallic factors. An absent
+        // map is neutral in both channels, preserving factor-only metals.
+        vec4<f32>(0.0, 1.0, 1.0, 1.0),
         sample_metallic_roughness(material_uv(input.uv0, 2u)),
         material.texture_flags.z != 0u
     );
@@ -565,8 +567,9 @@ fn sample_shadow_map(
     return visibility / 9.0;
 }
 
+const AODEPTH_LOG1P_BA16: f32 = 1.0;
 fn screen_space_ao_visibility(position: vec4<f32>, normal: vec3<f32>, depth: f32) -> f32 {
-    if (dynamic_ao.params.w < 0.5) {
+    if (dynamic_ao.params.w < 0.5 || dynamic_ao.camera_forward.w != AODEPTH_LOG1P_BA16) {
         return 1.0;
     }
     let ao_position = position.xy * 0.5 - vec2<f32>(0.5);
@@ -583,7 +586,7 @@ fn screen_space_ao_visibility(position: vec4<f32>, normal: vec3<f32>, depth: f32
             let depth_code = (u32(round(surface.b * 255.0)) << 8u)
                 | u32(round(surface.a * 255.0));
             if (depth_code == 0u) { continue; }
-            let stored_depth = f32(depth_code - 1u) * dynamic_ao.depth.y;
+            let stored_depth = exp2(f32(depth_code - 1u) * dynamic_ao.depth.y) - 1.0;
             let encoded_normal = surface.rg * 2.0 - vec2<f32>(1.0);
             var stored_normal = vec3<f32>(
                 encoded_normal,

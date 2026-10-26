@@ -33,6 +33,10 @@ impl<'a> Parser<'a> {
         if self.kw("law") {
             return Ok(Item::Law(self.parse_law()?));
         }
+        if self.looks_like_geometry_or_topology() {
+            let decl = self.parse_geometry_or_topology_decl()?;
+            return Ok(Item::Statement(Stmt::Block(decl.lower_to_block())));
+        }
         Ok(Item::Statement(self.parse_stmt()?))
     }
 

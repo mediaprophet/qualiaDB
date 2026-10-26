@@ -6,6 +6,7 @@
 
 #![recursion_limit = "256"]
 
+pub mod authoring;
 pub mod finance;
 pub mod projects;
 pub mod record;

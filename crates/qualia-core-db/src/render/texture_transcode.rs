@@ -400,48 +400,5 @@ pub fn transcode_ktx2_into(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn bc7_all_modes_decode_deterministically_without_fallback() {
-        for mode in 0..8usize {
-            let mut block = [0u8; 16];
-            block[0] = 1u8 << mode;
-            block[1] = 0xAA;
-            block[2] = 0x55;
-            block[3] = 0xFF;
-            let mut out = [[0u8; 4]; 16];
-            decode_bc7_block(&block, &mut out);
-            assert!(out.iter().any(|p| p[3] > 0));
-        }
-        let mut out = [[255u8; 4]; 16];
-        decode_bc7_block(&[0u8; 16], &mut out);
-        assert_eq!(out, [[0, 0, 0, 0]; 16]);
-    }
-
-    #[test]
-    fn etc2_eac_and_astc_4x4_void_extent_decode_correctly() {
-        let mut astc_block = [0u8; 16];
-        astc_block[0] = 0xFC;
-        astc_block[1] = 0xFD;
-        astc_block[8..10].copy_from_slice(&0x8000u16.to_le_bytes());
-        astc_block[10..12].copy_from_slice(&0x4000u16.to_le_bytes());
-        astc_block[12..14].copy_from_slice(&0xFF00u16.to_le_bytes());
-        astc_block[14..16].copy_from_slice(&0xFF00u16.to_le_bytes());
-        let mut out_astc = [[0u8; 4]; 16];
-        decode_astc_4x4_block(&astc_block, &mut out_astc);
-        assert_eq!(out_astc[0], [0x80, 0x40, 0xFF, 0xFF]);
-        assert_eq!(out_astc[15], [0x80, 0x40, 0xFF, 0xFF]);
-
-        let mut etc2_block = [0u8; 16];
-        etc2_block[0] = 200;
-        etc2_block[8] = 0xFF;
-        etc2_block[9] = 0x88;
-        etc2_block[10] = 0x44;
-        let mut out_etc2 = [[0u8; 4]; 16];
-        decode_etc2_eac_rgba_block(&etc2_block, &mut out_etc2);
-        assert!(out_etc2[0][3] >= 185 && out_etc2[0][3] <= 215);
-        assert!(out_etc2[0][0] > out_etc2[0][2]);
-    }
-}
+#[path = "texture_bc7_conformance_tests.rs"]
+mod tests;

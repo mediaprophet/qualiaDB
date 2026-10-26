@@ -6,8 +6,12 @@
 
 use crate::gpu_context::{global_vram_ledger, VramReservation, VramResourceClass};
 
+#[path = "ao_depth.rs"]
+mod depth;
 #[path = "ao_math.rs"]
 mod math;
+#[cfg(test)]
+pub(super) use depth::{decode_depth, encode_depth};
 pub(super) use math::make_uniform;
 
 #[repr(C)]
@@ -16,12 +20,13 @@ pub(super) struct AoUniform {
     /// Half-resolution width, height, and their reciprocals.
     pub viewport: [f32; 4],
     pub eye: [f32; 4],
+    /// XYZ forward basis; W is internal AODEPTH_LOG1P_BA16 encoding version.
     pub camera_forward: [f32; 4],
     pub camera_right: [f32; 4],
     pub camera_up: [f32; 4],
     /// World-space radius, strength, world-space bias, enabled.
     pub params: [f32; 4],
-    /// Far distance, reciprocal depth-code range, tan(vertical FOV / 2), aspect.
+    /// Far distance, log2(1 + depth) per BA16 code, tan(vertical FOV / 2), aspect.
     pub depth: [f32; 4],
 }
 
@@ -82,7 +87,7 @@ impl AoTargets {
         let normal_usage =
             wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
         let normal_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("qualia-ao-normal-half"),
+            label: Some("qualia-ao-normal-log1p-ba16-v1-half"),
             size: wgpu::Extent3d {
                 width,
                 height,
@@ -385,7 +390,7 @@ impl AoTargets {
     pub fn ao_view(&self) -> &wgpu::TextureView {
         &self.ao_view
     }
-    /// Normal-buffer texture view.
+    /// Internal transient RG8 oct normal / BA16 AODEPTH_LOG1P_BA16 depth view.
     pub fn normal_view(&self) -> &wgpu::TextureView {
         &self.normal_view
     }

@@ -9,6 +9,7 @@ struct AoUniform {
 };
 @group(0) @binding(0) var scene_surface: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> ao: AoUniform;
+const AODEPTH_LOG1P_BA16: f32 = 1.0;
 
 struct FullscreenOutput { @builtin(position) position: vec4<f32> };
 @vertex
@@ -37,7 +38,7 @@ fn decode_normal(surface: vec4<f32>) -> vec3<f32> {
 
 fn decode_view_depth(surface: vec4<f32>) -> f32 {
     let code = decode_depth_code(surface);
-    return f32(code - 1u) * ao.depth.y;
+    return exp2(f32(code - 1u) * ao.depth.y) - 1.0;
 }
 
 fn reconstruct_world(pixel: vec2<i32>, view_depth: f32) -> vec3<f32> {
@@ -53,6 +54,7 @@ fn reconstruct_world(pixel: vec2<i32>, view_depth: f32) -> vec3<f32> {
 
 @fragment
 fn fragment_main(input: FullscreenOutput) -> @location(0) f32 {
+    if (ao.camera_forward.w != AODEPTH_LOG1P_BA16) { return 1.0; }
     let pixel = vec2<i32>(input.position.xy);
     let surface = textureLoad(scene_surface, pixel, 0);
     let depth_code = decode_depth_code(surface);

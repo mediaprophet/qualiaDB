@@ -38,7 +38,7 @@ impl ConstructSource {
 }
 
 /// Observer-scope. Shortcuts use `--construct={id}`.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ConstructSeed {
     pub id: String,
     pub label: String,
@@ -52,6 +52,9 @@ pub struct ConstructSeed {
     pub default_manifold: String,
     /// Lenses that make up this scope.
     pub manifold_ids: Vec<String>,
+    /// Host geometries whose cellular complexes and harboured graphs belong to this scope.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub geometry_ids: Vec<String>,
     /// Library Software index URI (`urn:poet:construct:…`).
     pub library_uri: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -81,6 +84,7 @@ mod tests {
             honesty: "stub".into(),
             default_manifold: String::new(),
             manifold_ids: vec![],
+            geometry_ids: vec![],
             library_uri: "urn:poet:construct:stub-example".into(),
             required_shapes: vec![],
             source: ConstructSource::Stub,

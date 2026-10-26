@@ -1284,6 +1284,17 @@ pub const POET_INSPECTOR_BIND: &str = "Poet.inspector_bind";
 pub const POET_TIMELINE_SCRUB: &str = "Poet.timeline_scrub";
 pub const POET_VIEWPORT_CONFIGURE: &str = "Poet.viewport_configure";
 pub const POET_EXPORT_BUNDLE: &str = "Poet.export_bundle";
+pub const POET_TOPOLOGY_BIND: &str = "Poet.topology_bind";
+
+/// POET Geometry-Topology Complex ("Geometries Harbour Many Graphs") capability invoke ids.
+pub const TOPOLOGY_DEFINE_GEOMETRY: &str = "Topology.define_geometry";
+pub const TOPOLOGY_HARBOUR_GRAPH: &str = "Topology.harbour_graph";
+pub const TOPOLOGY_SWITCH_GRAPH: &str = "Topology.switch_graph";
+pub const TOPOLOGY_ANCHOR_BIND: &str = "Topology.anchor_bind";
+pub const TOPOLOGY_DELTA_EDIT: &str = "Topology.delta_edit";
+pub const TOPOLOGY_SEAL: &str = "Topology.seal";
+pub const TOPOLOGY_TRAVERSE: &str = "Topology.traverse";
+pub const TOPOLOGY_ANALYZE_HOMOLOGY: &str = "Topology.analyze_homology";
 
 // WGSL Forge & Shaders
 pub const SHADERS_LIST: &str = "Shaders.list";
@@ -2635,6 +2646,15 @@ pub const ALL_BOUND: &[&str] = &[
     SCENE_GRAPH_10D_STEP_ONTOGENY,
     SCENE_GRAPH_10D_DISPATCH_AFFORDANCE,
     SCENE_GRAPH_10D_CULL_INDIRECT_4TIER,
+    TOPOLOGY_DEFINE_GEOMETRY,
+    TOPOLOGY_HARBOUR_GRAPH,
+    TOPOLOGY_SWITCH_GRAPH,
+    TOPOLOGY_ANCHOR_BIND,
+    TOPOLOGY_DELTA_EDIT,
+    TOPOLOGY_SEAL,
+    TOPOLOGY_TRAVERSE,
+    TOPOLOGY_ANALYZE_HOMOLOGY,
+    POET_TOPOLOGY_BIND,
 ];
 
 /// Future extract target for an invoke id. Not a crate today.
@@ -3817,6 +3837,15 @@ pub fn seam_for(id: &str) -> &'static str {
         | SCENE_GRAPH_10D_STEP_ONTOGENY
         | SCENE_GRAPH_10D_DISPATCH_AFFORDANCE
         | SCENE_GRAPH_10D_CULL_INDIRECT_4TIER => "simulation",
+        TOPOLOGY_DEFINE_GEOMETRY
+        | TOPOLOGY_HARBOUR_GRAPH
+        | TOPOLOGY_SWITCH_GRAPH
+        | TOPOLOGY_ANCHOR_BIND
+        | TOPOLOGY_DELTA_EDIT
+        | TOPOLOGY_SEAL
+        | TOPOLOGY_TRAVERSE
+        | TOPOLOGY_ANALYZE_HOMOLOGY => "topology",
+        POET_TOPOLOGY_BIND => "poet",
         _ => "unbound",
     }
 }

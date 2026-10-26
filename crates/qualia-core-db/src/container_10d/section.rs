@@ -32,6 +32,19 @@
 //! `sort_indices_stack`). [`parse_section_table`] returns a zero-copy
 //! `&[SectionDescriptor]` view into the input bytes.
 
+#[path = "section/table_validation.rs"]
+mod table_validation;
+
+// FND-04: new preservation behavior lives in a focused child; the oversized
+// strict parser/writer remains unchanged pending its separate decomposition.
+#[path = "section/opaque_preservation.rs"]
+mod opaque_preservation;
+pub use opaque_preservation::{
+    copy_opaque_container_into, inspect_opaque_container,
+    replace_known_section_bytes_preserving_layout, OpaqueContainerView,
+    OpaquePreservationBudget, OpaquePreservationError,
+};
+
 use bytemuck::{Pod, Zeroable};
 
 use crate::container_10d::crc32c::crc32c;
@@ -315,6 +328,10 @@ pub enum SectionTableError {
     /// The header's section-table pointer is inconsistent (offset/count
     /// mismatch, offset below header, or count over the max).
     BadSectionTablePointer { offset: u32, count: u32 },
+    /// Borrowed descriptor bytes are not aligned for the zero-copy table view.
+    UnalignedSectionTable,
+    /// A nonempty payload intersects the container header or section table.
+    SectionOverlapsMetadata { index: usize },
     /// A descriptor's `reserved16` is non-zero.
     NonZeroDescriptorReserved { index: usize },
     /// A descriptor's `byte_offset` is misaligned relative to its tier.
@@ -397,6 +414,8 @@ impl std::fmt::Display for SectionTableError {
                 f,
                 "10d bad section-table pointer: offset={offset}, count={count}"
             ),
+            Self::UnalignedSectionTable => write!(f, "10d section table is not aligned for borrowing"),
+            Self::SectionOverlapsMetadata { index } => write!(f, "10d section {index} overlaps header or section table"),
             Self::NonZeroDescriptorReserved { index } => {
                 write!(f, "10d non-zero reserved16 in descriptor {index}")
             }
@@ -672,15 +691,17 @@ pub fn parse_section_table<'a>(
             need: table_end,
         });
     }
-    // SAFETY: SectionDescriptor is repr(C) + Pod + size 24 with no padding;
-    // the table slice is byte-aligned and fully within `data`.
-    let descs: &[SectionDescriptor] = bytemuck::cast_slice(&data[table_start..table_end]);
+    // Return a clear error for unaligned borrowed bytes instead of panicking.
+    let descs = table_validation::borrow_table(&data[table_start..table_end])?;
 
     // Per-descriptor validation + cross-descriptor overlap/alignment scan.
     // We scan in table order (which is canonical = ascending section_type
     // order for files we wrote; for files we didn't write, we sort the
     // offset check by byte_offset to detect overlaps correctly).
     for (i, d) in descs.iter().enumerate() {
+        if descs[..i].iter().any(|old| old.section_type == d.section_type) {
+            return Err(SectionTableError::DuplicateSectionType { section_type: d.section_type });
+        }
         if d.reserved16 != 0 {
             return Err(SectionTableError::NonZeroDescriptorReserved { index: i });
         }
@@ -733,6 +754,7 @@ pub fn parse_section_table<'a>(
                 file_len: data.len(),
             });
         }
+        table_validation::metadata_range(d, i, table_start, table_end)?;
         // Stride consistency.
         if d.stride > 0 {
             let expected = d.stride as usize * d.element_count as usize;
@@ -784,38 +806,8 @@ pub fn parse_section_table<'a>(
         }
     }
 
-    // Padding-between-sections is zero: scan the gaps. The gap before the
-    // first section (between table_end and the first section's offset) and
-    // between consecutive sections. Walk in offset order.
-    let mut order_by_off: [usize; MAX_SECTION_COUNT as usize] =
-        [0usize; MAX_SECTION_COUNT as usize];
-    for i in 0..descs.len() {
-        order_by_off[i] = i;
-    }
-    // Insertion sort by byte_offset.
-    for i in 1..descs.len() {
-        let mut j = i;
-        while j > 0 && descs[order_by_off[j - 1]].byte_offset > descs[order_by_off[j]].byte_offset {
-            order_by_off.swap(j - 1, j);
-            j -= 1;
-        }
-    }
-    let mut gap_start = table_end;
-    for k in 0..descs.len() {
-        let idx = order_by_off[k];
-        let o = descs[idx].byte_offset as usize;
-        for b in &data[gap_start..o] {
-            if *b != 0 {
-                return Err(SectionTableError::NonZeroPadding { at: gap_start });
-            }
-        }
-        gap_start = o + descs[idx].byte_length as usize;
-    }
-    // Tail padding (after the last section to the end of the encoded region)
-    // is not checked here — the caller may have a larger buffer. Only the
-    // encoded region's padding matters, and that is covered by `total` from
-    // the writer; a reader does not know `total` without the header CRC region
-    // (P0.3). For P0.2, inter-section padding is the gate.
+    // Focused canonical validation also supports payloads before a later table.
+    table_validation::padding(data, descs, table_start, table_end)?;
 
     Ok(descs)
 }

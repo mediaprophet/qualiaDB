@@ -169,7 +169,14 @@ impl SceneMeshAccum {
             }
         }
         let local_normals =
-            match crate::render::compile_10d::decode_10d_normals(&bytes, mesh.positions.len()) {
+            match container_10d::read_container_mesh_frames_with_limits(
+                &bytes, mesh.positions.len(),
+                container_10d::MeshFrameDecodeLimits {
+                    max_vertices: container_10d::MAX_NORMAL_COUNT,
+                    max_payload_bytes: 64 * 1024 * 1024,
+                    max_decoded_bytes: 256 * 1024 * 1024,
+                },
+            ).map(|frames| frames.and_then(|frames| frames.normals)) {
                 Ok(Some(normals)) => normals,
                 Ok(None) => {
                     let mut normals = vec![[0.0; 3]; mesh.positions.len()];

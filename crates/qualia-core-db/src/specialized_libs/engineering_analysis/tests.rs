@@ -89,10 +89,32 @@ fn test_mechanical_analysis() {
     let mut library = EngineeringAnalysisLibrary::new();
     library.initialize().unwrap();
 
-    let model = EngineeringModel::new();
-    // HONEST: mechanical FE analysis isn't implemented → NotImplemented, not a fake result.
-    let result = library.perform_mechanical_analysis(model, AnalysisType::LinearDynamic);
-    assert!(matches!(result, Err(EngineeringError::NotImplemented(_))));
+    // SI prismatic steel bar: A=0.01 m², L=2 m, E=200 GPa, F=200 N.
+    // The closed-form static tip displacement is F·L/(A·E)=2e-7 m.
+    // The undamped step-load dynamic peak approaches twice that static value.
+    let stat = library
+        .perform_mechanical_analysis(si_prismatic_model(200.0), AnalysisType::LinearStatic)
+        .unwrap()
+        .result;
+    assert!((stat.displacement_field[0] - 2.0e-7).abs() < 1e-15);
+    assert!((stat.stress_field[0] - 20_000.0).abs() < 1e-9);
+
+    let dynamic = library
+        .perform_mechanical_analysis(si_prismatic_model(200.0), AnalysisType::LinearDynamic)
+        .unwrap()
+        .result;
+    let dynamic_amplification = dynamic.displacement_field[0] / stat.displacement_field[0];
+    assert!(
+        (dynamic_amplification - 2.0).abs() < 0.02,
+        "step-load dynamic amplification = {dynamic_amplification}"
+    );
+
+    let mut missing_material = si_prismatic_model(200.0);
+    missing_material.materials.clear();
+    assert!(matches!(
+        library.perform_mechanical_analysis(missing_material, AnalysisType::LinearStatic),
+        Err(EngineeringError::InsufficientData(_))
+    ));
 }
 
 #[test]
@@ -1099,23 +1121,42 @@ fn structural_buckling_dispatch_load_factor() {
 }
 
 #[test]
-fn structural_vibration_facade_is_honest_not_implemented() {
-    // Modal results don't fit the scalar-field AnalysisResults shape — the
-    // facade returns an honest NotImplemented pointing to the real method.
+fn structural_vibration_facade_matches_prismatic_closed_form_and_rejects_invalid_density() {
     let mut library = EngineeringAnalysisLibrary::new();
     library.initialize().unwrap();
-    let mut model = EngineeringModel::new();
-    model.geometry.dimensions = vec![1.0, 1.0, 2.0];
-    model.materials.insert("steel".to_string(), Material::new());
-    model.loads.push(Load {
-        load_id: "F".to_string(),
-        load_type: LoadType::Force,
-        load_magnitude: 50.0,
-        load_direction: vec![1.0, 0.0, 0.0],
-        application_point: vec![0.0, 0.0, 0.0],
-    });
-    let res = library.perform_structural_analysis(model, AnalysisType::Vibration);
-    assert!(matches!(res, Err(EngineeringError::NotImplemented(_))));
+    let result = library
+        .perform_structural_analysis(si_prismatic_model(200.0), AnalysisType::Vibration)
+        .unwrap()
+        .result;
+    assert_eq!(result.analysis_type, AnalysisType::Vibration);
+
+    let area: f64 = 0.1 * 0.1;
+    let length: f64 = 2.0;
+    let si_model = si_prismatic_model(200.0);
+    let material = si_model.materials.get("steel").unwrap();
+    let e = material.material_properties.youngs_modulus;
+    let density = material.material_properties.density;
+    let expected_omega = ((e * area / length) / (density * area * length / 2.0)).sqrt();
+    assert!((result.stress_field[0] - expected_omega).abs() < 1e-9);
+    assert!(
+        (result.displacement_field[0] - expected_omega / (2.0 * std::f64::consts::PI)).abs() < 1e-9
+    );
+    // The solver reports its first mode in reaction_forces, normalized to max |φ|=1.
+    assert_eq!(result.reaction_forces.len(), 1);
+    assert!(result.reaction_forces.iter().all(|value| value.is_finite()));
+    assert!((result.reaction_forces[0].abs() - 1.0).abs() < 1e-12);
+
+    let mut invalid_density = si_prismatic_model(200.0);
+    invalid_density
+        .materials
+        .get_mut("steel")
+        .unwrap()
+        .material_properties
+        .density = 0.0;
+    assert!(matches!(
+        library.perform_structural_analysis(invalid_density, AnalysisType::Vibration),
+        Err(EngineeringError::InsufficientData(_))
+    ));
 }
 
 // ---- FE-backed facade dispatch (real assembly + solve) -------------------
@@ -1132,6 +1173,20 @@ fn prismatic_model(load: f64) -> EngineeringModel {
         load_direction: vec![1.0, 0.0, 0.0],
         application_point: vec![0.0, 0.0, 0.0],
     });
+    model
+}
+
+fn si_prismatic_model(load: f64) -> EngineeringModel {
+    // Consistent SI fixture: 0.1 m × 0.1 m × 2 m steel bar; N, Pa, kg/m³.
+    let mut model = prismatic_model(load);
+    let material = &mut model
+        .materials
+        .get_mut("steel")
+        .unwrap()
+        .material_properties;
+    material.youngs_modulus = 200.0e9;
+    material.yield_strength = 250.0e6;
+    material.density = 7850.0;
     model
 }
 

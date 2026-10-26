@@ -1,7 +1,8 @@
 //! Multi-Format DEM Ingestion & Chunking (GeoTIFF, Terrain-RGB, Terrarium).
 //!
 //! Converts raw floating-point elevation rasters or compressed 24-bit elevation tiles
-//! into cache-aligned $64 \times 64$ cell `.m64` strata chunks ordered along a 2D Hilbert curve.
+//! into cache-aligned $64 \times 64$ cell `.m64` strata chunks in row-major order,
+//! with a 2D Hilbert index recorded for each chunk.
 
 use super::frame::GeodeticFrame;
 use super::hilbert::xy_to_hilbert;
@@ -43,7 +44,9 @@ pub fn decode_terrarium_mm(r: u8, g: u8, b: u8) -> i32 {
     (meters * 1000.0).round() as i32
 }
 
-/// Canonical compression codecs for .m64 spatial chunks (stored in `compression_flags`).
+/// Codec identifiers for .m64 spatial chunks (stored in `compression_flags`).
+/// The raster producer currently implements only `UncompressedMmap`; all other
+/// identifiers fail before output mutation rather than mislabelling raw bytes.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionCodec {
@@ -83,9 +86,13 @@ pub enum IngestionError {
     DimensionMismatch,
     BufferTooSmall,
     InvalidChunkCount,
+    UnsupportedCompression(CompressionCodec),
+    SizeOverflow,
+    UnsupportedEndian,
 }
 
-/// Partitions a DEM raster into $64 \times 64$ `.m64` strata chunks sorted along a 2D Hilbert curve.
+/// Partitions a DEM raster into $64 \times 64$ `.m64` strata chunks in row-major
+/// order, retaining a Hilbert index in each directory entry.
 ///
 /// Writes the complete `.m64` container bytes (Header + Directory + Records) into `out`.
 pub fn compile_raster_to_m64(
@@ -105,20 +112,28 @@ pub fn compile_raster_to_m64_with_codec(
     codec: CompressionCodec,
     out: &mut [u8],
 ) -> Result<usize, IngestionError> {
-    if raster.width == 0 || raster.height == 0 || raster.elevations_mm.len() != raster.width * raster.height {
+    if codec != CompressionCodec::UncompressedMmap {
+        return Err(IngestionError::UnsupportedCompression(codec));
+    }
+    if !cfg!(target_endian = "little") {
+        return Err(IngestionError::UnsupportedEndian);
+    }
+    if raster.width == 0 || raster.height == 0
+        || raster.width.checked_mul(raster.height) != Some(raster.elevations_mm.len()) {
         return Err(IngestionError::DimensionMismatch);
     }
 
-    let chunks_x = (raster.width + CHUNK_GRID_SIZE - 1) / CHUNK_GRID_SIZE;
-    let chunks_y = (raster.height + CHUNK_GRID_SIZE - 1) / CHUNK_GRID_SIZE;
-    let total_chunks = chunks_x * chunks_y;
+    let chunks_x = raster.width / CHUNK_GRID_SIZE + usize::from(raster.width % CHUNK_GRID_SIZE != 0);
+    let chunks_y = raster.height / CHUNK_GRID_SIZE + usize::from(raster.height % CHUNK_GRID_SIZE != 0);
+    let total_chunks = chunks_x.checked_mul(chunks_y).ok_or(IngestionError::SizeOverflow)?;
 
     let header_size = std::mem::size_of::<M64Header>();
     let dir_entry_size = std::mem::size_of::<M64ChunkDirectoryEntry>();
     let record_size = std::mem::size_of::<M64StrataColumnRecord>();
     let chunk_payload_size = CHUNK_CELL_COUNT * record_size;
 
-    let required_len = header_size + total_chunks * dir_entry_size + total_chunks * chunk_payload_size;
+    let required_len = total_chunks.checked_mul(dir_entry_size + chunk_payload_size)
+        .and_then(|size| header_size.checked_add(size)).ok_or(IngestionError::SizeOverflow)?;
     if out.len() < required_len {
         return Err(IngestionError::BufferTooSmall);
     }
@@ -143,7 +158,7 @@ pub fn compile_raster_to_m64_with_codec(
     let dir_offset = header_size;
     let mut payload_offset = dir_offset + total_chunks * dir_entry_size;
 
-    // 2. Iterate chunks and sort by Hilbert index
+    // 2. Emit row-major chunks with Hilbert keys; no sorting is performed.
     for cy in 0..chunks_y {
         for cx in 0..chunks_x {
             let chunk_idx = cy * chunks_x + cx;
@@ -578,6 +593,53 @@ pub fn compute_canopy_height_model_zero_heap(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn m64_unimplemented_codecs_fail_without_mutating_output() {
+        let elevations = [1000];
+        let raster = ElevationRaster { width: 1, height: 1, cell_size_mm: 1000, elevations_mm: &elevations };
+        let frame = GeodeticFrame::default();
+        for codec in [CompressionCodec::Lz4, CompressionCodec::BaoTree,
+            CompressionCodec::Htj2kWavelet, CompressionCodec::TerrainRgbPng,
+            CompressionCodec::TerrariumPng, CompressionCodec::Av1IntraDrape] {
+            let mut output = [0xa5; 512];
+            assert_eq!(compile_raster_to_m64_with_codec(&raster, &frame, 1, codec, &mut output),
+                Err(IngestionError::UnsupportedCompression(codec)));
+            assert_eq!(output, [0xa5; 512]);
+        }
+    }
+
+    #[test]
+    fn m64_raw_codec_preserves_version_layout_and_checked_sdk_readability() {
+        use qualia_core_db::q42::m64_matter::{M64Reader, M64ReadLimits, M64PayloadInterval};
+        let elevations = [500_000];
+        let raster = ElevationRaster { width: 1, height: 1, cell_size_mm: 30_000, elevations_mm: &elevations };
+        let frame = GeodeticFrame::default();
+        let mut output = vec![0; 64 + 64 + 4096 * 64];
+        let written = compile_raster_to_m64(&raster, &frame, 1, &mut output).unwrap();
+        let reader = M64Reader::parse(&output[..written], M64ReadLimits {
+            max_file_bytes: output.len(), max_chunks: 1, max_records: 4096,
+        }, &mut [M64PayloadInterval::default(); 1]).unwrap();
+        assert_eq!(reader.header().version, 1);
+        assert_eq!(reader.verification().record_crc_checked, 4096);
+        assert_eq!(reader.verification().records_without_checksum, 0);
+        let chunk = reader.chunk(0).unwrap();
+        assert_eq!(chunk.directory_entry().compression_flags, 0);
+        assert_eq!(chunk.directory_entry().bao_root_hash_prefix, [0; 12]);
+        let mut expected_record = M64StrataColumnRecord::default();
+        expected_record.surface_elevation_mm = 500_000;
+        expected_record.update_crc();
+        assert!(chunk.payload().chunks_exact(64).all(|raw| raw == bytemuck::bytes_of(&expected_record)));
+    }
+
+    #[test]
+    fn m64_invalid_dimensions_fail_before_mutation() {
+        let raster = ElevationRaster { width: usize::MAX, height: 2, cell_size_mm: 1, elevations_mm: &[] };
+        let mut output = [0xa5; 64];
+        assert_eq!(compile_raster_to_m64(&raster, &GeodeticFrame::default(), 1, &mut output),
+            Err(IngestionError::DimensionMismatch));
+        assert_eq!(output, [0xa5; 64]);
+    }
 
     #[test]
     fn test_parse_cog_ifd_header_and_extract_elevation() {

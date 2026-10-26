@@ -2,6 +2,8 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
+#[cfg(windows)]
+mod native_secure_lock;
 
 fn generate_master_secret() -> Result<[u8; 32], String> {
     let mut secret = [0u8; 32];
@@ -9,13 +11,17 @@ fn generate_master_secret() -> Result<[u8; 32], String> {
     Ok(secret)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(test)))]
 fn keyring_entry_for(storage_dir: &str) -> Result<keyring::Entry, String> {
     let mut hasher = Sha256::new();
     hasher.update(storage_dir.as_bytes());
     let digest = hasher.finalize();
     let username = format!("master_{}", hex::encode(&digest[..8]));
     keyring::Entry::new("qualia_db", &username).map_err(|e| format!("Keyring error: {e}"))
+}
+#[cfg(all(not(target_arch = "wasm32"), test))]
+fn keyring_entry_for(_storage_dir: &str) -> Result<keyring::Entry, String> {
+    Err("OS credentials are unavailable to isolated unit-test vault fixtures".into())
 }
 
 /// Closed v1 `idf:keyRole` values for purpose-separated vault material.
@@ -110,9 +116,91 @@ impl KeyRole {
 pub struct KeyVault {
     master_key: Option<SigningKey>,
     storage_dir: Option<String>,
+    native_secure: bool,
 }
 
 impl KeyVault {
+    /// Native operator vault. Uses the OS credential store exclusively: no
+    /// plaintext keystore, auto-generation on read failure or legacy fallback.
+    /// `create` must follow an explicit native operator create gesture.
+    #[cfg(all(windows, not(test)))]
+    pub fn open_native_secure(storage_dir: &str, create: bool) -> Result<Self, String> {
+        if storage_dir.is_empty() || storage_dir.len() > 4096 {
+            return Err("native secure vault requires bounded profile path".into());
+        }
+        let (profile_path, _profile_lock) =
+            native_secure_lock::acquire(Path::new(storage_dir), create)?;
+        if profile_path.join("keystore.bin").exists() {
+            return Err("legacy plaintext vault requires explicit protected migration".into());
+        }
+        // Build directly from the concrete OS store. A replaceable global default
+        // (including test/mock stores) cannot supply production enrollment keys.
+        use keyring_core::api::CredentialStoreApi;
+        let store = windows_native_keyring_store::Store::new()
+            .map_err(|e| format!("Windows Credential Manager unavailable: {e}"))?;
+        let mut hasher = Sha256::new();
+        hasher.update(profile_path.to_string_lossy().as_bytes());
+        let profile = format!("native_{}", hex::encode(hasher.finalize()));
+        let modifiers = std::collections::HashMap::from([("persistence", "Local")]);
+        let entry = store
+            .build("qualia_native_authoring_v1", &profile, Some(&modifiers))
+            .map_err(|e| format!("native OS credential construction: {e}"))?;
+        let mut secret = zeroize::Zeroizing::new([0u8; 32]);
+        match entry.get_password() {
+            Ok(encoded) => {
+                if create {
+                    return Err("native secure vault already exists".into());
+                }
+                let encoded = zeroize::Zeroizing::new(encoded);
+                hex::decode_to_slice(encoded.as_str(), secret.as_mut())
+                    .map_err(|_| "invalid OS credential vault key")?;
+            }
+            Err(keyring_core::Error::NoEntry) if create => {
+                *secret = generate_master_secret()?;
+                let encoded = zeroize::Zeroizing::new(hex::encode(secret.as_ref()));
+                entry
+                    .set_password(encoded.as_str())
+                    .map_err(|e| format!("OS credential write failed: {e}"))?;
+                let verified = zeroize::Zeroizing::new(
+                    entry
+                        .get_password()
+                        .map_err(|e| format!("OS credential readback failed: {e}"))?,
+                );
+                if verified.as_str() != encoded.as_str() {
+                    return Err("OS credential readback mismatch".into());
+                }
+            }
+            Err(e) => return Err(format!("native secure vault unavailable: {e}")),
+        }
+        if *secret == [0; 32] {
+            return Err("empty native secure vault key".into());
+        }
+        if entry
+            .get_attributes()
+            .map_err(|e| format!("OS credential persistence unavailable: {e}"))?
+            .get("persistence")
+            .is_none_or(|p| p != "Local")
+        {
+            return Err("native enrollment requires OS Local persistence".into());
+        }
+        // No generic unlock fallback: secure callers reopen this explicit method.
+        Ok(Self {
+            master_key: Some(SigningKey::from_bytes(&secret)),
+            storage_dir: None,
+            native_secure: true,
+        })
+    }
+    #[cfg(all(not(target_arch = "wasm32"), not(windows), not(test)))]
+    pub fn open_native_secure(_storage_dir: &str, _create: bool) -> Result<Self, String> {
+        Err("native enrollment OS credential backend is not qualified on this target".into())
+    }
+    #[cfg(all(not(target_arch = "wasm32"), test))]
+    pub fn open_native_secure(_storage_dir: &str, _create: bool) -> Result<Self, String> {
+        Err("OS credential operations are explicitly disabled in unit tests".into())
+    }
+    pub fn is_native_secure(&self) -> bool {
+        self.native_secure
+    }
     /// Creates an in-memory KeyVault with a fresh ephemeral key (for tests/stubs only).
     pub fn new() -> Self {
         use sha2::{Digest, Sha256};
@@ -124,6 +212,7 @@ impl KeyVault {
         Self {
             master_key: Some(SigningKey::from_bytes(&secret)),
             storage_dir: None,
+            native_secure: false,
         }
     }
 
@@ -211,6 +300,7 @@ impl KeyVault {
         Ok(Self {
             master_key: Some(master_key),
             storage_dir: Some(storage_dir.to_string()),
+            native_secure: false,
         })
     }
 
@@ -246,6 +336,7 @@ impl KeyVault {
         Ok(Self {
             master_key: Some(master_key),
             storage_dir: Some(storage_dir.to_string()),
+            native_secure: false,
         })
     }
 

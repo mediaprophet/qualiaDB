@@ -8,6 +8,7 @@ use super::construct::ConstructSeed;
 use super::ontology::OntologyRegistry;
 use super::sociality::{ManifoldParticipant, ManifoldSociality};
 use super::toolbox::Toolbox;
+use super::topology::{CellAnchorSpec, GeometrySeed};
 use core::fmt;
 use std::collections::BTreeMap;
 
@@ -26,16 +27,18 @@ pub struct Registry {
     ontologies: OntologyRegistry,
     manifolds: Vec<ManifoldSeed>,
     constructs: Vec<ConstructSeed>,
+    geometries: Vec<GeometrySeed>,
 }
 
 impl Registry {
-    /// Create a new empty registry.
+    /// Create a new registry seeded with canonical geometry-topology presets.
     pub fn new() -> Self {
         Self {
             toolboxes: Vec::new(),
             ontologies: OntologyRegistry::new(),
             manifolds: Vec::new(),
             constructs: Vec::new(),
+            geometries: GeometrySeed::default_presets(),
         }
     }
 
@@ -98,6 +101,30 @@ impl Registry {
     pub fn construct(&self, id: &str) -> Option<&ConstructSeed> {
         self.constructs.iter().find(|c| c.id == id)
     }
+
+    /// Register or replace a geometry seed.
+    pub fn register_geometry(&mut self, seed: GeometrySeed) {
+        if let Some(existing) = self.geometries.iter_mut().find(|g| g.id == seed.id) {
+            *existing = seed;
+        } else {
+            self.geometries.push(seed);
+        }
+    }
+
+    /// All registered geometry seeds.
+    pub fn geometries(&self) -> &[GeometrySeed] {
+        &self.geometries
+    }
+
+    /// Find a geometry seed by id.
+    pub fn geometry(&self, id: &str) -> Option<&GeometrySeed> {
+        self.geometries.iter().find(|g| g.id == id)
+    }
+
+    /// Mutable lookup for a geometry seed by id.
+    pub fn geometry_mut(&mut self, id: &str) -> Option<&mut GeometrySeed> {
+        self.geometries.iter_mut().find(|g| g.id == id)
+    }
 }
 
 impl Default for Registry {
@@ -113,6 +140,7 @@ impl fmt::Debug for Registry {
             .field("manifold_count", &self.manifolds.len())
             .field("ontology_count", &self.ontologies.modules().len())
             .field("construct_count", &self.constructs.len())
+            .field("geometry_count", &self.geometries.len())
             .finish()
     }
 }
@@ -151,6 +179,9 @@ pub struct ManifoldSeed {
     /// People and agents on a social lens. Empty on personal manifolds.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub participants: Vec<ManifoldParticipant>,
+    /// Host geometries and their harboured graphs bound to this manifold lens.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub geometries: Vec<GeometrySeed>,
 }
 
 impl ManifoldSeed {
@@ -350,6 +381,26 @@ pub struct SeedConnection {
     pub wire_type: String,
     /// Predicate label shown on the wire midpoint.
     pub label: String,
+    /// Harboured graph IDs within the manifold's host geometry that this wire participates in.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub graph_ids: Vec<String>,
+    /// Optional cellular anchor binding this wire to a $k$-cell of the host geometry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell_anchor: Option<CellAnchorSpec>,
+}
+
+impl Default for SeedConnection {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            from: 0,
+            to: 0,
+            wire_type: default_wire_type(),
+            label: String::new(),
+            graph_ids: Vec::new(),
+            cell_anchor: None,
+        }
+    }
 }
 
 fn default_wire_type() -> String {
@@ -387,6 +438,8 @@ mod tests {
     #[test]
     fn registry_construction() {
         let mut reg = Registry::new();
+        assert_eq!(reg.geometries().len(), 3);
+        assert!(reg.geometry("surface-manifold-2d").is_some());
         reg.register_manifold(ManifoldSeed {
             id: "social".into(),
             label: "Social".into(),

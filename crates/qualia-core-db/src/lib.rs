@@ -322,6 +322,7 @@ pub mod container_10d;
 /// Semantic-instrument collectables (SI-03): Demo-labelled HMC of HCF + N3 + `.10d`.
 pub mod semantic_instruments;
 pub mod tensor;
+pub mod topology;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the
 // `solvers` module below — on wasm32 it only exists under the `wasm-scientific` feature.

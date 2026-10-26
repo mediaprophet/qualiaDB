@@ -45,9 +45,9 @@ pub fn has_m64_magic(data: &[u8]) -> bool {
 pub struct M64Header {
     /// 0x00..0x04: ASCII Magic `m64\0` (or `e64\0`)
     pub magic: [u8; 4],
-    /// 0x04..0x08: Format version (1 or 2)
+    /// 0x04..0x08: Format version (1/2, or explicit developmental georaster 3)
     pub version: u32,
-    /// 0x08..0x10: Fixed 64-byte header size
+    /// 0x08..0x10: Header size (64 for v1/v2; 192 for opt-in georaster v3)
     pub header_size: u64,
     /// 0x10..0x18: Total file size in bytes
     pub total_file_size: u64,
@@ -104,10 +104,11 @@ impl M64Header {
         if !has_m64_magic(&self.magic) {
             return Err(M64Error::InvalidMagic);
         }
-        if self.version != 1 && self.version != 2 {
+        if !matches!(self.version, 1 | 2 | 3) {
             return Err(M64Error::InvalidVersion(self.version as u16));
         }
-        if self.header_size != 64 {
+        let required_size = if self.version == 3 { 192 } else { 64 };
+        if self.header_size != required_size {
             return Err(M64Error::InvalidHeaderSize);
         }
 

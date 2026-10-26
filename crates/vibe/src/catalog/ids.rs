@@ -1,4 +1,6 @@
-//! Generated from qualia-core-db poet_host/invoke/ids.rs — keep in sync when adding host IDs.
+//! Core catalog seeded from qualia-core-db poet_host/invoke/ids.rs.
+//! Explicit Poet GeometryHost extensions below are separate host-owned bindings;
+//! catalog recognition does not establish implementation or grants in every host.
 
 /// Every bound Family.method invoke id the Vibe catalog knows.
 pub const ALL_INVOKE_IDS: &[&str] = &[
@@ -56,6 +58,11 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "ComputationalGeometry.nearest_site_brute_force",
     "ComputationalGeometry.orient_3d",
     "ComputationalGeometry.extrude_profile",
+    // Implemented by Poet GeometryHost; not central Core or LocalHost mesh kernels.
+    "ComputationalGeometry.profile_sweep",
+    "ComputationalGeometry.revolve_profile",
+    "ComputationalGeometry.torus",
+    "ComputationalGeometry.uv_sphere",
     "ComputationalGeometry.asymmetric_hull",
     "ComputationalGeometry.bspline_fit",
     "ComputationalGeometry.turtle_3d",
@@ -1242,6 +1249,15 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "SceneGraph10D.step_ontogeny",
     "SceneGraph10D.dispatch_affordance",
     "SceneGraph10D.cull_indirect_4tier",
+    "Topology.define_geometry",
+    "Topology.harbour_graph",
+    "Topology.switch_graph",
+    "Topology.anchor_bind",
+    "Topology.delta_edit",
+    "Topology.seal",
+    "Topology.traverse",
+    "Topology.analyze_homology",
+    "Poet.topology_bind",
 ];
 
 pub const INVOKE_ID_COUNT: usize = ALL_INVOKE_IDS.len();

@@ -6,21 +6,31 @@ authors = ["QualiaDB Project Team"]
 description = "QualiaDB Model Context Protocol (MCP) server library: standards-compliant JSON-RPC 2.0 interface exposing semantic graph, modalities, physics, geomechanics, and space weather simulations"
 license = "Apache-2.0"
 
+[features]
+default = ["engine-tools"]
+engine-tools = [
+    "dep:qualia-core-db", "dep:qualia-sim", "dep:qualia-geospatial",
+    "dep:qualia-vision", "dep:qualia-audio", "dep:vibe", "dep:tokio",
+    "dep:bytemuck", "dep:log", "dep:env_logger", "dep:chrono",
+    "dep:rio_turtle", "dep:rio_api",
+]
+authoring = []
+
 [dependencies]
-qualia-core-db = { workspace = true, default-features = true }
-qualia-sim = { workspace = true }
-qualia-geospatial = { workspace = true }
-qualia-vision = { workspace = true }
-qualia-audio = { workspace = true }
-vibe = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
+qualia-core-db = { workspace = true, default-features = true, optional = true }
+qualia-sim = { workspace = true, optional = true }
+qualia-geospatial = { workspace = true, optional = true }
+qualia-vision = { workspace = true, optional = true }
+qualia-audio = { workspace = true, optional = true }
+vibe = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["full"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["std"] }
-bytemuck = { workspace = true, features = ["derive"] }
-log = { workspace = true }
-env_logger = "0.11"
-chrono = { workspace = true }
-rio_turtle = { workspace = true }
-rio_api = { workspace = true }
+bytemuck = { workspace = true, features = ["derive"], optional = true }
+log = { workspace = true, optional = true }
+env_logger = { version = "0.11", optional = true }
+chrono = { workspace = true, optional = true }
+rio_turtle = { workspace = true, optional = true }
+rio_api = { workspace = true, optional = true }
 
 [dev-dependencies]

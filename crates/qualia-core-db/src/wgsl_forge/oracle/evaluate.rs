@@ -241,7 +241,7 @@ pub fn evaluate_matmul_tc(
 pub fn evaluate_coopmat_loadstore(
     context: &mut WgpuComputeContext,
 ) -> Result<ComparisonReport, ForgeError> {
-    let source = r#"enable wgpu_cooperative_matrix;
+    let source = r#"enable etalon_cooperative_matrix;
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(2) var<storage, read_write> c: array<f32>;
 

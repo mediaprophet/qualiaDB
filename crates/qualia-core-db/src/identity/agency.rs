@@ -198,6 +198,58 @@ pub fn derive_lane_key(pin: &str, salt: &[u8]) -> [u8; LANE_KEY_LENGTH] {
     )
 }
 
+#[cfg(all(feature = "sanctuary-crypto", not(target_arch = "wasm32")))]
+/// Memory-hard Argon2id + HKDF-SHA256 domain-separated Sanctuary Keep lane key derivation (WP-05).
+///
+/// Combines Argon2id memory-hardness with HKDF-SHA256 sub-lane expansion so multi-member
+/// family/household and multi-tenant VPS vaults isolate each member's Sanctuary Keep lane.
+pub fn derive_lane_key_argon2_hkdf(
+    pin: &str,
+    salt: &[u8],
+    lane_domain: &[u8],
+    m_cost_kib: u32,
+    t_cost: u32,
+    p_cost: u32,
+) -> Result<[u8; LANE_KEY_LENGTH], String> {
+    use hmac::{Hmac, Mac};
+    type HmacSha256 = Hmac<Sha256>;
+
+    // Ensure salt is at least 8 bytes for Argon2id
+    let mut padded_salt = [0u8; 16];
+    let salt_slice = if salt.len() >= 8 {
+        salt
+    } else {
+        padded_salt[..salt.len()].copy_from_slice(salt);
+        &padded_salt[..]
+    };
+
+    let km = crate::sanctuary_crypto::derive_sanctuary_key_material_argon2(
+        pin.as_bytes(),
+        salt_slice,
+        m_cost_kib,
+        t_cost,
+        p_cost,
+    )?;
+
+    // HKDF-Extract(salt = volume_tweak, IKM = cipher_key)
+    let mut extract_mac = <HmacSha256 as hmac::digest::KeyInit>::new_from_slice(&km.volume_tweak)
+        .map_err(|e| format!("hkdf extract init: {e}"))?;
+    extract_mac.update(&km.cipher_key);
+    let prk = extract_mac.finalize().into_bytes();
+
+    // HKDF-Expand(PRK, info = "qualia.sanctuary.lane.v1|" || lane_domain || 0x01, L = 32)
+    let mut expand_mac = <HmacSha256 as hmac::digest::KeyInit>::new_from_slice(&prk)
+        .map_err(|e| format!("hkdf expand init: {e}"))?;
+    expand_mac.update(b"qualia.sanctuary.lane.v1|");
+    expand_mac.update(lane_domain);
+    expand_mac.update(&[0x01]);
+    let okm = expand_mac.finalize().into_bytes();
+
+    let mut out = [0u8; LANE_KEY_LENGTH];
+    out.copy_from_slice(&okm);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

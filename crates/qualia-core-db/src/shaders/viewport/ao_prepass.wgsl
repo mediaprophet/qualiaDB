@@ -201,11 +201,13 @@ fn vertex_main(
     return output;
 }
 
-// Pack octahedral world normal (RG8) and normalized linear view depth (BA16)
+const AODEPTH_LOG1P_BA16: f32 = 1.0;
+// Pack octahedral world normal (RG8) and internal log2(1 + view depth) (BA16)
 // into one universally renderable RGBA8 target. Code 0 is the clear/background
 // sentinel; valid surface depths occupy 1..65535.
 @fragment
 fn fragment_main(input: Output) -> @location(0) vec4<f32> {
+    if (ao.camera_forward.w != AODEPTH_LOG1P_BA16) { discard; }
     if (material.coverage.x == 1u) {
         let vertex_alpha = select(1.0, input.color.a, material.flags.y != 0u);
         let base_sample = select(
@@ -222,8 +224,8 @@ fn fragment_main(input: Output) -> @location(0) vec4<f32> {
     let camera_focus = camera.rest[1].xyz;
     let forward = normalize(camera_focus - eye);
     let view_depth = max(dot(input.world_position - eye, forward), 0.0);
-    let normalized_depth = clamp(view_depth / ao.depth.x, 0.0, 1.0);
-    let code = 1u + u32(round(normalized_depth * 65534.0));
+    let depth_code = log2(1.0 + clamp(view_depth, 0.0, ao.depth.x)) / ao.depth.y;
+    let code = 1u + u32(round(clamp(depth_code, 0.0, 65534.0)));
     let high = (code >> 8u) & 255u;
     let low = code & 255u;
     let encoded_normal = oct_encode(input.normal);

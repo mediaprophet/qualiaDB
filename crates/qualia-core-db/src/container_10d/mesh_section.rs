@@ -102,6 +102,8 @@ pub enum MeshSectionError {
     OutputBufferTooSmall { needed: usize, have: usize },
     /// Unknown flags bit set (only bit 0 is defined in v1).
     UnknownFlags { got: u16 },
+    /// A dequantization-frame bound is non-finite or min exceeds max.
+    InvalidBounds { axis: usize },
 }
 
 impl std::fmt::Display for MeshSectionError {
@@ -127,6 +129,7 @@ impl std::fmt::Display for MeshSectionError {
                 f,
                 "10d MESH output buffer too small: need {needed}, have {have}"
             ),
+            Self::InvalidBounds { axis } => write!(f, "10d MESH invalid bounds on axis {axis}"),
             Self::UnknownFlags { got } => write!(
                 f,
                 "10d MESH unknown flags bits {got:#06x} (only bit 0 defined in v1)"
@@ -170,8 +173,21 @@ fn quantize(v: f32, min: f32, extent: f32) -> u16 {
 }
 
 #[inline]
-fn dequantize(q: u16, min: f32, extent: f32) -> f32 {
-    min + (q as f32 / 65535.0) * extent
+fn dequantize(q: u16, min: f32, max: f32) -> f32 {
+    // Use the actual stored endpoints. f32 (max - min) can round upward or
+    // overflow even for finite ordered bounds, placing decoded points outside
+    // their declared frame. This changes no serialized bytes or encoder policy.
+    if q == 0 {
+        return min;
+    }
+    if q == u16::MAX {
+        return max;
+    }
+    if min == max {
+        return min;
+    }
+    let fraction = q as f64 / u16::MAX as f64;
+    (min as f64 + fraction * (max as f64 - min as f64)) as f32
 }
 
 fn bbox(positions: &[[f32; 3]]) -> ([f32; 3], [f32; 3]) {
@@ -221,6 +237,14 @@ pub fn parse_mesh_header(bytes: &[u8]) -> Result<(MeshMiniHeader, usize), MeshSe
     // Only bit 0 (FLAG_U16_INDICES) is defined in v1.
     if header.flags & !FLAG_U16_INDICES != 0 {
         return Err(MeshSectionError::UnknownFlags { got: header.flags });
+    }
+    for axis in 0..3 {
+        if !header.min[axis].is_finite()
+            || !header.max[axis].is_finite()
+            || header.min[axis] > header.max[axis]
+        {
+            return Err(MeshSectionError::InvalidBounds { axis });
+        }
     }
     let vcount = header.vertex_count as usize;
     let tcount = header.triangle_count as usize;
@@ -317,11 +341,6 @@ pub fn decode_mesh_section(bytes: &[u8]) -> Result<Mesh, MeshSectionError> {
     let vcount = header.vertex_count as usize;
     let tcount = header.triangle_count as usize;
     let u16_idx = header.flags & FLAG_U16_INDICES != 0;
-    let extent = [
-        header.max[0] - header.min[0],
-        header.max[1] - header.min[1],
-        header.max[2] - header.min[2],
-    ];
     debug_assert_eq!(
         total,
         MESH_MINI_HEADER_SIZE + vcount * 6 + tcount * if u16_idx { 6 } else { 12 }
@@ -333,7 +352,7 @@ pub fn decode_mesh_section(bytes: &[u8]) -> Result<Mesh, MeshSectionError> {
         let mut p = [0.0f32; 3];
         for a in 0..3 {
             let q = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
-            p[a] = dequantize(q, header.min[a], extent[a]);
+            p[a] = dequantize(q, header.min[a], header.max[a]);
             off += 2;
         }
         positions.push(p);

@@ -337,7 +337,7 @@ fn register_price_feed_and_ingest_uses_cached_prices() {
 }
 
 #[test]
-fn ingest_from_feed_generates_deterministic_series_when_no_cache() {
+fn ingest_from_feed_fails_closed_without_cached_prices() {
     let mut manager = AssetManager::new();
     manager.register_price_feed(PriceFeed {
         feed_id: "seeded_feed".to_string(),
@@ -350,20 +350,11 @@ fn ingest_from_feed_generates_deterministic_series_when_no_cache() {
         cached_prices: Vec::new(),
     });
 
-    manager.ingest_from_feed("B").unwrap();
-    let first = manager
-        .get_price_history("B")
-        .expect("history for B")
-        .clone();
-    // Deterministic: re-ingesting yields the identical series.
-    manager.ingest_from_feed("B").unwrap();
-    let second = manager
-        .get_price_history("B")
-        .expect("history for B")
-        .clone();
-    assert_eq!(first, second);
-    // Enough points for risk computation (need ≥ 3).
-    assert!(first.len() >= 3);
+    assert!(matches!(
+        manager.ingest_from_feed("B"),
+        Err(FinancialError::DataError(_))
+    ));
+    assert!(manager.get_price_history("B").is_none());
 }
 
 #[test]

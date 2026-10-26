@@ -23,6 +23,12 @@ pub fn dispatch<H: Host>(
     if let Some(v) = call_quin(host, path, named, span)? {
         return Ok(v);
     }
+    if let Some(v) = crate::web_runtime::call_web_or_ui(path, args, span)? {
+        return Ok(v);
+    }
+    if let Some(v) = crate::stdlib_v2::call_stdlib_v2(path, args, span)? {
+        return Ok(v);
+    }
     match path {
         "receipt_empty" => Ok(Value::Receipt),
         "graph.query" => {

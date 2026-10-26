@@ -58,7 +58,7 @@ pub struct CudaComputeContext {
     /// when double-buffering is not used.
     pub prefetch_stream: Option<Arc<CudaStream>>,
     /// Cache of loaded CUDA functions keyed by (source_hash, entry_point).
-    /// Avoids redundant `load_module` JIT on every `compile_pipe!` call —
+    /// Avoids redundant `load_module` JIT on every `compile_pipe!` call â€”
     /// the PTX text is already cached in `NVRTC_PTX_CACHE`, but the driver
     /// module load is a separate JIT step that was repeated per token.
     pub module_cache:
@@ -110,6 +110,15 @@ unsafe impl Send for CapturedCudaGraph {}
 impl CudaComputeContext {
     /// Creates `CudaComputeContext` with the given state.
     pub fn new(capacity_bytes: usize) -> Result<Self, ForgeError> {
+        // cudarc dynamic loading panics when the driver library is absent. Probe first
+        // so callers can treat CUDA as an optional backend through the existing error.
+        // SAFETY: probes cudarc's fixed driver candidates, invoking no CUDA symbols;
+        // handles are released by the probe before the existing context loader runs.
+        if !unsafe { cudarc::driver::sys::is_culib_present() } {
+            return Err(ForgeError::GpuUnavailable(
+                "CUDA driver library unavailable".to_string(),
+            ));
+        }
         let ctx = CudaContext::new(0)
             .map_err(|e| ForgeError::GpuUnavailable(format!("CUDA init failed: {:?}", e)))?;
         // Forge owns stream ordering explicitly (`join_prefetch` before every dependent launch).
@@ -286,7 +295,7 @@ impl CudaComputeContext {
     }
 
     /// Overwrite an existing device view with host bytes (no new allocation).
-    /// `data.len()` must be ≤ `view.length_bytes`.
+    /// `data.len()` must be â‰¤ `view.length_bytes`.
     pub fn write_view(&mut self, view: &BufferView, data: &[u8]) -> Result<(), ForgeError> {
         if data.len() > view.length_bytes {
             return Err(ForgeError::GpuValidation(format!(
@@ -379,7 +388,7 @@ impl CudaComputeContext {
     }
 
     /// Double-precision readback, the `f64` mirror of [`Self::read_buffer_f32`]
-    /// (8 bytes/elem). Used by the native CUDA-f64 GEMM path — WGSL has no `f64`,
+    /// (8 bytes/elem). Used by the native CUDA-f64 GEMM path â€” WGSL has no `f64`,
     /// so this is CUDA-only by construction.
     pub fn read_buffer_f64(&self, view: &BufferView) -> Result<Vec<f64>, ForgeError> {
         let src = self
@@ -425,7 +434,7 @@ impl<'a> CudaPipeline<'a> {
 
     /// Compile a *raw* CUDA-C source string (entry point + storage-buffer bindings
     /// supplied directly) to PTX via NVRTC and load it. This is for kernels that
-    /// have no portable-IR analogue — notably the `nvcuda::wmma` tensor-core GEMM,
+    /// have no portable-IR analogue â€” notably the `nvcuda::wmma` tensor-core GEMM,
     /// whose f16/f32 fragment API and fixed 16x16x16 shape cannot be expressed in
     /// WGSL/IR. `storage_buffer_bindings` lists the kernel's pointer parameters in
     /// binding order (all treated as storage pointers; no by-value uniform).
@@ -491,7 +500,7 @@ impl<'a> CudaPipeline<'a> {
         })
     }
 
-    /// Compile (or reuse cached PTX for) raw CUDA-C and load — same as
+    /// Compile (or reuse cached PTX for) raw CUDA-C and load â€” same as
     /// `compile_cuda_c_source()` but shares the process NVRTC cache when `source`
     /// matches a previously compiled kernel body.
     pub fn compile_cuda_c_source_cached(
@@ -503,7 +512,7 @@ impl<'a> CudaPipeline<'a> {
         let src_hash = fnv1a64_bytes(source.as_bytes());
         let cache_key = src_hash ^ fnv1a64_bytes(entry_point.as_bytes()).rotate_left(1);
 
-        // Fast path: function already loaded — skip NVRTC + load_module entirely.
+        // Fast path: function already loaded â€” skip NVRTC + load_module entirely.
         // Zero allocations: just Arc clones (atomic increments).
         if let Ok(guard) = context.module_cache.lock() {
             if let Some((func, module, spec)) = guard.get(&cache_key) {
@@ -516,7 +525,7 @@ impl<'a> CudaPipeline<'a> {
             }
         }
 
-        // Slow path: NVRTC compile + load_module — construct full KernelSpec.
+        // Slow path: NVRTC compile + load_module â€” construct full KernelSpec.
         let buffers: Vec<BufferSpec> = storage_buffer_bindings
             .iter()
             .map(|&binding| BufferSpec {
@@ -550,7 +559,7 @@ impl<'a> CudaPipeline<'a> {
     }
 
     /// Load a hand-emitted PTX module (from `emit/ptx.rs`) directly into the CUDA
-    /// driver — no NVRTC compilation step. This is the PTX execution bridge:
+    /// driver â€” no NVRTC compilation step. This is the PTX execution bridge:
     /// the emitter produces complete PTX text with `.version`, `.target`,
     /// `.address_size`, entry point, and full kernel body; the driver JITs it
     /// to the actual GPU ISA.
@@ -566,7 +575,7 @@ impl<'a> CudaPipeline<'a> {
         let src_hash = fnv1a64_bytes(ptx_source.as_bytes());
         let cache_key = src_hash ^ fnv1a64_bytes(entry_point.as_bytes()).rotate_left(1);
 
-        // Fast path: function already loaded — skip load_module entirely.
+        // Fast path: function already loaded â€” skip load_module entirely.
         if let Ok(guard) = context.module_cache.lock() {
             if let Some((func, module, spec)) = guard.get(&cache_key) {
                 return Ok(Self {
@@ -614,7 +623,7 @@ impl<'a> CudaPipeline<'a> {
 /// targeting the device's *actual* compute capability and making the CUDA toolkit
 /// headers resolvable. NVRTC's default `--include-path` search list is empty, so
 /// tensor-core kernels (`#include <mma.h>`) need the toolkit include dir passed
-/// explicitly — without it NVRTC fails with "could not open source file mma.h".
+/// explicitly â€” without it NVRTC fails with "could not open source file mma.h".
 /// Process-wide cache: (source_hash, arch, ptx_text) so NVRTC runs once per kernel/arch.
 #[cfg(feature = "cuda")]
 static NVRTC_PTX_CACHE: OnceLock<Mutex<std::collections::HashMap<(u64, String), String>>> =
@@ -625,7 +634,7 @@ fn nvrtc_ptx_cache() -> &'static Mutex<std::collections::HashMap<(u64, String), 
     NVRTC_PTX_CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()))
 }
 
-/// Hash of CUDA-C source body (FNV-1a 64) for cache keys — no heap string key.
+/// Hash of CUDA-C source body (FNV-1a 64) for cache keys â€” no heap string key.
 #[cfg(feature = "cuda")]
 fn fnv1a64_bytes(data: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
@@ -636,7 +645,7 @@ fn fnv1a64_bytes(data: &[u8]) -> u64 {
     h
 }
 
-/// Compile CUDA-C → PTX with process-wide cache (key = source FNV + compute arch).
+/// Compile CUDA-C â†’ PTX with process-wide cache (key = source FNV + compute arch).
 #[cfg(feature = "cuda")]
 pub(crate) fn nvrtc_compile_to_ptx_cached(
     context: &CudaComputeContext,
@@ -682,7 +691,7 @@ pub(crate) fn nvrtc_compile_to_ptx_cached(
 }
 
 /// Maps a CUDA compute capability to the `--gpu-architecture=compute_XX` virtual
-/// arch NVRTC should target. Floors unknown/older parts to `compute_70` — the
+/// arch NVRTC should target. Floors unknown/older parts to `compute_70` â€” the
 /// minimum for WMMA tensor-core ops; the driver JIT-upgrades the emitted PTX to the
 /// real arch, so this stays correct (if not arch-optimal) on newer cards.
 #[cfg(feature = "cuda")]
@@ -776,8 +785,8 @@ impl<'a> CudaPipeline<'a> {
     /// Fast-path async dispatch for pre-sorted buffer views.
     ///
     /// Assumes `buffers` are already in ascending binding order (as the mega-pass
-    /// always provides). Skips `spec.buffers.clone()` + sort + linear search —
-    /// eliminating 2 Vec allocations and O(n²) search per dispatch.
+    /// always provides). Skips `spec.buffers.clone()` + sort + linear search â€”
+    /// eliminating 2 Vec allocations and O(nÂ²) search per dispatch.
     pub fn dispatch_async_sorted(
         &self,
         buffers: &[BufferView],
@@ -794,7 +803,7 @@ impl<'a> CudaPipeline<'a> {
         let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
         let base = base as u64;
 
-        // Build pointer args directly from pre-sorted buffer views — no clone,
+        // Build pointer args directly from pre-sorted buffer views â€” no clone,
         // no sort, no linear search. Stack array for typical binding counts.
         let mut ptr_args: [u64; 16] = [0; 16];
         let n_bufs = buffers.len().min(16);
@@ -875,7 +884,7 @@ impl<'a> CudaPipeline<'a> {
 
         // Build launch args from the kernel spec, in binding order: each storage
         // buffer becomes a device pointer, and the single uniform block is passed
-        // by value last — matching the CUDA-C signature emitted by emit_cuda_c.
+        // by value last â€” matching the CUDA-C signature emitted by emit_cuda_c.
         let (base, _guard) = self.context.slab.device_ptr(&self.context.stream);
         let base = base as u64;
 
@@ -928,7 +937,7 @@ impl<'a> CudaPipeline<'a> {
 
         if sync {
             // A post-launch synchronize failure is a device-level fault; surface it as
-            // the unified DeviceLost rather than a generic validation error (plan §7).
+            // the unified DeviceLost rather than a generic validation error (plan Â§7).
             self.context
                 .stream
                 .synchronize()
@@ -997,7 +1006,7 @@ impl OracleContext for CudaComputeContext {
         false
     }
 
-    /// Compile the kernel's CUDA-C (NVRTC → PTX, emitted internally by
+    /// Compile the kernel's CUDA-C (NVRTC â†’ PTX, emitted internally by
     /// [`CudaPipeline::compile_cuda_c`]) and run the warmup + timed-sample dispatch
     /// loop. Mirrors the wgpu loop shape so the generic oracle is backend-agnostic;
     /// the cross-backend CUDA oracle uses `warmups = 0, samples = 1`, reproducing the
@@ -1028,6 +1037,18 @@ impl OracleContext for CudaComputeContext {
 mod graph_tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
+
+    #[test]
+    fn absent_cuda_driver_returns_unavailable() {
+        // SAFETY: the same fixed-candidate, symbol-free availability probe as construction.
+        if unsafe { cudarc::driver::sys::is_culib_present() } {
+            return;
+        }
+        assert!(matches!(
+            CudaComputeContext::new(1),
+            Err(ForgeError::GpuUnavailable(_))
+        ));
+    }
 
     #[test]
     fn captured_kernel_replays_without_host_redispatch() {

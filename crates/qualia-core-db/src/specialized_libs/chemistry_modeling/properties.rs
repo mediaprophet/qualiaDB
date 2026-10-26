@@ -441,6 +441,7 @@ impl PropertyPredictor {
         molecule: &Molecule,
         properties: &[PropertyType],
     ) -> Result<PredictedProperties, ChemistryError> {
+        self.validate_molecule(molecule)?;
         // Compute molecular descriptors from the molecule.
         let mut descriptors: HashMap<String, f64> = HashMap::new();
         let mut molecular_weight = 0.0;
@@ -707,6 +708,7 @@ mod tests {
 
     fn water_molecule() -> Molecule {
         let mut m = Molecule::new();
+        m.formula = "H2O".to_string();
         m.atoms.push(Atom {
             atom_id: "O1".to_string(),
             element: "O".to_string(),
@@ -731,13 +733,45 @@ mod tests {
             charge: 0.0,
             coordinates: vec![0.0, -0.757, 0.586],
         });
+        m.coordinates = m.atoms.iter().map(|atom| atom.coordinates.clone()).collect();
         m
     }
 
     #[test]
-    fn predict_from_molecule_density_and_boiling_point() {
-        let predictor = PropertyPredictor::new();
+    fn initialized_predictor_uses_registered_group_contribution_formulas() {
+        let uninitialized = PropertyPredictor::new();
         let mol = water_molecule();
+        assert_eq!(mol.formula, "H2O");
+        assert_eq!(mol.atoms.len(), 3);
+        assert_eq!(mol.coordinates.len(), 3);
+        assert!(!mol.atoms.iter().any(|atom| atom.element == "C"));
+        assert!(matches!(
+            uninitialized.predict_from_molecule(&mol, &[PropertyType::BoilingPoint]),
+            Err(ChemistryError::NotImplemented(_))
+        ));
+
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+        let registered = predictor.list_properties();
+        assert!(registered.iter().any(|name| name == "boiling_point"));
+        assert!(registered.iter().any(|name| name == "density"));
+        assert!(registered.iter().any(|name| name == "heat_capacity"));
+
+        // These assertions pin the implemented group-contribution equations.
+        // They are formula/dispatch checks, not claims of empirical accuracy.
+        let descriptors = HashMap::from([
+            ("C".to_string(), 0.0),
+            ("H".to_string(), 2.0),
+            ("O".to_string(), 1.0),
+            ("N".to_string(), 0.0),
+            ("ring".to_string(), 0.0),
+        ]);
+        assert!((predictor.predict("boiling_point", &descriptors).unwrap() - 253.96).abs() < 1e-12);
+        assert!(matches!(
+            predictor.predict("unknown_property", &descriptors),
+            Err(ChemistryError::NotImplemented(_))
+        ));
+
         let res = predictor
             .predict_from_molecule(
                 &mol,
@@ -751,6 +785,23 @@ mod tests {
         assert!(res.properties.contains_key("boiling_point"));
         assert!(res.properties.contains_key("density"));
         assert!(res.properties.contains_key("heat_capacity"));
-        assert!(res.properties["density"] > 0.0);
+        // H₂O descriptors yield the implemented equation values exactly:
+        // density = .85 + .0018·18.015 + .08·1; heat capacity = 25 + 7.5·2 + 18·1.
+        assert!((res.properties["density"] - 0.962427).abs() < 1e-12);
+        assert!((res.properties["heat_capacity"] - 58.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn initialized_predictor_rejects_empty_and_formula_only_molecules() {
+        let mut predictor = PropertyPredictor::new();
+        predictor.initialize().unwrap();
+        for formula in ["", "H2O"] {
+            let mut molecule = Molecule::new();
+            molecule.formula = formula.to_string();
+            assert!(matches!(
+                predictor.predict_from_molecule(&molecule, &[PropertyType::Density]),
+                Err(ChemistryError::ValidationError(_))
+            ));
+        }
     }
 }

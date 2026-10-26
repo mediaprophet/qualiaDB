@@ -17,7 +17,7 @@ pure fn hash_sha512(text: String) -> Record {
 }
 
 // Sign data with an Ed25519 key
-fn sign_data(key_id: String, data: String) -> Record {
+effect fn sign_data(key_id: String, data: String) -> Record {
   return crypto.sign(key_id, data);
 }
 
@@ -27,7 +27,7 @@ fn verify_signature(key_id: String, data: String, sig_hex: String) -> Bool {
 }
 
 // Generate a new Ed25519 key
-fn new_ed25519_key() -> String {
+effect fn new_ed25519_key() -> String {
   return crypto.generate_key("Ed25519");
 }
 

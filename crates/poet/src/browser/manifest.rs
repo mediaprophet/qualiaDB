@@ -6,7 +6,7 @@
 //! bytes, and a manifest persistence layer that can POST to the daemon
 //! `POST /manifest` endpoint when native, or to `localStorage` on public web.
 
-use crate::tool_chest::core::{ConstructSeed, ManifoldSeed};
+use crate::tool_chest::core::{ConstructSeed, GeometrySeed, ManifoldSeed};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
@@ -511,6 +511,8 @@ pub struct HcfContainerEnvelope {
     pub created_at: String,
     pub checksum: String,
     pub container: SeedContainer,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub geometries: Vec<GeometrySeed>,
 }
 
 /// Hypermedia Manifold Container (.hmc) full world snapshot envelope.
@@ -522,13 +524,17 @@ pub struct HmcManifoldEnvelope {
     pub checksum: String,
     pub provenance_chain: Vec<String>,
     pub manifold: ManifoldSeed,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub geometries: Vec<GeometrySeed>,
 }
 
-/// Complete observer-scope package: construct metadata plus its authored lenses.
+/// Complete observer-scope package: construct metadata plus its authored lenses and geometries.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ConstructPackage {
     pub construct: ConstructSeed,
     pub manifolds: Vec<ManifoldSeed>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub geometries: Vec<GeometrySeed>,
 }
 
 /// Interactive HCF export of a complete construct composition.
@@ -563,12 +569,18 @@ fn construct_package(
         return Err("stub constructs without a default manifold cannot be exported".into());
     }
     let mut packaged = Vec::new();
+    let mut geometries = Vec::new();
     for manifold in manifolds {
         if construct.contains_manifold(&manifold.id)
             && !packaged
                 .iter()
                 .any(|saved: &ManifoldSeed| saved.id == manifold.id)
         {
+            for geom in &manifold.geometries {
+                if !geometries.iter().any(|g: &GeometrySeed| g.id == geom.id) {
+                    geometries.push(geom.clone());
+                }
+            }
             packaged.push(manifold.clone());
         }
     }
@@ -583,9 +595,13 @@ fn construct_package(
     }
     let mut saved_construct = construct.clone();
     saved_construct.manifold_ids = packaged.iter().map(|seed| seed.id.clone()).collect();
+    if saved_construct.geometry_ids.is_empty() && !geometries.is_empty() {
+        saved_construct.geometry_ids = geometries.iter().map(|g| g.id.clone()).collect();
+    }
     Ok(ConstructPackage {
         construct: saved_construct,
         manifolds: packaged,
+        geometries,
     })
 }
 
@@ -683,6 +699,7 @@ pub fn export_hcf(container: &SeedContainer, author_did: &str) -> Result<Vec<u8>
         created_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         checksum,
         container: container.clone(),
+        geometries: Vec::new(),
     };
 
     let mut out = Vec::new();
@@ -729,6 +746,7 @@ pub fn export_hmc(manifold: &ManifoldSeed, author_did: &str) -> Result<Vec<u8>, 
         checksum,
         provenance_chain: vec![author_did.to_string()],
         manifold: manifold.clone(),
+        geometries: manifold.geometries.clone(),
     };
 
     let mut out = Vec::new();
@@ -768,7 +786,8 @@ pub fn import_hmc(bytes: &[u8]) -> Result<(ManifoldSeed, HmcManifoldEnvelope), S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool_chest::core::registry::{DockPosition, SeedContainer, SeedPanel};
+    use crate::tool_chest::core::registry::{DockPosition, SeedConnection, SeedContainer, SeedPanel};
+    use crate::tool_chest::core::CellAnchorSpec;
 
     fn test_seed() -> ManifoldSeed {
         ManifoldSeed {
@@ -884,6 +903,7 @@ mod tests {
             honesty: "live".into(),
             default_manifold: seed.id.clone(),
             manifold_ids: vec![seed.id.clone()],
+            geometry_ids: vec![],
             library_uri: "urn:poet:construct:test-scope".into(),
             required_shapes: vec![],
             source: crate::tool_chest::core::ConstructSource::Authored,
@@ -900,5 +920,74 @@ mod tests {
         let archive = import_construct_hmc(&hmc).unwrap();
         assert_eq!(archive.package.manifolds, vec![seed]);
         assert_eq!(archive.provenance_chain, vec![DEFAULT_ACTOR_DID]);
+    }
+
+    #[test]
+    fn geometry_and_harboured_graphs_roundtrip_in_hcf_and_hmc() {
+        let mut seed = test_seed();
+        seed.containers.push(SeedContainer {
+            container_type: "doc".into(),
+            title: "Hydrology Notes".into(),
+            x: 560.0,
+            y: 70.0,
+            width: 360.0,
+            height: 260.0,
+            z: 100.0,
+            honesty: "live".into(),
+            ..Default::default()
+        });
+        seed.connections.push(SeedConnection {
+            id: "wire-topo-1".into(),
+            from: 0,
+            to: 1,
+            wire_type: "active".into(),
+            label: "qualia:drains_to".into(),
+            graph_ids: vec!["subsurface-flux-dual".into(), "water-custody-norms".into()],
+            cell_anchor: Some(CellAnchorSpec {
+                anchor_domain: "Cell2Face".into(),
+                cell_index: 7,
+                orientation_sign: 1,
+                material_or_stratum: 2,
+            }),
+        });
+        seed.geometries = GeometrySeed::default_presets();
+
+        let hmc_bytes = export_hmc(&seed, DEFAULT_ACTOR_DID).unwrap();
+        let (decoded_seed, hmc_env) = import_hmc(&hmc_bytes).unwrap();
+        assert_eq!(decoded_seed.geometries.len(), 3);
+        assert_eq!(hmc_env.geometries.len(), 3);
+        assert_eq!(
+            decoded_seed.connections[0].graph_ids,
+            vec!["subsurface-flux-dual", "water-custody-norms"]
+        );
+        assert_eq!(
+            decoded_seed.connections[0]
+                .cell_anchor
+                .as_ref()
+                .unwrap()
+                .anchor_domain,
+            "Cell2Face"
+        );
+
+        let construct = ConstructSeed {
+            id: "topo-scope".into(),
+            label: "Topology scope".into(),
+            description: "Construct with harboured graphs".into(),
+            icon: "graph".into(),
+            observer: DEFAULT_ACTOR_DID.into(),
+            honesty: "live".into(),
+            default_manifold: seed.id.clone(),
+            manifold_ids: vec![seed.id.clone()],
+            geometry_ids: vec![],
+            library_uri: "urn:poet:construct:topo-scope".into(),
+            required_shapes: vec![],
+            source: crate::tool_chest::core::ConstructSource::Authored,
+        };
+        let construct_hcf =
+            export_construct_hcf(&construct, std::slice::from_ref(&seed), DEFAULT_ACTOR_DID)
+                .unwrap();
+        let imported = import_construct_hcf(&construct_hcf).unwrap();
+        assert_eq!(imported.package.geometries.len(), 3);
+        assert_eq!(imported.package.construct.geometry_ids.len(), 3);
     }
 }

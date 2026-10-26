@@ -7,9 +7,9 @@
 //!
 //! The identity record keeps three concepts distinct:
 //!
-//! - `StableEntityId` is an opaque continuity handle supplied by a trusted,
-//!   global identity authority. The authority MUST guarantee global uniqueness
-//!   and collision-check issuance; this codec never derives it from content.
+//! - `StableEntityId` is an opaque stored continuity handle. This codec does
+//!   not verify its issuer or global uniqueness and never derives it from content.
+//!   Qualified referent resolution belongs to native graph/authority mechanisms.
 //! - Tensor10D coordinates are explicit identity-bearing address/state under
 //!   the declared profile, domain, and coordinate convention. Their fixed
 //!   order is `[q, v, w, x, y, z, t, α, μ, σ]`, matching `Tensor10D`.
@@ -47,16 +47,43 @@ pub const FIELD_KIND_SPECTRAL: u16 = 0x0004;
 /// Electromagnetic field data. This is a typed field kind, not a manifold or
 /// container format of its own.
 pub const FIELD_KIND_ELECTROMAGNETIC: u16 = 0x0100;
-pub const BUILTIN_FIELD_KINDS: [u16; 5] = [
+/// Existing NRM1/FRM1 per-vertex surface frames, unitless FieldSidecar range.
+pub const FIELD_KIND_SURFACE_FRAMES: u16 = 0x0200;
+/// Existing MRP1 mixed-schema morph targets in a FieldSidecar range. unit_id=0:
+/// position deltas inherit mesh coordinates; normal/tangent deltas are unitless.
+pub const FIELD_KIND_MORPH_TARGETS: u16 = 0x0201;
+/// POET Geometry-Topology Complex (`GTOP`: `PoetGeometryHeader` + `M` `HarbouredGraphHeader`s).
+pub const FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX: u16 = 0x0300;
+// Registry additions preserve MID2 layout. Older readers reject unsupported kinds
+// unless their explicit supported-extension allow-list admits these semantics.
+pub const BUILTIN_FIELD_KINDS: [u16; 8] = [
     FIELD_KIND_SCALAR,
     FIELD_KIND_VECTOR,
     FIELD_KIND_TENSOR,
     FIELD_KIND_SPECTRAL,
     FIELD_KIND_ELECTROMAGNETIC,
+    FIELD_KIND_SURFACE_FRAMES,
+    FIELD_KIND_MORPH_TARGETS,
+    FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX,
 ];
 
-/// Opaque stable continuity identity, globally unique under the trusted
-/// issuing authority's contract. Its bytes are never interpreted as a digest.
+/// Canonical `(kind, name)` table for built-in MID2 field kinds.
+pub const BUILTIN_FIELD_KIND_NAMES: [(u16, &str); 8] = [
+    (FIELD_KIND_SCALAR, "scalar"),
+    (FIELD_KIND_VECTOR, "vector"),
+    (FIELD_KIND_TENSOR, "tensor"),
+    (FIELD_KIND_SPECTRAL, "spectral"),
+    (FIELD_KIND_ELECTROMAGNETIC, "electromagnetic"),
+    (FIELD_KIND_SURFACE_FRAMES, "surface_frames"),
+    (FIELD_KIND_MORPH_TARGETS, "morph_targets"),
+    (
+        FIELD_KIND_GEOMETRY_TOPOLOGY_COMPLEX,
+        "geometry_topology_complex",
+    ),
+];
+
+/// Opaque stored continuity identifier. Issuer and uniqueness are not verified
+/// by this codec. Its bytes are never interpreted as a digest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StableEntityId(pub [u8; 16]);
 
@@ -82,10 +109,9 @@ pub struct ManifoldIdentityV2 {
 }
 
 impl ManifoldIdentityV2 {
-    /// Canonical entity resolution uses the stable entity handle only. Edits
-    /// and replay frames for the same entity retain this handle even when the
-    /// manifold address/state changes. Splits or merges create new handles and
-    /// record lineage in an appropriate provenance section.
+    /// Compare stored handles only; equality does not establish universal
+    /// referent equivalence or issuer authority. Qualified resolution and
+    /// split/merge lineage remain graph/authority responsibilities.
     pub fn resolves_same_entity(&self, other: &Self) -> bool {
         self.entity_id == other.entity_id
     }

@@ -3,7 +3,13 @@
 //! The existing QuantizedMesh payload remains byte-for-byte stable. This field sidecar stores
 //! unit normals as two signed normalized 16-bit octahedral coordinates (4 bytes per vertex).
 
-use bytemuck::{bytes_of, from_bytes, Pod, Zeroable};
+use bytemuck::{bytes_of, Pod, Zeroable};
+
+mod frame_decode;
+pub use frame_decode::{
+    decode_mesh_frames_into, decode_mesh_frames_with_limits, inspect_mesh_frames,
+    MeshFrameDecodeLimits, MeshFrameLayout,
+};
 
 pub const NORMAL_SECTION_HEADER_SIZE: usize = 16;
 pub const NORMAL_SECTION_VERSION: u16 = 1;
@@ -52,6 +58,9 @@ pub enum NormalSectionError {
     StreamCountMismatch { expected: usize, got: usize },
     UnknownFlags(u16),
     EmptyFrame,
+    PayloadTooLarge { needed: usize, max: usize },
+    DecodedTooLarge { needed: usize, max: usize },
+    AllocationFailed,
 }
 
 impl std::fmt::Display for NormalSectionError {
@@ -169,76 +178,8 @@ pub fn encode_mesh_frames(
 
 /// Decode either the legacy NRM1 stream or the combined FRM1 normal/tangent stream.
 pub fn decode_mesh_frames(bytes: &[u8]) -> Result<MeshFrameStreams, NormalSectionError> {
-    if bytes.starts_with(&NORMAL_SECTION_MAGIC) {
-        return Ok(MeshFrameStreams {
-            normals: Some(decode_legacy_normals(bytes)?),
-            tangents: None,
-        });
-    }
-    if bytes.len() < NORMAL_SECTION_HEADER_SIZE {
-        return Err(NormalSectionError::HeaderTooShort);
-    }
-    let mut header_bytes = [0u8; NORMAL_SECTION_HEADER_SIZE];
-    header_bytes.copy_from_slice(&bytes[..NORMAL_SECTION_HEADER_SIZE]);
-    let header: FrameSectionHeader = *from_bytes(&header_bytes);
-    if header.magic != FRAME_SECTION_MAGIC {
-        return Err(NormalSectionError::BadMagic);
-    }
-    if header.version != NORMAL_SECTION_VERSION {
-        return Err(NormalSectionError::UnsupportedVersion(header.version));
-    }
-    let known_flags = FRAME_FLAG_NORMALS | FRAME_FLAG_TANGENTS;
-    if header.flags & !known_flags != 0 {
-        return Err(NormalSectionError::UnknownFlags(header.flags));
-    }
-    if header.flags == 0 {
-        return Err(NormalSectionError::EmptyFrame);
-    }
-    if header.reserved != 0 {
-        return Err(NormalSectionError::NonZeroReserved);
-    }
-    let count = header.count as usize;
-    if count > MAX_NORMAL_COUNT {
-        return Err(NormalSectionError::CountTooLarge {
-            count: header.count,
-            max: MAX_NORMAL_COUNT,
-        });
-    }
-    let has_normals = header.flags & FRAME_FLAG_NORMALS != 0;
-    let has_tangents = header.flags & FRAME_FLAG_TANGENTS != 0;
-    let expected = frame_encoded_len(count, has_normals, has_tangents)
-        .ok_or(NormalSectionError::EmptyFrame)?;
-    if bytes.len() != expected {
-        return Err(NormalSectionError::PayloadLength {
-            expected,
-            got: bytes.len(),
-        });
-    }
-    let mut normals = has_normals.then(|| Vec::with_capacity(count));
-    let mut tangents = has_tangents.then(|| Vec::with_capacity(count));
-    let mut offset = NORMAL_SECTION_HEADER_SIZE;
-    for index in 0..count {
-        if let Some(values) = normals.as_mut() {
-            let packed = [
-                i16::from_le_bytes([bytes[offset], bytes[offset + 1]]),
-                i16::from_le_bytes([bytes[offset + 2], bytes[offset + 3]]),
-            ];
-            values.push(oct_decode(packed));
-            offset += 4;
-        }
-        if let Some(values) = tangents.as_mut() {
-            let mut packed = [0i16; 4];
-            for component in &mut packed {
-                *component = i16::from_le_bytes([bytes[offset], bytes[offset + 1]]);
-                offset += 2;
-            }
-            values
-                .push(tangent_decode(packed).ok_or(NormalSectionError::InvalidTangent { index })?);
-        }
-    }
-    Ok(MeshFrameStreams { normals, tangents })
+    decode_mesh_frames_with_limits(bytes, MeshFrameDecodeLimits::COMPATIBILITY)
 }
-
 /// Encode normalized vertex normals into a caller-owned payload buffer.
 pub fn encode_normals(normals: &[[f32; 3]], out: &mut [u8]) -> Result<usize, NormalSectionError> {
     if normals.len() > MAX_NORMAL_COUNT || normals.len() > u32::MAX as usize {
@@ -273,53 +214,6 @@ pub fn encode_normals(normals: &[[f32; 3]], out: &mut [u8]) -> Result<usize, Nor
         offset += 4;
     }
     Ok(offset)
-}
-
-/// Decode the canonical octahedral normal sidecar.
-fn decode_legacy_normals(bytes: &[u8]) -> Result<Vec<[f32; 3]>, NormalSectionError> {
-    if bytes.len() < NORMAL_SECTION_HEADER_SIZE {
-        return Err(NormalSectionError::HeaderTooShort);
-    }
-    let mut header_bytes = [0u8; NORMAL_SECTION_HEADER_SIZE];
-    header_bytes.copy_from_slice(&bytes[..NORMAL_SECTION_HEADER_SIZE]);
-    let header: NormalSectionHeader = *from_bytes(&header_bytes);
-    if header.magic != NORMAL_SECTION_MAGIC {
-        return Err(NormalSectionError::BadMagic);
-    }
-    if header.version != NORMAL_SECTION_VERSION {
-        return Err(NormalSectionError::UnsupportedVersion(header.version));
-    }
-    if header.encoding != NORMAL_ENCODING_OCT16 {
-        return Err(NormalSectionError::UnsupportedEncoding(header.encoding));
-    }
-    if header.reserved != 0 {
-        return Err(NormalSectionError::NonZeroReserved);
-    }
-    let count = header.count as usize;
-    if count > MAX_NORMAL_COUNT {
-        return Err(NormalSectionError::CountTooLarge {
-            count: header.count,
-            max: MAX_NORMAL_COUNT,
-        });
-    }
-    let expected = encoded_len(count).ok_or(NormalSectionError::CountTooLarge {
-        count: header.count,
-        max: MAX_NORMAL_COUNT,
-    })?;
-    if bytes.len() != expected {
-        return Err(NormalSectionError::PayloadLength {
-            expected,
-            got: bytes.len(),
-        });
-    }
-    let mut normals = Vec::with_capacity(count);
-    for pair in bytes[NORMAL_SECTION_HEADER_SIZE..].chunks_exact(4) {
-        normals.push(oct_decode([
-            i16::from_le_bytes([pair[0], pair[1]]),
-            i16::from_le_bytes([pair[2], pair[3]]),
-        ]));
-    }
-    Ok(normals)
 }
 
 /// Decode vertex normals from a normal-only or combined mesh-frame FieldSidecar.

@@ -264,6 +264,16 @@ pub fn sim_fire_ecology(v: &Value, _s: Span) -> Result<Value, Diagnostic> {
 
 // ── Universal Studio Lifecycle Handlers ─────────────────────────────────────
 
+fn expected_revision(v: &Value, span: Span) -> Result<Option<u32>, Diagnostic> {
+    match args::rec(v, "expected_revision") {
+        None => Ok(None),
+        Some(value) => args::as_u64(value)
+            .filter(|n| (1..=0x1fff_ffff).contains(n))
+            .map(|n| Some(n as u32))
+            .ok_or_else(|| args::bad(span, "expected_revision must be a positive 29-bit integer")),
+    }
+}
+
 pub fn studio_create(v: &Value, _s: Span) -> Result<Value, Diagnostic> {
     let id_str = args::rec_str(v, "id").unwrap_or("art-default");
     let dom = args::rec_str(v, "domain").unwrap_or("Document");
@@ -290,7 +300,7 @@ pub fn studio_edit(v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (node_id, attr_k, attr_v) = (args::rec_str(v, "node_id"), args::rec_str(v, "attr_key"), args::rec_str(v, "attr_val"));
     let (prop_k, prop_v) = (args::rec_str(v, "prop_key"), args::rec_str(v, "prop_val"));
 
-    let updated = studio_store::mutate_artifact(id_str, |art| {
+    let updated = studio_store::mutate_artifact_at(id_str, expected_revision(v, span)?, |art| {
         if let (Some(nid), Some(ak), Some(av)) = (node_id, attr_k, attr_v) {
             art.nodes.entry(nid.to_string()).or_default().insert(ak.to_string(), av.to_string());
         }
@@ -370,7 +380,7 @@ pub fn studio_export(v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 pub fn studio_undo(v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id_str = args::rec_str(v, "id").ok_or_else(|| args::bad(span, "Studio.undo needs id"))?;
-    let art = studio_store::undo_artifact(id_str).map_err(|e| args::bad(span, e))?;
+    let art = studio_store::undo_artifact_at(id_str, expected_revision(v, span)?).map_err(|e| args::bad(span, e))?;
     let quins = art.compile_to_quins();
     Ok(args::record([
         ("op", Value::String("studio_undo".into())),
@@ -385,7 +395,7 @@ pub fn studio_undo(v: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 pub fn studio_redo(v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let id_str = args::rec_str(v, "id").ok_or_else(|| args::bad(span, "Studio.redo needs id"))?;
-    let art = studio_store::redo_artifact(id_str).map_err(|e| args::bad(span, e))?;
+    let art = studio_store::redo_artifact_at(id_str, expected_revision(v, span)?).map_err(|e| args::bad(span, e))?;
     let quins = art.compile_to_quins();
     Ok(args::record([
         ("op", Value::String("studio_redo".into())),
@@ -424,7 +434,21 @@ pub fn codecs_matrix(_v: &Value, _s: Span) -> Result<Value, Diagnostic> { receip
 pub fn domain_info(v: &Value, _s: Span) -> Result<Value, Diagnostic> { receipt(ids::DOMAIN_INFO, "domain_info", args::rec_str(v, "domain").unwrap_or("general"), &[("active", Value::Bool(true))]) }
 pub fn econ_evaluate_peer(v: &Value, _s: Span) -> Result<Value, Diagnostic> { receipt(ids::ECON_EVALUATE_PEER, "econ_evaluate_peer", args::rec_str(v, "peer_did").unwrap_or("peer"), &[("credit_score", Value::F64(750.0))]) }
 pub fn git_status(_v: &Value, _s: Span) -> Result<Value, Diagnostic> { receipt(ids::GIT_STATUS, "git_status", "status", &[("clean", Value::Bool(true))]) }
-pub fn job_list(_v: &Value, _s: Span) -> Result<Value, Diagnostic> { receipt(ids::JOB_LIST, "job_list", "jobs", &[("pending", Value::U64(0))]) }
+pub fn job_list(_v: &Value, _s: Span) -> Result<Value, Diagnostic> {
+    let sum = vibe::task_scheduler::registry_summary();
+    receipt(
+        ids::JOB_LIST,
+        "job_list",
+        "jobs",
+        &[
+            ("pending", Value::U64(sum.pending + sum.running)),
+            ("running", Value::U64(sum.running)),
+            ("completed", Value::U64(sum.completed)),
+            ("cancelled", Value::U64(sum.cancelled)),
+            ("total", Value::U64(sum.total)),
+        ],
+    )
+}
 
 #[cfg(test)]
 mod tests {

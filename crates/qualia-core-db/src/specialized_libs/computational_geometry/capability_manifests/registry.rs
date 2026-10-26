@@ -16,6 +16,7 @@ use super::*;
 /// clears its acceptance gates, raise its row here AND in the execution plan
 /// in the same change.
 pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
+    super::super::uv_atlas::UV_ATLAS_MANIFEST,
     // ── P1 — Predicates (exact sign decisions; hot zero-heap) ──
     OpManifest {
         op: "orientation_2",

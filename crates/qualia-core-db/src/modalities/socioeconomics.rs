@@ -199,6 +199,86 @@ pub fn accumulate_meter_to_pool(
     pool_after(pool, fee)
 }
 
+// ─── Persistent `.q42j` Obligation Pool NQuin Binding (WP-07) ────────────────────
+
+/// Modality opcode for persistent CommonsObligation pool checkpoints in `.q42j` journals.
+pub const OP_COMMONS_OBLIGATION_POOL: u8 = 0x58;
+/// Routing lane bit-pattern (`metadata[61..62] = 0b01`) for EnforcePermissiveCommons.
+pub const METADATA_LANE_PERMISSIVE_COMMONS: u64 = 0b01u64 << 61;
+/// Routing lane bit-pattern (`metadata[61..62] = 0b10`) for Bilateral / Active Obligation recovery.
+pub const METADATA_LANE_OBLIGATION_RECOVERY: u64 = 0b10u64 << 61;
+
+/// Encode a persistent `CommonsObligation` pool checkpoint as a 48-byte [`crate::NQuin`] for `.q42j`.
+///
+/// Automatically transitions `metadata[61..62]` to `EnforcePermissiveCommons` (`0b01`) the instant
+/// `is_commons_discharged(accumulated_pool_cents, capped_cost_cents)` evaluates to `true`.
+#[inline]
+pub fn encode_obligation_pool_quin(
+    asset_did_hash: u64,
+    accumulated_pool_cents: u64,
+    capped_cost_cents: u64,
+    context_did_hash: u64,
+    lamport_clock: u32,
+) -> crate::NQuin {
+    let prop_hash = crate::q_hash("https://ns.webcivics.net/economics#obligationPoolState");
+    let predicate = (prop_hash << 8) | (OP_COMMONS_OBLIGATION_POOL as u64);
+    // Inline integer tag 0b001 << 60 per resolver.rs
+    let object = (0b001u64 << 60) | (accumulated_pool_cents & 0x0FFF_FFFF_FFFF_FFFF);
+    let discharged = is_commons_discharged(accumulated_pool_cents, capped_cost_cents);
+    let lane_bits = if discharged {
+        METADATA_LANE_PERMISSIVE_COMMONS
+    } else {
+        METADATA_LANE_OBLIGATION_RECOVERY
+    };
+    let clock_bits = ((lamport_clock as u64) & 0x1FFF_FFFF) << 32;
+    let cost_low32 = capped_cost_cents.min(u32::MAX as u64) as u64;
+    let metadata = lane_bits | clock_bits | cost_low32;
+    let parity = asset_did_hash ^ predicate ^ object ^ context_did_hash ^ metadata;
+    crate::NQuin {
+        subject: asset_did_hash,
+        predicate,
+        object,
+        context: context_did_hash,
+        metadata,
+        parity,
+    }
+}
+
+/// Replay a slice of `.q42j` journal `NQuin`s for `asset_did_hash` in zero heap memory,
+/// returning `(accumulated_pool_cents, capped_cost_cents, is_discharged_to_commons)`.
+pub fn replay_obligation_pool_journal(
+    journal_quins: &[crate::NQuin],
+    asset_did_hash: u64,
+) -> Option<(u64, u64, bool)> {
+    let mut best_clock: Option<u32> = None;
+    let mut latest_pool = 0u64;
+    let mut latest_cost = 0u64;
+    let mut discharged = false;
+
+    for q in journal_quins {
+        if q.subject != asset_did_hash {
+            continue;
+        }
+        if (q.predicate & 0xFF) as u8 != OP_COMMONS_OBLIGATION_POOL {
+            continue;
+        }
+        let expected_parity = q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata;
+        if q.parity != expected_parity {
+            continue;
+        }
+        let clock = ((q.metadata >> 32) & 0x1FFF_FFFF) as u32;
+        if best_clock.map_or(true, |prev| clock >= prev) {
+            best_clock = Some(clock);
+            latest_pool = q.object & 0x0FFF_FFFF_FFFF_FFFF;
+            latest_cost = q.metadata & 0xFFFF_FFFF;
+            discharged = (q.metadata & (0b11u64 << 61)) == METADATA_LANE_PERMISSIVE_COMMONS
+                || is_commons_discharged(latest_pool, latest_cost);
+        }
+    }
+
+    best_clock.map(|_| (latest_pool, latest_cost, discharged))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

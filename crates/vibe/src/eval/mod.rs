@@ -8,11 +8,15 @@ use crate::span::Span;
 use crate::value::Value;
 use std::collections::{HashMap, HashSet};
 
+mod budget;
+use budget::budget_steps;
 mod call;
 mod expr;
 mod program;
 mod stmt;
+mod stack;
 
+#[derive(Clone)]
 pub struct Env {
     pub vars: HashMap<String, Value>,
     /// Set of variable names that were declared with `mut` (T10).
@@ -62,6 +66,49 @@ pub const VIBE_0_1_NAMESPACES: &[&str] = &[
     "cue",
     "crypto",
     "zk",
+    "web",
+    "ui",
+    "form",
+    "input",
+    "validate",
+    "selection",
+    "layout",
+    "cbor_ld",
+    "reflect",
+    "record",
+    "uri",
+    "error",
+    "num",
+    "decimal",
+    "autodiff",
+    "str",
+    "regex",
+    "list",
+    "deque",
+    "pqueue",
+    "set",
+    "simplex",
+    "hypergraph",
+    "sheaf",
+    "topology",
+    "homotopy",
+    "context",
+    "manifold",
+    "inference",
+    "ast",
+    "diagnostic",
+    "effect",
+    "code",
+    "task",
+    "supervisor",
+    "contract",
+    "state",
+    "value",
+    "runtime",
+    "continuation",
+    "memory",
+    "simd",
+    "channel",
 ];
 
 /// Populate `env.aliases` from a program's import declarations.
@@ -103,16 +150,19 @@ pub struct Engine<'a, H: Host> {
     host: &'a mut H,
     budget: Budget,
     depth: u32,
+    call_depth_limit: u32,
+    expression_depth: u32,
+    expression_depth_limit: u32,
+    /// Budget expressions may use operators/builtins, never user functions.
+    evaluating_budget: bool,
     /// The program being evaluated, if any. When set, `eval_call` resolves
     /// user-defined function names (e.g. `raise_alert(â€¦)`) against the
     /// program's `Item::Function` items before falling through to host
     /// dispatch. This is what lets `on pulse:message(â€¦) { return
     /// raise_alert(â€¦) }` work â€” the hook body calls a sibling function.
     ///
-    /// Stored as a raw pointer because the program's lifetime is not tied to
-    /// `'a` â€” it is passed by reference to `call_function` / `call_hook` and
-    /// must outlive the engine evaluation (the caller guarantees this).
-    program: Option<*const Program>,
+    /// Owned once per engine; recursive calls share the same immutable AST.
+    program: Option<std::sync::Arc<Program>>,
     /// Optional deontic phase leaser (R2). When set, every host dispatch
     /// (`ns.fn`) is checked against the active phase's capability allow-list.
     /// If the capability is forbidden or not allowed in the current phase,
@@ -131,6 +181,12 @@ pub(super) enum Flow {
 }
 
 impl<'a, H: Host> Engine<'a, H> {
+    /// Smaller stack profile for admitted source sessions. Legacy stateless
+    /// constructors retain their existing 64-call setting.
+    pub(crate) fn set_session_stack_limits(&mut self, depth: u32, expression_depth: u32) {
+        self.call_depth_limit = depth.clamp(1, 8);
+        self.expression_depth_limit = expression_depth.clamp(1, 64);
+    }
     /// Workspace remaining.
     pub fn workspace_left(&self) -> u64 {
         self.budget.workspace_left
@@ -142,6 +198,10 @@ impl<'a, H: Host> Engine<'a, H> {
             host,
             budget,
             depth: 0,
+            call_depth_limit: 64,
+            expression_depth: 0,
+            expression_depth_limit: u32::MAX,
+            evaluating_budget: false,
             program: None,
             phase_leaser: None,
             granted: Vec::new(),
@@ -154,7 +214,11 @@ impl<'a, H: Host> Engine<'a, H> {
             host,
             budget,
             depth: 0,
-            program: Some(program as *const Program),
+            call_depth_limit: 64,
+            expression_depth: 0,
+            expression_depth_limit: u32::MAX,
+            evaluating_budget: false,
+            program: Some(std::sync::Arc::new(program.clone())),
             phase_leaser: None,
             granted: program.requires.iter().map(|c| c.id.clone()).collect(),
         }
@@ -171,6 +235,10 @@ impl<'a, H: Host> Engine<'a, H> {
             host,
             budget,
             depth: 0,
+            call_depth_limit: 64,
+            expression_depth: 0,
+            expression_depth_limit: u32::MAX,
+            evaluating_budget: false,
             program: None,
             phase_leaser: Some(leaser),
             granted: Vec::new(),
@@ -217,7 +285,7 @@ impl<'a, H: Host> Engine<'a, H> {
 }
 
 /// Literal expression.
-pub(super) fn lit(l: &Literal) -> Value {
+pub(crate) fn lit(l: &Literal) -> Value {
     match l {
         Literal::Null => Value::Null,
         Literal::Bool(b) => Value::Bool(*b),
@@ -643,23 +711,6 @@ pub(super) fn collect_pat_idents(pat: &Pattern, out: &mut Vec<String>) {
 }
 
 /// Budget step count.
-pub(super) fn budget_steps<H: Host>(
-    args: &[NamedArg],
-    env: &mut Env,
-    eng: &mut Engine<H>,
-) -> Option<u64> {
-    for a in args {
-        if a.name == "steps" {
-            return eng
-                .eval_expr(&a.value, env)
-                .ok()
-                .and_then(|v| v.as_i64())
-                .map(|n| n as u64);
-        }
-    }
-    None
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1482,7 +1533,7 @@ mod tests {
     fn t24_dag_execute_dispatches_to_host() {
         let src = r#"
             import "dag" as dag;
-            fn main() {
+            effect fn main() {
                 return dag.execute({});
             }
         "#;
@@ -1538,7 +1589,7 @@ mod tests {
     fn t42_hid_poll_dispatches_to_host() {
         let src = r#"
             import "hid" as hid;
-            fn main() {
+            effect fn main() {
                 return hid.poll();
             }
         "#;
@@ -1551,7 +1602,7 @@ mod tests {
     fn t42_hid_wait_dispatches_to_host() {
         let src = r#"
             import "hid" as hid;
-            fn main() {
+            effect fn main() {
                 return hid.wait(1000000);
             }
         "#;
@@ -1566,7 +1617,7 @@ mod tests {
     fn t45_cue_post_dispatches_to_host() {
         let src = r#"
             import "cue" as cue;
-            fn main() {
+            effect fn main() {
                 return cue.post("Haptic.buzz", {});
             }
         "#;
@@ -1579,7 +1630,7 @@ mod tests {
     fn t45_cue_post_needs_string_id() {
         let src = r#"
             import "cue" as cue;
-            fn main() {
+            effect fn main() {
                 return cue.post(42, {});
             }
         "#;
@@ -1672,7 +1723,7 @@ mod tests {
     fn crypto_sign_dispatches_to_host() {
         let src = r#"
             import "crypto" as crypto;
-            fn main() {
+            effect fn main() {
                 return crypto.sign("key:ed25519:0", "data");
             }
         "#;
@@ -1698,7 +1749,7 @@ mod tests {
     fn crypto_generate_key_dispatches_to_host() {
         let src = r#"
             import "crypto" as crypto;
-            fn main() {
+            effect fn main() {
                 return crypto.generate_key("Ed25519");
             }
         "#;
@@ -1724,7 +1775,7 @@ mod tests {
     fn crypto_sign_needs_string_args() {
         let src = r#"
             import "crypto" as crypto;
-            fn main() {
+            effect fn main() {
                 return crypto.sign(42, "data");
             }
         "#;

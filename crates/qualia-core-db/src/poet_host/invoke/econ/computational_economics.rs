@@ -2289,7 +2289,8 @@ pub fn econ_aggregate_paper_fills(_args: &Value, _span: Span) -> Result<Value, D
 /// VibeScript seam for `Econ.accounting_balance` — validates args and wraps `computational_economics::accounting::account_balances_into`.
 pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     use crate::specialized_libs::computational_economics::accounting::{
-        account_balances_into, trial_balance, Account, AccountType, Posting,
+        account_balances_into, trial_balance, validate_balanced_entry, Account, AccountBalance,
+        AccountType, Posting,
     };
 
     let accounts_v = match args {
@@ -2300,6 +2301,9 @@ pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagno
         Value::Record(r) => r.get("postings"),
         _ => None,
     };
+    let require_balanced_entries = args::rec_bool(args, "require_balanced_entries")
+        .or_else(|| args::rec_bool(args, "validate_entries"))
+        .unwrap_or(false);
 
     let mut accounts = Vec::new();
     if let Some(Value::List(list)) = accounts_v {
@@ -2309,7 +2313,8 @@ pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagno
                     .get("id")
                     .and_then(|v| match v {
                         Value::U64(n) => Some(*n),
-                        Value::F64(f) => Some(*f as u64),
+                        Value::I64(n) if *n >= 0 => Some(*n as u64),
+                        Value::F64(f) if *f >= 0.0 => Some(*f as u64),
                         _ => None,
                     })
                     .unwrap_or(0);
@@ -2333,35 +2338,51 @@ pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagno
     }
 
     let mut postings = Vec::new();
+    let mut entry_ids = Vec::new();
     if let Some(Value::List(list)) = postings_v {
-        for (i, item) in list.iter().enumerate() {
+        for item in list {
             if let Value::Record(r) = item {
+                let entry_id = r
+                    .get("entry_id")
+                    .and_then(|v| match v {
+                        Value::U64(n) => Some(*n),
+                        Value::I64(n) if *n >= 0 => Some(*n as u64),
+                        Value::F64(f) if *f >= 0.0 => Some(*f as u64),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                if !entry_ids.contains(&entry_id) {
+                    entry_ids.push(entry_id);
+                }
                 let account_id = r
                     .get("account_id")
                     .and_then(|v| match v {
                         Value::U64(n) => Some(*n),
-                        Value::F64(f) => Some(*f as u64),
+                        Value::I64(n) if *n >= 0 => Some(*n as u64),
+                        Value::F64(f) if *f >= 0.0 => Some(*f as u64),
                         _ => None,
                     })
                     .unwrap_or(0);
                 let debit = r
                     .get("debit")
                     .and_then(|v| match v {
+                        Value::I64(n) => Some(*n),
                         Value::F64(f) => Some(*f as i64),
-                        Value::U64(n) => Some(*n as i64),
+                        Value::U64(n) => i64::try_from(*n).ok(),
                         _ => None,
                     })
                     .unwrap_or(0);
                 let credit = r
                     .get("credit")
                     .and_then(|v| match v {
+                        Value::I64(n) => Some(*n),
                         Value::F64(f) => Some(*f as i64),
-                        Value::U64(n) => Some(*n as i64),
+                        Value::U64(n) => i64::try_from(*n).ok(),
                         _ => None,
                     })
                     .unwrap_or(0);
                 postings.push(Posting {
-                    entry_id: i as u64,
+                    entry_id,
                     account_id,
                     debit,
                     credit,
@@ -2371,24 +2392,89 @@ pub fn econ_accounting_balance(args: &Value, span: Span) -> Result<Value, Diagno
     }
 
     let is_balanced = trial_balance(&accounts, &postings).is_ok();
-    let mut balances_buf = Vec::new();
-    account_balances_into(&accounts, &postings, &mut balances_buf)
+    let mut entries_balanced = true;
+    for &eid in &entry_ids {
+        if let Err(e) = validate_balanced_entry(eid, &postings) {
+            entries_balanced = false;
+            if require_balanced_entries {
+                return Err(args::bad(
+                    span,
+                    format!("Econ.accounting_balance entry {eid} unbalanced: {e:?}"),
+                ));
+            }
+        }
+    }
+
+    let mut balances_buf = vec![
+        AccountBalance {
+            account_id: 0,
+            account_type: AccountType::Asset,
+            balance: 0,
+            debit_total: 0,
+            credit_total: 0,
+        };
+        accounts.len()
+    ];
+    let count = account_balances_into(&accounts, &postings, &mut balances_buf)
         .map_err(|e| args::bad(span, format!("accounting error: {e:?}")))?;
 
-    let mut balance_records = Vec::new();
-    for b in balances_buf {
+    let mut balance_records = Vec::with_capacity(count);
+    for b in &balances_buf[..count] {
+        let bal_i64 = i64::try_from(b.balance).map_err(|_| {
+            args::bad(
+                span,
+                format!(
+                    "Econ.accounting_balance: account {} balance {} overflows i64",
+                    b.account_id, b.balance
+                ),
+            )
+        })?;
+        let deb_i64 = i64::try_from(b.debit_total).map_err(|_| {
+            args::bad(
+                span,
+                format!(
+                    "Econ.accounting_balance: account {} debit_total {} overflows i64",
+                    b.account_id, b.debit_total
+                ),
+            )
+        })?;
+        let cred_i64 = i64::try_from(b.credit_total).map_err(|_| {
+            args::bad(
+                span,
+                format!(
+                    "Econ.accounting_balance: account {} credit_total {} overflows i64",
+                    b.account_id, b.credit_total
+                ),
+            )
+        })?;
         balance_records.push(args::record([
             ("account_id", Value::U64(b.account_id)),
             ("balance", Value::F64(b.balance as f64)),
             ("debit_total", Value::F64(b.debit_total as f64)),
             ("credit_total", Value::F64(b.credit_total as f64)),
+            ("balance_i64", Value::I64(bal_i64)),
+            ("debit_total_i64", Value::I64(deb_i64)),
+            ("credit_total_i64", Value::I64(cred_i64)),
         ]));
     }
 
+    let has_nonempty_journal = !accounts.is_empty() && !postings.is_empty();
+    let journal_balanced = has_nonempty_journal && is_balanced && entries_balanced;
+    let honesty_tag = if !has_nonempty_journal {
+        "empty_input_projection"
+    } else if journal_balanced {
+        "verified_balanced_journal"
+    } else {
+        "unbalanced_postings_projection"
+    };
+
     Ok(args::record([
         ("trial_balance_ok", Value::Bool(is_balanced)),
+        ("entries_balanced", Value::Bool(entries_balanced)),
+        ("journal_balanced", Value::Bool(journal_balanced)),
+        ("empty_fixture", Value::Bool(!has_nonempty_journal)),
         ("balances", Value::List(balance_records)),
-        ("honesty", Value::String("real".into())),
+        ("honesty", Value::String(honesty_tag.into())),
     ]))
 }
 
@@ -2541,5 +2627,95 @@ mod tests {
         } else {
             panic!("Expected record");
         }
+    }
+
+    #[test]
+    fn accounting_balance_nonempty_and_entry_validation_lx64a() {
+        let accounts = Value::List(vec![
+            args::record([("id", Value::U64(1)), ("type", Value::String("asset".into()))]),
+            args::record([("id", Value::U64(2)), ("type", Value::String("revenue".into()))]),
+        ]);
+        let postings = Value::List(vec![
+            args::record([
+                ("entry_id", Value::U64(10)),
+                ("account_id", Value::U64(1)),
+                ("debit", Value::I64(1_500)),
+                ("credit", Value::I64(0)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(10)),
+                ("account_id", Value::U64(2)),
+                ("debit", Value::I64(0)),
+                ("credit", Value::I64(1_500)),
+            ]),
+        ]);
+        let input = args::record([("accounts", accounts.clone()), ("postings", postings)]);
+        let res = econ_accounting_balance(&input, Span { start: 0, end: 0 }).unwrap();
+        let Value::Record(rec) = res else {
+            panic!("expected record");
+        };
+        assert_eq!(rec.get("trial_balance_ok"), Some(&Value::Bool(true)));
+        assert_eq!(rec.get("entries_balanced"), Some(&Value::Bool(true)));
+        assert_eq!(rec.get("journal_balanced"), Some(&Value::Bool(true)));
+        assert_eq!(
+            rec.get("honesty"),
+            Some(&Value::String("verified_balanced_journal".into()))
+        );
+        let Some(Value::List(balances)) = rec.get("balances") else {
+            panic!("expected balances list");
+        };
+        assert_eq!(balances.len(), 2);
+
+        // Offsetting unbalanced entries (Entry 1: Debit 1000, Entry 2: Credit 1000) have trial_balance_ok=true
+        // but entries_balanced=false and journal_balanced=false!
+        let offsetting_postings = Value::List(vec![
+            args::record([
+                ("entry_id", Value::U64(1)),
+                ("account_id", Value::U64(1)),
+                ("debit", Value::I64(1_000)),
+                ("credit", Value::I64(0)),
+            ]),
+            args::record([
+                ("entry_id", Value::U64(2)),
+                ("account_id", Value::U64(2)),
+                ("debit", Value::I64(0)),
+                ("credit", Value::I64(1_000)),
+            ]),
+        ]);
+        let off_in = args::record([
+            ("accounts", accounts.clone()),
+            ("postings", offsetting_postings.clone()),
+        ]);
+        let off_res = econ_accounting_balance(&off_in, Span { start: 0, end: 0 }).unwrap();
+        let Value::Record(off_rec) = off_res else {
+            panic!("expected record");
+        };
+        assert_eq!(off_rec.get("trial_balance_ok"), Some(&Value::Bool(true)));
+        assert_eq!(off_rec.get("entries_balanced"), Some(&Value::Bool(false)));
+        assert_eq!(off_rec.get("journal_balanced"), Some(&Value::Bool(false)));
+
+        // Strict `require_balanced_entries: true` rejects offsetting unbalanced entries
+        let strict_in = args::record([
+            ("accounts", accounts),
+            ("postings", offsetting_postings),
+            ("require_balanced_entries", Value::Bool(true)),
+        ]);
+        assert!(econ_accounting_balance(&strict_in, Span { start: 0, end: 0 }).is_err());
+
+        // Empty fixture does not claim journal_balanced
+        let empty_in = args::record([
+            ("accounts", Value::List(vec![])),
+            ("postings", Value::List(vec![])),
+        ]);
+        let empty_res = econ_accounting_balance(&empty_in, Span { start: 0, end: 0 }).unwrap();
+        let Value::Record(empty_rec) = empty_res else {
+            panic!("expected record");
+        };
+        assert_eq!(empty_rec.get("empty_fixture"), Some(&Value::Bool(true)));
+        assert_eq!(empty_rec.get("journal_balanced"), Some(&Value::Bool(false)));
+        assert_eq!(
+            empty_rec.get("honesty"),
+            Some(&Value::String("empty_input_projection".into()))
+        );
     }
 }

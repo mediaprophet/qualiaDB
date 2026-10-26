@@ -324,6 +324,11 @@ serde-wasm-bindgen = "0.6.5"
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = "0.7.12"
 
+[target.'cfg(windows)'.dependencies]
+# Pin the native enrollment owner directly; never use a replaceable global store.
+keyring-core = "1"
+windows-native-keyring-store = "1"
+
 [dev-dependencies]
 oxiri = { workspace = true }
 rio_api = { workspace = true }

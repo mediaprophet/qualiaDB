@@ -91,7 +91,10 @@ impl<'a> Parser<'a> {
     pub fn parse_cell_body(&mut self) -> Result<Expr, Diagnostic> {
         self.expect(TokenKind::Eq, "cell body must start with '='")?;
         let expr = self.parse_expr()?;
-        if self.cur.kind != TokenKind::Eof && self.cur.kind != TokenKind::Semicolon {
+        if self.cur.kind == TokenKind::Semicolon {
+            self.bump()?;
+        }
+        if self.cur.kind != TokenKind::Eof {
             return Err(self.err("unexpected tokens after cell expression"));
         }
         Ok(expr)

@@ -252,6 +252,11 @@ pub fn export_bundle(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     ]))
 }
 
+/// Vibe fn: binds a `PoetGeometry` and its harboured graphs to a POET HyperCanvas Manifold.
+pub fn topology_bind(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    super::topology_bind::poet_topology_bind(args_v, span)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -345,6 +350,27 @@ mod tests {
             panic!("record");
         };
         assert_eq!(mi.get("axis_index"), Some(&Value::U64(15)));
+    }
+
+    #[test]
+    fn topology_bind_and_define_geometry_receipts() {
+        let sp = Span { start: 0, end: 0 };
+        let Value::Record(tb) = topology_bind(
+            &rec(&[
+                ("geometry", Value::String("NorthSpringCatchment".into())),
+                ("manifold", Value::String("Ecological".into())),
+                ("complex_kind", Value::String("MixedCellComplex3D".into())),
+                ("harboured_graph_count", Value::U64(3)),
+            ]),
+            sp,
+        )
+        .unwrap() else {
+            panic!("record");
+        };
+        assert_eq!(tb.get("op"), Some(&Value::String("topology_bind".into())));
+        assert_eq!(tb.get("magic"), Some(&Value::String("GTOP".into())));
+        assert_eq!(tb.get("header_size_bytes"), Some(&Value::U64(64)));
+        assert_eq!(tb.get("cell_anchor_size_bytes"), Some(&Value::U64(16)));
     }
 }
 

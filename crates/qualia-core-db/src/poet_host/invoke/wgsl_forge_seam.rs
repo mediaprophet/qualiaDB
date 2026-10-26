@@ -61,38 +61,17 @@ pub fn list_kernels(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-pub fn list_kernels(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    let filter = args::rec_str(args_v, "filter").unwrap_or("");
-    let fallback = [
-        ("affine-f32", "Elementwise affine transform y = a * x + b"),
-        ("rmsnorm-f32", "Root-mean-square layer normalization"),
-        ("rope-f32", "Rotary positional embedding transform"),
-        ("swiglu-f32", "SwiGLU gated feed-forward activation"),
-        ("softmax-f32", "Numerically stable row-wise softmax"),
-        ("q4k-gemv", "Quantized Q4_K matrix-vector multiplication"),
-    ];
-    let mut kernels = Vec::new();
-    for (name, desc) in fallback {
-        if !filter.is_empty() && !name.contains(filter) {
-            continue;
-        }
-        kernels.push(args::record([
-            ("name", Value::String(name.into())),
-            ("version", Value::U64(1)),
-            ("description", Value::String(desc.into())),
-            ("has_gpu_oracle", Value::Bool(true)),
-        ]));
-    }
-    let viewport_pipelines: Vec<Value> = VIEWPORT_PIPELINES
-        .iter()
-        .map(|s| Value::String((*s).into()))
-        .collect();
+pub fn list_kernels(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    let _ = span;
+    // Discovery reports actual target availability, not a synthetic catalogue.
     Ok(args::record([
         ("op", Value::String("list_kernels".into())),
         ("id", Value::String(ids::WGSL_FORGE_LIST_KERNELS.into())),
-        ("kernel_count", Value::U64(kernels.len() as u64)),
-        ("kernels", Value::List(kernels)),
-        ("viewport_pipelines", Value::List(viewport_pipelines)),
+        ("available", Value::Bool(false)),
+        ("native_service_required", Value::Bool(true)),
+        ("kernel_count", Value::U64(0)),
+        ("kernels", Value::List(Vec::new())),
+        ("viewport_pipelines", Value::List(Vec::new())),
     ]))
 }
 
@@ -132,25 +111,8 @@ pub fn generate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-pub fn generate(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    let kernel_name = args::rec_str(args_v, "kernel").unwrap_or("affine-f32");
-    let target_str = args::rec_str(args_v, "target").unwrap_or("wgsl");
-    let workgroup_size = args::rec_u64(args_v, "workgroup_size").unwrap_or(64);
-    let src = format!(
-        "@compute @workgroup_size({workgroup_size})\nfn main(@builtin(global_invocation_id) gid: vec3<u32>) {{ /* {kernel_name} ({target_str}) */ }}\n"
-    );
-    let hash = format!("0x{:016x}", crate::q_hash(&src));
-    Ok(args::record([
-        ("op", Value::String("generate".into())),
-        ("id", Value::String(ids::WGSL_FORGE_GENERATE.into())),
-        ("kernel_id", Value::String(kernel_name.into())),
-        ("target", Value::String(target_str.into())),
-        ("entry_point", Value::String("main".into())),
-        ("semantic_hash", Value::String(hash.clone())),
-        ("source_hash", Value::String(hash)),
-        ("workgroup_size", Value::U64(workgroup_size)),
-        ("source", Value::String(src)),
-    ]))
+pub fn generate(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::bad(span, "WgslForge.generate requires the enabled native WGSL Forge service; no shader, validation or execution result was produced"))
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
@@ -194,14 +156,8 @@ pub fn validate(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-pub fn validate(_args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    Ok(args::record([
-        ("op", Value::String("validate".into())),
-        ("id", Value::String(ids::WGSL_FORGE_VALIDATE.into())),
-        ("naga_validated", Value::Bool(true)),
-        ("binding_count", Value::U64(3)),
-        ("entry_points", Value::List(vec![Value::String("main".into())])),
-    ]))
+pub fn validate(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::bad(span, "WgslForge.validate requires the enabled native WGSL Forge service; no shader, validation or execution result was produced"))
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
@@ -225,21 +181,8 @@ pub fn roofline(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-pub fn roofline(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    let kernel_name = args::rec_str(args_v, "kernel").unwrap_or("affine-f32");
-    let n = args::rec_u64(args_v, "n").unwrap_or(65_536).max(1);
-    let flops = n * 2;
-    let bytes = n * 8;
-    Ok(args::record([
-        ("op", Value::String("roofline".into())),
-        ("id", Value::String(ids::WGSL_FORGE_ROOFLINE.into())),
-        ("kernel", Value::String(kernel_name.into())),
-        ("n", Value::U64(n)),
-        ("flops", Value::U64(flops)),
-        ("bytes", Value::U64(bytes)),
-        ("arithmetic_intensity", Value::F64(flops as f64 / bytes as f64)),
-        ("bound", Value::String("MemoryBound".into())),
-    ]))
+pub fn roofline(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::bad(span, "WgslForge.roofline requires the enabled native WGSL Forge service; no shader, validation or execution result was produced"))
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
@@ -280,20 +223,8 @@ pub fn schedule_candidates(args_v: &Value, span: Span) -> Result<Value, Diagnost
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-pub fn schedule_candidates(args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    let kernel_name = args::rec_str(args_v, "kernel").unwrap_or("affine-f32");
-    let list = vec![args::record([
-        ("workgroup_size", Value::U64(64)),
-        ("items_per_invocation", Value::U64(1)),
-        ("vector_width", Value::U64(1)),
-    ])];
-    Ok(args::record([
-        ("op", Value::String("schedule_candidates".into())),
-        ("id", Value::String(ids::WGSL_FORGE_SCHEDULE_CANDIDATES.into())),
-        ("kernel", Value::String(kernel_name.into())),
-        ("candidate_count", Value::U64(list.len() as u64)),
-        ("candidates", Value::List(list)),
-    ]))
+pub fn schedule_candidates(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::bad(span, "WgslForge.schedule_candidates requires the enabled native WGSL Forge service; no shader, validation or execution result was produced"))
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
@@ -343,24 +274,11 @@ pub fn attention_synthesize(args_v: &Value, span: Span) -> Result<Value, Diagnos
 }
 
 #[cfg(not(all(not(target_arch = "wasm32"), feature = "wgsl-forge")))]
-pub fn attention_synthesize(_args_v: &Value, _span: Span) -> Result<Value, Diagnostic> {
-    let src = "@compute @workgroup_size(128)\nfn causal_attention_main() {}\n".to_string();
-    let hash = format!("0x{:016x}", crate::q_hash(&src));
-    Ok(args::record([
-        ("op", Value::String("attention_synthesize".into())),
-        (
-            "id",
-            Value::String(ids::WGSL_FORGE_ATTENTION_SYNTHESIZE.into()),
-        ),
-        ("source_hash", Value::String(hash)),
-        ("workgroup_size", Value::U64(128)),
-        ("naga_validated", Value::Bool(true)),
-        ("binding_count", Value::U64(4)),
-        ("source", Value::String(src)),
-    ]))
+pub fn attention_synthesize(_args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::bad(span, "WgslForge.attention_synthesize requires the enabled native WGSL Forge service; no shader, validation or execution result was produced"))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
@@ -391,12 +309,30 @@ mod tests {
         assert!(g.get("source").is_some());
 
         let Value::Record(v) = validate(
-            &rec(&[("kernel", Value::String("rmsnorm-f32".into()))]),
+            &rec(&[("kernel", Value::String("ray-probe".into()))]),
             Span { start, end },
         )
         .unwrap() else {
             panic!("expected record");
         };
         assert_eq!(v.get("naga_validated"), Some(&Value::Bool(true)));
+    }
+}
+
+#[cfg(all(test, not(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))))]
+mod unavailable_tests {
+    use super::*;
+    #[test]
+    fn disabled_native_service_never_fabricates_a_kernel_or_validation() {
+        let value=Value::Record(Default::default());
+        let span=Span::point(0);
+        let Value::Record(catalogue)=list_kernels(&value,span).unwrap() else { panic!("catalogue record") };
+        assert_eq!(catalogue.get("available"),Some(&Value::Bool(false)));
+        assert_eq!(catalogue.get("kernel_count"),Some(&Value::U64(0)));
+        assert!(generate(&value,span).is_err());
+        assert!(validate(&value,span).is_err());
+        assert!(roofline(&value,span).is_err());
+        assert!(schedule_candidates(&value,span).is_err());
+        assert!(attention_synthesize(&value,span).is_err());
     }
 }

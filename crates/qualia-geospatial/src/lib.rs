@@ -10,6 +10,7 @@ pub mod geotiff;
 pub mod hilbert;
 pub mod isogloss;
 pub mod manifest;
+pub mod raster_m64;
 pub mod wfs;
 pub mod wms_streamer;
 
@@ -24,7 +25,9 @@ pub use geotiff::{
     CHUNK_CELL_COUNT, CHUNK_GRID_SIZE,
 };
 pub use hilbert::{hilbert_to_xy, xy_to_hilbert};
-pub use isogloss::{DiachronicIsogloss, SonicToponymStreamer, SpatioTemporalLect, TimeFrequencyBox};
+pub use isogloss::{
+    DiachronicIsogloss, SonicToponymStreamer, SpatioTemporalLect, TimeFrequencyBox,
+};
 pub use manifest::SpatialAssetManifest;
 pub use wfs::{GeologicUnitRecord, GeologicVectorLayer};
 pub use wms_streamer::{
@@ -98,8 +101,8 @@ mod tests {
         };
 
         let mut buffer = vec![0u8; 1_000_000];
-        let bytes_written = compile_raster_to_m64(&raster, &frame, 1, &mut buffer)
-            .expect("compilation succeeds");
+        let bytes_written =
+            compile_raster_to_m64(&raster, &frame, 1, &mut buffer).expect("compilation succeeds");
 
         assert!(bytes_written > 0);
 
@@ -142,8 +145,16 @@ mod tests {
     #[test]
     fn test_wms_tile_streamer_lru_and_addressing() {
         let mut streamer = WmsTileStreamer::default();
-        let coord1 = TileCoordinate { zoom: 12, x: 3820, y: 2450 };
-        let coord2 = TileCoordinate { zoom: 12, x: 3821, y: 2450 };
+        let coord1 = TileCoordinate {
+            zoom: 12,
+            x: 3820,
+            y: 2450,
+        };
+        let coord2 = TileCoordinate {
+            zoom: 12,
+            x: 3821,
+            y: 2450,
+        };
 
         let slot1 = streamer.allocate_slot(&coord1);
         let slot2 = streamer.allocate_slot(&coord2);
@@ -169,7 +180,10 @@ mod tests {
         let road = HermiteCorridorSegment {
             p0,
             p1,
-            kind: CorridorKind::Road { width_mm: 8000, crown_height_mm: 150 },
+            kind: CorridorKind::Road {
+                width_mm: 8000,
+                crown_height_mm: 150,
+            },
         };
         let mut road_col = M64StrataColumnRecord::default();
         road_col.surface_elevation_mm = 505_000;

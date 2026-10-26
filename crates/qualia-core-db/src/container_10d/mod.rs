@@ -1,45 +1,21 @@
-//! `.10d` living-container v2 — the normative header, axis-role taxonomy, and
-//! metric-completeness descriptor that serialize the 10-D tensor runtime.
+//! `.10d` versioned container codecs and shared native/WASM SDK boundaries.
 //!
-//! This is the **P0.1 barrier task**: the surface every later P0 task (section
-//! table, CRC-32C integrity, quantized-mesh section, Tensor10D node section,
-//! renderer upload path, conformance vectors, WASM parity) consumes. It lands
-//! alone first; no swarm fan-out on P0.1 itself.
+//! Source includes v1/v2 headers, aligned section tables and CRC integrity;
+//! quantized meshes, tensor nodes, provenance, materials, UV/frame streams,
+//! typed MID2 payload references, morph/skeletal data and other specialized
+//! sections. Presence of an API is not qualification of every combination,
+//! consumer, target or scientific interpretation.
 //!
-//! Scope of P0.1 (what is implemented-in-code here vs. spec-reserved):
+//! Current numeric and typed-payload contracts are maintained in
+//! `docs/manuals/standards/10d-container-format.md` and
+//! `docs/manuals/standards/10d-typed-field-payloads.md`. Those companions identify
+//! the exact native conformance cases and the limits of their evidence.
 //!
-//! - **Implemented:** `AxisRole` taxonomy + the proposed (not-yet-frozen)
-//!   Option A table; `MetricCompletenessDescriptor` + the
-//!   `verify_descriptor_against_reality` gate that introspects
-//!   `Tensor10D::full_distance`; `Container10dHeader` POD (64 bytes, repr(C),
-//!   zero padding asserted) with `encode`/`parse` running every P0.1
-//!   acceptance gate (bad magic / unknown version / undefined axis role /
-//!   non-zero padding / metric-completeness divergence).
-//! - **Spec-reserved (NOT yet implemented — do not report as working):**
-//!   `header_crc32c` (P0.3 wires the shared CRC-32C delegated from
-//!   `q42/p64_weight.rs`); the section table, tiered alignment, and
-//!   per-section CRC (P0.2); the quantized-mesh section (P0.4); the Tensor10D
-//!   node section (P0.5); the renderer upload path (P0.6); conformance
-//!   vectors (P0.7); WASM parity build gate (P0.8).
-//!
-//! Two ⚑ format decisions were resolved by Timothy Charles Holborn on
-//! 2026-07-04 and are encoded here as the not-yet-frozen defaults:
-//!
-//! 1. **Axis-role taxonomy (Option A):** `q,v,w` = `Selector`; `x,y,z,t,α,σ`
-//!    = `Coordinate`; `μ` = `CoordinateCarrier` (dual-role: a coordinate that
-//!    is also the in-band provenance carrier).
-//! 2. **Metric-completeness (option b — document the limitation):** the header
-//!    encodes the current `full_distance` reality. `v=0` Euclidean folds all
-//!    seven COORDINATEs; `v=1` Cyclic and `v=2` Hyperbolic fold `x,y,z` only;
-//!    `v>=3` Boundary clique folds no coordinate axes (byte-equality on `v`).
-//!    P7.9 (making the non-Euclidean metrics axis-complete via product /
-//!    warped-product manifolds and a weighted clique-graph) is deferred as
-//!    future geometry design work — see the progress log.
-//!
-//! Reference: `docs/plans/native-computational-geometry.md` §4.1,
-//! `docs/plans/native-computational-geometry-EXECUTION.md` P0.1, and the
-//! cross-cutting gate "Honest axis-role taxonomy & metric-completeness
-//! (queryability claim == code)".
+//! Axis roles remain q/v/w selectors, x/y/z/t/alpha/sigma coordinates, and mu
+//! a coordinate carrier. Metric completeness must reflect actual runtime math;
+//! no source-only completeness or native/WASM parity claim follows here.
+//! Legacy API/file names containing `identity` remain compatibility spellings;
+//! identifiers, qualified referents and integrity digests retain distinct roles.
 
 pub mod axis_role;
 pub mod conformance;
@@ -72,6 +48,8 @@ pub mod skeletal_section;
 pub mod surface_reading;
 pub mod texture_coordinate_container;
 pub mod texture_coordinate_section;
+/// Borrowed typed-field selection and existing-codec container readers.
+pub mod typed_payloads;
 // `topology_section` and `spatial_index_section` depend on
 // `crate::specialized_libs::computational_geometry`, which is itself gated
 // `#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]` at
@@ -124,7 +102,8 @@ pub use manifold_identity_v2::{
     encode_manifold_identity_v2_with_extensions, encoded_len as manifold_identity_v2_encoded_len,
     IntegrityIndexDigest, ManifestV2Error, ManifoldIdentityV2, StableEntityId, TypedFieldRecord,
     BUILTIN_FIELD_KINDS, FIELD_KIND_ELECTROMAGNETIC, FIELD_KIND_SCALAR, FIELD_KIND_SPECTRAL,
-    FIELD_KIND_TENSOR, FIELD_KIND_VECTOR, MANIFOLD_IDENTITY_V2_AXIS_ORDER,
+    FIELD_KIND_TENSOR, FIELD_KIND_VECTOR, FIELD_KIND_SURFACE_FRAMES, FIELD_KIND_MORPH_TARGETS,
+    MANIFOLD_IDENTITY_V2_AXIS_ORDER,
     MANIFOLD_IDENTITY_V2_FIELD_RECORD_SIZE, MANIFOLD_IDENTITY_V2_HEADER_SIZE,
     MANIFOLD_IDENTITY_V2_MAGIC, MANIFOLD_IDENTITY_V2_MAX_BYTES, MANIFOLD_IDENTITY_V2_MAX_FIELDS,
     MANIFOLD_IDENTITY_V2_VERSION,
@@ -172,7 +151,9 @@ pub use node_section::{
     MAX_NODE_COUNT, NODE_MINI_HEADER_SIZE, TENSOR10D_SIZE,
 };
 pub use normal_section::{
-    decode_mesh_frames, decode_normals, decode_tangents, encode_mesh_frames, encode_normals,
+    decode_mesh_frames, decode_mesh_frames_into, decode_mesh_frames_with_limits,
+    inspect_mesh_frames, MeshFrameDecodeLimits, MeshFrameLayout,
+    decode_normals, decode_tangents, encode_mesh_frames, encode_normals,
     frame_encoded_len, is_normal_section, MeshFrameStreams, NormalSectionError, MAX_NORMAL_COUNT,
     NORMAL_SECTION_HEADER_SIZE, NORMAL_SECTION_VERSION,
 };
@@ -190,6 +171,12 @@ pub use provenance_section::{
     validate_provenance, ProvenanceMiniHeader, ProvenanceSectionError, ProvenanceSidecar,
     ProvenanceSidecarView, FLAG_HAS_VC, PROVENANCE_MAGIC, PROVENANCE_MINI_HEADER_SIZE,
     PROVENANCE_SECTION_VERSION,
+};
+pub use typed_payloads::{
+    inspect_container_mesh_frames, read_container_mesh_frames,
+    read_container_mesh_frames_into, read_container_mesh_frames_with_limits,
+    read_container_morph_targets_into, TypedPayload,
+    TypedPayloadError, TypedPayloadResolver,
 };
 pub use section::{
     encode_container, parse_section_table, AlignmentTier, SectionDescriptor, SectionInput,
@@ -235,3 +222,10 @@ pub use topology_section::{
 /// caller-buffer contracts change. P0.1 sets this to 1; P0.2/P0.3 may raise it
 /// when the section table + CRC lands.
 pub const CONTAINER_10D_ABI_VERSION: u32 = 1;
+
+// Explicit opaque retention is separate from strict typed section admission.
+pub use section::{
+    copy_opaque_container_into, inspect_opaque_container,
+    replace_known_section_bytes_preserving_layout, OpaqueContainerView,
+    OpaquePreservationBudget, OpaquePreservationError,
+};

@@ -205,23 +205,35 @@ pub enum JournalFrameType {
     QuinRemove = 0x03,
     LexiconBind = 0x04,
     Receipt = 0x05,
+    TopologyDelta = 0x06,
+    TopologySeal = 0x07,
     TxCommit = 0xFF,
+}
+
+impl JournalFrameType {
+    /// Decodes a `u8` frame tag into [`JournalFrameType`].
+    #[inline]
+    pub const fn from_u8(val: u8) -> Option<Self> {
+        match val {
+            0x01 => Some(Self::TxBegin),
+            0x02 => Some(Self::QuinAdd),
+            0x03 => Some(Self::QuinRemove),
+            0x04 => Some(Self::LexiconBind),
+            0x05 => Some(Self::Receipt),
+            0x06 => Some(Self::TopologyDelta),
+            0x07 => Some(Self::TopologySeal),
+            0xFF => Some(Self::TxCommit),
+            _ => None,
+        }
+    }
 }
 
 impl TryFrom<u8> for JournalFrameType {
     type Error = JournalError;
-    /// Decodes a frame-type tag (0x01–0x05, 0xFF); `UnknownFrameType` on any
+    /// Decodes a frame-type tag (0x01–0x07, 0xFF); `UnknownFrameType` on any
     /// other byte — corrupt/unrecognized frames fail closed.
     fn try_from(val: u8) -> Result<Self, Self::Error> {
-        match val {
-            0x01 => Ok(Self::TxBegin),
-            0x02 => Ok(Self::QuinAdd),
-            0x03 => Ok(Self::QuinRemove),
-            0x04 => Ok(Self::LexiconBind),
-            0x05 => Ok(Self::Receipt),
-            0xFF => Ok(Self::TxCommit),
-            other => Err(JournalError::UnknownFrameType(other)),
-        }
+        Self::from_u8(val).ok_or(JournalError::UnknownFrameType(val))
     }
 }
 
@@ -570,6 +582,9 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
                         }
                     }
                 }
+                JournalFrameType::TopologyDelta | JournalFrameType::TopologySeal => {
+                    // CRC-32C of the topology delta / seal payload is already verified above.
+                }
                 JournalFrameType::TxCommit => {
                     if let Some(mut tx) = current_tx.take() {
                         tx.committed = true;
@@ -580,6 +595,38 @@ impl<S: Read + Write + Seek> Q42Journal<S> {
         }
 
         Ok(transactions)
+    }
+
+    /// Appends a `TopologyDelta` (`0x06`) frame carrying a 16-byte `TopologicalDeltaEntry` payload.
+    pub fn append_topology_delta(
+        &mut self,
+        tx_id: u32,
+        tick: u64,
+        delta_bytes: &[u8],
+    ) -> Result<(), JournalError> {
+        self.storage.seek(SeekFrom::End(0))?;
+        self.write_frame(JournalFrameType::TopologyDelta, tx_id, tick, delta_bytes)?;
+        self.storage.flush()?;
+        Ok(())
+    }
+
+    /// Appends a `TopologySeal` (`0x07`) frame carrying `[geometry_id: u64 LE, crc32c: u32 LE, slot_count: u32 LE]`.
+    pub fn append_topology_seal(
+        &mut self,
+        tx_id: u32,
+        tick: u64,
+        geometry_id: u64,
+        segment_crc32c: u32,
+        graph_count: u16,
+    ) -> Result<(), JournalError> {
+        self.storage.seek(SeekFrom::End(0))?;
+        let mut payload = [0u8; 16];
+        payload[0..8].copy_from_slice(&geometry_id.to_le_bytes());
+        payload[8..12].copy_from_slice(&segment_crc32c.to_le_bytes());
+        payload[12..14].copy_from_slice(&graph_count.to_le_bytes());
+        self.write_frame(JournalFrameType::TopologySeal, tx_id, tick, &payload)?;
+        self.storage.flush()?;
+        Ok(())
     }
 
     /// Reset journal back to empty header after a checkpoint compaction.
@@ -999,5 +1046,47 @@ mod tests {
         assert_eq!(session.active_state.len(), 1);
         assert!(session.active_state.contains(&added_quin));
         assert!(!session.active_state.contains(&base_quin));
+    }
+
+    #[test]
+    fn test_q42j_topology_delta_and_seal_framing_roundtrip() {
+        assert_eq!(
+            JournalFrameType::from_u8(0x06),
+            Some(JournalFrameType::TopologyDelta)
+        );
+        assert_eq!(
+            JournalFrameType::from_u8(0x07),
+            Some(JournalFrameType::TopologySeal)
+        );
+        assert_eq!(
+            JournalFrameType::try_from(0x06).unwrap(),
+            JournalFrameType::TopologyDelta
+        );
+        assert_eq!(
+            JournalFrameType::try_from(0x07).unwrap(),
+            JournalFrameType::TopologySeal
+        );
+
+        let digest = [0x33u8; 32];
+        let h = JournalHeader::new(JournalApplicationProfile::PoetWorkspace, 0x77, digest, 1);
+        let storage = Cursor::new(Vec::new());
+        let mut journal = Q42Journal::create(storage, h).unwrap();
+
+        let delta_payload = [0x01u8; 16];
+        journal
+            .append_topology_delta(1, 5, &delta_payload)
+            .unwrap();
+        journal
+            .append_topology_seal(1, 6, 0xCAFE_BABE_1234_5678, 0xE306_9283, 4)
+            .unwrap();
+
+        let q1 = sample_quin(1, 2, 3, 4, 5);
+        let mut tx = JournalTransaction::new(2, 7, 0x99, 0x44);
+        tx.add_quin(q1);
+        journal.append_transaction(&tx).unwrap();
+
+        let recovered = journal.recover_transactions().unwrap();
+        assert_eq!(recovered.len(), 1);
+        assert_eq!(recovered[0].tx_id, 2);
     }
 }

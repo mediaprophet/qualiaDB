@@ -1,7 +1,11 @@
-//! Full glTF 2.0 / GLB → `.10d` Living Container Compiler (`SKL1`, `MRP1`, `PROC1`, `EONT1`,
+//! Rigid glTF 2.0 / GLB → `.10d` Living Container Compiler (`SKL1`, `MRP1`, `PROC1`, `EONT1`,
 //! KHR Material Extensions & `KHR_lights_punctual`).
 
 use serde_json::Value;
+#[path = "glb_rigid_skin.rs"] mod rigid_skin;
+#[path = "glb_rigid_animation.rs"] mod rigid_animation;
+#[cfg(test)]
+#[path = "glb_rigid_tests.rs"] mod rigid_tests;
 
 use super::glb::{import_glb_with_normals, read_vec3, read_vec4};
 use super::{AssetError, ImportedMesh, CHUNK_BIN, CHUNK_JSON, GLB_MAGIC};
@@ -100,11 +104,12 @@ pub fn matrix4_to_motor_and_scale(m: &[f32; 16]) -> MotorAndScale {
     (Motor::from_rotation_translation([qw / len, qx / len, qy / len, qz / len], [tx, ty, tz]), [sx, sy, sz])
 }
 
-/// Parse a binary glTF (`.glb`) into a full `.10d` Living Scene (`SKL1`, `MRP1`, `PROC1`, `EONT1`,
+/// Parse a binary glTF (`.glb`) into a rigid `.10d` Living Scene (`SKL1`, `MRP1`, `PROC1`, `EONT1`,
 /// KHR material extensions, and `KHR_lights_punctual`).
 pub fn parse_glb_living_scene(bytes: &[u8]) -> Result<GlbLivingScene, AssetError> {
     let imported_mesh = import_glb_with_normals(bytes)?;
-    if bytes.len() < 12 || u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) != GLB_MAGIC {
+    if bytes.len() < 12 || u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) != GLB_MAGIC
+    {
         return Err(AssetError::UnknownFormat);
     }
     let (mut json_chunk, mut bin_chunk, mut off) = (None, None, 12usize);
@@ -112,48 +117,98 @@ pub fn parse_glb_living_scene(bytes: &[u8]) -> Result<GlbLivingScene, AssetError
         let clen = u32::from_le_bytes(bytes[off..off + 4].try_into().unwrap()) as usize;
         let ctype = u32::from_le_bytes(bytes[off + 4..off + 8].try_into().unwrap());
         let dend = off + 8 + clen;
-        if ctype == CHUNK_JSON { json_chunk = Some(&bytes[off + 8..dend]); }
-        else if ctype == CHUNK_BIN { bin_chunk = Some(&bytes[off + 8..dend]); }
+        if ctype == CHUNK_JSON {
+            json_chunk = Some(&bytes[off + 8..dend]);
+        } else if ctype == CHUNK_BIN {
+            bin_chunk = Some(&bytes[off + 8..dend]);
+        }
         off = dend;
     }
-    let gltf: Value = serde_json::from_slice(json_chunk.ok_or_else(|| AssetError::Parse("no JSON".into()))?)
-        .map_err(|e| AssetError::Parse(format!("glTF JSON: {e}")))?;
+    let gltf: Value =
+        serde_json::from_slice(json_chunk.ok_or_else(|| AssetError::Parse("no JSON".into()))?)
+            .map_err(|e| AssetError::Parse(format!("glTF JSON: {e}")))?;
     let (bin, empty) = (bin_chunk.unwrap_or(&[]), Vec::new());
-    let (accessors, bvs) = (gltf["accessors"].as_array().unwrap_or(&empty), gltf["bufferViews"].as_array().unwrap_or(&empty));
+    let (accessors, bvs) = (
+        gltf["accessors"].as_array().unwrap_or(&empty),
+        gltf["bufferViews"].as_array().unwrap_or(&empty),
+    );
 
+    rigid_skin::validate_hierarchy(&gltf)?;
     let (nodes, scene_roots) = parse_nodes_and_scenes(&gltf)?;
-    let mut skin_weights = parse_primitive_skin_weights(&gltf, accessors, bvs, bin, imported_mesh.mesh.vertex_count())?;
-    let (joints, joint_ids, node_to_joint) = parse_skins(&gltf, &nodes, accessors, bvs, bin, &mut skin_weights)?;
+    let mut skin_weights = parse_primitive_skin_weights(
+        &gltf,
+        accessors,
+        bvs,
+        bin,
+        imported_mesh.mesh.vertex_count(),
+    )?;
+    let skin = rigid_skin::parse_skins(&gltf, &nodes, accessors, bvs, bin, &mut skin_weights)?;
     let (clips, tracks, keys, morph_weight_tracks) =
-        parse_animations(&gltf, &nodes, &joints, &node_to_joint, accessors, bvs, bin)?;
+        rigid_animation::parse_animations(&gltf, &nodes, &skin, accessors, bvs, bin)?;
+    let rigid_skin::RigidSkin {
+        joints, joint_ids, ..
+    } = skin;
 
     let skl1_section = if !joints.is_empty() && !skin_weights.is_empty() {
-        let (c_slice, t_slice, k_slice) = if clips.is_empty() {
-            (
-                vec![ClipRecord { id: q_hash("urn:qualia:clip:bind"), duration: 1.0, first_track: 0, track_count: 1, looping: true }],
-                vec![Track { joint: 0, first_key: 0, key_count: 1 }],
-                vec![Key { time: 0.0, local: joints[0].rest_local }],
-            )
-        } else {
-            (clips.clone(), tracks.clone(), keys.clone())
+        let counts = Counts {
+            joints: joints.len(),
+            vertices: skin_weights.len(),
+            clips: clips.len(),
+            tracks: tracks.len(),
+            keys: keys.len(),
         };
-        let counts = Counts { joints: joints.len(), vertices: skin_weights.len(), clips: c_slice.len(), tracks: t_slice.len(), keys: k_slice.len() };
-        counts.encoded_len().and_then(|len| {
-            let mut buf = vec![0u8; len];
-            let data = SkeletalData { joints: &joints, joint_ids: &joint_ids, skin: &skin_weights, clips: &c_slice, tracks: &t_slice, keys: &k_slice };
-            encode_skeletal_section_into(&data, &mut buf).ok().map(|_| buf)
-        })
-    } else { None };
+        let len = counts.encoded_len().ok_or_else(|| {
+            AssetError::Parse("native skeletal section exceeds its explicit format bounds".into())
+        })?;
+        let mut bytes = vec![0u8; len];
+        let data = SkeletalData {
+            joints: &joints,
+            joint_ids: &joint_ids,
+            skin: &skin_weights,
+            clips: &clips,
+            tracks: &tracks,
+            keys: &keys,
+        };
+        encode_skeletal_section_into(&data, &mut bytes).map_err(|error| {
+            AssetError::Parse(format!(
+                "native skeletal section admission failed: {error:?}"
+            ))
+        })?;
+        Some(bytes)
+    } else {
+        None
+    };
 
-    let (morph_header, morph_deltas, mrp1_section) =
-        parse_morph_targets(&gltf, accessors, bvs, bin, imported_mesh.mesh.vertex_count())?;
+    let (morph_header, morph_deltas, mrp1_section) = parse_morph_targets(
+        &gltf,
+        accessors,
+        bvs,
+        bin,
+        imported_mesh.mesh.vertex_count(),
+    )?;
     let material_extensions = parse_khr_material_extensions(&gltf);
     let punctual_lights = parse_khr_lights_punctual(&gltf);
     let (proc1_header, eont1_header) = build_living_headers(&gltf, &imported_mesh);
 
     Ok(GlbLivingScene {
-        imported_mesh, scene_roots, nodes, joints, joint_ids, skin_weights, clips, tracks, keys, skl1_section,
-        morph_header, morph_deltas, mrp1_section, morph_weight_tracks, material_extensions, punctual_lights, proc1_header, eont1_header,
+        imported_mesh,
+        scene_roots,
+        nodes,
+        joints,
+        joint_ids,
+        skin_weights,
+        clips,
+        tracks,
+        keys,
+        skl1_section,
+        morph_header,
+        morph_deltas,
+        mrp1_section,
+        morph_weight_tracks,
+        material_extensions,
+        punctual_lights,
+        proc1_header,
+        eont1_header,
     })
 }
 
@@ -212,20 +267,26 @@ fn parse_primitive_skin_weights(
     for mesh in gltf["meshes"].as_array().unwrap_or(&empty) {
         for prim in mesh["primitives"].as_array().into_iter().flatten() {
             if prim["mode"].as_u64().unwrap_or(4) != 4 { continue; }
-            let (Some(j_idx), Some(w_idx)) = (prim["attributes"]["JOINTS_0"].as_u64(), prim["attributes"]["WEIGHTS_0"].as_u64()) else { continue };
+            if prim["attributes"].get("JOINTS_1").is_some() || prim["attributes"].get("WEIGHTS_1").is_some() {return Err(AssetError::Parse("more than four skin influences require an influence-preserving native profile".into()));}
+            let j_idx=prim["attributes"]["JOINTS_0"].as_u64();
+            let w_idx=prim["attributes"]["WEIGHTS_0"].as_u64();
+            if j_idx.is_some()!=w_idx.is_some() {return Err(AssetError::Parse("JOINTS_0/WEIGHTS_0 must be paired".into()));}
+            let (Some(j_idx),Some(w_idx))=(j_idx,w_idx) else {continue};
             let j_acc = accessors.get(j_idx as usize).ok_or_else(|| AssetError::Parse("JOINTS_0 OOB".into()))?;
             let w_acc = accessors.get(w_idx as usize).ok_or_else(|| AssetError::Parse("WEIGHTS_0 OOB".into()))?;
             let (joints, weights) = (read_joints_0(j_acc, bvs, bin)?, read_weights_0(w_acc, bvs, bin)?);
             if joints.len() != weights.len() { return Err(AssetError::Parse("JOINTS_0/WEIGHTS_0 count mismatch".into())); }
             for (j, w) in joints.into_iter().zip(weights) {
-                let sum: f32 = w.iter().map(|v| v.max(0.0)).sum();
-                let norm_w = if sum > 1e-6 { [w[0].max(0.0) / sum, w[1].max(0.0) / sum, w[2].max(0.0) / sum, w[3].max(0.0) / sum] } else { [1.0, 0.0, 0.0, 0.0] };
+                if w.iter().any(|v|!v.is_finite() || *v<0.0) {return Err(AssetError::Parse("invalid skin weights".into()));}
+                let sum: f32 = w.iter().sum();
+                if !sum.is_finite() || sum<=0.0 {return Err(AssetError::Parse("zero or non-finite skin weight sum".into()));}
+                let norm_w = w.map(|v|v/sum);
                 out.push(SkinWeight { joints: j, weights: norm_w });
             }
         }
     }
-    if !out.is_empty() && out.len() < total_vertices {
-        out.resize(total_vertices, SkinWeight { joints: [0; 4], weights: [1.0, 0.0, 0.0, 0.0] });
+    if !out.is_empty() && out.len() != total_vertices {
+        return Err(AssetError::Parse("skin vertex remapping must preserve vertex alignment".into()));
     }
     Ok(out)
 }
@@ -236,6 +297,7 @@ fn read_joints_0(acc: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<[u16; 4]>
     let bv = bvs.get(acc["bufferView"].as_u64().unwrap_or(0) as usize).ok_or_else(|| AssetError::Parse("JOINTS_0 bv".into()))?;
     let start = bv["byteOffset"].as_u64().unwrap_or(0) as usize + acc["byteOffset"].as_u64().unwrap_or(0) as usize;
     let elem_bytes = match comp { 5121 => 4usize, 5123 => 8usize, _ => return Err(AssetError::Parse("JOINTS_0 comp".into())) };
+    rigid_skin::checked_accessor(acc,bvs,bin,elem_bytes,262144)?;
     let stride = bv["byteStride"].as_u64().map(|s| s as usize).unwrap_or(elem_bytes);
     (0..count).map(|i| {
         let s = bin.get(start + i * stride..start + i * stride + elem_bytes).ok_or_else(|| AssetError::Parse("JOINTS_0 OOB".into()))?;
@@ -251,6 +313,8 @@ fn read_weights_0(acc: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<[f32; 4]
     let bv = bvs.get(acc["bufferView"].as_u64().unwrap_or(0) as usize).ok_or_else(|| AssetError::Parse("WEIGHTS_0 bv".into()))?;
     let start = bv["byteOffset"].as_u64().unwrap_or(0) as usize + acc["byteOffset"].as_u64().unwrap_or(0) as usize;
     let elem_bytes = match comp { 5121 => 4usize, 5123 => 8usize, 5126 => 16usize, _ => return Err(AssetError::Parse("WEIGHTS_0 comp".into())) };
+    if comp!=5126 && acc["normalized"].as_bool()!=Some(true) {return Err(AssetError::Parse("integer WEIGHTS_0 must be normalized".into()));}
+    rigid_skin::checked_accessor(acc,bvs,bin,elem_bytes,262144)?;
     let stride = bv["byteStride"].as_u64().map(|s| s as usize).unwrap_or(elem_bytes);
     (0..count).map(|i| {
         let s = bin.get(start + i * stride..start + i * stride + elem_bytes).ok_or_else(|| AssetError::Parse("WEIGHTS_0 OOB".into()))?;
@@ -262,116 +326,15 @@ fn read_weights_0(acc: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<[f32; 4]
     }).collect()
 }
 
-fn parse_skins(
-    gltf: &Value, nodes: &[GlbNodeRecord], accessors: &[Value], bvs: &[Value], bin: &[u8], _skin_weights: &mut [SkinWeight],
-) -> Result<(Vec<Joint>, Vec<u64>, std::collections::HashMap<usize, u16>), AssetError> {
-    let Some(skin) = gltf["skins"].as_array().and_then(|s| s.first()) else {
-        return Ok((Vec::new(), Vec::new(), std::collections::HashMap::new()));
-    };
-    let joint_nodes: Vec<usize> = skin["joints"].as_array().ok_or_else(|| AssetError::Parse("skin.joints".into()))?
-        .iter().filter_map(|v| v.as_u64().map(|u| u as usize)).collect();
-    let ibm_motors = if let Some(ibm_idx) = skin["inverseBindMatrices"].as_u64() {
-        read_mat4_motors(accessors.get(ibm_idx as usize).ok_or_else(|| AssetError::Parse("IBM OOB".into()))?, bvs, bin)?
-    } else { vec![Motor::identity(); joint_nodes.len()] };
-    let node_to_joint: std::collections::HashMap<usize, u16> = joint_nodes.iter().enumerate().map(|(ji, &ni)| (ni, ji as u16)).collect();
-    let (mut joints, mut joint_ids) = (Vec::with_capacity(joint_nodes.len()), Vec::with_capacity(joint_nodes.len()));
-    for (j_idx, &n_idx) in joint_nodes.iter().enumerate() {
-        let node = nodes.get(n_idx).ok_or_else(|| AssetError::Parse("skin joint node OOB".into()))?;
-        let parent = node.parent.and_then(|p| node_to_joint.get(&(p as usize)).copied()).filter(|&pj| (pj as usize) < j_idx);
-        let name_str = node.name.as_deref().unwrap_or("joint");
-        joints.push(Joint { parent, rest_local: node.local_motor, inverse_bind: ibm_motors.get(j_idx).copied().unwrap_or_else(Motor::identity) });
-        joint_ids.push(q_hash(&format!("urn:qualia:joint:{j_idx}:{name_str}")));
-    }
-    Ok((joints, joint_ids, node_to_joint))
-}
-
-fn read_mat4_motors(acc: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<Motor>, AssetError> {
-    if acc["componentType"].as_u64() != Some(5126) || acc["type"].as_str() != Some("MAT4") { return Err(AssetError::Parse("IBM MAT4".into())); }
-    let (count, bv) = (acc["count"].as_u64().unwrap_or(0) as usize, bvs.get(acc["bufferView"].as_u64().unwrap_or(0) as usize).ok_or_else(|| AssetError::Parse("IBM bv".into()))?);
-    let (start, stride) = (bv["byteOffset"].as_u64().unwrap_or(0) as usize + acc["byteOffset"].as_u64().unwrap_or(0) as usize, bv["byteStride"].as_u64().map(|s| s as usize).unwrap_or(64));
-    (0..count).map(|i| {
-        let slice = bin.get(start + i * stride..start + i * stride + 64).ok_or_else(|| AssetError::Parse("IBM OOB".into()))?;
-        let mut m = [0.0f32; 16];
-        for k in 0..16 { m[k] = f32::from_le_bytes(slice[k * 4..k * 4 + 4].try_into().unwrap()); }
-        Ok(matrix4_to_motor_and_scale(&m).0)
-    }).collect()
-}
-
 fn read_f32_scalars(acc: &Value, bvs: &[Value], bin: &[u8]) -> Result<Vec<f32>, AssetError> {
+    if acc["type"].as_str()!=Some("SCALAR") || acc["componentType"].as_u64()!=Some(5126) {return Err(AssetError::Parse("animation scalar must be FLOAT SCALAR".into()));}
+    rigid_skin::checked_accessor(acc,bvs,bin,4,crate::render::skeletal::MAX_KEYS*16*3)?;
     let (count, bv) = (acc["count"].as_u64().unwrap_or(0) as usize, bvs.get(acc["bufferView"].as_u64().unwrap_or(0) as usize).ok_or_else(|| AssetError::Parse("scalar bv".into()))?);
     let (start, stride) = (bv["byteOffset"].as_u64().unwrap_or(0) as usize + acc["byteOffset"].as_u64().unwrap_or(0) as usize, bv["byteStride"].as_u64().map(|s| s as usize).unwrap_or(4));
     (0..count).map(|i| {
         let s = bin.get(start + i * stride..start + i * stride + 4).ok_or_else(|| AssetError::Parse("scalar OOB".into()))?;
         Ok(f32::from_le_bytes(s.try_into().unwrap()))
     }).collect()
-}
-
-fn parse_animations(
-    gltf: &Value, nodes: &[GlbNodeRecord], joints: &[Joint], node_to_joint: &std::collections::HashMap<usize, u16>,
-    accessors: &[Value], bvs: &[Value], bin: &[u8],
-) -> Result<(Vec<ClipRecord>, Vec<Track>, Vec<Key>, Vec<GlbMorphWeightTrack>), AssetError> {
-    let empty = Vec::new();
-    let (mut clips, mut tracks, mut keys, mut morph_tracks) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
-    for (anim_idx, anim) in gltf["animations"].as_array().unwrap_or(&empty).iter().enumerate() {
-        let (samplers, first_track, mut max_time) = (anim["samplers"].as_array().unwrap_or(&empty), tracks.len() as u32, 0.0f64);
-        let mut joint_channels: std::collections::BTreeMap<u16, (Vec<f32>, Vec<[f64; 3]>, Vec<[f64; 4]>, GlbInterpolation)> = std::collections::BTreeMap::new();
-        for ch in anim["channels"].as_array().unwrap_or(&empty) {
-            let (Some(s_idx), Some(n_idx)) = (ch["sampler"].as_u64(), ch["target"]["node"].as_u64()) else { continue };
-            let (path, sampler) = (ch["target"]["path"].as_str().unwrap_or(""), samplers.get(s_idx as usize).ok_or_else(|| AssetError::Parse("sampler OOB".into()))?);
-            let interp = match sampler["interpolation"].as_str().unwrap_or("LINEAR") {
-                "STEP" => GlbInterpolation::Step, "CUBICSPLINE" => GlbInterpolation::CubicSpline, _ => GlbInterpolation::Linear,
-            };
-            let in_acc = accessors.get(sampler["input"].as_u64().unwrap_or(0) as usize).ok_or_else(|| AssetError::Parse("in OOB".into()))?;
-            let out_acc = accessors.get(sampler["output"].as_u64().unwrap_or(0) as usize).ok_or_else(|| AssetError::Parse("out OOB".into()))?;
-            let times = read_f32_scalars(in_acc, bvs, bin)?;
-            for &t in &times { max_time = max_time.max(t as f64); }
-            if path == "weights" {
-                morph_tracks.push(GlbMorphWeightTrack { node_index: n_idx as u16, interpolation: interp, times, values: read_f32_scalars(out_acc, bvs, bin)? });
-                continue;
-            }
-            let Some(&joint_idx) = node_to_joint.get(&(n_idx as usize)) else { continue };
-            let rest = joints.get(joint_idx as usize).map(|j| j.rest_local).unwrap_or_else(|| nodes.get(n_idx as usize).map(|n| n.local_motor).unwrap_or_else(Motor::identity));
-            let (rest_rot, rest_trans) = rest.to_rotation_translation();
-            let entry = joint_channels.entry(joint_idx).or_insert_with(|| (times.clone(), Vec::new(), Vec::new(), interp));
-            if entry.0.is_empty() { entry.0 = times.clone(); }
-            entry.3 = interp;
-            let (stride, offset) = if interp == GlbInterpolation::CubicSpline { (3, 1) } else { (1, 0) };
-            if path == "translation" {
-                let raw = read_vec3(out_acc, bvs, bin, "translation")?;
-                entry.1 = (0..times.len()).filter_map(|i| raw.get(i * stride + offset)).map(|v| [v[0] as f64, v[1] as f64, v[2] as f64]).collect();
-            } else if path == "rotation" {
-                let raw = read_vec4(out_acc, bvs, bin, "rotation")?;
-                entry.2 = (0..times.len()).filter_map(|i| raw.get(i * stride + offset)).map(|q| {
-                    let (x, y, z, w) = (q[0] as f64, q[1] as f64, q[2] as f64, q[3] as f64);
-                    let l = (w * w + x * x + y * y + z * z).sqrt().max(1e-12);
-                    [w / l, x / l, y / l, z / l]
-                }).collect();
-            }
-            if entry.1.is_empty() { entry.1 = vec![rest_trans; entry.0.len()]; }
-            if entry.2.is_empty() { entry.2 = vec![rest_rot; entry.0.len()]; }
-        }
-        for (joint_idx, (times, trans, rots, _)) in joint_channels {
-            if times.is_empty() { continue; }
-            let (first_key, mut prev_t, mut key_count) = (keys.len() as u32, -1.0f64, 0u16);
-            for i in 0..times.len() {
-                let mut t = (times[i] as f64).max(0.0);
-                if t <= prev_t { t = prev_t + 1e-4; }
-                prev_t = t;
-                max_time = max_time.max(t);
-                let tr = trans.get(i).copied().or_else(|| trans.last().copied()).unwrap_or([0.0; 3]);
-                let ro = rots.get(i).copied().or_else(|| rots.last().copied()).unwrap_or([1.0, 0.0, 0.0, 0.0]);
-                keys.push(Key { time: t, local: Motor::from_rotation_translation(ro, tr) });
-                key_count += 1;
-            }
-            if key_count > 0 { tracks.push(Track { joint: joint_idx, first_key, key_count }); }
-        }
-        let track_count = (tracks.len() as u32).saturating_sub(first_track);
-        if track_count > 0 {
-            let name = anim["name"].as_str().unwrap_or("clip");
-            clips.push(ClipRecord { id: q_hash(&format!("urn:qualia:clip:{anim_idx}:{name}")), duration: max_time.max(1e-3), first_track, track_count, looping: true });
-        }
-    }
-    Ok((clips, tracks, keys, morph_tracks))
 }
 
 fn parse_morph_targets(
@@ -421,11 +384,10 @@ fn parse_morph_targets(
         flags, max_displacement, ontogenetic_bind_mask: (1u32 << target_count.min(16)) - 1, reserved: [0u8; 8],
     };
     let deltas: Vec<QuantizedMorphDelta> = raw_deltas.into_iter().map(|(ti, vi, pd, nd, td)| quantize_morph_delta(pd, nd, td, max_displacement, ti, vi)).collect();
-    let mrp1_bytes = morph_section_encoded_len(deltas.len()).and_then(|len| {
-        let mut buf = vec![0u8; len];
-        encode_morph_section(&header, &deltas, &mut buf).ok().map(|_| buf)
-    });
-    Ok((Some(header), deltas, mrp1_bytes))
+    let len=morph_section_encoded_len(deltas.len()).ok_or_else(||AssetError::Parse("MRP1 length overflow".into()))?;
+    let mut buf=vec![0u8;len];
+    encode_morph_section(&header,&deltas,&mut buf).map_err(|e|AssetError::Parse(format!("MRP1 admission: {e:?}")))?;
+    Ok((Some(header), deltas, Some(buf)))
 }
 
 fn parse_khr_material_extensions(gltf: &Value) -> Vec<KhrMaterialExtensions> {

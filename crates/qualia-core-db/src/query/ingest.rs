@@ -1195,7 +1195,13 @@ mod tests {
         );
         let report = crate::q42_volume::Q42InspectReport::from_path(&output).unwrap();
         assert!(!report.lexicon_has_no_terms);
-        assert!(report.flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS != 0);
+        // Successful parsing is not a reviewed redistribution decision. The
+        // native writer's QW-10 contract keeps default ingest unmarked.
+        assert_eq!(report.flags & crate::q42_volume::FLAG_PERMISSIVE_COMMONS, 0);
+        let volume = crate::q42_volume::Q42Volume::open(&output).unwrap();
+        assert_eq!(volume.read_all_quins().unwrap().len(), 2);
+        let object = crate::query::ingest_formats::object_iri_hash("http://purl.org/ontology/mo/");
+        assert_eq!(volume.lex_view().unwrap().lookup_owned(object).as_deref(), Some("http://purl.org/ontology/mo/"));
     }
 
     #[test]

@@ -29,6 +29,7 @@ mod manifest;
 #[cfg(not(target_arch = "wasm32"))]
 mod network_quanta;
 mod opfs_source;
+mod payload_catalogue;
 mod postings;
 mod publication;
 #[cfg(not(target_arch = "wasm32"))]
@@ -74,6 +75,12 @@ pub use opfs_source::verify_local_car_as_q42_source;
 pub use opfs_source::{
     verify_car_bytes_as_q42_source, OpfsCallbackRangeSource, OpfsSliceRangeSource,
     VerifiedCarRangeSource,
+};
+#[allow(unused_imports)]
+pub use payload_catalogue::{
+    decode_payload_catalogue_section, encode_payload_catalogue_section,
+    header_payload_catalogue_range, set_header_payload_catalogue_range,
+    PAYLOAD_CATALOGUE_HEADER_BYTES, PAYLOAD_CATALOGUE_MAGIC, PAYLOAD_CATALOGUE_VERSION,
 };
 pub use postings::{
     encode_block_postings, encode_postings_section, measure_bloom_false_positives,

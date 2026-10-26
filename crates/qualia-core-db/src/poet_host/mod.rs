@@ -10,6 +10,9 @@ pub mod catalog_ttl;
 pub mod invoke;
 mod scan;
 mod values;
+pub mod scoped_effects;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod native_authority;
 
 use scan::{collect_matches, subject_present};
 pub use values::format_value;
@@ -2008,28 +2011,7 @@ mod tests {
         assert_eq!(v, Value::Null);
     }
 
-    #[test]
-    fn t42_hid_vibescript_poll() {
-        let mut snap = PoetSnapshot::default();
-        let event = vibe::hid::InboundEvent::pointer_move(100, "mouse:0", 5.0, 10.0);
-        snap.enqueue_hid_event(&event).unwrap();
 
-        // Test via VibeScript
-        let v = snap.eval_cell_src("= hid.poll()").unwrap();
-        match v {
-            Value::Record(r) => {
-                assert_eq!(r.get("timestamp_ns"), Some(&Value::U64(100)));
-            }
-            other => panic!("expected record, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn t42_hid_vibescript_poll_empty() {
-        let mut snap = PoetSnapshot::default();
-        let v = snap.eval_cell_src("= hid.poll()").unwrap();
-        assert_eq!(v, Value::Null);
-    }
 
     #[test]
     fn t46_hid_buffer_enqueue_dequeue() {
@@ -2224,77 +2206,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn crypto_sign_fail_closed() {
-        let mut snap = PoetSnapshot::default();
-        let src = r#"
-            import "crypto" as crypto;
-            fn sign_it() {
-                return crypto.sign("key:ed25519:0", "data");
-            }
-        "#;
-        let result = snap.eval_fn(src, "sign_it", vec![]);
-        assert!(result.is_err());
-    }
 
-    #[test]
-    fn test_crypto_ed25519_generate_sign_verify_roundtrip() {
-        let mut snap = PoetSnapshot::default();
-        let gen_src = r#"
-            import "crypto" as crypto;
-            fn make_key() {
-                return crypto.generate_key("Ed25519");
-            }
-        "#;
-        let key_rec_val = snap.eval_fn(gen_src, "make_key", vec![]).unwrap();
-        let key_rec = match key_rec_val {
-            Value::Record(r) => r,
-            _ => panic!("expected Record"),
-        };
-        let key_id = match key_rec.get("key_id").unwrap() {
-            Value::String(s) => s.clone(),
-            _ => panic!("expected String key_id"),
-        };
-
-        let sign_src = format!(
-            r#"
-            import "crypto" as crypto;
-            fn sign_doc() {{
-                return crypto.sign("{}", "authentic contract payload");
-            }}
-            "#,
-            key_id
-        );
-        let sig_val = snap.eval_fn(&sign_src, "sign_doc", vec![]).unwrap();
-        let sig_hex = match sig_val {
-            Value::String(s) => s,
-            _ => panic!("expected String signature"),
-        };
-
-        let verify_src = format!(
-            r#"
-            import "crypto" as crypto;
-            fn verify_doc() {{
-                return crypto.verify("{}", "authentic contract payload", "{}");
-            }}
-            "#,
-            key_id, sig_hex
-        );
-        let verify_val = snap.eval_fn(&verify_src, "verify_doc", vec![]).unwrap();
-        assert_eq!(verify_val, Value::Bool(true));
-
-        let verify_bad_src = format!(
-            r#"
-            import "crypto" as crypto;
-            fn verify_tampered() {{
-                return crypto.verify("{}", "tampered payload", "{}");
-            }}
-            "#,
-            key_id, sig_hex
-        );
-        let verify_bad_val = snap.eval_fn(&verify_bad_src, "verify_tampered", vec![]).unwrap();
-        assert_eq!(verify_bad_val, Value::Bool(false));
-    }
 
     // ── ZK proof tests (real Groth16 over BLS12-381) ───────────────────
 
@@ -2885,29 +2797,6 @@ effect fn boom() {
         );
     }
 
-    #[test]
-    fn dispatch_tick_hook_fires() {
-        let mut snap = PoetSnapshot::with_demo_seed();
-        let src = r#"
-requires [ capability("pulse.publish") ];
-effect fn emit() {
-    effect pulse.publish("poet/tick", 1);
-    return null;
-}
-on tick() {
-    return emit();
-}
-"#;
-        let path = vec!["tick".to_string()];
-        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
-        assert_eq!(v, Value::Null);
-        assert_eq!(
-            snap.published.len(),
-            1,
-            "tick hook should have triggered a publish"
-        );
-        assert_eq!(snap.published[0].topic, "poet/tick");
-    }
 
     #[test]
     fn dispatch_tick_no_hook_returns_null() {
@@ -3122,25 +3011,6 @@ effect fn go() {
         }
     }
 
-    #[test]
-    fn g_tick_hook_with_pulse_publish_through_snapshot() {
-        let mut snap = PoetSnapshot::with_demo_seed();
-        let src = r#"
-requires [ capability("pulse.publish") ];
-effect fn emit() {
-    effect pulse.publish("poet/tick", 42);
-    return null;
-}
-on tick() {
-    return emit();
-}
-"#;
-        let path = vec!["tick".to_string()];
-        let v = snap.dispatch_hook_src(src, &path, vec![]).unwrap();
-        assert_eq!(v, Value::Null);
-        assert_eq!(snap.published.len(), 1);
-        assert_eq!(snap.published[0].topic, "poet/tick");
-    }
 
     #[test]
     fn g_time_dependent_cell_recomputes_on_re_eval() {

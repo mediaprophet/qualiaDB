@@ -20,7 +20,7 @@ integrity, and caller-buffered readers for render/query paths.
 - `crc32c.rs`: CRC-32C implementation used by sections and whole-file sealing.
 - `header.rs`: Parses and emits the fixed 64-byte container header.
 - `integrity.rs`: Computes, seals, and verifies whole-file integrity.
-- `mesh_section.rs`: Encodes and decodes quantised triangle meshes.
+- `mesh_section.rs`: Encodes and decodes quantised triangle meshes; numeric payload details are in the [QuantizedMesh companion](../../../../docs/manuals/standards/10d-container-format.md#payload-layout).
 - `metric_check.rs`: Validates metric/topology compatibility for Tensor10D profiles.
 - `mod.rs`: Container module boundary and public re-exports.
 - `node_section.rs`: Encodes and reads caller-buffered Tensor10D node sections.
@@ -35,3 +35,4 @@ integrity, and caller-buffered readers for render/query paths.
 
 - **2026-07-29**: Created a comprehensive semantic index reflecting the implemented
   provenance, topology, spatial-index, Tensor10D, and integrity sections.
+

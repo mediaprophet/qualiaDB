@@ -1,4 +1,4 @@
-//! Means to author manifolds, containers, nested links, and subjects.
+//! Means to author manifolds, containers, nested links, subjects, and topology bindings.
 //!
 //! VibeScript is the language (`Poet.*`); the HyperCanvas applies layout.
 //! Host receipts do not mutate the DOM. We do not ship canned worlds.
@@ -7,7 +7,9 @@ use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{Document, HtmlElement, HtmlInputElement, HtmlSelectElement};
 
 use crate::tool_chest::core::registry::{ManifoldSeed, SeedContainer};
-use crate::tool_chest::core::{ManifoldSociality, SubjectSeed};
+use crate::tool_chest::core::{
+    AdjacencySpec, BoundarySpec, GeometrySeed, HarbouredGraphSeed, ManifoldSociality, SubjectSeed,
+};
 
 use super::native_daemon::{daemon_records_upsert, is_daemon_connected, NativeRecordUpsertRequest};
 
@@ -19,6 +21,7 @@ pub enum AuthoringOp {
     NestedLink(NestedLink),
     SubjectDeclare(SubjectDeclare),
     ParticipantInvite(ParticipantInvite),
+    TopologyBind(TopologyBind),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +58,14 @@ pub struct ParticipantInvite {
     pub label: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TopologyBind {
+    pub geometry_id: String,
+    pub active_graph_id: String,
+    pub complex_kind: String,
+    pub anchor_domain: String,
+}
+
 /// Parse `Poet.manifold_create` calls. Kept for existing tests.
 pub fn parse_manifold_creates(source: &str) -> Vec<ManifoldCreate> {
     parse_authoring_ops(source)
@@ -66,7 +77,7 @@ pub fn parse_manifold_creates(source: &str) -> Vec<ManifoldCreate> {
         .collect()
 }
 
-/// Parse all four Poet.* shell ops from Vibe source, in source order.
+/// Parse all Poet.* shell ops from Vibe source, in source order.
 pub fn parse_authoring_ops(source: &str) -> Vec<AuthoringOp> {
     let mut out = Vec::new();
     let mut rest = source;
@@ -76,7 +87,8 @@ pub fn parse_authoring_ops(source: &str) -> Vec<AuthoringOp> {
         let link = rest.find("Poet.nested_link");
         let subject = rest.find("Poet.subject_declare");
         let invite = rest.find("Poet.participant_invite");
-        let next = [create, place, link, subject, invite]
+        let topo = rest.find("Poet.topology_bind");
+        let next = [create, place, link, subject, invite, topo]
             .into_iter()
             .flatten()
             .min();
@@ -140,7 +152,7 @@ pub fn parse_authoring_ops(source: &str) -> Vec<AuthoringOp> {
                 description,
             }));
             rest = &rest[idx + "Poet.subject_declare".len()..];
-        } else {
+        } else if invite == Some(idx) {
             let did = quoted_field(body, "did")
                 .or_else(|| quoted_field(body, "participant"))
                 .unwrap_or_default();
@@ -154,6 +166,28 @@ pub fn parse_authoring_ops(source: &str) -> Vec<AuthoringOp> {
                 }));
             }
             rest = &rest[idx + "Poet.participant_invite".len()..];
+        } else {
+            let geometry_id = quoted_field(body, "geometry_id")
+                .or_else(|| quoted_field(body, "geometry"))
+                .or_else(|| quoted_field(body, "id"))
+                .unwrap_or_else(|| "hypercanvas-layout".into());
+            let active_graph_id = quoted_field(body, "active_graph_id")
+                .or_else(|| quoted_field(body, "graph_id"))
+                .or_else(|| quoted_field(body, "graph"))
+                .unwrap_or_else(|| "primal-1-skeleton".into());
+            let complex_kind = quoted_field(body, "complex_kind")
+                .or_else(|| quoted_field(body, "kind"))
+                .unwrap_or_else(|| "SurfaceManifold2D".into());
+            let anchor_domain = quoted_field(body, "anchor_domain")
+                .or_else(|| quoted_field(body, "anchors"))
+                .unwrap_or_else(|| "Cell0Vertex".into());
+            out.push(AuthoringOp::TopologyBind(TopologyBind {
+                geometry_id,
+                active_graph_id,
+                complex_kind,
+                anchor_domain,
+            }));
+            rest = &rest[idx + "Poet.topology_bind".len()..];
         }
     }
     out
@@ -213,10 +247,123 @@ pub fn apply_authoring_ops(ops: &[AuthoringOp]) -> Vec<String> {
                     spec.did, spec.role
                 ));
             }
+            AuthoringOp::TopologyBind(spec) => {
+                let summary = bind_topology(spec);
+                log.push(summary);
+            }
         }
     }
     persist_authored();
     log
+}
+
+/// Deterministically binds or updates a [`GeometrySeed`] and its active [`HarbouredGraphSeed`]
+/// on a [`ManifoldSeed`].
+pub fn apply_topology_bind_to_seed(seed: &mut ManifoldSeed, spec: &TopologyBind) -> String {
+    if !seed.geometries.iter().any(|g| g.id == spec.geometry_id) {
+        let mut preset = GeometrySeed::default_presets()
+            .into_iter()
+            .find(|g| g.id == spec.geometry_id)
+            .unwrap_or_else(|| {
+                let mut g = GeometrySeed {
+                    id: spec.geometry_id.clone(),
+                    label: spec.geometry_id.clone(),
+                    complex_kind: if spec.complex_kind.is_empty() {
+                        "SurfaceManifold2D".into()
+                    } else {
+                        spec.complex_kind.clone()
+                    },
+                    satisfies_construct_id: String::new(),
+                    manifold_id: seed.id.clone(),
+                    v_register: 0,
+                    w_domain: 1,
+                    metric_kind: "Euclidean".into(),
+                    cell_counts: [16, 32, 18, 0],
+                    active_graph_slot: 0,
+                    harboured_graphs: Vec::new(),
+                };
+                g.add_intrinsic_default_graphs();
+                g
+            });
+        preset.manifold_id = seed.id.clone();
+        seed.geometries.push(preset);
+    }
+
+    let geom = seed
+        .geometries
+        .iter_mut()
+        .find(|g| g.id == spec.geometry_id)
+        .expect("geometry inserted above");
+    if !spec.complex_kind.is_empty() {
+        geom.complex_kind = spec.complex_kind.clone();
+    }
+    if !spec.active_graph_id.is_empty() && !geom.switch_active_graph(&spec.active_graph_id) {
+        geom.harboured_graphs.push(HarbouredGraphSeed {
+            id: spec.active_graph_id.clone(),
+            label: spec.active_graph_id.clone(),
+            embed_role: "SemanticOverlay".into(),
+            morphology: "DirectedMultigraph".into(),
+            anchor_domain: if spec.anchor_domain.is_empty() {
+                "Cell0Vertex".into()
+            } else {
+                spec.anchor_domain.clone()
+            },
+            invariants: vec!["ACYCLIC".into()],
+            adjacency: AdjacencySpec {
+                layout: "CSR_CSC".into(),
+                edge_binding: vec![],
+                context_filter: 0,
+                state_filter: "ACTIVE".into(),
+            },
+            boundary: BoundarySpec {
+                roots_query: "in_degree == 0".into(),
+                sinks_query: "out_degree == 0".into(),
+                max_depth: 16,
+                betti_target: None,
+            },
+        });
+        geom.active_graph_slot = geom.harboured_graphs.len() - 1;
+    }
+    if !spec.anchor_domain.is_empty() {
+        if let Some(active) = geom.harboured_graphs.get_mut(geom.active_graph_slot) {
+            active.anchor_domain = spec.anchor_domain.clone();
+        }
+    }
+
+    let active_graph_id = geom
+        .active_graph()
+        .map(|g| g.id.as_str())
+        .unwrap_or("none");
+    let anchor = geom
+        .active_graph()
+        .map(|g| g.anchor_domain.as_str())
+        .unwrap_or("Cell0Vertex");
+    format!(
+        "bound geometry `{}` ({}) active_graph=`{}` anchor=`{}` chi={}",
+        geom.id,
+        geom.complex_kind,
+        active_graph_id,
+        anchor,
+        geom.euler_characteristic()
+    )
+}
+
+/// Binds a geometry complex and active harboured graph to the open manifold lens.
+pub fn bind_topology(spec: &TopologyBind) -> String {
+    let manifold_id = super::current_manifold_id();
+    let mut seed = super::get_current_seeds()
+        .into_iter()
+        .find(|s| s.id == manifold_id)
+        .unwrap_or_else(|| ManifoldSeed {
+            id: manifold_id.clone(),
+            ..Default::default()
+        });
+    let summary = apply_topology_bind_to_seed(&mut seed, spec);
+    super::replace_current_seed(&seed);
+    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+        super::interactions::show_tool_status(&document, "Topology bind", &summary, "success");
+    }
+    summary
 }
 
 fn persist_authored() {
@@ -514,7 +661,7 @@ pub fn open_authoring_dialog_kind(document: &Document, kind: &str) {
     panel.append_child(&title).unwrap();
     let hint = document.create_element("div").unwrap();
     hint.set_text_content(Some(
-        "Means to author — not a canned world. Vibe: Poet.manifold_create / container_place / nested_link / subject_declare",
+        "Means to author — not a canned world. Vibe: Poet.manifold_create / container_place / nested_link / subject_declare / topology_bind",
     ));
     let hint_el: HtmlElement = hint.clone().dyn_into().unwrap();
     hint_el
@@ -798,6 +945,41 @@ mod tests {
             AuthoringOp::SubjectDeclare(s) => assert_eq!(s.label, "North Spring"),
             other => panic!("{other:?}"),
         }
+    }
+
+    #[test]
+    fn parses_and_applies_topology_bind_deterministically() {
+        let source = r#"
+            capability.invoke("Poet.topology_bind", {
+                geometry_id: "north-spring-catchment-3d",
+                active_graph_id: "water-custody-norms",
+                complex_kind: "MixedCellComplex3D",
+                anchor_domain: "Cell2Face"
+            })
+        "#;
+        let ops = parse_authoring_ops(source);
+        assert_eq!(ops.len(), 1);
+        let AuthoringOp::TopologyBind(spec) = &ops[0] else {
+            panic!("expected TopologyBind, got {:?}", ops[0]);
+        };
+        assert_eq!(spec.geometry_id, "north-spring-catchment-3d");
+        assert_eq!(spec.active_graph_id, "water-custody-norms");
+        assert_eq!(spec.complex_kind, "MixedCellComplex3D");
+        assert_eq!(spec.anchor_domain, "Cell2Face");
+
+        let mut seed = ManifoldSeed {
+            id: "research".into(),
+            ..Default::default()
+        };
+        let summary = apply_topology_bind_to_seed(&mut seed, spec);
+        assert!(summary.contains("north-spring-catchment-3d"));
+        assert!(summary.contains("water-custody-norms"));
+        assert_eq!(seed.geometries.len(), 1);
+        assert_eq!(seed.geometries[0].active_graph_slot, 2);
+        assert_eq!(
+            seed.geometries[0].active_graph().unwrap().anchor_domain,
+            "Cell2Face"
+        );
     }
 
     #[test]

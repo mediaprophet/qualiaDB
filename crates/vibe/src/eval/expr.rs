@@ -4,7 +4,7 @@ use crate::value::EnumValue;
 
 impl<'a, H: Host> Engine<'a, H> {
     /// Evaluates an expression.
-    pub fn eval_expr(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {
+    pub(super) fn eval_expr_inner(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {
         self.budget.tick(expr.span)?;
         match &expr.kind {
             ExprKind::Literal(l) => {
@@ -192,13 +192,29 @@ impl<'a, H: Host> Engine<'a, H> {
                 r: Box::new(self.eval_expr(reifier, env)?),
             }),
             ExprKind::Index { recv, index } => {
-                let list = self.eval_expr(recv, env)?;
-                let i = self.eval_expr(index, env)?.as_i64().unwrap_or(0) as usize;
-                match list {
-                    Value::List(xs) => xs.get(i).cloned().ok_or_else(|| {
-                        Diagnostic::new(DiagCode::E600, expr.span, "index out of range")
-                    }),
-                    _ => Err(Diagnostic::new(DiagCode::E600, expr.span, "not a list")),
+                let target = self.eval_expr(recv, env)?;
+                let raw_idx = self.eval_expr(index, env)?.as_i64().unwrap_or(0);
+                match target {
+                    Value::List(xs) => {
+                        let len = xs.len() as i64;
+                        let resolved = if raw_idx < 0 { len + raw_idx } else { raw_idx };
+                        if resolved >= 0 && resolved < len {
+                            Ok(xs[resolved as usize].clone())
+                        } else {
+                            Err(Diagnostic::new(DiagCode::E600, expr.span, "index out of range"))
+                        }
+                    }
+                    Value::String(s) => {
+                        let graphemes = crate::stdlib_v2::split_graphemes(&s);
+                        let len = graphemes.len() as i64;
+                        let resolved = if raw_idx < 0 { len + raw_idx } else { raw_idx };
+                        if resolved >= 0 && resolved < len {
+                            Ok(Value::String(graphemes[resolved as usize].clone()))
+                        } else {
+                            Err(Diagnostic::new(DiagCode::E600, expr.span, "string grapheme index out of range"))
+                        }
+                    }
+                    _ => Err(Diagnostic::new(DiagCode::E600, expr.span, "not a list or string")),
                 }
             }
             ExprKind::Pipe { left, right } => {
@@ -331,7 +347,10 @@ impl<'a, H: Host> Engine<'a, H> {
                 self.budget.charge(buf.len() as u64, expr.span)?;
                 Ok(Value::String(buf))
             }
-            ExprKind::Await(e) => self.eval_expr(e, env),
+            ExprKind::Await(e) => {
+                let val = self.eval_expr(e, env)?;
+                crate::task_scheduler::await_scheduled_value(self, val, env, expr.span)
+            }
             ExprKind::Lambda { params, body } => {
                 check_non_capturing(body, params, env, expr.span)?;
                 Ok(Value::Lambda {

@@ -75,19 +75,23 @@ impl<'a, H: Host> Engine<'a, H> {
                 value,
                 span,
             } => {
-                let v = self.eval_expr(value, env)?;
-                if let Some(n) = target.ident_name() {
-                    if !env.mutables.contains(n) {
-                        return Err(Diagnostic::new(
-                            DiagCode::E701,
-                            *span,
-                            format!(
-                                "cannot assign to immutable binding `{n}` (declare with `let mut`)"
-                            ),
-                        ));
-                    }
-                    env.vars.insert(n.to_string(), v.clone());
+                let n = target.ident_name().ok_or_else(|| Diagnostic::new(
+                    DiagCode::E701,
+                    *span,
+                    "assignment target must be a mutable whole binding; member/index assignment is unsupported in vibe-0.1",
+                ))?;
+                // Admission precedes the RHS, which can dispatch real effects.
+                if !env.mutables.contains(n) {
+                    return Err(Diagnostic::new(
+                        DiagCode::E701,
+                        *span,
+                        format!(
+                            "cannot assign to immutable binding `{n}` (declare with `let mut`)"
+                        ),
+                    ));
                 }
+                let v = self.eval_expr(value, env)?;
+                env.vars.insert(n.to_string(), v.clone());
                 Ok(Flow::Next(v))
             }
             Stmt::If {

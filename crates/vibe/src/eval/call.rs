@@ -12,7 +12,7 @@ impl<'a, H: Host> Engine<'a, H> {
         span: Span,
         env: &mut Env,
     ) -> Result<Value, Diagnostic> {
-        if self.depth >= 64 {
+        if self.depth >= self.call_depth_limit {
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }
         let path = match &callee.kind {
@@ -52,7 +52,7 @@ impl<'a, H: Host> Engine<'a, H> {
         span: Span,
         env: &mut Env,
     ) -> Result<Value, Diagnostic> {
-        if self.depth >= 64 {
+        if self.depth >= self.call_depth_limit {
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }
         if let ExprKind::Member { recv, name } = &callee.kind {
@@ -76,6 +76,8 @@ impl<'a, H: Host> Engine<'a, H> {
                             | "cue"
                             | "crypto"
                             | "zk"
+                            | "web"
+                            | "ui"
                     )
             } else {
                 false
@@ -231,15 +233,24 @@ impl<'a, H: Host> Engine<'a, H> {
             }
         }
         // Try resolving as a user-defined function in the attached program.
-        if let Some(program_ptr) = self.program {
-            let program = unsafe { &*program_ptr };
+        if let Some(program) = self.program.clone() {
             if let Some(Item::Function(f)) = program
                 .items
                 .iter()
                 .find(|i| matches!(i, Item::Function(f) if f.name == path))
             {
-                if let Some(steps) = budget_steps(&f.budget, env, self) {
-                    self.budget.steps_left = self.budget.steps_left.min(steps);
+                if self.evaluating_budget {
+                    return Err(Diagnostic::new(DiagCode::E400, span,
+                        "budget expressions must not call user functions"));
+                }
+                // Budget expressions execute before the body and can call
+                // functions too. Account depth before evaluating them and
+                // preserve their diagnostic rather than swallowing it.
+                self.depth += 1;
+                match budget_steps(&f.budget, env, self) {
+                    Ok(Some(steps)) => self.budget.steps_left = self.budget.steps_left.min(steps),
+                    Ok(None) => {},
+                    Err(error) => { self.depth -= 1; return Err(error); }
                 }
                 let mut local = Env::default();
                 local.aliases = env.aliases.clone();
@@ -247,7 +258,6 @@ impl<'a, H: Host> Engine<'a, H> {
                 for (p, a) in f.params.iter().zip(pos.into_iter()) {
                     local.vars.insert(p.name.clone(), a);
                 }
-                self.depth += 1;
                 let r = self.finish_block(&f.body, &mut local);
                 self.depth -= 1;
                 return r;
@@ -511,7 +521,7 @@ impl<'a, H: Host> Engine<'a, H> {
             ));
         }
         self.depth += 1;
-        if self.depth >= 64 {
+        if self.depth >= self.call_depth_limit {
             self.depth -= 1;
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }

@@ -615,45 +615,13 @@ impl<'a> SparqlMmHandler<'a> {
             return Ok(C2paVerificationStatus::Unsupported);
         }
 
-        let sig_val = self.get_ma_property(media_uri, c2pa::HAS_SIGNATURE).unwrap_or(0);
-        let manifest_val = self.get_ma_property(media_uri, c2pa::HAS_MANIFEST).unwrap_or(0);
-        let has_assertion = self.get_ma_property(media_uri, c2pa::HAS_ASSERTION).is_ok();
-        let cert_val = self.get_ma_property(media_uri, c2pa::HAS_CERTIFICATE).unwrap_or(0);
-
-        // 1. ParsedOnly: Manifest or signature edge present, but missing cryptographic payload
-        if sig_val == 0 && manifest_val == 0 {
-            return Ok(C2paVerificationStatus::ParsedOnly);
-        }
-
-        // 2. IntegrityChecked: Manifest hash is bound to the asset (via assertion or manifest matching)
-        if sig_val == 0 {
-            if has_manifest && (has_assertion || manifest_val != 0) {
-                return Ok(C2paVerificationStatus::IntegrityChecked);
-            }
-            return Ok(C2paVerificationStatus::ParsedOnly);
-        }
-
-        // 3. Signature present: Verify signature binding between media, manifest, and certificate
-        if cert_val == 0 {
-            return Ok(C2paVerificationStatus::IntegrityChecked);
-        }
-
-        // 4. Trust chain: Verify if certificate has an established root issuer / trust chain anchor
-        let mut has_root_anchor = false;
-        for quin in self.quins {
-            if quin.subject == cert_val && (quin.predicate == c2pa::CREATED_BY || quin.predicate == c2pa::HAS_PROVENANCE) {
-                if quin.object != 0 {
-                    has_root_anchor = true;
-                    break;
-                }
-            }
-        }
-
-        if has_root_anchor {
-            Ok(C2paVerificationStatus::TrustChainEvaluated)
-        } else {
-            Ok(C2paVerificationStatus::SignatureVerified)
-        }
+        // This accessor has graph references, not the original payload/hash,
+        // signature, key or evaluated trust policy. Nonzero references and an
+        // asserted isVerified edge cannot establish any verification tier.
+        // Keep the original graph/provenance accessible while reporting only
+        // what this path actually did. A native verifier must supply a separate
+        // verified-result integration before higher statuses can be returned.
+        Ok(C2paVerificationStatus::ParsedOnly)
     }
 
     /// C2PA: Get verification status as u64 enum discriminant.
@@ -1151,5 +1119,28 @@ mod tests {
         );
         assert!(!handler.is_verified(media).unwrap());
         assert!(!handler.verify_signature(media).unwrap());
+    }
+
+    #[test]
+    fn c2pa_manifest_certificate_and_claimed_anchor_do_not_fabricate_verification() {
+        let media = q_hash("media:unverified-claims");
+        let certificate = q_hash("certificate:claimed");
+        let mut quins = vec![];
+        for (subject, predicate, object) in [
+            (media, c2pa::HAS_MANIFEST, 7), (media, c2pa::HAS_ASSERTION, 8),
+            (media, c2pa::HAS_SIGNATURE, 9), (media, c2pa::HAS_CERTIFICATE, certificate),
+            (certificate, c2pa::CREATED_BY, 10), (certificate, c2pa::HAS_PROVENANCE, 11),
+            (media, c2pa::IS_VERIFIED, 1), (media, c2pa::VERIFICATION_STATUS, 4),
+        ] {
+            let mut quin = NQuin { subject, predicate, object, context: 0, metadata: 0, parity: 0 };
+            quin.recalculate_parity(); quins.push(quin);
+        }
+        let handler = SparqlMmHandler::new(&quins);
+        assert_eq!(handler.c2pa_status(media).unwrap(), C2paVerificationStatus::ParsedOnly);
+        assert!(!handler.is_verified(media).unwrap());
+        assert!(!handler.verify_signature(media).unwrap());
+        assert_eq!(handler.get_manifest(media).unwrap(), 7);
+        assert_eq!(handler.get_signature(media).unwrap(), 9);
+        assert_eq!(SparqlMmHandler::new(&[]).c2pa_status(media).unwrap(), C2paVerificationStatus::Unsupported);
     }
 }
