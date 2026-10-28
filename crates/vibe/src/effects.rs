@@ -32,6 +32,23 @@ impl Effect {
 /// Binding id → minimum effect required to call it.
 pub fn binding_effect(path: &str) -> Effect {
     match path {
+        // Runtime registry writes/reads and deferred execution cannot be Pure.
+        "task.spawn"
+        | "task.cancel"
+        | "task.with_timeout"
+        | "code.spawn_at"
+        | "code.hash_ast"
+        | "code.resolve"
+        | "value.attach_provenance"
+        | "value.verify_provenance"
+        | "crypto.prove_zk_predicate"
+        | "crypto.verify_zk_predicate" => Effect::Cold,
+        // Stateless deterministic binding integrity; no registry or attestation.
+        "crypto.commit_predicate" | "crypto.verify_commitment" => Effect::Pure,
+        "task.status" => Effect::Hot,
+        // Child effects are not yet represented in Task<T, effects>. Joining may
+        // run an admitted effectful program, so dynamic joins are conservative.
+        "task.await" | "task.nursery" => Effect::External,
         p if p.starts_with("math.") || p.starts_with("rdf.") => Effect::Pure,
         p if p.starts_with("web.")
             || p.starts_with("ui.")

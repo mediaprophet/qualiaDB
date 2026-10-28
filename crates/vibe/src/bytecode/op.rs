@@ -253,12 +253,11 @@ impl Op {
             | Self::Jump
             | Self::JumpIfFalse
             | Self::JumpIfTrue
-            | Self::CallUser
             | Self::MakeList
             | Self::MakeRecord
             | Self::GetMember
             | Self::TryUnwrap => 2,
-            Self::CallHost => 3, // u16 path + u8 argc
+            Self::CallHost | Self::CallUser => 3, // u16 path/function + u8 argc
         }
     }
 }

@@ -30,6 +30,23 @@ pub fn sdf_smooth_union(d1: f64, d2: f64, k: f64) -> f64 {
     d2 + (d1 - d2) * h - k * h * (1.0 - h)
 }
 
+/// Numerically stable polynomial smooth minimum for finite field values.
+///
+/// Computes the same real-valued blend as `sdf_smooth_union` using
+/// `min(a,b) - (k/4) * ((k-|a-b|)/k)^2` within the blend width, and the
+/// exact floating-point minimum outside it. This avoids cancellation between
+/// widely separated magnitudes. `k <= 0` selects the hard minimum. Callers
+/// must validate finite inputs and their own numeric envelope; no allocation.
+#[inline]
+pub fn sdf_smooth_union_stable(d1: f64, d2: f64, k: f64) -> f64 {
+    let low=d1.min(d2);
+    if k<=0.0 { return low; }
+    let separation=(d1-d2).abs();
+    if separation>=k { return low; }
+    let h=(k-separation)/k;
+    low - ((k*0.25)*h)*h
+}
+
 /// Smooth intersection = `−smin(−a, −b)`.
 #[inline]
 pub fn sdf_smooth_intersect(d1: f64, d2: f64, k: f64) -> f64 {

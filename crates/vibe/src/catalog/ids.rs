@@ -367,6 +367,7 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "Document.ingest",
     "Sheet.stats",
     "Sheet.sum_range",
+    "Sheet.set_cell",
     "ChatGraph.validate_fragment",
     "ChatGraph.link_reply",
     "ChatGraph.session_summary",

@@ -13,11 +13,15 @@ use budget::budget_steps;
 mod call;
 mod expr;
 mod program;
-mod stmt;
 mod stack;
+mod stmt;
+mod task_runtime;
 
 #[derive(Clone)]
 pub struct Env {
+    /// Runtime task ownership. Clones share effects; Default starts an isolated scope.
+    /// This opaque value is not a serializable grant or human delegation.
+    pub task_scope: crate::task_scheduler::TaskScope,
     pub vars: HashMap<String, Value>,
     /// Set of variable names that were declared with `mut` (T10).
     pub mutables: HashSet<String>,
@@ -36,7 +40,15 @@ pub struct Env {
 
 impl Default for Env {
     fn default() -> Self {
+        Self::with_task_scope(crate::task_scheduler::TaskScope::default())
+    }
+}
+
+impl Env {
+    /// Function/hook locals share the admitted scope without allocating another owner.
+    fn with_task_scope(task_scope: crate::task_scheduler::TaskScope) -> Self {
         Self {
+            task_scope,
             vars: HashMap::new(),
             mutables: HashSet::new(),
             aliases: HashMap::new(),
@@ -147,6 +159,7 @@ pub fn populate_import_aliases(env: &mut Env, imports: &[ImportDecl]) -> Result<
 }
 
 pub struct Engine<'a, H: Host> {
+    pub(crate) active_tasks: Vec<(crate::task_scheduler::TaskScope, u64)>,
     host: &'a mut H,
     budget: Budget,
     depth: u32,
@@ -195,6 +208,7 @@ impl<'a, H: Host> Engine<'a, H> {
     /// Creates a new `Engine`.
     pub fn new(host: &'a mut H, budget: Budget) -> Self {
         Self {
+            active_tasks: Vec::new(),
             host,
             budget,
             depth: 0,
@@ -211,6 +225,7 @@ impl<'a, H: Host> Engine<'a, H> {
     /// Attach a program so `eval_call` can resolve user-defined functions.
     pub fn with_program(host: &'a mut H, budget: Budget, program: &Program) -> Self {
         Self {
+            active_tasks: Vec::new(),
             host,
             budget,
             depth: 0,
@@ -232,6 +247,7 @@ impl<'a, H: Host> Engine<'a, H> {
         leaser: &'a mut crate::deontic_interrupt::PhaseLeaser,
     ) -> Self {
         Self {
+            active_tasks: Vec::new(),
             host,
             budget,
             depth: 0,

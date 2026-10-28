@@ -41,12 +41,15 @@ pub fn sum_range(args_v: &Value, span: Span) -> Result<Value, Diagnostic> {
     let (c0, r0, c1, r1) = parse_range(spec).ok_or_else(|| args::bad(span, "bad A1 range"))?;
     let mut acc = 0.0;
     let mut n = 0u64;
-    for r in r0..=r1 {
-        for c in c0..=c1 {
-            if let Some(v) = grid.get(r).and_then(|row| row.get(c)) {
-                acc += *v;
-                n += 1;
-            }
+    // Intersect with the supplied grid first. A valid A1 range can name
+    // billions of absent cells, but only actual values need to be visited.
+    // Coordinates are zero-based and at most usize::MAX - 1 after parsing.
+    let row_count = r1 - r0 + 1;
+    let column_count = c1 - c0 + 1;
+    for row in grid.iter().skip(r0).take(row_count) {
+        for value in row.iter().skip(c0).take(column_count) {
+            acc += *value;
+            n = n.checked_add(1).ok_or_else(|| args::bad(span, "Sheet.sum_range cell count exceeds u64"))?;
         }
     }
     Ok(args::record([
@@ -81,7 +84,7 @@ fn parse_a1(s: &str) -> Option<(usize, usize)> {
     let mut i = 0;
     let mut col = 0usize;
     while i < bytes.len() && bytes[i].is_ascii_alphabetic() {
-        col = col * 26 + (bytes[i].to_ascii_uppercase() - b'A' + 1) as usize;
+        col = col.checked_mul(26)?.checked_add((bytes[i].to_ascii_uppercase() - b'A' + 1) as usize)?;
         i += 1;
     }
     if i == 0 || i == bytes.len() {
@@ -95,6 +98,8 @@ fn parse_a1(s: &str) -> Option<(usize, usize)> {
 }
 
 fn parse_range(s: &str) -> Option<(usize, usize, usize, usize)> {
+    // Keep parsing work bounded even when the caller supplies arbitrary text.
+    if s.len() > 128 { return None; }
     let (a, b) = s.split_once(':')?;
     let (c0, r0) = parse_a1(a)?;
     let (c1, r1) = parse_a1(b)?;
@@ -105,6 +110,42 @@ fn parse_range(s: &str) -> Option<(usize, usize, usize, usize)> {
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
+
+    fn input(grid: Vec<Vec<f64>>, range: &str) -> Value {
+        let mut record = BTreeMap::new();
+        record.insert("grid".into(), Value::List(grid.into_iter().map(args::f64_list_value).collect()));
+        record.insert("range".into(), Value::String(range.into()));
+        Value::Record(record)
+    }
+
+    #[test]
+    fn oversized_range_visits_only_existing_cells() {
+        let span = Span { start: 0, end: 0 };
+        let range = format!("A1:ZZZZZZ{}", usize::MAX);
+        let Value::Record(result) = sum_range(&input(vec![vec![1.0, 2.0], vec![3.0, 4.0]], &range), span).unwrap() else { panic!("record") };
+        assert_eq!(result.get("sum"), Some(&Value::F64(10.0)));
+        assert_eq!(result.get("count"), Some(&Value::U64(4)));
+    }
+
+    #[test]
+    fn overflowing_columns_and_oversized_text_are_refused() {
+        let span = Span { start: 0, end: 0 };
+        let huge_column = format!("A1:{}1", "Z".repeat(64));
+        assert!(sum_range(&input(vec![vec![1.0]], &huge_column), span).is_err());
+        assert!(sum_range(&input(vec![vec![1.0]], &format!("A1:{}1", "A".repeat(129))), span).is_err());
+    }
+
+    #[test]
+    fn reversed_ragged_and_disjoint_ranges_preserve_existing_semantics() {
+        let span = Span { start: 0, end: 0 };
+        let rows = vec![vec![1.0, 2.0], vec![3.0], vec![], vec![4.0, 5.0]];
+        let Value::Record(result) = sum_range(&input(rows.clone(), "B4:A2"), span).unwrap() else { panic!("record") };
+        assert_eq!(result.get("sum"), Some(&Value::F64(12.0)));
+        assert_eq!(result.get("count"), Some(&Value::U64(3)));
+        let Value::Record(empty) = sum_range(&input(rows, "ZZ999:ZZ1000"), span).unwrap() else { panic!("record") };
+        assert_eq!(empty.get("sum"), Some(&Value::F64(0.0)));
+        assert_eq!(empty.get("count"), Some(&Value::U64(0)));
+    }
 
     #[test]
     fn sum_a1_b2() {

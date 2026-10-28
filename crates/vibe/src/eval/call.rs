@@ -240,8 +240,11 @@ impl<'a, H: Host> Engine<'a, H> {
                 .find(|i| matches!(i, Item::Function(f) if f.name == path))
             {
                 if self.evaluating_budget {
-                    return Err(Diagnostic::new(DiagCode::E400, span,
-                        "budget expressions must not call user functions"));
+                    return Err(Diagnostic::new(
+                        DiagCode::E400,
+                        span,
+                        "budget expressions must not call user functions",
+                    ));
                 }
                 // Budget expressions execute before the body and can call
                 // functions too. Account depth before evaluating them and
@@ -249,10 +252,13 @@ impl<'a, H: Host> Engine<'a, H> {
                 self.depth += 1;
                 match budget_steps(&f.budget, env, self) {
                     Ok(Some(steps)) => self.budget.steps_left = self.budget.steps_left.min(steps),
-                    Ok(None) => {},
-                    Err(error) => { self.depth -= 1; return Err(error); }
+                    Ok(None) => {}
+                    Err(error) => {
+                        self.depth -= 1;
+                        return Err(error);
+                    }
                 }
-                let mut local = Env::default();
+                let mut local = Env::with_task_scope(env.task_scope.clone());
                 local.aliases = env.aliases.clone();
                 local.enums = env.enums.clone();
                 for (p, a) in f.params.iter().zip(pos.into_iter()) {
@@ -272,7 +278,11 @@ impl<'a, H: Host> Engine<'a, H> {
             self.depth -= 1;
             return Err(diag);
         }
-        let r = dispatch(self.host, path, &pos, &named, span);
+        let r = match crate::task_scheduler::dispatch_on_engine(self, path, &pos, env, span) {
+            Ok(Some(value)) => Ok(value),
+            Ok(None) => dispatch(self.host, path, &pos, &named, span),
+            Err(error) => Err(error),
+        };
         self.depth -= 1;
         r
     }
@@ -507,7 +517,7 @@ impl<'a, H: Host> Engine<'a, H> {
         env: &Env,
         span: Span,
     ) -> Result<Value, Diagnostic> {
-        let mut local = Env::default();
+        let mut local = Env::with_task_scope(env.task_scope.clone());
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
         if let Some(p) = params.first() {

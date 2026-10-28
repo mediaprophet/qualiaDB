@@ -882,7 +882,6 @@ mod tests {
 
     #[test]
     fn hzb_depth_pyramid_occludes_hidden_instances_zero_heap() {
-        let vp = perspective_view_proj();
         let assets = [make_test_asset()];
 
         // Build an 8x8 HZB pyramid with an occluder wall at depth 0.25 across the entire screen

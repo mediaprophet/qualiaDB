@@ -845,6 +845,7 @@ pub fn dispatch(
         ids::DOC_INGEST => docs::ingest(args, span),
         ids::SHEET_STATS => sheet::stats(args, span),
         ids::SHEET_SUM => sheet::sum_range(args, span),
+        ids::SHEET_SET_CELL => sheet::set_cell(args, span),
         ids::CHAT_GRAPH_VALIDATE_FRAGMENT => chat_graph::validate_fragment(args, span),
         ids::CHAT_GRAPH_LINK_REPLY => chat_graph::link_reply(args, span),
         ids::CHAT_GRAPH_SESSION_SUMMARY => chat_graph::session_summary(args, span),

@@ -115,7 +115,6 @@ pub fn unwrap_atlas_into(
         limits,
     )?;
     let n = positions.len();
-    let f = triangles.len();
     if positions
         .iter()
         .any(|p| !p.x.is_finite() || !p.y.is_finite() || !p.z.is_finite())

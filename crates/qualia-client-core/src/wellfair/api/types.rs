@@ -164,6 +164,29 @@ mod api_tests {
     }
 
     #[test]
+    fn agency_delegation_checkpoint_failure_reports_partial_write() {
+        use qualia_cooperative_core::agency_delegation::AgencyDelegation;
+        use qualia_cooperative_core::agency_domain::ids as dom;
+
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        // A directory at the DAG file path makes checkpoint persistence fail
+        // after the journal write, without relying on platform permissions.
+        std::fs::create_dir_all(
+            dir.path().join(crate::wellfair::checkpoint_store::DAG_FILE),
+        )
+        .unwrap();
+        let d = AgencyDelegation::new("did:wf:alice", dom::MEDICAL, "urn:un:hr:udhr", 100);
+
+        let error = host.add_agency_delegation(&d).unwrap_err();
+        assert!(error.contains("checkpoint failed"));
+        assert!(error.contains("reconcile before retrying"));
+        let entries = host.list_agency_delegations(16).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, d.id);
+    }
+
+    #[test]
     fn wellbeing_assessment_record_score_and_list() {
         let dir = tempdir().unwrap();
         let mut host = test_host(dir.path());

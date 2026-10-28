@@ -117,6 +117,26 @@ impl NativeSigner {
         seed.copy_from_slice(&plain);
         Ok(Self { seed })
     }
+    /// Signs exact bounded agency/task/source bytes with this admitted controller.
+    /// A signature is consent evidence; this does not adopt or dispatch a grant.
+    pub fn sign_authoring_delegation(
+        &self,
+        delegation: qualia_cooperative_core::authoring::delegation::AuthoringDelegation,
+    ) -> Result<qualia_cooperative_core::authoring::delegation::SignedAuthoringDelegation, String>
+    {
+        use super::super::delegation::{authoring_delegation_digest, AUTHORING_DELEGATION_CONTEXT};
+        if delegation.grantor_controller != self.public_key() {
+            return Err("delegation grantor is not this native controller".into());
+        }
+        let digest = authoring_delegation_digest(&delegation)?;
+        let signature = self.sign(&digest, AUTHORING_DELEGATION_CONTEXT)?.to_vec();
+        Ok(
+            qualia_cooperative_core::authoring::delegation::SignedAuthoringDelegation {
+                delegation,
+                signature,
+            },
+        )
+    }
     pub fn public_key(&self) -> [u8; 32] {
         ed25519::public_from_seed(&self.seed)
     }

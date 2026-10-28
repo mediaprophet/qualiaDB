@@ -198,7 +198,7 @@ impl<'a, H: Host> Engine<'a, H> {
         if let Some(steps) = budget_steps(&f.budget, env, self)? {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
-        let mut local = Env::default();
+        let mut local = Env::with_task_scope(env.task_scope.clone());
         // Inherit import aliases, enum declarations, and field/material/law
         // declarations from the calling env.
         local.aliases = env.aliases.clone();
@@ -241,7 +241,7 @@ impl<'a, H: Host> Engine<'a, H> {
         if let Some(steps) = budget_steps(&h.budget, env, self)? {
             self.budget.steps_left = self.budget.steps_left.min(steps);
         }
-        let mut local = Env::default();
+        let mut local = Env::with_task_scope(env.task_scope.clone());
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
         for (p, a) in h.params.iter().zip(args.into_iter()) {

@@ -8,6 +8,8 @@
 //! - `_reserved[48..56]` = `payload_catalogue_offset` (`u64` little-endian)
 //! - `_reserved[56..64]` = `payload_catalogue_length` (`u64` little-endian)
 
+#![allow(dead_code)]
+
 use sha2::{Digest, Sha256};
 
 use crate::bundle::cbor_ld_manifest::PayloadCatalogueEntry;
@@ -20,6 +22,7 @@ pub const PAYLOAD_CATALOGUE_HEADER_BYTES: usize = 16;
 
 /// FourCC magic and kind tag (`"GTOP"`) for a POET Geometry-Topology Complex payload in `.q42`.
 pub const GTOP_SECTION_MAGIC: [u8; 4] = *b"GTOP";
+#[allow(dead_code)]
 pub const PAYLOAD_KIND_GEOMETRY_TOPOLOGY: u32 = 0x4754_4F50;
 pub const GTOP_SECTION_VERSION: u32 = 1;
 pub const GTOP_SECTION_HEADER_BYTES: usize = 16;

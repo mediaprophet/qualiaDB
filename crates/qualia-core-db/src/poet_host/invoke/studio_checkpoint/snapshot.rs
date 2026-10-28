@@ -1,4 +1,4 @@
-use super::super::{journal, store, StoreStamp, StoredArtifact, StudioArtifact};
+use super::super::{journal, stamped, store, StoreStamp, StoredArtifact, StudioArtifact};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -103,7 +103,7 @@ pub(super) fn validate_record(record: &Record, limits: CheckpointLimits) -> Resu
     let stored = StoredArtifact {
         artifact: art.clone(),
         journal: record.journal.clone(),
-        incarnation: Arc::new(()),
+        publication: Arc::new(stamped::PublicationState::new(&art.id, art.lamport_clock)),
     };
     journal::validate_checkpoint(&stored, limits.journal, |nodes| {
         validate_nodes(nodes, limits)
@@ -149,10 +149,14 @@ pub fn activate(
     limits: CheckpointLimits,
 ) -> Result<(StudioArtifact, StoreStamp), String> {
     validate_record(&checkpoint.record, limits)?;
+    let publication = Arc::new(stamped::PublicationState::new(
+        &checkpoint.record.artifact.id,
+        checkpoint.record.artifact.lamport_clock,
+    ));
     let stored = StoredArtifact {
         artifact: checkpoint.record.artifact,
         journal: checkpoint.record.journal,
-        incarnation: Arc::new(()),
+        publication,
     };
     let mut source = store().lock().map_err(|_| "Studio store poisoned")?;
     if source.contains_key(&stored.id) {

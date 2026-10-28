@@ -35,8 +35,22 @@ pub(super) fn walk_expr(
             let b = walk_expr(right, env, aliases, granted, ambient, tick, budgeted)?;
             Ok(a.join(b))
         }
-        ExprKind::Unary { expr, .. } | ExprKind::Await(expr) | ExprKind::Try(expr) => {
+        ExprKind::Unary { expr, .. } | ExprKind::Try(expr) => {
             walk_expr(expr, env, aliases, granted, ambient, tick, budgeted)
+        }
+        ExprKind::Await(inner) => {
+            let operand = walk_expr(inner, env, aliases, granted, ambient, tick, budgeted)?;
+            // Literal values cannot contain task references. Dynamic tasks can
+            // execute a checked program with External effects; no effect-polymorphic
+            // task type exists in the pinned dialect yet.
+            if matches!(&inner.kind, ExprKind::Literal(_)) {
+                return Ok(operand);
+            }
+            if ambient < Effect::External {
+                return Err(Diagnostic::new(DiagCode::E200, expr.span,
+                    "dynamic await requires an effect function; deferred child effects are not typed"));
+            }
+            Ok(operand.join(Effect::External))
         }
         ExprKind::Member { recv, .. } => {
             walk_expr(recv, env, aliases, granted, ambient, tick, budgeted)
@@ -76,8 +90,11 @@ pub(super) fn walk_expr(
                 }
             }
             if call_effect > ambient {
-                return Err(Diagnostic::new(DiagCode::E200, expr.span,
-                    "call exceeds permitted effect class"));
+                return Err(Diagnostic::new(
+                    DiagCode::E200,
+                    expr.span,
+                    "call exceeds permitted effect class",
+                ));
             }
             if let Some(p) = path.as_ref().filter(|p| {
                 !env.functions.contains_key(*p) && !env.enum_calls.contains(*p) && !builtin_call(p)

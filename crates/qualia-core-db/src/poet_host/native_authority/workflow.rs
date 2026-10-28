@@ -25,6 +25,7 @@ pub struct WorkflowEvidence {
     pub target: DocumentRevision,
     pub principal_subject: String,
     pub principal_kind: PrincipalKind,
+    pub human_authority: HumanAuthorityEvidence,
     pub authority_generation: u64,
     pub can_contribute: bool,
     pub can_review: bool,
@@ -54,6 +55,7 @@ impl NativeAuthority {
                 target: view.current_document.clone(),
                 principal_subject: principal.subject.into(),
                 principal_kind: principal.kind,
+                human_authority: HumanAuthorityEvidence::legacy(principal.subject, principal.kind),
                 authority_generation: view.generation,
                 can_contribute: allowed(AuthoringAction::ContributionRecord)
                     && view.current_document.author_subject.as_deref() == Some(principal.subject),

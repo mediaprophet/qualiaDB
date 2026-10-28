@@ -193,6 +193,8 @@ mod surface_mesh_processing;
 /// generalized profile extrusion with per-station scale+twist, swung surfaces,
 /// frustum/cone primitives, taper and IFS deformation.
 pub mod sweep_extrusion;
+/// Optional caller-buffered capped sweep derivative with hard cap normals.
+pub mod hard_cap_sweep;
 mod tda;
 /// P13.7 — Tetrahedral quality improvement and sliver handling
 /// (flip / smooth / insert / exude passes; domain + orientation preserved;
@@ -644,3 +646,11 @@ pub use voronoi_variants::{
 /// Versioned native geometry ABI. Increment only when public POD layouts or
 /// caller-buffer contracts change.
 pub const GEOMETRY_ABI_VERSION: u32 = 1;
+
+pub mod indexed_tetra_surface;
+
+pub mod surface_topology_qualification;
+pub use connectivity::{label_components_triangle_ordered, triangle_ordered_component_work, OrderedConnectivityError};
+
+pub mod tapered_branch_field;
+pub use sdf_ops::sdf_smooth_union_stable;

@@ -140,7 +140,7 @@ impl NativeAuthority {
             .ok_or("native authenticated session capacity exhausted")?;
         let mut grants = GrantOwner::new();
         let (_, _, grant) = grants
-            .install_grant(binding, now, pending.expires, ContactState::Active)
+            .install_grant_with_ceiling(binding, now, pending.expires, ContactState::Active, 1)
             .map_err(|e| format!("native grant install: {e:?}"))?;
         // Shared generation denotes adopted admission, not the last login.
         // Publication guards also check their own opaque session handle.

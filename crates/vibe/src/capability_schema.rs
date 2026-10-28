@@ -1,12 +1,9 @@
 //! Machine schema exports for all bound host call ids (T51).
 //!
-//! Every `ALL_BOUND` id exports a machine schema — not English prose.
-//! Arguments, effect class, honesty label, and return type are
-//! declared in the same table that the catalog uses. This is the
-//! MCP replacement: the schema IS the protocol.
-//!
-//! The schema is generated from the dispatch table so it can never
-//! drift from the actual implementation. A host can query
+//! Explicit schemas for the covered host and runtime operations.
+//! This registry is maintained alongside dispatch; source presence does not
+//! establish provider availability or full dispatch/schema conformance.
+//! A host can query
 //! `host.schema()` to get the full catalog, or `host.schema_for(id)`
 //! to get a single entry.
 //!
@@ -17,6 +14,8 @@
 
 use crate::value::Value;
 use std::collections::BTreeMap;
+#[path = "capability_schema/runtime_entries.rs"]
+mod runtime_entries;
 
 /// The effect class of a host call (T51).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -186,7 +185,7 @@ impl SchemaEntry {
 /// the actual implementation. New host calls must be added here AND
 /// in the dispatch table — the schema test verifies they match.
 pub fn all_schemas() -> Vec<SchemaEntry> {
-    vec![
+    let mut schemas = vec![
         // ── Graph ─────────────────────────────────────────────────────
         SchemaEntry::new(
             "graph.query",
@@ -612,7 +611,9 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
                 .with_description("Target version or previous active if omitted"),
         )
         .with_description("Restore a prior approved version"),
-    ]
+    ];
+    schemas.extend(runtime_entries::entries());
+    schemas
 }
 
 /// Get the schema for a single host call id.

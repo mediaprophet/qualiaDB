@@ -333,6 +333,8 @@ pub(super) const BINDING_PATHS: &[&str] = &[
     "value.verify_provenance",
     "crypto.prove_zk_predicate",
     "crypto.verify_zk_predicate",
+    "crypto.commit_predicate",
+    "crypto.verify_commitment",
     "runtime.with_budget",
     "continuation.snapshot",
     "continuation.rollback_to",
@@ -342,3 +344,18 @@ pub(super) const BINDING_PATHS: &[&str] = &[
     "simd.validate_boundary",
     "channel.lock_free_spsc",
 ];
+
+#[cfg(test)]
+mod predicate_binding_tests {
+    #[test]
+    fn exact_integrity_bindings_are_recognized_without_widening_crypto_namespace() {
+        for source in [
+            "= crypto.commit_predicate(\"text\")",
+            "= crypto.verify_commitment(crypto.commit_predicate(\"text\"))",
+        ] {
+            assert!(crate::check_cell(&crate::parse_cell(source).unwrap()).is_ok());
+        }
+        let unknown = crate::parse_cell("= crypto.unregistered_predicate_operator(42)").unwrap();
+        assert!(crate::check_cell(&unknown).is_err());
+    }
+}

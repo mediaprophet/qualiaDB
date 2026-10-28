@@ -351,6 +351,7 @@ pub const MANIFOLD_PROJECT: &str = "Manifold.project";
 pub const DOC_INGEST: &str = "Document.ingest";
 pub const SHEET_STATS: &str = "Sheet.stats";
 pub const SHEET_SUM: &str = "Sheet.sum_range";
+pub const SHEET_SET_CELL: &str = "Sheet.set_cell";
 // ── ChatGraph (caller-supplied payloads; Lane D / VIBE-CHAT) ───────────────
 pub const CHAT_GRAPH_VALIDATE_FRAGMENT: &str = "ChatGraph.validate_fragment";
 pub const CHAT_GRAPH_LINK_REPLY: &str = "ChatGraph.link_reply";
@@ -1767,6 +1768,7 @@ pub const ALL_BOUND: &[&str] = &[
     DOC_INGEST,
     SHEET_STATS,
     SHEET_SUM,
+    SHEET_SET_CELL,
     CHAT_GRAPH_VALIDATE_FRAGMENT,
     CHAT_GRAPH_LINK_REPLY,
     CHAT_GRAPH_SESSION_SUMMARY,
@@ -3261,7 +3263,7 @@ pub fn seam_for(id: &str) -> &'static str {
         CRYPTO_SHA256 | CRYPTO_SHA512 | CRYPTO_BLAKE3 | PRIVACY_GAUSSIAN_SIGMA => "crypto",
         MANIFOLD_DISTANCE | MANIFOLD_AXES | MANIFOLD_PROJECT => "manifold",
         DOC_INGEST => "docs",
-        SHEET_STATS | SHEET_SUM => "sheet",
+        SHEET_STATS | SHEET_SUM | SHEET_SET_CELL => "sheet",
         CHAT_GRAPH_VALIDATE_FRAGMENT | CHAT_GRAPH_LINK_REPLY | CHAT_GRAPH_SESSION_SUMMARY => {
             "chat_graph"
         }

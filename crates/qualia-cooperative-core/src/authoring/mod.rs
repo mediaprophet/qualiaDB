@@ -8,6 +8,9 @@
 //! never reusable authority. Supported slice: directly authenticated members;
 //! agency delegation requires a separately verified host adapter.
 
+pub mod delegation;
+mod human_authority;
+pub use human_authority::{HumanAuthorityEvidence, HumanAuthorityStatus};
 pub mod package_review;
 mod policy;
 mod records;

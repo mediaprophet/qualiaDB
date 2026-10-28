@@ -178,15 +178,15 @@ pub fn merge_vertices(
         let mut found: Option<u32> = None;
         for cand in 0..merged_count as usize {
             let c = cand * 3;
-            let dx = (positions[c] - px).abs();
+            let dx = (merged_positions[c] - px).abs();
             if dx > tol {
                 continue;
             }
-            let dy = (positions[c + 1] - py).abs();
+            let dy = (merged_positions[c + 1] - py).abs();
             if dy > tol {
                 continue;
             }
-            let dz = (positions[c + 2] - pz).abs();
+            let dz = (merged_positions[c + 2] - pz).abs();
             if dz > tol {
                 continue;
             }
@@ -617,6 +617,34 @@ pub fn repair_polygon_soup(
 mod tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::required_edge_slots;
+
+    #[test]
+    fn interleaved_duplicates_match_compacted_representatives() {
+        // B is first seen after a duplicate A: compacted index 1 is B,
+        // while positions[1] is A. The second B must map to compacted B.
+        let positions = [
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 1.0, 2.0, 4.0, 1.0, 2.0, 4.0, 1.0, 2.0,
+        ];
+        let mut remap = [u32::MAX; 5];
+        let mut merged = [0.0; 15];
+        let count = merge_vertices(&positions, 5, 0.0, &mut remap, &mut merged).unwrap();
+        assert_eq!(count, 2);
+        assert_eq!(remap, [0, 0, 1, 1, 1]);
+        assert_eq!(&merged[..6], &[0.0, 0.0, 0.0, 4.0, 1.0, 2.0]);
+    }
+
+    #[test]
+    fn tolerance_uses_first_compacted_representative_in_all_dimensions() {
+        let positions = [
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 3.0, 2.0, 4.0001, 3.0001, 2.0001, 4.2, 3.0, 2.0,
+        ];
+        let mut remap = [u32::MAX; 5];
+        let mut merged = [0.0; 15];
+        let count = merge_vertices(&positions, 5, 0.001, &mut remap, &mut merged).unwrap();
+        assert_eq!(count, 3);
+        assert_eq!(remap, [0, 0, 1, 1, 2]);
+        assert_eq!(&merged[3..6], &[4.0, 3.0, 2.0]);
+    }
 
     // -- merge_vertices ------------------------------------------------------
 

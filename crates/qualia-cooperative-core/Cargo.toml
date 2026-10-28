@@ -4,6 +4,7 @@ version = "0.0.40"
 edition = "2021"
 
 [dependencies]
+qualia-app-contract = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde", "js"] }

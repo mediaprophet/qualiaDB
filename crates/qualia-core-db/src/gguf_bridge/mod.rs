@@ -560,7 +560,7 @@ impl KvCacheLayout {
     /// Derive the dense f32 device layout used by native CUDA kernels without changing the host
     /// cache representation. Host int8/dictionary compression and the CUDA execution arena are
     /// independent storage decisions.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
     pub(crate) fn dense_device_layout(self) -> Option<Self> {
         let slot_kv_elems = self.n_kv_head.checked_mul(self.head_dim)?;
         let layer_stride = self

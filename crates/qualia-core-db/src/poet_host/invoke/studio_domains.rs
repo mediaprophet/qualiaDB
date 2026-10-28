@@ -87,9 +87,8 @@ pub fn sheet_create(v: &Value, _s: Span) -> Result<Value, Diagnostic> {
     receipt(ids::SHEET_CREATE, "sheet_create", t, &[("title", Value::String(t.into())), ("rows", Value::U64(r)), ("cols", Value::U64(c)), ("cell_count", Value::U64(r * c))])
 }
 
-pub fn sheet_eval_formula(v: &Value, _s: Span) -> Result<Value, Diagnostic> {
-    let f = args::rec_str(v, "formula").unwrap_or("=SUM(A1:A10)");
-    receipt(ids::SHEET_EVAL_FORMULA, "sheet_eval_formula", f, &[("formula", Value::String(f.into())), ("ast_depth", Value::U64(2)), ("result_type", Value::String("number".into())), ("cached", Value::Bool(true))])
+pub fn sheet_eval_formula(v: &Value, span: Span) -> Result<Value, Diagnostic> {
+    super::sheet::evaluate_formula(v, span)
 }
 
 pub fn sheet_pivot_analyze(v: &Value, _s: Span) -> Result<Value, Diagnostic> {

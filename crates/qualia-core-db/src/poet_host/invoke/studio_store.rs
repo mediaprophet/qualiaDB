@@ -16,8 +16,11 @@ mod journal;
 pub use journal::{EditableSourceSnapshot, SourceJournalLimits};
 #[path = "studio_stamped.rs"]
 mod stamped;
-pub use stamped::{artifact_stamp_is_current, create_artifact_if_absent, get_artifact_stamped, mutate_artifact_stamped,
-    redo_artifact_stamped, undo_artifact_stamped, previous_source_snapshot, StoreStamp};
+pub use stamped::{
+    artifact_stamp_is_current, create_artifact_if_absent, get_artifact_stamped,
+    mutate_artifact_stamped, previous_source_snapshot, redo_artifact_stamped,
+    undo_artifact_stamped, StoreStamp,
+};
 
 #[path = "studio_checkpoint/mod.rs"]
 pub mod checkpoint;
@@ -53,16 +56,28 @@ pub struct StudioArtifact {
 struct StoredArtifact {
     artifact: StudioArtifact,
     journal: journal::SourceJournal,
-    incarnation: Arc<()>,
+    publication: Arc<stamped::PublicationState>,
+}
+
+impl Drop for StoredArtifact {
+    fn drop(&mut self) {
+        // Any removal or replacement of the canonical entry retires every
+        // retained publication token, including future map lifecycle paths.
+        self.publication.retire();
+    }
 }
 
 impl std::ops::Deref for StoredArtifact {
     type Target = StudioArtifact;
-    fn deref(&self) -> &Self::Target { &self.artifact }
+    fn deref(&self) -> &Self::Target {
+        &self.artifact
+    }
 }
 
 impl std::ops::DerefMut for StoredArtifact {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.artifact }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.artifact
+    }
 }
 
 #[inline]
@@ -100,7 +115,8 @@ impl StudioArtifact {
     pub fn compile_to_quins(&self) -> Vec<NQuin> {
         let subject = self.did_q42;
         let mut quins = Vec::new();
-        let context = ((self.sensitivity as u64) << 56) | (self.context_did_hash & 0x00FF_FFFF_FFFF_FFFF);
+        let context =
+            ((self.sensitivity as u64) << 56) | (self.context_did_hash & 0x00FF_FFFF_FFFF_FFFF);
         let metadata = (((self.routing_lane as u64) & 0b11) << 61)
             | (((self.lamport_clock as u64) & 0x1FFF_FFFF) << 32)
             | (self.nodes.len() as u64 & 0xFFFF_FFFF);
@@ -108,13 +124,28 @@ impl StudioArtifact {
         let make_quin = |pred_iri: &str, opcode: u8, obj_val: u64| -> NQuin {
             let predicate = (q_hash(pred_iri) << 8) | (opcode as u64);
             let parity = subject ^ predicate ^ obj_val ^ context;
-            NQuin { subject, predicate, object: obj_val, context, metadata, parity }
+            NQuin {
+                subject,
+                predicate,
+                object: obj_val,
+                context,
+                metadata,
+                parity,
+            }
         };
 
         // Domain identity
-        quins.push(make_quin("q42:hasStudioDomain", 0x10, q_hash(&self.domain) & 0x0FFF_FFFF_FFFF_FFFF));
+        quins.push(make_quin(
+            "q42:hasStudioDomain",
+            0x10,
+            q_hash(&self.domain) & 0x0FFF_FFFF_FFFF_FFFF,
+        ));
         // Title
-        quins.push(make_quin("q42:hasTitle", 0x11, q_hash(&self.title) & 0x0FFF_FFFF_FFFF_FFFF));
+        quins.push(make_quin(
+            "q42:hasTitle",
+            0x11,
+            q_hash(&self.title) & 0x0FFF_FFFF_FFFF_FFFF,
+        ));
 
         // Properties
         for (k, v) in &self.properties {
@@ -125,7 +156,11 @@ impl StudioArtifact {
         // Nodes & Node attributes
         for (node_id, attrs) in &self.nodes {
             let node_pred = format!("q42:node:{}", node_id);
-            quins.push(make_quin(&node_pred, 0x13, q_hash(node_id) & 0x0FFF_FFFF_FFFF_FFFF));
+            quins.push(make_quin(
+                &node_pred,
+                0x13,
+                q_hash(node_id) & 0x0FFF_FFFF_FFFF_FFFF,
+            ));
             for (ak, av) in attrs {
                 let attr_pred = format!("q42:nodeAttr:{}:{}", node_id, ak);
                 quins.push(make_quin(&attr_pred, 0x14, encode_val(av)));
@@ -143,60 +178,123 @@ impl StudioArtifact {
                     let ok = q.parity == (q.subject ^ q.predicate ^ q.object ^ q.context);
                     format!(r#"{{"subject":"0x{:016x}","predicate":"0x{:016x}","object":"0x{:016x}","context":"0x{:016x}","metadata":"0x{:016x}","parity":"0x{:016x}","parity_valid":{}}}"#, q.subject, q.predicate, q.object, q.context, q.metadata, q.parity, ok)
                 }).collect();
-                let json = format!(r#"{{"artifact_id":"{}","did_q42":"0x{:016x}","clock":{},"quin_count":{},"quins":[{}]}}"#, self.id, self.did_q42, self.lamport_clock, quins.len(), entries.join(","));
+                let json = format!(
+                    r#"{{"artifact_id":"{}","did_q42":"0x{:016x}","clock":{},"quin_count":{},"quins":[{}]}}"#,
+                    self.id,
+                    self.did_q42,
+                    self.lamport_clock,
+                    quins.len(),
+                    entries.join(",")
+                );
                 Ok(("application/x-qualia-quins+json".into(), json))
             }
             "10d" | "e64" => {
-                let json = format!(r#"{{"envelope":"Tensor10D","did_q42":"0x{:016x}","lamport_clock":{},"domain":"{}","title":"{}","node_count":{},"axes":[1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}}"#, self.did_q42, self.lamport_clock, self.domain, self.title, self.nodes.len());
+                let json = format!(
+                    r#"{{"envelope":"Tensor10D","did_q42":"0x{:016x}","lamport_clock":{},"domain":"{}","title":"{}","node_count":{},"axes":[1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}}"#,
+                    self.did_q42,
+                    self.lamport_clock,
+                    self.domain,
+                    self.title,
+                    self.nodes.len()
+                );
                 Ok(("application/x-qualia-10d+json".into(), json))
             }
-            "cml" => {
-                Ok(("application/x-qualia-cml+xml".into(), cml::export(self, cml::CmlLimits::default())?))
-            }
+            "cml" => Ok((
+                "application/x-qualia-cml+xml".into(),
+                cml::export(self, cml::CmlLimits::default())?,
+            )),
             "ttl" | "rdf" => {
                 let mut s = format!("@prefix qualia: <https://qualia.dev/ns#> .\n\n<did:q42:0x{:016x}> a qualia:StudioArtifact ;\n  qualia:domain \"{}\" ;\n  qualia:title \"{}\" ;\n  qualia:clock {} .\n", self.did_q42, self.domain, self.title, self.lamport_clock);
-                for (k, v) in &self.properties { s.push_str(&format!("<did:q42:0x{:016x}> qualia:prop_{} \"{}\" .\n", self.did_q42, k, v)); }
+                for (k, v) in &self.properties {
+                    s.push_str(&format!(
+                        "<did:q42:0x{:016x}> qualia:prop_{} \"{}\" .\n",
+                        self.did_q42, k, v
+                    ));
+                }
                 for (nid, attrs) in &self.nodes {
-                    s.push_str(&format!("<did:q42:0x{:016x}> qualia:hasNode <did:q42:node:{}> .\n", self.did_q42, nid));
-                    for (ak, av) in attrs { s.push_str(&format!("<did:q42:node:{}> qualia:{} \"{}\" .\n", nid, ak, av)); }
+                    s.push_str(&format!(
+                        "<did:q42:0x{:016x}> qualia:hasNode <did:q42:node:{}> .\n",
+                        self.did_q42, nid
+                    ));
+                    for (ak, av) in attrs {
+                        s.push_str(&format!(
+                            "<did:q42:node:{}> qualia:{} \"{}\" .\n",
+                            nid, ak, av
+                        ));
+                    }
                 }
                 Ok(("text/turtle".into(), s))
             }
             "hcf" => {
-                let json = format!(r#"{{"version":"webizen.hcf/1","artifact_id":"{}","did_q42":"0x{:016x}","domain":"{}","title":"{}","clock":{},"node_count":{},"prop_count":{}}}"#, self.id, self.did_q42, self.domain, self.title, self.lamport_clock, self.nodes.len(), self.properties.len());
+                let json = format!(
+                    r#"{{"version":"webizen.hcf/1","artifact_id":"{}","did_q42":"0x{:016x}","domain":"{}","title":"{}","clock":{},"node_count":{},"prop_count":{}}}"#,
+                    self.id,
+                    self.did_q42,
+                    self.domain,
+                    self.title,
+                    self.lamport_clock,
+                    self.nodes.len(),
+                    self.properties.len()
+                );
                 Ok(("application/vnd.webizen.hcf+json".into(), json))
             }
-            "docx" | "odt" | "md" => {
-                let mut out = format!("# {}\n\n*Domain: {} | Lamport: {}*\n\n", self.title, self.domain, self.lamport_clock);
+            "docx" | "odt" => Err("DOCX/ODT export is unavailable for Studio artifacts; no document was produced".into()),
+            "md" => {
+                let mut out = format!(
+                    "# {}\n\n*Domain: {} | Lamport: {}*\n\n",
+                    self.title, self.domain, self.lamport_clock
+                );
                 for (nid, attrs) in &self.nodes {
-                    let text = attrs.get("text").cloned().unwrap_or_else(|| format!("{}: {:?}", nid, attrs));
+                    let text = attrs
+                        .get("text")
+                        .cloned()
+                        .unwrap_or_else(|| format!("{}: {:?}", nid, attrs));
                     out.push_str(&format!("{}\n\n", text));
                 }
-                let mime = if format == "md" { "text/markdown" } else { "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
-                Ok((mime.into(), out))
+                Ok(("text/markdown".into(), out))
             }
-            "xlsx" | "csv" => {
+            "xlsx" => Err("XLSX export is unavailable for Studio artifacts; no workbook was produced".into()),
+            "csv" => {
+                // The paired legacy importer splits on commas and trims each field;
+                // refuse data it cannot reconstruct instead of emitting corrupt CSV.
+                let representable = |field: &str| {
+                    field.trim() == field && !field.chars().any(|ch| matches!(ch, ',' | '"' | '\r' | '\n'))
+                };
                 let mut out = "node_id,attribute,value\n".to_string();
                 for (nid, attrs) in &self.nodes {
-                    for (k, v) in attrs { out.push_str(&format!("{},{},{}\n", nid, k, v)); }
+                    if attrs.is_empty() {
+                        return Err("CSV export cannot preserve a node without attributes; source unchanged".into());
+                    }
+                    for (k, v) in attrs {
+                        if !representable(nid) || !representable(k) || !representable(v) {
+                            return Err("CSV export cannot preserve a field containing comma, quote, line break, or edge whitespace; source unchanged".into());
+                        }
+                        out.push_str(&format!("{},{},{}\n", nid, k, v));
+                    }
                 }
-                let mime = if format == "csv" { "text/csv" } else { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
-                Ok((mime.into(), out))
+                Ok(("text/csv".into(), out))
             }
-            "pptx" => {
-                let mut out = format!("Presentation: {}\nSlides:\n", self.title);
-                for (nid, attrs) in &self.nodes { out.push_str(&format!("- Slide {}: {:?}\n", nid, attrs)); }
-                Ok(("application/vnd.openxmlformats-officedocument.presentationml.presentation".into(), out))
-            }
+            "pptx" => Err("PPTX export is unavailable for Studio artifacts; no presentation was produced".into()),
             "pdf" | "xfdf" => {
-                let mut out = format!("%PDF-1.7\n% StudioArtifact: {} (clock {})\n", self.title, self.lamport_clock);
-                for (nid, attrs) in &self.nodes { out.push_str(&format!("/COS_{} << {:?} >>\n", nid, attrs)); }
+                let mut out = format!(
+                    "%PDF-1.7\n% StudioArtifact: {} (clock {})\n",
+                    self.title, self.lamport_clock
+                );
+                for (nid, attrs) in &self.nodes {
+                    out.push_str(&format!("/COS_{} << {:?} >>\n", nid, attrs));
+                }
                 Ok(("application/pdf".into(), out))
             }
             "svg" => {
-                let mut out = format!(r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" title="{}">"#, self.title);
+                let mut out = format!(
+                    r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" title="{}">"#,
+                    self.title
+                );
                 for (nid, attrs) in &self.nodes {
-                    let d = attrs.get("d").cloned().unwrap_or_else(|| "M 0 0 L 100 100".into());
+                    let d = attrs
+                        .get("d")
+                        .cloned()
+                        .unwrap_or_else(|| "M 0 0 L 100 100".into());
                     out.push_str(&format!(r#"<path id="{}" d="{}" />"#, nid, d));
                 }
                 out.push_str("</svg>");
@@ -204,24 +302,54 @@ impl StudioArtifact {
             }
             "dxf" | "step" => {
                 let mut out = "0\nSECTION\n2\nENTITIES\n".to_string();
-                for (nid, _) in &self.nodes { out.push_str(&format!("0\nLINE\n8\n{}\n", nid)); }
+                for (nid, _) in &self.nodes {
+                    out.push_str(&format!("0\nLINE\n8\n{}\n", nid));
+                }
                 out.push_str("0\nENDSEC\n0\nEOF\n");
                 Ok(("image/vnd.dxf".into(), out))
             }
             "fcpxml" | "edl" => {
-                let mut out = format!(r#"<?xml version="1.0" encoding="UTF-8"?><fcpxml version="1.9"><project name="{}"><sequence>"#, self.title);
-                for (nid, attrs) in &self.nodes { out.push_str(&format!(r#"<clip name="{}" offset="{}" />"#, nid, attrs.get("offset").cloned().unwrap_or_default())); }
+                let mut out = format!(
+                    r#"<?xml version="1.0" encoding="UTF-8"?><fcpxml version="1.9"><project name="{}"><sequence>"#,
+                    self.title
+                );
+                for (nid, attrs) in &self.nodes {
+                    out.push_str(&format!(
+                        r#"<clip name="{}" offset="{}" />"#,
+                        nid,
+                        attrs.get("offset").cloned().unwrap_or_default()
+                    ));
+                }
                 out.push_str("</sequence></project></fcpxml>");
                 Ok(("application/xml".into(), out))
             }
-            "psd" | "dng" => Ok(("image/vnd.adobe.photoshop".into(), format!("RasterContainer: title={}, nodes={}", self.title, self.nodes.len()))),
-            "wav" | "mid" => Ok(("audio/wav".into(), format!("RIFF_AUDIO: title={}, tracks={}", self.title, self.nodes.len()))),
+            "psd" | "dng" => Ok((
+                "image/vnd.adobe.photoshop".into(),
+                format!(
+                    "RasterContainer: title={}, nodes={}",
+                    self.title,
+                    self.nodes.len()
+                ),
+            )),
+            "wav" | "mid" => Ok((
+                "audio/wav".into(),
+                format!(
+                    "RIFF_AUDIO: title={}, tracks={}",
+                    self.title,
+                    self.nodes.len()
+                ),
+            )),
             other => Err(format!("Unsupported export format: {other}")),
         }
     }
 
     /// Imports external format payload into a populated `StudioArtifact`.
-    pub fn import_format(id: &str, domain: &str, format: &str, payload: &str) -> Result<Self, String> {
+    pub fn import_format(
+        id: &str,
+        domain: &str,
+        format: &str,
+        payload: &str,
+    ) -> Result<Self, String> {
         let mut art = StudioArtifact::new(id, domain, "Imported Artifact");
         match format.to_ascii_lowercase().as_str() {
             "cml" => {
@@ -231,7 +359,10 @@ impl StudioArtifact {
                 for line in payload.lines().skip(1) {
                     let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
                     if parts.len() >= 3 {
-                        art.nodes.entry(parts[0].to_string()).or_default().insert(parts[1].to_string(), parts[2].to_string());
+                        art.nodes
+                            .entry(parts[0].to_string())
+                            .or_default()
+                            .insert(parts[1].to_string(), parts[2].to_string());
                     }
                 }
             }
@@ -252,7 +383,8 @@ impl StudioArtifact {
                 for line in payload.lines() {
                     let trimmed = line.trim();
                     if trimmed.contains("<path") {
-                        let nid = extract_attr(trimmed, "id").unwrap_or_else(|| format!("path_{}", art.nodes.len() + 1));
+                        let nid = extract_attr(trimmed, "id")
+                            .unwrap_or_else(|| format!("path_{}", art.nodes.len() + 1));
                         let d = extract_attr(trimmed, "d").unwrap_or_default();
                         let mut m = BTreeMap::new();
                         m.insert("d".to_string(), d);
@@ -263,7 +395,8 @@ impl StudioArtifact {
             _ => {
                 for line in payload.lines() {
                     if let Some((k, v)) = line.split_once('=') {
-                        art.properties.insert(k.trim().to_string(), v.trim().to_string());
+                        art.properties
+                            .insert(k.trim().to_string(), v.trim().to_string());
                     }
                 }
             }
@@ -282,14 +415,38 @@ fn extract_attr(s: &str, attr: &str) -> Option<String> {
 
 // ── Public Store API ─────────────────────────────────────────────────────────
 
-/// Persists or updates an artifact in the studio store.
-/// Compatibility replacement API; it does not perform revision/authority checks.
-/// Replacing source invalidates its in-memory undo snapshots. Cooperative edits
-/// must use the checked mutation API rather than get/edit/upsert.
-pub fn upsert_artifact(mut art: StudioArtifact) {
+/// Persists or updates an artifact using the legacy compatibility semantics.
+/// This infallible surface does not validate initial-source budgets or perform
+/// revision/authority checks. Replacing source invalidates its undo snapshots.
+/// Use [`try_upsert_artifact`] for fallible imports and other admitted writes.
+/// Cooperative edits should use the checked mutation API rather than upsert.
+pub fn upsert_artifact(art: StudioArtifact) {
+    replace_artifact(art, false).expect("studio store poisoned");
+}
+
+/// Validates and replaces an artifact. On admission/store failure, the previous
+/// canonical artifact and its publication token remain current.
+pub fn try_upsert_artifact(art: StudioArtifact) -> Result<(), String> {
+    replace_artifact(art, true)
+}
+
+fn replace_artifact(mut art: StudioArtifact, validate: bool) -> Result<(), String> {
     art.redo_stack.clear();
-    let mut s = store().lock().expect("studio store poisoned");
-    s.insert(art.id.clone(), StoredArtifact { artifact: art, journal: journal::SourceJournal::default(), incarnation: Arc::new(()) });
+    let publication = Arc::new(stamped::PublicationState::new(&art.id, art.lamport_clock));
+    let candidate = StoredArtifact {
+        artifact: art,
+        journal: journal::SourceJournal::default(),
+        publication,
+    };
+    if validate {
+        journal::admit_initial(&candidate)?;
+    }
+    let mut s = store().lock().map_err(|_| "studio store poisoned")?;
+    if let Some(previous) = s.get(&candidate.id) {
+        previous.publication.retire();
+    }
+    s.insert(candidate.id.clone(), candidate);
+    Ok(())
 }
 
 /// Retrieves an artifact by ID from the studio store.
@@ -308,13 +465,22 @@ where
 
 /// Atomic revision-checked source edit. `None` preserves the legacy call shape;
 /// it supplies no conflict protection. This is not an authorization check.
-pub fn mutate_artifact_at<F>(id: &str, expected: Option<u32>, f: F) -> Result<StudioArtifact, String>
+pub fn mutate_artifact_at<F>(
+    id: &str,
+    expected: Option<u32>,
+    f: F,
+) -> Result<StudioArtifact, String>
 where
     F: FnOnce(&mut StudioArtifact),
 {
     let mut s = store().lock().expect("studio store poisoned");
-    let art = s.get_mut(id).ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let art = s
+        .get_mut(id)
+        .ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let publication = Arc::clone(&art.publication);
+    let mutation = publication.begin(art.lamport_clock)?;
     journal::edit(art, expected, f)?;
+    mutation.finish(art.lamport_clock);
     Ok(art.artifact.clone())
 }
 
@@ -325,15 +491,21 @@ pub fn list_artifacts() -> Vec<StudioArtifact> {
 }
 
 /// Imports external data into the store as an artifact.
-pub fn import_into_store(id: &str, domain: &str, format: &str, payload: &str) -> Result<StudioArtifact, String> {
+pub fn import_into_store(
+    id: &str,
+    domain: &str,
+    format: &str,
+    payload: &str,
+) -> Result<StudioArtifact, String> {
     let art = StudioArtifact::import_format(id, domain, format, payload)?;
-    upsert_artifact(art.clone());
+    try_upsert_artifact(art.clone())?;
     Ok(art)
 }
 
 /// Exports an artifact from the store to the specified format.
 pub fn export_from_store(id: &str, format: &str) -> Result<(String, String), String> {
-    let art = get_artifact(id).ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let art =
+        get_artifact(id).ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
     art.export_format(format)
 }
 
@@ -357,19 +529,37 @@ pub fn redo_artifact_at(id: &str, expected: Option<u32>) -> Result<StudioArtifac
     restore_artifact_at(id, expected, true)
 }
 
-fn restore_artifact_at(id: &str, expected: Option<u32>, redo: bool) -> Result<StudioArtifact, String> {
+fn restore_artifact_at(
+    id: &str,
+    expected: Option<u32>,
+    redo: bool,
+) -> Result<StudioArtifact, String> {
     let mut s = store().lock().expect("studio store poisoned");
-    let art = s.get_mut(id).ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let art = s
+        .get_mut(id)
+        .ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let publication = Arc::clone(&art.publication);
+    let mutation = publication.begin(art.lamport_clock)?;
     journal::restore(art, expected, redo)?;
+    mutation.finish(art.lamport_clock);
     Ok(art.artifact.clone())
 }
 
 /// Host-controlled cold-state budget admission. Not exposed as a Vibe edit and
 /// not an authorization grant. A caller may deliberately admit larger masters.
-pub fn configure_artifact_journal(id: &str, expected: Option<u32>, limits: SourceJournalLimits) -> Result<StudioArtifact, String> {
+pub fn configure_artifact_journal(
+    id: &str,
+    expected: Option<u32>,
+    limits: SourceJournalLimits,
+) -> Result<StudioArtifact, String> {
     let mut s = store().lock().expect("studio store poisoned");
-    let art = s.get_mut(id).ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let art = s
+        .get_mut(id)
+        .ok_or_else(|| format!("Artifact '{id}' not found in studio store"))?;
+    let publication = Arc::clone(&art.publication);
+    let mutation = publication.begin(art.lamport_clock)?;
     journal::configure(art, expected, limits)?;
+    mutation.finish(art.lamport_clock);
     Ok(art.artifact.clone())
 }
 
@@ -381,7 +571,8 @@ mod tests {
     fn test_artifact_lifecycle() {
         let mut art = StudioArtifact::new("art-001", "Document", "Annual Report");
         assert_eq!(art.did_q42 & (1u64 << 63), 1u64 << 63);
-        art.properties.insert("author".into(), "did:qualia:01".into());
+        art.properties
+            .insert("author".into(), "did:qualia:01".into());
         let mut n1 = BTreeMap::new();
         n1.insert("text".into(), "Introduction section".into());
         art.nodes.insert("p1".into(), n1);
@@ -423,14 +614,90 @@ mod tests {
     }
 
     #[test]
+    fn studio_office_export_refuses_instead_of_mislabelling_text() {
+        use vibe::{Span, Value};
+        let id = format!("xlsx-refusal-fixture-{}", std::process::id());
+        let mut art = StudioArtifact::new(&id, "Sheet", "Example");
+        art.nodes.insert("A1".into(), BTreeMap::from([("input".into(), "42".into())]));
+        for format in ["xlsx", "XLSX", "docx", "DOCX", "odt", "ODT", "pptx", "PPTX"] {
+            assert!(art.export_format(format).unwrap_err().contains("unavailable"));
+        }
+        let (mime, csv) = art.export_format("CSV").unwrap();
+        assert_eq!(mime, "text/csv");
+        assert_eq!(csv, "node_id,attribute,value\nA1,input,42\n");
+        upsert_artifact(art.clone());
+        let request = |format: &str| Value::Record(BTreeMap::from([
+            ("id".into(), Value::String(id.clone())),
+            ("format".into(), Value::String(format.into())),
+        ]));
+        let span = Span { start: 0, end: 0 };
+        for format in ["xlsx", "docx", "odt", "pptx"] {
+            let error = super::super::studio_domains::studio_export(&request(format), span).unwrap_err();
+            assert!(error.message.contains("unavailable"));
+        }
+        assert_eq!(get_artifact(&id), Some(art.clone()));
+        let (md_mime, markdown) = art.export_format("MD").unwrap();
+        assert_eq!(md_mime, "text/markdown");
+        assert!(markdown.starts_with("# Example\n"));
+        let Value::Record(output) = super::super::studio_domains::studio_export(&request("csv"), span).unwrap() else { panic!("record"); };
+        assert_eq!(output.get("mime"), Some(&Value::String("text/csv".into())));
+        assert_eq!(output.get("payload"), Some(&Value::String(csv)));
+    }
+
+    #[test]
+    fn studio_csv_export_refuses_fields_the_existing_importer_cannot_preserve() {
+        let bad = ["bad,field", "bad\"field", "bad\nfield", "bad\rfield", " leading", "trailing ", "\tleading", "trailing\t", "\u{a0}leading"];
+        for field in bad {
+            for position in 0..3 {
+                let mut art = StudioArtifact::new("csv-invalid-fixture", "Sheet", "Example");
+                let id = if position == 0 { field } else { "A1" };
+                let key = if position == 1 { field } else { "input" };
+                let value = if position == 2 { field } else { "42" };
+                art.nodes.insert(id.into(), BTreeMap::from([(key.into(), value.into())]));
+                let original = art.clone();
+                for format in ["csv", "CSV"] {
+                    assert!(art.export_format(format).unwrap_err().contains("cannot preserve"));
+                }
+                assert_eq!(art, original);
+            }
+        }
+        let mut empty_node = StudioArtifact::new("csv-empty-node-fixture", "Sheet", "Example");
+        empty_node.nodes.insert("A1".into(), BTreeMap::new());
+        assert!(empty_node.export_format("csv").unwrap_err().contains("node without attributes"));
+        let id = format!("csv-refusal-fixture-{}", std::process::id());
+        let mut unsafe_artifact = StudioArtifact::new(&id, "Sheet", "Example");
+        unsafe_artifact.nodes.insert("A1".into(), BTreeMap::from([("input".into(), "bad,value".into())]));
+        upsert_artifact(unsafe_artifact.clone());
+        let request = vibe::Value::Record(BTreeMap::from([
+            ("id".into(), vibe::Value::String(id.clone())),
+            ("format".into(), vibe::Value::String("csv".into())),
+        ]));
+        let error = super::super::studio_domains::studio_export(&request, vibe::Span { start: 0, end: 0 }).unwrap_err();
+        assert!(error.message.contains("cannot preserve"));
+        assert_eq!(get_artifact(&id), Some(unsafe_artifact));
+        let mut plain = StudioArtifact::new("csv-plain-fixture", "Sheet", "Example");
+        plain.nodes.insert("A1".into(), BTreeMap::from([("input".into(), "42".into())]));
+        let (mime, bytes) = plain.export_format("csv").unwrap();
+        assert_eq!(mime, "text/csv");
+        assert_eq!(bytes, "node_id,attribute,value\nA1,input,42\n");
+        let reopened = StudioArtifact::import_format("csv-copy", "Sheet", "csv", &bytes).unwrap();
+        assert_eq!(reopened.nodes, plain.nodes);
+    }
+
+    #[test]
     fn test_import_cml_and_csv() {
         let cml = r##"<q-artifact domain="Vector" did="did:q42:0x1" clock="1" title="Logo"><q-prop key="stroke" value="#000" /><q-node id="path_1"><q-attr key="d" value="M 0 0 L 50 50" /></q-node></q-artifact>"##;
-        let art = StudioArtifact::import_format("vec-001", "Vector", "cml", cml).expect("cml import");
-        assert_eq!(art.properties.get("stroke").map(|s| s.as_str()), Some("#000"));
+        let art =
+            StudioArtifact::import_format("vec-001", "Vector", "cml", cml).expect("cml import");
+        assert_eq!(
+            art.properties.get("stroke").map(|s| s.as_str()),
+            Some("#000")
+        );
         assert!(art.nodes.contains_key("path_1"));
 
         let csv = "node_id,attribute,value\ncell_1,val,42\ncell_2,val,99\n";
-        let art_csv = StudioArtifact::import_format("sheet-csv", "Sheet", "csv", csv).expect("csv import");
+        let art_csv =
+            StudioArtifact::import_format("sheet-csv", "Sheet", "csv", csv).expect("csv import");
         assert_eq!(art_csv.nodes.len(), 2);
     }
 
@@ -441,7 +708,8 @@ mod tests {
 
         let mut1 = mutate_artifact("art-undo", |a| {
             a.title = "Draft 2".into();
-        }).expect("mutate");
+        })
+        .expect("mutate");
         assert_eq!(mut1.lamport_clock, 2);
 
         let undid = undo_artifact("art-undo").expect("undo");

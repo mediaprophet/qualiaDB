@@ -4,7 +4,14 @@ use crate::value::EnumValue;
 
 impl<'a, H: Host> Engine<'a, H> {
     /// Evaluates an expression.
-    pub(super) fn eval_expr_inner(&mut self, expr: &Expr, env: &mut Env) -> Result<Value, Diagnostic> {
+    pub(super) fn eval_expr_inner(
+        &mut self,
+        expr: &Expr,
+        env: &mut Env,
+    ) -> Result<Value, Diagnostic> {
+        for (scope, id) in &self.active_tasks {
+            crate::task_scheduler::checkpoint(scope, *id, expr.span)?;
+        }
         self.budget.tick(expr.span)?;
         match &expr.kind {
             ExprKind::Literal(l) => {
@@ -201,7 +208,11 @@ impl<'a, H: Host> Engine<'a, H> {
                         if resolved >= 0 && resolved < len {
                             Ok(xs[resolved as usize].clone())
                         } else {
-                            Err(Diagnostic::new(DiagCode::E600, expr.span, "index out of range"))
+                            Err(Diagnostic::new(
+                                DiagCode::E600,
+                                expr.span,
+                                "index out of range",
+                            ))
                         }
                     }
                     Value::String(s) => {
@@ -211,10 +222,18 @@ impl<'a, H: Host> Engine<'a, H> {
                         if resolved >= 0 && resolved < len {
                             Ok(Value::String(graphemes[resolved as usize].clone()))
                         } else {
-                            Err(Diagnostic::new(DiagCode::E600, expr.span, "string grapheme index out of range"))
+                            Err(Diagnostic::new(
+                                DiagCode::E600,
+                                expr.span,
+                                "string grapheme index out of range",
+                            ))
                         }
                     }
-                    _ => Err(Diagnostic::new(DiagCode::E600, expr.span, "not a list or string")),
+                    _ => Err(Diagnostic::new(
+                        DiagCode::E600,
+                        expr.span,
+                        "not a list or string",
+                    )),
                 }
             }
             ExprKind::Pipe { left, right } => {
@@ -349,6 +368,11 @@ impl<'a, H: Host> Engine<'a, H> {
             }
             ExprKind::Await(e) => {
                 let val = self.eval_expr(e, env)?;
+                if matches!(&val, Value::Record(record) if crate::task_scheduler::is_task_record(record))
+                    || matches!(&val, Value::Lambda { .. })
+                {
+                    self.check_phase_capability("task.await", expr.span)?;
+                }
                 crate::task_scheduler::await_scheduled_value(self, val, env, expr.span)
             }
             ExprKind::Lambda { params, body } => {

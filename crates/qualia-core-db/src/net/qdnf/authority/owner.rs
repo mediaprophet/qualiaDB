@@ -2,7 +2,7 @@
 
 use crate::crypto::network::digest::sha384;
 use crate::net::qdnf::errors::QdnfError;
-use crate::net::qdnf::types::{Generation, ProfileId, StrongDigest};
+use crate::net::qdnf::types::{Generation, OperationId, ProfileId, StrongDigest};
 
 use super::digest_bind::AuthorityBinding;
 use super::permit::ExecutionPermit;
@@ -19,6 +19,10 @@ struct Record {
     recipient: StrongDigest,
     purpose: StrongDigest,
     instrument: StrongDigest,
+    scope: StrongDigest,
+    operation: OperationId,
+    not_before_unix: u64,
+    resource_ceiling: u64,
     expires_unix: u64,
     contact: ContactState,
     revoked: bool,
@@ -32,6 +36,10 @@ impl Record {
         recipient: StrongDigest::ZERO,
         purpose: StrongDigest::ZERO,
         instrument: StrongDigest::ZERO,
+        scope: StrongDigest::ZERO,
+        operation: OperationId::ZERO,
+        not_before_unix: 0,
+        resource_ceiling: 0,
         expires_unix: 0,
         contact: ContactState::Request,
         revoked: false,
@@ -74,11 +82,6 @@ impl AuthorityOwner {
         }
     }
 
-    fn bump(&mut self) -> Result<Generation, QdnfError> {
-        self.next_generation = self.next_generation.next()?;
-        Ok(self.next_generation)
-    }
-
     fn free_slot(&self) -> Result<usize, QdnfError> {
         let mut i = 0;
         while i < MAX_RECORDS {
@@ -90,7 +93,9 @@ impl AuthorityOwner {
         Err(QdnfError::Capacity)
     }
 
-    /// Install a local verified grant after hashing the original bytes.
+    /// Compatibility admission with an unlimited per-permit resource ceiling.
+    /// Scope and operation remain pinned. New bounded hosts should use
+    /// `install_grant_with_ceiling`; neither route is a consumable budget ledger.
     pub fn install_grant(
         &mut self,
         binding: AuthorityBinding,
@@ -98,25 +103,42 @@ impl AuthorityOwner {
         expires_unix: u64,
         contact: ContactState,
     ) -> Result<(VerifiedCredential, AuthorisedContact, MutationHandle), QdnfError> {
+        self.install_grant_with_ceiling(binding, now_unix, expires_unix, contact, u64::MAX)
+    }
+
+    /// Pin the exact admitted binding, validity start and per-permit ceiling.
+    /// This trusted host entry point does not verify human consent by itself.
+    pub fn install_grant_with_ceiling(
+        &mut self,
+        binding: AuthorityBinding,
+        now_unix: u64,
+        expires_unix: u64,
+        contact: ContactState,
+        resource_ceiling: u64,
+    ) -> Result<(VerifiedCredential, AuthorisedContact, MutationHandle), QdnfError> {
         if expires_unix <= now_unix {
             return Err(QdnfError::Expired);
         }
         if contact != ContactState::Active {
             return Err(QdnfError::Unauthorized);
         }
+        if binding.principal.is_zero()
+            || binding.recipient.is_zero()
+            || binding.purpose.is_zero()
+            || binding.instrument.is_zero()
+            || binding.scope.is_zero()
+            || binding.operation.is_zero()
+        {
+            return Err(QdnfError::Unauthorized);
+        }
+        if binding.principal == binding.recipient {
+            return Err(QdnfError::Conflict);
+        }
+        if resource_ceiling == 0 {
+            return Err(QdnfError::Capacity);
+        }
         let slot = self.free_slot()?;
-        let generation = self.bump()?;
-        self.records[slot] = Record {
-            occupied: true,
-            generation,
-            principal: binding.principal,
-            recipient: binding.recipient,
-            purpose: binding.purpose,
-            instrument: binding.instrument,
-            expires_unix,
-            contact,
-            revoked: false,
-        };
+        let generation = self.next_generation.next()?;
         let cred = VerifiedCredential::new(
             binding.principal,
             binding.instrument,
@@ -125,11 +147,29 @@ impl AuthorityOwner {
         )?;
         let authorised =
             AuthorisedContact::new(binding.principal, binding.recipient, contact, generation)?;
+        // Every fallible admission check precedes publication/capacity use.
+        let record = Record {
+            occupied: true,
+            generation,
+            principal: binding.principal,
+            recipient: binding.recipient,
+            purpose: binding.purpose,
+            instrument: binding.instrument,
+            scope: binding.scope,
+            operation: binding.operation,
+            not_before_unix: now_unix,
+            resource_ceiling,
+            expires_unix,
+            contact,
+            revoked: false,
+        };
         let handle = MutationHandle {
             slot: slot as u8,
             generation,
             principal: binding.principal,
         };
+        self.records[slot] = record;
+        self.next_generation = generation;
         Ok((cred, authorised, handle))
     }
 
@@ -159,12 +199,20 @@ impl AuthorityOwner {
         if now_unix >= rec.expires_unix {
             return Err(QdnfError::Expired);
         }
+        if now_unix < rec.not_before_unix {
+            return Err(QdnfError::Denied);
+        }
         if rec.principal != binding.principal
             || rec.recipient != binding.recipient
             || rec.purpose != binding.purpose
             || rec.instrument != binding.instrument
+            || rec.scope != binding.scope
+            || rec.operation != binding.operation
         {
             return Err(QdnfError::Unauthorized);
+        }
+        if resource_ceiling > rec.resource_ceiling {
+            return Err(QdnfError::BudgetExhausted);
         }
         ExecutionPermit::issue(
             binding.operation,
@@ -189,13 +237,13 @@ impl AuthorityOwner {
             purpose_digest: rec.purpose,
             audience_digest: rec.recipient,
             authority_generation: rec.generation.0,
-            not_before_unix: 0,
+            not_before_unix: rec.not_before_unix,
             expires_unix: rec.expires_unix,
             profile: ProfileId::QPR_PQ_1,
         })
     }
 
-    /// `Ok` when `handle` is live and authorized.
+    /// Check record association/generation only; use `issue_permit` for live rights.
     pub fn validate_handle(&self, handle: MutationHandle) -> Result<(), QdnfError> {
         let _ = self.record(handle)?;
         Ok(())
@@ -263,64 +311,5 @@ pub fn binding_for_controllers(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::net::qdnf::authority::DecodedClaim;
-    use crate::net::qdnf::authority::PolicyOutcome;
-    use crate::net::qdnf::types::OperationId;
-
-    #[test]
-    fn decoded_allow_cannot_issue_permit() {
-        let owner = AuthorityOwner::new();
-        let mut claim = DecodedClaim::empty();
-        claim.asserted_outcome = PolicyOutcome::Allow;
-        claim.signed_flag = true;
-        assert_eq!(claim.admit_service(), Err(QdnfError::Unauthorized));
-        let _ = owner;
-    }
-
-    #[test]
-    fn stale_handle_is_rejected() {
-        let mut owner = AuthorityOwner::new();
-        let binding =
-            binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a").unwrap();
-        let (_c, _k, handle) = owner
-            .install_grant(binding, 10, 100, ContactState::Active)
-            .unwrap();
-        let mut stale = handle;
-        stale.generation = Generation(99);
-        assert_eq!(
-            owner.issue_permit(stale, binding, 20, 256),
-            Err(QdnfError::StaleGeneration)
-        );
-    }
-
-    #[test]
-    fn revoked_grant_cannot_issue_permit() {
-        let mut owner = AuthorityOwner::new();
-        let binding =
-            binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a").unwrap();
-        let (_c, _k, handle) = owner
-            .install_grant(binding, 10, 100, ContactState::Active)
-            .unwrap();
-        owner.revoke(handle).unwrap();
-        assert_eq!(
-            owner.issue_permit(handle, binding, 20, 256),
-            Err(QdnfError::Revoked)
-        );
-    }
-
-    #[test]
-    fn current_grant_issues_permit() {
-        let mut owner = AuthorityOwner::new();
-        let binding =
-            binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a").unwrap();
-        let (cred, contact, handle) = owner
-            .install_grant(binding, 10, 100, ContactState::Active)
-            .unwrap();
-        let permit = owner.issue_permit(handle, binding, 20, 256).unwrap();
-        assert!(permit.matches_credential(&cred).is_ok());
-        assert!(permit.matches_contact(&contact).is_ok());
-        assert_ne!(permit.operation(), OperationId::ZERO);
-    }
-}
+#[path = "owner_tests.rs"]
+mod tests;

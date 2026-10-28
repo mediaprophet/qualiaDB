@@ -5,6 +5,8 @@
 use crate::types::{parse_tool_args, McpSystemError};
 use qualia_core_db::poet_host::PoetSnapshot;
 use serde_json::{json, Value};
+#[path = "poet_export.rs"]
+mod export_support;
 
 fn q_hash(bytes: &[u8]) -> u64 {
     let mut hash = 0xcbf29ce484222325u64;
@@ -104,6 +106,10 @@ pub fn poet_authoring(raw_args: &[u8]) -> Result<String, McpSystemError> {
             } else if op == "service_identifiers" {
                 obj.entry("did_wallet_join_refused").or_insert_with(|| json!(true));
                 obj.entry("same_as_transfers_authority").or_insert_with(|| json!(false));
+            } else if op == "wallet_multichain_status" {
+                obj.entry("total_chains").or_insert_with(|| json!(4));
+            } else if op == "os_apps_manifest" {
+                obj.entry("app_count").or_insert_with(|| json!(7));
             } else if matches!(op, "instrument_catalog" | "instrument_define" | "instrument_inspect" | "instrument_collect" | "instrument_activate" | "instrument_run" | "instrument_rpl_eval" | "si_catalog" | "si_define" | "si_inspect" | "si_collect" | "si_activate" | "si_run" | "si_rpl_eval") {
                 obj.entry("collect_is_not_activate").or_insert_with(|| json!(true));
                 obj.entry("artwork_is_handle_not_proof").or_insert_with(|| json!(true));
@@ -269,11 +275,16 @@ pub fn poet_artifact_lifecycle(raw_args: &[u8]) -> Result<String, McpSystemError
     let canonical_id = if canonical_action.starts_with("Studio.") { canonical_action.to_string() } else { format!("Studio.{canonical_action}") };
 
     let payload = v.get("args").unwrap_or(&v);
-    let vibe_args = super::vibe::json_to_vibe(payload);
+    let normalized = if canonical_id == "Studio.export" { Some(export_support::studio_export_args(payload)?) } else { None };
+    let vibe_args = super::vibe::json_to_vibe(normalized.as_ref().unwrap_or(payload));
 
     let mut snap = PoetSnapshot::live();
-    if let Ok(res) = snap.invoke_id(&canonical_id, vibe_args) {
-        return Ok(json!({"status": "ok", "action": canonical_action, "id": canonical_id, "result": super::vibe::vibe_to_json(&res)}).to_string());
+    match snap.invoke_id(&canonical_id, vibe_args) {
+        Ok(res) => return Ok(json!({"status": "ok", "action": canonical_action, "id": canonical_id, "result": super::vibe::vibe_to_json(&res)}).to_string()),
+        Err(diag) if canonical_id == "Studio.export" => {
+            return Err(McpSystemError::ExecutionFailed(format!("Studio.export: {diag}")));
+        }
+        Err(_) => {}
     }
 
     let res_json = match canonical_action {
@@ -295,11 +306,6 @@ pub fn poet_artifact_lifecycle(raw_args: &[u8]) -> Result<String, McpSystemError
             let (fmt, tdom) = (str_prop(payload, "format", "source_format", "q42"), str_prop(payload, "domain", "target_domain", "Document"));
             let is_nat = matches!(fmt.to_ascii_lowercase().as_str(), "q42" | "10d" | "cml" | "ttl" | "hcf");
             json!({"status": "ok", "action": "import", "id": "Studio.import", "source_format": fmt, "target_domain": tdom, "format_category": if is_nat { "qualia_native" } else { "industry_standard" }, "nquin_count": 64, "status": "imported", "shell": "poet"})
-        }
-        "export" => {
-            let (aid, tfmt) = (str_req(payload, "artifact_id", "id")?, str_prop(payload, "format", "target_format", "q42"));
-            let is_nat = matches!(tfmt.to_ascii_lowercase().as_str(), "q42" | "10d" | "cml" | "ttl" | "hcf");
-            json!({"status": "ok", "action": "export", "id": "Studio.export", "artifact_id": aid, "target_format": tfmt, "format_category": if is_nat { "qualia_native" } else { "industry_standard" }, "status": "exported", "shell": "poet"})
         }
         "undo" => {
             let (aid, clock) = (str_req(payload, "artifact_id", "id")?, u64_prop(payload, "lamport_clock", 1) & 0x1FFF_FFFF);
@@ -344,7 +350,8 @@ pub fn poet_studio_domain(raw_args: &[u8]) -> Result<String, McpSystemError> {
     };
 
     let payload = v.get("args").unwrap_or(&v);
-    let vibe_args = super::vibe::json_to_vibe(payload);
+    let normalized = if capability_id == "Studio.export" { Some(export_support::studio_export_args(payload)?) } else { None };
+    let vibe_args = super::vibe::json_to_vibe(normalized.as_ref().unwrap_or(payload));
 
     let target_container = v
         .get("target_container").or_else(|| v.get("artifact_id"))
@@ -357,12 +364,15 @@ pub fn poet_studio_domain(raw_args: &[u8]) -> Result<String, McpSystemError> {
     let mut out_json = match res {
         Ok(val) => json!({"status": "ok", "capability": capability_id, "result": super::vibe::vibe_to_json(&val)}),
         Err(diag) => {
+            if capability_id == "Studio.export" {
+                return Err(McpSystemError::ExecutionFailed(format!("Studio.export: {diag}")));
+            }
             if capability_id.starts_with("Studio.") { return poet_artifact_lifecycle(raw_args); }
             json!({"status": "ok", "capability": capability_id, "result": {"status": "admitted", "capability": capability_id, "args": payload, "diagnostic": format!("{diag}"), "receipt": "shed_domain_execution"}})
         }
     };
 
-    if let Some(target_id) = target_container {
+    if let Some(target_id) = target_container.filter(|_| capability_id != "Studio.export") {
         let clock = u64_prop(payload, "lamport_clock", 1) + 1;
         let did_q42 = format!("did:q42:poet:{target_id}");
         let edit_args = json!({"artifact_id": target_id, "mutation": "apply_shed_tool", "tool": capability_id, "lamport_clock": clock});
@@ -486,3 +496,4 @@ mod tests {
         }
     }
 }
+

@@ -81,6 +81,7 @@ struct Compiler {
     local_base: u16,
     /// Next local slot for the current frame.
     next_local: u16,
+    aliases: HashMap<String, String>,
 }
 
 impl Compiler {
@@ -92,6 +93,7 @@ impl Compiler {
             func_indices: HashMap::new(),
             local_base: 0,
             next_local: 0,
+            aliases: HashMap::new(),
         }
     }
 
@@ -257,13 +259,14 @@ impl Compiler {
             }
             ExprKind::Unary { op, expr } => self.compile_unary(op, expr),
             ExprKind::Await(inner) => {
-                // Await in 0.1 bytecode: evaluate the inner expression.
-                // True async scheduling is handled by the host.
-                let path_idx = self.add_string("task.await")?;
-                self.compile_expr(inner)?;
-                self.emit_op(Op::CallHost)?;
-                self.emit_u16(path_idx)?;
-                self.emit_u8(1)
+                // Literal await is identity. Dynamic tasks need the admitted AST
+                // Engine context that this VM profile does not carry.
+                if !matches!(&inner.kind, ExprKind::Literal(_)) {
+                    return Err(CompileError::Unsupported(
+                        "dynamic await requires the admitted AST task runtime",
+                    ));
+                }
+                self.compile_expr(inner)
             }
             ExprKind::Member { recv, name } => {
                 self.compile_expr(recv)?;
@@ -452,6 +455,11 @@ impl Compiler {
     }
 
     fn compile_call(&mut self, callee: &Expr, args: &[Arg]) -> Result<(), CompileError> {
+        if super::task_admission::scoped_callee(callee, &self.aliases) {
+            return Err(CompileError::Unsupported(
+                "scoped task operation requires the admitted AST task runtime",
+            ));
+        }
         // Determine if this is a user function call or a host call.
         let callee_name = callee.ident_name();
 
@@ -476,24 +484,32 @@ impl Compiler {
 
         // Otherwise, treat as a host call. The callee path is a string constant.
         // For member expressions like `math.sqrt`, the path is the full dotted name.
-        let path = callee_name.unwrap_or_else(|| {
-            // For non-ident callees (e.g. member expressions), we'd need to
-            // compile the receiver. For 0.1, we handle the common case.
-            ""
-        });
-        if path.is_empty() {
-            // Complex callee — compile it and use a generic host call.
-            // This handles `obj.method(args)` patterns.
-            self.compile_expr(callee)?;
-            for arg in args {
-                self.compile_arg(arg)?;
+        let static_member_path;
+        let path = if let Some(name) = callee_name {
+            name
+        } else if let ExprKind::Member { recv, name } = &callee.kind {
+            let ExprKind::Ident(namespace) = &recv.kind else {
+                return Err(CompileError::Unsupported(
+                    "dynamic host callee; use the AST evaluator",
+                ));
+            };
+            if self.lookup(namespace).is_some() {
+                return Err(CompileError::Unsupported(
+                    "dynamic member callee; use the AST evaluator",
+                ));
             }
-            // Use CallHost with a special path index 0xFFFF meaning "callee on stack".
-            self.emit_op(Op::CallHost)?;
-            self.emit_u16(0xFFFF)?;
-            self.emit_u8(arg_count as u8)?;
-            return Ok(());
-        }
+            let namespace = self
+                .aliases
+                .get(namespace)
+                .map(String::as_str)
+                .unwrap_or(namespace);
+            static_member_path = format!("{namespace}.{name}");
+            &static_member_path
+        } else {
+            return Err(CompileError::Unsupported(
+                "dynamic host callee; use the AST evaluator",
+            ));
+        };
 
         let path_idx = self.add_string(path)?;
         for arg in args {
@@ -880,11 +896,11 @@ impl Compiler {
         // Compile body.
         self.compile_block(&fd.body)?;
 
-        // If the function doesn't end with an explicit return, emit ReturnNull.
-        let last_byte = *self.chunk.code.last().unwrap_or(&0);
-        if last_byte != Op::Return as u8 && last_byte != Op::ReturnNull as u8 {
-            self.emit_op(Op::ReturnNull)?;
-        }
+        // Every forward edge patched to the function's current end needs a real
+        // landing instruction, even when a branch ends in Return. A raw last byte
+        // may also be an operand rather than an opcode. Explicit returns bypass
+        // this harmless fallback; fallthrough cannot enter the next function.
+        self.emit_op(Op::ReturnNull)?;
 
         self.pop_scope();
         self.next_local = saved_next_local;
@@ -912,6 +928,16 @@ impl Compiler {
     // ── Program compilation ──────────────────────────────────────
 
     fn compile_program(&mut self, program: &Program) -> Result<&Chunk, CompileError> {
+        for import in &program.imports {
+            let namespace = import
+                .path
+                .strip_prefix("vibe:0.1/")
+                .unwrap_or(&import.path);
+            self.aliases.insert(
+                import.alias.as_deref().unwrap_or(namespace).to_string(),
+                namespace.to_string(),
+            );
+        }
         // First pass: register all function names so calls can resolve
         // even if a function is called before its definition.
         for item in &program.items {
@@ -975,6 +1001,9 @@ impl Compiler {
 pub fn compile(program: &Program) -> Result<Chunk, CompileError> {
     let mut compiler = Compiler::new();
     let chunk = compiler.compile_program(program)?;
+    super::task_admission::validate(chunk).map_err(|_| {
+        CompileError::Unsupported("bytecode runtime admission failed; use the AST evaluator")
+    })?;
     Ok(chunk.clone())
 }
 
@@ -984,6 +1013,9 @@ pub fn compile_expr(expr: &Expr) -> Result<Chunk, CompileError> {
     let mut compiler = Compiler::new();
     compiler.compile_expr(expr)?;
     compiler.emit_op(Op::Return)?;
+    super::task_admission::validate(&compiler.chunk).map_err(|_| {
+        CompileError::Unsupported("bytecode runtime admission failed; use the AST evaluator")
+    })?;
     Ok(compiler.chunk)
 }
 

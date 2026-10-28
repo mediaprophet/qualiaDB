@@ -130,6 +130,7 @@ impl<'a, H: Host> Vm<'a, H> {
 
     /// Execute the chunk's top-level preamble and return the last value on the stack.
     pub fn run(&mut self) -> Result<Value, VmError> {
+        super::task_admission::validate(self.chunk)?;
         let mut pc: usize = 0;
         // Top-level locals.
         let top_locals = vec![Value::Null; self.chunk.top_locals as usize];
@@ -172,6 +173,7 @@ impl<'a, H: Host> Vm<'a, H> {
 
     /// Execute a specific user function by index with the given arguments.
     pub fn call_function(&mut self, fn_idx: u16, args: &[Value]) -> Result<Value, VmError> {
+        super::task_admission::validate(self.chunk)?;
         let meta = self
             .chunk
             .functions

@@ -55,6 +55,8 @@ pub const TOPOLOGY_AND_MANIFOLD_BINDINGS: &[&str] = &[
     "value.verify_provenance",
     "crypto.prove_zk_predicate",
     "crypto.verify_zk_predicate",
+    "crypto.commit_predicate",
+    "crypto.verify_commitment",
     "runtime.with_budget",
     "continuation.snapshot",
     "continuation.rollback_to",

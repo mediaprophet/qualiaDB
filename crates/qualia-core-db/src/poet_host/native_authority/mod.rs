@@ -1,6 +1,7 @@
 //! Native project authority: signed adoption, key possession, current grants,
 //! serialized document/evidence commit. No source-facing authentication entry.
 mod admission;
+pub mod delegation;
 pub mod enrollment;
 mod workflow;
 pub use workflow::{SourceReviewRequest, WorkflowEvidence};

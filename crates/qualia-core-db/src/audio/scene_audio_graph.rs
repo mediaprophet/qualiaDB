@@ -22,16 +22,16 @@ use std::f32::consts::{PI, TAU};
 
 use crate::audio::acoustic_plane::push_sonic_token;
 use crate::audio::dsp::biquad_df2t::{BiquadCoeffs, Df2tState, DENORMAL_DC_OFFSET};
-use crate::audio::holosonic::{
-    HolosonicEmitter, HolosonicPointSample, HolosonicSonicToken48,
-    HolosonicWavefield, SPEED_OF_SOUND_MPS,
-};
 #[allow(unused_imports)]
 use crate::audio::holosonic::HolosonicModality;
+use crate::audio::holosonic::{
+    HolosonicEmitter, HolosonicPointSample, HolosonicSonicToken48, HolosonicWavefield,
+    SPEED_OF_SOUND_MPS,
+};
 use crate::audio::hrtf::{binaural_from_position, BinauralGains};
 use crate::container_10d::procedural_synthesis::evaluate_smooth_minimum_sdf;
 #[cfg(feature = "gpu-runtime")]
-use crate::render::gpu::holographic::{HolographicNodeGpu, HolographicPrimitive};
+use crate::render::gpu::holographic::HolographicNodeGpu;
 use crate::render::pga::{sandwich_point, Motor};
 use crate::sonic_token::{SonicEventType, SonicToken, SONIC_MAGIC};
 
@@ -91,9 +91,18 @@ impl AudioListenerPose {
         let py = sandwich_point(motor, [0.0, 1.0, 0.0]);
         let pz = sandwich_point(motor, [0.0, 0.0, -1.0]);
 
-        let right = normalize3([px[0] - origin[0], px[1] - origin[1], px[2] - origin[2]], [1.0, 0.0, 0.0]);
-        let up = normalize3([py[0] - origin[0], py[1] - origin[1], py[2] - origin[2]], [0.0, 1.0, 0.0]);
-        let forward = normalize3([pz[0] - origin[0], pz[1] - origin[1], pz[2] - origin[2]], [0.0, 0.0, -1.0]);
+        let right = normalize3(
+            [px[0] - origin[0], px[1] - origin[1], px[2] - origin[2]],
+            [1.0, 0.0, 0.0],
+        );
+        let up = normalize3(
+            [py[0] - origin[0], py[1] - origin[1], py[2] - origin[2]],
+            [0.0, 1.0, 0.0],
+        );
+        let forward = normalize3(
+            [pz[0] - origin[0], pz[1] - origin[1], pz[2] - origin[2]],
+            [0.0, 0.0, -1.0],
+        );
         let yaw_rad = forward[0].atan2(-forward[2]);
 
         Self {
@@ -278,9 +287,7 @@ impl AcousticObstacleShape {
     #[inline]
     pub fn signed_distance(&self, p: [f32; 3]) -> f32 {
         match *self {
-            Self::AnalyticalSphere { center, radius } => {
-                length3(sub3(p, center)) - radius
-            }
+            Self::AnalyticalSphere { center, radius } => length3(sub3(p, center)) - radius,
             Self::AnalyticalCapsule { a, b, radius } => {
                 let pa = sub3(p, a);
                 let ba = sub3(b, a);
@@ -520,14 +527,16 @@ pub fn evaluate_acoustic_occlusion_zero_heap(
     let mut combined_sdf_min = f32::MAX;
 
     for obs in obstacles {
-        let (hit, penetration_m, min_sdf_dist) =
-            intersect_or_graze_obstacle(&obs.shape, emitter_pos, ray_dir, direct_dist, obs.thickness_m);
-
-        combined_sdf_min = evaluate_smooth_minimum_sdf(
-            combined_sdf_min,
-            min_sdf_dist,
-            obs.smooth_blend_radius,
+        let (hit, penetration_m, min_sdf_dist) = intersect_or_graze_obstacle(
+            &obs.shape,
+            emitter_pos,
+            ray_dir,
+            direct_dist,
+            obs.thickness_m,
         );
+
+        combined_sdf_min =
+            evaluate_smooth_minimum_sdf(combined_sdf_min, min_sdf_dist, obs.smooth_blend_radius);
 
         if hit {
             hit_count += 1;
@@ -770,8 +779,8 @@ impl DirectBinauralBus {
 
         let idx0 = (cur + ZERO_HEAP_HRIR_TAPS - d_int) % ZERO_HEAP_HRIR_TAPS;
         let idx1 = (cur + ZERO_HEAP_HRIR_TAPS - (d_int + 1)) % ZERO_HEAP_HRIR_TAPS;
-        let delayed = self.fir_history[idx][idx0] * (1.0 - d_frac)
-            + self.fir_history[idx][idx1] * d_frac;
+        let delayed =
+            self.fir_history[idx][idx0] * (1.0 - d_frac) + self.fir_history[idx][idx1] * d_frac;
         // Gentle contralateral 2-tap head-shadow smoothing
         let shadow_delayed = 0.65 * delayed + 0.35 * self.fir_history[idx][idx1];
 
@@ -1205,9 +1214,8 @@ impl SceneAudioBusGraph {
             };
             let v_emit = dot3(node.velocity, dir);
             let v_list = dot3(self.listener.velocity, dir);
-            let doppler = ((SPEED_OF_SOUND_MPS - v_list)
-                / (SPEED_OF_SOUND_MPS + v_emit).max(20.0))
-            .clamp(0.5, 2.0);
+            let doppler = ((SPEED_OF_SOUND_MPS - v_list) / (SPEED_OF_SOUND_MPS + v_emit).max(20.0))
+                .clamp(0.5, 2.0);
 
             let omega = TAU * e.base_freq_hz * doppler;
             let wave_number = omega / SPEED_OF_SOUND_MPS;
@@ -1376,6 +1384,8 @@ fn normalize3(v: [f32; 3], fallback: [f32; 3]) -> [f32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "gpu-runtime")]
+    use crate::render::gpu::HolographicPrimitive;
     use crate::render::pga::motor_translate;
 
     #[test]

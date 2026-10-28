@@ -35,8 +35,14 @@ pub fn call_effects_and_systems(
         "state.crdt_merge" => Ok(Some(state_crdt_merge(args, span)?)),
         "value.attach_provenance" => Ok(Some(value_attach_provenance(args, span)?)),
         "value.verify_provenance" => Ok(Some(value_verify_provenance(args, span)?)),
-        "crypto.prove_zk_predicate" => Ok(Some(crypto_prove_zk_predicate(args, span)?)),
-        "crypto.verify_zk_predicate" => Ok(Some(crypto_verify_zk_predicate(args, span)?)),
+        "crypto.prove_zk_predicate" => {
+            Err(unsupported_proof_route("crypto.prove_zk_predicate", span))
+        }
+        "crypto.verify_zk_predicate" => {
+            Err(unsupported_proof_route("crypto.verify_zk_predicate", span))
+        }
+        "crypto.commit_predicate" => Ok(Some(crypto_commit_predicate(args, span)?)),
+        "crypto.verify_commitment" => Ok(Some(crypto_verify_commitment(args, span)?)),
         "runtime.with_budget" => Ok(Some(runtime_with_budget(args, span)?)),
         "continuation.snapshot" => Ok(Some(continuation_snapshot(args, span)?)),
         "continuation.rollback_to" => Ok(Some(continuation_rollback_to(args, span)?)),
@@ -103,6 +109,9 @@ fn effect_resume(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
 pub(crate) struct StoredAstArtifact {
     pub fast_index_u64: u64,
     pub normalized_src: String,
+    /// Original checked source supplied by the caller. A normalized AST cell
+    /// wrapper is suitable for hashing but is not the source to execute.
+    pub execution_src: String,
     pub cbor_bytes: Vec<u8>,
 }
 
@@ -127,13 +136,26 @@ fn parse_sha256_address(raw: &str) -> Option<String> {
     Some(hex_part.to_ascii_lowercase())
 }
 
+fn normalize_ast_source(src: &str) -> String {
+    if let Some(rest) = src.trim_start().strip_prefix('=') {
+        format!("const __cell = {};", rest.trim().trim_end_matches(';'))
+    } else {
+        src.to_string()
+    }
+}
+
 /// Look up a previously content-addressed AST source by its `sha256:...` digest.
 pub(crate) fn lookup_verified_ast_source(raw_address: &str) -> Option<String> {
     let expected_hex = parse_sha256_address(raw_address)?;
     let guard = ast_content_store().lock().ok()?;
     let art = guard.get(&expected_hex)?;
-    if crate::crypto::sha256_hex(&art.cbor_bytes) == expected_hex {
-        Some(art.normalized_src.clone())
+    let normalized = normalize_ast_source(&art.execution_src);
+    let source_matches_stored_bytes = parse_program(&normalized)
+        .ok()
+        .map(|program| encode(&program) == art.cbor_bytes)
+        .unwrap_or(false);
+    if source_matches_stored_bytes && crate::crypto::sha256_hex(&art.cbor_bytes) == expected_hex {
+        Some(art.execution_src.clone())
     } else {
         None
     }
@@ -141,11 +163,7 @@ pub(crate) fn lookup_verified_ast_source(raw_address: &str) -> Option<String> {
 
 fn code_hash_ast(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
     let src = extract_str(args, 0, "code.hash_ast", span)?;
-    let normalized_src = if let Some(rest) = src.trim_start().strip_prefix('=') {
-        format!("const __cell = {};", rest.trim().trim_end_matches(';'))
-    } else {
-        src.to_string()
-    };
+    let normalized_src = normalize_ast_source(src);
     let prog = parse_program(&normalized_src)?;
     let bytes = encode(&prog);
     let fast_index_u64 = fnv1a_64(&bytes);
@@ -158,6 +176,7 @@ fn code_hash_ast(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
             StoredAstArtifact {
                 fast_index_u64,
                 normalized_src: normalized_src.clone(),
+                execution_src: src.to_string(),
                 cbor_bytes: bytes.clone(),
             },
         );
@@ -201,11 +220,7 @@ fn code_resolve(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
 
     // Optional second argument: candidate source or CBOR bytes to verify against expected_hex.
     if let Some(Value::String(candidate_src)) = args.get(1) {
-        let normalized_cand = if let Some(rest) = candidate_src.trim_start().strip_prefix('=') {
-            format!("const __cell = {};", rest.trim().trim_end_matches(';'))
-        } else {
-            candidate_src.clone()
-        };
+        let normalized_cand = normalize_ast_source(candidate_src);
         if let Ok(cand_prog) = parse_program(&normalized_cand) {
             let cand_bytes = encode(&cand_prog);
             let actual_hex = crate::crypto::sha256_hex(&cand_bytes);
@@ -220,7 +235,10 @@ fn code_resolve(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
             out.insert("resolved".into(), Value::Bool(false));
             out.insert("verified".into(), Value::Bool(false));
             out.insert("immutable".into(), Value::Bool(false));
-            out.insert("reason".into(), Value::String("invalid_candidate_ast".into()));
+            out.insert(
+                "reason".into(),
+                Value::String("invalid_candidate_ast".into()),
+            );
             return Ok(Value::Record(out));
         }
     }
@@ -251,10 +269,7 @@ fn code_resolve(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
     out.insert("verified".into(), Value::Bool(true));
     out.insert("immutable".into(), Value::Bool(true));
     out.insert("sha256_hex".into(), Value::String(expected_hex));
-    out.insert(
-        "fast_index_u64".into(),
-        Value::U64(artifact.fast_index_u64),
-    );
+    out.insert("fast_index_u64".into(), Value::U64(artifact.fast_index_u64));
     out.insert(
         "byte_len".into(),
         Value::I64(artifact.cbor_bytes.len() as i64),
@@ -265,17 +280,11 @@ fn code_resolve(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
 
 fn code_spawn_at(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
     let node_did = extract_str(args, 0, "code.spawn_at", span)?;
-    if node_did.trim().is_empty()
-        || !node_did.starts_with("did:")
-        || node_did.contains("unavailable")
-        || node_did.contains("unauthorized")
-        || node_did.contains("unauthorised")
-        || node_did.contains("revoked")
-    {
+    if node_did != "did:q42:local_scheduler" {
         return Err(Diagnostic::new(
-            DiagCode::E400,
+            DiagCode::E600,
             span,
-            format!("code.spawn_at: provider '{node_did}' is unavailable or unauthorised"),
+            format!("code.spawn_at: remote or unknown scheduler '{node_did}' is unsupported; only did:q42:local_scheduler is available"),
         ));
     }
     let code_hash = extract_str(args, 1, "code.spawn_at", span)?;
@@ -287,9 +296,7 @@ fn code_spawn_at(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
         ));
     }
     let call_args = args.get(2).cloned().unwrap_or_else(|| Value::List(vec![]));
-    Ok(crate::task_scheduler::spawn_scheduled_task(
-        node_did, code_hash, call_args, 0,
-    ))
+    crate::task_scheduler::spawn_scheduled_task(node_did, code_hash, call_args, 0, span)
 }
 
 fn task_spawn(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
@@ -299,12 +306,13 @@ fn task_spawn(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
         Value::Record(r) => r.get("elapsed_ms").and_then(|v| v.as_i64()).unwrap_or(0),
         _ => 0,
     };
-    Ok(crate::task_scheduler::spawn_scheduled_task(
+    crate::task_scheduler::spawn_scheduled_task(
         "did:q42:local_scheduler",
         code_or_spec,
         call_args,
         elapsed_ms,
-    ))
+        span,
+    )
 }
 
 fn task_await(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
@@ -348,8 +356,10 @@ fn task_nursery(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
                 || r.get("status").and_then(|v| v.as_str()) == Some("running")
             {
                 if crate::task_scheduler::extract_task_id(r).is_some() {
-                    let awaited =
-                        crate::task_scheduler::await_value_standalone(Value::Record(r.clone()), span)?;
+                    let awaited = crate::task_scheduler::await_value_standalone(
+                        Value::Record(r.clone()),
+                        span,
+                    )?;
                     results.push(awaited);
                 } else {
                     let mut tr = r.clone();
@@ -382,8 +392,7 @@ fn task_cancel(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
 fn task_with_timeout(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
     let rec = extract_record(args, 0, "task.with_timeout", span)?;
     let timeout_ms = extract_i64(args, 1, "task.with_timeout", span)?;
-    let out = crate::task_scheduler::apply_task_timeout(rec, timeout_ms, span)?;
-    Ok(Value::Record(out))
+    crate::task_scheduler::apply_task_timeout(rec, timeout_ms, span).map(Value::Record)
 }
 
 fn supervisor_start_link(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
@@ -405,7 +414,10 @@ fn supervisor_start_link(args: &[Value], span: Span) -> Result<Value, Diagnostic
     out.insert("strategy".into(), Value::String(strategy.to_string()));
     out.insert("max_restarts".into(), Value::I64(max_restarts));
     out.insert("restarted_indices".into(), Value::List(restarted.clone()));
-    out.insert("healthy".into(), Value::Bool((restarted.len() as i64) <= max_restarts));
+    out.insert(
+        "healthy".into(),
+        Value::Bool((restarted.len() as i64) <= max_restarts),
+    );
     stamp_descriptor_only(&mut out, "checked_supervisor_plan_descriptor_only");
     Ok(Value::Record(out))
 }
@@ -415,7 +427,10 @@ fn contract_check(kind: &str, args: &[Value], span: Span) -> Result<Value, Diagn
         Some(Value::Bool(b)) => *b,
         _ => false,
     };
-    let msg = args.get(1).and_then(|v| v.as_str()).unwrap_or("contract failed");
+    let msg = args
+        .get(1)
+        .and_then(|v| v.as_str())
+        .unwrap_or("contract failed");
     if !ok {
         return Err(Diagnostic::new(
             DiagCode::E500,
@@ -541,103 +556,89 @@ fn value_verify_provenance(args: &[Value], span: Span) -> Result<Value, Diagnost
     let mut out = BTreeMap::new();
     out.insert("authentic".into(), Value::Bool(integrity_verified));
     out.insert("integrity_verified".into(), Value::Bool(integrity_verified));
-    out.insert(
-        "issuer_signature_verified".into(),
-        Value::Bool(false),
-    );
+    out.insert("issuer_signature_verified".into(), Value::Bool(false));
     out.insert(
         "verification_kind".into(),
         Value::String("content_sha256_integrity_not_external_pki".into()),
     );
-    out.insert("expected_digest_sha256".into(), Value::String(expected_sha256));
+    out.insert(
+        "expected_digest_sha256".into(),
+        Value::String(expected_sha256),
+    );
     out.insert("expected_signature".into(), Value::U64(expected_u64));
     Ok(Value::Record(out))
 }
 
-#[derive(Debug, Clone)]
-struct StoredPredicateCommitment {
-    predicate: String,
-    pub_in_sha256: String,
-    commitment_u64: u64,
-    witness_satisfied: bool,
+fn unsupported_proof_route(name: &str, span: Span) -> Diagnostic {
+    Diagnostic::new(
+        DiagCode::E600,
+        span,
+        format!("{name}: unsupported; no native zero-knowledge proof provider is configured"),
+    )
 }
 
-static ZK_COMMITMENT_STORE: std::sync::OnceLock<
-    std::sync::Mutex<BTreeMap<String, StoredPredicateCommitment>>,
-> = std::sync::OnceLock::new();
-
-fn zk_commitment_store() -> &'static std::sync::Mutex<BTreeMap<String, StoredPredicateCommitment>> {
-    ZK_COMMITMENT_STORE.get_or_init(|| std::sync::Mutex::new(BTreeMap::new()))
+fn local_predicate_commitment(predicate: &str, public_input: &Value) -> String {
+    let payload =
+        format!("vibe-local-predicate-commitment-v1|predicate={predicate}|public={public_input:?}");
+    crate::crypto::sha256_hex(payload.as_bytes())
 }
 
-fn crypto_prove_zk_predicate(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
-    let pred = extract_str(args, 0, "crypto.prove_zk_predicate", span)?;
-    let pub_in = args.get(1).cloned().unwrap_or(Value::Null);
-    let witness = args.get(2).cloned().unwrap_or(Value::Null);
-    let commitment_u64 = fnv1a_64(pred.as_bytes()) ^ fnv1a_value(&pub_in);
-    let witness_valid = !pred.trim().is_empty()
-        && witness != Value::Null
-        && witness != Value::Bool(false);
-    let pub_in_sha256 = crate::crypto::sha256_hex(format!("pub:{pub_in:?}").as_bytes());
-    let commitment_sha256 = crate::crypto::sha256_hex(
-        format!("vibe-zk-commit-v1|pred={pred}|pub={pub_in_sha256}|wit={witness:?}").as_bytes(),
-    );
-    if let Ok(mut guard) = zk_commitment_store().lock() {
-        guard.insert(
-            commitment_sha256.clone(),
-            StoredPredicateCommitment {
-                predicate: pred.to_string(),
-                pub_in_sha256,
-                commitment_u64,
-                witness_satisfied: witness_valid,
-            },
-        );
+fn crypto_commit_predicate(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
+    let predicate = extract_str(args, 0, "crypto.commit_predicate", span)?;
+    if predicate.trim().is_empty() {
+        return Err(Diagnostic::new(
+            DiagCode::E400,
+            span,
+            "crypto.commit_predicate: predicate must not be empty",
+        ));
     }
+    let public_input = args.get(1).cloned().unwrap_or(Value::Null);
     let mut out = BTreeMap::new();
-    out.insert("predicate".into(), Value::String(pred.to_string()));
-    out.insert("commitment".into(), Value::U64(commitment_u64));
+    out.insert("predicate".into(), Value::String(predicate.to_string()));
     out.insert(
         "commitment_sha256".into(),
-        Value::String(commitment_sha256),
+        Value::String(local_predicate_commitment(predicate, &public_input)),
     );
-    out.insert("verified".into(), Value::Bool(witness_valid));
     out.insert(
-        "proof_system".into(),
-        Value::String("deterministic_sha256_commitment_seal_not_interactive_zkp".into()),
+        "commitment_kind".into(),
+        Value::String(
+            "local_deterministic_binding_integrity_not_zkp_or_predicate_evaluation".into(),
+        ),
     );
+    out.insert("predicate_truth_verified".into(), Value::Bool(false));
+    out.insert("issuer_authenticity_verified".into(), Value::Bool(false));
     Ok(Value::Record(out))
 }
 
-fn crypto_verify_zk_predicate(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
-    let proof = extract_record(args, 0, "crypto.verify_zk_predicate", span)?;
-    let pub_in = args.get(1).cloned().unwrap_or(Value::Null);
-    let pred = proof.get("predicate").and_then(|v| v.as_str()).unwrap_or("");
-    let expected_u64 = fnv1a_64(pred.as_bytes()) ^ fnv1a_value(&pub_in);
-    let committed_u64 = match proof.get("commitment") {
-        Some(Value::U64(u)) => *u,
-        _ => 0,
-    };
-    let committed_sha256 = proof
+fn crypto_verify_commitment(args: &[Value], span: Span) -> Result<Value, Diagnostic> {
+    let commitment = extract_record(args, 0, "crypto.verify_commitment", span)?;
+    let pred_arg = [commitment.get("predicate").cloned().unwrap_or(Value::Null)];
+    let predicate = extract_str(
+        &pred_arg,
+        0,
+        "crypto.verify_commitment.predicate",
+        span,
+    )?;
+    let public_input = args.get(1).cloned().unwrap_or(Value::Null);
+    let claimed = commitment
         .get("commitment_sha256")
-        .and_then(|v| v.as_str())
+        .and_then(Value::as_str)
         .unwrap_or("");
-    if committed_sha256.is_empty() || committed_u64 != expected_u64 {
-        return Ok(Value::Bool(false));
-    }
-    let pub_in_sha256 = crate::crypto::sha256_hex(format!("pub:{pub_in:?}").as_bytes());
-    // Never trust caller-supplied `proof.get("verified")`; verify against the registered commitment!
-    let verified_in_store = zk_commitment_store()
-        .lock()
-        .ok()
-        .and_then(|guard| guard.get(committed_sha256).cloned())
-        .map(|entry| {
-            entry.witness_satisfied
-                && entry.predicate == pred
-                && entry.pub_in_sha256 == pub_in_sha256
-                && entry.commitment_u64 == expected_u64
-        })
-        .unwrap_or(false);
-    Ok(Value::Bool(verified_in_store))
+    let expected = local_predicate_commitment(predicate, &public_input);
+    let mut out = BTreeMap::new();
+    out.insert(
+        "integrity_verified".into(),
+        Value::Bool(!claimed.is_empty() && claimed == expected),
+    );
+    out.insert("predicate_truth_verified".into(), Value::Bool(false));
+    out.insert("issuer_authenticity_verified".into(), Value::Bool(false));
+    out.insert(
+        "verification_kind".into(),
+        Value::String(
+            "local_deterministic_binding_integrity_not_zkp_or_predicate_evaluation".into(),
+        ),
+    );
+    Ok(Value::Record(out))
 }
 
 fn runtime_with_budget(args: &[Value], span: Span) -> Result<Value, Diagnostic> {

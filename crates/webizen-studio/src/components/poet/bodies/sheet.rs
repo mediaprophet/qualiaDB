@@ -12,7 +12,7 @@ effect fn sum() {
 
 const FORMULA: &str = r#"requires [ capability("capability.invoke") ];
 effect fn eval_formula() {
-    return capability.invoke("Sheet.eval_formula", { formula: "=SUM(A1:B2)*1.15" });
+    return capability.invoke("Sheet.eval_formula", { formula: "=SUM(A1:B2)*1.15", grid: [[1,2],[3,4]] });
 }
 "#;
 
