@@ -118,13 +118,9 @@ qpu_internal = []
 alloc_buffers = []
 neon_simd_unroll = []
 vm_tracing = []
+minimal-fast-build = []
 
 [dependencies]
-# Typed, bounded Sheet.eval_formula reuse of the existing Craft parser and calculator.
-gridcraft-core = { path = "../../../poet-gridcraft/crates/core" }
-gridcraft-formula = { path = "../../../poet-gridcraft/crates/formula" }
-gridcraft-model = { path = "../../../poet-gridcraft/crates/model" }
-gridcraft-calc = { path = "../../../poet-gridcraft/crates/calc" }
 vibe = { workspace = true }
 qualia-cooperative-core = { workspace = true }
 qualia-inference-kernel = { workspace = true }
@@ -213,7 +209,7 @@ cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
 
 
 [lib]
-crate-type = ["rlib", "cdylib"]
+crate-type = ["rlib"]
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22.4"

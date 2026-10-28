@@ -61,6 +61,8 @@ mod temporal_resolve_gpu;
 mod texture_mips;
 mod water;
 pub mod frame_lock;
+pub mod residency_budget;
+pub mod emf_cue_bridge;
 pub use frame_lock::*;
 
 use crate::gpu_context::{

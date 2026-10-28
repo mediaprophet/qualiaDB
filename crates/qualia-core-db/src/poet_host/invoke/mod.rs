@@ -49,6 +49,7 @@ mod solvers;
 mod stats;
 mod vision;
 mod studio_domains;
+pub mod space_weather_bridge;
 pub mod studio_store;
 pub mod topology_bind;
 mod wgsl_forge_seam;

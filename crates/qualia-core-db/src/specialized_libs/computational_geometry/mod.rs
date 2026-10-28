@@ -609,7 +609,7 @@ pub use tet_quality_improve::{
 };
 pub use tool::{execute_geometry_tool_json, GeometryToolError};
 pub use topology::{
-    build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge, TopologyError,
+    build_triangle_half_edges, build_triangle_half_edges_budgeted, BudgetedTopologyError, required_edge_slots, EdgeSlot, HalfEdge, TopologyError,
     TopologySummary, INVALID_INDEX,
 };
 pub use trapezoidal_map::{TmSegment, Trapezoid, TrapezoidalMap, TrapezoidalMapError};

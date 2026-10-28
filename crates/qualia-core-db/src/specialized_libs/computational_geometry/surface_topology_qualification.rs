@@ -12,7 +12,7 @@
 //! scratch and must not be treated as a published successful receipt.
 
 use super::connectivity::{label_components_triangle_ordered, triangle_ordered_component_work, ConnectivityError, OrderedConnectivityError};
-use super::topology::{build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge, TopologyError, INVALID_INDEX};
+use super::topology::{build_triangle_half_edges, build_triangle_half_edges_budgeted, BudgetedTopologyError, required_edge_slots, EdgeSlot, HalfEdge, TopologyError, INVALID_INDEX};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SurfaceQualificationError {
@@ -182,3 +182,67 @@ mod tests {
         assert_eq!(surface_qualification_bounds(4,usize::MAX),Err(SurfaceQualificationError::SizeOverflow));
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BudgetedSurfaceQualificationError { Qualification(SurfaceQualificationError), TopologyBuild(BudgetedTopologyError) }
+impl From<SurfaceQualificationError> for BudgetedSurfaceQualificationError {
+    fn from(value:SurfaceQualificationError) -> Self { Self::Qualification(value) }
+}
+/// Reserve fixed work, charge actual probes; late errors dirty scratch and consume budget.
+pub fn qualify_surface_topology_budgeted_into(
+    vertex_count:u32,triangles:&[[u32;3]],remaining_work:&mut usize,
+    half_edges:&mut [HalfEdge],edge_slots:&mut [EdgeSlot],vertex_starts:&mut [u32],
+    visited_half_edges:&mut [bool],face_labels:&mut [u32],face_queue:&mut [u32],
+) -> Result<SurfaceQualificationReceipt,BudgetedSurfaceQualificationError> {
+    let bounds=surface_qualification_bounds(vertex_count,triangles.len())?;
+    let hash_bound=bounds.half_edges.checked_mul(2).and_then(|n|n.checked_mul(bounds.edge_slots)).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    let fixed=bounds.work.checked_sub(hash_bound).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    let minimum=fixed.checked_add(1).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    if *remaining_work<minimum { return Err(SurfaceQualificationError::WorkLimitExceeded{required:minimum}.into()); }
+    if half_edges.len()<bounds.half_edges || edge_slots.len()<bounds.edge_slots ||
+       vertex_starts.len()<bounds.vertex_starts || visited_half_edges.len()<bounds.visited_half_edges ||
+       face_labels.len()<bounds.face_labels || face_queue.len()<bounds.face_queue {
+        return Err(SurfaceQualificationError::InsufficientScratch.into());
+    }
+    *remaining_work -= fixed;
+    let edges=&mut half_edges[..bounds.half_edges];
+    let summary=build_triangle_half_edges_budgeted(vertex_count,triangles,edges,&mut edge_slots[..bounds.edge_slots],remaining_work).map_err(BudgetedSurfaceQualificationError::TopologyBuild)?;
+    if summary.boundary_half_edges!=0 { return Err(SurfaceQualificationError::BoundaryEdges(summary.boundary_half_edges).into()); }
+    let traversal_work=triangle_ordered_component_work(triangles.len() as u32).map_err(|_|SurfaceQualificationError::SizeOverflow)?;
+    let components=label_components_triangle_ordered(triangles.len() as u32,edges,traversal_work,&mut face_labels[..bounds.face_labels],&mut face_queue[..bounds.face_queue]).map_err(SurfaceQualificationError::OrderedConnectivity)?;
+    if components!=1 { return Err(SurfaceQualificationError::Disconnected(components).into()); }
+    let starts=&mut vertex_starts[..bounds.vertex_starts];starts.fill(INVALID_INDEX);
+    let visited=&mut visited_half_edges[..bounds.visited_half_edges];visited.fill(false);
+    for (i,edge) in edges.iter().enumerate() {
+        let start=&mut starts[edge.origin as usize];
+        if *start==INVALID_INDEX { *start=i as u32; }
+    }
+    for vertex in 0..vertex_count {
+        let start=starts[vertex as usize];
+        if start==INVALID_INDEX { return Err(SurfaceQualificationError::UnusedVertex(vertex).into()); }
+        let mut cur=start; let mut steps=0usize;
+        loop {
+            let i=cur as usize;
+            if i>=edges.len() || edges[i].origin!=vertex { return Err(SurfaceQualificationError::InvalidVertexLink(vertex).into()); }
+            if visited[i] {
+                if cur==start && steps>0 { break; }
+                return Err(SurfaceQualificationError::InvalidVertexLink(vertex).into());
+            }
+            visited[i]=true;steps+=1;
+            // For v→a, the preceding edge b→v is next(next(v→a)); its
+            // twin v→b advances to the next triangle incident on v.
+            let next=edges[i].next as usize;
+            if next>=edges.len() { return Err(SurfaceQualificationError::InvalidVertexLink(vertex).into()); }
+            let prev=edges[next].next as usize;
+            if prev>=edges.len() || edges[prev].twin==INVALID_INDEX { return Err(SurfaceQualificationError::InvalidVertexLink(vertex).into()); }
+            cur=edges[prev].twin;
+            if steps>edges.len() { return Err(SurfaceQualificationError::InvalidVertexLink(vertex).into()); }
+        }
+    }
+    // More than one fan at a vertex leaves additional outgoing half-edges
+    // unvisited even if every edge is paired and all faces are connected.
+    if let Some(i)=visited.iter().position(|x|!*x) { return Err(SurfaceQualificationError::InvalidVertexLink(edges[i].origin).into()); }
+    Ok(SurfaceQualificationReceipt { vertex_count,face_count:triangles.len() as u32,
+        half_edge_count:summary.half_edge_count,component_count:components })
+}
+

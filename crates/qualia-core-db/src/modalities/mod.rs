@@ -71,6 +71,8 @@ pub use likeliness::Likeliness;
 pub mod linear;
 pub use linear::{consume_quin, is_consumed, CONSUMED_BIT};
 pub mod logic;
+pub mod n3_deontic_bridge;
+pub mod typed_cue_profile;
 pub mod paraconsistent;
 pub use paraconsistent::{
     route_paraconsistent, ContradictionStatus, ParaconsistentError, ISOLATED_CONTEXT_PREFIX,

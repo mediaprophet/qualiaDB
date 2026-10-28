@@ -27,6 +27,7 @@ pub mod consent_contract;
     feature = "wasm-full"
 ))]
 pub mod coord_seams;
+pub mod cohort_access_gate;
 pub mod coordination;
 pub mod illocution;
 pub mod instrument_trace;

@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added (Whole-Biosphere & Poet Host Engine — 2026-10-29)
+
+- **Whole-Biosphere, Corpus Estimation, Living-Systems & Selective Streaming Engine (`PHASE-1`–`PHASE-5`)**:
+  - **Clean-Room Studio Domains & Fast-Build Capability Bitmasks (`P1-W1`, `P1-W2`)**: Decomposed `poet_host::invoke::studio_domains` into focused submodules (`receipt`, `office_domains`, `media_cad_domains`, `sim_lifecycle_domains`) under 300 lines each and added `const fn` capability bitmasks (`active_domain_mask()`, `active_specialized_lib_mask()`) + `minimal-fast-build` Cargo feature gate.
+  - **Source-Preserving Corpus Ingest & Zero-Heap Cohort Estimation (`P2-W1`–`P2-W4`, `C1–C5`, `Task G`)**: Deterministic `DOM-AX-7` subject hashing, `context[56..63]` sensitivity-tier packing, and `PRED_RAW_INVALID_LEXICAL` preservation in `csv_parser` / `json_parser`; Tier-1 zero-heap comparable-cohort estimation in `solvers::statistics::cohort_estimator` and Vibe `Statistics.estimate_cohort`; N3 `Strict`/`Defeasible`/`Defeater` and `AgreementDID` norm compilation in `modalities::n3_deontic_bridge`; and sensitivity/grant enforcement in `governance::cohort_access_gate`.
+  - **Biosphere Living-Systems & Space-Weather Heliophysical Engine (`P3-W3`, `P3-W4`, `BIO-FN/MC/EC`, `EAS-01..04`)**: Zero-heap fungal mycelial network transport (`domains::biosphere::funga_network`), microbial scale-band transforms & Monod biofilm kinetics (`microbial_colony`), trophic/mycorrhizal coupling (`ecological_coupling`), dynamic Shue/Burton/Chapman space-weather modeling (`poet_host::invoke::space_weather_bridge`), and strict vertical-datum (`Wgs84Ellipsoidal` vs `AhdOrthometric`) and temporal-basis validation in `qualia_geospatial::frame`.
+  - **Selective HMC Byte-Range Streamer, CPU/GPU Residency Governor & Typed Physical Cue Engine (`P5-W1`, `P5-W2`, `BS-30`, `BS-40`)**: Zero-heap HMC sub-range resolution and CRC-32C slice verification (`q42::selective_streamer`), LRU residency budget governance with pinned-slot protection (`render::gpu::residency_budget`), SI-typed EMF/acoustic/chemical cue receptor evaluation refusing uncalibrated bands (`modalities::typed_cue_profile`), and 64-byte `#[repr(C)]` WebGPU descriptor packing (`render::gpu::emf_cue_bridge`). See `docs/whole-biosphere-engine-reference.md`.
+
 ### Added
 
 - **Geospatial OSM scene compilation**: Compile parsed OSM points, lines, simple areas, and multipart geometries into bounded local ENU meshes, retain source identity/version/tags alongside each mesh, drape emitted vertices against a caller-owned DEM sampler, and optionally clip point/line/area triangles to a rectangular local tile. Clipped edge heights are interpolated for continuous DEM draping. Area fills with interior rings are rejected until hole-preserving triangulation is selected.

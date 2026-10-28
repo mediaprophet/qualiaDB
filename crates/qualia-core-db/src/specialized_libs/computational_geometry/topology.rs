@@ -248,3 +248,130 @@ mod tests {
         );
     }
 }
+
+/// Actual-probe budget exhaustion or the existing topology error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BudgetedTopologyError { Topology(TopologyError), WorkLimitExceeded }
+fn find_slot_budgeted(slots: &[EdgeSlot], key: u64, remaining: &mut usize) -> Result<Option<u32>, BudgetedTopologyError> {
+    let mask = slots.len() - 1;
+    let mut at = hash_key(key) & mask;
+    for _ in 0..slots.len() {
+        if *remaining == 0 { return Err(BudgetedTopologyError::WorkLimitExceeded); }
+        *remaining -= 1;
+        let slot = slots[at];
+        if slot.half_edge == INVALID_INDEX {
+            return Ok(None);
+        }
+        if slot.key == key {
+            return Ok(Some(slot.half_edge));
+        }
+        at = (at + 1) & mask;
+    }
+    Ok(None)
+}
+
+fn insert_slot_budgeted(
+    slots: &mut [EdgeSlot],
+    key: u64,
+    half_edge: u32,
+    from: u32,
+    to: u32,
+    remaining: &mut usize,
+) -> Result<(), BudgetedTopologyError> {
+    let mask = slots.len() - 1;
+    let mut at = hash_key(key) & mask;
+    for _ in 0..slots.len() {
+        if *remaining == 0 { return Err(BudgetedTopologyError::WorkLimitExceeded); }
+        *remaining -= 1;
+        if slots[at].half_edge == INVALID_INDEX {
+            slots[at] = EdgeSlot {
+                key,
+                half_edge,
+                _reserved: 0,
+            };
+            return Ok(());
+        }
+        if slots[at].key == key {
+            return Err(BudgetedTopologyError::Topology(TopologyError::DuplicateDirectedEdge { from, to }));
+        }
+        at = (at + 1) & mask;
+    }
+    Err(BudgetedTopologyError::Topology(TopologyError::SlotBufferTooSmall {
+        required: slots.len().saturating_mul(2),
+    }))
+}
+
+
+/// Charges every hash probe. Caller budgets non-probe work; scratch can be dirty on failure.
+pub fn build_triangle_half_edges_budgeted(
+    vertex_count: u32,
+    triangles: &[[u32; 3]],
+    out: &mut [HalfEdge],
+    slots: &mut [EdgeSlot],
+    remaining_probes: &mut usize,
+) -> Result<TopologySummary, BudgetedTopologyError> {
+    if triangles.len() > (u32::MAX as usize) / 3 {
+        return Err(BudgetedTopologyError::Topology(TopologyError::TooManyFaces));
+    }
+    let edge_count = triangles.len() * 3;
+    if out.len() < edge_count {
+        return Err(BudgetedTopologyError::Topology(TopologyError::HalfEdgeBufferTooSmall {
+            required: edge_count,
+        }));
+    }
+    let required_slots = required_edge_slots(triangles.len());
+    if slots.len() < required_slots || !slots.len().is_power_of_two() {
+        return Err(BudgetedTopologyError::Topology(TopologyError::SlotBufferTooSmall {
+            required: required_slots,
+        }));
+    }
+    if *remaining_probes == 0 && edge_count != 0 { return Err(BudgetedTopologyError::WorkLimitExceeded); }
+    for slot in slots.iter_mut() {
+        *slot = EdgeSlot::default();
+    }
+
+    for (face, triangle) in triangles.iter().copied().enumerate() {
+        if triangle[0] == triangle[1] || triangle[1] == triangle[2] || triangle[2] == triangle[0] {
+            return Err(BudgetedTopologyError::Topology(TopologyError::DegenerateFace { face }));
+        }
+        for &vertex in &triangle {
+            if vertex >= vertex_count {
+                return Err(BudgetedTopologyError::Topology(TopologyError::VertexOutOfRange { face, vertex }));
+            }
+        }
+
+        let base = face * 3;
+        for local in 0..3 {
+            let from = triangle[local];
+            let to = triangle[(local + 1) % 3];
+            let current = (base + local) as u32;
+            out[base + local] = HalfEdge {
+                origin: from,
+                twin: INVALID_INDEX,
+                next: (base + (local + 1) % 3) as u32,
+                face: face as u32,
+            };
+
+            if let Some(reverse) = find_slot_budgeted(slots, edge_key(to, from), remaining_probes)? {
+                if out[reverse as usize].twin != INVALID_INDEX {
+                    return Err(BudgetedTopologyError::Topology(TopologyError::NonManifoldEdge { from, to }));
+                }
+                out[base + local].twin = reverse;
+                out[reverse as usize].twin = current;
+            }
+            insert_slot_budgeted(slots, edge_key(from, to), current, from, to, remaining_probes)?;
+        }
+    }
+
+    let boundary_half_edges = out[..edge_count]
+        .iter()
+        .filter(|edge| edge.twin == INVALID_INDEX)
+        .count() as u32;
+    Ok(TopologySummary {
+        vertex_count,
+        face_count: triangles.len() as u32,
+        half_edge_count: edge_count as u32,
+        boundary_half_edges,
+    })
+}
+

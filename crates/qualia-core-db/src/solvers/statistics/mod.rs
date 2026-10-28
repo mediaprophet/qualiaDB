@@ -15,6 +15,7 @@
 //! into here for numeric work, but the two are not merged.
 
 pub mod anomaly;
+pub mod cohort_estimator;
 pub mod correlation;
 pub mod descriptive;
 pub mod distributions;

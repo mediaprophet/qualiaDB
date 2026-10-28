@@ -37,4 +37,5 @@ pub mod q42_reader;
 pub mod q42_volume;
 /// Upstream source / connector catalogue without data bundling (AST-07).
 pub mod source_catalogue;
+pub mod selective_streamer;
 pub mod yaml_ld_q42;

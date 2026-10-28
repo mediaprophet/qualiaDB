@@ -12,6 +12,8 @@ mod tests;
 mod values;
 #[cfg(test)]
 mod validation_tests;
+#[cfg(test)]
+mod binding_validation_tests;
 
 static NEXT_SESSION: AtomicU64 = AtomicU64::new(1);
 
@@ -79,6 +81,16 @@ pub struct CheckedSubmission {
     body: Body,
 }
 
+/// Read-only view of evaluated bindings before source-session promotion.
+/// Host effects remain governed by the actual host; rejection does not undo them.
+pub struct SessionBindings<'a> {
+    env: &'a Env,
+}
+impl SessionBindings<'_> {
+    pub fn value(&self, name: &str) -> Option<&Value> {
+        self.env.vars.get(name)
+    }
+}
 pub struct SourceSession {
     owner: u64,
     revision: u64,
@@ -125,6 +137,10 @@ impl SourceSession {
     pub fn revision(&self) -> u64 {
         self.revision
     }
+    /// Read-only accepted bindings, using the same view as tentative validation.
+    pub fn bindings(&self) -> SessionBindings<'_> {
+        SessionBindings { env: &self.env }
+    }
     pub fn value(&self, name: &str) -> Option<&Value> {
         self.env.vars.get(name)
     }
@@ -167,6 +183,21 @@ impl SourceSession {
         let candidate = self.prepare(source).map_err(|e| self.error(e, false))?;
         self.execute_validated(candidate, host, budget, validate)
     }
+    /// Validate tentative bindings and result using the same host before local
+    /// promotion. Dispatched host effects are not automatically rolled back.
+    pub fn submit_validated_bindings<H: Host, F>(
+        &mut self,
+        source: &str,
+        host: &mut H,
+        budget: Budget,
+        validate: F,
+    ) -> Result<SubmissionResult, SubmissionError>
+    where
+        F: FnOnce(&Value, SessionBindings<'_>, &mut H) -> Result<(), Diagnostic>,
+    {
+        let candidate = self.prepare(source).map_err(|e| self.error(e, false))?;
+        self.execute_validated_bindings(candidate, host, budget, validate)
+    }
     pub fn execute<H: Host>(
         &mut self,
         candidate: CheckedSubmission,
@@ -185,6 +216,22 @@ impl SourceSession {
         budget: Budget,
         validate: F,
     ) -> Result<SubmissionResult, SubmissionError> {
+        self.execute_validated_bindings(candidate, host, budget, |value, _, _| validate(value))
+    }
+
+    /// Inspect tentative bindings and debit the actual host before promotion.
+    /// A rejected callback preserves local source/session state. Any already
+    /// dispatched external host effects still require reconciliation.
+    pub fn execute_validated_bindings<H: Host, F>(
+        &mut self,
+        candidate: CheckedSubmission,
+        host: &mut H,
+        budget: Budget,
+        validate: F,
+    ) -> Result<SubmissionResult, SubmissionError>
+    where
+        F: FnOnce(&Value, SessionBindings<'_>, &mut H) -> Result<(), Diagnostic>,
+    {
         if candidate.owner != self.owner || candidate.base_revision != self.revision {
             return Err(self.error(
                 Diagnostic::new(
@@ -210,6 +257,7 @@ impl SourceSession {
             Body::Program(program) => engine.eval_program(program, &mut tentative),
             Body::Expression(expr) => engine.eval_expr(expr, &mut tentative),
         };
+        drop(engine);
         let value = result.map_err(|e| self.error(e, true))?;
         if tentative.vars.len() > self.limits.bindings {
             return Err(self.error(
@@ -224,7 +272,7 @@ impl SourceSession {
         values::validate(&candidate.checked, &tentative).map_err(|e| self.error(e, true))?;
         values::check_retained_size(&tentative, self.limits.retained_value_bytes)
             .map_err(|e| self.error(e, true))?;
-        validate(&value).map_err(|e| self.error(e, true))?;
+        validate(&value, SessionBindings { env: &tentative }, host).map_err(|e| self.error(e, true))?;
         self.env = tentative;
         self.checked = candidate.checked;
         self.mutables = candidate.mutables;

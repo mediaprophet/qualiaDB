@@ -4,6 +4,8 @@
 //! in the `Statistics.*` namespace.
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+mod cohort_estimation;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod correlation;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod correlation_more;
@@ -55,6 +57,9 @@ pub use manifold::{
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use more::*;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+#[allow(unused_imports)]
+pub use cohort_estimation::{estimate_cohort, stats_estimate_cohort};
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use regression::linear_regression;
 
@@ -205,5 +210,7 @@ stats_stub!(
     neg_entropy_grad,
     kl_bregman_form,
     bregman_pythagorean_test,
-    probability_hash
+    probability_hash,
+    estimate_cohort,
+    stats_estimate_cohort
 );
