@@ -1,0 +1,250 @@
+// Poet Cartography Live-Edit and Interactive Geospatial Publication Pipeline (GEO-S9 / R9-V).
+// Declares CartographicPublicationComplex governing interactive studio authoring, topology snapping,
+// thematic Jenks/bivariate classification, CVD color accessibility verification, and publication SVG export.
+// Demonstrates end-to-end execution across all 12 PoetGeo.* and Cartography.* capabilities:
+// 1. PoetGeo.cow_stroke_apply (interactive CoW brush sculpt stroke on terrain raster)
+// 2. PoetGeo.cow_undo_redo (non-destructive CoW revision tree journal traversal)
+// 3. PoetGeo.shared_vertex_move_split (shared topological vertex move and boundary split)
+// 4. PoetGeo.geodesic_ruler_protractor (Karney geodesic distance and azimuth protractor)
+// 5. PoetGeo.orbital_camera_flythrough (cinematic Catmull-Rom orbital 3D camera spline)
+// 6. PoetGeo.terrain_graph_intent_sync (reactive IntentBus canvas edit synchronization)
+// 7. Cartography.classify_jenks_thematic (Jenks natural breaks thematic interval classification)
+// 8. Cartography.bivariate_choropleth_3x3 (2D 3x3 bivariate choropleth color matrix generation)
+// 9. Cartography.proportional_dot_density (pseudo-random proportional dot-density synthesis)
+// 10. Cartography.simulate_cvd_palette (Brettel color vision deficiency simulation)
+// 11. Cartography.audit_wcag_contrast (WCAG 2.1 AA/AAA relative luminance contrast audit)
+// 12. Cartography.compose_publication_svg (publication-ready SVG cartographic layout composition)
+module <https://qualiadb.org/modules/geography/poet_cartography_live_edit>;
+using PoetGeo;
+using Cartography;
+using Topology;
+using Poet;
+
+// Declarative CartographicPublicationComplex governing studio editing, classification, and SVG layout
+topology snowy_cartographic_publication : CartographicPublicationComplex {
+    role: "CartographicPublicationComplex";
+    complex_id: "urn:qualia:topology:cartographic-publication";
+    anchors: ["MountKosciuszkoSummit", "CharlottePassLookout", "SpencersCreekBasin", "PerisherValleyMedical"];
+    crs_epsg: 7855;
+    states: [
+        "StudioAuthoring",
+        "TopologySnapped",
+        "ThematicClassified",
+        "CvdAccessibilityVerified",
+        "PublicationSvgExported"
+    ];
+    transitions: [
+        "sync_terrain_and_topology",
+        "classify_jenks_bivariate",
+        "verify_cvd_wcag_contrast",
+        "export_publication_layout"
+    ];
+    invariants: [
+        "CoWStrokeReversibility",
+        "ZeroSliverTopology",
+        "WcagAaContrastAdherence",
+        "DeterministicSvgDigest"
+    ];
+    boundary {
+        min_easting: 609000.0;
+        min_northing: 5959000.0;
+        max_easting: 619000.0;
+        max_northing: 5969000.0;
+    }
+}
+
+// Pure domain raster and cadastral extent for Kosciuszko Main Range study area (EPSG:7855 / MGA Zone 55)
+pure fn snowy_carto_bbox() -> Record {
+    return {
+        name: "Snowy Mountains Kosciuszko National Park Cartographic Study Area",
+        crs: "EPSG:7855",
+        min_x: 609000.0,
+        min_y: 5959000.0,
+        max_x: 619000.0,
+        max_y: 5969000.0,
+        width_m: 10000.0,
+        height_m: 10000.0
+    };
+}
+
+// Pure interactive brush sculpt stroke parameters for trail grooming and elevation terracing
+pure fn live_brush_stroke_spec() -> Record {
+    return {
+        stroke_id: "stroke_kosciuszko_pass_trail_001",
+        tool_type: "smooth",
+        radius_m: 35.0,
+        intensity: 0.65,
+        path: [
+            [611200.0, 5961400.0, 1850.0],
+            [611450.0, 5961620.0, 1895.0],
+            [611780.0, 5961890.0, 1940.0],
+            [612100.0, 5962150.0, 2010.0]
+        ]
+    };
+}
+
+// Pure thematic survey distribution samples for Jenks natural breaks and 3x3 bivariate classification
+pure fn thematic_survey_data() -> Record {
+    return {
+        biodiversity_indices: [12.4, 15.8, 22.1, 24.5, 31.0, 38.2, 42.6, 55.1, 68.4, 72.0, 85.3, 91.7],
+        human_footprint_scores: [4.1, 8.5, 11.2, 19.8, 23.4, 35.0, 41.2, 49.5, 58.0, 64.2, 79.1, 88.0],
+        total_wildlife_observations: 1450.0,
+        per_dot_value: 25.0,
+        jenks_bins: 5
+    };
+}
+
+// Pure publication cartographic layout and styling directives
+pure fn publication_layout_specs() -> Record {
+    return {
+        dimensions: {
+            width_mm: 297.0,
+            height_mm: 210.0,
+            dpi: 300,
+            margin_mm: 15.0
+        },
+        scale_bar: {
+            units: "kilometers",
+            max_width_mm: 50.0,
+            divisions: 4
+        },
+        palette_hex: ["#2b83ba", "#abdda4", "#ffffbf", "#fdae61", "#d7191c"],
+        dark_text_color: "#1a1a1a",
+        light_background_color: "#f7f7f7"
+    };
+}
+
+// Executes the complete Poet cartography and live interactive editing pipeline
+effect fn run_poet_cartography_live_edit_pipeline() -> Record {
+    let bbox = snowy_carto_bbox();
+    let stroke_spec = live_brush_stroke_spec();
+    let survey = thematic_survey_data();
+    let layout = publication_layout_specs();
+
+    // 1. Interactive CoW Brush Sculpt Stroke: apply smooth operator along alpine trail path
+    let sculpt_stroke = PoetGeo.cow_stroke_apply(
+        stroke_spec.stroke_id,
+        stroke_spec.tool_type,
+        stroke_spec.path,
+        stroke_spec.radius_m,
+        stroke_spec.intensity
+    );
+
+    // 2. CoW Undo/Redo Journal Traversal: verify non-destructive revision tree step backward/forward
+    let undo_redo_journal = PoetGeo.cow_undo_redo(
+        "session_kosciuszko_live_01",
+        "undo",
+        1
+    );
+
+    // 3. Shared Topological Vertex Move & Edge Split: snap adjacent parcel boundaries with zero gap
+    let vertex_edit = PoetGeo.shared_vertex_move_split(
+        { x: 613500.0, y: 5962000.0, crs: bbox.crs },
+        { x: 613505.0, y: 5962002.5 },
+        true,
+        0.05
+    );
+
+    // 4. Geodesic Karney Ruler & Protractor: compute geodesic distance and bearings between alpine peaks
+    let geodesic_measure = PoetGeo.geodesic_ruler_protractor(
+        [
+            { lat: -36.4559, lon: 148.2636, height_m: 2228.0 },
+            { lat: -36.4312, lon: 148.3315, height_m: 1864.0 },
+            { lat: -36.4042, lon: 148.4140, height_m: 1720.0 }
+        ],
+        "GRS80",
+        true
+    );
+
+    // 5. Cinematic Orbital Camera Flythrough: generate smooth Catmull-Rom spline keyframes
+    let camera_flight = PoetGeo.orbital_camera_flythrough(
+        [
+            { pos: [609000.0, 5959000.0, 2600.0], target: [612000.0, 5962000.0, 1900.0], fov: 60.0, roll: 0.0, duration_s: 4.0 },
+            { pos: [612000.0, 5961000.0, 2450.0], target: [614000.0, 5963000.0, 1850.0], fov: 55.0, roll: 2.5, duration_s: 5.0 },
+            { pos: [615000.0, 5964000.0, 2300.0], target: [616000.0, 5966000.0, 1750.0], fov: 50.0, roll: 0.0, duration_s: 6.0 }
+        ],
+        "catmull_rom",
+        80.0
+    );
+
+    // 6. Reactive IntentBus Canvas Synchronization: register live edits into topological graph ledger
+    let intent_sync = PoetGeo.terrain_graph_intent_sync(
+        "intent_geo_carto_publish_001",
+        {
+            raster_layers: ["field://qualia:snowy-dem-25m", "field://qualia:snowy-slope-rad"],
+            vector_layers: ["cadastre://nsw:parcels-snowy-7855", "trails://poet:kosciuszko-walk"]
+        },
+        "did:qualia:agent:poet-cartographer-subagent"
+    );
+
+    // 7. Jenks Natural Breaks Thematic Classification: compute optimal class breaks for biodiversity index
+    let jenks_breaks = Cartography.classify_jenks_thematic(
+        survey.biodiversity_indices,
+        survey.jenks_bins,
+        "jenks_natural_breaks"
+    );
+
+    // 8. 3x3 Bivariate Choropleth Matrix: encode biodiversity index vs human footprint intensity
+    let bivariate_matrix = Cartography.bivariate_choropleth_3x3(
+        survey.biodiversity_indices,
+        survey.human_footprint_scores,
+        "purple_green",
+        [20.0, 45.0, 75.0],
+        [15.0, 40.0, 70.0]
+    );
+
+    // 9. Proportional Dot Density Distribution: synthesize pseudo-random observation centroids in alpine reserve
+    let dot_density = Cartography.proportional_dot_density(
+        "geom://qualia:snowy-main-range-boundary",
+        survey.total_wildlife_observations,
+        survey.per_dot_value,
+        { exclude_waterbodies: true, max_slope_deg: 40.0 }
+    );
+
+    // 10. Color Vision Deficiency Simulation: audit palette under deuteranopia and protanopia
+    let cvd_simulation = Cartography.simulate_cvd_palette(
+        layout.palette_hex,
+        "deuteranopia",
+        1.0
+    );
+
+    // 11. WCAG 2.1 AA/AAA Contrast Ratio Audit: check text and boundary relative luminance contrast
+    let wcag_audit = Cartography.audit_wcag_contrast(
+        [layout.dark_text_color, "#ffffff"],
+        layout.palette_hex,
+        "aa_normal"
+    );
+
+    // 12. Publication Cartographic SVG Composition: assemble neatline, graticule, scale bar, and legend
+    let svg_publication = Cartography.compose_publication_svg(
+        [
+            { layer_id: "dem_hillshade_base", opacity: 0.75, blend: "multiply" },
+            { layer_id: "bivariate_choropleth_parcels", opacity: 0.90, blend: "normal" },
+            { layer_id: "wildlife_dot_density", symbol: "circle_1.5mm", fill: "#1a1a1a" },
+            { layer_id: "trail_groomed_centerline", stroke_width_mm: 0.8, color: "#d95f02" }
+        ],
+        layout.dimensions,
+        layout.scale_bar,
+        { style: "compass_rose_clean", anchor: "top_right", size_mm: 20.0 },
+        { title: "Kosciuszko Biodiversity & Human Footprint", orientation: "vertical" }
+    );
+
+    return {
+        status: "complete",
+        pipeline: "GEO-S9 Poet Cartography Live-Edit and Publication Pipeline",
+        complex_state: "PublicationSvgExported",
+        crs: bbox.crs,
+        sculpt_stroke: sculpt_stroke,
+        undo_redo: undo_redo_journal,
+        vertex_edit: vertex_edit,
+        geodesic_measure: geodesic_measure,
+        camera_flight: camera_flight,
+        intent_sync: intent_sync,
+        jenks_breaks: jenks_breaks,
+        bivariate_matrix: bivariate_matrix,
+        dot_density: dot_density,
+        cvd_simulation: cvd_simulation,
+        wcag_audit: wcag_audit,
+        svg_publication: svg_publication
+    };
+}

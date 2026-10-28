@@ -1,0 +1,292 @@
+// Spatial statistics, geomorphometry, map algebra WGSL compilation,
+// and turn-restricted least-cost network routing pipeline (GEO-S7 / R7-V).
+// Declares MapAlgebraSuitabilityComplex over the Snowy Mountains Alpine Region (EPSG:7855 / MGA Zone 55).
+// Demonstrates Ordinary Kriging, LISA / Getis-Ord Gi* spatial autocorrelation,
+// viewshed line-of-sight visibility, TPI/TRI/VRM/geomorphon landform classification,
+// TWI hydrological wetness, RUSLE soil erosion hazard modeling,
+// pure VibeScript cell expressions compiled via GisGp.map_algebra_cell_compile,
+// Saaty Analytic Hierarchy Process (AHP) multi-criteria weighted overlay,
+// zonal statistics, marching squares contours, Least Cost Path (LCP) corridors,
+// turn-restricted A* emergency routing, and network MST / max-flow centrality.
+module <https://qualiadb.org/modules/geography/map_algebra_kriging_network>;
+using GisGp;
+using Topology;
+using Poet;
+
+// Declarative MapAlgebraSuitabilityComplex governing pipeline state transitions
+topology snowy_alpine_suitability : MapAlgebraSuitabilityComplex {
+    role: "MapAlgebraSuitabilityComplex";
+    complex_id: "urn:qualia:topology:snowy-alpine-suitability";
+    anchors: ["MountKosciuszko", "CharlottePass", "PerisherValley", "ThredboTopStation"];
+    crs_epsg: 7855;
+    states: [
+        "RawBands",
+        "VariogramKriged",
+        "HydroIndicesEvaluated",
+        "AhpWeightedOverlay",
+        "LeastCostRouted"
+    ];
+    transitions: [
+        "krige_covariates",
+        "compute_twi_rusle",
+        "compile_cell_algebra",
+        "route_least_cost_network"
+    ];
+    invariants: [
+        "ContinuousFieldPreservation",
+        "ZeroNegativeCost",
+        "AcyclicOptimalPath",
+        "DeterministicCellCompilation"
+    ];
+    boundary {
+        min_easting: 609000.0;
+        min_northing: 5959000.0;
+        max_easting: 619000.0;
+        max_northing: 5969000.0;
+    }
+}
+
+// Pure bounding box and raster discretization for Snowy Mountains study area (EPSG:7855 / MGA Zone 55)
+pure fn snowy_study_bbox() -> Record {
+    return {
+        name: "Snowy Mountains Main Range Alpine Study Area",
+        crs: "EPSG:7855",
+        min_x: 609000.0,
+        min_y: 5959000.0,
+        max_x: 619000.0,
+        max_y: 5969000.0,
+        cell_size_m: 25.0,
+        rows: 400,
+        cols: 400
+    };
+}
+
+// Pure high-country weather station point observations for precipitation and temperature kriging
+pure fn alpine_weather_stations() -> List {
+    return [
+        { id: "BOM_KOS01", name: "Kosciuszko Top Station", easting: 610500.0, northing: 5960200.0, elevation: 1950.0, rain_annual_mm: 2150.0, temp_mean_c: -3.2 },
+        { id: "BOM_KOS02", name: "Charlotte Pass Lookout", easting: 614200.0, northing: 5964800.0, elevation: 1840.0, rain_annual_mm: 1850.0, temp_mean_c: -1.5 },
+        { id: "BOM_KOS03", name: "Spencers Creek Shelter", easting: 612800.0, northing: 5962300.0, elevation: 1730.0, rain_annual_mm: 1980.0, temp_mean_c: -2.1 },
+        { id: "BOM_KOS04", name: "Perisher Valley Base", easting: 614900.0, northing: 5963500.0, elevation: 1720.0, rain_annual_mm: 1720.0, temp_mean_c: -0.8 },
+        { id: "BOM_KOS05", name: "Betts Creek Basin", easting: 613600.0, northing: 5963800.0, elevation: 1780.0, rain_annual_mm: 1890.0, temp_mean_c: -1.8 },
+        { id: "BOM_KOS06", name: "Guthega Hydro Station", easting: 617200.0, northing: 5967400.0, elevation: 1610.0, rain_annual_mm: 1610.0, temp_mean_c: 0.4 },
+        { id: "BOM_KOS07", name: "Smiggin Holes Ridge", easting: 616100.0, northing: 5964200.0, elevation: 1680.0, rain_annual_mm: 1680.0, temp_mean_c: -0.5 },
+        { id: "BOM_KOS08", name: "Dead Horse Gap Pass", easting: 609800.0, northing: 5958500.0, elevation: 1580.0, rain_annual_mm: 2020.0, temp_mean_c: -2.5 }
+    ];
+}
+
+// Pure synthetic DEM surface and hydrological flow input descriptor for Mount Kosciuszko terrain
+pure fn alpine_terrain_surface_descriptors() -> Record {
+    return {
+        dem_ref: "field://qualia:snowy-kosciuszko-dem-25m",
+        slope_ref: "field://qualia:snowy-kosciuszko-slope-rad",
+        flow_accum_ref: "field://qualia:snowy-kosciuszko-flow-accum",
+        solar_rad_ref: "field://qualia:snowy-kosciuszko-solar-insol"
+    };
+}
+
+// Pure RUSLE soil erosion parameters for alpine granite regolith and peaty soils
+pure fn rusle_erosion_parameters() -> Record {
+    return {
+        rainfall_erosivity_r: 1450.0,
+        soil_erodibility_k: 0.024,
+        cover_management_c: 0.08,
+        conservation_practice_p: 1.0
+    };
+}
+
+// Pure Saaty Analytic Hierarchy Process (AHP) pairwise comparison matrix and criteria weights
+pure fn alpine_ahp_parameters() -> Record {
+    return {
+        criteria: ["SlopeShelter", "SoilErosionControl", "HydrologicalStability", "GeomorphConservation"],
+        pairwise_matrix: [
+            [1.0000, 3.0000, 5.0000, 7.0000],
+            [0.3333, 1.0000, 3.0000, 5.0000],
+            [0.2000, 0.3333, 1.0000, 3.0000],
+            [0.1428, 0.2000, 0.3333, 1.0000]
+        ],
+        suitability_scale: "standard_0_100"
+    };
+}
+
+// Pure emergency evacuation and patrol trail network graph with turn restrictions
+pure fn alpine_evacuation_network_graph() -> Record {
+    return {
+        nodes: [
+            { id: 1, name: "Mount Kosciuszko Summit", easting: 610300.0, northing: 5959800.0 },
+            { id: 2, name: "Rawsons Pass Junction", easting: 611200.0, northing: 5960400.0 },
+            { id: 3, name: "Seamans Emergency Hut", easting: 612500.0, northing: 5961900.0 },
+            { id: 4, name: "Snowy River Ford", easting: 613700.0, northing: 5963200.0 },
+            { id: 5, name: "Charlotte Pass Trailhead", easting: 614200.0, northing: 5964800.0 },
+            { id: 6, name: "Perisher Medical Station", easting: 614900.0, northing: 5963500.0 }
+        ],
+        edges: [
+            { from: 1, to: 2, length_m: 1100.0, max_slope_deg: 8.5, capacity_vehicles_hr: 0, trail_type: "SummitWalk" },
+            { from: 2, to: 3, length_m: 2100.0, max_slope_deg: 5.2, capacity_vehicles_hr: 12, trail_type: "SummitRoadGravel" },
+            { from: 3, to: 4, length_m: 1800.0, max_slope_deg: 6.1, capacity_vehicles_hr: 12, trail_type: "SummitRoadGravel" },
+            { from: 4, to: 5, length_m: 1900.0, max_slope_deg: 4.8, capacity_vehicles_hr: 15, trail_type: "SummitRoadGravel" },
+            { from: 5, to: 6, length_m: 8500.0, max_slope_deg: 3.5, capacity_vehicles_hr: 120, trail_type: "KosciuszkoRoadBitumen" },
+            { from: 2, to: 6, length_m: 7200.0, max_slope_deg: 14.2, capacity_vehicles_hr: 0, trail_type: "BackcountryTrack" }
+        ],
+        turn_restrictions: [
+            { via_node: 2, from_edge: 1, to_edge: 6, restricted: true, reason: "Severe avalanche chute hazard" }
+        ]
+    };
+}
+
+// Pure VibeScript cell mathematical formula expressions for zero-heap WGSL map algebra compilation
+cell terrain_friction_formula = "(0.35 * slope_cost) + (0.30 * rusle_soil_loss) + (0.20 * wetness_impedance) + (0.15 * geomorph_roughness)";
+cell alpine_habitat_suitability_formula = "(0.40 * solar_insolation) + (0.25 * slope_shelter) - (0.20 * erosion_hazard) - (0.15 * wind_exposure)";
+
+// Executes the complete spatial statistics, geomorphometry, map algebra, and network analysis pipeline
+effect fn run_alpine_suitability_kriging_network_pipeline() -> Record {
+    let bbox = snowy_study_bbox();
+    let stations = alpine_weather_stations();
+    let terrain = alpine_terrain_surface_descriptors();
+    let rusle_params = rusle_erosion_parameters();
+    let ahp_params = alpine_ahp_parameters();
+    let network_graph = alpine_evacuation_network_graph();
+
+    // 1. Experimental Empirical Variogram: compute spatial continuity from irregular rainfall observations
+    let rainfall_variogram = GisGp.empirical_variogram(
+        stations,
+        500.0,
+        15
+    );
+
+    // 2. Ordinary Kriging: Best Linear Unbiased Prediction of continuous rainfall surface & prediction variance
+    let kriged_precipitation = GisGp.ordinary_kriging(
+        stations,
+        "Spherical",
+        25.0,
+        180.0,
+        4500.0,
+        bbox
+    );
+
+    // 3. Global Spatial Autocorrelation: Moran's I & Geary's C with Monte Carlo permutations
+    let global_autocorrelation = GisGp.morans_i_gearys_c(
+        stations,
+        "InverseDistance",
+        999
+    );
+
+    // 4. Local Spatial Association: Anselin LISA & Getis-Ord Gi* hotspot detection
+    let rainfall_hotspots = GisGp.local_lisa_getis_ord_gi_star(
+        stations,
+        2500.0,
+        "getis_ord_gi_star"
+    );
+
+    // 5. Viewshed Line-of-Sight: compute cumulative observer visibility from Charlotte Pass fire lookout
+    let lookout_viewshed = GisGp.viewshed_radial_cumulative(
+        terrain.dem_ref,
+        [{ x: 614200.0, y: 5964800.0, z_offset: 12.0 }],
+        8000.0,
+        2.0,
+        true
+    );
+
+    // 6. Geomorphometry: Topographic Position Index (TPI), TRI, VRM, and 10 Geomorphon landforms
+    let geomorphometry = GisGp.tpi_tri_vrm_geomorphons(
+        terrain.dem_ref,
+        5,
+        1.0
+    );
+
+    // 7. Hydrology & Erosion: Topographic Wetness Index (TWI), SPI, STI, and RUSLE soil erosion hazard
+    let hydro_erosion = GisGp.twi_spi_sti_rusle(
+        terrain.dem_ref,
+        terrain.slope_ref,
+        terrain.flow_accum_ref,
+        rusle_params
+    );
+
+    // 8. Map Algebra Cell Compile: compile pure VibeScript cell expression into zero-heap WGSL shader kernel
+    let compiled_friction_kernel = GisGp.map_algebra_cell_compile(
+        terrain_friction_formula,
+        {
+            slope_cost: terrain.slope_ref,
+            rusle_soil_loss: hydro_erosion.rusle_soil_loss,
+            wetness_impedance: hydro_erosion.twi,
+            geomorph_roughness: geomorphometry.tri
+        },
+        "zero_heap_simd"
+    );
+
+    // 9. Multi-Criteria AHP Overlay: Saaty pairwise comparison weighted linear combination
+    let ahp_suitability_overlay = GisGp.ahp_multi_criteria_overlay(
+        [
+            geomorphometry.vrm,
+            hydro_erosion.rusle_soil_loss,
+            hydro_erosion.twi,
+            geomorphometry.tpi
+        ],
+        ahp_params.pairwise_matrix,
+        ahp_params.suitability_scale
+    );
+
+    // 10. Zonal Statistics & Reclassification: aggregate suitability scores into alpine catchment zones
+    let zonal_evaluation = GisGp.zonal_statistics_reclassify(
+        ahp_suitability_overlay.suitability_field,
+        "geom://qualia:snowy-alpine-catchment-zones",
+        [
+            { min: 0.0, max: 25.0, new_val: 1 },
+            { min: 25.0, max: 50.0, new_val: 2 },
+            { min: 50.0, max: 75.0, new_val: 3 },
+            { min: 75.0, max: 100.0, new_val: 4 }
+        ]
+    );
+
+    // 11. Marching Squares Contours: extract 50mm precipitation isolines from kriged rainfall surface
+    let rainfall_isolines = GisGp.marching_squares_contours(
+        kriged_precipitation.prediction_surface,
+        50.0,
+        1500.0,
+        true
+    );
+
+    // 12. Watershed & Cost-Distance LCP: compute accumulated friction distance & least-cost evacuation corridor
+    let cost_path_corridor = GisGp.watershed_cost_distance_lcp(
+        compiled_friction_kernel.output_field,
+        [{ x: 610300.0, y: 5959800.0 }],
+        [{ x: 614900.0, y: 5963500.0 }],
+        terrain.flow_accum_ref
+    );
+
+    // 13. Turn-Restricted A* & 30-Minute Service Area Isochrones: shortest emergency evacuation path
+    let emergency_routing = GisGp.network_astar_isochrone_tsp(
+        network_graph,
+        { x: 610300.0, y: 5959800.0 },
+        [{ x: 614900.0, y: 5963500.0 }],
+        1800.0
+    );
+
+    // 14. Network Topology & Flow Centrality: Minimum Spanning Tree and Edmonds-Karp maximum evacuation throughput
+    let network_topology = GisGp.network_mst_maxflow_centrality(
+        network_graph,
+        1,
+        6,
+        "betweenness"
+    );
+
+    return {
+        status: "complete",
+        pipeline: "GEO-S7 Spatial Stats, Geomorphometry, Map Algebra & Network",
+        crs: bbox.crs,
+        variogram: rainfall_variogram,
+        kriging: kriged_precipitation,
+        spatial_autocorrelation: global_autocorrelation,
+        hotspots: rainfall_hotspots,
+        viewshed: lookout_viewshed,
+        geomorphometry: geomorphometry,
+        hydro_erosion: hydro_erosion,
+        map_algebra_kernel: compiled_friction_kernel,
+        ahp_overlay: ahp_suitability_overlay,
+        zonal_stats: zonal_evaluation,
+        precipitation_contours: rainfall_isolines,
+        least_cost_path: cost_path_corridor,
+        emergency_astar: emergency_routing,
+        network_flow_mst: network_topology
+    };
+}

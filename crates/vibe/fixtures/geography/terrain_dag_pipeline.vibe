@@ -1,0 +1,132 @@
+// Procedural terrain DAG pipeline fixture (GEO-S2 / R2-V).
+// Demonstrates declarative `|>` pipe-composed procedural terrain DAG for the Snowy Mountains,
+// combining Swiss turbulence, fault block tectonic uplift, glacial cirque carving, periglacial
+// cryoplanation terracing, alpine treeline classification, and DAG baking into m64 georaster.
+module <https://qualiadb.org/modules/geography/terrain_dag_pipeline>;
+using Terrain;
+
+// Pure bounding box specification for Mount Kosciuszko / Main Range (EPSG:7855 / MGA Zone 55)
+pure fn snowy_mountains_bbox() -> Record {
+    return {
+        name: "Snowy Mountains - Mount Kosciuszko National Park",
+        crs_epsg: 7855,
+        min_x: 611000.0,
+        min_y: 5961000.0,
+        max_x: 617000.0,
+        max_y: 5967000.0
+    };
+}
+
+// Pure alpine environmental parameters
+pure fn alpine_environment_params() -> Record {
+    return {
+        summit_alt_m: 2228.0,
+        valley_floor_alt_m: 1150.0,
+        treeline_alt_m: 1850.0,
+        solifluction_terrace_levels: 8,
+        terrace_smoothness: 0.38,
+        terrace_variability: 0.14
+    };
+}
+
+// Pure generator: bedrock alpine relief via Swiss turbulence
+pure fn base_alpine_bedrock() -> FieldRef {
+    return Terrain.swiss_turbulence(6, 2.14, 0.48, 0.35);
+}
+
+// Pure generator: Kosciuszko horst block tectonic uplift primitive
+pure fn kosciuszko_fault_block() -> FieldRef {
+    return Terrain.primitive_landform("FaultBlock", {
+        scarp_azimuth_deg: 35.0,
+        displacement_m: 720.0,
+        dip_angle_deg: 16.5,
+        scarp_steepness: 0.82
+    });
+}
+
+// Pure generator: Blue Lake / Club Lake glacial cirque overdeepening primitive
+pure fn blue_lake_glacial_cirque() -> FieldRef {
+    return Terrain.primitive_landform("GlacialCirque", {
+        bowl_radius_m: 480.0,
+        headwall_height_m: 210.0,
+        tarn_depth_m: 42.0,
+        moraine_crest_m: 26.0,
+        cirque_aspect_deg: 125.0
+    });
+}
+
+// Declarative `|>` pipe-composed procedural terrain DAG for the Snowy Mountains
+pure fn compose_snowy_mountains_dag() -> FieldRef {
+    let env = alpine_environment_params();
+    let fault = kosciuszko_fault_block();
+    let cirque = blue_lake_glacial_cirque();
+
+    // Pipe pipeline: Swiss turbulence bedrock
+    // |> combine with tectonic fault block uplift
+    // |> carve glacial cirque basin and headwall
+    // |> apply periglacial cryoplanation terracing
+    // |> autolevel into calibrated altitudinal range (1150m - 2228m)
+    let terrain = base_alpine_bedrock()
+        |> Terrain.combine(fault, "add", 0.68)
+        |> Terrain.combine(cirque, "sub", 0.52)
+        |> Terrain.terrace(
+            env.solifluction_terrace_levels,
+            env.terrace_smoothness,
+            env.terrace_variability
+        )
+        |> Terrain.autolevel(env.valley_floor_alt_m, env.summit_alt_m);
+
+    return terrain;
+}
+
+// Generates ecological classification masks using terrain selectors
+pure fn classify_alpine_zones(terrain: FieldRef) -> Record {
+    let env = alpine_environment_params();
+
+    // Select exposed alpine feldmark above treeline (1850m) on slopes >= 25 deg
+    let rock_treeline_mask = terrain
+        |> Terrain.select_rock_treeline(env.treeline_alt_m, 25.0);
+
+    // Select leeward south-east cirque slopes for winter snowpack drift accumulation
+    let snowdrift_mask = terrain
+        |> Terrain.select_aspect(130.0, 45.0);
+
+    // Select steep cliff face outcrops (slope 38 to 85 deg)
+    let cliff_mask = terrain
+        |> Terrain.select_slope(38.0, 85.0, 4.0);
+
+    return {
+        rock_feldmark: rock_treeline_mask,
+        snowdrift_zones: snowdrift_mask,
+        cliff_faces: cliff_mask
+    };
+}
+
+// Effect: executes and bakes the complete terrain DAG into an m64 container
+effect fn bake_snowy_mountains_terrain(resolution_m: f64) -> Record {
+    let terrain = compose_snowy_mountains_dag();
+    let bbox = snowy_mountains_bbox();
+
+    return terrain |> Terrain.bake_dag(
+        bbox,
+        resolution_m,
+        "m64_georaster"
+    );
+}
+
+// Full verification entry point for the procedural pipeline
+effect fn verify_snowy_mountains_pipeline() -> Record {
+    let bbox = snowy_mountains_bbox();
+    let terrain = compose_snowy_mountains_dag();
+    let zones = classify_alpine_zones(terrain);
+    let baked = bake_snowy_mountains_terrain(5.0);
+
+    return {
+        status: "verified",
+        region: bbox.name,
+        target_crs: bbox.crs_epsg,
+        elevation_model: terrain,
+        zones_classified: zones,
+        baked_output: baked
+    };
+}

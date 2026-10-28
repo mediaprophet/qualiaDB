@@ -1,0 +1,225 @@
+// Vector geoprocessing, planar parcel topology validation, and spatial analysis pipeline (GEO-S6 / R6-V).
+// Declares CadastralTopologyComplex over the Snowy Mountains Alpine Region (EPSG:7855 / MGA Zone 55).
+// Chains GisGp.snap_eliminate_slivers, GisGp.buffer, GisGp.multi_ring_buffer, GisGp.intersection,
+// GisGp.difference, GisGp.dissolve, GisGp.centroid_polylabel, GisGp.delaunay_voronoi,
+// GisGp.tessellate_grid ("HexagonFlatTop"), GisGp.spatial_join, GisGp.kernel_density, and GisGp.cluster_dbscan_kmeans.
+module <https://qualiadb.org/modules/geography/vector_geoprocessing>;
+using GisGp;
+using Topology;
+using Poet;
+
+// Declarative CadastralTopologyComplex enforcing planar parcel topology over Snowy Mountains alpine leases
+topology snowy_cadastral_fabric : CadastralTopologyComplex {
+    role: "CadastralTopologyComplex";
+    complex_id: "urn:qualia:topology:snowy-cadastral-fabric";
+    anchors: ["JindabyneCadastre", "PerisherValleyParcels", "ThredboVillage"];
+    crs_epsg: 7855;
+    must_not_overlap: true;
+    must_not_have_gaps: true;
+    snap_tolerance_m: 0.05;
+    min_sliver_area_m2: 1.0;
+    invariants: ["PlanarEnforcement", "ZeroOverlap", "ContinuousParcelCoverage"];
+    boundary {
+        min_easting: 611000.0;
+        min_northing: 5961000.0;
+        max_easting: 617000.0;
+        max_northing: 5967000.0;
+    }
+}
+
+// Pure bounding box specification for Snowy Mountains cadastral study area (EPSG:7855 / MGA Zone 55)
+pure fn snowy_cadastral_bbox() -> Record {
+    return {
+        name: "Snowy Mountains Cadastral Study Area",
+        crs: "EPSG:7855",
+        min_x: 611000.0,
+        min_y: 5961000.0,
+        max_x: 617000.0,
+        max_y: 5967000.0
+    };
+}
+
+// Pure raw parcel records with minor digitizing slivers and gaps before planar topology snapping
+pure fn raw_cadastral_parcels() -> List {
+    return [
+        {
+            lot_id: "LOT101_DP750001",
+            zone: "AlpineLeasehold",
+            owner_did: "did:qualia:agent:snowy-alpine-resort",
+            geometry_wkt: "POLYGON((612000.0 5962000.0, 613500.0 5962000.0, 613500.0 5963500.0, 612000.0 5963500.0, 612000.0 5962000.0))"
+        },
+        {
+            lot_id: "LOT102_DP750001",
+            zone: "AlpineLeasehold",
+            owner_did: "did:qualia:agent:perisher-village-strata",
+            geometry_wkt: "POLYGON((613499.98 5962000.02, 615000.0 5962000.0, 615000.0 5963500.0, 613499.98 5963500.02, 613499.98 5962000.02))"
+        },
+        {
+            lot_id: "LOT103_DP750001",
+            zone: "EnvironmentalConservation",
+            owner_did: "did:qualia:agent:nsw-national-parks",
+            geometry_wkt: "POLYGON((612000.0 5963500.0, 615000.0 5963500.0, 615000.0 5965000.0, 612000.0 5965000.0, 612000.0 5963500.0))"
+        }
+    ];
+}
+
+// Pure stream centerline geometry for Perisher Creek riparian buffer analysis
+pure fn perisher_creek_centerline() -> Record {
+    return {
+        stream_name: "Perisher Creek",
+        order: 3,
+        geometry_wkt: "LINESTRING(612500.0 5961800.0, 613200.0 5962700.0, 613800.0 5963800.0, 614200.0 5964800.0)"
+    };
+}
+
+// Pure survey control benchmark points for Delaunay/Voronoi analysis and clustering
+pure fn survey_control_points() -> List {
+    return [
+        { id: "SSM101", easting: 612200.0, northing: 5962100.0, elevation: 1720.5 },
+        { id: "SSM102", easting: 613400.0, northing: 5962300.0, elevation: 1754.2 },
+        { id: "SSM103", easting: 614800.0, northing: 5962200.0, elevation: 1710.0 },
+        { id: "SSM104", easting: 612400.0, northing: 5963300.0, elevation: 1789.6 },
+        { id: "SSM105", easting: 613600.0, northing: 5963400.0, elevation: 1812.3 },
+        { id: "SSM106", easting: 614900.0, northing: 5963450.0, elevation: 1775.1 },
+        { id: "SSM107", easting: 612100.0, northing: 5964600.0, elevation: 1840.8 },
+        { id: "SSM108", easting: 613500.0, northing: 5964700.0, elevation: 1865.0 },
+        { id: "SSM109", easting: 614700.0, northing: 5964800.0, elevation: 1832.4 }
+    ];
+}
+
+// Pure Mountain Pygmy-possum (Burramys parvus) boulder field sighting event points
+pure fn pygmy_possum_sightings() -> List {
+    return [
+        { id: "BP01", easting: 612800.0, northing: 5962500.0, count: 3 },
+        { id: "BP02", easting: 612850.0, northing: 5962540.0, count: 2 },
+        { id: "BP03", easting: 612900.0, northing: 5962480.0, count: 5 },
+        { id: "BP04", easting: 613650.0, northing: 5963600.0, count: 4 },
+        { id: "BP05", easting: 613700.0, northing: 5963650.0, count: 6 },
+        { id: "BP06", easting: 613750.0, northing: 5963580.0, count: 1 },
+        { id: "BP07", easting: 614500.0, northing: 5964200.0, count: 2 },
+        { id: "BP08", easting: 614550.0, northing: 5964250.0, count: 3 }
+    ];
+}
+
+// Pure geoprocessing parameters for buffering, hexagonal tessellation, and clustering
+pure fn geoprocessing_parameters() -> Record {
+    return {
+        riparian_buffer_m: 50.0,
+        hazard_rings_m: [50.0, 150.0, 300.0],
+        tessellation_shape: "HexagonFlatTop",
+        hexagon_size_m: 400.0,
+        kde_bandwidth_m: 250.0,
+        kde_cell_size_m: 10.0,
+        dbscan_eps_m: 200.0,
+        dbscan_min_pts: 3
+    };
+}
+
+// Executes end-to-end vector geoprocessing and cadastral topology pipeline chaining 12 key operations
+effect fn run_snowy_vector_geoprocessing_pipeline() -> Record {
+    let bbox = snowy_cadastral_bbox();
+    let raw_parcels = raw_cadastral_parcels();
+    let creek = perisher_creek_centerline();
+    let survey_pts = survey_control_points();
+    let sightings = pygmy_possum_sightings();
+    let params = geoprocessing_parameters();
+
+    // 1. Cadastral planar topology sanitation: snap vertices (0.05m) and eliminate slivers (< 1.0 m^2)
+    let topology_result = GisGp.snap_eliminate_slivers(
+        raw_parcels,
+        0.05,
+        1.0
+    );
+
+    // 2. Proximity buffer: generate 50m riparian protection setback around Perisher Creek centerline
+    let riparian_buffer = GisGp.buffer(
+        creek.geometry_wkt,
+        params.riparian_buffer_m,
+        8
+    );
+
+    // 3. Multi-ring buffer: generate concentric hazard exposure rings (50m, 150m, 300m)
+    let hazard_rings = GisGp.multi_ring_buffer(
+        creek.geometry_wkt,
+        params.hazard_rings_m,
+        true
+    );
+
+    // 4. Overlay intersection: compute parcel areas encumbered by riparian protection zone
+    let encumbered_parcels = GisGp.intersection(
+        raw_parcels[0].geometry_wkt,
+        riparian_buffer
+    );
+
+    // 5. Overlay difference: compute unencumbered developable lease area outside riparian buffer
+    let unencumbered_parcels = GisGp.difference(
+        raw_parcels[0].geometry_wkt,
+        riparian_buffer
+    );
+
+    // 6. Dissolve: aggregate adjacent lease parcels into a unified alpine zone polygon
+    let dissolved_reserve = GisGp.dissolve(
+        [raw_parcels[0].geometry_wkt, raw_parcels[1].geometry_wkt],
+        "zone"
+    );
+
+    // 7. Visual pole of inaccessibility: compute polylabel visual centroid guaranteed inside parcel interior
+    let parcel_polylabel = GisGp.centroid_polylabel(
+        raw_parcels[0].geometry_wkt,
+        1.0
+    );
+
+    // 8. Delaunay triangulation & Voronoi Thiessen partition over survey control network
+    let survey_network = GisGp.delaunay_voronoi(
+        survey_pts,
+        bbox
+    );
+
+    // 9. Regular spatial tessellation: generate HexagonFlatTop continuous grid covering study area
+    let hex_tessellation = GisGp.tessellate_grid(
+        bbox,
+        "HexagonFlatTop",
+        params.hexagon_size_m
+    );
+
+    // 10. Spatial join: transfer cadastral zoning attributes from parcels into hexagonal analysis cells
+    let joined_cells = GisGp.spatial_join(
+        hex_tessellation.cells,
+        raw_parcels,
+        "Intersects",
+        "OneToOne"
+    );
+
+    // 11. Kernel density estimation: compute continuous habitat suitability KDE surface from sightings
+    let possum_kde_surface = GisGp.kernel_density(
+        sightings,
+        params.kde_bandwidth_m,
+        params.kde_cell_size_m
+    );
+
+    // 12. Spatial clustering: identify dense colonies and survey clusters via DBSCAN
+    let spatial_clusters = GisGp.cluster_dbscan_kmeans(
+        sightings,
+        "dbscan",
+        params.dbscan_eps_m,
+        params.dbscan_min_pts
+    );
+
+    return {
+        status: "complete",
+        pipeline: "GEO-S6 Vector Geoprocessing & Cadastral Fabric",
+        crs: bbox.crs,
+        sanitized_parcels: topology_result,
+        riparian_setback: riparian_buffer,
+        multi_ring_hazard: hazard_rings,
+        encumbered_overlay: encumbered_parcels,
+        unencumbered_overlay: unencumbered_parcels,
+        dissolved_cadastre: dissolved_reserve,
+        interior_label: parcel_polylabel,
+        voronoi_tessellation: survey_network,
+        hex_grid: hex_tessellation,
+        spatially_joined_hexagons: joined_cells,
+        density_field: possum_kde_surface,
+        clusters: spatial_clusters
+    };
+}

@@ -14,6 +14,26 @@
 
 use crate::value::Value;
 use std::collections::BTreeMap;
+#[path = "capability_schema/geo_geodesy_entries.rs"]
+pub mod geo_geodesy_entries;
+#[path = "capability_schema/geo_terrain_node_entries.rs"]
+pub mod geo_terrain_node_entries;
+#[path = "capability_schema/geo_geomorph_strata_entries.rs"]
+pub mod geo_geomorph_strata_entries;
+#[path = "capability_schema/geo_gis_io_entries.rs"]
+pub mod geo_gis_io_entries;
+#[path = "capability_schema/geo_sparql_deontic_entries.rs"]
+pub mod geo_sparql_deontic_entries;
+#[path = "capability_schema/geo_vector_gp_entries.rs"]
+pub mod geo_vector_gp_entries;
+#[path = "capability_schema/geo_spatial_stats_algebra_entries.rs"]
+pub mod geo_spatial_stats_algebra_entries;
+#[path = "capability_schema/geo_wgsl_forge_entries.rs"]
+pub mod geo_wgsl_forge_entries;
+#[path = "capability_schema/geo_cartography_poet_entries.rs"]
+pub mod geo_cartography_poet_entries;
+#[path = "capability_schema/geo_viewport_entries.rs"]
+pub mod geo_viewport_entries;
 #[path = "capability_schema/runtime_entries.rs"]
 mod runtime_entries;
 
@@ -613,6 +633,16 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
         .with_description("Restore a prior approved version"),
     ];
     schemas.extend(runtime_entries::entries());
+    schemas.extend(geo_geodesy_entries::entries());
+    schemas.extend(geo_terrain_node_entries::entries());
+    schemas.extend(geo_geomorph_strata_entries::entries());
+    schemas.extend(geo_gis_io_entries::entries());
+    schemas.extend(geo_sparql_deontic_entries::entries());
+    schemas.extend(geo_vector_gp_entries::entries());
+    schemas.extend(geo_spatial_stats_algebra_entries::entries());
+    schemas.extend(geo_wgsl_forge_entries::entries());
+    schemas.extend(geo_cartography_poet_entries::entries());
+    schemas.extend(geo_viewport_entries::entries());
     schemas
 }
 

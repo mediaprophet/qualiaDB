@@ -1,0 +1,268 @@
+// GeoSPARQL topological analysis, OGC STAC/COG ingest, 10D datacube compilation,
+// and defeasible deontic spatial covenant enforcement fixture (GEO-S5 / R5-V).
+// Demonstrates querying Sentinel-2 STAC assets and planning HTTP range-reads for COGs,
+// compiling an alpine microclimate 10D tensor datacube from Zarr/GRIB2,
+// minting a 48B NQuin Indigenous Cultural & Sphagnum Bog Protection Covenant (OP_FORBID ^>),
+// and evaluating a proposed ski-lift infrastructure corridor against covenant zones
+// via DE-9IM intersection matrices and defeasible rule resolution.
+module <https://qualiadb.org/modules/geography/geosparql_deontic_covenant>;
+using GeoSparql;
+using GisIo;
+using Topology;
+using Poet;
+
+// Declarative SpatialCovenantZone over Mount Kosciuszko / Perisher alpine peatland sanctuary
+topology alpine_sphagnum_covenant : SpatialCovenantZone {
+    role: "SpatialCovenantZone";
+    anchors: ["PerisherValley", "BettsCampPeatland", "CharlottePass"];
+    zone_id: "urn:qualia:zone:kosciuszko-sphagnum-covenant";
+    covenant_type: "IndigenousCulturalAndPeatlandSanctuary";
+    deontic_opcode: 0x12; // OP_FORBID
+    is_defeater: true;     // Defeater rule: OP_FORBID ^> defeats any OP_PERMIT ~>
+    buffer_distance_m: 150.0;
+    priority: 1;
+    invariants: ["ZeroDestruction", "RamsarWetlandProtection", "CulturalHeritageIntegrity"];
+    boundary {
+        min_easting: 612500.0;
+        min_northing: 5962000.0;
+        max_easting: 615500.0;
+        max_northing: 5965000.0;
+    }
+}
+
+// Pure bounding box specification for Perisher Valley & Kosciuszko Peatlands (EPSG:7855 / MGA Zone 55)
+pure fn perisher_alpine_bbox() -> Record {
+    return {
+        name: "Mount Kosciuszko & Perisher Alpine Peatlands",
+        crs: "EPSG:7855",
+        min_x: 612000.0,
+        min_y: 5961500.0,
+        max_x: 616000.0,
+        max_y: 5965500.0
+    };
+}
+
+// Pure proposed ski-lift infrastructure alignment crossing sensitive peatland
+pure fn proposed_skilift_corridor() -> Record {
+    return {
+        project_name: "Proposed Mount Piper Express 6-Seater Chairlift",
+        crs: "EPSG:7855",
+        corridor_width_m: 25.0,
+        geometry_wkt: "LINESTRING(612800.0 5962200.0, 613900.0 5963400.0, 614700.0 5964600.0)",
+        developer_did: "did:qualia:agent:resort-developer-consortium"
+    };
+}
+
+// Pure covenant protection zone specification for Ramsar Sphagnum bog complex
+pure fn sphagnum_sanctuary_covenant_record() -> Record {
+    return {
+        zone_id: "urn:qualia:zone:kosciuszko-sphagnum-covenant",
+        covenant_type: "IndigenousCulturalAndPeatlandSanctuary",
+        custodian_did: "did:qualia:entity:mount-kosciuszko-traditional-owners",
+        norm_predicate: "urn:qualia:norm:prohibit-habitat-encroachment",
+        deontic_opcode: 0x12, // OP_FORBID
+        is_defeater: true,
+        buffer_distance_m: 150.0,
+        priority: 1,
+        geometry_wkt: "POLYGON((613200.0 5962800.0, 614200.0 5962800.0, 614200.0 5963800.0, 613200.0 5963800.0, 613200.0 5962800.0))"
+    };
+}
+
+// Pure STAC 1.0 search query parameters for cloud-free Sentinel-2 L2A assets
+pure fn stac_query_parameters() -> Record {
+    let bbox = perisher_alpine_bbox();
+    return {
+        stac_url: "https://earth-search.aws.element84.com/v1",
+        collections: ["sentinel-2-l2a"],
+        bbox: bbox,
+        datetime: "2026-01-01T00:00:00Z/2026-03-31T23:59:59Z",
+        max_cloud_cover: 10.0
+    };
+}
+
+// Pure 10D Environmental Tensor Datacube compilation parameters
+pure fn datacube_compilation_parameters() -> Record {
+    let bbox = perisher_alpine_bbox();
+    return {
+        spatial_extent: bbox,
+        temporal_extent: {
+            start: "2026-01-01T00:00:00Z",
+            end: "2026-03-31T23:59:59Z",
+            step_hours: 1.0
+        },
+        qudt_units: [
+            "m3_m3",    // soil moisture volumetric fraction
+            "percent",  // peat water saturation
+            "K",        // 2m air temperature
+            "m_s",      // wind velocity magnitude
+            "W_m2"      // net topographic solar irradiance
+        ]
+    };
+}
+
+// Queries Sentinel-2 STAC catalog and plans HTTP range-read byte windows for COG IFD
+effect fn acquire_sentinel2_stac_and_plan_cog(stac_api_url: string) -> Record {
+    let bbox = perisher_alpine_bbox();
+    let query_params = stac_query_parameters();
+
+    // 1. Query STAC 1.0 catalog API search with datetime, bbox, and cloud filter
+    let stac_catalog_result = GisIo.query_stac_catalog(
+        stac_api_url,
+        query_params.collections,
+        bbox,
+        query_params.datetime,
+        query_params.max_cloud_cover
+    );
+
+    // 2. Parse COG IFD headers and plan HTTP byte-range GET requests for sub-window
+    let byte_range_plan = GisIo.plan_cog_range_read(
+        stac_catalog_result.best_asset,
+        bbox,
+        0
+    );
+
+    return {
+        status: "planned",
+        selected_asset: stac_catalog_result.best_asset.id,
+        cloud_cover_pct: stac_catalog_result.best_asset.cloud_cover,
+        byte_range_chunks: byte_range_plan.chunks,
+        total_fetch_bytes: byte_range_plan.total_bytes
+    };
+}
+
+// Compiles alpine microclimate 10D tensor datacube from Zarr hydrology and GRIB2 meteorology
+effect fn compile_alpine_microclimate_datacube(zarr_path: string, grib2_path: string) -> Record {
+    let params = datacube_compilation_parameters();
+
+    // 1. Unpack gridded hydrology from Zarr v3
+    let zarr_hydrology = GisIo.read_zarr_netcdf_grib(
+        zarr_path,
+        "zarr",
+        ["soil_moisture_m3_m3", "peat_saturation_fraction"],
+        "2026-01/2026-03",
+        33554432
+    );
+
+    // 2. Unpack gridded alpine atmospheric state from GRIB2
+    let grib_atmosphere = GisIo.read_zarr_netcdf_grib(
+        grib2_path,
+        "grib2",
+        ["temperature_2m_K", "wind_u_m_s", "wind_v_m_s"],
+        "2026-01-15T00:00:00Z",
+        16777216
+    );
+
+    // 3. Compile multi-variable slices into 10D Environmental Tensor Cube with QUDT units
+    let datacube_10d = GisIo.compile_datacube_10d(
+        {
+            hydrology_layer: zarr_hydrology,
+            atmosphere_layer: grib_atmosphere
+        },
+        params.spatial_extent,
+        params.temporal_extent,
+        params.qudt_units
+    );
+
+    return {
+        status: "compiled",
+        tensor_magic: "10D_TENSOR_CUBE",
+        dimensions: 10,
+        qudt_units: params.qudt_units,
+        datacube: datacube_10d
+    };
+}
+
+// Evaluates ski-lift infrastructure proposal against Indigenous Sphagnum bog covenant
+// via 48B NQuin minting, DE-9IM intersection matrices, and defeasible covenant resolution.
+effect fn evaluate_skilift_covenant_compliance(proposed_lift: Record) -> Record {
+    let covenant_spec = sphagnum_sanctuary_covenant_record();
+
+    // 1. Mint 48B NQuin spatial covenant (opcode: 0x12 OP_FORBID, is_defeater: true)
+    let covenant_quin = GeoSparql.mint_spatial_quin(
+        covenant_spec.custodian_did,
+        covenant_spec.norm_predicate,
+        {
+            zone_id: covenant_spec.zone_id,
+            geometry: covenant_spec.geometry_wkt,
+            buffer_m: covenant_spec.buffer_distance_m
+        },
+        covenant_spec.deontic_opcode,
+        covenant_spec.is_defeater,
+        covenant_spec.zone_id
+    );
+
+    // 2. Compute 9-character DE-9IM intersection matrix between proposed lift and sanctuary
+    let de9im_result = GeoSparql.de9im_matrix(
+        proposed_lift.geometry_wkt,
+        covenant_spec.geometry_wkt
+    );
+
+    // 3. Evaluate simple features topological predicates
+    let intersects = GeoSparql.sf_intersects(
+        proposed_lift.geometry_wkt,
+        covenant_spec.geometry_wkt
+    );
+    let disjoint = GeoSparql.sf_disjoint(
+        proposed_lift.geometry_wkt,
+        covenant_spec.geometry_wkt
+    );
+    let overlaps = GeoSparql.sf_overlaps(
+        proposed_lift.geometry_wkt,
+        covenant_spec.geometry_wkt
+    );
+    let min_dist_m = GeoSparql.distance(
+        proposed_lift.geometry_wkt,
+        covenant_spec.geometry_wkt,
+        proposed_lift.crs
+    );
+
+    // 4. Evaluate deontic covenant: defeasible OP_FORBID ^> strictly defeats any OP_PERMIT ~>
+    let covenant_verdict = GeoSparql.evaluate_deontic_covenant(
+        proposed_lift.geometry_wkt,
+        [covenant_quin],
+        {
+            requester_did: proposed_lift.developer_did,
+            request_type: "CommercialSkiLiftConstruction",
+            claimed_permit_exception: true
+        }
+    );
+
+    return {
+        project: proposed_lift.project_name,
+        covenant_zone: covenant_spec.zone_id,
+        de9im_matrix: de9im_result,
+        sf_intersects: intersects,
+        sf_disjoint: disjoint,
+        sf_overlaps: overlaps,
+        minimum_distance_m: min_dist_m,
+        covenant_quin_opcode: 0x12,
+        is_defeater: true,
+        compliance_status: covenant_verdict.decision, // "DENIED_BY_DEFEATER_SANCTUARY"
+        verdict: covenant_verdict
+    };
+}
+
+// Executes end-to-end GeoSPARQL & Deontic covenant enforcement pipeline
+effect fn run_alpine_geosparql_deontic_pipeline() -> Record {
+    let stac_url = "https://earth-search.aws.element84.com/v1";
+    let zarr_path = "data/snowy_mountains/peatland_hydrology.zarr";
+    let grib2_path = "data/snowy_mountains/kosciuszko_weather.grib2";
+    let lift_proposal = proposed_skilift_corridor();
+
+    // Step 1: STAC query and COG range planning
+    let cog_result = acquire_sentinel2_stac_and_plan_cog(stac_url);
+
+    // Step 2: 10D Environmental Datacube compilation
+    let datacube_result = compile_alpine_microclimate_datacube(zarr_path, grib2_path);
+
+    // Step 3: Deontic covenant evaluation and DE-9IM topological verification
+    let compliance_result = evaluate_skilift_covenant_compliance(lift_proposal);
+
+    return {
+        status: "verified",
+        pipeline: "GEO-S5 GeoSparql & Deontic Covenant Enforcement",
+        stac_cog: cog_result,
+        datacube: datacube_result,
+        compliance: compliance_result
+    };
+}

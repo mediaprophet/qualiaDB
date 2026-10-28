@@ -1,0 +1,138 @@
+// LiDAR point cloud ingest, CSF classification, DTM/DSM/CHM rasterization, and vector integration fixture (GEO-S4 / R4-V).
+// Declares a LiDAR point complex (m64 Mode 0x00) over the Snowy Mountains (EPSG:7855 / MGA Zone 55),
+// ingests a COPC LiDAR point cloud, classifies ground and Snow Gum subalpine canopy via Cloth Simulation Filter (CSF),
+// rasterizes bare-earth DTM, first-return DSM, and Canopy Height Model (CHM),
+// queries cadastral boundaries via zero-copy FlatGeobuf Hilbert R-tree spatial filter,
+// and encodes vector tile layers into Mapbox Vector Tile (MVT) protobuf format.
+module <https://qualiadb.org/modules/geography/lidar_vector_ingest>;
+using GisIo;
+using Topology;
+using Poet;
+
+// Declarative LidarPointComplex over the Snowy Mountains (EPSG:7855 / MGA Zone 55)
+topology snowy_lidar_cloud : LidarPointComplex {
+    role: "LidarPointComplex";
+    anchors: ["PerisherValley", "GuthegaRidge", "MountKosciuszkoSummit"];
+    m64_submagic: 0x00;
+    crs: "EPSG:7855";
+    byte_budget: 67108864;
+    classes: [2, 3, 4, 5];
+    invariants: ["SubmagicMode0x00", "BoundedPointDensity", "Crc32cAttestation"];
+    boundary {
+        min_easting: 611000.0;
+        min_northing: 5961000.0;
+        max_easting: 617000.0;
+        max_northing: 5967000.0;
+    }
+}
+
+// Pure bounding box specification for Mount Kosciuszko / Snowy Mountains (EPSG:7855 / MGA Zone 55)
+pure fn snowy_lidar_bbox() -> Record {
+    return {
+        name: "Snowy Mountains - Perisher & Kosciuszko Range",
+        crs: "EPSG:7855",
+        min_x: 611000.0,
+        min_y: 5961000.0,
+        max_x: 617000.0,
+        max_y: 5967000.0
+    };
+}
+
+// Pure Cloth Simulation Filter parameters for ground and Snow Gum canopy separation
+pure fn csf_filter_parameters() -> Record {
+    return {
+        cloth_resolution_m: 1.5,
+        rigidness: 2,
+        time_step: 0.65,
+        class_threshold_m: 0.5,
+        canopy_threshold_m: 2.0
+    };
+}
+
+// Pure rasterization parameters for DTM, DSM, and Canopy Height Model (CHM)
+pure fn rasterization_parameters() -> Record {
+    return {
+        resolution_m: 1.0,
+        interpolation: "idw",
+        dtm_max_hag_m: 0.2
+    };
+}
+
+// Ingests COPC LiDAR, classifies via CSF, packs m64, rasterizes DTM/DSM/CHM,
+// queries FlatGeobuf cadastral boundary, and encodes MVT vector tile.
+effect fn ingest_and_process_lidar(copc_path: string, cadastral_fgb_path: string) -> Record {
+    let bbox = snowy_lidar_bbox();
+    let csf = csf_filter_parameters();
+    let rast = rasterization_parameters();
+
+    // 1. Ingest COPC octree hierarchy and point cloud with spatial bounds filter
+    let raw_cloud = GisIo.read_lidar_copc(
+        copc_path,
+        bbox,
+        67108864,
+        [0, 1, 2, 3, 4, 5]
+    );
+
+    // 2. Classify ground and Snow Gum canopy via Cloth Simulation Filter (CSF)
+    let classified = GisIo.classify_lidar_csf(
+        raw_cloud,
+        csf.cloth_resolution_m,
+        csf.rigidness,
+        csf.time_step,
+        csf.class_threshold_m
+    );
+
+    // 3. Pack classified LiDAR points into 64B .m64 Mode 0x00 records with CRC-32C
+    let packed_m64 = GisIo.pack_lidar_m64(
+        classified,
+        bbox.crs,
+        0.001
+    );
+
+    // 4. Rasterize bare-earth DTM, first-return DSM, and Canopy Height Model CHM
+    let rasters = GisIo.rasterize_dtm_dsm_chm(
+        classified,
+        rast.resolution_m,
+        rast.interpolation
+    );
+
+    // 5. Query FlatGeobuf cadastral boundary via zero-copy Hilbert R-tree spatial filter
+    let cadastral = GisIo.read_flatgeobuf(
+        cadastral_fgb_path,
+        bbox,
+        16777216
+    );
+
+    // 6. Encode vector layers and contour geometry into Mapbox Vector Tile (MVT) protobuf
+    let mvt_tile = GisIo.encode_mvt_tile(
+        {
+            cadastral_parcels: cadastral,
+            dtm_raster: rasters.dtm,
+            chm_canopy: rasters.chm
+        },
+        4096,
+        2
+    );
+
+    return {
+        status: "verified",
+        region: bbox.name,
+        crs: bbox.crs,
+        m64_submagic: 0,
+        packed_lidar: packed_m64,
+        dtm: rasters.dtm,
+        dsm: rasters.dsm,
+        chm: rasters.chm,
+        cadastral_features: cadastral,
+        vector_tile: mvt_tile
+    };
+}
+
+// Executes end-to-end pipeline with standard Snowy Mountains dataset paths
+effect fn run_snowy_lidar_pipeline() -> Record {
+    let copc_path = "data/snowy_mountains/kosciuszko_lidar.copc.laz";
+    let cadastral_fgb_path = "data/snowy_mountains/nsw_cadastre_snowy.fgb";
+
+    let result = ingest_and_process_lidar(copc_path, cadastral_fgb_path);
+    return result;
+}

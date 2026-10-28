@@ -10,7 +10,10 @@ pub mod canvas_query;
 pub mod canvas_rights;
 pub mod dem;
 pub mod environmental_raster;
+pub mod geodesy;
 pub mod geodetic;
+pub mod gis_gp;
+pub mod gis_io;
 pub mod reference_frame;
 pub mod render_surface;
 pub mod scale_continuum;
@@ -18,9 +21,11 @@ pub mod spatial;
 pub mod spatial_sync;
 pub mod steward;
 pub mod streaming;
+pub mod terrain;
 pub mod terrain_pipeline;
 pub mod triggers;
 pub mod vector_scene;
+pub mod wgsl_kernels;
 
 pub use adapters::{AdapterRegistry, LayerFetchReport, LayerFetchStatus};
 pub use environmental_raster::{

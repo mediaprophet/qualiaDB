@@ -45,7 +45,54 @@ pub fn binding_effect(path: &str) -> Effect {
         | "crypto.verify_zk_predicate" => Effect::Cold,
         // Stateless deterministic binding integrity; no registry or attestation.
         "crypto.commit_predicate" | "crypto.verify_commitment" => Effect::Pure,
-        "task.status" => Effect::Hot,
+        "task.status" | "Geodesy.rtree_query_bbox" => Effect::Hot,
+        "Terrain.bake_dag"
+        | "Terrain.erode_fixed824"
+        | "Terrain.erode_coupled_6species"
+        | "Terrain.erode_droplet"
+        | "Terrain.carve_meander_channel"
+        | "Terrain.hydro_priority_flood"
+        | "Terrain.hydro_flow_dinf"
+        | "Terrain.hydro_fastscape_spl"
+        | "Terrain.coastal_wave_cliff"
+        | "Terrain.thermal_talus_creep"
+        | "Terrain.landslide_debris_runout"
+        | "Terrain.glacier_sia_carve"
+        | "Terrain.snow_wind_avalanche"
+        | "Terrain.aeolian_sand_saltation"
+        | "Terrain.strata_pack_m64"
+        | "Terrain.geomorph_qa_audit" => Effect::Cold,
+        "GisIo.read_geojson" | "GisIo.write_geojson" | "GisIo.plan_cog_range_read" => Effect::Pure,
+        "GisIo.write_geopackage"
+        | "GisIo.write_flatgeobuf"
+        | "GisIo.write_shapefile"
+        | "GisIo.write_geoparquet"
+        | "GisIo.query_ogc_features_cql2"
+        | "GisIo.query_wfs_arcgis_csw"
+        | "GisIo.query_stac_catalog"
+        | "GisIo.query_sensorthings_sos"
+        | "GisIo.query_wcs_wms_wmts" => Effect::External,
+        "GisGp.simplify_dp"
+        | "GisGp.centroid_polylabel"
+        | "GisGp.hausdorff_frechet"
+        | "GisGp.tpi_tri_vrm_geomorphons"
+        | "GisGp.map_algebra_cell_compile"
+        | "WgslForge.geo_compile_cell_map_algebra"
+        | "PoetGeo.geodesic_ruler_protractor"
+        | "PoetGeo.orbital_camera_flythrough"
+        | "Cartography.bivariate_choropleth_3x3"
+        | "Cartography.simulate_cvd_palette"
+        | "Cartography.audit_wcag_contrast"
+        | "WebizenGeo.eval_mvt_style_zoom"
+        | "WebizenGeo.eval_sky_atmosphere_limb"
+        | "WebizenGeo.eval_water_wave_foam" => Effect::Pure,
+        p if p.starts_with("GisIo.")
+            || p.starts_with("GisGp.")
+            || p.starts_with("WgslForge.geo_")
+            || p.starts_with("PoetGeo.")
+            || p.starts_with("Cartography.")
+            || p.starts_with("WebizenGeo.") => Effect::Cold,
+        p if p.starts_with("Geodesy.") || p.starts_with("Terrain.") || p.starts_with("GeoSparql.") => Effect::Pure,
         // Child effects are not yet represented in Task<T, effects>. Joining may
         // run an admitted effectful program, so dynamic joins are conservative.
         "task.await" | "task.nursery" => Effect::External,

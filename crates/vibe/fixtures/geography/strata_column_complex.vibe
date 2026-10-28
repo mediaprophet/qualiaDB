@@ -1,0 +1,192 @@
+// Stratigraphic column complex and geomorphological simulation pipeline fixture (GEO-S3 / R3-V).
+// Declares a 6-layer geological strata column (m64 Mode 0x02) over the Snowy Mountains,
+// and executes an alpine geomorphological simulation pipeline chaining priority-flood pit
+// breaching, FastScape stream power law incision, shallow-ice glacier carve, 6-species coupled
+// erosion, thermal talus creep, m64 strata packing, and Sentinel-2 biome albedo evaluation,
+// asserting that geomorphological QA audit passes the natural realism gate.
+module <https://qualiadb.org/modules/geography/strata_column_complex>;
+using Terrain;
+using Topology;
+using Poet;
+
+// Declarative StrataColumnComplex over the Snowy Mountains (EPSG:7855 / MGA Zone 55)
+topology kosciuszko_glacial_strata : StrataColumnComplex {
+    role: "GeomorphologicalStrata";
+    anchors: ["MountKosciuszkoSummit", "BlueLakeCirque"];
+    m64_submagic: 0x02;
+    sentinel2_province: 0;
+    layers: ["bedrock", "saprolite", "regolith", "sand", "silt", "snow_ice"];
+    invariants: ["MassConservation", "LayerMonotonicity"];
+    boundary {
+        sources: "PrecipitationSnow";
+        sinks: "SnowyCatchmentOutlet";
+    }
+}
+
+// Pure bounding box specification for Mount Kosciuszko / Snowy Mountains (EPSG:7855 / MGA Zone 55)
+pure fn kosciuszko_strata_bbox() -> Record {
+    return {
+        name: "Snowy Mountains - Mount Kosciuszko Strata Complex",
+        crs_epsg: 7855,
+        min_x: 611000.0,
+        min_y: 5961000.0,
+        max_x: 617000.0,
+        max_y: 5967000.0
+    };
+}
+
+// Pure 6-layer stratigraphic column thickness parameters (m64 Mode 0x02)
+pure fn strata_column_parameters() -> Record {
+    return {
+        m64_submagic: 2,
+        sentinel2_province: 0,
+        bedrock: 850.0,
+        saprolite: 18.0,
+        regolith: 6.0,
+        sand: 3.5,
+        silt: 1.5,
+        snow_ice: 2.0
+    };
+}
+
+// Pure alpine geomorphological simulation parameters
+pure fn geomorph_simulation_params() -> Record {
+    return {
+        flood_min_slope_deg: 0.05,
+        fastscape_k: 0.00002,
+        fastscape_m: 0.5,
+        fastscape_n: 1.0,
+        uplift_rate_m_yr: 0.0008,
+        tectonic_dt_years: 10000.0,
+        glacier_ela_alt_m: 1950.0,
+        glacier_sliding_coeff: 0.0012,
+        glacier_quarrying_rate: 0.0004,
+        glacier_dt_years: 5000.0,
+        coupled_dt_years: 2500.0,
+        shear_stress_threshold: 1.8,
+        carrying_capacity: 0.45,
+        talus_repose_deg: 33.5,
+        talus_creep_rate: 0.02,
+        freeze_thaw_cycles: 500,
+        cell_resolution_m: 5.0,
+        mass_tolerance_kg: 0.001
+    };
+}
+
+// Chains geomorphological erosion and hydrology simulation passes over the initial DEM:
+// initial_dem
+// |> hydro_priority_flood (Barnes 2014 pit filling & breach carving)
+// |> hydro_fastscape_spl (Implicit Stream Power Law bedrock incision)
+// |> glacier_sia_carve (Shallow Ice Approximation alpine glacier flow & cirque quarrying)
+// |> erode_coupled_6species (Coupled 6-species bedrock/saprolite/regolith/sand/silt/snow)
+// |> thermal_talus_creep (8-neighbor anisotropic talus creep & freeze-thaw weathering)
+// |> strata_pack_m64 (Pack 6-layer column into 64B .m64 0x02 cells with CRC-32C)
+// |> sentinel2_biome_albedo (Evaluate 323-province ESA Sentinel-2 L2A biome spectral LUT)
+effect fn simulate_and_pack_strata(initial_dem: FieldRef) -> Record {
+    let strata = strata_column_parameters();
+    let sim = geomorph_simulation_params();
+
+    // Declarative |> pipeline chaining all geomorphology and strata passes
+    let packed_with_albedo = initial_dem
+        |> Terrain.hydro_priority_flood(sim.flood_min_slope_deg, true)
+        |> Terrain.hydro_fastscape_spl(
+            sim.fastscape_k,
+            sim.fastscape_m,
+            sim.fastscape_n,
+            sim.uplift_rate_m_yr,
+            sim.tectonic_dt_years
+        )
+        |> Terrain.glacier_sia_carve(
+            sim.glacier_ela_alt_m,
+            sim.glacier_sliding_coeff,
+            sim.glacier_quarrying_rate,
+            sim.glacier_dt_years
+        )
+        |> Terrain.erode_coupled_6species(
+            strata,
+            sim.coupled_dt_years,
+            sim.shear_stress_threshold,
+            sim.carrying_capacity
+        )
+        |> Terrain.thermal_talus_creep(
+            sim.talus_repose_deg,
+            sim.talus_creep_rate,
+            sim.freeze_thaw_cycles
+        )
+        |> Terrain.strata_pack_m64(
+            strata,
+            sim.cell_resolution_m,
+            strata.sentinel2_province
+        )
+        |> Terrain.sentinel2_biome_albedo(strata.sentinel2_province);
+
+    return packed_with_albedo;
+}
+
+// Executes complete pipeline and asserts that geomorph_qa_audit passes the natural realism gate
+effect fn run_strata_column_pipeline(initial_dem: FieldRef) -> Record {
+    let sim = geomorph_simulation_params();
+    let bbox = kosciuszko_strata_bbox();
+    let strata = strata_column_parameters();
+
+    // Intermediate eroded terrain before packing for QA auditing
+    let eroded_dem = initial_dem
+        |> Terrain.hydro_priority_flood(sim.flood_min_slope_deg, true)
+        |> Terrain.hydro_fastscape_spl(
+            sim.fastscape_k,
+            sim.fastscape_m,
+            sim.fastscape_n,
+            sim.uplift_rate_m_yr,
+            sim.tectonic_dt_years
+        )
+        |> Terrain.glacier_sia_carve(
+            sim.glacier_ela_alt_m,
+            sim.glacier_sliding_coeff,
+            sim.glacier_quarrying_rate,
+            sim.glacier_dt_years
+        )
+        |> Terrain.erode_coupled_6species(
+            strata,
+            sim.coupled_dt_years,
+            sim.shear_stress_threshold,
+            sim.carrying_capacity
+        )
+        |> Terrain.thermal_talus_creep(
+            sim.talus_repose_deg,
+            sim.talus_creep_rate,
+            sim.freeze_thaw_cycles
+        );
+
+    // Compute geomorphological QA audit
+    let audit = Terrain.geomorph_qa_audit(initial_dem, eroded_dem, sim.mass_tolerance_kg);
+
+    // Assert that geomorph_qa_audit passes the natural realism gate
+    let realism_gate_passed = audit.natural_realism_passed;
+    if !realism_gate_passed {
+        return {
+            status: "failed",
+            reason: "geomorph_qa_audit failed natural realism gate",
+            audit_report: audit
+        };
+    }
+
+    // Evaluate packed strata container with Sentinel-2 albedo
+    let packed_m64 = eroded_dem
+        |> Terrain.strata_pack_m64(
+            strata,
+            sim.cell_resolution_m,
+            strata.sentinel2_province
+        )
+        |> Terrain.sentinel2_biome_albedo(strata.sentinel2_province);
+
+    return {
+        status: "verified",
+        region: bbox.name,
+        target_crs: bbox.crs_epsg,
+        m64_submagic: strata.m64_submagic,
+        sentinel2_province: strata.sentinel2_province,
+        audit: audit,
+        packed_strata: packed_m64,
+        realism_gate_passed: true
+    };
+}

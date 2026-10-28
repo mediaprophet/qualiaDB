@@ -11,6 +11,7 @@
 //! - Epistemic Level of Detail (DoXastic LoD)
 
 pub mod audio_contract;
+pub mod geo_viewport;
 pub mod math;
 pub mod pipeline;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
