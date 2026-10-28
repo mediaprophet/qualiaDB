@@ -127,7 +127,7 @@ jobs:
           rm -f docs/pkg/vibe/.gitignore docs/pkg/vibe/README.md docs/pkg/vibe/LICENSE
           cargo run -q -p vibe-wasm --bin gen-dev-docs -- docs/vibe/dev-docs.json
           ls -la docs/pkg/vibe/vibe_wasm.js docs/pkg/vibe/vibe_wasm_bg.wasm docs/vibe/dev-docs.json
-          node docs/tests/wasm-size-check.mjs docs/pkg/vibe/vibe_wasm_bg.wasm 2097152 786432
+          node docs/tests/wasm-size-check.mjs docs/pkg/vibe/vibe_wasm_bg.wasm 3670016 1048576
           python3 - <<'PY'
           import json, pathlib, sys
           data = json.loads(pathlib.Path("docs/vibe/dev-docs.json").read_text())

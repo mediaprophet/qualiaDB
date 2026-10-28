@@ -209,7 +209,7 @@ cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
 
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22.4"

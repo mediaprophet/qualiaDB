@@ -104,7 +104,7 @@ pub fn import_into(
                 match end.name().as_ref() { b"q-node" => current_node = None, b"q-artifact" => root_closed = true, _ => {} }
                 depth -= 1;
             }
-            Event::Text(text) if text.as_ref().iter().all(u8::is_ascii_whitespace) => {}
+            Event::Text(text) if (&*text).iter().all(u8::is_ascii_whitespace) => {}
             Event::Comment(_) => {}
             Event::Decl(_) if !root_seen => {}
             Event::Eof => break,
