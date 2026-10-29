@@ -155,7 +155,7 @@ void main() {
         float distance_to_eye = length(v_world - u_eye);
         float effective_dist = max(0.0, distance_to_eye - 35.0);
         if (effective_dist > 0.0) {
-            float valley_factor = exp(-max(0.0, v_world.y) * 0.35);
+            float valley_factor = exp(-max(0.0, v_world.y) * u_fog_falloff);
             float extinction = u_fog_density * 0.4 * valley_factor;
             float fog = clamp(1.0 - exp(-extinction * effective_dist), 0.0, u_fog_max_opacity);
             col = mix(col, u_fog_rgb, fog);
@@ -193,6 +193,7 @@ pub struct AnatomyWebGl2 {
     sky_enabled: bool,
     atmosphere: AtmospherePreset,
     index_count: i32,
+    vertex_count: usize,
     mesh_reservation: Option<VramReservation<'static>>,
     frame_count: u32,
     near_plane: f32,
@@ -299,6 +300,7 @@ impl AnatomyWebGl2 {
             sky_enabled: false,
             atmosphere: AtmospherePreset::from_id(0),
             index_count: 0,
+            vertex_count: 0,
             mesh_reservation: None,
             frame_count: 0,
             near_plane: crate::render::camera::CAMERA_NEAR_PLANE,
@@ -440,6 +442,7 @@ impl AnatomyWebGl2 {
         self.color_buffer = color_buffer;
         self.index_buffer = index_buffer;
         self.index_count = index_count;
+        self.vertex_count = positions.len();
         self.mesh_reservation = Some(reservation);
         self.frame_count = 0;
         Ok(())
@@ -530,7 +533,7 @@ impl AnatomyWebGl2 {
             Some(&self.fog_density),
             self.atmosphere.fog_density.clamp(0.0, 0.05),
         );
-        self.gl.uniform1f(Some(&self.fog_falloff), 0.012);
+        self.gl.uniform1f(Some(&self.fog_falloff), 0.35);
         self.gl.uniform1f(Some(&self.fog_max_opacity), 0.92);
         self.gl.uniform1f(
             Some(&self.fog_enabled),
@@ -608,9 +611,12 @@ impl AnatomyWebGl2 {
     /// Same span write the WebGPU mesh uses, so a walk on this path moves
     /// the person instead of leaving a frozen upload.
     pub fn write_vertices(&mut self, start: u32, positions: &[[f32; 3]]) {
-        if positions.is_empty() {
+        if positions.is_empty() || positions.iter().flatten().any(|v| !v.is_finite()) {
             return;
         }
+        let Some(end) = (start as usize).checked_add(positions.len()) else { return; };
+        if end > self.vertex_count { return; }
+        let Some(offset) = (start as usize).checked_mul(12).and_then(|n| i32::try_from(n).ok()) else { return; };
         self.gl.bind_buffer(
             WebGl2RenderingContext::ARRAY_BUFFER,
             Some(&self.position_buffer),
@@ -619,7 +625,7 @@ impl AnatomyWebGl2 {
             let values = Float32Array::view(bytemuck::cast_slice(positions));
             self.gl.buffer_sub_data_with_i32_and_array_buffer_view(
                 WebGl2RenderingContext::ARRAY_BUFFER,
-                (start as i32).saturating_mul(12),
+                offset,
                 &values,
             );
         }

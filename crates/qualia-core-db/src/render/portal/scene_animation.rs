@@ -154,6 +154,11 @@ impl QualiaPortal {
                         self.scene_animation.failed_uploads += 1;
                     }
                 }
+            } else if self.body_renderer == BodyRendererBackend::WebGl2 && !compact {
+                if let Some(gl) = self.anatomy_webgl2.as_mut() {
+                    gl.write_vertices(actor.start, actor.player.positions());
+                    self.scene_animation.uploaded_vertices += actor.player.positions().len() as u64;
+                }
             }
         }
         // Compact backends use the replay mesh's lineage, never full-scene offsets.
@@ -162,7 +167,7 @@ impl QualiaPortal {
                 if let Some(gpu) = self.gpu.as_mut() {
                     gpu.write_mesh_vertices(0, &body.positions);
                 }
-            } else if self.body_renderer == BodyRendererBackend::WebGl2 {
+            } else if self.body_renderer == BodyRendererBackend::WebGl2 && compact {
                 if let Some(gl) = self.anatomy_webgl2.as_mut() {
                     gl.write_vertices(0, &body.positions);
                 }

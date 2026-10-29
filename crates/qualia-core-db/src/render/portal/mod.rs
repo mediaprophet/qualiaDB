@@ -143,6 +143,7 @@ pub(crate) use scene_mesh::SceneMeshAccum;
 mod capabilities;
 pub use capabilities::probe_portal_graphics;
 mod exposure;
+mod part_vertices;
 mod graphics;
 use graphics::PortalGraphicsState;
 mod recovery;
@@ -1930,6 +1931,14 @@ impl QualiaPortal {
             if let Some(ref mut webgl2) = self.anatomy_webgl2 {
                 webgl2.set_near_plane(self.camera.near_plane);
                 if webgl2
+                    .upload_mesh(&accum.positions, &accum.colors, &accum.indices)
+                    .is_ok()
+                {
+                    compact_gpu = false;
+                    renderer = BodyRendererBackend::WebGl2;
+                    admitted_vertex_count = accum.positions.len();
+                    admitted_index_count = accum.indices.len();
+                } else if webgl2
                     .upload_mesh(&reduced.positions, &reduced.colors, &reduced.indices)
                     .is_ok()
                 {
@@ -2459,43 +2468,6 @@ impl QualiaPortal {
             if let Ok(t) = read_tensor_at(tensor, node as usize) {
                 sonify_tensor_node(node, &t, false);
             }
-        }
-    }
-
-    /// Write posed positions into one vertex span of the resident body mesh.
-    /// Generic: any app can move a part over time without a full re-upload.
-    pub fn write_part_vertices(&mut self, start: u32, xyz: &[f32]) {
-        let n = xyz.len() / 3;
-        if n == 0 {
-            return;
-        }
-        if let Some(body) = self.cpu_body.as_mut() {
-            for i in 0..n {
-                let vi = start as usize + i;
-                if vi >= body.positions.len() {
-                    break;
-                }
-                let o = i * 3;
-                body.positions[vi] = [xyz[o], xyz[o + 1], xyz[o + 2]];
-            }
-        }
-        #[cfg(target_arch = "wasm32")]
-        if let Some(gpu) = self.gpu.as_mut() {
-            let mut pos = Vec::with_capacity(n);
-            for i in 0..n {
-                let o = i * 3;
-                pos.push([xyz[o], xyz[o + 1], xyz[o + 2]]);
-            }
-            gpu.write_mesh_vertices(start, &pos);
-        }
-        #[cfg(target_arch = "wasm32")]
-        if let Some(gl) = self.anatomy_webgl2.as_mut() {
-            let mut pos = Vec::with_capacity(n);
-            for i in 0..n {
-                let o = i * 3;
-                pos.push([xyz[o], xyz[o + 1], xyz[o + 2]]);
-            }
-            gl.write_vertices(start, &pos);
         }
     }
 
