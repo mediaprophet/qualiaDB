@@ -1,6 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
-import { createReadStream, readFileSync, realpathSync, statSync } from 'node:fs';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { open, realpath } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
@@ -129,7 +129,7 @@ export function createDocsServer({ root = docsRoot, cert, key, allowPaths, maxFi
       response.setHeader('Content-Type', MIME.get(extname(candidate).toLowerCase()) || 'application/octet-stream');
       response.setHeader('Content-Length', metadata.size);
       if (request.method === 'HEAD') response.end();
-      else await pipeline(createReadStream(candidate, { fd: file.fd, autoClose: false }), response);
+      else await pipeline(file.createReadStream({ autoClose: false }), response);
     } catch (error) {
       if (!response.headersSent) {
         const status = error instanceof URIError ? 400 : ['ENOENT', 'ENOTDIR'].includes(error.code) ? 404 : 403;

@@ -72,6 +72,12 @@ jobs:
         shell: pwsh
         run: rustup toolchain install 1.96.1 --profile minimal
 
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24.22.0
+          package-manager-cache: false
+
       - name: Test browser report and local hosting
         working-directory: qualia
         run: node --test docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs
