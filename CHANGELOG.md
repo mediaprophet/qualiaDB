@@ -6,8 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Forge manifests no longer label absent, native-only or mismatched evidence as Naga validation; numerical certification rejects invalid tolerances and nonfinite values.
+- Made resident tensor loads and reads synchronize through safe shared state; malformed loads preserve the previous publication and poisoned state fails closed.
+- Isolated browser device diagnostics from the portal build, restored explicit unsupported diagnostics for excluded scientific functions, and made CPU harness selection exclude GPU tests exactly.
+
 ### Added
 
+- Added `generate_with_validation_via_etalon` to retain shader validation reports while preserving the existing shader-only compatibility API.
 - Added fresh Windows/Linux NPU discovery with independent runtime/workload/execution states, and an optional OpenVINO plugin harness that selects an actual runtime NPU, disables CPU fallback and checks output plus provider execution evidence. Missing hardware is recorded as unverified execution.
 - Made CUDA opt-in in the portable default profile, upgraded optional vision adapters to ORT rc.15 with a shared environment owner and caller-owned environment loaders, and corrected NPU routing and iGPU zero-copy claims.
 - Added a local Etalon/VibeScript integration harness covering checked scripts through the canonical Qualia host, graph transactions, real GPU readback against CPU references, resource initialization and request rejection. Integrated GPUs are supported; CPU-only coverage is explicit. See `docs/testing-etalon-vibe.md`.

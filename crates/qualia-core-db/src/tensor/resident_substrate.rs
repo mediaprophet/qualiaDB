@@ -2,9 +2,7 @@
 //!
 //! Cold path may parse heap buffers; hot path (`tensor_search_into`) uses caller stack only.
 
-use core::cell::UnsafeCell;
-use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 
 use super::buffer_export::{parse_header, read_tensor_at};
 use super::q42_integration::{
@@ -18,18 +16,20 @@ pub const MAX_RESIDENT_NODES: usize = 4096;
 pub const MAX_KNN_HITS: usize = 32;
 
 /// Process-wide resident substrate (U1 pin). Writer: cold load; reader: U1 producer.
+/// Each call observes one complete load; separate calls may observe different generations.
 pub struct ResidentTensorSubstrate {
-    nquins: UnsafeCell<[NQuin; MAX_RESIDENT_NODES]>,
-    metadata: UnsafeCell<[TensorMetadata; MAX_RESIDENT_NODES]>,
-    subject_hashes: UnsafeCell<[u64; MAX_RESIDENT_NODES]>,
-    node_count: AtomicU32,
-    load_generation: AtomicU32,
+    state: RwLock<ResidentState>,
 }
 
-// SAFETY: Writers synchronize via `load_generation` bump + Release; readers snapshot count.
-unsafe impl Sync for ResidentTensorSubstrate {}
+struct ResidentState {
+    nquins: [NQuin; MAX_RESIDENT_NODES],
+    metadata: [TensorMetadata; MAX_RESIDENT_NODES],
+    subject_hashes: [u64; MAX_RESIDENT_NODES],
+    node_count: u32,
+    load_generation: u32,
+}
 
-fn empty_nquin() -> NQuin {
+const fn empty_nquin() -> NQuin {
     NQuin {
         subject: 0,
         predicate: 0,
@@ -43,45 +43,67 @@ fn empty_nquin() -> NQuin {
 impl ResidentTensorSubstrate {
     /// Creates a default `ResidentTensorSubstrate`.
     pub fn new() -> Self {
-        Self {
-            nquins: UnsafeCell::new([empty_nquin(); MAX_RESIDENT_NODES]),
-            metadata: UnsafeCell::new([TensorMetadata::default(); MAX_RESIDENT_NODES]),
-            subject_hashes: UnsafeCell::new([0u64; MAX_RESIDENT_NODES]),
-            node_count: AtomicU32::new(0),
-            load_generation: AtomicU32::new(0),
+        // Constant initialization avoids large intermediate arrays on debug-build stacks.
+        const {
+            Self {
+                state: RwLock::new(ResidentState {
+                    nquins: [empty_nquin(); MAX_RESIDENT_NODES],
+                    metadata: [TensorMetadata {
+                        tensor: Tensor10D {
+                            q: 0.0,
+                            v: 0.0,
+                            w: 0.0,
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                            t: 0.0,
+                            alpha: 1.0,
+                            mu: 0.0,
+                            sigma: 0.0,
+                        },
+                        has_tensor: false,
+                        tensor_version: 1,
+                    }; MAX_RESIDENT_NODES],
+                    subject_hashes: [0u64; MAX_RESIDENT_NODES],
+                    node_count: 0,
+                    load_generation: 0,
+                }),
+            }
         }
     }
 
     #[inline]
-    /// `ResidentTensorSubstrate::node_count`.
+    /// Published node count, or zero after a writer panic poisons the substrate.
     pub fn node_count(&self) -> u32 {
-        self.node_count.load(Ordering::Acquire)
+        self.state.read().map_or(0, |state| state.node_count)
     }
 
     #[inline]
-    /// Loads `generation`.
+    /// Wrapping load generation, or zero if the substrate is poisoned.
     pub fn load_generation(&self) -> u32 {
-        self.load_generation.load(Ordering::Acquire)
+        self.state.read().map_or(0, |state| state.load_generation)
     }
 
     #[inline]
-    /// `ResidentTensorSubstrate::subject_hash_at`.
+    /// Published subject hash, or zero for a missing index or poisoned substrate.
     pub fn subject_hash_at(&self, index: u32) -> u64 {
-        let count = self.node_count();
-        if index >= count {
+        let Ok(state) = self.state.read() else {
+            return 0;
+        };
+        if index >= state.node_count {
             return 0;
         }
-        unsafe { (*self.subject_hashes.get())[index as usize] }
+        state.subject_hashes[index as usize]
     }
 
     #[inline]
-    /// `ResidentTensorSubstrate::tensor_at`.
+    /// Copies a published tensor, or returns `None` if missing or poisoned.
     pub fn tensor_at(&self, index: u32) -> Option<Tensor10D> {
-        let count = self.node_count();
-        if index >= count {
+        let state = self.state.read().ok()?;
+        if index >= state.node_count {
             return None;
         }
-        let meta = unsafe { (*self.metadata.get())[index as usize] };
+        let meta = state.metadata[index as usize];
         if meta.has_tensor {
             Some(meta.tensor)
         } else {
@@ -90,6 +112,7 @@ impl ResidentTensorSubstrate {
     }
 
     /// Cold-path load from exported tensor buffer (spatial encode, daemon slice).
+    /// Invalid buffers leave the published generation unchanged.
     pub fn load_from_tensor_buffer(
         &self,
         bytes: &[u8],
@@ -101,9 +124,14 @@ impl ResidentTensorSubstrate {
             return Err("resident substrate capacity exceeded");
         }
 
-        let nquins = unsafe { &mut *self.nquins.get() };
-        let metadata = unsafe { &mut *self.metadata.get() };
-        let subject_hashes = unsafe { &mut *self.subject_hashes.get() };
+        // Validate every record before replacing any published data.
+        for i in 0..count {
+            read_tensor_at(bytes, i)?;
+        }
+        let mut state = self
+            .state
+            .write()
+            .map_err(|_| "resident substrate poisoned")?;
 
         for i in 0..count {
             let tensor = read_tensor_at(bytes, i)?;
@@ -112,34 +140,34 @@ impl ResidentTensorSubstrate {
             } else {
                 crate::q_hash(&format!("tensor:node:{i}"))
             };
-            nquins[i] = synthesize_nquin_for_tensor(i, subject, &tensor);
-            metadata[i] = TensorMetadata::from_nquin_and_tensor(&nquins[i], tensor);
-            subject_hashes[i] = subject;
+            state.nquins[i] = synthesize_nquin_for_tensor(i, subject, &tensor);
+            state.metadata[i] = TensorMetadata::from_nquin_and_tensor(&state.nquins[i], tensor);
+            state.subject_hashes[i] = subject;
         }
 
-        self.node_count.store(count as u32, Ordering::Release);
-        self.load_generation.fetch_add(1, Ordering::AcqRel);
+        state.node_count = count as u32;
+        state.load_generation = state.load_generation.wrapping_add(1);
         Ok(count as u32)
     }
 
     /// Zero-heap kNN into caller buffer (U1 producer / SIMD path).
+    /// A poisoned substrate reports `TensorVolumeError::MismatchedStorage`.
     pub fn tensor_search_into(
         &self,
         query: &Tensor10D,
         max_distance: f32,
         out: &mut [usize],
     ) -> Result<usize, TensorVolumeError> {
-        let count = self.node_count() as usize;
+        let state = self
+            .state
+            .read()
+            .map_err(|_| TensorVolumeError::MismatchedStorage)?;
+        let count = state.node_count as usize;
         if count == 0 {
             return Ok(0);
         }
-        let nquins =
-            unsafe { std::slice::from_raw_parts(self.nquins.get() as *const NQuin, count) };
-        let meta = unsafe {
-            std::slice::from_raw_parts(self.metadata.get() as *const TensorMetadata, count)
-        };
         let config = TensorVolumeConfig::default();
-        let view = Q42TensorView::new(nquins, meta, &config)?;
+        let view = Q42TensorView::new(&state.nquins[..count], &state.metadata[..count], &config)?;
         view.tensor_search_into(query, max_distance, out)
     }
 
@@ -152,9 +180,10 @@ impl ResidentTensorSubstrate {
         if tensors.len() > MAX_RESIDENT_NODES {
             return Err("resident substrate capacity exceeded");
         }
-        let nquins = unsafe { &mut *self.nquins.get() };
-        let metadata = unsafe { &mut *self.metadata.get() };
-        let subject_hashes = unsafe { &mut *self.subject_hashes.get() };
+        let mut state = self
+            .state
+            .write()
+            .map_err(|_| "resident substrate poisoned")?;
 
         for (i, tensor) in tensors.iter().enumerate() {
             let subject = if subject_hash != 0 {
@@ -162,14 +191,13 @@ impl ResidentTensorSubstrate {
             } else {
                 crate::q_hash(&format!("tensor:node:{i}"))
             };
-            nquins[i] = synthesize_nquin_for_tensor(i, subject, tensor);
-            metadata[i] = TensorMetadata::from_nquin_and_tensor(&nquins[i], *tensor);
-            subject_hashes[i] = subject;
+            state.nquins[i] = synthesize_nquin_for_tensor(i, subject, tensor);
+            state.metadata[i] = TensorMetadata::from_nquin_and_tensor(&state.nquins[i], *tensor);
+            state.subject_hashes[i] = subject;
         }
 
-        self.node_count
-            .store(tensors.len() as u32, Ordering::Release);
-        self.load_generation.fetch_add(1, Ordering::AcqRel);
+        state.node_count = tensors.len() as u32;
+        state.load_generation = state.load_generation.wrapping_add(1);
         Ok(tensors.len() as u32)
     }
 }
@@ -204,7 +232,165 @@ pub fn global_resident_substrate() -> &'static ResidentTensorSubstrate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
     use crate::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
+
+    #[test]
+    fn initial_state_matches_metadata_default() {
+        let sub = ResidentTensorSubstrate::new();
+        let state = sub.state.read().unwrap();
+        assert_eq!(state.node_count, 0);
+        assert_eq!(state.load_generation, 0);
+        for i in 0..MAX_RESIDENT_NODES {
+            assert_eq!(state.nquins[i], NQuin::default());
+            assert_eq!(state.metadata[i], TensorMetadata::default());
+            assert_eq!(state.subject_hashes[i], 0);
+        }
+    }
+
+    #[test]
+    fn malformed_reload_preserves_published_generation() {
+        let sub = ResidentTensorSubstrate::new();
+        let original = Tensor10D::default();
+        sub.load_from_tensors(&[original; 2], 42).unwrap();
+        let changed = Tensor10D {
+            x: 10.0,
+            ..original
+        };
+        let mut bytes = vec![0; TensorBufferHeader::total_bytes(2)];
+        write_tensor_buffer(&[changed; 2], &mut bytes).unwrap();
+        bytes.pop();
+
+        assert_eq!(
+            sub.load_from_tensor_buffer(&bytes, 99),
+            Err("buffer truncated")
+        );
+        assert_eq!(sub.node_count(), 2);
+        assert_eq!(sub.load_generation(), 1);
+        for i in 0..2 {
+            assert_eq!(sub.tensor_at(i), Some(original));
+            assert_eq!(sub.subject_hash_at(i), 42 ^ u64::from(i));
+        }
+        assert_eq!(sub.tensor_at(2), None);
+        assert_eq!(sub.subject_hash_at(2), 0);
+        let mut hits = [usize::MAX; 2];
+        assert_eq!(sub.tensor_search_into(&original, 0.5, &mut hits), Ok(2));
+        assert_eq!(hits, [0, 1]);
+    }
+
+    #[test]
+    fn concurrent_reloads_publish_complete_generations() {
+        const RELOADS: usize = 500;
+        let sub = ResidentTensorSubstrate::new();
+        let near = [Tensor10D::default(); 32];
+        let far = [Tensor10D {
+            x: 10.0,
+            ..Tensor10D::default()
+        }; 16];
+        let mut bytes = vec![0; TensorBufferHeader::total_bytes(far.len())];
+        write_tensor_buffer(&far, &mut bytes).unwrap();
+        sub.load_from_tensors(&near, 32).unwrap();
+        let start = std::sync::Barrier::new(5);
+
+        std::thread::scope(|scope| {
+            for _ in 0..2 {
+                scope.spawn(|| {
+                    start.wait();
+                    for _ in 0..RELOADS {
+                        sub.load_from_tensor_buffer(&bytes, 16).unwrap();
+                        sub.load_from_tensors(&near, 32).unwrap();
+                        std::thread::yield_now();
+                    }
+                });
+            }
+            for _ in 0..2 {
+                scope.spawn(|| {
+                    start.wait();
+                    let mut generation = 0;
+                    let mut hits = [usize::MAX; 32];
+                    for _ in 0..RELOADS {
+                        let n = sub.tensor_search_into(&near[0], 0.5, &mut hits).unwrap();
+                        assert!(n == 0 || n == near.len());
+                        for (index, hit) in hits[..n].iter().enumerate() {
+                            assert_eq!(*hit, index);
+                        }
+                        assert!(matches!(sub.node_count(), 16 | 32));
+                        assert!(matches!(sub.subject_hash_at(0), 16 | 32));
+                        let tensor = sub.tensor_at(0).unwrap();
+                        assert!(tensor == near[0] || tensor == far[0]);
+
+                        let state = sub.state.read().unwrap();
+                        assert!(state.load_generation >= generation);
+                        generation = state.load_generation;
+                        let expected = if state.node_count == 32 {
+                            near[0]
+                        } else {
+                            far[0]
+                        };
+                        for i in 0..state.node_count as usize {
+                            assert_eq!(state.metadata[i].tensor, expected);
+                            assert_eq!(
+                                state.subject_hashes[i],
+                                u64::from(state.node_count) ^ i as u64
+                            );
+                            assert_eq!(state.nquins[i].subject, state.subject_hashes[i]);
+                        }
+                    }
+                });
+            }
+            start.wait();
+        });
+        assert_eq!(sub.load_generation(), 1 + 4 * RELOADS as u32);
+    }
+
+    #[test]
+    fn poisoned_substrate_fails_closed() {
+        let sub = ResidentTensorSubstrate::new();
+        let tensor = Tensor10D::default();
+        let mut bytes = vec![0; TensorBufferHeader::total_bytes(1)];
+        write_tensor_buffer(&[tensor], &mut bytes).unwrap();
+        sub.load_from_tensors(&[tensor], 42).unwrap();
+        assert!(std::panic::catch_unwind(|| {
+            let _guard = sub.state.write().unwrap();
+            panic!("interrupt resident reload");
+        })
+        .is_err());
+
+        assert_eq!(sub.node_count(), 0);
+        assert_eq!(sub.load_generation(), 0);
+        assert_eq!(sub.tensor_at(0), None);
+        assert_eq!(sub.subject_hash_at(0), 0);
+        assert_eq!(
+            sub.load_from_tensors(&[tensor], 42),
+            Err("resident substrate poisoned")
+        );
+        assert_eq!(
+            sub.load_from_tensor_buffer(&bytes, 42),
+            Err("resident substrate poisoned")
+        );
+        assert_eq!(
+            sub.tensor_search_into(&tensor, 1.0, &mut [0; 1]),
+            Err(TensorVolumeError::MismatchedStorage)
+        );
+    }
+
+    #[test]
+    fn resident_reads_are_zero_heap() {
+        let sub = ResidentTensorSubstrate::new();
+        let tensor = Tensor10D::default();
+        sub.load_from_tensors(&[tensor; 2], 42).unwrap();
+        let mut hits = [0; 2];
+        sub.tensor_search_into(&tensor, 0.5, &mut hits).unwrap();
+        assert_zero_alloc("resident tensor reads", || {
+            for _ in 0..32 {
+                assert_eq!(sub.node_count(), 2);
+                assert_eq!(sub.load_generation(), 1);
+                assert_eq!(sub.tensor_at(0), Some(tensor));
+                assert_eq!(sub.subject_hash_at(0), 42);
+                assert_eq!(sub.tensor_search_into(&tensor, 0.5, &mut hits), Ok(2));
+            }
+        });
+    }
 
     #[test]
     fn load_and_search_resident_substrate() {

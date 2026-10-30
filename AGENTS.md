@@ -1366,3 +1366,19 @@ HANDOVER.md is absent in this checkout; module scope and test limits are recorde
 in docs/testing-etalon-vibe.md and the implementation/qualification documents in
 Etalon. The active 0.0.40.8-dev branch is retained instead of the historical branch
 name in the handoff checklist.
+
+### 2026-10-30 — Resident safety and diagnostic isolation follow-up
+
+Replaced the resident substrate's unsynchronized interior mutation with an
+RwLock-owned fixed-capacity state. Loads validate every record before publication;
+poisoned state fails closed. Supplemental actual-source tests passed 53 cases,
+including concurrent publication, malformed-load preservation and zero-allocation
+reads. These do not replace the required default-feature core library suite.
+
+The first full core test build reached linking, then failed because external
+artifact cleanup removed an active dependency archive. No tests executed; the
+production lock was restored unchanged. A protected, immutable-pin retry remains
+required. CPU harness selection now uses exact test names, and lean diagnostics
+retain explicit E300 responses for excluded scientific operations. Pages compile
+and deployment qualification remain pending. The Etalon Intel DX12 multiview
+repair passed focused production GPU readbacks; its full suite is in progress.

@@ -167,6 +167,7 @@ scripts/*
 !scripts/package-poet-wasm.ps1
 !scripts/package-qapp.ps1
 !scripts/test-etalon-vibe.ps1
+!scripts/test-etalon-vibe.test.ps1
 !scripts/device-harness-build.mjs
 !scripts/serve-device-harness.mjs
 !scripts/serve-device-harness.test.mjs

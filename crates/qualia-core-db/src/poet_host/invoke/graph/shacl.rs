@@ -1,11 +1,47 @@
 //! SHACL + Qualia extensions over the live graph (SPARQL-star reifiers included).
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 use super::super::args;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 use crate::lexicon::generate_60bit_token;
-use crate::poet_host::{hash_val, PoetSnapshot};
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+use crate::poet_host::hash_val;
+use crate::poet_host::PoetSnapshot;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 use crate::query::shacl_compiler::{validate_shacl_property, ShaclConstraint, ShaclDatatype};
 use vibe::{Diagnostic, Span, Value};
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 const RDF_REIFIES: &[u8] = b"http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 
 /// Names apps may pass as `kind`. Keep in lockstep with `ShaclConstraint`.
@@ -76,6 +112,13 @@ pub fn extensions(_args: &Value, _span: Span) -> Result<Value, Diagnostic> {
     ))
 }
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 fn parse_constraints(
     args_v: &Value,
     out: &mut [ShaclConstraint],
@@ -108,6 +151,13 @@ fn parse_constraints(
     Ok(1)
 }
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 fn one_constraint(item: &Value, span: Span) -> Result<ShaclConstraint, Diagnostic> {
     if let Some(kind) = args::as_str(item) {
         return named(kind, item, span);
@@ -116,6 +166,13 @@ fn one_constraint(item: &Value, span: Span) -> Result<ShaclConstraint, Diagnosti
     named(kind, item, span)
 }
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 fn named(kind: &str, item: &Value, span: Span) -> Result<ShaclConstraint, Diagnostic> {
     Ok(match kind {
         "minCount" => ShaclConstraint::MinCount(args::rec_u64(item, "value").unwrap_or(1) as u32),
@@ -217,6 +274,13 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(
+        not(target_arch = "wasm32"),
+        feature = "wasm-ontology",
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))]
     fn parse_in_constraint() {
         let mut m = std::collections::BTreeMap::new();
         m.insert("kind".into(), Value::String("in".into()));
@@ -241,6 +305,13 @@ mod tests {
     }
 
     #[test]
+    #[cfg(any(
+        not(target_arch = "wasm32"),
+        feature = "wasm-ontology",
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))]
     fn parse_minlength_constraint() {
         let mut m = std::collections::BTreeMap::new();
         m.insert("kind".into(), Value::String("minLength".into()));

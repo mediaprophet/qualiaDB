@@ -150,7 +150,36 @@ function Invoke-OwnedProcess([string]$Name, [string]$Executable, [string[]]$Argu
 }
 function Assert-Success($Phase) {
     if ($Phase.exit_code -ne 0 -or $Phase.timed_out -or $Phase.log_limit_exceeded -or $Phase.free_space_exhausted -or $Phase.cleanup_incomplete -or $Phase.error) {
+        foreach ($streamName in @('stdout', 'stderr')) {
+            $tail = Read-LogTail $Phase[$streamName]
+            $Phase["${streamName}_tail"] = $tail
+            if ($tail) { Write-Host "$($Phase.name) ${streamName} tail (at most 8 KiB):`n$tail" }
+        }
         throw "$($Phase.name) failed; inspect $($Phase.stderr) and $($Phase.stdout)"
+    }
+}
+function Read-LogTail([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }
+    $file = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    try {
+        $length = [int][Math]::Min(8192, $file.Length)
+        [void]$file.Seek(-$length, [IO.SeekOrigin]::End)
+        $bytes = [byte[]]::new($length)
+        $offset = 0
+        while ($offset -lt $length) {
+            $read = $file.Read($bytes, $offset, $length - $offset)
+            if ($read -eq 0) { break }
+            $offset += $read
+        }
+        return [Text.Encoding]::UTF8.GetString($bytes, 0, $offset)
+    } finally { $file.Dispose() }
+}
+function Get-ProductTestSelection([bool]$CpuOnly) {
+    $expected = @{ cpu_graph_transaction_seals_qualia_quins = 'cpu'; cpu_invalid_gpu_handle_is_rejected_through_vibe = 'cpu' }
+    if (-not $CpuOnly) { $expected.gpu_compute_readback_matches_cpu_and_rejects_invalid_requests = 'gpu' }
+    return @{
+        expected = $expected
+        arguments = @('--exact', '--nocapture', '--test-threads=1') + @($expected.Keys | Sort-Object)
     }
 }
 function Read-BoundedJson([string]$Path, [long]$Limit) {
@@ -346,11 +375,11 @@ incremental = false
         $fullBuild = Invoke-OwnedProcess 'product-build' 'cargo' $fullArgs $BuildTimeoutSeconds
         $fullBinary = Find-Artifact $fullBuild 'etalon_vibe_harness'
         $eventsPath = Join-Path $runDir 'product-events.jsonl'; $summary.artifacts.product_events = $eventsPath
-        $fullRunArgs = @('--nocapture', '--test-threads=1'); if ($CpuOnly) { $fullRunArgs += 'cpu_' }
+        $selection = Get-ProductTestSelection ([bool]$CpuOnly)
+        $expected = $selection.expected
+        $fullRunArgs = $selection.arguments
         $fullEnv = @{ QUALIA_ETALON_HARNESS_EVENTS = $eventsPath }; if ($Backend) { $fullEnv.QUALIA_WGPU_BACKEND = $Backend }
         $fullRun = Invoke-OwnedProcess 'product-execution' $fullBinary $fullRunArgs $TimeoutSeconds $fullEnv
-        $expected = @{ cpu_graph_transaction_seals_qualia_quins = 'cpu'; cpu_invalid_gpu_handle_is_rejected_through_vibe = 'cpu' }
-        if (-not $CpuOnly) { $expected.gpu_compute_readback_matches_cpu_and_rejects_invalid_requests = 'gpu' }
         $seen = @{}; $events = [Collections.Generic.List[object]]::new()
         if (Test-Path -LiteralPath $eventsPath) {
             if ((Get-Item -LiteralPath $eventsPath).Length -gt 1MB) { throw 'Product event receipt exceeds 1 MiB' }

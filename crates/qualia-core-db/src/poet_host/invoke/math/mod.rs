@@ -1,6 +1,6 @@
 //! Future seam: `qualia-math` (`solvers/` + CAS today).
-//! Real solvers on native and every poet-bearing WASM profile (`wasm-scientific`,
-//! which portal and wasm-logic now pull). Ontology-only has no poet_host.
+//! Scientific operations run on native and `wasm-scientific` profiles.
+//! Lean WASM profiles return explicit capability diagnostics for these operations.
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod calculus;
@@ -23,6 +23,10 @@ mod cas_wave8;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod cas_wave9;
 pub mod closure_solvers;
+#[cfg(all(target_arch = "wasm32", not(feature = "wasm-scientific")))]
+mod scientific_unavailable;
+#[cfg(all(target_arch = "wasm32", not(feature = "wasm-scientific")))]
+pub use scientific_unavailable::*;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 mod ga;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]

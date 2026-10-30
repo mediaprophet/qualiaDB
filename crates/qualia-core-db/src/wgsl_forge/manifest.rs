@@ -171,8 +171,17 @@ pub struct CertificationManifest {
 }
 
 impl CertificationManifest {
-    /// `CertificationManifest::naga_only`.
+    /// Records Naga validation only when the report matches the actual shader source.
+    /// Missing or inconsistent evidence retains the report at `ValidationLevel::Generated`.
     pub fn naga_only(generated: &GeneratedShader, validation: ValidationReport) -> Self {
+        let validation_level = if validation.naga_validated
+            && validation.source_hash == generated.source_hash
+            && generated.source_hash == blake3::hash(generated.source.as_bytes()).to_hex().as_str()
+        {
+            ValidationLevel::NagaValidated
+        } else {
+            ValidationLevel::Generated
+        };
         Self {
             forge_schema_version: FORGE_SCHEMA_VERSION,
             crate_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -182,7 +191,7 @@ impl CertificationManifest {
             semantic_hash: generated.semantic_hash.clone(),
             source_hash: generated.source_hash.clone(),
             schedule: generated.schedule,
-            validation_level: ValidationLevel::NagaValidated,
+            validation_level,
             validation,
             adapter: None,
             oracle: None,
@@ -249,6 +258,9 @@ impl TuningManifest {
         Ok(serde_json::to_string_pretty(self)?)
     }
 }
+
+#[cfg(test)]
+mod evidence_tests;
 
 #[cfg(test)]
 mod tests {

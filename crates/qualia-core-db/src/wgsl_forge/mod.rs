@@ -89,7 +89,8 @@ pub mod etalon_bridge {
         certify_kernel as certify_etalon_kernel, emit_shader as emit_etalon_shader,
         BuiltinKernel as EtalonBuiltinKernel, GeneratedShader as EtalonGeneratedShader,
         KernelSpec as EtalonKernelSpec, Schedule as EtalonSchedule,
-        TargetBackend as EtalonTargetBackend, FORGE_CACHE_MAGIC as ETALON_FORGE_CACHE_MAGIC,
+        TargetBackend as EtalonTargetBackend, ValidationReport as EtalonValidationReport,
+        FORGE_CACHE_MAGIC as ETALON_FORGE_CACHE_MAGIC,
         FORGE_SCHEMA_VERSION as ETALON_FORGE_SCHEMA_VERSION,
     };
 
@@ -228,17 +229,27 @@ pub mod etalon_bridge {
         }
     }
 
-    /// Emits and certifies a kernel via `etalon_wgsl_forge`.
-    ///
-    /// Maps `builtin`, `schedule`, and `target` to their Etalon counterparts, emits
-    /// the shader source via `etalon_wgsl_forge::emit_shader`, certifies WGSL via
-    /// `etalon_wgsl_forge::certify_kernel` when target is `TargetBackend::Wgsl`,
-    /// and returns the resulting generated shader.
+    /// Compatibility wrapper that discards the report from [`generate_with_validation_via_etalon`].
+    /// Successful emission alone does not establish device or numerical correctness.
     pub fn generate_and_certify_via_etalon(
         builtin: BuiltinKernel,
         schedule: Schedule,
         target: TargetBackend,
     ) -> Result<etalon_wgsl_forge::GeneratedShader, ForgeError> {
+        generate_with_validation_via_etalon(builtin, schedule, target).map(|(shader, _)| shader)
+    }
+
+    /// Emits a shader and retains Etalon's WGSL validation report unchanged.
+    ///
+    /// Non-WGSL targets return `None`: no native compiler validation is run here.
+    /// WGSL returns `Some(report)`, whose `naga_validated` is false when Etalon's
+    /// `naga-validate` feature is disabled. IR validation does not prove device
+    /// compatibility or numerical correctness; safe shader creation still validates.
+    pub fn generate_with_validation_via_etalon(
+        builtin: BuiltinKernel,
+        schedule: Schedule,
+        target: TargetBackend,
+    ) -> Result<(EtalonGeneratedShader, Option<EtalonValidationReport>), ForgeError> {
         let etalon_builtin: etalon_wgsl_forge::BuiltinKernel = builtin.into();
         let etalon_schedule: etalon_wgsl_forge::Schedule = schedule.into();
         let etalon_target: etalon_wgsl_forge::TargetBackend = target.into();
@@ -247,20 +258,22 @@ pub mod etalon_bridge {
         let generated = etalon_wgsl_forge::emit_shader(&spec, etalon_schedule, etalon_target)
             .map_err(ForgeError::from)?;
 
-        if matches!(target, TargetBackend::Wgsl) {
-            etalon_wgsl_forge::certify_kernel(&generated.source)
-                .map_err(ForgeError::from)?;
-        }
+        let validation = if matches!(target, TargetBackend::Wgsl) {
+            Some(etalon_wgsl_forge::certify_kernel(&generated.source).map_err(ForgeError::from)?)
+        } else {
+            None
+        };
 
-        Ok(generated)
+        Ok((generated, validation))
     }
 }
 
 #[cfg(feature = "gpu-runtime")]
 pub use etalon_bridge::{
     certify_etalon_kernel, emit_etalon_shader, generate_and_certify_via_etalon,
-    EtalonBuiltinKernel, EtalonGeneratedShader, EtalonKernelSpec, EtalonSchedule,
-    EtalonTargetBackend, ETALON_FORGE_CACHE_MAGIC, ETALON_FORGE_SCHEMA_VERSION,
+    generate_with_validation_via_etalon, EtalonBuiltinKernel, EtalonGeneratedShader,
+    EtalonKernelSpec, EtalonSchedule, EtalonTargetBackend, EtalonValidationReport,
+    ETALON_FORGE_CACHE_MAGIC, ETALON_FORGE_SCHEMA_VERSION,
 };
 
 #[cfg(feature = "gpu-runtime")]
@@ -375,6 +388,9 @@ pub fn generate_builtin(
     schedule.validate(&kernel, &AdapterConstraints::portable())?;
     emit_shader(&kernel, schedule, target)
 }
+
+#[cfg(all(test, feature = "gpu-runtime"))]
+mod etalon_bridge_validation_tests;
 
 #[cfg(all(test, feature = "gpu-runtime"))]
 mod etalon_bridge_tests {

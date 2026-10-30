@@ -23,12 +23,26 @@ impl ComparisonReport {
 }
 
 /// Compares f32 results against tolerance.
+/// Nonfinite values fail. Invalid tolerances report a failure even for empty inputs.
 pub fn compare_f32(
     expected: &[f32],
     actual: &[f32],
     tolerance: OracleTolerance,
 ) -> ComparisonReport {
     let compared = expected.len().max(actual.len());
+    if !tolerance.absolute.is_finite()
+        || !tolerance.relative.is_finite()
+        || tolerance.absolute < 0.0
+        || tolerance.relative < 0.0
+    {
+        return ComparisonReport {
+            compared,
+            mismatch_count: compared.max(1),
+            first_mismatch: (compared != 0).then_some(0),
+            max_absolute_error: f32::INFINITY,
+            max_relative_error: f32::INFINITY,
+        };
+    }
     let mut mismatch_count = expected.len().abs_diff(actual.len());
     let mut first_mismatch =
         (expected.len() != actual.len()).then(|| expected.len().min(actual.len()));
@@ -60,19 +74,8 @@ pub fn compare_f32(
 }
 
 fn compare_value(expected: f32, actual: f32, tolerance: OracleTolerance) -> (bool, f32, f32) {
-    if expected.is_nan() || actual.is_nan() {
+    if !expected.is_finite() || !actual.is_finite() {
         return (false, f32::INFINITY, f32::INFINITY);
-    }
-    if expected.is_infinite() || actual.is_infinite() {
-        return (
-            expected.to_bits() == actual.to_bits(),
-            if expected.to_bits() == actual.to_bits() {
-                0.0
-            } else {
-                f32::INFINITY
-            },
-            f32::INFINITY,
-        );
     }
     let absolute = (expected - actual).abs();
     let denominator = expected.abs().max(actual.abs()).max(f32::MIN_POSITIVE);
@@ -109,3 +112,6 @@ pub(super) fn vector_hash_f32(expected: &[f32]) -> String {
         .to_hex()
         .to_string()
 }
+
+#[cfg(test)]
+mod comparison_tests;

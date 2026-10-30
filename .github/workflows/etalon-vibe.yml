@@ -10,6 +10,7 @@ on:
       - "crates/vibe/**"
       - "tools/accelerator-harness/**"
       - "scripts/test-etalon-vibe.ps1"
+      - "scripts/test-etalon-vibe.test.ps1"
       - ".github/workflows/etalon-vibe.yml"
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - "crates/vibe/**"
       - "tools/accelerator-harness/**"
       - "scripts/test-etalon-vibe.ps1"
+      - "scripts/test-etalon-vibe.test.ps1"
       - ".github/workflows/etalon-vibe.yml"
   workflow_dispatch:
 
@@ -78,6 +80,11 @@ jobs:
           node-version: 24.22.0
           package-manager-cache: false
 
+      - name: Test harness CPU selection and bounded failure logs
+        shell: pwsh
+        working-directory: etalon
+        run: ../qualia/scripts/test-etalon-vibe.test.ps1
+
       - name: Test browser report and local hosting
         working-directory: qualia
         run: node --test docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs
@@ -106,11 +113,14 @@ jobs:
           cargo test --manifest-path $receipt.lightweight_manifest --target-dir $receipt.target_directory --features npu-openvino
           if ($LASTEXITCODE -ne 0) { throw 'Optional NPU adapter tests failed' }
 
-      - name: Retain bounded qualification receipt
+      - name: Retain bounded qualification receipt and execution logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: etalon-vibe-${{ matrix.os }}
-          path: qualia/target/qualification/receipt.json
+          path: |
+            qualia/target/qualification/receipt.json
+            qualia/target/etalon-vibe-harness/runs/*/*-execution.*.log
+            qualia/target/etalon-vibe-harness/runs/*/product-events.jsonl
           retention-days: 7
           if-no-files-found: warn

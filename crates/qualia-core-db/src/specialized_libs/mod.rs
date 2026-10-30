@@ -44,6 +44,7 @@ pub mod financial_modeling;
     not(target_arch = "wasm32"),
     feature = "portal",
     feature = "wasm-webcivics",
+    feature = "device-harness",
     feature = "wasm-logic",
     feature = "wasm-scientific"
 ))]
@@ -52,6 +53,7 @@ pub mod linear_algebra;
 pub mod machine_learning;
 #[cfg(any(
     not(target_arch = "wasm32"),
+    feature = "device-harness",
     feature = "portal",
     feature = "wasm-logic",
     feature = "wasm-scientific"
@@ -182,6 +184,7 @@ pub const fn active_specialized_lib_mask() -> u32 {
         not(target_arch = "wasm32"),
         feature = "portal",
         feature = "wasm-webcivics",
+        feature = "device-harness",
         feature = "wasm-logic",
         feature = "wasm-scientific"
     ))]
@@ -191,12 +194,22 @@ pub const fn active_specialized_lib_mask() -> u32 {
 
     #[cfg(any(
         not(target_arch = "wasm32"),
+        feature = "device-harness",
         feature = "portal",
         feature = "wasm-logic",
         feature = "wasm-scientific"
     ))]
     {
         mask |= LIB_MEDICAL_COMPUTING;
+    }
+
+    #[cfg(any(
+        not(target_arch = "wasm32"),
+        feature = "portal",
+        feature = "wasm-logic",
+        feature = "wasm-scientific"
+    ))]
+    {
         mask |= LIB_SHARED;
     }
 
@@ -248,6 +261,13 @@ pub const fn specialized_lib_name(lib_bit: u32) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(all(target_arch = "wasm32", feature = "device-harness"))]
+    #[test]
+    fn harness_libraries_are_reported_active() {
+        assert!(is_specialized_lib_active(LIB_LINEAR_ALGEBRA));
+        assert!(is_specialized_lib_active(LIB_MEDICAL_COMPUTING));
+    }
 
     #[test]
     fn test_active_specialized_lib_mask_native() {
