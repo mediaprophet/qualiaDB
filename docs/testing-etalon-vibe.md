@@ -117,7 +117,7 @@ The [phone/browser harness](playground/etalon-vibe-harness.html) runs fixed publ
 fixtures through canonical Vibe CPU exports and the Rust Etalon browser WebGPU
 frontend. Its separate `device-harness` WASM feature and bundle keep diagnostic
 exports out of the main portal and playground downloads. The diagnostics bundle
-has its own 16 MiB raw / 4 MiB gzip CI limit. After the updated Pages deployment, open
+has its own 16 MiB raw / 4 MiB gzip CI limit. Open the deployed harness at
 `https://mediaprophet.github.io/qualiaDB/playground/etalon-vibe-harness.html`, tap
 **Run checks**, then **Download JSON**. A missing manifest, stale bundle, failed
 hash check, unsupported browser or timeout still leaves a downloadable report.
@@ -179,3 +179,49 @@ Run the report validation/budget checks without a browser or GPU:
 ```powershell
 node docs/tests/device-harness.test.mjs
 ```
+
+## Qualification on 30 October 2026
+
+The tested consumer revision was `a9668cb2123ad05ef64f7ad4c7b2551c4a5d95b8`,
+with all production Etalon dependencies pinned to
+`5721ae58285e229a30c0444d41e84f98014912d4`. Both lockfiles use that immutable
+source without local patches; ORT remains exactly rc.15 and Tokio 1.54.1.
+
+The [consuming CI run](https://github.com/mediaprophet/qualiaDB/actions/runs/41030925853)
+and [Pages deployment](https://github.com/mediaprophet/qualiaDB/actions/runs/41030925879)
+record the published implementation. Later documentation-only commits preserve
+the tested Rust sources and dependency locks.
+
+| Check                                          | Result                                                                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Default-feature core library, Rust 1.96.1 MSVC | 10,181 passed, zero failed, three existing external-data/network tests ignored                                |
+| Native consuming harness                       | Two CPU cases and one Intel UHD 620 Vulkan case passed; eleven dispatch/readbacks checked against CPU results |
+| Windows/Linux consuming CI                     | Product CPU, language/discovery, report/server and optional NPU adapter tests passed                          |
+| Pages and WASM release                         | Build, size budgets and deployment passed                                                                     |
+| Published HTTPS browser UI, Edge 156           | Two CPU cases and eleven WebGPU dispatch/readbacks passed at a 390×844 mobile viewport                        |
+| Report and email controls                      | Asset hashes, exact JSON download, mocked sharing, cancellation and draft fallback passed; no email sent      |
+| Fresh Windows NPU discovery                    | DXCore probe completed with no NPU detected; requiring NPU execution failed as expected with zero NPU passes  |
+
+The three ignored library cases require a 440 MiB Monarch shard, an 8+ GiB
+Monarch volume set, or a separate real-network integration run. Mobile viewport
+emulation is not physical phone coverage. Browser NPU state remains unknown;
+native provider execution requires suitable hardware and an installed provider.
+
+The earlier core build failed at linking after external cleanup removed an active
+dependency archive. A later combined library/integration build was stopped before
+test execution when two compiler variants reached approximately 14 GiB combined
+private memory. Completed dependencies were retained. The successful protected
+retry used one build job, debug information disabled, optimization level zero,
+normal debug assertions and no incremental compilation. Production lock hashes
+were unchanged. Use one compiler job for this combined run on a 16-GiB machine:
+
+```powershell
+$env:CARGO_BUILD_JOBS = '1'
+$env:CARGO_PROFILE_DEV_DEBUG = '0'
+$env:CARGO_PROFILE_TEST_DEBUG = '0'
+$env:CARGO_INCREMENTAL = '0'
+cargo +1.96.1 test --locked -p qualia-core-db --lib --test etalon_vibe_harness -- --test-threads=1
+```
+
+Retired Deno CTS coverage remains absent. These application and Rust results
+do not restore JavaScript/WebIDL conformance or prove unavailable hardware.

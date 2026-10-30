@@ -1382,3 +1382,29 @@ required. CPU harness selection now uses exact test names, and lean diagnostics
 retain explicit E300 responses for excluded scientific operations. Pages compile
 and deployment qualification remain pending. The Etalon Intel DX12 multiview
 repair passed focused production GPU readbacks; its full suite is in progress.
+
+### 2026-10-30 — Immutable-pin qualification completed
+
+Consumer a9668cb2123ad05ef64f7ad4c7b2551c4a5d95b8 uses Etalon
+5721ae58285e229a30c0444d41e84f98014912d4 in both production locks without local
+patches. Full default-feature MSVC library testing passed 10,181 cases with three
+existing external-data/network cases ignored; all three consuming harness cases
+passed, including eleven Intel UHD 620 Vulkan dispatch/readbacks. This includes
+the resident publication and Forge evidence regressions. Production locks were
+unchanged by execution.
+
+Two overlapping compiler variants reached approximately 14 GiB combined private
+memory and were deliberately stopped before tests. This scheduling choice cost
+partial compiler work; completed dependencies were preserved and the successful
+retry used one build job. Do not run overlapping monolithic core compilations on
+this 16-GiB host or delete artifacts while an ACTIVE-RUN receipt exists.
+
+Windows/Linux consuming CI, Pages deployment and WASM release passed. The actual
+published HTTPS harness passed two Vibe CPU cases and eleven WebGPU readbacks,
+asset hashes, exact download and mocked email controls at a mobile viewport. No
+mail was sent and physical phone execution remains user-supplied evidence. Fresh
+DXCore inventory found no NPU; --require-npu correctly failed with zero execution
+passes. Browser NPU state remains unknown. See docs/testing-etalon-vibe.md for the
+full scope, ignored cases and build-resource history. Retired CTS coverage remains
+absent. Later Etalon commits change CI and benchmark profiler platform support;
+the consumer's production Rust sources retain the tested immutable revision.
