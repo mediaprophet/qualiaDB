@@ -31,6 +31,7 @@ mod imaging;
 mod library;
 mod privacy;
 mod records;
+mod similarity;
 mod types;
 
 #[cfg(any(
@@ -51,6 +52,7 @@ pub use imaging::*;
 pub use library::*;
 pub use privacy::*;
 pub use records::*;
+pub use similarity::tanimoto_bits;
 pub use types::*;
 
 #[cfg(test)]

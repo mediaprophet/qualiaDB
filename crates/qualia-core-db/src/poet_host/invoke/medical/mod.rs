@@ -35,6 +35,7 @@ pub fn tanimoto(args: &Value, span: Span) -> Result<Value, Diagnostic> {
 
 /// `Medical.structural_fingerprint` — compute a structural fingerprint from a SMILES string.
 /// Args: { smiles: string }
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub fn structural_fingerprint(args: &Value, span: Span) -> Result<Value, Diagnostic> {
     let smiles = args::rec_str(args, "smiles")
         .ok_or_else(|| args::bad(span, "Medical.structural_fingerprint needs smiles"))?;
@@ -46,6 +47,14 @@ pub fn structural_fingerprint(args: &Value, span: Span) -> Result<Value, Diagnos
         ),
         ("bit_count", Value::U64(fp.len() as u64)),
     ]))
+}
+
+#[cfg(all(target_arch = "wasm32", not(feature = "wasm-scientific")))]
+pub fn structural_fingerprint(_args: &Value, span: Span) -> Result<Value, Diagnostic> {
+    Err(args::need_scientific(
+        span,
+        "Medical.structural_fingerprint",
+    ))
 }
 
 /// `Medical.analyze_intensity_grid` — DSP analysis of an intensity grid.
@@ -129,4 +138,16 @@ pub fn screen_compounds(
     span: vibe::Span,
 ) -> Result<vibe::Value, vibe::Diagnostic> {
     Err(super::args::need_scientific(span, "MedicalComputing"))
+}
+
+#[cfg(all(test, target_arch = "wasm32", not(feature = "wasm-scientific")))]
+mod lean_tests {
+    use super::*;
+
+    #[test]
+    fn fingerprint_requires_the_scientific_profile() {
+        let error = structural_fingerprint(&Value::Null, Span { start: 0, end: 0 })
+            .expect_err("a lean profile must not fabricate a molecular fingerprint");
+        assert_eq!(error.code, vibe::DiagCode::E300);
+    }
 }

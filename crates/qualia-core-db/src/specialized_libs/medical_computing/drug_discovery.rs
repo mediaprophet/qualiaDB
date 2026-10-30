@@ -462,6 +462,12 @@ impl DrugDiscovery {
     /// and Veber filters, and ranks by Tanimoto similarity to an optional query SMILES.
     /// Returns an honestly-labeled [`super::ScreeningProposal`] — rule-based filtering /
     /// similarity ranking, NOT a binding-affinity or efficacy prediction.
+    #[cfg(any(
+        not(target_arch = "wasm32"),
+        feature = "portal",
+        feature = "wasm-logic",
+        feature = "wasm-scientific"
+    ))]
     pub fn screen_compounds(
         &mut self,
         compounds: &[Compound],

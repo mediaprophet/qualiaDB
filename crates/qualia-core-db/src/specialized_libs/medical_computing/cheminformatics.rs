@@ -7,7 +7,7 @@
 //! fingerprint. It is **not** a binding-affinity, potency, or efficacy prediction, and
 //! never presented as one — every result carries [`SCREENING_EPISTEMIC_STATUS`].
 
-use super::{Compound, DrugTarget, MedicalError};
+use super::{tanimoto_bits, Compound, DrugTarget, MedicalError};
 use crate::domains::chemical::organic_chemistry as oc;
 
 /// Honest epistemic label stamped on every [`ScreeningProposal`].
@@ -19,30 +19,6 @@ const METHOD: &str = "descriptors via SMILES parse \u{2192} Lipinski/Veber pass-
 
 /// Fingerprint length in bits.
 pub const FINGERPRINT_BITS: usize = 256;
-
-/// Tanimoto (Jaccard) similarity of two equal-length boolean fingerprints:
-/// `|A ∩ B| / |A ∪ B|`. Returns 0.0 when the union is empty (both all-zero).
-/// If lengths differ, only the overlapping prefix is compared.
-pub fn tanimoto_bits(a: &[bool], b: &[bool]) -> f64 {
-    let n = a.len().min(b.len());
-    let mut inter = 0usize;
-    let mut uni = 0usize;
-    for i in 0..n {
-        let x = a[i];
-        let y = b[i];
-        if x && y {
-            inter += 1;
-        }
-        if x || y {
-            uni += 1;
-        }
-    }
-    if uni == 0 {
-        0.0
-    } else {
-        inter as f64 / uni as f64
-    }
-}
 
 /// FNV-1a hash of a feature string, folded to a fingerprint bit index.
 fn feature_bit(s: &str) -> usize {
