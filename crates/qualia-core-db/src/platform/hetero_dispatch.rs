@@ -8,12 +8,10 @@
 //! `wgpu` ([`super::gpu`]) + memory-mapped I/O ([`super::host`]) — so they build,
 //! run, and verify on any backend (Vulkan / DX12 / Metal / WebGPU), no vendor SDK:
 //!
-//! 1. **Unified-memory zero-copy** ([`ZeroCopyStrategy`]) — choose mmap-direct on
-//!    integrated / unified-memory GPUs (Apple Silicon via Metal, which `wgpu` maps
-//!    transparently — CPU and GPU share physical RAM, so the mmap'd region is GPU
-//!    visible with no copy) vs a one-time staging upload on discrete GPUs.
+//! 1. **Transfer policy** ([`ZeroCopyStrategy`]) — portable GPU buffers use staging.
+//!    Shared physical RAM alone does not establish a backend host-memory import.
 //! 2. **Hardware-agnostic fallback dispatcher** ([`HeterogeneousDispatcher`]) —
-//!    route a job to the GPU (`wgpu`) when it fits, else NPU, else CPU; and tile a
+//!    route a job to the GPU (`wgpu`) when it fits, else CPU; and tile a
 //!    matmul across passes when VRAM is exhausted instead of hard-failing.
 //! 3. **Kernel stream fusion** ([`plan_fusion`]) — group consecutive same-shape
 //!    element-wise tensor ops into a single `wgpu` compute pass (the portable
@@ -51,31 +49,21 @@
 /// How weight data reaches the GPU for a given device.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ZeroCopyStrategy {
-    /// Integrated / unified-memory GPU (Apple Silicon via Metal; integrated
-    /// Intel/AMD): the `mmap`'d region is directly GPU-visible — no host→device copy.
+    /// CPU in-pool data, or host memory explicitly imported by a backend.
     MmapDirect,
-    /// Discrete GPU: upload the `mmap`'d region once via a staging buffer.
+    /// Upload through the portable GPU buffer path, including integrated GPUs.
     StagingUpload,
 }
 
 impl ZeroCopyStrategy {
-    /// Pick the strategy from whether the adapter has unified memory.
-    pub fn for_device(is_unified_memory: bool) -> Self {
-        if is_unified_memory {
-            Self::MmapDirect
-        } else {
-            Self::StagingUpload
-        }
+    /// Topology alone cannot establish an imported host mapping.
+    pub fn for_device(_is_unified_memory: bool) -> Self {
+        Self::StagingUpload
     }
 
-    /// Map a `wgpu` device type to the strategy: integrated GPUs share memory with
-    /// the host (unified) ⇒ mmap-direct; discrete GPUs ⇒ staging upload. CPU/other
-    /// adapters are treated as unified (the "device" buffer is host memory).
-    pub fn for_wgpu_device_type(device_type: wgpu::DeviceType) -> Self {
-        match device_type {
-            wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::VirtualGpu => Self::StagingUpload,
-            _ => Self::MmapDirect,
-        }
+    /// Portable GPU allocations require uploads regardless of adapter class.
+    pub fn for_wgpu_device_type(_device_type: wgpu::DeviceType) -> Self {
+        Self::StagingUpload
     }
 
     /// Whether a host→device copy is required (false on unified memory).
@@ -91,7 +79,7 @@ impl ZeroCopyStrategy {
 pub enum ComputeBackend {
     /// Portable `wgpu` GPU path ([`super::gpu::WebGpuIntegrator`]).
     Gpu,
-    /// A neural-processing unit, when present.
+    /// Reserved for a production executor verified for the requested workload.
     Npu,
     /// CPU fallback — always available, never hard-fails.
     Cpu,
@@ -103,6 +91,7 @@ pub struct HostCapabilities {
     pub gpu_available: bool,
     /// Usable VRAM in bytes (e.g. `wgpu` `limits().max_buffer_size`).
     pub vram_available: u64,
+    /// Discovery only; this flag does not establish a verified NPU executor.
     pub npu_available: bool,
     pub cpu_threads: u32,
 }
@@ -121,7 +110,7 @@ impl HeterogeneousDispatcher {
     }
 
     /// Choose a backend for a job needing `vram_required` bytes: GPU if present and
-    /// it fits → else NPU if present → else CPU (always works). When the GPU is
+    /// it fits → else CPU. NPU discovery alone cannot select an execution path. When the GPU is
     /// present but the job is larger than VRAM, the caller should GPU-tile (see
     /// [`Self::gpu_tiles`]) rather than fall straight to CPU.
     pub fn select_backend(&self, vram_required: u64) -> ComputeBackend {
@@ -131,11 +120,7 @@ impl HeterogeneousDispatcher {
                 return ComputeBackend::Gpu;
             }
         }
-        if self.caps.npu_available {
-            ComputeBackend::Npu
-        } else {
-            ComputeBackend::Cpu
-        }
+        ComputeBackend::Cpu
     }
 
     /// How many sequential tiles a `total_bytes` GPU job must be split into so each
@@ -263,28 +248,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn zero_copy_strategy_follows_memory_architecture() {
-        // Unified memory (Apple Silicon / integrated) → no host copy.
-        assert_eq!(
-            ZeroCopyStrategy::for_device(true),
-            ZeroCopyStrategy::MmapDirect
-        );
-        assert!(!ZeroCopyStrategy::for_device(true).requires_host_copy());
-        // Discrete GPU → staging upload.
-        assert_eq!(
-            ZeroCopyStrategy::for_device(false),
-            ZeroCopyStrategy::StagingUpload
-        );
-        assert!(ZeroCopyStrategy::for_device(false).requires_host_copy());
-        // wgpu device-type mapping.
-        assert_eq!(
-            ZeroCopyStrategy::for_wgpu_device_type(wgpu::DeviceType::IntegratedGpu),
-            ZeroCopyStrategy::MmapDirect
-        );
-        assert_eq!(
-            ZeroCopyStrategy::for_wgpu_device_type(wgpu::DeviceType::DiscreteGpu),
-            ZeroCopyStrategy::StagingUpload
-        );
+    fn gpu_topology_does_not_establish_host_memory_import() {
+        for unified in [false, true] {
+            let strategy = ZeroCopyStrategy::for_device(unified);
+            assert_eq!(strategy, ZeroCopyStrategy::StagingUpload);
+            assert!(strategy.requires_host_copy());
+        }
+        for device_type in [
+            wgpu::DeviceType::IntegratedGpu,
+            wgpu::DeviceType::DiscreteGpu,
+            wgpu::DeviceType::Cpu,
+            wgpu::DeviceType::VirtualGpu,
+            wgpu::DeviceType::Other,
+        ] {
+            assert_eq!(
+                ZeroCopyStrategy::for_wgpu_device_type(device_type),
+                ZeroCopyStrategy::StagingUpload
+            );
+        }
+        assert!(!ZeroCopyStrategy::MmapDirect.requires_host_copy());
     }
 
     #[test]
@@ -298,14 +280,14 @@ mod tests {
         });
         assert_eq!(d.select_backend(1 << 30), ComputeBackend::Gpu);
 
-        // No GPU, NPU present → NPU.
+        // Detection alone does not establish a production NPU executor.
         let d2 = HeterogeneousDispatcher::new(HostCapabilities {
             gpu_available: false,
             vram_available: 0,
             npu_available: true,
             cpu_threads: 8,
         });
-        assert_eq!(d2.select_backend(1 << 30), ComputeBackend::Npu);
+        assert_eq!(d2.select_backend(1 << 30), ComputeBackend::Cpu);
 
         // No GPU, no NPU → CPU (always works, never hard-fails).
         let d3 = HeterogeneousDispatcher::new(HostCapabilities {

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Qualia / Etalon device checks</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui,sans-serif; background:#0b1320; color:#e2edf6; }
+    body { max-width:56rem; margin:auto; padding:1.2rem; line-height:1.55; }
+    h1 { font-size:clamp(1.5rem,5vw,2.2rem); line-height:1.2; }
+    a { color:#8fe6ed; } button { font:inherit; padding:.65rem 1rem; border:1px solid #6acdd7; border-radius:.4rem; background:#133640; color:#efffff; cursor:pointer; }
+    button:disabled { opacity:.45; cursor:default; } button:focus-visible { outline:3px solid #ffe89b; }
+    .actions { display:flex; gap:.65rem; flex-wrap:wrap; margin:1.2rem 0; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; padding:1rem; background:#111f30; border:1px solid #2b4459; border-radius:.4rem; max-height:36rem; overflow:auto; font-size:.8rem; }
+    .note { border-left:3px solid #6acdd7; padding-left:1rem; }
+  </style>
+</head>
+<body>
+  <a href="https://mediaprophet.github.io/qualiaDB/playground/">Public playground</a>
+  <h1>Qualia / Etalon device checks</h1>
+  <p>Run canonical VibeScript CPU checks and a Rust Etalon browser WebGPU computation with readback compared against a CPU oracle.</p>
+  <p class="note">This checks the browser WebGPU path, not the native Etalon backend or WebGPU conformance. NPU availability remains unknown. Unsupported checks are reported separately from passes.</p>
+  <p>No automatic uploads, private inputs, account access, or model downloads. Running downloads the published portal code and WASM and runs fixed test data locally. HTTPS and localhost runs verify build hashes. Plain LAN HTTP permits limited CPU diagnostics with unverified assets and reports GPU as unsupported. The JSON includes browser information and public build identities. Review it before sharing.</p>
+  <p>Use HTTPS on a phone for WebGPU, or localhost on this computer. Ordinary LAN HTTP does not provide a secure context or authenticated source identity. The worker is stopped if loading exceeds 150 seconds, CPU checks 20 seconds, or GPU checks 60 seconds. Local HTTPS hosting accepts explicit certificate and key files that your phone trusts.</p>
+  <div class="actions">
+    <button id="run" type="button">Run checks</button>
+    <button id="cancel" type="button" disabled>Cancel</button>
+    <button id="download" type="button" disabled>Download JSON</button>
+    <button id="copy" type="button" disabled>Copy JSON</button>
+    <button id="email" type="button" disabled>Email report</button>
+  </div>
+  <p><label for="email-recipient">Optional email recipient for draft fallback</label><br>
+    <input id="email-recipient" type="email" maxlength="254" autocomplete="off" spellcheck="false" placeholder="Your email address" style="font:inherit;max-width:100%;box-sizing:border-box;padding:.6rem">
+    <button id="email-draft" type="button" disabled>Open email draft</button>
+  </p>
+  <p>Email report first offers the device share sheet with the full JSON file when supported. Choose your mail app and send it to yourself, then forward it as needed. The optional address applies only to the draft fallback; it stays in this field and is not saved in the report. A mailto draft contains a compact summary only: download the JSON and attach it manually. No mail is sent automatically, and this page cannot confirm delivery. Sharing transfers the file only to the app you explicitly choose.</p>
+  <p id="status" role="status" aria-live="polite">Ready. Run checks to create a downloadable report.</p>
+  <pre id="report" aria-label="Debug report">No run yet.</pre>
+  <script type="module" src="../js/device-harness/main.js"></script>
+</body>
+</html>

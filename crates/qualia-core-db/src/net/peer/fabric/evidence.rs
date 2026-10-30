@@ -23,6 +23,7 @@ pub struct TransportWitness {
 
 impl TransportWitness {
     /// Builds `TransportWitness` from `local`.
+    #[cfg(any(not(target_arch = "wasm32"), test))]
     pub(crate) const fn from_local(
         class: PathClass,
         generation: u32,

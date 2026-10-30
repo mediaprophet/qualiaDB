@@ -1,9 +1,9 @@
 //! Frame rendering execution, temporal resolve handoff, and presentation for PortalGpu.
 
 use super::super::{
-    ambient_draw_instances, create_picking_texture, output_pass, portal_bloom_enabled,
-    reserve_view_resources, run_bloom_passes, temporal_resolve_gpu, AmbientUniforms, PortalGpu,
-    TemporalProducerViews,
+    AmbientUniforms, PortalGpu, TemporalProducerViews, ambient_draw_instances,
+    create_picking_texture, output_pass, portal_bloom_enabled, reserve_view_resources,
+    run_bloom_passes, temporal_resolve_gpu,
 };
 use crate::render::telemetry::SystemTelemetry;
 
@@ -512,7 +512,15 @@ impl PortalGpu {
         // VC3: Submit the command buffer. The uniform belt's copy commands
         // are already recorded in the encoder. The belt's advance() calls
         // have already re-mapped the oldest slots for the next frame.
-        self.queue.submit(std::iter::once(encoder.finish()));
+        let submission = self.queue.submit(std::iter::once(encoder.finish()));
+        #[cfg(not(target_arch = "wasm32"))]
+        if submission.is_none() {
+            return Err(
+                "frame rendering: native queue rejected the command submission".to_string(),
+            );
+        }
+        #[cfg(target_arch = "wasm32")]
+        let _ = submission;
 
         if let Some(frame) = surface_frame {
             // wgpu 30: SurfaceTexture::present() removed → Queue::present(frame).

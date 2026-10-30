@@ -1,5 +1,7 @@
 //! `platform` category (reorg).
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub mod accelerator_inventory;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod compute_bridge;
 #[cfg(not(target_arch = "wasm32"))]
@@ -27,4 +29,6 @@ pub mod local_scheduler;
 pub mod platform_scheduler;
 pub mod precision_timer;
 
-pub use precision_timer::{format_duration_human, BenchmarkResult, DurationPrecisionExt, PrecisionTimer};
+pub use precision_timer::{
+    format_duration_human, BenchmarkResult, DurationPrecisionExt, PrecisionTimer,
+};

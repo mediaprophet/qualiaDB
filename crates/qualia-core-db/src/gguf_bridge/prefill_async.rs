@@ -1445,7 +1445,8 @@ impl QTensorEngine {
 
     /// Batched argmax: all vocab chunks in one encoder + one submit + one readback.
     /// Eliminates 4 of 5 async map yields per token vs the per-chunk path.
-    #[cfg(target_arch = "wasm32")]
+    #[cfg(all(target_arch = "wasm32", feature = "wasm-llm-diagnostics"))]
+    #[expect(dead_code, reason = "Staged browser argmax experiment; not connected to production decode")]
     pub(crate) async fn dispatch_output_argmax_batched_async(
         &self,
         index: &crate::gguf_sharder::GgufTensorIndex,

@@ -54,7 +54,7 @@ pub fn shared_policy() -> &'static ComputePolicy {
             let host = HostCapabilities {
                 gpu_available: gpu_gemm::shared().is_some(),
                 vram_available: 2u64 << 30,
-                npu_available: false,
+                npu_available: crate::platform::accelerator_inventory::capture().has_detected_npu(),
                 cpu_threads: num_cpus::get() as u32,
             };
             ComputePolicy::probe(&registry, &panel, budget, host)

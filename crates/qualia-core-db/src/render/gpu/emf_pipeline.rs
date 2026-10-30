@@ -15,8 +15,8 @@
 
 #[allow(unused_imports)]
 pub use etalon_render::emf::{
-    checked_field_bytes, checked_grid_cell_count, EmfFieldCell, EmfPipeline, EmfPipelineDesc,
-    EmfSliceUniform, EMF_VOLUMETRIC_WGSL,
+    EMF_VOLUMETRIC_WGSL, EmfFieldCell, EmfPipeline, EmfPipelineDesc, EmfSliceUniform,
+    checked_field_bytes, checked_grid_cell_count,
 };
 use wgpu::util::DeviceExt;
 
@@ -316,10 +316,7 @@ impl super::PortalGpu {
     /// Draws a full-screen quad with the EMF fragment shader. The caller is
     /// responsible for beginning the render pass and providing a color
     /// attachment view.
-    pub fn emf_render_slice(
-        &self,
-        render_pass: &mut wgpu::RenderPass<'_>,
-    ) -> Result<(), String> {
+    pub fn emf_render_slice(&self, render_pass: &mut wgpu::RenderPass<'_>) -> Result<(), String> {
         let Some(field_bind) = &self.emf.field_bind_group else {
             return Err("emf_render_slice: no field uploaded".into());
         };
@@ -376,7 +373,13 @@ impl super::PortalGpu {
             });
             self.emf_render_slice(&mut pass)?;
         }
-        self.queue.submit(std::iter::once(encoder.finish()));
+        let submission = self.queue.submit(std::iter::once(encoder.finish()));
+        #[cfg(not(target_arch = "wasm32"))]
+        if submission.is_none() {
+            return Err("EMF rendering: native queue rejected the command submission".to_string());
+        }
+        #[cfg(target_arch = "wasm32")]
+        let _ = submission;
 
         let (w, h) = self.surface_size();
         let mut pixels = vec![0u8; (w * h * 4) as usize];

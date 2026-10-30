@@ -19,7 +19,9 @@ use super::super::{
     Q42Volume, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, QUIN_SIZE, SUPERBLOCK_HEADER,
     SUPERBLOCK_SIZE,
 };
-use crate::{NQuin, PermissiveRoutingLane, QUINS_PER_BLOCK};
+use crate::{NQuin, PermissiveRoutingLane};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::QUINS_PER_BLOCK;
 
 /// What the caller asserts about a file. Never overrides Quin-level rights.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -319,6 +321,7 @@ pub fn deny_public_publication(verdict: &Q42PublicationVerdict) -> io::Result<()
 
 /// Tally one Quin into `counts` — sensitivity byte, protected tiers,
 /// and routing lane.
+#[cfg(not(target_arch = "wasm32"))]
 fn accumulate(counts: &mut ClassificationCounts, quin: &NQuin) {
     counts.quins_scanned += 1;
     match quin.get_sensitivity_byte() {
@@ -343,6 +346,7 @@ fn accumulate(counts: &mut ClassificationCounts, quin: &NQuin) {
 
 /// Total Quins that force Sanctuary handling (restricted +
 /// classified + protected tiers + bilateral lane).
+#[cfg(not(target_arch = "wasm32"))]
 fn sanctuary_quin_count(counts: &ClassificationCounts) -> u64 {
     counts.restricted
         + counts.classified
@@ -358,6 +362,7 @@ fn sanctuary_quin_count(counts: &ClassificationCounts) -> u64 {
 /// `PermissiveCommons`; unmarked → `UnmarkedLocal` (stays local).
 /// Decode failures count as sanctuary bits — unverifiable data never
 /// goes public.
+#[cfg(not(target_arch = "wasm32"))]
 fn decide(
     header_commons: bool,
     header_sanctuary: bool,

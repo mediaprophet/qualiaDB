@@ -1,0 +1,110 @@
+name: Etalon and VibeScript
+
+on:
+  push:
+    branches: ["0.0.40.*"]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/qualia-core-db/**"
+      - "crates/vibe/**"
+      - "tools/accelerator-harness/**"
+      - "scripts/test-etalon-vibe.ps1"
+      - ".github/workflows/etalon-vibe.yml"
+  pull_request:
+    paths:
+      - "crates/qualia-core-db/**"
+      - "crates/vibe/**"
+      - "tools/accelerator-harness/**"
+      - "scripts/test-etalon-vibe.ps1"
+      - ".github/workflows/etalon-vibe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etalon-vibe-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_BUILD_JOBS: "2"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            mode: product-cpu
+          - os: ubuntu-latest
+            mode: language-discovery
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - name: Checkout QualiaDB
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: qualia
+          persist-credentials: false
+
+      - name: Read reviewed Etalon revision
+        id: etalon
+        shell: pwsh
+        run: |
+          $revision = (Get-Content qualia/tools/accelerator-harness/etalon-revision.txt -Raw).Trim()
+          if ($revision -notmatch '^[0-9a-f]{40}$') { throw 'Etalon must be pinned to a full reviewed commit' }
+          "revision=$revision" >> $env:GITHUB_OUTPUT
+
+      - name: Checkout reviewed Etalon
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mediaprophet/etalon
+          ref: ${{ steps.etalon.outputs.revision }}
+          path: etalon
+          persist-credentials: false
+
+      - name: Install Rust
+        shell: pwsh
+        run: rustup toolchain install 1.96.1 --profile minimal
+
+      - name: Test browser report and local hosting
+        working-directory: qualia
+        run: node --test docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: qualia
+          key: etalon-vibe-${{ matrix.mode }}
+
+      - name: CPU integration and fresh accelerator discovery
+        shell: pwsh
+        env:
+          HARNESS_MODE: ${{ matrix.mode }}
+        run: |
+          $options = @{ EtalonPath = './etalon'; ReportPath = './qualia/target/qualification/receipt.json' }
+          if ($env:HARNESS_MODE -eq 'product-cpu') { $options.CpuOnly = $true }
+          else { $options.LanguageOnly = $true }
+          & ./qualia/scripts/test-etalon-vibe.ps1 @options
+
+      - name: Check optional NPU adapter and evidence rejection tests
+        shell: pwsh
+        working-directory: etalon
+        run: |
+          $receipt = Get-Content ../qualia/target/qualification/receipt.json -Raw | ConvertFrom-Json
+          cargo test --manifest-path $receipt.lightweight_manifest --target-dir $receipt.target_directory --features npu-openvino
+          if ($LASTEXITCODE -ne 0) { throw 'Optional NPU adapter tests failed' }
+
+      - name: Retain bounded qualification receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: etalon-vibe-${{ matrix.os }}
+          path: qualia/target/qualification/receipt.json
+          retention-days: 7
+          if-no-files-found: warn

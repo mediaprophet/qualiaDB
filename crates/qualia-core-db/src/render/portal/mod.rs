@@ -2012,7 +2012,7 @@ impl QualiaPortal {
         Reflect::set(
             &result,
             &JsValue::from_str("organs_loaded"),
-            &JsValue::from_f64(accum.assets_loaded as f64),
+            &JsValue::from_f64(accum.organs_loaded() as f64),
         )?;
         Reflect::set(
             &result,
@@ -2022,7 +2022,7 @@ impl QualiaPortal {
         Reflect::set(
             &result,
             &JsValue::from_str("organs_refused"),
-            &JsValue::from_f64(accum.assets_refused as f64),
+            &JsValue::from_f64(accum.organs_refused() as f64),
         )?;
         Reflect::set(
             &result,

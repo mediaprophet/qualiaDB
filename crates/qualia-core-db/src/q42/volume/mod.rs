@@ -4,11 +4,12 @@
 //! decomposed in later phases.  They keep the read/query path checked and
 //! caller-buffered without changing the 48-byte `NQuin` ABI.
 //!
-//! wasm32: the byte-format read path (`index`, `postings`, `validate`, `range`,
+//! wasm32: the byte-format read path (`index`, `postings`, `range`,
 //! `range_volume`, `manifest` descriptors, `car`/`cid`, `opfs_source` slice
 //! adapters, `publication` policy types, `query_mode`) is transport-neutral and
-//! compiles for the browser. Modules that need a filesystem, mmap, tempfile,
-//! or blocking HTTP stay `cfg(not(target_arch = "wasm32"))`.
+//! compiles for the browser; `range_volume` validates its range-based reads.
+//! Whole-file `validate` serves the native mmap reader. Modules requiring filesystem,
+//! mmap, tempfile, or blocking HTTP stay `cfg(not(target_arch = "wasm32"))`.
 
 mod car;
 mod cid;
@@ -39,6 +40,7 @@ mod range;
 mod range_volume;
 #[cfg(not(target_arch = "wasm32"))]
 mod stream_writer;
+#[cfg(not(target_arch = "wasm32"))]
 mod validate;
 mod wasm_slice_reader;
 #[cfg(not(target_arch = "wasm32"))]
@@ -118,6 +120,9 @@ pub use verify::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use write_quins::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};
 
-pub(crate) use index::{bidx_block_range_for_hash, bidx_blocks_for_hash_into};
+pub(crate) use index::bidx_block_range_for_hash;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use index::bidx_blocks_for_hash_into;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use validate::validate_volume_structure;
 pub use wasm_slice_reader::WasmSliceQ42Reader;

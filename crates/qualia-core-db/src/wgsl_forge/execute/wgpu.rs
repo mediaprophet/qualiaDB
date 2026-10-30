@@ -556,6 +556,19 @@ impl WgpuComputeContext {
         })
     }
 
+    fn submit_commands(&self, command_buffer: wgpu::CommandBuffer) -> Result<(), ForgeError> {
+        let submission = self.queue.submit([command_buffer]);
+        #[cfg(not(target_arch = "wasm32"))]
+        if submission.is_none() {
+            return Err(ForgeError::GpuValidation(
+                "native queue rejected the command submission".into(),
+            ));
+        }
+        #[cfg(target_arch = "wasm32")]
+        let _ = submission;
+        Ok(())
+    }
+
     /// The physical buffer backing a view, chosen by its binding usage.
     fn slab_for(&self, usage: BindingUsage) -> &wgpu::Buffer {
         match usage {
@@ -756,7 +769,7 @@ impl WgpuComputeContext {
                 label: Some("forge-build-accel"),
             });
         encoder.build_acceleration_structures(std::iter::once(&entry), std::iter::once(&tlas));
-        self.queue.submit(Some(encoder.finish()));
+        self.submit_commands(encoder.finish())?;
         self.device
             .poll(wgpu::PollType::wait_indefinitely())
             .map_err(|e| {
@@ -930,7 +943,7 @@ impl WgpuComputeContext {
                 }
             }
         }
-        self.queue.submit(Some(encoder.finish()));
+        self.submit_commands(encoder.finish())?;
         self.device
             .poll(wgpu::PollType::wait_indefinitely())
             .map_err(|e| {
@@ -965,7 +978,7 @@ impl WgpuComputeContext {
             dst.offset as u64,
             len,
         );
-        self.queue.submit(Some(encoder.finish()));
+        self.submit_commands(encoder.finish())?;
         Ok(())
     }
 
@@ -990,7 +1003,7 @@ impl WgpuComputeContext {
             0,
             size,
         );
-        self.queue.submit(Some(encoder.finish()));
+        self.submit_commands(encoder.finish())?;
         let bytes = map_read(&self.device, &staging)?;
 
         let elements = view.length_bytes / size_of::<f32>();
@@ -1185,11 +1198,13 @@ impl<'a> WgpuPipeline<'a> {
             pass.set_bind_group(0, &bind_group, &[]);
             pass.dispatch_workgroups(dispatch_x, 1, 1);
         }
-        self.context.queue.submit(Some(encoder.finish()));
-        let _ = self
-            .context
+        self.context.submit_commands(encoder.finish())?;
+        self.context
             .device
-            .poll(wgpu::PollType::wait_indefinitely());
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|error| {
+                ForgeError::DeviceLost(format!("device poll failed after ray probe: {error:?}"))
+            })?;
         Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
     }
 
@@ -1219,11 +1234,13 @@ impl<'a> WgpuPipeline<'a> {
             pass.set_bind_group(0, &bind_group, &[]);
             pass.dispatch_workgroups(head_count, 1, 1);
         }
-        self.context.queue.submit(Some(encoder.finish()));
-        let _ = self
-            .context
+        self.context.submit_commands(encoder.finish())?;
+        self.context
             .device
-            .poll(wgpu::PollType::wait_indefinitely());
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|error| {
+                ForgeError::DeviceLost(format!("device poll failed after attention: {error:?}"))
+            })?;
         Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
     }
 }
@@ -1268,7 +1285,7 @@ impl<'a> QualiaCompute for WgpuPipeline<'a> {
             encoder.resolve_query_set(&resources.query_set, 0..2, &resources.resolve, 0);
             encoder.copy_buffer_to_buffer(&resources.resolve, 0, &resources.staging, 0, 16);
         }
-        self.context.queue.submit(Some(encoder.finish()));
+        self.context.submit_commands(encoder.finish())?;
 
         if let Some(resources) = &self.context.timestamp_resources {
             let bytes = map_read(&self.context.device, &resources.staging)?;

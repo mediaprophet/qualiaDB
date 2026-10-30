@@ -166,6 +166,10 @@ scripts/*
 !scripts/validate-nlp-plan.ps1
 !scripts/package-poet-wasm.ps1
 !scripts/package-qapp.ps1
+!scripts/test-etalon-vibe.ps1
+!scripts/device-harness-build.mjs
+!scripts/serve-device-harness.mjs
+!scripts/serve-device-harness.test.mjs
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json
@@ -286,3 +290,5 @@ tauri_updater.key.pub
 /experiments/inference-lab/artifacts/raw-*/
 
 crates/qualia-core-db/pkg-webcivics/
+/docs/playground/device-harness-build.json
+/docs/pkg/device-harness/

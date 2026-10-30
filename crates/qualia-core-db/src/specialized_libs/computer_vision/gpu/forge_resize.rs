@@ -13,14 +13,22 @@
 
 use super::dispatch::VisionComputeReport;
 use crate::specialized_libs::computer_vision::types::VisionError;
-#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+#[cfg(all(
+    feature = "gpu-runtime",
+    feature = "wgsl-forge",
+    not(target_arch = "wasm32")
+))]
 use crate::specialized_libs::computer_vision::VisionComputeDevice;
 
 /// Attempt GPU resize on the process-wide shared device.
 ///
 /// Returns `Ok(report)` with `device = SharedGpu` on success. On any failure
 /// returns `Err` so the caller falls back to the CPU oracle.
-#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+#[cfg(all(
+    feature = "gpu-runtime",
+    feature = "wgsl-forge",
+    not(target_arch = "wasm32")
+))]
 pub fn try_resize_nearest_shared_gpu(
     input: &[f32],
     c: usize,
@@ -99,7 +107,11 @@ pub fn try_resize_nearest_shared_gpu(
     })
 }
 
-#[cfg(not(all(feature = "gpu-runtime", not(target_arch = "wasm32"))))]
+#[cfg(not(all(
+    feature = "gpu-runtime",
+    feature = "wgsl-forge",
+    not(target_arch = "wasm32")
+)))]
 /// Tries `resize-nearest-shared-gpu`.
 pub fn try_resize_nearest_shared_gpu(
     _input: &[f32],
@@ -118,6 +130,19 @@ mod tests {
     use super::*;
     use crate::specialized_libs::computer_vision::ops::resize_nearest_nchw_f32;
     use crate::specialized_libs::computer_vision::VisionComputeDevice;
+
+    #[cfg(not(all(
+        feature = "gpu-runtime",
+        feature = "wgsl-forge",
+        not(target_arch = "wasm32")
+    )))]
+    #[test]
+    fn unavailable_forge_leaves_output_untouched() {
+        let mut output = [7.0; 4];
+        let result = try_resize_nearest_shared_gpu(&[1.0], 1, 1, 1, 2, 2, &mut output);
+        assert!(matches!(result, Err(VisionError::BackendUnavailable)));
+        assert_eq!(output, [7.0; 4]);
+    }
 
     #[test]
     fn forge_path_or_unavailable_matches_cpu_when_ok() {

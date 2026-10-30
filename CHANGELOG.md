@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Added fresh Windows/Linux NPU discovery with independent runtime/workload/execution states, and an optional OpenVINO plugin harness that selects an actual runtime NPU, disables CPU fallback and checks output plus provider execution evidence. Missing hardware is recorded as unverified execution.
+- Made CUDA opt-in in the portable default profile, upgraded optional vision adapters to ORT rc.15 with a shared environment owner and caller-owned environment loaders, and corrected NPU routing and iGPU zero-copy claims.
+- Added a local Etalon/VibeScript integration harness covering checked scripts through the canonical Qualia host, graph transactions, real GPU readback against CPU references, resource initialization and request rejection. Integrated GPUs are supported; CPU-only coverage is explicit. See `docs/testing-etalon-vibe.md`.
+
 ### Added (Whole-Biosphere & Poet Host Engine — 2026-10-29)
 
 - **Whole-Biosphere, Corpus Estimation, Living-Systems & Selective Streaming Engine (`PHASE-1`–`PHASE-5`)**:

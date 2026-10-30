@@ -17,6 +17,7 @@ use crate::wgsl_forge::{
 };
 use vibe::{Diagnostic, Span, Value};
 
+#[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 const VIEWPORT_PIPELINES: [&str; 8] = [
     "cyber_glass",
     "barnes_hut_graph_physics",

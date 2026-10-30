@@ -195,6 +195,7 @@ pub fn encode_postings_section(blocks: &[BlockFieldPostings]) -> Vec<u8> {
 /// Structural validation of a PIDX section: magic, version, block-count
 /// match, non-truncated offset table, payload-length consistency, and
 /// per-block payload decodability.
+#[cfg(any(not(target_arch = "wasm32"), test))]
 pub fn validate_postings_section(bytes: &[u8], expected_blocks: usize) -> io::Result<()> {
     if bytes.len() < FIELD_POSTINGS_HEADER_BYTES {
         return Err(invalid("field postings shorter than header"));
@@ -256,6 +257,7 @@ pub(crate) fn block_payload_interval(
 }
 
 /// Slice one SuperBlock's encoded S/P/C membership out of an in-memory PIDX section.
+#[cfg(any(not(target_arch = "wasm32"), test))]
 pub fn block_payload<'a>(bytes: &'a [u8], block_index: usize) -> io::Result<&'a [u8]> {
     if bytes.len() < FIELD_POSTINGS_HEADER_BYTES {
         return Err(invalid("field postings shorter than header"));

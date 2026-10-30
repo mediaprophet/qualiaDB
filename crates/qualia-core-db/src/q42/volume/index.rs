@@ -2,8 +2,10 @@
 
 use std::io;
 
+use super::super::BIDX_MAGIC;
+#[cfg(not(target_arch = "wasm32"))]
 use super::super::{
-    BIDX_MAGIC, FIELD_RANGE_INDEX_ENTRY_BYTES, FIELD_RANGE_INDEX_HEADER_BYTES,
+    FIELD_RANGE_INDEX_ENTRY_BYTES, FIELD_RANGE_INDEX_HEADER_BYTES,
     FIELD_RANGE_INDEX_MAGIC,
 };
 
@@ -115,6 +117,7 @@ pub(crate) fn validate_bidx(bidx: &[u8], expected_blocks: usize) -> io::Result<(
 }
 
 /// Validates `field-range-index`.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn validate_field_range_index(bytes: &[u8], expected_blocks: usize) -> io::Result<()> {
     let expected = FIELD_RANGE_INDEX_HEADER_BYTES
         .checked_add(
@@ -200,6 +203,7 @@ pub(crate) fn bidx_block_range_for_hash(
 }
 
 /// Fill one bounded page of matching BIDX block indices.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn bidx_blocks_for_hash_into(
     bidx: &[u8],
     object_hash: u64,

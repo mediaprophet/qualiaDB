@@ -280,6 +280,7 @@ pub(super) fn compute_router_logits_from_gguf(
 }
 
 /// Compute FTW router logits directly from raw weights without materializing a matrix.
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn compute_router_logits_from_raw(
     raw: &[u8],
     ggml_type: u32,

@@ -21,7 +21,7 @@ pub use reservation::{GraphicsReservationError, VramReservation, VramResourceCla
 // qdnf-only does not, and must not `use wgpu` here.
 #[cfg(feature = "gpu-runtime")]
 mod caps;
-#[cfg(all(feature = "gpu-runtime", feature = "wgsl-forge"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime", feature = "wgsl-forge"))]
 pub(crate) use caps::experimental_features_allowed;
 #[cfg(feature = "gpu-runtime")]
 pub(crate) use caps::requested_native_llm_features;

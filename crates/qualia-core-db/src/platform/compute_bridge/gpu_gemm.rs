@@ -161,13 +161,13 @@ impl WgpuGemm {
             pass.dispatch_workgroups((m as u32).div_ceil(8), (n as u32).div_ceil(8), 1);
         }
         enc.copy_buffer_to_buffer(&out, 0, &staging, 0, out_bytes);
-        self.queue.submit(Some(enc.finish()));
+        self.queue.submit(Some(enc.finish()))?;
 
         let (tx, rx) = mpsc::channel();
         staging.slice(..).map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        let _ = dev.poll(wgpu::PollType::wait_indefinitely());
+        dev.poll(wgpu::PollType::wait_indefinitely()).ok()?;
         rx.recv().ok()?.ok()?;
         let data = staging
             .slice(..)

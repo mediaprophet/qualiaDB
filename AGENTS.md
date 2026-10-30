@@ -1336,3 +1336,33 @@ complete HMC semantics/model dossiers, high-grade masters and reviewed film,
 open-world game and cartoon derivatives remain open. All 120 production packets
 remain open. No GUI/Computer Use, commits, pushes, payment, publication or Chora
 source changes were performed. Existing user work and running Poet were preserved.
+
+### 2026-10-30 — Etalon / VibeScript harness modernization (publication checkpoint)
+
+Added native and browser consuming harnesses for canonical Vibe CPU execution and
+Rust Etalon GPU compute/readback, with separate unsupported outcomes and bounded
+JSON diagnostics. The GitHub Pages UI offers downloadable reports and explicit
+file sharing to a mail app; its mailto fallback requires manual JSON attachment.
+No SMTP service, credentials, automatic upload or delivery claim is introduced.
+Source revisions and published asset hashes identify the browser build.
+
+All production Etalon declarations and the accelerator tool pin the immutable
+published revision recorded in tools/accelerator-harness/etalon-revision.txt.
+ORT consumers share the exact rc.15 runtime API and explicit environment lifetime.
+Native inventory distinguishes hardware, runtime, workload and actual execution;
+Windows DXCore found no NPU here. Browser NPU availability remains unknown.
+Rejected submissions and failed completion polls propagate through native callers.
+
+Local browser execution passed two Vibe CPU cases and eleven WebGPU dispatches
+within one GPU case. Download/file-share/draft fallback and bounded server checks
+pass; no email was sent during testing. The actual default-feature core library
+checks successfully on MSVC using the reviewed local Etalon sources. Full core
+library tests and immutable-pin CI/Pages deployment remain pending at this
+checkpoint; this note does not claim release acceptance. Two intermittent Intel
+DX12 multiview failures are still being investigated in Etalon independently.
+The retired Deno WebGPU CTS coverage is not restored by these application tests.
+
+HANDOVER.md is absent in this checkout; module scope and test limits are recorded
+in docs/testing-etalon-vibe.md and the implementation/qualification documents in
+Etalon. The active 0.0.40.8-dev branch is retained instead of the historical branch
+name in the handoff checklist.

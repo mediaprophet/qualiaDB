@@ -41,6 +41,8 @@ pub mod gguf_sharder;
 pub mod metal_bridge;
 pub mod moe;
 pub mod neuro_symbolic_sieve;
+#[cfg(feature = "vision-onnx")]
+pub mod onnx_runtime;
 pub mod operator_converter;
 pub mod operator_package;
 pub mod operator_runtime;

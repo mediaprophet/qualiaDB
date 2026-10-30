@@ -56,14 +56,21 @@ impl PortalGpu {
                 depth_or_array_layers: 1,
             },
         );
-        self.queue.submit(std::iter::once(encoder.finish()));
+        self.queue
+            .submit(std::iter::once(encoder.finish()))
+            .ok_or_else(|| {
+                "RGBA8 readback: native queue rejected the command submission".to_string()
+            })?;
 
         let slice = staging.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();
         slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = tx.send(result);
         });
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        if let Err(error) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
+            staging.unmap();
+            return Err(format!("RGBA8 readback: device poll failed: {error}"));
+        }
         rx.recv()
             .map_err(|e| format!("RGBA8 readback callback failed: {e}"))?
             .map_err(|e| format!("RGBA8 buffer map failed: {e}"))?;

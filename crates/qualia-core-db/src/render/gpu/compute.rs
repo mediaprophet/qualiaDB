@@ -470,7 +470,15 @@ impl super::PortalGpu {
                 .expect("readback binding validated before resource allocation");
             encoder.copy_buffer_to_buffer(src, 0, staging, 0, copy_size as u64);
         }
-        self.queue.submit(std::iter::once(encoder.finish()));
+        let submission = self.queue.submit(std::iter::once(encoder.finish()));
+        #[cfg(not(target_arch = "wasm32"))]
+        if submission.is_none() {
+            return Err(
+                "compute dispatch: native queue rejected the command submission".to_string(),
+            );
+        }
+        #[cfg(target_arch = "wasm32")]
+        let _ = submission;
 
         let dispatch_id = self.compute.next_dispatch_id;
         self.compute.next_dispatch_id = self.compute.next_dispatch_id.wrapping_add(1);
@@ -499,7 +507,13 @@ impl super::PortalGpu {
         slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = tx.send(result);
         });
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        if let Err(error) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
+            staging.unmap();
+            self.compute.pending = None;
+            return Some(Err(format!(
+                "compute_readback: dispatch {dispatch_id}: device poll failed: {error}"
+            )));
+        }
         // Block until the map callback fires (native synchronous readback, mirrors
         // the RGBA8 readback path). `poll(wait_indefinitely)` drives the device
         // queue; `recv()` guarantees we observe the callback result.

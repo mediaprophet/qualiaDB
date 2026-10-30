@@ -13,9 +13,11 @@
 //! elsewhere; this module never claims trust, only fast-boot.
 //!
 //! Native only.
+//! CPU/GPU measurements are cached here; NPU discovery is fresh and independent.
 #![cfg(not(target_arch = "wasm32"))]
 
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use std::path::PathBuf;
 
 use crate::device_benchmark::{benchmark_devices, CapabilityMatrix, CircuitKind};
@@ -28,6 +30,7 @@ pub const PASSPORT_VERSION: u32 = 2;
 
 /// Default representative GEMV side length for the cached benchmark.
 pub const PASSPORT_GEMV_N: usize = 2048;
+const MAX_PASSPORT_BYTES: usize = 4 * 1024 * 1024;
 
 /// Cached discovery: topology + measured capability matrix, keyed by adapter identifiers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,19 +74,59 @@ pub fn default_cache_path() -> PathBuf {
 
 /// Serialize a passport to a CBOR blob on disk.
 pub fn write_passport(passport: &HardwarePassport, path: &Path) -> Result<(), String> {
-    let mut buf = Vec::new();
+    if !gpu_cpu_only(passport) {
+        return Err("NPU execution claims cannot be stored in the GPU/CPU passport".into());
+    }
+    let mut buf = PassportBuffer(Vec::new());
     ciborium::into_writer(passport, &mut buf).map_err(|e| format!("cbor encode: {e}"))?;
-    std::fs::write(path, &buf).map_err(|e| format!("write {}: {e}", path.display()))
+    std::fs::write(path, &buf.0).map_err(|e| format!("write {}: {e}", path.display()))
+}
+
+struct PassportBuffer(Vec<u8>);
+
+impl std::io::Write for PassportBuffer {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        if bytes.len() > MAX_PASSPORT_BYTES.saturating_sub(self.0.len()) {
+            return Err(std::io::Error::other(
+                "hardware passport exceeds its byte budget",
+            ));
+        }
+        self.0.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }
 
 /// Read + decode a passport (CBOR). Returns `None` on missing file, decode error, or version mismatch.
 pub fn read_passport(path: &Path) -> Option<HardwarePassport> {
-    let bytes = std::fs::read(path).ok()?;
+    let file = std::fs::File::open(path).ok()?;
+    if file.metadata().ok()?.len() > MAX_PASSPORT_BYTES as u64 {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    file.take((MAX_PASSPORT_BYTES + 1) as u64)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    if bytes.len() > MAX_PASSPORT_BYTES {
+        return None;
+    }
     let passport: HardwarePassport = ciborium::from_reader(&bytes[..]).ok()?;
-    if passport.version != PASSPORT_VERSION {
+    if passport.version != PASSPORT_VERSION || !gpu_cpu_only(&passport) {
         return None;
     }
     Some(passport)
+}
+
+fn gpu_cpu_only(passport: &HardwarePassport) -> bool {
+    !passport.matrix.npu_probed
+        && !passport
+            .matrix
+            .circuits
+            .iter()
+            .any(|circuit| circuit.kind == CircuitKind::Npu)
 }
 
 /// Fast-boot entry: return the cached passport iff its adapter-identifier key matches the current
@@ -93,7 +136,7 @@ pub fn load_or_probe(path: &Path, gemv_n: usize) -> (HardwarePassport, bool) {
     let current_key = topology_key(&topology);
 
     if let Some(cached) = read_passport(path) {
-        if cached.key == current_key {
+        if cache_matches(&cached, &current_key, gemv_n) {
             return (cached, true); // fast-boot: skip the probe (TTFT)
         }
         // key mismatch ⇒ hardware changed (D26/D28) → re-probe below.
@@ -116,6 +159,13 @@ pub fn load_or_probe(path: &Path, gemv_n: usize) -> (HardwarePassport, bool) {
     };
     let _ = write_passport(&fresh, path);
     (fresh, false)
+}
+
+fn cache_matches(passport: &HardwarePassport, key: &str, gemv_n: usize) -> bool {
+    passport.key == key
+        && passport.probe_gemv_n == gemv_n
+        && passport.matrix.gemv_n == gemv_n
+        && gpu_cpu_only(passport)
 }
 
 /// Default small-model candidates for decode-proxy ranking (first existing wins).
@@ -507,6 +557,48 @@ mod tests {
             read_passport(&path).is_none(),
             "stale version must be rejected → re-probe"
         );
+    }
+
+    #[test]
+    fn gpu_passport_cannot_restore_npu_execution_claims() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("passport.cbor");
+        for has_npu_row in [false, true] {
+            let mut passport = synthetic_passport();
+            if has_npu_row {
+                passport.matrix.circuits[0].kind = CircuitKind::Npu;
+            } else {
+                passport.matrix.npu_probed = true;
+            }
+            let mut bytes = Vec::new();
+            ciborium::into_writer(&passport, &mut bytes).unwrap();
+            std::fs::write(&path, bytes).unwrap();
+            assert!(read_passport(&path).is_none());
+            assert!(write_passport(&passport, &path).is_err());
+        }
+    }
+
+    #[test]
+    fn benchmark_shape_changes_invalidate_the_gpu_cache() {
+        let mut passport = synthetic_passport();
+        assert!(cache_matches(&passport, &passport.key, 2048));
+        assert!(!cache_matches(&passport, &passport.key, 512));
+        passport.matrix.gemv_n = 512;
+        assert!(!cache_matches(&passport, &passport.key, 2048));
+    }
+
+    #[test]
+    fn oversized_passports_are_rejected_before_decoding() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("passport.cbor");
+        std::fs::File::create(&path)
+            .unwrap()
+            .set_len((MAX_PASSPORT_BYTES + 1) as u64)
+            .unwrap();
+        assert!(read_passport(&path).is_none());
+        let mut passport = synthetic_passport();
+        passport.key = "a".repeat(MAX_PASSPORT_BYTES);
+        assert!(write_passport(&passport, &path).is_err());
     }
 
     #[test]

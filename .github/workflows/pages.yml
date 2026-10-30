@@ -4,9 +4,8 @@ name: Deploy Qualia-DB Playground to GitHub Pages
 # Triggers: main, active release branch 0.0.40, version tags, or manual run.
 # Build/test runs on those refs without the github-pages environment so a missing
 # deployment-branch policy cannot skip node/wasm/jekyll verification.
-# Deploy still needs environment github-pages. Historical allowed refs (repo settings):
-# main, 0.0.24–0.0.34, tags v*. Branch 0.0.40 may still be rejected until settings
-# add that branch. Tag v0.0.40 is the intended publish path.
+# The github-pages deployment policy reviewed on 2026-10-30 permits 0.0.40*,
+# including the active 0.0.40.8-dev branch.
 on:
   push:
     branches:
@@ -65,6 +64,9 @@ jobs:
       - name: Add wasm32 target
         run: rustup target add wasm32-unknown-unknown
 
+      - name: Capture browser harness source identity
+        run: node scripts/device-harness-build.mjs --capture-source target/device-harness-source.json
+
       - name: Install system deps
         run: |
           sudo apt-get update -qq
@@ -81,6 +83,7 @@ jobs:
           node docs/tests/qdnf-pages.test.mjs
           node docs/tests/edge-llm-smoke.test.mjs
           node docs/tests/lexicon-v4-namespaced.test.mjs
+          node --test docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs
 
       - name: Install wasm-pack
         run: |
@@ -170,6 +173,9 @@ jobs:
           printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.40","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
+
+      - name: Attribute browser harness assets
+        run: node scripts/device-harness-build.mjs --source-record target/device-harness-source.json
 
       - name: Phase 7.1 — portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).

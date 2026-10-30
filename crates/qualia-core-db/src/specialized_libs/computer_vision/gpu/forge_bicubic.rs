@@ -13,7 +13,11 @@
 
 use super::dispatch::VisionComputeReport;
 use crate::specialized_libs::computer_vision::types::VisionError;
-#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+#[cfg(all(
+    feature = "gpu-runtime",
+    feature = "wgsl-forge",
+    not(target_arch = "wasm32")
+))]
 use crate::specialized_libs::computer_vision::VisionComputeDevice;
 
 pub const BICUBIC_ENTRY: &str = "bicubic2d_main";
@@ -144,7 +148,11 @@ fn cubic_weight(t: f32) -> f32 {
 /// Attempt bicubic NCHW resize on the auxiliary GPU circuit (iGPU when present; falls back
 /// auxiliary → primary → CPU). Returns `Err(BackendUnavailable)` on a GPU-less box so the caller
 /// degrades to the CPU oracle. Never panics.
-#[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
+#[cfg(all(
+    feature = "gpu-runtime",
+    feature = "wgsl-forge",
+    not(target_arch = "wasm32")
+))]
 pub fn try_resize_bicubic_shared_gpu(
     input: &[f32],
     c: usize,
@@ -237,7 +245,11 @@ pub fn try_resize_bicubic_shared_gpu(
     })
 }
 
-#[cfg(not(all(feature = "gpu-runtime", not(target_arch = "wasm32"))))]
+#[cfg(not(all(
+    feature = "gpu-runtime",
+    feature = "wgsl-forge",
+    not(target_arch = "wasm32")
+)))]
 /// Tries `resize-bicubic-shared-gpu`.
 pub fn try_resize_bicubic_shared_gpu(
     _input: &[f32],
@@ -255,6 +267,19 @@ pub fn try_resize_bicubic_shared_gpu(
 mod tests {
     use super::*;
     use crate::specialized_libs::computer_vision::VisionComputeDevice;
+
+    #[cfg(not(all(
+        feature = "gpu-runtime",
+        feature = "wgsl-forge",
+        not(target_arch = "wasm32")
+    )))]
+    #[test]
+    fn unavailable_forge_leaves_output_untouched() {
+        let mut output = [7.0; 4];
+        let result = try_resize_bicubic_shared_gpu(&[1.0], 1, 1, 1, 2, 2, &mut output);
+        assert!(matches!(result, Err(VisionError::BackendUnavailable)));
+        assert_eq!(output, [7.0; 4]);
+    }
 
     #[test]
     fn cpu_oracle_upscales_flat() {
