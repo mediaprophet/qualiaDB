@@ -109,6 +109,18 @@ assert.ok(new TextEncoder().encode(draft.url).length <= MAILTO_LIMIT);
 assert.ok(draft.url.startsWith('mailto:me%2Bdevice%40example.test?'));
 assert.match(new URL(draft.url).searchParams.get('body'), /COMPACT SUMMARY ONLY/);
 assert.match(draft.body, /attach it manually/);
+const unavailableGpuDraft = reportEmailDraft({
+  ...shareReport, browser: { webgpu_api: true, secure_context: true },
+  cases: [{ name: 'etalon_browser_compute_readback', execution_class: 'gpu', outcome: 'unsupported',
+    details: { reason: 'Browser returned no compatibility WebGPU adapter' } }],
+});
+assert.match(unavailableGpuDraft.body, /GPU reason: Browser returned no compatibility/);
+assert.match(unavailableGpuDraft.body, /WebGPU API: true; secure context: true/);
+assert.ok(new TextEncoder().encode(unavailableGpuDraft.url).length <= MAILTO_LIMIT);
+assert.doesNotThrow(() => reportEmailDraft({ ...shareReport, cases: [{
+  name: 'etalon_browser_compute_readback', execution_class: 'gpu', outcome: 'unsupported',
+  details: { reason: '不可用🙂'.repeat(300) },
+}] }));
 assert.ok(!draft.body.includes(JSON.stringify(cases)));
 assert.throws(() => reportEmailDraft(shareReport, 'me@example.test\r\nBcc:other@example.test'));
 assert.throws(() => reportEmailDraft(shareReport, 'a'.repeat(255) + '@x'));

@@ -4,15 +4,26 @@ use etalon::util::DeviceExt;
 use serde_json::{json, Value as Json};
 
 pub(super) async fn run() -> Json {
+    let navigator = js_sys::Reflect::get(&js_sys::global(), &"navigator".into()).ok();
+    let gpu_api = navigator
+        .and_then(|navigator| js_sys::Reflect::get(&navigator, &"gpu".into()).ok())
+        .is_some_and(|gpu| !gpu.is_null() && !gpu.is_undefined());
     let instance = etalon::Instance::new(etalon::InstanceDescriptor {
         backends: etalon::Backends::BROWSER_WEBGPU,
         ..etalon::InstanceDescriptor::new_without_display_handle()
     });
-    let adapter = match instance.request_adapter(&Default::default()).await {
+    let adapter = match instance
+        .request_webgpu_adapter(&Default::default(), etalon::FeatureLevel::Compatibility)
+        .await
+    {
         Ok(adapter) => adapter,
         Err(error) => {
             return json!({"name": "etalon_browser_compute_readback", "execution_class": "gpu",
-            "outcome": "unsupported", "details": {"reason": error.to_string(),
+            "outcome": "unsupported", "details": {"reason": if gpu_api {
+                format!("Browser returned no compatibility WebGPU adapter: {error}")
+            } else {
+                "This browser does not expose WebGPU in the diagnostics worker".to_string()
+            }, "webgpu_api_available": gpu_api, "requested_feature_level": "compatibility",
                 "execution_path": "Rust Etalon BrowserWebGpu adapter request", "gpu_execution": false}})
         }
     };
@@ -24,7 +35,26 @@ pub(super) async fn run() -> Json {
             Err("unexpected backend".into()),
         );
     }
-    let (device, queue) = match adapter.request_device(&Default::default()).await {
+    let limits = etalon::Limits {
+        max_bind_groups: 1,
+        max_bindings_per_bind_group: 3,
+        max_storage_buffers_per_shader_stage: 3,
+        max_storage_buffer_binding_size: 1028,
+        max_buffer_size: 1028,
+        max_compute_invocations_per_workgroup: 64,
+        max_compute_workgroup_size_x: 64,
+        max_compute_workgroup_size_y: 1,
+        max_compute_workgroup_size_z: 1,
+        max_compute_workgroups_per_dimension: 5,
+        ..etalon::Limits::downlevel_webgl2_defaults()
+    };
+    let (device, queue) = match adapter
+        .request_device(&etalon::DeviceDescriptor {
+            required_limits: limits,
+            ..Default::default()
+        })
+        .await
+    {
         Ok(pair) => pair,
         Err(error) => {
             return case(
@@ -36,6 +66,7 @@ pub(super) async fn run() -> Json {
     };
     let result = verify(&device, &queue).await.map(|dispatches| json!({
         "actualbackend": format!("{:?}", info.backend), "adapter_name": info.name,
+        "requested_feature_level": "compatibility", "webgpu_api_available": gpu_api,
         "device_type": format!("{:?}", info.device_type), "vendor": info.vendor, "device": info.device,
         "hardware_classification": "browser-reported; physical GPU type is not independently verified",
         "execution_path": "canonical VibeHost CPU oracle -> Rust Etalon BrowserWebGpu -> browser adapter -> async map/readback",

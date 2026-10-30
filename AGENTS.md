@@ -1408,3 +1408,15 @@ passes. Browser NPU state remains unknown. See docs/testing-etalon-vibe.md for t
 full scope, ignored cases and build-resource history. Retired CTS coverage remains
 absent. Later Etalon commits change CI and benchmark profiler platform support;
 the consumer's production Rust sources retain the tested immutable revision.
+
+### 2026-10-30 — Pixel Chrome compatibility correction
+
+The Pixel 10 XL report showed CPU success and GPU unsupported. The adapter probe
+requested only the default WebGPU core level. Browser diagnostics now use Etalon's
+explicit compatibility request with compute-sized limits, preserving browser
+validation and the existing numerical oracles. The old request reproduced GPU
+unsupported in a compatibility-only request fixture backed by a real browser GPU.
+The fixture does not emulate Pixel hardware. Compact email drafts now include GPU
+rejection/API details so the summary can explain future unsupported outcomes.
+Full execution and deployment receipts remain under target/qualification; actual
+Pixel confirmation requires another on-device run after the new deployment.

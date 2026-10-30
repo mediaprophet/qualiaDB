@@ -94,7 +94,7 @@ js-sys = "0.3.106"
 log = "0.4.34"
 lz4_flex = "0.13.1"
 minicbor = "2.3.1"
-naga = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4", features = [
+naga = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79", features = [
     "wgsl-in",
     "spv-out",
     "msl-out",
@@ -130,14 +130,14 @@ warp = "0.4.3"
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "0.4.79"
 web-sys = "0.3.106"
-wgpu = { version = "30.0.0", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4", default-features = false }
-etalon = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4", default-features = false }
-etalon-agent = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
-etalon-wgsl-forge = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
-etalon-nquin = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
-etalon-tensor = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
-etalon-render = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
-etalon-wasm = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
+wgpu = { version = "30.0.0", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79", default-features = false }
+etalon = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79", default-features = false }
+etalon-agent = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
+etalon-wgsl-forge = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
+etalon-nquin = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
+etalon-tensor = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
+etalon-render = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
+etalon-wasm = { version = "0.0.1", git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
 
 # Profile for WASM web builds (qualia-mobile-harness).
 # wasm-opt on Windows crashes with STATUS_STACK_BUFFER_OVERRUN when the AST is
@@ -174,5 +174,5 @@ debug = 1
 # we upgrade to imap 3.x (which uses the imap-types ecosystem instead).
 [patch.crates-io]
 imap-proto = { path = "vendor/imap-proto" }
-wgpu = { git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
-naga = { git = "https://github.com/mediaprophet/etalon.git", rev = "5721ae58285e229a30c0444d41e84f98014912d4" }
+wgpu = { git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }
+naga = { git = "https://github.com/mediaprophet/etalon.git", rev = "ceb79c6296df2bc2cd2c6354f4b345fbccce2c79" }

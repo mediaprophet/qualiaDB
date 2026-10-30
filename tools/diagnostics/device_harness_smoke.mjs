@@ -7,15 +7,17 @@ import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 import { chromium } from 'playwright';
 import { createDocsServer } from '../../scripts/serve-device-harness.mjs';
+import { compatibilityOnlyWorkerSource } from './compatibility-only.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const reportLimit = 1024 * 1024;
 const args = process.argv.slice(2);
 const allowUnsupported = args.includes('--allow-unsupported-gpu');
 const checkEmail = args.includes('--check-email');
+const compatibilityOnly = args.includes('--compatibility-only');
 const outIndex = args.indexOf('--out');
 if (outIndex < 0 || !args[outIndex + 1]
-  || args.some((arg, index) => !['--out', '--allow-unsupported-gpu', '--check-email'].includes(arg) && index !== outIndex + 1)) {
+  || args.some((arg, index) => !['--out', '--allow-unsupported-gpu', '--check-email', '--compatibility-only'].includes(arg) && index !== outIndex + 1)) {
   throw new Error('Usage: node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/NEW-DIRECTORY [--allow-unsupported-gpu] [--check-email]');
 }
 const output = resolve(root, args[outIndex + 1]);
@@ -64,8 +66,12 @@ try {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, acceptDownloads: true,
   });
-  await context.route('**/*', route => {
+  await context.route('**/*', async route => {
     const url = new URL(route.request().url());
+    if (compatibilityOnly && url.pathname === '/js/device-harness/worker.js') {
+      const response = await route.fetch();
+      return route.fulfill({ response, body: compatibilityOnlyWorkerSource(await response.text()) });
+    }
     return url.origin === origin || ['blob:', 'data:'].includes(url.protocol)
       ? route.continue() : route.abort('blockedbyclient');
   });
@@ -114,6 +120,7 @@ try {
   assert.equal(gpu.outcome, allowUnsupported && gpu.outcome === 'unsupported' ? 'unsupported' : 'passed',
     `GPU integration did not pass: ${JSON.stringify(gpu.details)}`);
   if (gpu.outcome === 'passed') {
+    if (compatibilityOnly) assert.equal(gpu.details.requested_feature_level, 'compatibility');
     assert.equal(gpu.details.actualbackend, 'BrowserWebGpu');
     assert.equal(gpu.details.dispatches, 11);
     assert.deepEqual(gpu.details.element_counts, [1, 63, 64, 65, 257]);

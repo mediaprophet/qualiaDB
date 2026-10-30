@@ -123,6 +123,22 @@ has its own 16 MiB raw / 4 MiB gzip CI limit. Open the deployed harness at
 hash check, unsupported browser or timeout still leaves a downloadable report.
 **Copy JSON** is optional and requires browser clipboard permission.
 
+The browser probe requests `featureLevel: "compatibility"` through Etalon's
+browser adapter API. Its three storage bindings, 64-invocation workgroups and
+1,028-byte buffers do not require the core graphics feature set. Browser
+validation remains active. This matters for compatibility-only mobile adapters;
+an adapter refusal is not evidence that the phone lacks a GPU. Reports distinguish
+worker API visibility from adapter refusal, and compact drafts include a bounded
+GPU reason. Browser or driver policy can still refuse every available adapter.
+
+The regression mode below refuses core adapter requests while forwarding
+compatibility requests to the real browser GPU. It retains the same eleven
+dispatch/readback CPU oracles; it does not emulate Pixel hardware:
+
+```powershell
+node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/compatibility-only-NEW --compatibility-only
+```
+
 To email diagnostics to yourself, choose **Email report**, select your mail app
 from the device share sheet, review the JSON attachment and recipient, and send
 it there. File sharing depends on the browser, device and chosen app. Completing
