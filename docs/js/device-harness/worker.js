@@ -62,7 +62,7 @@ async function load(manifestUrl) {
     exports = await import(blobUrl);
     if (typeof exports.default !== 'function'
       || typeof exports.run_etalon_vibe_cpu_harness !== 'function'
-      || typeof exports.run_etalon_vibe_gpu_harness !== 'function') throw new Error('Harness exports missing from portal build');
+      || typeof exports.run_etalon_vibe_gpu_harness !== 'function') throw new Error('Harness exports missing from diagnostics build');
     await exports.default({ module_or_path: wasm });
   } finally { URL.revokeObjectURL(blobUrl); }
   phase = 'cpu';

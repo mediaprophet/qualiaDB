@@ -69,7 +69,7 @@ if (capturePath) {
     throw new Error('Source record does not match this checkout and reviewed Etalon revision');
   }
   const output = option('--output') ?? resolve(root, 'docs/playground/device-harness-build.json');
-  const assetDirectory = option('--asset-directory') ?? resolve(root, 'docs/pkg/qualia');
+  const assetDirectory = option('--asset-directory') ?? resolve(root, 'docs/pkg/device-harness');
   if (!assetDirectory.startsWith(resolve(root, 'docs') + sep)) throw new Error('Harness assets must be within public docs');
   const assets = {};
   for (const [name, file] of [

@@ -3,23 +3,22 @@
 Use a freshly built checkout or an already built Pages artifact containing the
 matching harness assets and provenance manifest. Tracked WASM files alone do not
 establish that the current source changes have been compiled. From the QualiaDB
-checkout, use the same WASM portal build as `.github/workflows/pages.yml`. Capture
+checkout, use the dedicated diagnostics build from `.github/workflows/pages.yml`. Capture
 source identity before generating assets, then generate the manifest after the
 build:
 
 ```powershell
 node scripts/device-harness-build.mjs --capture-source target/device-harness-source.json
 $env:RUSTFLAGS = '-C target-feature=+simd128 --cfg getrandom_backend="wasm_js"'
-wasm-pack build crates/qualia-core-db --target web --release --out-dir pkg-qualia -- --no-default-features --features portal
-New-Item -ItemType Directory -Force docs/pkg/qualia | Out-Null
-Copy-Item crates/qualia-core-db/pkg-qualia/qualia_core_db.js docs/pkg/qualia/qualia.js
-Copy-Item crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm docs/pkg/qualia/qualia_bg.wasm
-bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
+wasm-pack build crates/qualia-core-db --target web --release --out-dir pkg-device-harness --out-name qualia -- --no-default-features --features device-harness
+New-Item -ItemType Directory -Force docs/pkg/device-harness | Out-Null
+Copy-Item crates/qualia-core-db/pkg-device-harness/qualia.js docs/pkg/device-harness/qualia.js
+Copy-Item crates/qualia-core-db/pkg-device-harness/qualia_bg.wasm docs/pkg/device-harness/qualia_bg.wasm
 node scripts/device-harness-build.mjs --source-record target/device-harness-source.json
 ```
 
 These PowerShell commands require Rust's `wasm32-unknown-unknown` target,
-`wasm-pack`, and Bash for the existing JS patch script. Restore your previous
+and `wasm-pack`. Restore your previous
 `RUSTFLAGS` after the build if you normally use different flags. The Pages
 workflow also builds other site assets; a complete site artifact includes those
 separate products.
@@ -42,7 +41,7 @@ change firewall settings, receive uploads or send telemetry. A network/firewall
 that blocks inbound connections must be configured separately by its owner.
 
 Only the harness HTML, its build manifest, its four JavaScript modules and the
-two exact portal assets selected by the bounded build manifest are served. Those
+two exact diagnostics assets selected by the bounded build manifest are served. Those
 assets must resolve within public `docs/pkg` and be named `qualia.js` and
 `qualia_bg.wasm`. The root URL opens the harness page. Every other document is
 denied, including other files that happen to exist under `docs`. Directory

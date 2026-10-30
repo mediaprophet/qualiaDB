@@ -27,7 +27,8 @@ function inside(root, target) {
 }
 
 export function harnessAllowPaths(root) {
-  const manifestPath = realpathSync(resolve(root, `.${BUILD_MANIFEST}`));
+  root = realpathSync.native(root);
+  const manifestPath = realpathSync.native(resolve(root, `.${BUILD_MANIFEST}`));
   if (relative(resolve(root, `.${BUILD_MANIFEST}`), manifestPath) !== ''
       || statSync(manifestPath).size > 64 * 1024) {
     throw new Error('Harness manifest is outside docs or exceeds 64 KiB');
@@ -38,7 +39,7 @@ export function harnessAllowPaths(root) {
     throw new Error('Harness manifest must identify exactly two portal assets');
   }
   const paths = new Set(HARNESS_FILES);
-  const publicPackageRoot = realpathSync(resolve(root, 'pkg'));
+  const publicPackageRoot = realpathSync.native(resolve(root, 'pkg'));
   if (relative(resolve(root, 'pkg'), publicPackageRoot) !== '') throw new Error('Public package root is redirected');
   for (const [name, file] of [['portal_js', 'qualia.js'], ['portal_wasm', 'qualia_bg.wasm']]) {
     const url = manifest.assets[name]?.url;
@@ -51,7 +52,7 @@ export function harnessAllowPaths(root) {
     }
     const path = `/pkg/${[...segments, file].join('/')}`;
     const expectedAsset = resolve(root, `.${path}`);
-    const canonicalAsset = realpathSync(expectedAsset);
+    const canonicalAsset = realpathSync.native(expectedAsset);
     if (!inside(publicPackageRoot, canonicalAsset) || relative(expectedAsset, canonicalAsset) !== ''
         || !statSync(canonicalAsset).isFile()) {
       throw new Error('Harness asset is outside public docs/pkg');
@@ -82,7 +83,7 @@ export function parseOptions(args) {
 
 export function createDocsServer({ root = docsRoot, cert, key, allowPaths, maxFileBytes = 128 * 1024 * 1024 } = {}) {
   if (Boolean(cert) !== Boolean(key)) throw new Error('HTTPS requires both cert and key');
-  const canonicalRoot = realpathSync(root);
+  const canonicalRoot = realpathSync.native(root);
   if (!statSync(canonicalRoot).isDirectory()) throw new Error('Docs root is not a directory');
   const allowed = allowPaths ? new Set(allowPaths) : harnessAllowPaths(canonicalRoot);
   let active = 0;

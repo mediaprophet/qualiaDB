@@ -115,7 +115,9 @@ adapter used rather than claiming exhaustive scheduling coverage.
 
 The [phone/browser harness](playground/etalon-vibe-harness.html) runs fixed public
 fixtures through canonical Vibe CPU exports and the Rust Etalon browser WebGPU
-frontend. After the updated Pages deployment, open
+frontend. Its separate `device-harness` WASM feature and bundle keep diagnostic
+exports out of the main portal and playground downloads. The diagnostics bundle
+has its own 16 MiB raw / 4 MiB gzip CI limit. After the updated Pages deployment, open
 `https://mediaprophet.github.io/qualiaDB/playground/etalon-vibe-harness.html`, tap
 **Run checks**, then **Download JSON**. A missing manifest, stale bundle, failed
 hash check, unsupported browser or timeout still leaves a downloadable report.

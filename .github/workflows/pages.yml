@@ -174,14 +174,29 @@ jobs:
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
 
-      - name: Attribute browser harness assets
-        run: node scripts/device-harness-build.mjs --source-record target/device-harness-source.json
-
       - name: Phase 7.1 — portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).
         # Measured 0.0.40 portal: ~7.70 MiB raw / ~2.15 MiB gzip (node gzipSync).
         # Ontology MCP keeps the tight 640 KiB / 200 KiB gate.
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
+
+      - name: Build isolated device diagnostics WASM
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128 --cfg getrandom_backend=\"wasm_js\""
+        run: |
+          wasm-pack build crates/qualia-core-db \
+            --target web \
+            --release \
+            --out-dir pkg-device-harness \
+            --out-name qualia \
+            -- --no-default-features --features device-harness
+          mkdir -p docs/pkg/device-harness
+          cp crates/qualia-core-db/pkg-device-harness/qualia.js docs/pkg/device-harness/qualia.js
+          cp crates/qualia-core-db/pkg-device-harness/qualia_bg.wasm docs/pkg/device-harness/qualia_bg.wasm
+          node docs/tests/wasm-size-check.mjs docs/pkg/device-harness/qualia_bg.wasm 16777216 4194304
+
+      - name: Attribute browser harness assets
+        run: node scripts/device-harness-build.mjs --source-record target/device-harness-source.json
 
       - name: PR-C11b — phenomenal viewport contract checklist
         run: node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts

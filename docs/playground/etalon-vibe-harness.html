@@ -21,7 +21,7 @@
   <h1>Qualia / Etalon device checks</h1>
   <p>Run canonical VibeScript CPU checks and a Rust Etalon browser WebGPU computation with readback compared against a CPU oracle.</p>
   <p class="note">This checks the browser WebGPU path, not the native Etalon backend or WebGPU conformance. NPU availability remains unknown. Unsupported checks are reported separately from passes.</p>
-  <p>No automatic uploads, private inputs, account access, or model downloads. Running downloads the published portal code and WASM and runs fixed test data locally. HTTPS and localhost runs verify build hashes. Plain LAN HTTP permits limited CPU diagnostics with unverified assets and reports GPU as unsupported. The JSON includes browser information and public build identities. Review it before sharing.</p>
+  <p>No automatic uploads, private inputs, account access, or model downloads. Running downloads the published device-check code and WASM and runs fixed test data locally. HTTPS and localhost runs verify build hashes. Plain LAN HTTP permits limited CPU diagnostics with unverified assets and reports GPU as unsupported. The JSON includes browser information and public build identities. Review it before sharing.</p>
   <p>Use HTTPS on a phone for WebGPU, or localhost on this computer. Ordinary LAN HTTP does not provide a secure context or authenticated source identity. The worker is stopped if loading exceeds 150 seconds, CPU checks 20 seconds, or GPU checks 60 seconds. Local HTTPS hosting accepts explicit certificate and key files that your phone trusts.</p>
   <div class="actions">
     <button id="run" type="button">Run checks</button>

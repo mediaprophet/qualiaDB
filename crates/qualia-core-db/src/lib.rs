@@ -421,7 +421,7 @@ pub mod q42_lex_ns;
 )))]
 #[path = "poet_host/mod.rs"]
 pub mod vibe_host;
-#[cfg(any(all(target_arch = "wasm32", feature = "portal"), all(test, not(target_arch = "wasm32"))))]
+#[cfg(any(all(target_arch = "wasm32", feature = "device-harness"), all(test, not(target_arch = "wasm32"))))]
 mod etalon_vibe_browser;
 /// Compatibility name for code written before the Vibe execution layer was
 /// separated from Poet, its current UI/client. New integrations use
