@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Browser diagnostics distinguish direct page/worker adapter refusal from the Rust request, retain unsupported GPU results, and include bounded renderer and adapter evidence in exported reports.
 - Browser device diagnostics request WebGPU compatibility adapters and only the compute limits they need, supporting browsers that cannot provide a core adapter. Compact email drafts include the GPU rejection reason and API visibility.
 - Forge manifests no longer label absent, native-only or mismatched evidence as Naga validation; numerical certification rejects invalid tolerances and nonfinite values.
 - Made resident tensor loads and reads synchronize through safe shared state; malformed loads preserve the previous publication and poisoned state fails closed.

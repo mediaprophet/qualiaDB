@@ -1,4 +1,5 @@
 import { boundedText, validateManifest, validateCases } from './report.js';
+import { probeWebGpuAdapters } from './webgpu-diagnostics.js';
 
 let exports;
 let phase = 'load';
@@ -86,6 +87,10 @@ self.onmessage = async ({ data }) => {
         name: 'etalon_browser_compute_readback', execution_class: 'gpu', outcome: 'unsupported',
         details: { reason: 'Browser WebGPU requires a secure context; use HTTPS or localhost', gpu_execution: false, execution: 'not_run' },
       }]);
+      phase = 'done';
+    } else if (data?.type === 'adapter-diagnostics' && phase === 'done') {
+      phase = 'adapter_diagnostics';
+      send('adapter-diagnostics', await probeWebGpuAdapters(navigator, 'worker'));
       phase = 'done';
     } else throw new Error('Invalid harness phase');
   } catch (error) {

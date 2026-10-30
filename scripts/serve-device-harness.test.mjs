@@ -85,10 +85,11 @@ test('rejects existing unlisted documents and root index', async t => {
   assert.equal((await request(port, '/')).body, 'HOME');
 });
 
-test('default allowlist contains exactly six harness files and two bounded manifest assets', async t => {
+test('default allowlist contains exactly seven harness files and two bounded manifest assets', async t => {
   const { root } = await fixture(t);
   await mkdir(join(root, 'js', 'device-harness'), { recursive: true });
   await writeFile(join(root, 'js', 'device-harness', 'email.js'), 'export const email = true;');
+  await writeFile(join(root, 'js', 'device-harness', 'webgpu-diagnostics.js'), 'export const diagnostics = true;');
   await mkdir(join(root, 'pkg', 'device-harness'), { recursive: true });
   await writeFile(join(root, 'pkg', 'device-harness', 'qualia.js'), 'JS');
   await writeFile(join(root, 'pkg', 'device-harness', 'qualia_bg.wasm'), 'WASM');
@@ -101,7 +102,7 @@ test('default allowlist contains exactly six harness files and two bounded manif
   assert.deepEqual([...harnessAllowPaths(root)].sort(), [
     '/playground/etalon-vibe-harness.html', '/playground/device-harness-build.json',
     '/js/device-harness/main.js', '/js/device-harness/worker.js', '/js/device-harness/report.js',
-    '/js/device-harness/email.js',
+    '/js/device-harness/email.js', '/js/device-harness/webgpu-diagnostics.js',
     '/pkg/device-harness/qualia.js', '/pkg/device-harness/qualia_bg.wasm',
   ].sort());
   const defaults = createDocsServer({ root });
@@ -113,6 +114,7 @@ test('default allowlist contains exactly six harness files and two bounded manif
     assert.equal((await request(port, '/unlisted.html')).status, 403);
     assert.equal((await request(port, '/pkg/device-harness/qualia_bg.wasm')).status, 200);
     assert.equal((await request(port, '/js/device-harness/email.js')).status, 200);
+    assert.equal((await request(port, '/js/device-harness/webgpu-diagnostics.js')).status, 200);
     assert.equal((await request(port, '/js/device-harness/unlisted.js')).status, 403);
     assert.equal((await request(port, '/pkg/device-harness/unlisted.wasm')).status, 403);
   } finally {

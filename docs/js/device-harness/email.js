@@ -32,7 +32,14 @@ export function reportEmailDraft(report, recipient = '') {
   const revision = value => /^[a-f0-9]{40}$/.test(value) ? value : 'unknown';
   const outcome = ['running', 'failed', 'completed', 'unsupported', 'cancelled'].includes(report.outcome) ? report.outcome : 'unknown';
   const gpu = report.cases?.find(item => item.execution_class === 'gpu');
-  const reason = gpu?.details?.reason ?? gpu?.details?.error;
+  const diagnosticReasons = {
+    browser_refused_core_and_compatibility_in_both_contexts: 'Browser refused core and compatibility in page and worker',
+    window_adapter_available_worker_unavailable: 'Page adapter available; worker adapter unavailable',
+    raw_worker_adapter_available_after_rust_refusal: 'Raw worker adapter available after Rust adapter refusal',
+    diagnostic_deadline_exceeded: 'Adapter diagnostics exceeded deadline; Rust GPU remains unsupported',
+  };
+  let reason = diagnosticReasons[report.webgpu_diagnostics?.classification] ?? gpu?.details?.reason ?? gpu?.details?.error;
+  if (report.webgpu_diagnostics?.webgl_inventory?.powervr_25_1_string_observed) reason = `${reason ?? 'GPU unsupported'}; WebGL string resembles PowerVR 25.1`;
   const browser = compactText(String(report.browser?.user_agent ?? '').slice(0, 1024)
     .match(/(?:EdgA?|Chrome|Firefox|Version)\/[\d.]+/g)?.join(' ') ?? 'unknown', 64);
   const lines = [

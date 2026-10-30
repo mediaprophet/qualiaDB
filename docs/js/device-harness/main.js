@@ -1,5 +1,6 @@
 import { boundedText, serializeReport } from './report.js';
 import { reportEmailDraft, reportSharePayload, REPORT_FILENAME } from './email.js';
+import { ADAPTER_DIAGNOSTICS_VERSION, probeWebGpuAdapters, probeWebGlRenderer, summarizeAdapterDiagnostics } from './webgpu-diagnostics.js';
 
 const byId = id => document.getElementById(id);
 const run = byId('run');
@@ -44,6 +45,39 @@ function deadline(phase, milliseconds) {
   timer = setTimeout(() => finish('failed', `${phase} exceeded ${milliseconds / 1000}s; worker terminated`), milliseconds);
 }
 
+function finishAdapterDiagnostics() {
+  const diagnostics = report.webgpu_diagnostics;
+  if (!diagnostics.window || !diagnostics.worker) return;
+  diagnostics.classification = summarizeAdapterDiagnostics(diagnostics);
+  finish('completed');
+}
+
+function startAdapterDiagnostics() {
+  const currentReport = report;
+  const diagnostics = report.webgpu_diagnostics = {
+    schema_version: ADAPTER_DIAGNOSTICS_VERSION, gpu_execution: false,
+    trigger: 'Rust Etalon GPU case unsupported', classification: 'pending',
+    limitation: 'Adapter discovery does not execute the Rust workload or prove GPU correctness',
+    chromium_driver_blocklist_reference: 'https://chromium.googlesource.com/chromium/src/+/main/gpu/config/webgpu_blocklist_impl.cc',
+  };
+  clearTimeout(timer);
+  report.phase = 'WebGPU adapter diagnostics';
+  status.textContent = 'Checking browser adapter availability in the page and worker…';
+  timer = setTimeout(() => {
+    diagnostics.classification = 'diagnostic_deadline_exceeded';
+    finish('completed');
+  }, 10000);
+  worker.postMessage({ type: 'adapter-diagnostics' });
+  diagnostics.webgl_inventory = probeWebGlRenderer(document);
+  probeWebGpuAdapters(navigator, 'window').then(result => {
+    if (finished || currentReport !== report) return;
+    diagnostics.window = result;
+    finishAdapterDiagnostics();
+    render();
+  });
+  render();
+}
+
 run.addEventListener('click', () => {
   if (!finished) return;
   finished = false;
@@ -86,7 +120,13 @@ run.addEventListener('click', () => {
         worker.postMessage({ type: 'gpu' });
       } else if (data?.type === 'gpu') {
         report.cases.push(...data.value);
-        finish(report.cases.some(x => x.outcome === 'failed') ? 'failed' : 'completed');
+        if (report.cases.some(x => x.outcome === 'failed')) finish('failed');
+        else if (report.assets_verified && data.value.some(x => x.outcome === 'unsupported')) startAdapterDiagnostics();
+        else finish('completed');
+      } else if (data?.type === 'adapter-diagnostics' && report.webgpu_diagnostics) {
+        report.webgpu_diagnostics.worker = data.value;
+        finishAdapterDiagnostics();
+        render();
       } else if (data?.type === 'failure') finish('failed', `${boundedText(data.value?.phase, 64)}: ${boundedText(data.value?.message)}`);
     };
     worker.onerror = event => { event.preventDefault(); if (!finished) finish('failed', boundedText(event.message)); };

@@ -131,6 +131,41 @@ an adapter refusal is not evidence that the phone lacks a GPU. Reports distingui
 worker API visibility from adapter refusal, and compact drafts include a bounded
 GPU reason. Browser or driver policy can still refuse every available adapter.
 
+If the verified Rust GPU case is unsupported, the page now compares raw WebGPU
+adapter discovery in the window and its existing worker, requesting core and
+compatibility once each. Each request has a 2.5-second deadline; a timed-out
+request ends that context's probe, and a 10-second outer deadline terminates the
+worker. The report preserves CPU results and the original GPU unsupported case.
+These probes never request a device or dispatch a workload. An adapter appearing
+after the Rust refusal is a differential observation, not proof of a Rust bug:
+browser availability can change between requests. Successful Rust GPU runs do
+not perform these extra probes.
+
+`webgpu_diagnostics` distinguishes both contexts returning null, a window-only
+adapter, a raw worker adapter appearing after the Rust refusal, and incomplete
+diagnostics. A short WebGL renderer inventory may provide a driver string; it
+does not establish WebGPU support, the WebGPU driver's identity, or GPU compute
+execution. The temporary WebGL context is released without drawing.
+
+Chromium's [17 June 2026 blocklist change](https://chromium.googlesource.com/chromium/src/gpu/+/8c46516424e1b2eb6d3d02bbf8af5b72ace8687a)
+blocks Imagination PowerVR driver 25.1 and states that 25.3 resolves the affected
+issues. This is a possible cause of Pixel 10 adapter refusal, not a diagnosis of
+every Pixel. A matching WebGL string is only a clue; Chrome's `chrome://gpu`
+driver and Problems Detected entries are needed to confirm its actual decision.
+If that driver block applies, a device system/driver update is the repair; a
+website cannot replace the phone's driver or override Chrome's adapter policy.
+
+The browser regression runner has explicit refusal fixtures:
+
+```powershell
+node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/adapter-refusal-NEW --adapter-refusal
+node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/worker-refusal-NEW --worker-adapter-refusal
+node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/rust-refusal-NEW --rust-adapter-refusal
+```
+
+These verify diagnostic classification and zero GPU passes under injected
+refusals; they do not reproduce a Pixel driver or certify phone execution.
+
 The regression mode below refuses core adapter requests while forwarding
 compatibility requests to the real browser GPU. It retains the same eleven
 dispatch/readback CPU oracles; it does not emulate Pixel hardware:

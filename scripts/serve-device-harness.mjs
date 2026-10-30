@@ -12,7 +12,7 @@ const HARNESS_PAGE = '/playground/etalon-vibe-harness.html';
 const BUILD_MANIFEST = '/playground/device-harness-build.json';
 const HARNESS_FILES = [HARNESS_PAGE, BUILD_MANIFEST,
   '/js/device-harness/main.js', '/js/device-harness/worker.js', '/js/device-harness/report.js',
-  '/js/device-harness/email.js'];
+  '/js/device-harness/email.js', '/js/device-harness/webgpu-diagnostics.js'];
 const MIME = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.js', 'text/javascript; charset=utf-8'],
   ['.mjs', 'text/javascript; charset=utf-8'], ['.wasm', 'application/wasm'],

@@ -15,10 +15,14 @@ const args = process.argv.slice(2);
 const allowUnsupported = args.includes('--allow-unsupported-gpu');
 const checkEmail = args.includes('--check-email');
 const compatibilityOnly = args.includes('--compatibility-only');
+const refusalModes = ['--adapter-refusal', '--worker-adapter-refusal', '--rust-adapter-refusal'];
+const refusalMode = refusalModes.find(mode => args.includes(mode));
+assert(args.filter(arg => refusalModes.includes(arg)).length <= 1, 'Choose at most one adapter refusal fixture');
+assert(!refusalMode || !compatibilityOnly, 'Adapter refusal and compatibility-only fixtures are separate');
 const outIndex = args.indexOf('--out');
 if (outIndex < 0 || !args[outIndex + 1]
-  || args.some((arg, index) => !['--out', '--allow-unsupported-gpu', '--check-email', '--compatibility-only'].includes(arg) && index !== outIndex + 1)) {
-  throw new Error('Usage: node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/NEW-DIRECTORY [--allow-unsupported-gpu] [--check-email]');
+  || args.some((arg, index) => !['--out', '--allow-unsupported-gpu', '--check-email', '--compatibility-only', ...refusalModes].includes(arg) && index !== outIndex + 1)) {
+  throw new Error('Usage: node tools/diagnostics/device_harness_smoke.mjs --out target/qualification/NEW-DIRECTORY [--allow-unsupported-gpu] [--check-email] [--compatibility-only | --adapter-refusal | --worker-adapter-refusal | --rust-adapter-refusal]');
 }
 const output = resolve(root, args[outIndex + 1]);
 const qualification = resolve(root, 'target/qualification');
@@ -38,6 +42,7 @@ const receipt = {
   viewport: { width: 390, height: 844, mobile_emulation: true },
   limitations: ['Viewport emulation is not physical phone hardware coverage',
     'Browser WebGPU execution is not native Etalon HAL or Naga validation'],
+  adapter_refusal_fixture: refusalMode ?? null,
 };
 const server = createDocsServer();
 let browser;
@@ -66,11 +71,23 @@ try {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, acceptDownloads: true,
   });
+  if (refusalMode === '--adapter-refusal') await context.addInitScript(() => {
+    if (navigator.gpu) navigator.gpu.requestAdapter = async () => null;
+  });
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
     if (compatibilityOnly && url.pathname === '/js/device-harness/worker.js') {
       const response = await route.fetch();
       return route.fulfill({ response, body: compatibilityOnlyWorkerSource(await response.text()) });
+    }
+    if (refusalMode && url.pathname === '/js/device-harness/worker.js') {
+      const response = await route.fetch();
+      const prefix = refusalMode === '--rust-adapter-refusal' ? `
+const originalRequestAdapter = navigator.gpu.requestAdapter.bind(navigator.gpu);
+let requestCount = 0;
+navigator.gpu.requestAdapter = options => ++requestCount === 1 ? Promise.resolve(null) : originalRequestAdapter(options);
+` : 'navigator.gpu.requestAdapter = async () => null;\n';
+      return route.fulfill({ response, body: prefix + await response.text() });
     }
     return url.origin === origin || ['blob:', 'data:'].includes(url.protocol)
       ? route.continue() : route.abort('blockedbyclient');
@@ -117,9 +134,10 @@ try {
   assert.equal(report.execution_counts.cpu.passed, 2);
   assert.equal(report.execution_counts.cpu.failed, 0);
   const gpu = report.cases.find(item => item.execution_class === 'gpu');
-  assert.equal(gpu.outcome, allowUnsupported && gpu.outcome === 'unsupported' ? 'unsupported' : 'passed',
+  assert.equal(gpu.outcome, refusalMode || (allowUnsupported && gpu.outcome === 'unsupported') ? 'unsupported' : 'passed',
     `GPU integration did not pass: ${JSON.stringify(gpu.details)}`);
   if (gpu.outcome === 'passed') {
+    assert.equal(report.webgpu_diagnostics, undefined, 'Successful Rust GPU checks must not run discovery probes');
     if (compatibilityOnly) assert.equal(gpu.details.requested_feature_level, 'compatibility');
     assert.equal(gpu.details.actualbackend, 'BrowserWebGpu');
     assert.equal(gpu.details.dispatches, 11);
@@ -127,6 +145,19 @@ try {
     assert.equal(gpu.details.sparse_zero_initialization_verified, true);
     assert.equal(gpu.details.submission_index, null);
     assert.equal(gpu.details.native_hal_or_naga_coverage, false);
+  }
+  if (refusalMode) {
+    const classifications = {
+      '--adapter-refusal': 'browser_refused_core_and_compatibility_in_both_contexts',
+      '--worker-adapter-refusal': 'window_adapter_available_worker_unavailable',
+      '--rust-adapter-refusal': 'raw_worker_adapter_available_after_rust_refusal',
+    };
+    assert.equal(report.webgpu_diagnostics.classification, classifications[refusalMode]);
+    assert.equal(report.webgpu_diagnostics.gpu_execution, false);
+    assert.equal(report.execution_counts.gpu.passed, 0);
+    assert.equal(report.execution_counts.gpu.unsupported, 1);
+    assert.equal(report.errors.length, 0);
+    receipt.webgpu_diagnostics = report.webgpu_diagnostics;
   }
   assert.equal(report.npu.execution, 'not_run');
   assert.equal(report.execution_counts.npu.passed, 0);
