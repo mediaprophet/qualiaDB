@@ -56,7 +56,7 @@ pub use format::{
     BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION,
     SHA256_LEN,
 };
-pub use reader::BundleReader;
+pub use reader::{BundleReadLimits, BundleReader};
 pub use streaming_loader::{
     classify_10d_section_tier, classify_entry_tier, verify_arrived_range, HmcHeaderProbe,
     HmcProgressiveRangePlanner, HmcRangeRequest, StreamPriorityTier,

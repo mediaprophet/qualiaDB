@@ -1,0 +1,21 @@
+[package]
+name = "qualia-etalon-sensing-bridge"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license-file = "../../LICENSE"
+
+# Standalone integration using the canonical sibling Etalon checkout.
+[workspace]
+
+[dependencies]
+qualia-core-db = { path = "../qualia-core-db", default-features = false }
+etalon-sense-core = { path = "../../../etalon/crates/etalon-sense-core" }
+etalon-sense-nfc = { path = "../../../etalon/crates/etalon-sense-nfc" }
+ed25519-dalek = { version = "3.0", default-features = false }
+
+[dev-dependencies]
+ed25519-dalek = { version = "3.0", default-features = false }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tempfile = "3"

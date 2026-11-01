@@ -883,24 +883,14 @@ impl PortalGpu {
         // stricter than the native backends, so a pipeline that builds on desktop can be invalid in
         // the browser and silently render nothing; log it instead of leaving a black viewport.
         //
-        // On wasm we CANNOT await this pop under wgpu 30.0.0: `GPUDevice.popErrorScope()` resolves
-        // to `GPUError | null`, and on the (common) no-error path it returns JS `null`. wgpu's
-        // `future_pop_error_scope` feeds that through `JsOption::into_option()`, which — since
-        // wasm-bindgen 0.2.123 — treats `null` as a *present* value (only `undefined` is absent).
-        // So a null (no error) becomes `Some(null)`, wgpu calls `Error::from_js(null)`, and
-        // webgpu.rs:85 panics `"Unexpected error"`, aborting the module before the canvas ever
-        // renders. Dropping the guard still pops the scope (discarding any captured error) but
-        // never polls that buggy future, so it cannot panic. Tracked in
-        // docs/WGPU_UPSTREAM_TRACKING.md for a proper soft-fork of `future_pop_error_scope`.
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let scope_err = error_scope.pop().await;
-            if let Some(err) = scope_err {
-                return Err(format!("renderer pipeline/shader creation failed: {err}"));
-            }
+        // The selected Etalon wgpu backend normalizes the WebGPU no-error
+        // `null`/`undefined` result to `None` in future_pop_error_scope. Await
+        // the same validation scope on browser and native paths so invalid
+        // pipeline/shader creation is reported instead of silently discarded.
+        let scope_err = error_scope.pop().await;
+        if let Some(err) = scope_err {
+            return Err(format!("renderer pipeline/shader creation failed: {err}"));
         }
-        #[cfg(target_arch = "wasm32")]
-        drop(error_scope);
 
         let emf_state = emf_pipeline::EmfState::new(&device, format)?;
 
@@ -992,6 +982,8 @@ impl PortalGpu {
             mip_generator,
             resident_textures: Default::default(),
             mesh: None,
+            mesh_generation: 0,
+            source_motion: Default::default(),
             mesh_reservation: None,
             water,
             model_buf,

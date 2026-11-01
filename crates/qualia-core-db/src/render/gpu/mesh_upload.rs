@@ -98,6 +98,7 @@ impl PortalGpu {
         }
         self.last_visibility_key = None;
         self.shadow_map_dirty = true;
+        self.source_motion.retire();
         Ok(())
     }
 
@@ -200,9 +201,13 @@ impl PortalGpu {
     ) -> Result<u32, String> {
         self.last_visibility_key = None;
         if positions.is_empty() || indices.len() < 3 {
+            let generation = self.mesh_generation.checked_add(1)
+                .ok_or_else(|| "mesh generation exhausted".to_string())?;
             self.mesh = None;
             self.mesh_reservation = None;
             self.shadow_map_dirty = true;
+            self.mesh_generation = generation;
+            self.source_motion = Default::default();
             return Ok(0);
         }
         if positions.len() > u32::MAX as usize || indices.len() > u32::MAX as usize {
@@ -414,6 +419,8 @@ impl PortalGpu {
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             });
         let index_count = indices.len() as u32;
+        let generation = self.mesh_generation.checked_add(1)
+            .ok_or_else(|| "mesh generation exhausted".to_string())?;
         self.mesh = Some(MeshGpu {
             vertex_buf,
             color_buf,
@@ -435,6 +442,8 @@ impl PortalGpu {
         self.shadow_map_dirty = true;
         self.last_admitted = Motor::identity();
         self.last_refused = false;
+        self.mesh_generation = generation;
+        self.source_motion = Default::default();
         Ok(index_count / 3)
     }
 
@@ -454,6 +463,9 @@ impl PortalGpu {
         {
             return;
         }
+        if mesh.normal_workspace.validate_position_span(mesh.cpu_positions.len(), start_us, end).is_err() {
+            return;
+        }
         mesh.cpu_positions[start_us..end].copy_from_slice(positions);
         materials::update_draw_bounds(
             &mut mesh.material_gpu.draws,
@@ -468,13 +480,8 @@ impl PortalGpu {
         self.mesh_base_aabb = Aabb::from_points(&mesh.cpu_positions);
         self.last_visibility_key = None;
         self.shadow_map_dirty = true;
-        if mesh
-            .normal_workspace
-            .update_positions(&mesh.cpu_positions, start_us, end)
-            .is_err()
-        {
-            return;
-        }
+        mesh.normal_workspace.update_positions_prevalidated(&mesh.cpu_positions, start_us, end);
+        self.source_motion.retire();
         self.queue.write_buffer(
             &mesh.vertex_buf,
             (start_us * 12) as u64,

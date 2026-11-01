@@ -4,6 +4,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Clone, Copy, Debug)]
 pub enum ExpectedFile {
@@ -60,6 +61,77 @@ fn read_bounded(path: &Path, maximum: usize) -> Result<Vec<u8>, String> {
 pub fn load(path: &Path, limits: CheckpointLimits) -> Result<Checkpoint, String> {
     let path = destination(path)?;
     decode(&read_bounded(&path, limits.file_bytes)?, limits)
+}
+
+// Check between bounded reads; a blocking filesystem call and the canonical
+// decoder cannot be interrupted. Nothing is returned after cancellation.
+fn read_cancellable(mut reader: impl Read, maximum: usize, cancelled: &AtomicBool) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    let mut chunk = [0u8; 64 * 1024];
+    loop {
+        if cancelled.load(Ordering::Acquire) { return Err("checkpoint load cancelled".into()); }
+        // Read one extra byte only after reaching the budget to detect growth.
+        let wanted = maximum.saturating_sub(bytes.len()).saturating_add(1).min(chunk.len());
+        let n = match reader.read(&mut chunk[..wanted]) {
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e.to_string()),
+            Ok(n) => n,
+        };
+        if n == 0 { break; }
+        if n > maximum.saturating_sub(bytes.len()) { return Err("checkpoint input grew beyond caller budget".into()); }
+        bytes.try_reserve(n).map_err(|_| "checkpoint input allocation refused")?;
+        bytes.extend_from_slice(&chunk[..n]);
+    }
+    if cancelled.load(Ordering::Acquire) { return Err("checkpoint load cancelled".into()); }
+    Ok(bytes)
+}
+
+/// Canonical checkpoint admission with cooperative cancellation during file
+/// reading. The decoder remains synchronous; cancellation after decoding
+/// prevents returning its result. This does not authorize access or establish
+/// a stable file revision on its own.
+pub fn load_cancellable(path: &Path, limits: CheckpointLimits, cancelled: &AtomicBool) -> Result<Checkpoint, String> {
+    if cancelled.load(Ordering::Acquire) { return Err("checkpoint load cancelled".into()); }
+    let path = destination(path)?;
+    let file = File::open(path).map_err(|e| e.to_string())?;
+    let meta = file.metadata().map_err(|e| e.to_string())?;
+    if !meta.is_file() || meta.len() > limits.file_bytes as u64 {
+        return Err("checkpoint input is not a regular file within caller budget".into());
+    }
+    let bytes = read_cancellable(file, limits.file_bytes, cancelled)?;
+    let checkpoint = decode(&bytes, limits)?;
+    if cancelled.load(Ordering::Acquire) { return Err("checkpoint load cancelled".into()); }
+    Ok(checkpoint)
+}
+
+#[cfg(test)]
+mod cancellable_read_tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn exact_budget_is_accepted_and_growth_is_refused() {
+        let cancel = AtomicBool::new(false);
+        assert_eq!(read_cancellable(Cursor::new(b"abc"), 3, &cancel).unwrap(), b"abc");
+        assert!(read_cancellable(Cursor::new(b"abcd"), 3, &cancel).is_err());
+        assert!(read_cancellable(Cursor::new(b""), 0, &cancel).is_ok());
+        assert!(read_cancellable(Cursor::new(b"x"), 0, &cancel).is_err());
+    }
+
+    #[test]
+    fn cancellation_between_reads_withholds_partial_bytes() {
+        struct Cancelling<'a>(&'a AtomicBool);
+        impl Read for Cancelling<'_> {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                buf[0] = 42;
+                self.0.store(true, Ordering::Release);
+                Ok(1)
+            }
+        }
+        let cancel = AtomicBool::new(false);
+        assert_eq!(read_cancellable(Cancelling(&cancel), 10, &cancel).unwrap_err(), "checkpoint load cancelled");
+        assert!(read_cancellable(Cursor::new(b""), 10, &cancel).is_err());
+    }
 }
 
 /// Native bounded read retaining the exact verified original HMC. Inert read
@@ -198,6 +270,31 @@ pub fn save(
     limits: CheckpointLimits,
 ) -> Result<SaveReceipt, String> {
     decode(bytes, limits)?;
+    save_bytes(path,bytes,expected,limits.file_bytes)
+}
+
+/// Canonical bundle integrity only, not Studio checkpoint/schema equivalence,
+/// source authority, rights or embodiment acceptance. The native owner supplies
+/// the format-specific admission and guards the real package commit.
+pub fn save_bundle(path:&Path,bytes:&[u8],expected:ExpectedFile,max_bytes:usize)->Result<SaveReceipt,String> {
+    if bytes.len()>max_bytes {return Err("Bundle exceeds caller file budget".into());}
+    crate::bundle::BundleReader::parse_with_limits(bytes,crate::bundle::BundleReadLimits { file_bytes:max_bytes, ..Default::default() }).map_err(|e|format!("Bundle integrity refused: {e:?}"))?;
+    save_bytes(path,bytes,expected,max_bytes)
+}
+
+pub fn load_bundle_cancellable(path:&Path,max_bytes:usize,cancelled:&AtomicBool)->Result<Vec<u8>,String> {
+    if cancelled.load(Ordering::Acquire){return Err("Bundle load cancelled".into());}
+    let path=destination(path)?;
+    let file=File::open(path).map_err(|e|e.to_string())?;
+    let meta=file.metadata().map_err(|e|e.to_string())?;
+    if !meta.is_file() || meta.len()>max_bytes as u64 {return Err("Bundle input exceeds caller file budget".into());}
+    let bytes=read_cancellable(file,max_bytes,cancelled)?;
+    crate::bundle::BundleReader::parse_with_limits(&bytes,crate::bundle::BundleReadLimits { file_bytes:max_bytes, ..Default::default() }).map_err(|e|format!("Bundle integrity refused: {e:?}"))?;
+    if cancelled.load(Ordering::Acquire){return Err("Bundle load cancelled".into());}
+    Ok(bytes)
+}
+
+fn save_bytes(path:&Path,bytes:&[u8],expected:ExpectedFile,max_bytes:usize)->Result<SaveReceipt,String> {
     let path = destination(path)?;
     let parent = path
         .parent()
@@ -224,7 +321,7 @@ pub fn save(
         .map_err(|e| e.to_string())?;
     lock.try_lock()
         .map_err(|e| format!("checkpoint writer busy: {e}"))?;
-    check_expected(&path, expected, limits.file_bytes)?;
+    check_expected(&path, expected, max_bytes)?;
     let mut staged = tempfile::Builder::new()
         .prefix(".poet-source-")
         .tempfile_in(parent)
@@ -232,7 +329,7 @@ pub fn save(
     staged.write_all(bytes).map_err(|e| e.to_string())?;
     staged.as_file().sync_all().map_err(|e| e.to_string())?;
     let (_installed, _attempts) =
-        persist_staged(staged, &path, expected, limits.file_bytes, |_| {})?;
+        persist_staged(staged, &path, expected, max_bytes, |_| {})?;
     // The staged file was already synced before install. No fallible operation
     // after this commit point may report a rolled-back/failed save.
     #[cfg(unix)]

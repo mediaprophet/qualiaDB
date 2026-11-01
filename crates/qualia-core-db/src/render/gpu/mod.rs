@@ -21,6 +21,7 @@ pub use texture_mips::AlphaCoverageDiagnostics;
 pub use texture_mips::TextureMipSemantic;
 pub use texture_residency::{TextureColorSpace, TextureUploadError};
 mod animated_upload;
+mod source_frame;
 pub mod holographic;
 pub use holographic::{HolographicNodeGpu, HolographicPipelineGpu, HolographicPrimitive};
 pub mod ibl_cubemap;
@@ -511,6 +512,8 @@ pub struct PortalGpu {
     mip_generator: texture_mips::MipGenerator,
     resident_textures: texture_residency::ResidentTextureMap,
     mesh: Option<MeshGpu>,
+    mesh_generation: u64,
+    source_motion: crate::render::source_frame::SourceFrameState,
     mesh_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     water: water::WaterGpu,
     model_buf: wgpu::Buffer,

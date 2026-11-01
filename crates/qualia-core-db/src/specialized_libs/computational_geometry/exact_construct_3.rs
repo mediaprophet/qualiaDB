@@ -65,6 +65,11 @@
 //! Shewchuk (1996). This is an original zero-heap Rust analogue over the P1.3
 //! [`super::expansion`] primitives — no third-party source is used.
 
+// CP04 additive checked original-coordinate owner; legacy implementation/layout
+// below remains unchanged. Focused implementation and tests live in this child.
+#[path = "exact_construct_3/checked/mod.rs"]
+pub mod checked;
+
 use super::expansion::{
     compress_expansion, expansion_sum, negate_expansion, scale_expansion, sign_of_expansion,
     two_product, Sign,

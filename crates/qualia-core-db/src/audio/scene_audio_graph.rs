@@ -20,6 +20,12 @@
 
 use std::f32::consts::{PI, TAU};
 
+// New PCM behavior is isolated from this legacy combined graph/DSP module.
+// Decomposition and ownership are tracked in Ecopunk's SF-03 receipt.
+pub mod pcm;
+pub mod pcm_schedule;
+pub mod source_coupling;
+
 use crate::audio::acoustic_plane::push_sonic_token;
 use crate::audio::dsp::biquad_df2t::{BiquadCoeffs, Df2tState, DENORMAL_DC_OFFSET};
 #[allow(unused_imports)]

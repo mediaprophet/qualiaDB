@@ -3,6 +3,13 @@
 
 use crate::container_10d::crc32c::crc32c_update;
 
+#[path = "reader_limits.rs"]
+mod limits;
+pub use limits::BundleReadLimits;
+#[cfg(test)]
+#[path = "reader_limits_tests.rs"]
+mod limits_tests;
+
 use super::format::{
     BundleEntry, BundleError, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION, OFF_CRC32C,
     OFF_FLAGS, OFF_INDEX_LENGTH, OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH, OFF_VERSION,
@@ -40,6 +47,51 @@ pub struct BundleReader<'a> {
 }
 
 impl<'a> BundleReader<'a> {
+    /// Bounded cold admission for the current definite-length index encoding.
+    /// Preflight borrows the CBOR fields before the legacy serde decoder can
+    /// allocate. Unknown fields, indefinite encodings and trailing index data
+    /// require an explicit compatibility profile instead of implicit skipping.
+    /// This verifies bytes and structure, not source rights or asset acceptance.
+    pub fn parse_with_limits(bytes: &'a [u8], limits: BundleReadLimits) -> Result<Self, BundleError> {
+        let count = self::limits::preflight(bytes, limits)?;
+        let reader = Self::parse(bytes)?;
+        if reader.entries.len() != count { return Err(BundleError::Cbor("Bundle entry count differs".into())); }
+        for entry in &reader.entries {
+            if entry.key.is_empty() || entry.offset % super::format::BUNDLE_ENTRY_ALIGN as u64 != 0
+                || entry.sha256.len() != 32
+            { return Err(BundleError::Cbor("Bundle entry integrity differs".into())); }
+        }
+        // One reference per entry fits inside the preflight's four-times-entry
+        // reservation. Both unstable sorts are in-place; no tree/node allocation.
+        let mut ordered = Vec::new();
+        ordered.try_reserve_exact(count)
+            .map_err(|_| BundleError::Cbor("Bundle validation scratch unavailable".into()))?;
+        ordered.extend(reader.entries.iter());
+        ordered.sort_unstable_by(|a, b| a.key.cmp(&b.key));
+        for pair in ordered.windows(2) {
+            if pair[0].key == pair[1].key {
+                return Err(BundleError::DuplicateKey(pair[0].key.clone()));
+            }
+        }
+        ordered.sort_unstable_by_key(|entry| (entry.offset, entry.length));
+        for pair in ordered.windows(2) {
+            // Legacy parse has already proved each sum and its payload bounds.
+            if pair[0].offset + pair[0].length > pair[1].offset {
+                return Err(BundleError::Cbor("Bundle payload ranges overlap".into()));
+            }
+        }
+        // Prove disjointness BEFORE SHA work. Hash direct slices (no key lookup)
+        // so the total payload hashed is at most the admitted file byte count.
+        use sha2::{Digest, Sha256};
+        for entry in ordered {
+            let payload = &bytes[entry.offset as usize..(entry.offset + entry.length) as usize];
+            if Sha256::digest(payload).as_slice() != entry.sha256.as_slice() {
+                return Err(BundleError::Cbor("Bundle entry payload hash differs".into()));
+            }
+        }
+        Ok(reader)
+    }
+
     /// Parse and fully validate a bundle: magic, version, declared length,
     /// whole-file CRC, and every entry's bounds. On success the payloads are
     /// known-good and in-bounds, so `get`/`segment` are total on valid keys.

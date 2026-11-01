@@ -77,8 +77,8 @@ pub use pipeline::{
     speech_phone_demo, EarsDemoResult,
 };
 pub use production::{
-    apply_comp_sample, apply_eq_sample, DelayLine, ProcessPlan, TrackState, MAX_BLOCK,
-    MAX_DELAY_SAMPLES, MAX_TRACKS,
+    apply_comp_sample, apply_eq_sample, DelayLine, ProcessPlan, StatefulMixer, TrackState, MAX_BLOCK,
+    MAX_DELAY_SAMPLES, MAX_MIX_DELAY, MAX_TRACKS,
 };
 pub use resample::resample_linear_mono;
 pub use semantic::{

@@ -35,6 +35,10 @@
 //! well-conditioned inputs but may misclassify near-coplanar configurations
 //! where the centroid lies on the other mesh's surface.
 
+// Bounded authoring adoption is decomposed from this legacy owner.
+pub mod bounded;
+pub mod conforming;
+
 use super::distance::{ray_triangle_intersect_3d, Aabb, RayTriangleResult};
 use super::kernel::{FilteredF64Kernel, GeometryKernel};
 use super::primitives::Point3;
@@ -647,7 +651,7 @@ fn split_one(tri: [Point3; 3], p: Point3, q: Point3) -> Vec<[Point3; 3]> {
     // Edges: AB=0, BC=1, CA=2. Vertices: A, B, C.
     // If P on AB and Q on BC: 3 sub-triangles (P,B,Q), (A,P,Q), (A,Q,C)
     // If P on AB and Q on CA: 3 sub-triangles (A,P,Q), (P,B,Q), (B,C,Q)
-    // If P on BC and Q on CA: 3 sub-triangles (B,Q,P), (P,Q,C), (A,B,Q)
+    // If P on BC and Q on CA: 3 sub-triangles (B,P,Q), (P,C,Q), (A,B,Q)
     //   Wait, let me think more carefully.
 
     // For P on edge AB, Q on edge BC (shared vertex B):
@@ -661,7 +665,7 @@ fn split_one(tri: [Point3; 3], p: Point3, q: Point3) -> Vec<[Point3; 3]> {
     //   Sub-tri 3: B, C, Q (near C)
     //
     // For P on edge BC, Q on edge CA (shared vertex C):
-    //   Sub-tri 1: P, Q, C (near C)
+    //   Sub-tri 1: P, C, Q (near C; preserve the original winding)
     //   Sub-tri 2: B, P, Q (near B)
     //   Sub-tri 3: A, B, Q (near A)
 
@@ -677,9 +681,9 @@ fn split_one(tri: [Point3; 3], p: Point3, q: Point3) -> Vec<[Point3; 3]> {
         // P on CA, Q on AB (reversed)
         (2, 0) => vec![[a, q, p], [q, b, p], [b, c, p]],
         // P on BC, Q on CA
-        (1, 2) => vec![[p, q, c], [b, p, q], [a, b, q]],
+        (1, 2) => vec![[p, c, q], [b, p, q], [a, b, q]],
         // P on CA, Q on BC (reversed)
-        (2, 1) => vec![[q, p, c], [b, q, p], [a, b, p]],
+        (2, 1) => vec![[q, c, p], [b, q, p], [a, b, p]],
         // One or both at a vertex — handle by treating vertex as on both edges.
         // If P is at vertex A (on edges AB and CA) and Q is on BC:
         // Split into 2: (A, B, Q) and (A, Q, C)
@@ -1029,6 +1033,32 @@ fn build_output(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn each_split_edge_order_preserves_winding_and_total_vector_area() {
+        use super::*;
+        let tri = [Point3::new(0., 0., 0.), Point3::new(2., 0., 1.),
+            Point3::new(0., 3., 1.)];
+        let cuts = [Point3::new(0.7, 0., 0.35),
+            Point3::new(1.2, 1.2, 1.), Point3::new(0., 1.5, 0.5)];
+        let original = tri_normal(tri[0], tri[1], tri[2]);
+        let dot = |a: Point3, b: Point3| a.x*b.x + a.y*b.y + a.z*b.z;
+        for a in 0..3 {
+            for b in 0..3 {
+                if a == b { continue; }
+                let children = split_one(tri, cuts[a], cuts[b]);
+                assert_eq!(children.len(), 3);
+                let mut sum = Point3::new(0., 0., 0.);
+                for t in children {
+                    let n = tri_normal(t[0], t[1], t[2]);
+                    assert!(dot(n, original) > 0., "reversed split edge order {a},{b}");
+                    sum = Point3::new(sum.x+n.x, sum.y+n.y, sum.z+n.z);
+                }
+                assert!((sum.x-original.x).abs() < 1e-12);
+                assert!((sum.y-original.y).abs() < 1e-12);
+                assert!((sum.z-original.z).abs() < 1e-12);
+            }
+        }
+    }
     use super::*;
 
     fn p(x: f64, y: f64, z: f64) -> Point3 {

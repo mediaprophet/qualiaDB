@@ -270,9 +270,213 @@ impl ProcessPlan {
     }
 }
 
+/// Largest delay supported by the stateful block mixer, in frames.
+pub const MAX_MIX_DELAY: usize = MAX_BLOCK - 1;
+
+#[derive(Debug, Clone)]
+struct MixTrackMemory {
+    lowpass: f32,
+    eq: f32,
+    envelope: f32,
+    delay: [f32; MAX_BLOCK],
+    delay_write: usize,
+}
+
+impl Default for MixTrackMemory {
+    fn default() -> Self {
+        Self { lowpass: 0.0, eq: 0.0, envelope: 0.0, delay: [0.0; MAX_BLOCK], delay_write: 0 }
+    }
+}
+
+/// Persistent allocation-free mixing of aligned mono tracks into stereo.
+/// Call `reset` after a discontinuous seek, track-slot reassignment or sample-rate
+/// change. Source scheduling, resampling, limiting and device playback remain
+/// host duties. Effect memory follows the input while bypassed: lowpass tracks
+/// the last source sample, while EQ and compressor retain their normal smoothers.
+/// Delay stores processed input even when bypassed; changes to its length read
+/// from that history, with no crossfade. This delay has no feedback or tail policy.
+#[derive(Debug, Clone, Default)]
+pub struct StatefulMixer {
+    memory: [MixTrackMemory; MAX_TRACKS],
+    sample_rate: Option<u32>,
+}
+
+impl StatefulMixer {
+    pub fn new() -> Self { Self::default() }
+
+    /// Discard effect history, for example after a seek.
+    pub fn reset(&mut self) { *self = Self::default(); }
+
+    /// Mix aligned blocks, with silence supplied for inactive tracks. Block
+    /// length may vary up to the plan's block size. Muted tracks continue to
+    /// advance their effect memory. Validation precedes all state/output writes.
+    /// Samples and gain are bounded to ±16, EQ to ±60 dB, compressor threshold
+    /// to 0..=1, ratio to 1..=100, and pan, lowpass and delay mix to their usual
+    /// normalized ranges. EQ frequency is accepted when finite and nonnegative:
+    /// the current EQ helper is a shelf and does not use that frequency. These
+    /// conservative limits keep the signal chain finite; no limiting occurs.
+    pub fn process_block(
+        &mut self,
+        plan: &ProcessPlan,
+        inputs: &[&[f32]],
+        frames: usize,
+        out: &mut [f32],
+    ) -> Result<(), &'static str> {
+        if plan.n_tracks > MAX_TRACKS || plan.sample_rate == 0 ||
+            plan.block_frames == 0 || plan.block_frames > MAX_BLOCK || frames > plan.block_frames {
+            return Err("invalid mixer plan or block size");
+        }
+        if inputs.len() != plan.n_tracks || inputs.iter().any(|input| input.len() < frames) {
+            return Err("each track requires an aligned input block");
+        }
+        if out.len() < frames * 2 { return Err("out too small"); }
+        if self.sample_rate.is_some_and(|rate| rate != plan.sample_rate) {
+            return Err("reset mixer before changing sample rate");
+        }
+        for (track, input) in plan.tracks[..plan.n_tracks].iter().zip(inputs) {
+            if !(-16.0..=16.0).contains(&track.gain) || !(-1.0..=1.0).contains(&track.pan) ||
+                !(0.0..=1.0).contains(&track.lowpass) || !(-60.0..=60.0).contains(&track.eq_gain_db) ||
+                !track.eq_freq_hz.is_finite() || track.eq_freq_hz < 0.0 ||
+                !(0.0..=1.0).contains(&track.comp_threshold) ||
+                !(1.0..=100.0).contains(&track.comp_ratio) || !(0.0..=1.0).contains(&track.delay_mix) ||
+                track.delay_samples as usize > MAX_MIX_DELAY ||
+                input[..frames].iter().any(|sample| !(-16.0..=16.0).contains(sample)) {
+                return Err("invalid track parameters or samples");
+            }
+        }
+        if frames > 0 { self.sample_rate = Some(plan.sample_rate); }
+        out[..frames * 2].fill(0.0);
+        let any_solo = plan.tracks[..plan.n_tracks].iter().any(|track| track.solo);
+        for (index, (track, input)) in plan.tracks[..plan.n_tracks].iter().zip(inputs).enumerate() {
+            let state = &mut self.memory[index];
+            let pan = track.pan.clamp(-1.0, 1.0);
+            let gl = track.gain * (0.5 * (1.0 - pan));
+            let gr = track.gain * (0.5 * (1.0 + pan));
+            let lp = track.lowpass.clamp(0.0, 0.99);
+            let delay = track.delay_samples as usize;
+            let wet = track.delay_mix.clamp(0.0, 1.0);
+            let audible = !track.mute && (!any_solo || track.solo);
+            for (i, &sample) in input[..frames].iter().enumerate() {
+                let mut s = sample;
+                if lp > 0.0 {
+                    state.lowpass += lp * (s - state.lowpass);
+                    s = state.lowpass;
+                } else {
+                    state.lowpass = s;
+                }
+                if track.eq_gain_db.abs() < 0.01 {
+                    state.eq += 0.05 * (s - state.eq);
+                } else {
+                    s = apply_eq_sample(s, track.eq_gain_db, track.eq_freq_hz, plan.sample_rate, &mut state.eq);
+                }
+                if track.comp_threshold >= 0.999 || track.comp_ratio <= 1.001 {
+                    state.envelope = state.envelope * 0.9 + s.abs() * 0.1;
+                } else {
+                    s = apply_comp_sample(s, track.comp_threshold, track.comp_ratio, &mut state.envelope);
+                }
+                // Advance the ring even while bypassed so enabling delay can
+                // use recent processed history.
+                let read = (state.delay_write + MAX_BLOCK - delay) % MAX_BLOCK;
+                let delayed = state.delay[read];
+                state.delay[state.delay_write] = s;
+                state.delay_write = (state.delay_write + 1) % MAX_BLOCK;
+                if delay > 0 && wet > 0.0 { s = s * (1.0 - wet) + delayed * wet; }
+                if audible {
+                    out[2 * i] += s * gl;
+                    out[2 * i + 1] += s * gr;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stateful_mixer_is_independent_of_block_partition() {
+        let mut plan = ProcessPlan::new(48000, 8);
+        plan.add_track(TrackState { pan: -1.0, lowpass: 0.4, delay_samples: 3, delay_mix: 0.5, ..Default::default() });
+        plan.add_track(TrackState { pan: 1.0, gain: 0.5, ..Default::default() });
+        let a = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let b = [0.5; 8];
+        let mut whole = [0.0; 16];
+        StatefulMixer::new().process_block(&plan, &[&a, &b], 8, &mut whole).unwrap();
+        let mut split = [0.0; 16];
+        let mut mixer = StatefulMixer::new();
+        mixer.process_block(&plan, &[&a[..3], &b[..3]], 3, &mut split[..6]).unwrap();
+        mixer.process_block(&plan, &[&a[3..], &b[3..]], 5, &mut split[6..]).unwrap();
+        assert_eq!(whole, split);
+        assert!(whole[6] > 0.0); // delayed impulse survived the boundary
+        assert_eq!(whole[1], 0.25); // independent right-panned track
+    }
+
+    #[test]
+    fn stateful_mixer_rejects_bad_input_without_mutating_state_or_output() {
+        let mut plan = ProcessPlan::new(48000, 4);
+        plan.add_track(TrackState { pan: -1.0, delay_samples: 1, delay_mix: 1.0, ..Default::default() });
+        let mut mixer = StatefulMixer::new();
+        let mut first = [0.0; 2];
+        mixer.process_block(&plan, &[&[1.0]], 1, &mut first).unwrap();
+        let mut output = [7.0; 2];
+        assert!(mixer.process_block(&plan, &[&[f32::NAN]], 1, &mut output).is_err());
+        assert_eq!(output, [7.0; 2]);
+        mixer.process_block(&plan, &[&[0.0]], 1, &mut output).unwrap();
+        assert_eq!(output, [1.0, 0.0]);
+        mixer.reset();
+        mixer.process_block(&plan, &[&[0.0]], 1, &mut output).unwrap();
+        assert_eq!(output, [0.0, 0.0]);
+    }
+
+    #[test]
+    fn muted_tracks_continue_to_advance() {
+        let mut plan = ProcessPlan::new(48000, 4);
+        plan.add_track(TrackState { pan: -1.0, mute: true, delay_samples: 1, delay_mix: 1.0, ..Default::default() });
+        let mut mixer = StatefulMixer::new();
+        let mut output = [0.0; 2];
+        mixer.process_block(&plan, &[&[1.0]], 1, &mut output).unwrap();
+        assert_eq!(output, [0.0, 0.0]);
+        plan.tracks[0].mute = false;
+        mixer.process_block(&plan, &[&[0.0]], 1, &mut output).unwrap();
+        assert_eq!(output, [1.0, 0.0]);
+    }
+
+    #[test]
+    fn stateful_mixer_rejects_extremes_and_rate_changes_transactionally() {
+        let mut plan = ProcessPlan::new(48000, 4);
+        plan.add_track(TrackState::default());
+        let mut mixer = StatefulMixer::new();
+        let mut output = [7.0; 2];
+        plan.tracks[0].eq_gain_db = 4000.0;
+        assert!(mixer.process_block(&plan, &[&[1.0]], 1, &mut output).is_err());
+        assert_eq!(output, [7.0; 2]);
+        plan.tracks[0].eq_gain_db = 0.0;
+        assert!(mixer.process_block(&plan, &[&[17.0]], 1, &mut output).is_err());
+        mixer.process_block(&plan, &[&[1.0]], 1, &mut output).unwrap();
+        plan.sample_rate = 44100;
+        output = [7.0; 2];
+        assert!(mixer.process_block(&plan, &[&[1.0]], 1, &mut output).is_err());
+        assert_eq!(output, [7.0; 2]);
+        mixer.reset();
+        mixer.process_block(&plan, &[&[1.0]], 1, &mut output).unwrap();
+    }
+
+    #[test]
+    fn bypassed_effects_follow_input_before_reactivation() {
+        let mut plan = ProcessPlan::new(48000, 4);
+        plan.add_track(TrackState { pan: -1.0, ..Default::default() });
+        let mut mixer = StatefulMixer::new();
+        let mut output = [0.0; 2];
+        mixer.process_block(&plan, &[&[1.0]], 1, &mut output).unwrap();
+        assert_eq!(mixer.memory[0].lowpass, 1.0);
+        assert_eq!(mixer.memory[0].eq, 0.05);
+        assert_eq!(mixer.memory[0].envelope, 0.1);
+        plan.tracks[0].lowpass = 0.5;
+        mixer.process_block(&plan, &[&[1.0]], 1, &mut output).unwrap();
+        assert_eq!(output, [1.0, 0.0]);
+    }
 
     #[test]
     fn mix_two_tracks() {

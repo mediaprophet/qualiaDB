@@ -12,6 +12,8 @@ pub mod ik_motor;
 mod player;
 mod pose;
 mod skin;
+mod time_policy;
+pub use time_policy::PoseTimePolicy;
 pub use absm::{
     AbsmLayer, AbsmMachine, AbsmParameter, AbsmStateNode, AbsmStateSource, AbsmTransition,
     AnimationSignal, BoneLayerMask, EontPostureConfig, LayerBlendMode, LeafCondition,

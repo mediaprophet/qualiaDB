@@ -93,7 +93,8 @@ fn edge_vertex(a: usize, b: usize, pa: Point3, pb: Point3, va: f64, vb: f64,
             let t=(aa/scale)/((aa/scale)+(bb/scale));
             if !t.is_finite() || t<=0.0 || t>=1.0 { return Err(TetraSurfaceError::InvalidGeometry); }
             let v=Point3::new(pa.x+(pb.x-pa.x)*t,pa.y+(pb.y-pa.y)*t,pa.z+(pb.z-pa.z)*t);
-            if !finite(v) || v==pa || v==pb || *count>=vertices.len() { return Err(TetraSurfaceError::InvalidGeometry); }
+            if !finite(v) || v==pa || v==pb { return Err(TetraSurfaceError::InvalidGeometry); }
+            if *count>=vertices.len() { return Err(TetraSurfaceError::InsufficientBuffer); }
             let index=u32::try_from(*count).map_err(|_|TetraSurfaceError::SizeOverflow)?;
             vertices[*count]=v; edge_sources[*count]=[lo,hi]; *count+=1; slots[bucket]=TetraEdgeSlot{a:lo,b:hi,vertex:index};
             return Ok(index);
@@ -151,19 +152,45 @@ pub fn indexed_tetra_surface_into(
     grid:&[f64], dims:[usize;3], origin:Point3, spacing:Point3, iso:f64,
     max_cells:usize, max_probes:usize, min_area_sq:f64, vertices:&mut [Point3], triangles:&mut [[u32;3]], edge_sources:&mut [[usize;2]], slots:&mut [TetraEdgeSlot],
 ) -> Result<(usize,usize),TetraSurfaceError> {
+    indexed_tetra_surface_impl(grid,dims,origin,spacing,iso,max_cells,max_probes,min_area_sq,vertices,triangles,edge_sources,slots,false)
+}
+
+/// Same extractor with explicitly capped output/scratch capacity. Useful when
+/// a large sample volume contains a sparse surface. No partial success: a full
+/// vertex/triangle buffer, hash table or probe budget returns Err; all output
+/// remains unpublished scratch. Successful ordering and geometry match the
+/// legacy operation. Caller must provide source rows for every vertex slot.
+pub fn indexed_tetra_surface_capped_into(
+    grid:&[f64], dims:[usize;3], origin:Point3, spacing:Point3, iso:f64,
+    max_cells:usize, max_probes:usize, min_area_sq:f64, vertices:&mut [Point3], triangles:&mut [[u32;3]], edge_sources:&mut [[usize;2]], slots:&mut [TetraEdgeSlot],
+) -> Result<(usize,usize),TetraSurfaceError> {
+    indexed_tetra_surface_impl(grid,dims,origin,spacing,iso,max_cells,max_probes,min_area_sq,vertices,triangles,edge_sources,slots,true)
+}
+
+fn indexed_tetra_surface_impl(
+    grid:&[f64], dims:[usize;3], origin:Point3, spacing:Point3, iso:f64,
+    max_cells:usize, max_probes:usize, min_area_sq:f64, vertices:&mut [Point3], triangles:&mut [[u32;3]], edge_sources:&mut [[usize;2]], slots:&mut [TetraEdgeSlot], capped:bool,
+) -> Result<(usize,usize),TetraSurfaceError> {
     let [nx,ny,nz]=dims; let bounds=tetra_surface_bounds(nx,ny,nz,max_cells)?;
     if max_probes==0 { return Err(TetraSurfaceError::WorkLimitExceeded); }
     let mut remaining_probes=max_probes;
     if grid.len()<bounds.samples { return Err(TetraSurfaceError::GridTooSmall); }
     if !finite(origin) || !finite(spacing) || spacing.x<=0.0 || spacing.y<=0.0 || spacing.z<=0.0 || !iso.is_finite() || !min_area_sq.is_finite() || min_area_sq<0.0 || !finite(point(nx-1,ny-1,nz-1,origin,spacing)) { return Err(TetraSurfaceError::InvalidGeometry); }
-    if vertices.len()<bounds.vertices || triangles.len()<bounds.triangles || edge_sources.len()<bounds.vertices || slots.len()<bounds.edge_slots { return Err(TetraSurfaceError::InsufficientBuffer); }
+    let slot_count=if capped {
+        if vertices.is_empty()||vertices.len()>u32::MAX as usize||triangles.is_empty()||edge_sources.len()<vertices.len()
+            ||slots.len()<4||!slots.len().is_power_of_two(){return Err(TetraSurfaceError::InsufficientBuffer);}
+        slots.len()
+    }else{
+        if vertices.len()<bounds.vertices || triangles.len()<bounds.triangles || edge_sources.len()<bounds.vertices || slots.len()<bounds.edge_slots { return Err(TetraSurfaceError::InsufficientBuffer); }
+        bounds.edge_slots
+    };
     for z in 0..nz { for y in 0..ny { for x in 0..nx {
         let v=grid[x+y*nx+z*nx*ny]; if !v.is_finite(){ return Err(TetraSurfaceError::NonFiniteSample); }
         if v==iso { return Err(TetraSurfaceError::SampleOnSurface); }
         if (x==0 || y==0 || z==0 || x+1==nx || y+1==ny || z+1==nz) && v<iso { return Err(TetraSurfaceError::SurfaceTouchesBoundary); }
         if !(v-iso).is_finite() { return Err(TetraSurfaceError::InvalidGeometry); }
     } } }
-    let slots=&mut slots[..bounds.edge_slots]; slots.fill(TetraEdgeSlot::default());
+    let slots=&mut slots[..slot_count]; slots.fill(TetraEdgeSlot::default());
     let mut vc=0; let mut tc=0;
     const CORNERS:[[usize;3];8]=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
     const TETS:[[usize;4];6]=[[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6],[0,5,1,6]];
@@ -200,6 +227,33 @@ mod tests {
     use super::*;
     use super::super::sdf_ops::{sdf_capsule, sdf_smooth_union};
     use std::collections::{HashMap, VecDeque};
+
+    #[test]
+    fn capped_extraction_matches_legacy_and_never_returns_partial_success() {
+        let dims=[7,7,7];let origin=Point3::new(-1.53,-1.52,-1.51);let spacing=Point3::new(0.5,0.5,0.5);
+        let mut grid=Vec::new();
+        for z in 0..7 {for y in 0..7 {for x in 0..7 {let p=point(x,y,z,origin,spacing);grid.push(p.x.hypot(p.y).hypot(p.z)-0.81);}}}
+        let (legacy_v,legacy_t)=output(&grid,dims,origin,spacing).unwrap();
+        let slots=(legacy_t.len()*3).max(legacy_v.len()*2).next_power_of_two();
+        let run=|v:usize,t:usize,s:usize,probes:usize| {
+            let mut vertices=vec![Point3::default();v];let mut triangles=vec![[0;3];t];
+            let mut edges=vec![[0;2];v];let mut table=vec![TetraEdgeSlot::default();s];
+            let result=indexed_tetra_surface_capped_into(&grid,dims,origin,spacing,0.0,1000,probes,1e-28,
+                &mut vertices,&mut triangles,&mut edges,&mut table);
+            (result,vertices,triangles)
+        };
+        let (counts,v,t)=run(legacy_v.len(),legacy_t.len(),slots,1_000_000);
+        assert_eq!(counts.unwrap(),(legacy_v.len(),legacy_t.len()));assert_eq!(v,legacy_v);assert_eq!(t,legacy_t);
+        assert_eq!(run(legacy_v.len()-1,legacy_t.len(),slots,1_000_000).0,Err(TetraSurfaceError::InsufficientBuffer));
+        assert_eq!(run(legacy_v.len(),legacy_t.len()-1,slots,1_000_000).0,Err(TetraSurfaceError::InsufficientBuffer));
+        assert!(run(legacy_v.len(),legacy_t.len(),4,1_000_000).0.is_err());
+        assert_eq!(run(legacy_v.len(),legacy_t.len(),slots,1).0,Err(TetraSurfaceError::WorkLimitExceeded));
+        let mut v=vec![Point3::new(7.,7.,7.);legacy_v.len()];let mut t=vec![[7;3];legacy_t.len()];
+        let mut edges=vec![[7;2];legacy_v.len()];let mut table=vec![TetraEdgeSlot::default();slots-1];
+        assert_eq!(indexed_tetra_surface_capped_into(&grid,dims,origin,spacing,0.0,1000,1000,1e-28,
+            &mut v,&mut t,&mut edges,&mut table),Err(TetraSurfaceError::InsufficientBuffer));
+        assert!(v.iter().all(|p|*p==Point3::new(7.,7.,7.)));assert!(t.iter().all(|p|*p==[7;3]));
+    }
 
     fn output(grid: &[f64], dims: [usize;3], origin: Point3, spacing: Point3)
       -> Result<(Vec<Point3>,Vec<[u32;3]>),TetraSurfaceError> {

@@ -45,27 +45,42 @@ pub struct SurfaceQualificationBounds {
     pub face_queue: usize,
     pub work: usize,
 }
+/// Storage and fixed linear work for the actual-probe-budgeted operation.
+/// Unlike the legacy worst-case bound, this does not multiply every edge by
+/// every hash slot, which can overflow usize on 32-bit targets unnecessarily.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SurfaceQualificationStorage {
+    pub half_edges:usize, pub edge_slots:usize, pub vertex_starts:usize,
+    pub visited_half_edges:usize, pub face_labels:usize, pub face_queue:usize,
+    pub fixed_work:usize,
+}
 
 /// Conservative upper bound for the existing topology/face-connectivity
 /// owners and the vertex-fan validation. `work` counts elementary visits/probes,
 /// not measured wall-clock time or hardware resource consumption.
 pub fn surface_qualification_bounds(vertex_count:u32,face_count:usize) -> Result<SurfaceQualificationBounds,SurfaceQualificationError> {
+    let b=surface_qualification_storage_bounds(vertex_count,face_count)?;
+    let hash_work=b.half_edges.checked_mul(2).and_then(|x|x.checked_mul(b.edge_slots)).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    let work=hash_work.checked_add(b.fixed_work).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    Ok(SurfaceQualificationBounds{half_edges:b.half_edges,edge_slots:b.edge_slots,vertex_starts:b.vertex_starts,
+        visited_half_edges:b.visited_half_edges,face_labels:b.face_labels,face_queue:b.face_queue,work})
+}
+
+pub fn surface_qualification_storage_bounds(vertex_count:u32,face_count:usize) -> Result<SurfaceQualificationStorage,SurfaceQualificationError> {
     if vertex_count==0 || face_count==0 { return Err(SurfaceQualificationError::EmptyMesh); }
     if face_count>(u32::MAX as usize)/3 { return Err(SurfaceQualificationError::SizeOverflow); }
     let half_edges=face_count.checked_mul(3).ok_or(SurfaceQualificationError::SizeOverflow)?;
     let slots=required_edge_slots(face_count);
     if slots==usize::MAX || !slots.is_power_of_two() { return Err(SurfaceQualificationError::SizeOverflow); }
-    // Two scans of up to slot length per directed edge: existing find/insert.
-    let hash_work=half_edges.checked_mul(2).and_then(|x|x.checked_mul(slots)).ok_or(SurfaceQualificationError::SizeOverflow)?;
     // Checked triangle-ordered connectivity traversal is linear in faces.
     let component_work=triangle_ordered_component_work(face_count as u32).map_err(|_|SurfaceQualificationError::SizeOverflow)?;
     let housekeeping=half_edges.checked_mul(32)
         .and_then(|x| x.checked_add((vertex_count as usize).checked_mul(8)?))
         .and_then(|x| x.checked_add(slots.checked_mul(4)?))
         .and_then(|x| x.checked_add(64)).ok_or(SurfaceQualificationError::SizeOverflow)?;
-    let work=hash_work.checked_add(component_work).and_then(|x|x.checked_add(housekeeping)).ok_or(SurfaceQualificationError::SizeOverflow)?;
-    Ok(SurfaceQualificationBounds { half_edges,edge_slots:slots,vertex_starts:vertex_count as usize,
-        visited_half_edges:half_edges,face_labels:face_count,face_queue:face_count,work })
+    let fixed_work=component_work.checked_add(housekeeping).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    Ok(SurfaceQualificationStorage { half_edges,edge_slots:slots,vertex_starts:vertex_count as usize,
+        visited_half_edges:half_edges,face_labels:face_count,face_queue:face_count,fixed_work })
 }
 
 /// Qualify an already-produced indexed triangle surface without changing it.
@@ -181,6 +196,30 @@ mod tests {
         assert_eq!(surface_qualification_bounds(4,0),Err(SurfaceQualificationError::EmptyMesh));
         assert_eq!(surface_qualification_bounds(4,usize::MAX),Err(SurfaceQualificationError::SizeOverflow));
     }
+    #[test]
+    fn storage_bounds_do_not_require_a_representable_quadratic_probe_bound() {
+        let b=surface_qualification_storage_bounds(65_536,131_072).unwrap();
+        assert!(b.fixed_work<u32::MAX as usize);
+        let quadratic=(b.half_edges as u64)*2*(b.edge_slots as u64);
+        assert!(quadratic>u32::MAX as u64);
+        #[cfg(target_pointer_width="32")]
+        assert_eq!(surface_qualification_bounds(65_536,131_072),Err(SurfaceQualificationError::SizeOverflow));
+        let small=surface_qualification_storage_bounds(4,4).unwrap();
+        let legacy=surface_qualification_bounds(4,4).unwrap();
+        assert_eq!(legacy.work,small.fixed_work+small.half_edges*2*small.edge_slots);
+        assert_eq!(legacy.edge_slots,small.edge_slots);
+    }
+    #[test]
+    fn budgeted_storage_path_matches_legacy_and_refuses_exhaustion() {
+        let b=surface_qualification_storage_bounds(4,TET.len()).unwrap();
+        let mut edges=vec![HalfEdge::default();b.half_edges];let mut slots=vec![EdgeSlot::default();b.edge_slots];
+        let mut starts=vec![0;b.vertex_starts];let mut visited=vec![false;b.visited_half_edges];
+        let mut labels=vec![0;b.face_labels];let mut queue=vec![0;b.face_queue];let mut work=100_000;
+        let actual=qualify_surface_topology_budgeted_into(4,&TET,&mut work,&mut edges,&mut slots,&mut starts,&mut visited,&mut labels,&mut queue).unwrap();
+        assert_eq!(actual,qualify(4,&TET).unwrap());assert!(work<100_000);
+        let mut exhausted=b.fixed_work;
+        assert!(qualify_surface_topology_budgeted_into(4,&TET,&mut exhausted,&mut edges,&mut slots,&mut starts,&mut visited,&mut labels,&mut queue).is_err());
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -194,9 +233,8 @@ pub fn qualify_surface_topology_budgeted_into(
     half_edges:&mut [HalfEdge],edge_slots:&mut [EdgeSlot],vertex_starts:&mut [u32],
     visited_half_edges:&mut [bool],face_labels:&mut [u32],face_queue:&mut [u32],
 ) -> Result<SurfaceQualificationReceipt,BudgetedSurfaceQualificationError> {
-    let bounds=surface_qualification_bounds(vertex_count,triangles.len())?;
-    let hash_bound=bounds.half_edges.checked_mul(2).and_then(|n|n.checked_mul(bounds.edge_slots)).ok_or(SurfaceQualificationError::SizeOverflow)?;
-    let fixed=bounds.work.checked_sub(hash_bound).ok_or(SurfaceQualificationError::SizeOverflow)?;
+    let bounds=surface_qualification_storage_bounds(vertex_count,triangles.len())?;
+    let fixed=bounds.fixed_work;
     let minimum=fixed.checked_add(1).ok_or(SurfaceQualificationError::SizeOverflow)?;
     if *remaining_work<minimum { return Err(SurfaceQualificationError::WorkLimitExceeded{required:minimum}.into()); }
     if half_edges.len()<bounds.half_edges || edge_slots.len()<bounds.edge_slots ||

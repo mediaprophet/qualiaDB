@@ -237,6 +237,7 @@ pub use inference::topk_gpu;
 pub mod lora;
 // --- q42/ category (reorg) ---
 pub mod q42;
+pub mod sensing;
 pub use q42::design_encode;
 pub use q42::execution_profile;
 pub use q42::journal;

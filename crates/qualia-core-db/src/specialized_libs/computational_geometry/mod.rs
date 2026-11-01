@@ -369,6 +369,7 @@ pub use exact_arrangement::{
     zone_traversal, ArrangementEdge, ArrangementError, ArrangementVertex, ExactArrangement,
     ExactLine2, ZoneTraversal,
 };
+pub use exact_construct_3::checked as checked_exact_construct_3;
 pub use exact_construct_3::{
     construct_segment_plane_intersection_3, construct_segment_triangle_intersection_3,
     orient_3d_exact_3, segment_plane_parameter_sign, Exact3Error, ExactPoint3, ParameterSpan,
@@ -653,4 +654,8 @@ pub mod surface_topology_qualification;
 pub use connectivity::{label_components_triangle_ordered, triangle_ordered_component_work, OrderedConnectivityError};
 
 pub mod tapered_branch_field;
+pub mod branch_graph_surface;
 pub use sdf_ops::sdf_smooth_union_stable;
+
+/// Bounded geometric collar projection with fixed authored boundary bands.
+pub mod smooth_junction;

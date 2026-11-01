@@ -35,6 +35,10 @@
 use crate::NQuin;
 use std::io;
 
+/// Cold RDF/Q42 lexical binary64 storage; not the inline binary32 encoding.
+#[path = "typed_double.rs"]
+pub mod typed_double;
+
 // ---------------------------------------------------------------------------
 // Bit-layout constants
 // ---------------------------------------------------------------------------
@@ -318,11 +322,12 @@ pub fn pack_typed_literal(value: &str, datatype_iri: &str) -> Option<u64> {
             _ => None,
         };
     }
-    if dt == "http://www.w3.org/2001/XMLSchema#float"
-        || dt == "http://www.w3.org/2001/XMLSchema#double"
-        || dt == "xsd:float"
-        || dt == "xsd:double"
-    {
+    // A binary64 value cannot fit the binary32 inline payload. The caller must
+    // retain its standard typed lexical term in Q42LEX instead of rounding it.
+    if dt == typed_double::DATATYPE || dt == "xsd:double" {
+        return None;
+    }
+    if dt == "http://www.w3.org/2001/XMLSchema#float" || dt == "xsd:float" {
         let f = value.parse::<f32>().ok()?;
         return Some(crate::frame_layout::pack_float_object(f));
     }

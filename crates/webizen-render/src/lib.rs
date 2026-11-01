@@ -24,6 +24,10 @@ pub mod ui_layout;
 pub mod ui_msdf_text;
 #[cfg(feature = "qualia")]
 pub mod volumetric;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+mod volumetric_native_preview;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub use volumetric_native_preview::{ReviewGeometry, ReviewView, REVIEW_VIEWS};
 #[cfg(feature = "qualia")]
 pub mod volumetric_hmc;
 #[cfg(feature = "qualia")]

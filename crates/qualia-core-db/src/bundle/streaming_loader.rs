@@ -226,15 +226,23 @@ impl HmcProgressiveRangePlanner {
         if entry_prefix_bytes.len() < HEADER_BYTE_SIZE {
             return Err(BundleError::TooShort);
         }
-        let hdr = Container10dHeader::parse(&entry_prefix_bytes[..HEADER_BYTE_SIZE])
+        // Header validation also checks the table pointer against the supplied
+        // slice. Include the available entry prefix, but never bytes belonging
+        // to a following bundle entry.
+        let prefix_len = entry_prefix_bytes.len().min(usize::try_from(entry.length).unwrap_or(usize::MAX));
+        let hdr = Container10dHeader::parse(&entry_prefix_bytes[..prefix_len])
             .map_err(|_| BundleError::BadMagic)?;
         if hdr.magic != MAGIC_10D {
             return Err(BundleError::BadMagic);
         }
         let sec_count = hdr.section_count as usize;
         let toc_start = hdr.section_table_offset as usize;
-        let toc_end = toc_start + sec_count * SECTION_DESCRIPTOR_SIZE;
-        if entry_prefix_bytes.len() < toc_end {
+        let toc_end = sec_count.checked_mul(SECTION_DESCRIPTOR_SIZE)
+            .and_then(|size| toc_start.checked_add(size))
+            .ok_or_else(|| BundleError::EntryOutOfBounds {
+                key: entry.key.clone(), offset: entry.offset, length: entry.length,
+            })?;
+        if toc_end as u64 > entry.length || entry_prefix_bytes.len() < toc_end {
             return Err(BundleError::TooShort);
         }
         let is_low_lod_key = entry.key.contains("lod1") || entry.key.contains("lod2");
@@ -243,13 +251,24 @@ impl HmcProgressiveRangePlanner {
             let off = toc_start + i * SECTION_DESCRIPTOR_SIZE;
             let sec: SectionDescriptor =
                 bytemuck::pod_read_unaligned(&entry_prefix_bytes[off..off + SECTION_DESCRIPTOR_SIZE]);
+            let section_offset = u64::from(sec.byte_offset);
+            let section_length = u64::from(sec.byte_length);
+            if section_offset.checked_add(section_length).is_none_or(|end| end > entry.length) {
+                return Err(BundleError::EntryOutOfBounds {
+                    key: entry.key.clone(), offset: section_offset, length: section_length,
+                });
+            }
+            let absolute_offset = entry.offset.checked_add(section_offset)
+                .ok_or_else(|| BundleError::EntryOutOfBounds {
+                    key: entry.key.clone(), offset: section_offset, length: section_length,
+                })?;
             let tier = classify_10d_section_tier(u16::from(sec.section_type), is_low_lod_key);
             out.push(HmcRangeRequest {
                 entry_key: entry.key.clone(),
                 entry_kind: entry.kind.clone(),
                 tier,
-                offset: entry.offset + u64::from(sec.byte_offset),
-                length: u64::from(sec.byte_length),
+                offset: absolute_offset,
+                length: section_length,
                 expected_sha256: None,
                 expected_crc32c: Some(sec.crc32c),
                 section_type_raw: Some(u16::from(sec.section_type)),
@@ -358,6 +377,69 @@ pub fn verify_arrived_range(req: &HmcRangeRequest, arrived_bytes: &[u8]) -> Resu
 mod tests {
     use super::*;
     use crate::bundle::writer::BundleWriter;
+
+    #[test]
+    fn section_ranges_cannot_escape_their_bundle_entry() {
+        use crate::container_10d::{encode_container, AlignmentTier, SectionInput};
+        let header = Container10dHeader::proposed();
+        let section = SectionInput { section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &[1, 2, 3, 4] };
+        let mut bytes = vec![0u8; 512];
+        let len = encode_container(&header, &[section], &mut bytes).unwrap();
+        bytes.truncate(len);
+        let mut writer = BundleWriter::new();
+        writer.add_file("mesh.10d", "10d", bytes.clone(), None).unwrap();
+        let bundle = writer.build().unwrap();
+        let probe = HmcHeaderProbe::parse_header_range(&bundle[..BUNDLE_HEADER_SIZE]).unwrap();
+        let footer = &bundle[probe.index_offset as usize..(probe.index_offset + probe.index_length) as usize];
+        let planner = HmcProgressiveRangePlanner::from_header_and_index(probe, footer).unwrap();
+        let ranges = planner.plan_10d_interior_section_ranges("mesh.10d", &bytes).unwrap();
+        assert_eq!(ranges.len(), 1);
+        assert!(ranges[0].offset + ranges[0].length <= planner.entries()[0].offset + len as u64);
+
+        // Keep a valid 10D header, but point the section at the next entry.
+        let table = Container10dHeader::parse(&bytes[..HEADER_BYTE_SIZE]).unwrap().section_table_offset as usize;
+        bytes[table + 4..table + 8].copy_from_slice(&(len as u32).to_le_bytes());
+        assert!(planner.plan_10d_interior_section_ranges("mesh.10d", &bytes).is_err());
+    }
+
+    #[test]
+    fn section_table_after_header_uses_only_the_selected_entry_prefix() {
+        use crate::container_10d::{encode_container, AlignmentTier, SectionInput};
+        let header = Container10dHeader::proposed();
+        let section = SectionInput { section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &[1, 2, 3, 4] };
+        let mut bytes = vec![0u8; 512];
+        let len = encode_container(&header, &[section], &mut bytes).unwrap();
+        bytes.truncate(len);
+        let mut parsed = Container10dHeader::parse(&bytes).unwrap();
+        let old_table = parsed.section_table_offset as usize;
+        let descriptor = bytes[old_table..old_table + SECTION_DESCRIPTOR_SIZE].to_vec();
+        bytes[old_table..old_table + SECTION_DESCRIPTOR_SIZE].fill(0);
+        parsed.section_table_offset = 256;
+        bytes.resize(256 + SECTION_DESCRIPTOR_SIZE, 0);
+        bytes[256..].copy_from_slice(&descriptor);
+        bytes[..HEADER_BYTE_SIZE].copy_from_slice(&parsed.encode_to_vec64());
+        crate::container_10d::seal_whole_file_crc32c(&mut bytes);
+        crate::container_10d::integrity::check_whole_file_crc32c(&bytes).unwrap();
+        let sealed_header = Container10dHeader::parse(&bytes).unwrap();
+        assert_eq!(crate::container_10d::parse_section_table(&bytes, &sealed_header).unwrap().len(), 1);
+        let mut writer = BundleWriter::new();
+        writer.add_file("mesh.10d", "10d", bytes.clone(), None).unwrap();
+        let bundle = writer.build().unwrap();
+        let probe = HmcHeaderProbe::parse_header_range(&bundle[..BUNDLE_HEADER_SIZE]).unwrap();
+        let footer = &bundle[probe.index_offset as usize..(probe.index_offset + probe.index_length) as usize];
+        let planner = HmcProgressiveRangePlanner::from_header_and_index(probe, footer).unwrap();
+        assert_eq!(planner.plan_10d_interior_section_ranges("mesh.10d", &bytes).unwrap().len(), 1);
+        assert!(planner.plan_10d_interior_section_ranges("mesh.10d", &bytes[..128]).is_err());
+
+        // Supplying extra bytes must not make an out-of-entry table admissible.
+        let mut overrun = bytes.clone();
+        parsed.section_table_offset = bytes.len() as u32 + 1;
+        overrun[..HEADER_BYTE_SIZE].copy_from_slice(&parsed.encode_to_vec64());
+        overrun.resize(overrun.len() + SECTION_DESCRIPTOR_SIZE + 2, 0);
+        assert!(planner.plan_10d_interior_section_ranges("mesh.10d", &overrun).is_err());
+    }
 
     #[test]
     fn progressive_planner_orders_tier0_before_tier1_and_tier2_and_verifies_ranges() {
