@@ -33,7 +33,7 @@ impl QTensorEngine {
                 &hidden[..emb_dim],
                 emb_dim,
                 tensors.ffn_norm.as_ref(),
-                self.gguf_mmap.as_deref().map(|m| &m[..]),
+                self.model_bytes().map(|m| &m[..]),
                 index.tensor_data_start,
                 &mut h_norm_ffn,
                 &mut norm_w_ffn,
@@ -140,7 +140,7 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
     ) -> bool {
         // Clone the mmap Arc so weight slices don't borrow `self` (we mutate `self` below).
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -585,7 +585,7 @@ impl QTensorEngine {
             &hidden[..emb_dim],
             emb_dim,
             tensors.ffn_norm.as_ref(),
-            self.gguf_mmap.as_deref(),
+            self.model_bytes(),
             index.tensor_data_start,
             &mut h_norm_ffn,
             &mut norm_w_ffn,

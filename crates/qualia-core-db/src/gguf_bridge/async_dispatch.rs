@@ -75,7 +75,7 @@ impl QTensorEngine {
             logits_out[..n].copy_from_slice(&hidden[..n]);
             return n;
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => {
                 let n = emb_dim.min(logits_out.len());
@@ -383,7 +383,7 @@ impl QTensorEngine {
             ));
             return false;
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -430,7 +430,7 @@ impl QTensorEngine {
             return None;
         }
 
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let k_raw =
             crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, k_info).ok()?;
         let v_raw =
@@ -749,7 +749,7 @@ impl QTensorEngine {
         if q_dim > scratch_a.len() || q_dim > scratch_b.len() || emb_dim < h.n_embd as usize {
             return false;
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };

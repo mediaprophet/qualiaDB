@@ -83,25 +83,22 @@ impl LocalLlmAgent {
                 };
 
                 let is_p64_mmap = engine
-                    .gguf_mmap
-                    .as_ref()
+                    .model_bytes()
                     .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
                     .unwrap_or(false);
                 let p64_index = if is_p64_mmap {
                     engine
-                        .gguf_mmap
-                        .as_ref()
+                        .model_bytes()
                         .and_then(|m| crate::p64_weight::P64TensorIndex::from_p64(m).ok())
                 } else {
                     None
                 };
                 let mut tok =
-                    if let (Some(qi), Some(m)) = (p64_index.as_ref(), engine.gguf_mmap.as_ref()) {
+                    if let (Some(qi), Some(m)) = (p64_index.as_ref(), engine.model_bytes()) {
                         GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
                     } else {
                         engine
-                            .gguf_mmap
-                            .as_ref()
+                            .model_bytes()
                             .map(|m| GgufTokenizer::from_gguf(m))
                             .unwrap_or_default()
                     };
@@ -111,8 +108,7 @@ impl LocalLlmAgent {
                     Some(qi.to_gguf_index())
                 } else {
                     engine
-                        .gguf_mmap
-                        .as_ref()
+                        .model_bytes()
                         .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
                 };
 
@@ -158,7 +154,7 @@ impl LocalLlmAgent {
                             let n = (prefill_tokens - pos).min(chunk_cap);
                             let batch_elems = n * emb_dim;
                             {
-                                let mmap = match engine.gguf_mmap.as_deref() {
+                                let mmap = match engine.model_bytes() {
                                     Some(m) => m,
                                     None => break,
                                 };

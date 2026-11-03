@@ -69,7 +69,7 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        if let Some(mmap) = &self.gguf_mmap {
+        if let Some(mmap) = self.model_bytes() {
             let offset = (self.tensor_data_offset + weight_tensor.byte_offset) as usize;
             let end = (offset + weights_elems * 4).min(mmap.len());
             if end > offset {
@@ -188,7 +188,7 @@ impl QTensorEngine {
         // ── DirectML path (Windows) ───────────────────────────────────────────
         #[cfg(target_os = "windows")]
         if let Some(dml) = &self.dml {
-            if let Some(mmap) = &self.gguf_mmap {
+            if let Some(mmap) = self.model_bytes() {
                 let offset = self.tensor_data_offset + tensor.byte_offset;
                 let q4_bytes_needed = (rows * cols / crate::directml_bridge::Q4_K_BLOCK_SIZE)
                     * crate::directml_bridge::Q4_K_BLOCK_BYTES;
@@ -212,7 +212,7 @@ impl QTensorEngine {
 
         // ── Accelerate BLAS path (macOS / Apple Silicon AMX) ─────────────────────
         #[cfg(any(target_os = "macos", target_os = "ios"))]
-        if let Some(mmap) = &self.gguf_mmap {
+        if let Some(mmap) = self.model_bytes() {
             let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
             let q4_bytes_needed = (rows * cols / crate::metal_bridge::Q4_K_BLOCK_SIZE)
                 * crate::metal_bridge::Q4_K_BLOCK_BYTES;
@@ -253,7 +253,7 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        if let Some(mmap) = &self.gguf_mmap {
+        if let Some(mmap) = self.model_bytes() {
             let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
             let end = (offset + rows * cols * 4).min(mmap.len());
             if end > offset {
@@ -298,7 +298,7 @@ impl QTensorEngine {
         // real path (`gguf_mmap.is_some()`) dispatches `self.pipeline`; the mock
         // path (no model, i.e. tests) dispatches `self.mock_pipeline`, so it must
         // take the mock pipeline's own group-0 layout.
-        let use_mock = self.gguf_mmap.is_none();
+        let use_mock = self.model_bytes().is_none();
         #[cfg(not(target_arch = "wasm32"))]
         let bind_group_layout = if use_mock {
             self.mock_pipeline.get_bind_group_layout(0)

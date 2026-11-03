@@ -467,3 +467,38 @@ unchanged. Existing target-specific unused warnings remain visible. The final
 reconciliation matches all 72 independently reviewed authority/evidence source
 paths, the complete test inventory and the unchanged lockfile. These WASM
 checks establish compilation, not browser authority transport or execution.
+
+### Engine state and model-byte access preparation
+
+G3-P2A separates the tensor engine's state definition and centralizes borrowed
+model bytes and retained byte handles. Public mapping fields keep their existing
+types, and ownership transfer remains available. The 17 existing retained-map
+clones remain 17 retained-handle clones; ordinary reads borrow the same bytes.
+This mechanical step changes neither backing admission nor numerical algorithms.
+
+Three additional tests cover pointer/ownership identity, replacement and drop
+lifetimes, absent mappings and positive-controlled zero-allocation access. The
+actual core suite passed **10,513 tests, zero failures, three existing ignores
+and zero filtered**, in 548.87 seconds with serial execution and
+`QUALIA_REQUIRE_GPU_TESTS=1`. All 10,513 prior test names remain, with exactly
+three additions. The 3,313 frozen source/manifest paths remained unchanged.
+
+Native, CPU-only, WASM LLM, WASM LLM with GPU runtime and CUDA compilation pass.
+An initial WASM unused parent-alias warning was removed by gating that alias on
+native targets; the final WASM checks pass with the existing unrelated warnings.
+These compilation results do not establish CUDA or browser execution.
+
+A separately linked non-test caller ran the complete 32-layer SmolLM2 fixture
+for four generated tokens. Its retained report is byte-identical to the original
+caller report, including token/text output and observed stage records. Hidden
+sampler, DOMINO, provider KV/SSM and opaque backend state were not observed by
+that report. The candidate additionally inherited the GPU-test requirement flag,
+which is used only by renderer test fixtures; the numerical environment values
+were equal. No performance or new governance claim follows from this comparison.
+
+The first capture completed inference but failed report promotion because its
+artifact parent included compiler/source evidence exceeding the 2 MiB budget.
+The failed receipt is retained. A fresh capture used a separate marker-owned
+parent under the unchanged budget and passed; production code and reference
+expectations were unchanged. Actual retained-model preparation and numerical
+commit through Webizen remain subsequent integration gates.

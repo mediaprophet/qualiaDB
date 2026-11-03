@@ -10,22 +10,20 @@ pub(super) fn prepare(engine: &QTensorEngine, model_path: &str) -> PreparedModel
     // format. P64 carries a Q42T tokenizer section and a manifest;
     // GGUF carries both in its own metadata.
     let is_p64_mmap = engine
-        .gguf_mmap
-        .as_ref()
+        .model_bytes()
         .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
         .unwrap_or(false);
     // Prefer engine-cached index from adopt (zero re-CRC); else parse once.
     let p64_index = engine.p64_index.clone().or_else(|| {
         if is_p64_mmap {
             engine
-                .gguf_mmap
-                .as_ref()
+                .model_bytes()
                 .and_then(|m| crate::p64_weight::P64TensorIndex::from_p64(m).ok())
         } else {
             None
         }
     });
-    let mut tok = if let (Some(qi), Some(m)) = (p64_index.as_ref(), engine.gguf_mmap.as_ref()) {
+    let mut tok = if let (Some(qi), Some(m)) = (p64_index.as_ref(), engine.model_bytes()) {
         GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
     } else if let Some(sibling_tok) = {
         let mp = std::path::Path::new(&model_path);
@@ -47,8 +45,7 @@ pub(super) fn prepare(engine: &QTensorEngine, model_path: &str) -> PreparedModel
         sibling_tok
     } else {
         engine
-            .gguf_mmap
-            .as_ref()
+            .model_bytes()
             .map(|m| GgufTokenizer::from_gguf(m))
             .unwrap_or_default()
     };
@@ -60,8 +57,7 @@ pub(super) fn prepare(engine: &QTensorEngine, model_path: &str) -> PreparedModel
             Some(qi.to_gguf_index())
         } else {
             engine
-                .gguf_mmap
-                .as_ref()
+                .model_bytes()
                 .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
         }
     });

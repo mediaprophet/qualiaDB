@@ -69,7 +69,7 @@ impl QTensorEngine {
             return true;
         }
         // Clone the Arc so the mmap borrow does not block mutating `self` below.
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -210,7 +210,7 @@ impl QTensorEngine {
             return false;
         }
         // Clone the Arc so the mmap borrow does not block mutating `self` below.
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -262,7 +262,7 @@ impl QTensorEngine {
         if n_layer == 0 || n_embd == 0 || n_embd > MAX_HIDDEN_DIM {
             return false;
         }
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };

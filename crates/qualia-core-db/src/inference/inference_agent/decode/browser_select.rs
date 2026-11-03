@@ -36,8 +36,7 @@ pub(super) fn run(input: BrowserSelection<'_>) -> (usize, f32, bool) {
         .as_ref()
         .and_then(|idx| {
             engine
-                .gguf_mmap
-                .as_deref()
+                .model_bytes()
                 .map(|m| idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim]))
         })
         .unwrap_or(0);

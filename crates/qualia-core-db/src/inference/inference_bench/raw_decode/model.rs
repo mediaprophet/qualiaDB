@@ -1,13 +1,12 @@
 #![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
 
-use std::sync::Arc;
 
 use crate::gguf_bridge::QTensorEngine;
 use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
 
 pub(super) struct RawModel {
     pub engine: QTensorEngine,
-    pub mmap: Arc<memmap2::Mmap>,
+    pub mmap: crate::gguf_bridge::ModelByteHandle,
     pub tokenizer: GgufTokenizer,
     pub index: GgufTensorIndex,
     pub emb: Vec<f32>,
@@ -25,8 +24,7 @@ impl RawModel {
         engine.load_model_checked(model_path)?;
 
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map".to_string())?;
         let is_p64 = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
         let (tokenizer, index) = if let Some(ref pkg) = engine.ftw_package {

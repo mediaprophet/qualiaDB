@@ -138,8 +138,7 @@ async fn run_inference_async(
             }
         } else {
             let mmap = engine
-                .gguf_mmap
-                .as_ref()
+                .model_bytes()
                 .ok_or_else(|| "no resident model bytes (neither P64 nor GGUF)".to_string())?;
             // from_gguf falls back to Default on parse failure — require_real_tokenizer rejects it.
             let tok = GgufTokenizer::from_gguf(mmap);
@@ -184,7 +183,7 @@ async fn run_inference_async(
                 while pos < prefill_tokens {
                     let n = (prefill_tokens - pos).min(chunk_cap);
                     let batch_elems = n * emb_dim;
-                    let mmap = match engine.gguf_mmap.as_deref() {
+                    let mmap = match engine.model_bytes() {
                         Some(m) => m,
                         None => break,
                     };
@@ -230,7 +229,7 @@ async fn run_inference_async(
             let hidden_ok = tensor_idx
                 .as_ref()
                 .and_then(|idx| {
-                    engine.gguf_mmap.as_deref().map(|m| {
+                    engine.model_bytes().map(|m| {
                         idx.dequantize_token_embedding_into(m, cur, &mut emb_buf[..emb_dim])
                     })
                 })
@@ -341,7 +340,7 @@ pub fn get_resident_tokenizer_vocab() -> u32 {
             }
             return 0;
         }
-        if let Some(m) = engine.gguf_mmap.as_ref() {
+        if let Some(m) = engine.model_bytes() {
             return GgufTokenizer::from_gguf(m).vocab_len();
         }
         0
@@ -438,8 +437,7 @@ pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
             crate::p64_weight::P64TensorIndex::from_p64(data)?.to_gguf_index()
         } else {
             let bytes = engine
-                .gguf_mmap
-                .as_deref()
+                .model_bytes()
                 .ok_or_else(|| "quant probe: no resident model".to_string())?;
             crate::gguf_sharder::GgufTensorIndex::from_gguf(bytes)
         };
@@ -453,8 +451,7 @@ pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
             return Err("quant probe: unsupported projection dimensions".to_string());
         }
         let bytes = engine
-            .gguf_mmap
-            .as_deref()
+            .model_bytes()
             .ok_or_else(|| "quant probe: model bytes unavailable".to_string())?;
         let raw = crate::ggml_quants::fetch_tensor_bytes(bytes, index.tensor_data_start, &info)
             .map_err(|e| format!("quant probe: tensor bytes unavailable: {e:?}"))?;

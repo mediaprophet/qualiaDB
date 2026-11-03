@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Split the native tensor engine state into a focused owner and route model-byte access through an internal borrowed/retained interface. Preserve public mapping fields, ownership transfer and existing native/browser numerical paths while preparing for retained-model admission.
+
 - Added explicit V3 evidence-policy installation and retained token/artifact acceptance through the existing native authority gate. Preserve V2 signed policy records and require current association/policy checks before one-use acceptance; prepared model binding and real decoder cutover remain separate migration steps.
 
 - Moved MoE routing, NVFP4 arithmetic, causal convolution/GatedDeltaNet, and Qwen vector/Hyper-Connection primitives to Etalon-backed compatibility exports. Existing public imports, error types and numerical ordering remain available; complete Qwen/MoE model execution and Webizen acceptance integration remain separate migration steps.

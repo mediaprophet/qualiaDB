@@ -100,7 +100,7 @@ impl QTensorEngine {
             ));
             return Err(PrefillLayerStage::BatchHiddenTooSmall);
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => {
                 wlog("[prefill_layer] FAILED gguf_mmap is None");
@@ -256,7 +256,7 @@ impl QTensorEngine {
             ));
             return false;
         }
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => {
                 wlog("[prefill_layer] FAILED gguf_mmap is None");
@@ -613,7 +613,7 @@ impl QTensorEngine {
         if layout.int8 || layout.dict_k > 0 {
             return None;
         }
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let tds = index.tensor_data_start;
 
         // Phase 1: Collect raw weights, dims, and norm weights.
@@ -916,7 +916,7 @@ impl QTensorEngine {
         attn_input: Option<&wgpu::Buffer>,
         work_aliases_hidden: bool,
     ) -> bool {
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -1180,7 +1180,7 @@ impl QTensorEngine {
             Some(l) => l,
             None => return false,
         };
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -1373,7 +1373,7 @@ impl QTensorEngine {
         }
         self.gpu_queue()
             .write_buffer(batch_buf, 0, bytemuck::cast_slice(&hidden[..n_embd]));
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return 0,
         };
@@ -1638,7 +1638,7 @@ impl QTensorEngine {
         let prefill_scratch = self.prefill_scratch_buf.as_ref()?;
         let batch_buf = self.gemm_input_buf.as_ref().unwrap();
         let norm_buf = self.norm_weight_buf.as_ref().unwrap();
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let layout = self.kv_layout?;
 
         // Upload hidden to batch_buf
@@ -2067,7 +2067,7 @@ impl QTensorEngine {
         max_layers: u32,
         max_vocab_chunks: u32,
     ) -> u32 {
-        let mmap = match self.gguf_mmap.clone() {
+        let mmap = match self.clone_model_bytes() {
             Some(m) => m,
             None => return 0,
         };

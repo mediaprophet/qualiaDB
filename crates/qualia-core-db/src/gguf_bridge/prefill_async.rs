@@ -54,7 +54,7 @@ impl QTensorEngine {
         v_raw: &[u8],
         cursors: &mut Mc8ChunkUniformCursors,
     ) -> Option<(Mc8PrefillLayerUniforms, Mc8PrefillLayerGeom)> {
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let layout = self.kv_layout?;
         let h = index.hyperparams;
         let n_embd = h.n_embd as usize;
@@ -390,7 +390,7 @@ impl QTensorEngine {
         uniforms: &Mc8PrefillLayerUniforms,
         geom: &Mc8PrefillLayerGeom,
     ) -> bool {
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -875,7 +875,7 @@ impl QTensorEngine {
             0,
             bytemuck::cast_slice(&batch_hidden[..batch_elems]),
         );
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -1143,7 +1143,7 @@ impl QTensorEngine {
         // ── DirectML path (Windows) ───────────────────────────────────────────
         #[cfg(target_os = "windows")]
         if let Some(dml) = &self.dml {
-            if let Some(mmap) = &self.gguf_mmap {
+            if let Some(mmap) = self.model_bytes() {
                 let offset = self.tensor_data_offset + tensor.byte_offset;
                 let q4_bytes_needed = (rows * cols / crate::directml_bridge::Q4_K_BLOCK_SIZE)
                     * crate::directml_bridge::Q4_K_BLOCK_BYTES;
@@ -1167,7 +1167,7 @@ impl QTensorEngine {
 
         // ── Accelerate BLAS path (macOS / Apple Silicon AMX) ─────────────────────
         #[cfg(any(target_os = "macos", target_os = "ios"))]
-        if let Some(mmap) = &self.gguf_mmap {
+        if let Some(mmap) = self.model_bytes() {
             let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
             let q4_bytes_needed = (rows * cols / crate::metal_bridge::Q4_K_BLOCK_SIZE)
                 * crate::metal_bridge::Q4_K_BLOCK_BYTES;
@@ -1208,7 +1208,7 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        if let Some(mmap) = &self.gguf_mmap {
+        if let Some(mmap) = self.model_bytes() {
             let offset = (self.tensor_data_offset + tensor.byte_offset) as usize;
             let end = (offset + rows * cols * 4).min(mmap.len());
             if end > offset {
@@ -1359,7 +1359,7 @@ impl QTensorEngine {
         if chunk_logits.len() < VOCAB_CHUNK_ROWS || !self.mc8_buffers_ready() {
             return None;
         }
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let n_chunks = if max_chunks == 0 {
             full_chunks

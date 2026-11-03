@@ -503,7 +503,7 @@ impl QTensorEngine {
         }
         // CPU oracle fallback (toggle off, or GPU unavailable): the SAME ternary weights via the
         // base-3 CPU GEMM — correct, slower; this is the toggle's OFF baseline.
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(m) => m,
             None => return false,
         };
@@ -557,7 +557,7 @@ impl QTensorEngine {
         let raw = match self.fetch_tensor_raw_bytes(info) {
             Some(s) => s,
             None => {
-                let mmap = match self.gguf_mmap.as_deref() {
+                let mmap = match self.model_bytes() {
                     Some(m) => m,
                     None => return false,
                 };
@@ -569,7 +569,7 @@ impl QTensorEngine {
         };
         #[cfg(target_arch = "wasm32")]
         let raw = {
-            let mmap = match self.gguf_mmap.as_deref() {
+            let mmap = match self.model_bytes() {
                 Some(m) => m,
                 None => return false,
             };

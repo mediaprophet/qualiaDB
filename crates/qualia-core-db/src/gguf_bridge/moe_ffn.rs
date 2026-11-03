@@ -59,7 +59,7 @@ impl QTensorEngine {
                 }
             }
         }
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         crate::ggml_quants::fetch_tensor_bytes(mmap, self.tensor_data_offset, info).ok()
     }
 
@@ -73,7 +73,7 @@ impl QTensorEngine {
         if let Some(raw) = self.fetch_tensor_raw_bytes(info) {
             return cpu_ops::dequant_norm_from_raw(raw, info, out);
         }
-        if let Some(mmap) = self.gguf_mmap.as_deref() {
+        if let Some(mmap) = self.model_bytes() {
             return cpu_ops::dequant_norm_row_into(mmap, self.tensor_data_offset, info, out);
         }
         0
@@ -123,7 +123,7 @@ impl QTensorEngine {
                         &mut gate_logits[..num_experts],
                     );
                     router_ready = true;
-                } else if let Some(ref mmap) = self.gguf_mmap {
+                } else if let Some(mmap) = self.model_bytes() {
                     let off = router_info.byte_offset as usize;
                     if off < mmap.len() {
                         compute_router_logits_from_raw(
@@ -145,7 +145,7 @@ impl QTensorEngine {
         // raw `byte_offset` (which is relative to that base).  This also keeps
         // Q4_K/Q6_K router rows on the canonical dequantization path.
         if !router_ready {
-            let Some(mmap) = self.gguf_mmap.as_deref() else {
+            let Some(mmap) = self.model_bytes() else {
                 return false;
             };
             if let Ok(raw) =
@@ -189,7 +189,7 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         let ftw_pkg = self.ftw_package.clone();
-        let mmap = self.gguf_mmap.clone();
+        let mmap = self.clone_model_bytes();
 
         let direct_gate = tensors.moe_gate_exps.as_ref();
         let direct_up = tensors.moe_up_exps.as_ref();

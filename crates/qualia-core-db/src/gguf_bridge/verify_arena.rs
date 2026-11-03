@@ -116,8 +116,7 @@ pub(crate) enum VerifyArenaState {
 impl QTensorEngine {
     fn verify_plan_key(&self, index: &crate::gguf_sharder::GgufTensorIndex) -> (u64, u64, u32) {
         let base = self
-            .gguf_mmap
-            .as_deref()
+            .model_bytes()
             .map(|m| m.as_ptr() as u64)
             .unwrap_or(0);
         (base, index.tensor_data_start, index.hyperparams.n_layer)
@@ -183,7 +182,7 @@ impl QTensorEngine {
         if start_pos as usize + b > plan.layout.max_context as usize {
             return None;
         }
-        let mmap = self.gguf_mmap.clone()?;
+        let mmap = self.clone_model_bytes()?;
         let queue = self.gpu_queue();
 
         // 1) Dequantize the B token embeddings → hidden_a (packed B × n_embd).
@@ -405,7 +404,7 @@ impl QTensorEngine {
         index: &crate::gguf_sharder::GgufTensorIndex,
         key: (u64, u64, u32),
     ) -> Option<Box<VerifyArenaPlan>> {
-        let mmap_arc = self.gguf_mmap.clone()?;
+        let mmap_arc = self.clone_model_bytes()?;
         let mmap: &[u8] = &mmap_arc;
         let h = index.hyperparams;
         let layout = self.kv_layout?;

@@ -230,7 +230,7 @@ impl super::QTensorEngine {
         scratch_b: &mut [f32],
         state_offset: usize,
     ) -> bool {
-        if self.gguf_mmap.is_none() {
+        if self.model_bytes().is_none() {
             super::wlog(&format!("[granite_ssm] layer={layer} mmap None"));
             return false;
         }
@@ -259,7 +259,7 @@ impl super::QTensorEngine {
         // 1. Pre-norm: inline mmap access; borrow released after block.
         let ssm_input_is_norm = {
             if let Some(ni) = tensors.attn_norm.as_ref() {
-                let mmap = self.gguf_mmap.as_deref().unwrap();
+                let mmap = self.model_bytes().unwrap();
                 let mut norm_w = [0f32; MAX_SSM_INNER];
                 let n = dequant_norm_row_into(mmap, tds, ni, &mut norm_w);
                 if n >= n_embd {
@@ -325,7 +325,7 @@ impl super::QTensorEngine {
             }
             let mut conv_w = [0f32; MAX_SSM_INNER * 4];
             {
-                let mmap = self.gguf_mmap.as_deref().unwrap();
+                let mmap = self.model_bytes().unwrap();
                 let conv_raw =
                     match crate::ggml_quants::fetch_tensor_bytes(mmap, tds, &ssm_conv1d_info) {
                         Ok(s) => s,
@@ -356,7 +356,7 @@ impl super::QTensorEngine {
 
         // 4. dt_bias softplus gate.
         if let Some(dt_info) = tensors.ssm_dt_bias.as_ref() {
-            let mmap = self.gguf_mmap.as_deref().unwrap();
+            let mmap = self.model_bytes().unwrap();
             let mut dt_w = [0f32; MAX_SSM_INNER];
             let dt_n = dequant_norm_row_into(mmap, tds, dt_info, &mut dt_w);
             for i in 0..dt_n.min(inner_dim) {
@@ -371,7 +371,7 @@ impl super::QTensorEngine {
 
         // 5. SSM norm.
         if let Some(norm_info) = tensors.ssm_norm.as_ref() {
-            let mmap = self.gguf_mmap.as_deref().unwrap();
+            let mmap = self.model_bytes().unwrap();
             let mut ssm_norm_w = [0f32; MAX_SSM_INNER];
             let n = dequant_norm_row_into(mmap, tds, norm_info, &mut ssm_norm_w);
             if n >= inner_dim {
@@ -425,7 +425,7 @@ impl super::QTensorEngine {
         scratch_b: &mut [f32],
         state_offset: usize,
     ) -> bool {
-        if self.gguf_mmap.is_none() {
+        if self.model_bytes().is_none() {
             super::wlog(&format!("[qwen_ssm] layer={layer} mmap None"));
             return false;
         }

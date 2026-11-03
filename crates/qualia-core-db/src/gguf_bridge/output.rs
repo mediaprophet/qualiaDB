@@ -42,7 +42,7 @@ impl QTensorEngine {
         if chunk_logits.len() < VOCAB_CHUNK_ROWS {
             return None;
         }
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let n_chunks = if max_chunks == 0 {
             full_chunks
@@ -291,7 +291,7 @@ impl QTensorEngine {
         let cand_val = self.topk_cand_val_buf.as_ref()?;
         let cand_idx = self.topk_cand_idx_buf.as_ref()?;
         let staging = self.topk_cand_staging.as_ref()?;
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
         let use_mr = use_coop && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
@@ -735,7 +735,7 @@ impl QTensorEngine {
         let cand_val = self.topk_cand_val_buf.as_ref()?;
         let cand_idx = self.topk_cand_idx_buf.as_ref()?;
         let staging = self.topk_cand_staging.as_ref()?;
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
 
         let k = k.clamp(1, crate::topk::TOPK_MAX_K);
         let block_size = crate::topk::TOPK_BLOCK_SIZE;
@@ -975,7 +975,7 @@ impl QTensorEngine {
         let mut norm_w = [0f32; MAX_HIDDEN_DIM];
         let dequant_n = if let Some(raw) = self.fetch_tensor_raw_bytes(info) {
             cpu_ops::dequant_norm_from_raw(raw, info, &mut norm_w)
-        } else if let Some(mmap) = self.gguf_mmap.as_deref() {
+        } else if let Some(mmap) = self.model_bytes() {
             dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut norm_w)
         } else {
             0

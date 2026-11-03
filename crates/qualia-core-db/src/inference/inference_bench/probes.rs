@@ -332,8 +332,7 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
         }
 
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
         let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
         let tok = if is_q42_mmap {
@@ -478,8 +477,7 @@ pub fn capture_kv_gpu_readback(
         }
 
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
         let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
         let tok = if is_q42_mmap {
@@ -717,8 +715,7 @@ pub fn spec_verify_probe_blocking(
         let mut engine = QTensorEngine::new();
         engine.load_gguf(&model_path);
         let mmap = engine
-            .gguf_mmap
-            .clone()
+            .clone_model_bytes()
             .ok_or_else(|| "model did not memory-map".to_string())?;
         let tok = GgufTokenizer::from_gguf(&mmap);
         let idx = GgufTensorIndex::from_gguf(&mmap);

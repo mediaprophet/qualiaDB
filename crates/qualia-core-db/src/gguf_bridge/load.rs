@@ -230,7 +230,7 @@ impl QTensorEngine {
         &mut self,
         q: &crate::p64_weight::P64TensorIndex,
     ) -> bool {
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };
@@ -448,7 +448,7 @@ impl QTensorEngine {
             return false;
         }
         // Clone the Arc so the mmap borrow does not block mutating `self` below.
-        let mmap_arc = match self.gguf_mmap.clone() {
+        let mmap_arc = match self.clone_model_bytes() {
             Some(a) => a,
             None => return false,
         };

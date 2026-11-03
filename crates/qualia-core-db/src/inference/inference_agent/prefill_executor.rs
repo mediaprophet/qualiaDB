@@ -227,7 +227,7 @@ pub fn execute_chunked_prefill_with_offset(
         let batch_elems = n * emb_dim;
 
         {
-            let Some(mmap) = engine.gguf_mmap.as_deref() else {
+            let Some(mmap) = engine.model_bytes() else {
                 return PrefillOutcome::Failed {
                     pos,
                     tokens_processed: pos,

@@ -107,7 +107,7 @@ pub(super) fn embedding_fallback_logits(
     emb_buf: &mut [f32],
     wt: &crate::gguf_bridge::QTensor,
 ) -> Vec<f32> {
-    if let (Some(idx), Some(mmap)) = (tensor_idx, engine.gguf_mmap.as_deref()) {
+    if let (Some(idx), Some(mmap)) = (tensor_idx, engine.model_bytes()) {
         if let Some(adapter) = lora_adapter {
             lora_embedding_forward(engine, idx, mmap, token_id, emb_dim, emb_buf, wt, adapter)
         } else {

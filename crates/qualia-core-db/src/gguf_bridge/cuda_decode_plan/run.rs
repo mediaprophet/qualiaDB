@@ -108,7 +108,7 @@ impl crate::gguf_bridge::QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
     ) -> Option<u32> {
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let key = (
             mmap.as_ptr() as u64,
             index.tensor_data_start,
@@ -146,7 +146,7 @@ impl crate::gguf_bridge::QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
     ) -> Option<u32> {
-        let mmap = self.gguf_mmap.as_deref()?;
+        let mmap = self.model_bytes()?;
         let key = (
             mmap.as_ptr() as u64,
             index.tensor_data_start,
@@ -185,7 +185,7 @@ impl crate::gguf_bridge::QTensorEngine {
         token_idx: u32,
         layer_count: u32,
     ) -> bool {
-        let mmap = match self.gguf_mmap.as_deref() {
+        let mmap = match self.model_bytes() {
             Some(mmap) => mmap,
             None => return false,
         };
