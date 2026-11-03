@@ -69,6 +69,52 @@ The reconciled full library run uses one compiler job, debug information disable
 incremental compilation disabled and one test thread. Cached historical
 executables do not qualify this reconciled source/dependency pair.
 
+The first reconciled build exposed a missing `RadioPermissionContext` import in
+the existing radio receipt tests. Restoring that import allowed the suite to run:
+10,404 tests passed, one failed and three existing external-data/network tests
+were ignored. The failing alpha-mask mip test found actual GPU alpha bytes below
+the material cutoff, rather than an overly strict assertion.
+
+Alpha-mask mip generation now explicitly rounds corrected alpha to the byte
+selected by the CPU coverage planner before render-target conversion. A spare
+component of the existing 16-byte uniform enables this only for alpha masks with
+a coverage plan. The cutoff, CPU planner and regression assertions are unchanged.
+Ordinary colour, normal and linear-data mip generation retain their existing
+behavior. The GPU fix and lock reconciliation are baseline repairs, separate from
+moving inference execution into Etalon.
+
+The corrected full baseline passed on 2026-11-03: **10,405 passed, 0 failed,
+3 ignored, 0 filtered out** in 452.04 seconds. The exact command was:
+
+```powershell
+$env:CARGO_PROFILE_DEV_DEBUG = '0'
+$env:CARGO_PROFILE_TEST_DEBUG = '0'
+$env:CARGO_INCREMENTAL = '0'
+$env:QUALIA_REQUIRE_GPU_TESTS = '1'
+cargo +1.96.1 test --locked -p qualia-core-db --lib -j 1 -- --test-threads=1
+```
+
+The GPU-required setting strengthens the earlier baseline run's availability
+check; features, dependency revision and build profile are otherwise unchanged.
+The three existing ignored cases require a 440 MiB Monarch shard, a local 8+ GiB
+Monarch volume set, or a real localhost federation service. They were not newly
+ignored by this repair. The build retains one unrelated dead-code warning for
+`source_motion_mesh_counts`.
+
+Independent production-source readbacks on NVIDIA RTX A2000 12GB, DX12 driver
+`32.0.16.1692` and OpenGL driver `616.92`, checked 22 alpha-mask mip rows per
+backend, including odd dimensions and cutoff/opacity extremes. All matched CPU
+alpha bytes and coverage. All 28 checked RGB rows and six non-mask RGBA rows per
+backend matched the pre-fix outputs. The original failing fixture now stores
+alpha byte 205 throughout its six-level mip chain. The rebuilt original test also
+passed separately with DX12 and GPU availability required.
+
+Local bounded logs and frozen input hashes are retained under
+`target/inference-migration-baseline/alpha-fixed-f092a8d5f0f646e6aadd47cbf147c256`;
+the independent GPU matrix is under `alpha-probe-20261103-01` in the same parent.
+These application checks do not qualify an untested accelerator, browser runtime,
+full new inference mode integration or retired WebGPU CTS coverage.
+
 Initial contract checks: 17 qualification unit tests, 10 independent qualification
 tests, 15 session unit tests and 9 independent session tests passed in both debug
 and optimised builds. Three Node runner tests passed. Both crates passed locked

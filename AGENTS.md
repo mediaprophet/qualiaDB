@@ -1420,3 +1420,33 @@ The fixture does not emulate Pixel hardware. Compact email drafts now include GP
 rejection/API details so the summary can explain future unsupported outcomes.
 Full execution and deployment receipts remain under target/qualification; actual
 Pixel confirmation requires another on-device run after the new deployment.
+
+### 2026-11-03 — Initial inference migration contracts and baseline repair
+
+The incremental Qualia branch is `0.0.40.12-etalon-migration`; Etalon uses
+`qualiadb-migration`. The first increment adds dependency-free qualification and
+session contracts in Etalon, plus an independent source test runner in Qualia.
+Developer sessions require no Qualia permissions. Governed session metadata
+requires an embedding-provided verifier and cannot fall back to developer mode
+on controller loss. Actual Webizen integration, inference execution, numerical
+state restoration, P64 ownership and lab extraction remain subsequent work.
+Existing runtime callers and modes remain available.
+
+The user-authorised lock repair aligns 19 Etalon source entries and 18 version
+fields with the manifest's existing immutable `072b4d9` revision. Dependency
+arrays are unchanged. A missing test-only radio permission import was restored.
+Baseline testing then exposed real alpha-mask coverage loss in GPU mip creation;
+explicit alpha-byte quantization now matches the CPU planner without changing
+the cutoff, planner or visibility assertion. The uniform remains 16 bytes.
+
+Independent contract checks passed 51 distinct Rust cases in both debug and
+optimised builds, plus three runner tests. Locked package tests, Clippy and WASM
+compilation passed. Actual-source GPU comparisons on RTX A2000 DX12 and OpenGL
+matched 22 mask mip rows per backend and preserved all checked RGB and non-mask
+outputs. The rebuilt original DX12 visibility regression passed with GPU required.
+The full default-feature core library suite then passed 10,405 tests with zero
+failures and three existing external-data/network tests ignored. It used Rust
+1.96.1, one build job/test thread, disabled debug info/incremental compilation and
+`QUALIA_REQUIRE_GPU_TESTS=1`. The frozen lock and runtime sources were unchanged.
+See `docs/testing-inference-migration.md` for commands, final baseline evidence
+and qualification limits. HANDOVER.md remains absent.

@@ -8,7 +8,7 @@ use super::*;
 use crate::governance::consent_contract::{ConsentGrant, ConsentScope};
 use crate::sensing::radio_evidence::{
     AddressAssignmentKind, RadioAddress48, RadioCaptureReference, RadioEvidenceReference,
-    RadioIdentifier, RadioObservationTime,
+    RadioIdentifier, RadioObservationTime, RadioPermissionContext,
 };
 
 fn record(address_tail: u8) -> RadioEvidenceRecord {

@@ -48,6 +48,12 @@ fn fragment_color(input: VertexOut) -> @location(0) vec4<f32> {
     // The 1/255 headroom mirrors the CPU coverage planner and protects threshold texels from
     // backend-specific UNORM render-target rounding (observed one to three codes low on GLES).
     result.a = clamp(result.a * mip_params.values.x + mip_params.values.y, 0.0, 1.0);
+    if (mip_params.values.z > 0.0) {
+        // Match the CPU alpha-mask planner's nonnegative round-to-nearest, ties-up rule.
+        // Emit the selected UNORM code's center so target conversion cannot choose the
+        // adjacent code at a half-code boundary and feed that error into the next mip.
+        result.a = floor(result.a * 255.0 + 0.5) / 255.0;
+    }
     return result;
 }
 

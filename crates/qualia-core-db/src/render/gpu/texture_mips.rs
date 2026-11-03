@@ -219,7 +219,13 @@ impl MipGenerator {
                     values: [
                         alpha_plan.map_or(1.0, |plan| plan.scales[mip_level as usize]),
                         alpha_plan.map_or(0.0, |plan| plan.rounding_biases[mip_level as usize]),
-                        0.0,
+                        if matches!(semantic, TextureMipSemantic::AlphaMask { .. })
+                            && alpha_plan.is_some()
+                        {
+                            1.0
+                        } else {
+                            0.0
+                        },
                         0.0,
                     ],
                 }),
