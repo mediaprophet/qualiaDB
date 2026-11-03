@@ -196,3 +196,43 @@ clean candidate checkout with CUDA 13.4 and the native compiler configured, was:
 ```text
 cargo +1.96.1 test --locked -p etalon-cuda -p etalon-tensor -p etalon-wgsl-forge -p etalon-sense-gpu --all-features --lib -j 1 -- --ignored --test-threads=1 --nocapture
 ```
+
+
+## First live resource and P64 consumer migration
+
+The consumer packet delegates classified byte reservation mechanics and residency
+metadata to `etalon-resources`, and P64 layout/structural/CRC reading to
+`etalon-model`, both pinned at `f4523adec4716e2cb32db2babc6a9562476947bd`.
+All nineteen shared GPU-provider packages remain at the qualified `5d3bce83`
+revision. Cargo graph inspection confirms only these two dependency-free packages
+at the new pure-library revision; no second GPU type universe is introduced.
+
+Qualia retains six resource-class identities, universe/viewport budget policy,
+error fields and mode refresh behavior. Reservation drop releases the Etalon guard
+before refreshing mode. The public residency types forward to Etalon while their
+existing tests remain in Qualia. This is accounting, not physical resource retirement.
+
+P64 retains owned manifest fields, Clone, public Q42 aliases, environment-selected
+integrity defaults, semantic role/manifold interpretation and GGUF synthesis. The
+adapter maps typed structural errors to the legacy strings. Weight bytes remain
+caller-owned; the cold owned manifest still allocates. No activation speed or
+total-memory reduction is claimed by this change.
+
+The actual full core suite passed **10,424 tests, zero failures and the same three
+existing ignores**, in 454.41 seconds, with GPU tests required. All eleven new
+consumer fixtures passed, including real compiler roundtrip, exact malformed-input
+errors, integrity policy in thirteen isolated subprocess cases, owned Clone/aliases,
+unknown semantic roles, six-class accounting, unwind and release/mode behavior.
+Nested subprocess summaries are not added to the outer suite count. Source hashes
+were unchanged throughout the run. The CPU-only package check also passed.
+
+The wasm-llm check passed in 1m35s, retaining the same two existing dead-code
+warnings. Actual native Vibe integration passed three tests on RTX A2000 DX12
+driver 32.0.16.1692 in 3.45s: ten vector dispatches, one sparse dispatch, exact
+CPU-oracle readback and invalid/destroyed-handle rejection. The source hashes
+remained unchanged in all four runs. Receipts are retained in the consumer-core,
+consumer-cpu, consumer-wasm and consumer-native directories under the local
+migration evidence parent. The core receipt also contains the resolved 21-package
+Etalon graph inventory.
+Real Webizen-controlled inference, standalone developer model execution and
+physical numerical-state rollback remain separate migration gates.

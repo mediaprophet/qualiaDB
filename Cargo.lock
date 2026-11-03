@@ -4459,6 +4459,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "etalon-model"
+version = "0.0.2"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=f4523adec4716e2cb32db2babc6a9562476947bd#f4523adec4716e2cb32db2babc6a9562476947bd"
+
+[[package]]
 name = "etalon-naga-bridge"
 version = "0.0.2"
 source = "git+https://github.com/mediaprophet/etalon.git?rev=5d3bce83ab57630c6dd77c7a0585fce789a15b6b#5d3bce83ab57630c6dd77c7a0585fce789a15b6b"
@@ -4489,6 +4494,11 @@ dependencies = [
  "log",
  "thiserror 2.0.21",
 ]
+
+[[package]]
+name = "etalon-resources"
+version = "0.0.2"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=f4523adec4716e2cb32db2babc6a9562476947bd#f4523adec4716e2cb32db2babc6a9562476947bd"
 
 [[package]]
 name = "etalon-sync"
@@ -11566,8 +11576,10 @@ dependencies = [
  "ed25519-dalek 3.0.0",
  "etalon",
  "etalon-agent",
+ "etalon-model",
  "etalon-nquin",
  "etalon-render",
+ "etalon-resources",
  "etalon-tensor",
  "etalon-wasm",
  "etalon-wgsl-forge",

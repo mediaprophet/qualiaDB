@@ -20,7 +20,10 @@
 //! ```
 
 mod compiler;
+mod etalon_adapter;
 mod layout;
+#[cfg(test)]
+mod migration_contract_tests;
 mod reader;
 #[cfg(test)]
 mod tests;

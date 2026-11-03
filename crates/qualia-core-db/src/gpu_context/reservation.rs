@@ -5,7 +5,7 @@
 //! lifetime is explicit, and release their bytes on replacement or drop.
 
 use super::{ComputeUniverse, UniverseOrchestrator, VramLedger, VramLedgerSlot};
-use std::sync::atomic::Ordering;
+use etalon_resources::reservation::{AdmissionLimits, Reservation, ReservationError};
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,8 +47,7 @@ impl std::error::Error for GraphicsReservationError {}
 #[derive(Debug)]
 pub struct VramReservation<'a> {
     ledger: &'a VramLedger,
-    class: VramResourceClass,
-    bytes: u64,
+    reservation: Option<Reservation<'a, 6>>,
 }
 
 impl VramLedger {
@@ -65,59 +64,53 @@ impl VramLedger {
         let viewport_budget = UniverseOrchestrator::from_total_budget(budget, self.mode())
             .partition(ComputeUniverse::Viewport)
             .vram_budget_bytes;
-        let mut current = self.reserved_graphics_bytes.load(Ordering::Acquire);
-        loop {
-            let used = recorded.saturating_add(current);
-            let available = budget
-                .saturating_sub(used)
-                .min(viewport_budget.saturating_sub(viewport_recorded.saturating_add(current)));
-            let Some(next) = current.checked_add(bytes) else {
-                return Err(GraphicsReservationError {
-                    requested_bytes: bytes,
-                    available_bytes: available,
-                });
-            };
-            if next > budget.saturating_sub(recorded)
-                || next > viewport_budget.saturating_sub(viewport_recorded)
-            {
-                return Err(GraphicsReservationError {
-                    requested_bytes: bytes,
-                    available_bytes: available,
-                });
-            }
-            match self.reserved_graphics_bytes.compare_exchange_weak(
-                current,
-                next,
-                Ordering::AcqRel,
-                Ordering::Acquire,
-            ) {
-                Ok(_) => {
-                    self.graphics_reservations[class.index()].fetch_add(bytes, Ordering::Relaxed);
-                    self.refresh_mode();
-                    return Ok(VramReservation {
-                        ledger: self,
-                        class,
-                        bytes,
-                    });
+        let reservation = self
+            .graphics_reservations
+            .try_reserve(
+                class.index(),
+                bytes,
+                AdmissionLimits {
+                    global_capacity: budget,
+                    global_recorded: recorded,
+                    partition_capacity: viewport_budget,
+                    partition_recorded: viewport_recorded,
+                },
+            )
+            .map_err(|error| match error {
+                ReservationError::BudgetExceeded {
+                    requested_bytes,
+                    available_bytes,
                 }
-                Err(observed) => current = observed,
-            }
-        }
+                | ReservationError::ArithmeticOverflow {
+                    requested_bytes,
+                    available_bytes,
+                } => GraphicsReservationError {
+                    requested_bytes,
+                    available_bytes,
+                },
+                ReservationError::InvalidClass { .. } => GraphicsReservationError {
+                    requested_bytes: bytes,
+                    available_bytes: 0,
+                },
+            })?;
+        self.refresh_mode();
+        Ok(VramReservation {
+            ledger: self,
+            reservation: Some(reservation),
+        })
     }
 
     /// Live reservations in one resource class, for diagnostics and admission tests.
     pub fn reserved_graphics_bytes(&self, class: VramResourceClass) -> u64 {
-        self.graphics_reservations[class.index()].load(Ordering::Acquire)
+        self.graphics_reservations
+            .class_bytes(class.index())
+            .unwrap_or(0)
     }
 }
 
 impl Drop for VramReservation<'_> {
     fn drop(&mut self) {
-        self.ledger.graphics_reservations[self.class.index()]
-            .fetch_sub(self.bytes, Ordering::AcqRel);
-        self.ledger
-            .reserved_graphics_bytes
-            .fetch_sub(self.bytes, Ordering::AcqRel);
+        drop(self.reservation.take());
         self.ledger.refresh_mode();
     }
 }

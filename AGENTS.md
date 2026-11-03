@@ -1473,3 +1473,23 @@ semantic interpretation and Webizen stay in Qualia; real integrated execution,
 rollback and standalone developer inference are not claimed by metadata contracts
 or these format/resource libraries. Public branches retain their requested names
 and commits contain no assistant bylines. HANDOVER.md remains absent.
+
+
+### 2026-11-03 — First live resource and model consumer delegation
+
+Qualia now forwards classified reservation accounting and residency metadata to
+Etalon resources, and P64 layout/structural/CRC reading to Etalon model. The two
+pure libraries pin f4523adec; all nineteen shared GPU packages remain at `5d3bce83`.
+Qualia retains universe policy, six class identities, drop/mode ordering, owned
+P64 manifests/aliases, environment integrity policy and semantic interpretation.
+The actual core suite passes 10,424 tests with zero failures and three existing
+ignores, including eleven new consumer fixtures. CPU-only and wasm-llm checks
+pass; native Vibe integration passes three tests with real RTX A2000 DX12 dispatch
+and exact readback. See docs/testing-inference-migration.md for evidence/limits.
+
+Separately published Etalon libraries now include contextual P64 planner errors,
+the canonical numerical inference kernel and budget/KV ownership mechanics.
+Their Qualia forwarding and Safetensors writer adoption are next, with separate
+independent fixtures and supervisor gates. Physical KV restoration, real governed
+model execution and standalone developer LLM execution remain open work. Remote
+benchmark-only automation updates were preserved. HANDOVER.md remains absent.

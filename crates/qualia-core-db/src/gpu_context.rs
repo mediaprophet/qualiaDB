@@ -13,6 +13,8 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 use std::sync::OnceLock;
 
+#[cfg(test)]
+mod migration_contract_tests;
 mod reservation;
 pub use reservation::{GraphicsReservationError, VramReservation, VramResourceClass};
 
@@ -389,8 +391,7 @@ pub struct VramLedger {
     render_bytes: AtomicU64,
     llm_weight_staging_bytes: AtomicU64,
     /// Live, owned allocations admitted through `try_reserve_graphics`.
-    reserved_graphics_bytes: AtomicU64,
-    graphics_reservations: [AtomicU64; 6],
+    graphics_reservations: etalon_resources::reservation::ReservationPool<6>,
     mode: AtomicU32,
 }
 
@@ -460,7 +461,7 @@ impl VramLedger {
             .map(|s| self.load_slot(*s))
             .fold(0u64, u64::saturating_add);
         if universe == ComputeUniverse::Viewport {
-            recorded.saturating_add(self.reserved_graphics_bytes.load(Ordering::Acquire))
+            recorded.saturating_add(self.graphics_reservations.total_bytes())
         } else {
             recorded
         }
@@ -582,7 +583,7 @@ impl VramLedger {
     #[inline]
     pub fn used_bytes(&self) -> u64 {
         self.recorded_used_bytes()
-            .saturating_add(self.reserved_graphics_bytes.load(Ordering::Acquire))
+            .saturating_add(self.graphics_reservations.total_bytes())
     }
 
     /// Sum of the four recorded slot counters (excludes graphics
