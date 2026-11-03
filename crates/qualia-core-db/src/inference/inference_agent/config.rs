@@ -15,7 +15,7 @@ pub(super) const DECODE_TOKEN_BUDGET: u32 = 16;
 /// MC2b harness iteration: CPU SDPA decode is very slow in wasm; trim budget until Option B.
 #[cfg(all(not(test), target_arch = "wasm32", feature = "gpu-runtime"))]
 pub(super) const DECODE_TOKEN_BUDGET: u32 = 32;
-// Codex P0: default per-turn decode cap. Was MAX_OUTPUT_TOKENS (2048) → at ~3 tok/s a no-EOS reply
+// default per-turn decode cap. Was MAX_OUTPUT_TOKENS (2048) → at ~3 tok/s a no-EOS reply
 // ran ~11 min and the app looked frozen. 256 keeps a turn bounded; MAX_OUTPUT_TOKENS stays the
 // absolute ceiling and the cooperative deadline (INFERENCE_TIMEOUT_MS, checked INSIDE the decode
 // loop) bounds wall-clock time independently.

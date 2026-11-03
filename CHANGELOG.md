@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Split the local inference decoder into focused native/browser, preparation, selection, publication and finalization modules, preserving existing behavior and public entrypoints. Real Webizen token-acceptance integration remains a separate required migration step.
+
 - Added signed inference-policy and authenticated multi-identifier association foundations. Subject identity, identifier evidence, controller and policy installation authority remain distinct; normal decoder and browser acceptance integration is still pending.
 - Added explicit local `inference-policy` commands for protected-vault setup, signed project configuration, identifier login checks and policy installation/revocation. These commands do not install default policy or create an identity during ordinary login.
 - Moved the GGUF-to-P64 canonical layout/writer and portable GGML codecs to Etalon-backed compatibility modules, retaining legacy format transforms, descriptor routing and public imports.

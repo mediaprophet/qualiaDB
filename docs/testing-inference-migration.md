@@ -309,3 +309,47 @@ a required corrective integration item. Neither a mode name nor a checkpoint
 digest establishes controller enforcement or physical numerical-state restoration.
 New normal-runtime integration requires real Webizen approval/denial, controller-loss,
 rejected-publication and recovery tests.
+
+### Decoder partition preservation checks
+
+The local decoder is now divided into thirteen focused modules for native and
+browser execution, preparation, selection, speculative/forced paths, output
+publication and finalization. Public entrypoints, numerical operations and
+existing mode behavior are preserved. This mechanical partition does not claim
+to correct the governance gaps described above.
+
+Actual native, CPU-only, WASM and WASM-with-GPU-runtime Cargo checks pass. Native
+retains the existing two renderer dead-code warnings; the partition also exposes
+target-specific unused bindings/imports in disabled branches. These warnings
+are recorded, rather than hidden under a crate-wide suppression.
+
+A non-test original/migrated caller comparison used the same full SmolLM2 Q8_0
+model, prompt, four-token budget and explicit portable/developer qualification
+environment. Returned text, provenance, semantic output, streamed bytes/chunk
+boundaries and stage records were byte-identical. This fixture did not use the
+unit-test layer/vocabulary caps. It does not prove that a particular GPU fast
+path ran, or that a current Webizen policy authorized the output.
+
+Separate actual in-crate comparisons exercised both the plain decoder and copies
+with observation hooks. The private original body and candidate body were called
+explicitly in fresh processes; hooks captured selected token/score, context and
+output token state, streaming and final output. The unit-test configuration
+retains its two-layer/four-vocabulary-chunk limits, so that evidence is scoped
+separately from the non-test comparison. Sampler RNG, DOMINO, provider KV/SSM and
+opaque backend state were not observed. There is no timing claim.
+
+The full serial core suite passed **10,470 tests, zero failures, four ignored and
+zero filtered**, in 570.11 seconds. All 10,473 original test names were retained;
+the fourth ignore was the added private oracle child. This run used the plain
+test-only registration with exactly matching candidate source bytes, not an
+untouched post-removal binary. All private registration was removed, and all
+3,284 frozen sources were checked after restoration. The receipt parser initially
+rejected the log because seventeen subprocess summaries preceded the final suite
+summary; final anchored counts and the complete inventory independently
+confirmed success. No test or production behavior was changed for that repair.
+
+Private oracle copies and absolute test registrations are not shipped. The final
+documentation changes remove a stale private-draft comment reference without
+altering executable code. Qwen dense, routed/shared MoE, FTW/NVFP4, hybrid
+recurrent and streamed Qwen paths require their own family-specific model,
+state, provider and caller qualification; this dense fixture does not cover them.
