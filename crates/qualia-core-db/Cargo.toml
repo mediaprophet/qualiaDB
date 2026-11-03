@@ -7,6 +7,11 @@ description = "QualiaDB semantic graph, inference, ontology, spatial, and browse
 repository = "https://github.com/mediaprophet/qualiaDB"
 license-file = "LICENSE"
 
+[[bin]]
+name = "qualia-device-benchmark-worker"
+path = "src/bin/qualia-device-benchmark-worker.rs"
+required-features = ["gpu-runtime"]
+
 [features]
 default = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-dx12", "wgsl-forge", "privacy-he"]
 

@@ -5,6 +5,9 @@ use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule, FORGE_SCHEMA_VERSI
 
 /// Emits `wgsl`.
 pub fn emit_wgsl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
+    if super::iq::is_iq(kernel) {
+        return super::iq::emit(kernel, schedule, super::TargetBackend::Wgsl);
+    }
     kernel.validate()?;
     let semantic_hash = kernel.semantic_hash()?;
     let mut source = String::with_capacity(2_048);
@@ -129,6 +132,12 @@ struct AffineParams {{
                 crate::wgsl_forge::ir::ScalarType::U64Words,
             ) => "array<vec2<u32>>",
             crate::wgsl_forge::ir::BufferElement::AffineParams => "AffineParams",
+            crate::wgsl_forge::ir::BufferElement::IqPowerParams
+            | crate::wgsl_forge::ir::BufferElement::IqPowerI16Params => {
+                return Err(ForgeError::Emission(
+                    "IQ parameter record reached generic emission".into(),
+                ));
+            }
             crate::wgsl_forge::ir::BufferElement::P64Words64 => "array<P64Words64>",
             crate::wgsl_forge::ir::BufferElement::AccelerationStructure => {
                 unreachable!("handled above")
@@ -615,10 +624,11 @@ impl crate::wgsl_forge::ir::graph::Lowerer for WgslGraphLowerer<'_> {
         &mut self,
         node: &crate::wgsl_forge::ir::graph::GraphNode,
     ) -> Result<(), ForgeError> {
-        self.source
-            .push_str(&crate::wgsl_forge::graph_ops::gather_dequant::gather_dequant_ternary_wgsl(
+        self.source.push_str(
+            &crate::wgsl_forge::graph_ops::gather_dequant::gather_dequant_ternary_wgsl(
                 node.sched.workgroup_size,
-            ));
+            ),
+        );
         Ok(())
     }
 
@@ -641,7 +651,10 @@ impl crate::wgsl_forge::ir::graph::Lowerer for WgslGraphLowerer<'_> {
         Ok(())
     }
 
-    fn stencil(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+    fn stencil(
+        &mut self,
+        node: &crate::wgsl_forge::ir::graph::GraphNode,
+    ) -> Result<(), ForgeError> {
         use crate::wgsl_forge::ir::graph::OpNode;
         if let OpNode::Stencil { kind, .. } = node.op {
             let src = crate::wgsl_forge::graph_ops::stencil::stencil_wgsl(
@@ -671,7 +684,10 @@ impl crate::wgsl_forge::ir::graph::Lowerer for WgslGraphLowerer<'_> {
         Ok(())
     }
 
-    fn resize2d(&mut self, node: &crate::wgsl_forge::ir::graph::GraphNode) -> Result<(), ForgeError> {
+    fn resize2d(
+        &mut self,
+        node: &crate::wgsl_forge::ir::graph::GraphNode,
+    ) -> Result<(), ForgeError> {
         self.source
             .push_str(&crate::wgsl_forge::graph_ops::vision::resize2d_wgsl(
                 node.sched.workgroup_size,
@@ -1146,9 +1162,7 @@ mod tests {
     #[test]
     fn graph_native_slice_lowers_to_template() {
         use crate::wgsl_forge::graph_ops::slice::{slice_wgsl, SLICE_ENTRY};
-        use crate::wgsl_forge::ir::graph::{
-            ComputeGraph, DType, OpNode, Shape, TensorRef,
-        };
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
 
         let sched = Schedule {
             workgroup_size: 64,
@@ -1180,9 +1194,7 @@ mod tests {
         use crate::wgsl_forge::graph_ops::gather_dequant::{
             gather_dequant_ternary_wgsl, GATHER_DEQUANT_ENTRY,
         };
-        use crate::wgsl_forge::ir::graph::{
-            ComputeGraph, DType, OpNode, Shape, TensorRef,
-        };
+        use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
 
         let sched = Schedule {
             workgroup_size: 128,

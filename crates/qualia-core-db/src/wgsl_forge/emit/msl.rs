@@ -5,6 +5,9 @@ use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule};
 
 /// Emits `msl`.
 pub fn emit_msl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
+    if super::iq::is_iq(kernel) {
+        return super::iq::emit(kernel, schedule, super::TargetBackend::Msl);
+    }
     kernel.validate()?;
     let semantic_hash = kernel.semantic_hash()?;
     let mut source = String::with_capacity(2048);

@@ -9,6 +9,7 @@ pub mod graph_hlsl;
 pub mod graph_msl;
 pub mod hlsl;
 pub mod hlsl_wave;
+mod iq;
 pub mod msl;
 pub mod ptx;
 pub mod spirv;

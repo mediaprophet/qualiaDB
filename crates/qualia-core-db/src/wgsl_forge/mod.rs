@@ -29,6 +29,9 @@ pub mod tune;
 pub mod validate;
 
 #[cfg(test)]
+mod etalon_iq_compat_tests;
+
+#[cfg(test)]
 /// `?::test_gpu_available`.
 pub(crate) fn test_gpu_available() -> bool {
     use std::sync::OnceLock;
@@ -64,6 +67,7 @@ pub use manifest::{
     AdapterIdentity, CertificationManifest, HardwareProfile, TimingSource, TimingSummary,
     TuningManifest, ValidationLevel,
 };
+pub use observer_kernels::*;
 pub use oracle::{
     candidate_evaluation, certify_builtin, compare_f32, dft_cpu, evaluate_builtin, evaluate_ffn,
     evaluate_fft, evaluate_matmul_tc, evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors,
@@ -79,7 +83,6 @@ pub use tune::{
     tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,
 };
 pub use validate::{validate_native, validate_wgsl, ValidationReport};
-pub use observer_kernels::*;
 
 #[cfg(feature = "gpu-runtime")]
 pub mod etalon_bridge {
@@ -145,6 +148,8 @@ pub mod etalon_bridge {
                 BuiltinKernel::Gemm => Self::Gemm,
                 BuiltinKernel::Gemv => Self::Gemv,
                 BuiltinKernel::Fft => Self::Fft,
+                BuiltinKernel::IqPowerF32 => Self::IqPowerF32,
+                BuiltinKernel::IqPowerI16 => Self::IqPowerI16,
             }
         }
     }
@@ -161,6 +166,8 @@ pub mod etalon_bridge {
                 etalon_wgsl_forge::BuiltinKernel::Gemm => Self::Gemm,
                 etalon_wgsl_forge::BuiltinKernel::Gemv => Self::Gemv,
                 etalon_wgsl_forge::BuiltinKernel::Fft => Self::Fft,
+                etalon_wgsl_forge::BuiltinKernel::IqPowerF32 => Self::IqPowerF32,
+                etalon_wgsl_forge::BuiltinKernel::IqPowerI16 => Self::IqPowerI16,
             }
         }
     }
@@ -449,7 +456,11 @@ mod etalon_bridge_tests {
             Schedule::default(),
             TargetBackend::Wgsl,
         );
-        assert!(result.is_ok(), "generate_and_certify_via_etalon failed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "generate_and_certify_via_etalon failed: {:?}",
+            result.err()
+        );
         let shader = result.unwrap();
         assert!(!shader.source.is_empty());
         assert_eq!(shader.kernel_id, "affine-f32");

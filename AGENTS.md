@@ -1450,3 +1450,26 @@ failures and three existing external-data/network tests ignored. It used Rust
 `QUALIA_REQUIRE_GPU_TESTS=1`. The frozen lock and runtime sources were unchanged.
 See `docs/testing-inference-migration.md` for commands, final baseline evidence
 and qualification limits. HANDOVER.md remains absent.
+
+### 2026-11-03 — Candidate provider and incremental library qualification
+
+The next coherent provider candidate is Etalon `5d3bce83`. Compatibility work
+preserves the original nine Forge builtin identities and adds strict delegation
+for its two IQ-power kernels. Unsupported local IQ oracle evaluation returns an
+explicit error. The complete Qualia core suite passes 10,413 tests with zero
+failures and the same three existing ignored tests; eight independent IQ cases
+are included. Actual native Vibe integration, CPU-only package and browser LLM
+WASM compilation checks pass. A baseline worker-target metadata defect was repaired by
+requiring `gpu-runtime` for that binary; its default GPU build still passes.
+Standalone Etalon qualification includes its full suite, cross-platform CI and
+explicit native CUDA/NVCC/Vulkan tests. See `docs/testing-inference-migration.md`
+for exact commands, receipts and hardware/skip distinctions.
+
+Independent author, verifier and supervisor gates have also qualified Etalon's
+reservation accounting, residency governor, P64 layout/reader, prepared-payload
+writer, sized streaming writer and bounded neutral GGUF metadata APIs. Actual
+Qualia caller delegation remains separate work. Normal application governance,
+semantic interpretation and Webizen stay in Qualia; real integrated execution,
+rollback and standalone developer inference are not claimed by metadata contracts
+or these format/resource libraries. Public branches retain their requested names
+and commits contain no assistant bylines. HANDOVER.md remains absent.

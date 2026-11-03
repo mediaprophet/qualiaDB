@@ -28,6 +28,13 @@ impl Schedule {
         constraints: &AdapterConstraints,
     ) -> Result<(), ForgeError> {
         kernel.validate()?;
+        if crate::wgsl_forge::ir::builtin::iq::is_iq(&kernel.id)
+            && (self.items_per_invocation != 1 || self.vector_width != 1)
+        {
+            return Err(ForgeError::InvalidSchedule(
+                "IQ power requires one scalar pair per invocation".into(),
+            ));
+        }
         if !matches!(self.workgroup_size, 1..=1024) || !self.workgroup_size.is_power_of_two() {
             return Err(ForgeError::InvalidSchedule(
                 "workgroup size must be a power of two in 1..=1024".to_string(),

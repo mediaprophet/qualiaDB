@@ -120,3 +120,79 @@ tests, 15 session unit tests and 9 independent session tests passed in both debu
 and optimised builds. Three Node runner tests passed. Both crates passed locked
 offline Cargo package testing, Clippy with warnings denied, and WASM compilation
 with no default features. WASM compilation is not browser runtime execution.
+
+## Candidate provider and Forge compatibility qualification
+
+The next provider candidate is immutable Etalon
+`5d3bce83ab57630c6dd77c7a0585fce789a15b6b`. All eleven manifest references and
+nineteen lock source entries move together; package versions and dependency
+arrays remain unchanged. The original `072b4d9` baseline remains reproducible.
+
+The first build exposed two new Etalon IQ-power enum variants missing from the
+public reverse conversion. Qualia now represents and emits those kernels through
+Etalon, validates their complete canonical specifications and rejects unsupported
+local oracle evaluation explicitly. The original nine builtin IDs, discriminants,
+serialization and complete specification hashes remain unchanged. Builtin
+construction moved into focused modules; existing backend generator behavior is
+retained. CLI TuneAll already skips kernels without a local GPU oracle.
+
+A full candidate run initially passed 10,412 tests and failed one new independent
+fixture: the fixture expected TopK serialization `topk`, while immutable old
+source proves it is `top-k` (its display name remains `topk`). Correcting only that
+fixture produced **10,413 passed, zero failed, three existing ignored tests** in
+537.58 seconds with the same full-core command/profile above. All eight new IQ
+fixtures pass. Frozen source/manifest/lock hashes were checked independently.
+
+Additional candidate gates completed:
+
+- The actual Qualia/Vibe integration target passed all three tests on NVIDIA RTX
+  A2000 DX12 driver 32.0.16.1692: ten vector dispatches, one sparse dispatch, exact
+  numerical readback, graph parity and invalid/destroyed-handle rejection.
+- The original CPU-only package check passed after a narrow existing build-target
+  defect was repaired. The benchmark worker calls a GPU-gated function; its
+  explicit binary declaration now requires `gpu-runtime`. Its default GPU build
+  also passes, so the worker remains available. No library behavior changed.
+- `wasm-llm` compilation for `wasm32-unknown-unknown` passed. This is compilation,
+  not browser LLM execution.
+- The clean Etalon candidate's full `cargo xtask test` passed 3,948 tests with 46
+  nextest skips. Its main GPU harness included 1,525 physical-backend Executed
+  rows and 351 software-renderer Executed rows; expected failures, internal skips
+  and unsupported capabilities are recorded separately.
+- Nine explicitly selected ignored Etalon tests also passed with CUDA 13.4 on the
+  RTX A2000 (compute 8.6, PCI 0000:01:00.0): CUDA resources, IQ, supplied dispatch,
+  resident tensor kernels, fused FFN, NVCC positive/negative compilation and
+  prepared Vulkan IQ. This does not qualify Qualia's separate captured Q8 lane.
+
+The test-only [provider CI run](https://github.com/mediaprophet/etalon/actions/runs/41621515244)
+passed all 40 jobs at `b9e9a1b8`, whose provider sources match `5d3bce83`.
+Windows passed 2,239 tests with 22 skipped on software DX12/OpenGL adapters; Linux
+passed 2,178 tests with 22 skipped on llvmpipe Vulkan/OpenGL; macOS passed 1,741 tests with 16 skipped on
+Apple's hosted paravirtual Metal adapter. The WASM job passed 438 tests with 1,305 skipped,
+with its executed GPU subset reporting GL. These results do not establish
+bare-metal Apple, physical Linux GPU, browser WebGPU or NPU qualification.
+
+Local receipts are retained under `target/inference-migration-baseline/`, with
+separate candidate, native, CPU, worker, WASM, CUDA and CI directories. The
+optional Qualia CUDA library feature check also passed in 7m03s. This establishes
+compilation coverage, not captured-decode execution.
+Actual resource/model consumer activation, real Webizen-controlled inference,
+numerical rollback and standalone developer LLM execution remain later gates.
+
+Reproduce the consuming candidate checks with Rust 1.96.1 and the same disabled
+debug-info/incremental profile used above:
+
+```text
+cargo +1.96.1 test --locked -p qualia-core-db --test etalon_vibe_harness -j 1 -- --test-threads=1 --nocapture
+cargo +1.96.1 check --locked -p qualia-core-db --no-default-features -j 1
+cargo +1.96.1 build --locked -p qualia-core-db --bin qualia-device-benchmark-worker -j 1
+cargo +1.96.1 check --locked -p qualia-core-db --no-default-features --features wasm-llm --target wasm32-unknown-unknown -j 1
+cargo +1.96.1 check --locked -p qualia-core-db --features cuda --lib -j 1
+```
+
+The native harness used `QUALIA_WGPU_BACKEND=dx12` and a caller-selected
+`QUALIA_ETALON_HARNESS_EVENTS` file. The explicit Etalon test command, from its
+clean candidate checkout with CUDA 13.4 and the native compiler configured, was:
+
+```text
+cargo +1.96.1 test --locked -p etalon-cuda -p etalon-tensor -p etalon-wgsl-forge -p etalon-sense-gpu --all-features --lib -j 1 -- --ignored --test-threads=1 --nocapture
+```

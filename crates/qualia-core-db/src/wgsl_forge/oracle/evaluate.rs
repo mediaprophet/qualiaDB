@@ -27,6 +27,12 @@ pub fn evaluate_builtin(
     warmups: usize,
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
+    if !builtin.has_gpu_oracle() {
+        return Err(ForgeError::GpuValidation(format!(
+            "{} has no local GPU differential oracle",
+            builtin.name()
+        )));
+    }
     if samples == 0 {
         return Err(ForgeError::GpuValidation(
             "sample count must be non-zero".to_string(),
@@ -81,9 +87,13 @@ pub fn evaluate_builtin(
         let n = schedule.workgroup_size as usize;
         return evaluate_fft(context, schedule, n, warmups, samples);
     }
-    // The only remaining builtin is the affine kernel — evaluated by the generic
-    // cross-backend path (plan §7), here on the wgpu context.
-    evaluate_affine(context, schedule, length, warmups, samples)
+    if builtin == BuiltinKernel::AffineF32 {
+        return evaluate_affine(context, schedule, length, warmups, samples);
+    }
+    Err(ForgeError::GpuValidation(format!(
+        "{} has no local GPU evaluator",
+        builtin.name()
+    )))
 }
 
 /// Cross-backend differential-oracle evaluation of the affine kernel against

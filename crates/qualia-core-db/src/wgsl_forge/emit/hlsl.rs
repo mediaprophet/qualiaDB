@@ -5,6 +5,9 @@ use crate::wgsl_forge::{ForgeError, KernelSpec, Op, Schedule};
 
 /// Emits `hlsl`.
 pub fn emit_hlsl(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
+    if super::iq::is_iq(kernel) {
+        return super::iq::emit(kernel, schedule, super::TargetBackend::Hlsl);
+    }
     kernel.validate()?;
     let semantic_hash = kernel.semantic_hash()?;
     let mut source = String::with_capacity(2048);

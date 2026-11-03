@@ -64,6 +64,10 @@ impl RooflineEstimate {
 /// elements / records / rays, depending on the kernel).
 pub fn roofline_for(kernel: BuiltinKernel, n: u64) -> RooflineEstimate {
     match kernel {
+        // Per complex pair: two squares and a sum; read two f32 and write one.
+        BuiltinKernel::IqPowerF32 => RooflineEstimate::new(3 * n, 12 * n),
+        // Packed i16 adds two scale multiplies; read one u32 and write one f32.
+        BuiltinKernel::IqPowerI16 => RooflineEstimate::new(5 * n, 8 * n),
         // out[i] = in[i]*scale + bias: one FMA (2 FLOP); read + write one f32.
         BuiltinKernel::AffineF32 => RooflineEstimate::new(2 * n, 8 * n),
         // per record: 16 MACs (32 FLOP); read 64 bytes, write 4.
