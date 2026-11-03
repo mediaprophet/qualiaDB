@@ -11,6 +11,8 @@ pub const QWEN4EXP_EXPERT_COUNT: usize = 512;
 pub mod checkpoint;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod decode;
+#[cfg(test)]
+mod etalon_compat_tests;
 pub mod expert_residency;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod expert_tile;

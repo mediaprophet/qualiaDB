@@ -4461,7 +4461,7 @@ dependencies = [
 [[package]]
 name = "etalon-inference"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=cc612450fb161e8937bb5d54bd725b9c9e99f03f#cc612450fb161e8937bb5d54bd725b9c9e99f03f"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=782a954c9c246cca45ceb1208f86c38528619bf9#782a954c9c246cca45ceb1208f86c38528619bf9"
 dependencies = [
  "etalon-inference-kernel",
 ]
@@ -4469,17 +4469,17 @@ dependencies = [
 [[package]]
 name = "etalon-inference-contract"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=cc612450fb161e8937bb5d54bd725b9c9e99f03f#cc612450fb161e8937bb5d54bd725b9c9e99f03f"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=782a954c9c246cca45ceb1208f86c38528619bf9#782a954c9c246cca45ceb1208f86c38528619bf9"
 
 [[package]]
 name = "etalon-inference-kernel"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=cc612450fb161e8937bb5d54bd725b9c9e99f03f#cc612450fb161e8937bb5d54bd725b9c9e99f03f"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=782a954c9c246cca45ceb1208f86c38528619bf9#782a954c9c246cca45ceb1208f86c38528619bf9"
 
 [[package]]
 name = "etalon-model"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=cc612450fb161e8937bb5d54bd725b9c9e99f03f#cc612450fb161e8937bb5d54bd725b9c9e99f03f"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=782a954c9c246cca45ceb1208f86c38528619bf9#782a954c9c246cca45ceb1208f86c38528619bf9"
 dependencies = [
  "bytemuck",
  "half",
@@ -4520,7 +4520,7 @@ dependencies = [
 [[package]]
 name = "etalon-resources"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=cc612450fb161e8937bb5d54bd725b9c9e99f03f#cc612450fb161e8937bb5d54bd725b9c9e99f03f"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=782a954c9c246cca45ceb1208f86c38528619bf9#782a954c9c246cca45ceb1208f86c38528619bf9"
 
 [[package]]
 name = "etalon-sync"

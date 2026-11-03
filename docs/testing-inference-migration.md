@@ -353,3 +353,50 @@ documentation changes remove a stale private-draft comment reference without
 altering executable code. Qwen dense, routed/shared MoE, FTW/NVFP4, hybrid
 recurrent and streamed Qwen paths require their own family-specific model,
 state, provider and caller qualification; this dense fixture does not cover them.
+
+### Qwen and MoE primitive consumers
+
+Five existing numerical modules now forward through `qualia-inference-kernel`
+to Etalon: MoE routing, NVFP4 decoding/GEMV, causal convolution/GatedDeltaNet,
+Qwen vector operations, and Hyper-Connection arithmetic. Parent and submodule
+imports retain the canonical error/configuration types. All thirteen original
+tests remain, with four additional consumer tests covering public type identity,
+real native error conversions, partial-error writes, output tails and operation
+ordering. The separate trained streamed Hyper-Connection operations retain
+their learned sigmoid gates and are not replaced by the simpler primitives.
+
+The canonical extraction was qualified with independent scalar vectors,
+positive-controlled zero-allocation checks and original-versus-library
+comparisons in debug and optimized profiles. The two RMS implementations retain
+their distinct floating-point associations, including a fixture whose first
+output differs by one bit. Existing edge behavior, including routing's zero-k
+panic for nonempty input and partial writes on some errors, is preserved for
+separately reviewed repair; these exports do not claim new input validation.
+
+The five pure-library dependencies share Etalon revision
+`782a954c9c246cca45ceb1208f86c38528619bf9`. The nineteen GPU-family dependencies
+retain their qualified revision. The lockfile update changes only those five
+source revisions; locked/offline dependency validation passes. No model-I/O
+dependency is introduced by this consumer change.
+
+The actual consuming core binary passed **10,474 tests, zero failures, three
+ignored and zero filtered**, in 525.66 seconds with serial execution. Its test
+inventory retains all 10,473 original names and adds exactly the four consumer
+tests. The 3,285 frozen source/manifest paths remained unchanged through this
+run. This is an ordinary candidate binary without the earlier private decoder
+oracle registration.
+
+The actual native integration harness also passed all three cases: two CPU
+cases and GPU compute/readback on the discrete NVIDIA RTX A2000 through Vulkan.
+The GPU case executed ten vector-add dispatches and one sparse initialization,
+checked exact reference outputs and rejected invalid requests. CPU-only, WASM
+LLM and WASM LLM with GPU-runtime compilation all pass with the same frozen
+sources. Existing native renderer warnings and target-specific unused warnings
+remain visible; these consumer checks are not a strict Clippy claim. WASM
+compilation does not establish browser execution or NPU/Qwen GPU qualification.
+
+These checks qualify numerical ownership and consumer compatibility. Complete
+Qwen dense, GGUF/FTW routed and shared experts, hybrid recurrent and streamed
+Qwen execution still require retained model identities, full sequence/state
+comparison and provider-specific evidence. A present optional model fixture or
+an early-returning physical test is not sufficient evidence for those gates.
