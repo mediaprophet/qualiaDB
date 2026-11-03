@@ -11,3 +11,6 @@ path = "src/lib.rs"
 
 [features]
 default = []
+
+[dependencies]
+etalon-inference-kernel = { workspace = true }

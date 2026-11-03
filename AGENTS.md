@@ -1493,3 +1493,24 @@ Their Qualia forwarding and Safetensors writer adoption are next, with separate
 independent fixtures and supervisor gates. Physical KV restoration, real governed
 model execution and standalone developer LLM execution remain open work. Remote
 benchmark-only automation updates were preserved. HANDOVER.md remains absent.
+
+### 2026-11-04 — Canonical inference kernel/storage and P64 writer consumer
+
+The second migration consumer forwards the public numerical-kernel, runtime
+budget and KV/prefix metadata APIs to Etalon at 0f31a701. All nineteen GPU-provider
+packages remain at 5d3bce83; graph identity semantics stay in Qualia. Safetensors
+Verbatim serialization now uses the canonical borrowed planner/streaming writer,
+with legacy APIs/reports and mechanically separated vision/quantized paths.
+The original kernel tests are maintained in the canonical library; core runtime
+and graph tests remain here. New consumer fixtures prove cross-library type and
+prefix-identity interoperability.
+
+The full core passed 10,430 tests with zero failures and three existing ignores.
+An initial run exposed preexisting global context-ring interference; the repaired
+test preserves every original assertion in a fresh native process and verifies
+that exactly one test executes. The production ring lifecycle is unchanged.
+Both the failure and controlled original-library reproduction are retained.
+CPU-only compilation passed, with one unused CRC import warning in the separated
+vision module. WASM/native and final publication evidence belong to the matching
+section of docs/testing-inference-migration.md. These ownership changes do not
+establish physical KV rollback or real Webizen-controlled numerical execution.

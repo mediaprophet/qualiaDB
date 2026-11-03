@@ -4459,9 +4459,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "etalon-inference"
+version = "0.0.2"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=0f31a70166af7ec3d3d0975f17a1866d751561f0#0f31a70166af7ec3d3d0975f17a1866d751561f0"
+dependencies = [
+ "etalon-inference-kernel",
+]
+
+[[package]]
+name = "etalon-inference-kernel"
+version = "0.0.2"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=0f31a70166af7ec3d3d0975f17a1866d751561f0#0f31a70166af7ec3d3d0975f17a1866d751561f0"
+
+[[package]]
 name = "etalon-model"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=f4523adec4716e2cb32db2babc6a9562476947bd#f4523adec4716e2cb32db2babc6a9562476947bd"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=0f31a70166af7ec3d3d0975f17a1866d751561f0#0f31a70166af7ec3d3d0975f17a1866d751561f0"
 
 [[package]]
 name = "etalon-naga-bridge"
@@ -4498,7 +4511,7 @@ dependencies = [
 [[package]]
 name = "etalon-resources"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=f4523adec4716e2cb32db2babc6a9562476947bd#f4523adec4716e2cb32db2babc6a9562476947bd"
+source = "git+https://github.com/mediaprophet/etalon.git?rev=0f31a70166af7ec3d3d0975f17a1866d751561f0#0f31a70166af7ec3d3d0975f17a1866d751561f0"
 
 [[package]]
 name = "etalon-sync"
@@ -11576,6 +11589,7 @@ dependencies = [
  "ed25519-dalek 3.0.0",
  "etalon",
  "etalon-agent",
+ "etalon-inference",
  "etalon-model",
  "etalon-nquin",
  "etalon-render",
@@ -11717,6 +11731,9 @@ dependencies = [
 [[package]]
 name = "qualia-inference-kernel"
 version = "0.0.40"
+dependencies = [
+ "etalon-inference-kernel",
+]
 
 [[package]]
 name = "qualia-mcp"

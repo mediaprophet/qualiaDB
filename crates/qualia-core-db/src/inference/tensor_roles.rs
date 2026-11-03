@@ -31,7 +31,8 @@ fn extract_layer(name: &str) -> Option<u16> {
     for marker in ["blk.", "layers."] {
         if let Some(pos) = name.find(marker) {
             let rest = &name[pos + marker.len()..];
-            let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+            let digit_bytes = rest.bytes().take_while(u8::is_ascii_digit).count();
+            let digits = &rest[..digit_bytes];
             if let Ok(l) = digits.parse::<u16>() {
                 return Some(l);
             }
@@ -165,6 +166,23 @@ pub fn name_is_ternary_eligible(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn borrowed_layer_prefix_preserves_marker_and_numeric_rules() {
+        for (name, expected) in [
+            ("blk.00012.attn_q", Some(12)),
+            ("blk.65535.attn_q", Some(65535)),
+            ("blk.65536.layers.7.attn_q", Some(7)),
+            ("blk..layers.9.attn_q", Some(9)),
+            ("blk.x.blk.4.attn_q", None),
+            ("layers.8.blk.3.attn_q", Some(3)),
+            ("blk.１２.layers.5.attn_q", Some(5)),
+            ("éblk.3é.attn_q", Some(3)),
+            ("blk.+3.attn_q", None),
+        ] {
+            assert_eq!(extract_layer(name), expected, "{name}");
+        }
+    }
 
     #[test]
     fn gguf_names_map_to_roles() {

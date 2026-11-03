@@ -917,6 +917,34 @@ mod tests {
 
     #[test]
     fn push_tensor_search_hits_drains_to_ring() {
+        // Other tests start process-wide producers that can refill this SPSC ring.
+        // Exercise the public API in a fresh process with the same assertions.
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            const CHILD: &str = "QUALIA_CONTEXT_RING_TEST_CHILD";
+            if std::env::var_os(CHILD).is_none() {
+                let output = std::process::Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "inference::compute_universe::tests::push_tensor_search_hits_drains_to_ring",
+                        "--nocapture",
+                    ])
+                    .env(CHILD, "1")
+                    .output()
+                    .expect("run isolated context-ring test");
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                assert!(
+                    output.status.success()
+                        && stdout.contains("running 1 test")
+                        && stdout.contains("test result: ok. 1 passed; 0 failed; 0 ignored;"),
+                    "isolated context-ring test did not execute successfully: {}\n{}\n{}",
+                    output.status,
+                    stdout,
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                return;
+            }
+        }
         let pushed = push_tensor_search_hits(&[3, 7], 99, 0.5, 1.0);
         assert_eq!(pushed, 2);
         assert_eq!(pop_tensor_context().unwrap().tensor_index, 3);

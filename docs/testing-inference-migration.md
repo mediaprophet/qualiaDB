@@ -236,3 +236,76 @@ migration evidence parent. The core receipt also contains the resolved 21-packag
 Etalon graph inventory.
 Real Webizen-controlled inference, standalone developer model execution and
 physical numerical-state rollback remain separate migration gates.
+
+## Numerical kernel, runtime metadata and streaming writer consumer
+
+This consumer pins four pure Etalon libraries at
+`0f31a70166af7ec3d3d0975f17a1866d751561f0`: inference-kernel, inference, model and
+resources. All nineteen shared GPU packages retain the qualified 5d3bce83 pin.
+The existing qualia-inference-kernel public imports forward to the canonical
+Etalon implementation. Budget, paged KV and prefix metadata public types also
+forward, while existing core tests and Qualia graph identity derivation remain.
+The extracted metadata does not copy physical KV contents or provide rollback.
+Independent consumer fixtures check actual type interoperability and graph-derived
+prefix keys through the canonical registry, store, table and reference counts.
+
+The Safetensors Verbatim path delegates layout and streaming serialization to
+Etalon. Existing owned APIs, report fields, semantic role/manifold construction
+and error adapters remain in Qualia. Quantized and vision paths are preserved in
+focused modules. The borrowed-plan API revalidates public plans and accepts
+caller-owned bounded workspaces. Parser, serde and external sink allocations are
+outside that workspace accounting; the historical peak-report field is not a
+total-process memory measurement. I/O failure can leave a partial external sink.
+
+Independent preservation checks cover 23 complete original binary outputs and
+all five report fields, ten error cases, four partial-I/O cases, 372 role-mapping
+rows and new workspace/sink/allocation boundaries. An initial measurement found
+eight role-parser allocations; borrowing the ASCII digit prefix removed those
+allocations without changing any of the 372 checked mappings. The canonical
+kernel has 25 tests in each profile; canonical runtime metadata has 26 in each.
+Those library counts are separate from the consuming core suite.
+
+The first full consumer run passed 10,429 tests and failed the global
+`push_tensor_search_hits_drains_to_ring` test, with three existing ignores. Its
+push-count assertion passed; the first popped tensor index was 0 instead of 3.
+Controlled prior-producer injection against the original published library
+reproduced that queue ordering, while the original exact test passed in a fresh
+process. This demonstrates shared-state susceptibility; it does not identify the
+particular producer interleaving in the failed suite.
+
+The test now executes its original public API assertions in a fresh native
+process, checking both successful exit and exactly one executed passing test.
+Its WASM body and production ring/producer lifecycle are unchanged. The initial
+failure and baseline diagnostics remain retained. The repaired full suite passed
+**10,430 tests, zero failures and three existing ignores**, in 418.58 seconds.
+All 70 frozen source/retired-path identities remained unchanged. CPU-only and
+wasm-llm compilation passed in 1m40s and 1m18s respectively. The split vision
+module has one harmless unused CRC import warning; WASM also retains the two
+existing renderer dead-code warnings. Actual native Vibe integration passed all
+three tests in 3.19 seconds on RTX A2000 DX12, driver 32.0.16.1692, with required
+GPU execution, exact CPU-oracle readback and invalid/destroyed-handle checks.
+The consumer2-core/cpu/wasm/native receipts retain source hashes and commands.
+Benchmark-only remote updates were preserved separately from the tested source.
+
+### Mandatory human-centric governance boundary
+
+Normal application inference requires a real Qualia Webizen/Sentinel decision in
+the token acceptance loop, before each proposal is accepted or published.
+Permission-independent execution belongs only to explicitly selected developer or
+debug-test sessions. Turning on tracing, profiling or a debug build does not relax
+a governed session. Missing, disconnected or failed controllers must not cause an
+implicit transition into developer mode. Numerical/format parity does not qualify
+normal-runtime authority or publication behavior.
+
+This consumer leaves the existing Sentinel, Webizen, inference guard, inference
+modes and application decode sources unchanged. The separately retained pretrained
+CPU comparison is a developer verification harness. The existing browser Rust CPU
+entrypoint has no local guard invocation; caller-layer enforcement needs an actual
+end-to-end audit and test before that route can be described as a qualified governed
+runtime. Existing FastVerify post-turn semantics do not satisfy that requirement;
+bypass belongs only to explicit developer/debug/lab execution. The existing native
+ring can advance without a decision bound to the current proposal, which is also
+a required corrective integration item. Neither a mode name nor a checkpoint
+digest establishes controller enforcement or physical numerical-state restoration.
+New normal-runtime integration requires real Webizen approval/denial, controller-loss,
+rejected-publication and recovery tests.
