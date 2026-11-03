@@ -64,6 +64,12 @@ fn pack_term(term: Term<'_>) -> (String, Option<u64>) {
             (format!("{value}@{language}"), None)
         }
         Term::Literal(Literal::Typed { value, datatype }) => {
+            if datatype.iri == crate::resolver::typed_double::DATATYPE {
+                // Complete ingestion retains the entire RDF term, including
+                // datatype and all binary64 lexical digits. Invalid numeric
+                // lexical forms are retained as RDF data, never silently cast.
+                return (Literal::Typed { value, datatype }.to_string(), None);
+            }
             (value.to_string(), pack_typed_literal(value, datatype.iri))
         }
         Term::Triple(inner) => (inner.to_string(), None),
@@ -247,7 +253,17 @@ where
                         .and_then(|t| t.as_str())
                         .and_then(|dt| pack_typed_literal(&value, dt)),
                 };
-                let object = if kind == "bnode" && !value.starts_with("_:") {
+                let object = if !matches!(kind, "uri" | "iri" | "bnode")
+                    && obj.get("datatype").and_then(|t| t.as_str())
+                        == Some(crate::resolver::typed_double::DATATYPE)
+                {
+                    Literal::Typed {
+                        value: &value,
+                        datatype: rio_api::model::NamedNode {
+                            iri: crate::resolver::typed_double::DATATYPE,
+                        },
+                    }.to_string()
+                } else if kind == "bnode" && !value.starts_with("_:") {
                     format!("_:{value}")
                 } else if let Some(lang) = obj.get("lang").and_then(|t| t.as_str()) {
                     format!("{value}@{lang}")
@@ -516,5 +532,16 @@ mod tests {
             object_iri_hash(&nt[0].object),
             object_iri_hash("http://ex/o")
         );
+    }
+
+    #[test]
+    fn typed_double_rdfjson_matches_complete_rio_term_without_f32_rounding() {
+        let nt = parse_bytes_to_raw(IngestRdfFormat::NTriples,
+            b"<urn:s> <urn:p> \"1.0000000000000002\"^^<http://www.w3.org/2001/XMLSchema#double> .\n").unwrap();
+        let json = parse_bytes_to_raw(IngestRdfFormat::RdfJson,
+            br#"{"urn:s":{"urn:p":[{"type":"literal","value":"1.0000000000000002","datatype":"http://www.w3.org/2001/XMLSchema#double"}]}}"#).unwrap();
+        assert_eq!(nt[0].object,json[0].object);
+        assert!(nt[0].packed_object.is_none());assert!(json[0].packed_object.is_none());
+        assert_eq!(crate::resolver::typed_double::decode(&nt[0].object).unwrap().1.to_bits(),1.0000000000000002f64.to_bits());
     }
 }

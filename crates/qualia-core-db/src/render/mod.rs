@@ -193,6 +193,8 @@ mod texture_transcode_tests;
 ))]
 pub mod lod_chain;
 
+/// Borrowed source-bound pose contract and cold canonical model admission.
+pub mod source_frame;
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(feature = "gpu-runtime")]
 pub mod gpu;

@@ -194,9 +194,33 @@ pub fn encode(
     Ok(bytes)
 }
 
-/// Integrity and schema checks precede any store access. No evaluation, grants,
-/// runtime handles, principal mappings, adoption or rights decisions are loaded.
-pub fn decode(bytes: &[u8], limits: CheckpointLimits) -> Result<Checkpoint, String> {
+/// A canonically validated checkpoint borrowing its original bytes. Its
+/// lifetime and immutability are provided by the caller; a borrowed or mapped
+/// file that another process can modify is not a stable snapshot. Validation
+/// does not grant authority, establish a current revision or evaluate source.
+pub struct ValidatedCheckpointView<'a> {
+    reader: BundleReader<'a>,
+    record: snapshot::Record,
+    file_digest: [u8; 32],
+    source_meta: Option<Vec<u8>>,
+}
+
+impl<'a> ValidatedCheckpointView<'a> {
+    pub fn artifact(&self) -> &super::super::StudioArtifact { &self.record.artifact }
+    pub fn file_digest(&self) -> [u8; 32] { self.file_digest }
+    /// Metadata from the validated HMC index. A key match does not establish
+    /// a clip association or the caller's authority to access the resource.
+    pub fn entries(&self) -> &[crate::bundle::BundleEntry] { self.reader.entries() }
+    pub fn resource(&self, key: &str) -> Option<&'a [u8]> {
+        if key == snapshot::SOURCE_KEY { return None; }
+        self.reader.get(key)
+    }
+}
+
+/// Canonical integrity and schema admission without materializing a second
+/// copy of every resource. The caller must pin the backing bytes and check
+/// its own source, authorization, release and cancellation conditions.
+pub fn validate_view(bytes: &[u8], limits: CheckpointLimits) -> Result<ValidatedCheckpointView<'_>, String> {
     if bytes.len() > limits.file_bytes {
         return Err("checkpoint file budget exceeded".into());
     }
@@ -265,11 +289,19 @@ pub fn decode(bytes: &[u8], limits: CheckpointLimits) -> Result<Checkpoint, Stri
     snapshot::validate_record(&record, limits)?;
     // Derived resources remain inert on reopen; format/use admission belongs to
     // the selected native resource loader, never implicit first-entry loading.
+    let source_meta = entry.meta.clone();
+    Ok(ValidatedCheckpointView { reader, record, file_digest: digest(bytes), source_meta })
+}
+
+/// Integrity and schema checks precede any store access. No evaluation, grants,
+/// runtime handles, principal mappings, adoption or rights decisions are loaded.
+pub fn decode(bytes: &[u8], limits: CheckpointLimits) -> Result<Checkpoint, String> {
+    let validated = validate_view(bytes, limits)?;
     Ok(Checkpoint {
-        record,
-        file_digest: Some(digest(bytes)),
-        source_meta: entry.meta.clone(),
-        resources: reader
+        record: validated.record,
+        file_digest: Some(validated.file_digest),
+        source_meta: validated.source_meta,
+        resources: validated.reader
             .entries()
             .iter()
             .filter(|entry| entry.key != snapshot::SOURCE_KEY)
@@ -277,7 +309,7 @@ pub fn decode(bytes: &[u8], limits: CheckpointLimits) -> Result<Checkpoint, Stri
                 Ok(super::ResourceData {
                     key: entry.key.clone(),
                     kind: entry.kind.clone(),
-                    bytes: reader
+                    bytes: validated.reader
                         .get(&entry.key)
                         .ok_or("checkpoint resource missing")?
                         .to_vec(),

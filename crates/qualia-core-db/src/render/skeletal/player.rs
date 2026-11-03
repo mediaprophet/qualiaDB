@@ -359,6 +359,16 @@ impl SkeletalPlayer {
         dt_seconds: f64,
         reduced_motion: bool,
     ) -> Result<PlaybackReceipt, PlayerError> {
+        self.advance_pose_only_with_policy(dt_seconds, reduced_motion, PoseTimePolicy::AuthoredLooping)
+    }
+    /// Explicit closed-interval sampling avoids wrapping a requested final
+    /// contact boundary to the first pose. Stored clip metadata is unchanged.
+    pub fn advance_pose_only_with_policy(
+        &mut self,
+        dt_seconds: f64,
+        reduced_motion: bool,
+        policy: PoseTimePolicy,
+    ) -> Result<PlaybackReceipt, PlayerError> {
         if !dt_seconds.is_finite() || !(0.0..=1.0).contains(&dt_seconds) {
             return Err(PlayerError::InvalidInput);
         }
@@ -366,7 +376,7 @@ impl SkeletalPlayer {
         self.time += dt_seconds;
         self.transition += dt_seconds;
         let clip = self.clips[self.clip];
-        if clip.looping {
+        if clip.looping && policy == PoseTimePolicy::AuthoredLooping {
             self.time = self.time.rem_euclid(clip.duration);
         } else {
             self.time = self.time.clamp(0.0, clip.duration);
@@ -377,9 +387,13 @@ impl SkeletalPlayer {
             (self.transition / self.transition_duration).clamp(0.0, 1.0)
         };
         let previous = (blend < 1.0).then_some(self.previous.as_slice());
+        let mut sampled_clip = clip_view(clip, &self.tracks, &self.keys).ok_or(PlayerError::InvalidInput)?;
+        // This borrowed invocation view controls sampling only. The admitted
+        // ClipRecord and its loop-compatible source remain untouched.
+        if policy == PoseTimePolicy::ExactClipInterval { sampled_clip.looping = false; }
         sample_pose_into(
             &self.joints,
-            clip_view(clip, &self.tracks, &self.keys).ok_or(PlayerError::InvalidInput)?,
+            sampled_clip,
             if reduced_motion { 0.0 } else { self.time },
             previous,
             blend,
@@ -424,7 +438,13 @@ impl SkeletalPlayer {
         dt_seconds: f64,
         reduced_motion: bool,
     ) -> Result<PlaybackReceipt, PlayerError> {
-        let receipt = self.advance_pose_only_with_mode(dt_seconds, reduced_motion)?;
+        self.advance_with_policy(dt_seconds, reduced_motion, PoseTimePolicy::AuthoredLooping)
+    }
+    /// The same policy is used for pose evaluation and skinning. Hosts with a
+    /// separate contact pass must select it consistently for both phases.
+    pub fn advance_with_policy(&mut self, dt_seconds: f64, reduced_motion: bool,
+        policy: PoseTimePolicy) -> Result<PlaybackReceipt, PlayerError> {
+        let receipt = self.advance_pose_only_with_policy(dt_seconds, reduced_motion, policy)?;
         skin_vertices_into(
             &self.bind_positions,
             &self.bind_normals,

@@ -173,6 +173,12 @@ fn parse_jsonld_shaped_value(decoder: &mut Decoder) -> Result<u64, Box<dyn std::
     }
     if let Some(v) = value {
         if let Some(dt) = dtype.as_deref() {
+            // This token-only nested-value path has no lexical sink. Refuse
+            // instead of replacing a full binary64 typed term by a bare hash.
+            // Lossless typed-double ingest uses the existing RDF/Q42LEX owner.
+            if dt == crate::resolver::typed_double::DATATYPE || dt == "xsd:double" {
+                return Err("CBOR-LD typed double requires a retained lexical owner; use lossless RDF ingestion".into());
+            }
             if let Some(packed) = crate::resolver::pack_typed_literal(&v, dt) {
                 return Ok(packed);
             }

@@ -358,6 +358,7 @@ impl VolumetricRenderer {
         )
     }
 
+    #[cfg(target_arch = "wasm32")]
     /// P9.3 — Load a full `.10d` container asset (not just a mesh section).
     /// Parses the section table, extracts the QuantizedMesh, uploads it to the
     /// GPU, and returns `(vertex_count, triangle_count, provenance_mu)`.
@@ -544,6 +545,11 @@ impl VolumetricRenderer {
         Ok((vert_count, tri_count, provenance_mu))
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    /// Native shared decode/upload path with the legacy Core compatibility profile.
+    pub fn load_10d_asset(&mut self, bytes: &[u8]) -> Result<(u32, u32, f32), String> {
+        self.load_10d_compat_asset(bytes)
+    }
     /// P9.3 — Colour-by-field: map a scalar field value to a deterministic RGB
     /// colour. The mapping is a simple linear interpolation across a fixed
     /// colour ramp, ensuring the same field value produces the same colour on

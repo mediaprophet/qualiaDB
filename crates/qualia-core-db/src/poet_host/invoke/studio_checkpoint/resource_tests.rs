@@ -77,6 +77,27 @@ fn mixed(id: &str) -> (Vec<u8>, super::super::StoreStamp) {
 }
 
 #[test]
+fn borrowed_view_matches_canonical_decode_without_copying_resources() {
+    let (bytes, _) = mixed("urn:checkpoint:borrowed-view");
+    let view = validate_view(&bytes, Default::default()).unwrap();
+    let owned = decode(&bytes, Default::default()).unwrap();
+    assert_eq!(view.file_digest(), owned.file_digest().unwrap());
+    assert_eq!(view.artifact().id, owned.artifact().id);
+    for resource in owned.resources() {
+        let slice = view.resource(&resource.key).unwrap();
+        assert_eq!(slice, resource.bytes);
+        let entry = view.entries().iter().find(|e| e.key == resource.key).unwrap();
+        assert_eq!(slice.as_ptr(), bytes[entry.offset as usize..].as_ptr());
+    }
+    assert!(view.resource(SOURCE_RESOURCE_KEY).is_none());
+    assert!(view.resource("absent").is_none());
+    let mut corrupt = bytes.clone();
+    corrupt[0] ^= 1;
+    assert!(validate_view(&corrupt, Default::default()).is_err());
+    assert!(decode(&corrupt, Default::default()).is_err());
+}
+
+#[test]
 fn mixed_package_source_material_edit_preserves_raw_bytes_graph_lexicon_and_metadata() {
     let id = "urn:checkpoint:resource-byte-exact";
     let (original, stamp) = mixed(id);

@@ -91,16 +91,13 @@ impl PortalGpu {
         {
             return false;
         }
+        if mesh.normal_workspace.validate_position_span(mesh.cpu_positions.len(), first, end).is_err() {
+            return false;
+        }
         mesh.cpu_positions[first..end].copy_from_slice(positions);
         // Maintain the legacy edit workspace so later topology-based edits
         // start from the actual posed geometry, without replacing skin normals.
-        if mesh
-            .normal_workspace
-            .update_positions(&mesh.cpu_positions, first, end)
-            .is_err()
-        {
-            return false;
-        }
+        mesh.normal_workspace.update_positions_prevalidated(&mesh.cpu_positions, first, end);
         self.queue.write_buffer(
             &mesh.vertex_buf,
             (first * 12) as u64,
@@ -129,6 +126,9 @@ impl PortalGpu {
         self.mesh_base_aabb = Aabb::from_points(&mesh.cpu_positions);
         self.last_visibility_key = None;
         self.shadow_map_dirty = true;
+        // Any generic writer retires external source identity. The source-bound
+        // owner restores its already-preflighted next state after this commit.
+        self.source_motion.retire();
         true
     }
 }

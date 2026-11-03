@@ -136,6 +136,7 @@ struct ProjectedNode {
 
 mod body_scene;
 mod scene_animation;
+mod source_frame;
 mod scene_mesh;
 pub(crate) use scene_mesh::BodyMeshAccum;
 #[allow(unused_imports)]

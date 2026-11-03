@@ -89,9 +89,7 @@ impl MeshNormalWorkspace {
         start: usize,
         end: usize,
     ) -> Result<(), &'static str> {
-        if positions.len() != self.vertex_sums.len() || start > end || end > positions.len() {
-            return Err("mesh normal update span is out of range");
-        }
+        self.validate_position_span(positions.len(), start, end)?;
         if positions[start..end]
             .iter()
             .flatten()
@@ -99,9 +97,25 @@ impl MeshNormalWorkspace {
         {
             return Err("mesh normal update positions must be finite");
         }
+        self.update_positions_prevalidated(positions, start, end);
+        Ok(())
+    }
+
+    /// Pure preflight, before a caller changes retained positions.
+    pub(crate) fn validate_position_span(&self, count: usize, start: usize, end: usize)
+        -> Result<(), &'static str> {
+        if count != self.vertex_sums.len() || start > end || end > count {
+            return Err("mesh normal update span is out of range");
+        }
+        Ok(())
+    }
+
+    /// Internal commit only after span and finite-position preflight. Adjacency
+    /// and scratch capacities are owned and validated at cold construction.
+    pub(crate) fn update_positions_prevalidated(&mut self, positions: &[[f32; 3]], start: usize, end: usize) {
         self.dirty_vertices.clear();
         if start == end {
-            return Ok(());
+            return;
         }
         self.next_generation();
         for vertex in start..end {
@@ -130,7 +144,6 @@ impl MeshNormalWorkspace {
         for &vertex in &self.dirty_vertices {
             self.normals[vertex as usize] = normalized(self.vertex_sums[vertex as usize]);
         }
-        Ok(())
     }
 
     /// Sorted, unique vertices whose normal values changed in the last update.
@@ -260,5 +273,17 @@ mod tests {
         assert_eq!(dirty, [0, 1, 2]);
         assert!(workspace.normals()[0][1] < 0.0);
         assert_eq!(workspace.normals()[3], [0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn pure_span_preflight_refuses_before_geometry_or_workspace_commit() {
+        let positions = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]];
+        let workspace = MeshNormalWorkspace::new(&positions, &[0, 1, 2]).unwrap();
+        let before = workspace.normals().to_vec();
+        assert!(workspace.validate_position_span(2, 0, 2).is_err());
+        assert!(workspace.validate_position_span(3, 0, 4).is_err());
+        assert!(workspace.validate_position_span(3, 2, 1).is_err());
+        assert_eq!(workspace.normals(), before.as_slice());
+        assert!(workspace.validate_position_span(3, 0, 3).is_ok());
     }
 }

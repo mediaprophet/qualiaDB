@@ -169,8 +169,10 @@ pub fn two_diff(a: f64, b: f64) -> (f64, f64) {
 /// components written to `h` (always `elen + 1`).
 ///
 /// Implements Shewchuk's `grow_expansion` (§2.4): a single pass that merges
-/// `b` into the expansion using [`fast_two_sum`], maintaining the
-/// non-overlapping + sorted invariant.
+/// `b` into a non-overlapping, increasing-magnitude expansion using
+/// [`two_sum`]. The nonzero output components retain that invariant. Zero
+/// components are retained to preserve the `elen + 1` return contract; remove
+/// them before using a last-component sign test.
 ///
 /// # Errors
 /// Returns [`ExpansionError::OutputTooSmall`] if `h.len() < elen + 1`.
@@ -180,22 +182,21 @@ pub fn grow_expansion(e: &[f64], b: f64, h: &mut [f64]) -> Result<usize, Expansi
         return Err(ExpansionError::OutputTooSmall);
     }
 
-    // Merge b into the expansion. We use two_sum (not fast_two_sum) because
-    // the relative magnitudes of e[i] and the running error are not
-    // guaranteed to satisfy fast_two_sum's |a| >= |b| precondition.
-    // two_sum is always error-free regardless of magnitudes (Knuth's
-    // algorithm, 6 ops vs fast_two_sum's 3).
-    let (sum, mut err) = two_sum(e[0], b);
-    h[0] = sum;
-
-    for i in 1..elen {
-        let (s, e_i) = two_sum(e[i], err);
-        h[i] = s;
-        err = e_i;
+    // Carry the running SUM and emit its low error. Carrying the error
+    // instead preserves the total but loses the non-overlap invariant.
+    let mut q = b;
+    for (i, &component) in e.iter().enumerate() {
+        let (sum, error) = two_sum(q, component);
+        h[i] = error;
+        q = sum;
     }
-    h[elen] = err;
+    h[elen] = q;
     Ok(elen + 1)
 }
+
+#[cfg(test)]
+#[path = "expansion_grow_tests.rs"]
+mod grow_normalization_tests;
 
 /// Scale an expansion by a scalar: `h = e * b`.
 ///

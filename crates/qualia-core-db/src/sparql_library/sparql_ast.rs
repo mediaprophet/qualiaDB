@@ -387,6 +387,13 @@ pub struct SparqlQueryContext {
 /// distinct RDF terms). The parser and the [`StringSink`] both use this so a produced
 /// `STRLANG`/`STRDT` term round-trips its tag.
 pub fn literal_term_hash(text: &str, lang: Option<&str>, datatype: Option<&str>) -> u64 {
+    // Share the complete RDF-ingest term for finite typed binary64 constants.
+    // This concerns RDF term identity, not coercion of hash tokens to numbers.
+    if lang.is_none() && datatype == Some(crate::resolver::typed_double::DATATYPE) {
+        if let Some(term) = crate::resolver::typed_double::from_lexical(text) {
+            return crate::resolver::typed_double::token(&term);
+        }
+    }
     match (lang, datatype) {
         (None, None) => crate::lexicon::generate_60bit_token(text.as_bytes()),
         (Some(l), _) => crate::lexicon::generate_60bit_token(format!("{text}@{l}").as_bytes()),
@@ -604,6 +611,9 @@ impl<'a> TextResolver<'a> {
         }
         if let Some(f) = self.lexicon {
             if let Some(s) = f(hash) {
+                if let Some((lexical, _)) = crate::resolver::typed_double::decode(&s) {
+                    return Some(lexical.to_owned());
+                }
                 return Some(s);
             }
         }
@@ -620,6 +630,11 @@ impl<'a> TextResolver<'a> {
         if let Some(sink) = self.sink {
             if let Some(l) = sink.lang(hash) {
                 return Some(l);
+            }
+        }
+        if let Some(term) = self.lexicon.and_then(|lookup| lookup(hash)) {
+            if crate::resolver::typed_double::has_declared_datatype(&term) {
+                return Some(String::new());
             }
         }
         // A known/resolvable literal with no lang tag → "".
@@ -655,6 +670,11 @@ impl<'a> TextResolver<'a> {
         }
         if self.literals.lang(hash).is_some() {
             return Some(RDF_LANGSTRING.to_string());
+        }
+        if let Some(term) = self.lexicon.and_then(|lookup| lookup(hash)) {
+            if crate::resolver::typed_double::has_declared_datatype(&term) {
+                return Some(crate::resolver::typed_double::DATATYPE.to_owned());
+            }
         }
         if let Some(lit) = crate::resolver::classify_inline_literal(hash) {
             return Some(lit.datatype_iri().to_string());

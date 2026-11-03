@@ -1,0 +1,591 @@
+{
+  "schema": "qualia.sensing.canonical-migration.v1",
+  "source_base": "a9668cb2123ad05ef64f7ad4c7b2551c4a5d95b8",
+  "target_base": "b64e82cae26ae47a3263fb5d51a5c0d1b3aa60fd",
+  "source_retained_readonly": true,
+  "byte_budget": 16777216,
+  "copied_files": 116,
+  "copied_bytes": 837610,
+  "files": [
+    {
+      "path": "crates/qualia-core-db/src/sensing/association.rs",
+      "bytes": 10278,
+      "sha256": "33c5ffd4fb20ccbe267f64f83be2f2d37e50e5c4276c1b58b1bf85326db2bee7"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/association_contract.rs",
+      "bytes": 6951,
+      "sha256": "cb9951ebcb6ffd2c295816087cba86728c80d8b4af0a00973dcde976b70bae6f"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/association_table.rs",
+      "bytes": 9660,
+      "sha256": "bccbfbf29d484a46e8c3690386bf5134644ff9d8b2849530862d93e6aa14689d"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/association_table_tests.rs",
+      "bytes": 11585,
+      "sha256": "9dc214a0f909057994f31c5038ec4a1f7489b8b506721d590007213fc43fc345"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/association_tests.rs",
+      "bytes": 18855,
+      "sha256": "9b67c5f57fc26dbae8a4a713a69ec2d669b308bd9712ed1afb58287a4a84e955"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/authorization.rs",
+      "bytes": 9910,
+      "sha256": "578fb7906c5be53fb82ee5b9a46cfd44cb0a8906aab972205602d0fd6ff83ef2"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/authorization_tests.rs",
+      "bytes": 9665,
+      "sha256": "c4773044432a8667b579d3fbb6b55239179db3e1c9d7d23de2ab568e5d7d1dcc"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/discovery.rs",
+      "bytes": 11944,
+      "sha256": "eabb9bafc46ae3d4122e00c76e7e3fa6f485bbd93154f4a2f7ed788e08cf15e6"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/discovery_tests.rs",
+      "bytes": 6106,
+      "sha256": "08a8200295b3d634468df4ae6daa98e5cda177ab2a05ad463d7136cf0cfd2d21"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/fusion.rs",
+      "bytes": 12460,
+      "sha256": "9172d587e828cc3b55d3bee3b1363de5b40eb32979a23da8aa5699c32fcde338"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/fusion_tests.rs",
+      "bytes": 10230,
+      "sha256": "a08a2a59ed854ea5f06303723b8e13bd92c44b13415989b79eba113406a76d4a"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/fusion_time.rs",
+      "bytes": 6290,
+      "sha256": "c44b372d2881ec48cce3facc6d6b796e266d53020618aed0499596ef2b5bc28d"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/grounding.rs",
+      "bytes": 11321,
+      "sha256": "225695136e19fe4b1e4c9ec20423d1b73dee6e5fb8b565cd1f23ff3fe7d79088"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/grounding_tests.rs",
+      "bytes": 6845,
+      "sha256": "71c83d5898ebf2c242a53fc1ab18d8dd53adadbe3a30b7da0ec4bd5315644814"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/mod.rs",
+      "bytes": 10633,
+      "sha256": "30fff62ece2097f52e2e8eb9451bb0adced58a34ec35950113337347293e2f2b"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/nfc_evidence.rs",
+      "bytes": 18602,
+      "sha256": "25b4df589c701701fdf866fa24a4fc6ead3f72eacf24da33f4a2bda9cf39edc4"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/nfc_evidence_tests.rs",
+      "bytes": 9290,
+      "sha256": "fb175d934adb9ed213301c6aa4c529b78a481d85d348d9d8d73db019e602c075"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/nfc_receipt_wire.rs",
+      "bytes": 6430,
+      "sha256": "a52f3bd2ab73442e5aa0c7d895e972522992e4b6cadca475c5aa6b5ef8c055e4"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/projection_map.rs",
+      "bytes": 9789,
+      "sha256": "6170ff3bde1d6a5ccc8f4491884550899fb372f9da88b7cee5b3ae236279ca25"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/projection_map_tests.rs",
+      "bytes": 7097,
+      "sha256": "e69d55fdf4aab0a979dc0005f8330dec59078e1a000385962c18aa319120c499"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/quin_index.rs",
+      "bytes": 1801,
+      "sha256": "16c17f2d567adefb4ded9ebe521ca9f541b23c98466ab90056bd43ec2d1cab62"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/quin_index_tests.rs",
+      "bytes": 1274,
+      "sha256": "44c0caad0796b506e8282ba0065655be7d2dd8ac740433f9cd8bc1af8cd18ebf"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/radio_evidence.rs",
+      "bytes": 15121,
+      "sha256": "f2f3f1d9dd2f0bbcb5b227521f195f6947903cacb169e6065d393645d6b5e6cf"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/radio_evidence_tests.rs",
+      "bytes": 7620,
+      "sha256": "3bc21e4dee3908430267289ef4b36147207bb96e60af3cc4296d3c40720f737e"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/radio_evidence_wire.rs",
+      "bytes": 7088,
+      "sha256": "7300637f40c28ee8afe14cba555bb0e9199a4945da6b27d5514e241260f2bd9c"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/radio_receipt.rs",
+      "bytes": 16131,
+      "sha256": "a62fa98002b687f3b45c27cbc04c50ef8c1821bfe6f381d7df9b3ec4cb025d2d"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/radio_receipt_tests.rs",
+      "bytes": 12885,
+      "sha256": "9c6f84fae4aa7e9521216825c262e42cc66ca60a60971f953582d4adfb4c340b"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/radio_receipt_wire.rs",
+      "bytes": 6269,
+      "sha256": "c5cc7e4e9b714dce1ebc4766729d31755e63eea9481c74324d5a3a0ed70031b5"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record.rs",
+      "bytes": 1812,
+      "sha256": "c42eed70b30801683764d0d47a774f68eee66f6586725951e44f58945c3578f3"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record_tests.rs",
+      "bytes": 9212,
+      "sha256": "97b29f325baf2e3629212d9e04b39ddbebedfbe500772896b4b0512f274ad81c"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/revocation.rs",
+      "bytes": 6364,
+      "sha256": "57dd62b07e4a43d1432d7706d3170e590f2d2e463208f86325137ae626d7b2b1"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/revocation_tests.rs",
+      "bytes": 6025,
+      "sha256": "2bd6aa9f1889a406edea73d9e2b4a165ecf27cee7ab8745b60a22fd7c660323d"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/sidecar_attestation.rs",
+      "bytes": 8349,
+      "sha256": "8e9ada743050c36d042c21b9d5df39321dc0db8b66364e283c89e8090c831687"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/sidecar_attestation_tests.rs",
+      "bytes": 2737,
+      "sha256": "1602c5fd43017d07f5c4fddf1b303458f1e3df3f3423713a1634f9a5cb64b36a"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/signed_evidence.rs",
+      "bytes": 16437,
+      "sha256": "dfa2e9053e549f06b6ebef297d51663411ec4191ab17ebc04d4cae2d83f7c12c"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/signed_evidence_tests.rs",
+      "bytes": 9337,
+      "sha256": "01952e3186780ffc01ad46ec82bd81b54a0a134f970de65e54f63fb893ec34ea"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/signed_evidence_wire.rs",
+      "bytes": 9220,
+      "sha256": "7fe91fe28e14ae1fb322bba1b6349fad55be713c181725b68f5d96db59c8f3c3"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/signed_scope.rs",
+      "bytes": 11194,
+      "sha256": "133e4d7bb7afd32a614cfd494a8a3edfcd39355d2eeb00d5f0fa7a591c320413"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/signed_scope_tests.rs",
+      "bytes": 7363,
+      "sha256": "cc23e841a1651fcb5f370e909bfa626a927dcdf355a678760ec08182857d166b"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/tests.rs",
+      "bytes": 4865,
+      "sha256": "c0adb952103e6a677abadd802887195ec9c43a8a9d2020d3d5208c5aec1d6dbe"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/uncertainty.rs",
+      "bytes": 21829,
+      "sha256": "a9345bd702c9b3192cbd6e7822f532e50c6e8138a16b0a9da803907e9732b71a"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/uncertainty_tests.rs",
+      "bytes": 9437,
+      "sha256": "a1900d4f2294ee630de1fe8985398049d941bc3b082f5975455cb2a8218fedcd"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/container/assemble.rs",
+      "bytes": 4401,
+      "sha256": "e836ddf66f2882eb77edf88ff1b15bb4368a13f2db4e497a82464c0e93757b74"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/container/mod.rs",
+      "bytes": 1637,
+      "sha256": "39bb8a20bc90d70547ef0e10d37e4112183f561aa73bb3634bb013022944a3f5"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/container/pack.rs",
+      "bytes": 3225,
+      "sha256": "2bc2b8991301a79c46b6ea58b2226b90d3695daad3b63ad76b11249a32234c12"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/container/registration.rs",
+      "bytes": 4999,
+      "sha256": "d4d1f27bc290631a993707c0248e5afadc669c8be61b19e920097a0f6598cfa1"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/container/tests.rs",
+      "bytes": 10104,
+      "sha256": "f80a631ab0ae5a93b7861a851c953b664aa44008a7b66b7763886526f6304803"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/container/view.rs",
+      "bytes": 5609,
+      "sha256": "4413572d12856c348e9492895978b24d73b14011c8e573e67ff7f0c5338a8c99"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/chain.rs",
+      "bytes": 6172,
+      "sha256": "e295d1326082922f35fca783c2a94a507ef95820691e17b4e228356d5b17bcb0"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/chain_tests.rs",
+      "bytes": 3061,
+      "sha256": "c59bf6711e296e3114b16c4f08e53f770b9b2b704dc726bd6d5584fd9ffa54d5"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/local_head.rs",
+      "bytes": 10941,
+      "sha256": "5853c083f779c50260b0f90613bd87c7f38d86fe230399d556a88dc2db13ffc2"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/local_head_adapter.rs",
+      "bytes": 4287,
+      "sha256": "23eb0d89de4a477b6f0857d7dbda6079e41e0b1a7204109f3298b0c1aad35d03"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/local_head_adapter_tests.rs",
+      "bytes": 2746,
+      "sha256": "7621e165a23c5db442f5e73fd5dc10c689a684ebe7d75fd97f4ff149ef342979"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/local_recovery.rs",
+      "bytes": 5559,
+      "sha256": "2bceac0d020e8878f90504ac4c22b2c2f4ec70e2395a75c442fad86077e1a850"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/local_recovery_tests.rs",
+      "bytes": 3443,
+      "sha256": "4f994a92f8767704639c8e1dafeb046fabeb699a08ffc3f95ccaed75696c8447"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/mod.rs",
+      "bytes": 3672,
+      "sha256": "49f6b422c75d3a01c1b37cbccc781f6d6f84f80e1ee57393306e19cf6260fbf2"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/open_checked.rs",
+      "bytes": 1824,
+      "sha256": "5a0d77488fcadec7b619e49e30f29b3bcffe9181643d3968befd5fda1fad28b1"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/publish.rs",
+      "bytes": 3052,
+      "sha256": "bbee644bc45d5a101f2c20109e64930379ab140f127aeaa426e02943c9802c46"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/quota.rs",
+      "bytes": 6688,
+      "sha256": "73b46e1344f493e85993d22310b45b96d791319633f146d6bc0537b65bc316e6"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/read.rs",
+      "bytes": 3226,
+      "sha256": "915b23987185e6a7f8035e438324d9a3edad8bd15dbfc3dbe821408e27235bc0"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/recovery.rs",
+      "bytes": 6491,
+      "sha256": "64ea136bd62739dcf34de29abe99de2a457a440a50925e3cf070d2c8f20a5790"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/recovery_tests.rs",
+      "bytes": 7484,
+      "sha256": "91ca310706678f7e1c057716b6dca185d5b3b75db0d84d730fc8c78d23736bc7"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/tests.rs",
+      "bytes": 5314,
+      "sha256": "595e829f6b16af3ca8a238bf3711b1bcfb63a6694ef7ca772f88ccad315e6096"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/quin_index/encode.rs",
+      "bytes": 3910,
+      "sha256": "bb85863d8b351270b9117467df171c924fdf6c94c1466c6247d2f0c5410684e7"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record/decode.rs",
+      "bytes": 3816,
+      "sha256": "f3cf73b47ba06c41e2e6d722c40af4d27a8f605f496c5dd2732f39a271d9fa38"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record/decode_tests.rs",
+      "bytes": 3941,
+      "sha256": "bd6bc36819d332a6fe181c88fff2893b32c207ce5b62b5cc0a7f19edc28fbeb1"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record/encode.rs",
+      "bytes": 8002,
+      "sha256": "c2f8a83f306965535401a3f29cafe8f2d3795451ebae2c981cba1d880ff43047"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record/quin_link_tests.rs",
+      "bytes": 3776,
+      "sha256": "3dfb06aaa5f484b4af20d84446f5fa3aa42757853f2c14c099259da6ec28a2f0"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/record/types.rs",
+      "bytes": 10797,
+      "sha256": "9de0cab84d0bdfd5c101ee9f748bfccac543a465d9e77ee9666ac7321993f924"
+    },
+    {
+      "path": "crates/qualia-core-db/src/sensing/local_custody/quota/tests.rs",
+      "bytes": 8178,
+      "sha256": "066589cf0e3d1737fd6145a08cbb275c613e9d2cc963875b7112c62253faa752"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/Cargo.toml",
+      "bytes": 641,
+      "sha256": "adcc3fd79d59e30f8050628b46da8a8e97d00597eede62ef598989d847a34f15"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/lib.rs",
+      "bytes": 7729,
+      "sha256": "358a3c0b192e34277c5df435706e33265fc7ec3ea2bcaf0b76eccaaad2809f21"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/local_publish.rs",
+      "bytes": 9595,
+      "sha256": "8a576a0c74e104f461b8628ebdecfc98c098995b8292acea5ad5beaa56f48696"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/nfc.rs",
+      "bytes": 3239,
+      "sha256": "59e115a54e0cab1a60a06ffcde13c4cec93cb7a63c4c7b649c54a1ab3345adcd"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/nfc_tests.rs",
+      "bytes": 5620,
+      "sha256": "812e7df775bf80c95cf2984b748099a82f88846fd8bbb3583237c1e31aff6333"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/publish_store.rs",
+      "bytes": 10580,
+      "sha256": "dabff145b61fcb64902d900a04a8d940cc7518848f12ead03f52a822224e0ad7"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/radio.rs",
+      "bytes": 9931,
+      "sha256": "043fc6bbc52f6fd41c3a6f77b1e78d024afe0b88a2c6a89bbd0ff5aee2e0e3fd"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/read_store.rs",
+      "bytes": 3195,
+      "sha256": "871faf7264a59ce903e36e696744b3190803b624e46e930df4a3754820433884"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/store_receipt.rs",
+      "bytes": 4519,
+      "sha256": "6499a56d715fab02202da44c55965a388f5e3ee6b5c4c6d734e6eea90d517434"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/container_custody/mod.rs",
+      "bytes": 716,
+      "sha256": "08284b6f4db53363efe9395322d710b48ea5af17629134ac4fd8eb2ea6ec6272"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/container_custody/publish.rs",
+      "bytes": 1724,
+      "sha256": "0acf095719bee83443ac4f1be87134e9e5a975e9290b24458f01515680463c49"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/container_custody/read.rs",
+      "bytes": 1876,
+      "sha256": "a1f072fc236cf432a7b1893dfaaaa377608bac6b4ae12aaf4614d276dc954e2f"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/container_custody/recovery.rs",
+      "bytes": 4106,
+      "sha256": "fc0ecb4993172f3b0b16684a93dece124292c794eaeb48337b9498b8a3ecbbe1"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/container_custody/selection.rs",
+      "bytes": 1833,
+      "sha256": "6f17fb9d5cd17d7913b5d7fd5ce11c551572d04ad967c3e910fa07adea7d993d"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/container_custody_tests.rs",
+      "bytes": 8833,
+      "sha256": "9e7cb6ffc6f0b4319a7ecb74e4bfdb12aad7b11b83017e45d7c80e1e5ecd4674"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/container_payload_budget_tests.rs",
+      "bytes": 4369,
+      "sha256": "a1e143a5ed09d50911392a3b92738c5b2e78c073f96dbed948b66bd3c3b394de"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/container_recovery_tests.rs",
+      "bytes": 4489,
+      "sha256": "f2b1489cb7d02befd404eaffe4f04fd14b9bcbd559d3f0c37570fd68e66d5050"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/cursor.rs",
+      "bytes": 1721,
+      "sha256": "e5ef48d3a05983b23be285e3365f49a40abf4290c2ffafcb58f7908516c202de"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/decode.rs",
+      "bytes": 9304,
+      "sha256": "af29af0c51abfcf0ed07f67b0bb0c5bea1192965fb13598ec6cb5b440381ebf4"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/encode.rs",
+      "bytes": 7079,
+      "sha256": "3aac96cd0566461588954ad3452824ce25abdb332b541a5b712f4823b5bca3b5"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/mod.rs",
+      "bytes": 1433,
+      "sha256": "41c745057c50131e494a8c118f2ed0078f20ea537ce04b83e821f5ce3d44f9d8"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/read_store_tests.rs",
+      "bytes": 6611,
+      "sha256": "e519189ae6d36e0c79801df81f74714e3786876db392cd507b15368e1671cb67"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/tests.rs",
+      "bytes": 24507,
+      "sha256": "fea6f21d086f11b2717ebedd70cb6cfe5ec7fbba28839a5290988038dc5f9d49"
+    },
+    {
+      "path": "crates/qualia-etalon-sensing-bridge/src/sidecar/tests/quota_publication.rs",
+      "bytes": 4454,
+      "sha256": "103d074c6fe016e74319f1d31c6a069904b167f6be23d116733098ca46663487"
+    },
+    {
+      "path": "applications/sensing-inspect/Cargo.toml",
+      "bytes": 844,
+      "sha256": "4b7a4662ea30c506cff9258ff60d9eb508478bff5d11d923bf7ab2a4ec6e0344"
+    },
+    {
+      "path": "applications/sensing-inspect/distribution.json",
+      "bytes": 1722,
+      "sha256": "236c5e74111484f28d5c5b9fda78d89dabb9867e7f6cba06afed9d9c46452a56"
+    },
+    {
+      "path": "applications/sensing-inspect/package.ps1",
+      "bytes": 6094,
+      "sha256": "c3d97f3b4f0d7e5aa93a694e2dcf05b72958290c82f157860613f751204ddf45"
+    },
+    {
+      "path": "applications/sensing-inspect/README.md",
+      "bytes": 7002,
+      "sha256": "8e7f605389f26a2edd5e89e0d14572a497515075bda71032b53d9993ff577f70"
+    },
+    {
+      "path": "applications/sensing-inspect/verify-package.ps1",
+      "bytes": 7818,
+      "sha256": "0070d90749ad9290f39bdbbbcc8cfda09e863eeaab58c4d4c3aa57c0fb9f998c"
+    },
+    {
+      "path": "applications/sensing-inspect/src/cli.rs",
+      "bytes": 2624,
+      "sha256": "2d3b29ad03986f688fdb1e068400839654197459b6208e75c12e03426d614ab8"
+    },
+    {
+      "path": "applications/sensing-inspect/src/lib.rs",
+      "bytes": 108,
+      "sha256": "868b852c6fa0b028004b46d1a359233f383aa2570501ac07fed013388c4aee9d"
+    },
+    {
+      "path": "applications/sensing-inspect/src/main.rs",
+      "bytes": 359,
+      "sha256": "aec4330a550567e3f50e993260bbf83fd395f5dafb348b916283d52535dedd56"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/binding.rs",
+      "bytes": 2671,
+      "sha256": "6817c5ec2fc673f0f61ae208ebeded7dbf0fca1ba5a629f6af6d42e107d6bc0e"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/index.rs",
+      "bytes": 1759,
+      "sha256": "a9811c2d0f03d37c4758fff65f62b19fddbd889cf428eb4b8e98bdb129c4a5c4"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/local_file.rs",
+      "bytes": 4703,
+      "sha256": "81c47c2ca166141b875bd135c69d32586321153c356a3e719535af7813069d61"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/mod.rs",
+      "bytes": 4526,
+      "sha256": "53baa4eaa92e779b1e3c38d5a11012758f9191a2d08ea270848fb65803e13a2d"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/release.rs",
+      "bytes": 9319,
+      "sha256": "761619b046885329a5b33cf1e4f7b420a3badcc3d4d2fdaf03bc6ae879ee4a5b"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/release_file_tests.rs",
+      "bytes": 6454,
+      "sha256": "8f81387d801f499ad85300435ce10defa77b49c464377046fa39e4e98f037586"
+    },
+    {
+      "path": "applications/sensing-inspect/src/sense/index/tests.rs",
+      "bytes": 4728,
+      "sha256": "088857fd4d5ab0dcb4aea2c685f88a3648560523ecb1ce1e895979abcae72343"
+    },
+    {
+      "path": "docs/plans/sensing-astra-review-2026-10-31.md",
+      "bytes": 7337,
+      "sha256": "4a22d363f9c30ee18a23ce80ff29bd80b168503dee0d2242182f792b70d8871f"
+    },
+    {
+      "path": "docs/plans/sensing-cli-inspection.md",
+      "bytes": 4814,
+      "sha256": "8120b53d568d5e70619357ec9c9b5cd86856319f0a9ab5b438f42600c678825e"
+    },
+    {
+      "path": "docs/plans/sensing-contracts-round-01-PROGRESS-LOG.md",
+      "bytes": 63242,
+      "sha256": "db4cb25c9bef4507200ee90eb9b0666af985f672bf3d734e76cfa05e5e2f41c5"
+    },
+    {
+      "path": "docs/plans/sensing-final-integration-source-review.md",
+      "bytes": 7155,
+      "sha256": "b6a1bb7b35c4f637db245c8a447f90928ad95f34626204507790357167c8fb6d"
+    },
+    {
+      "path": "docs/plans/sensing-implementation-readiness.md",
+      "bytes": 7344,
+      "sha256": "160ecf16dcb3bea8d812e0f357f439dc7508dacdded4a318819feeee46065f59"
+    },
+    {
+      "path": "docs/plans/sensing-native-v1-profile.md",
+      "bytes": 2071,
+      "sha256": "bec8087892a56d6d903d8b1b5f7f58220d4108651539daa0447d67c148a96d0d"
+    },
+    {
+      "path": "docs/plans/sensing-sidecar-storage-boundary.md",
+      "bytes": 4146,
+      "sha256": "8bb08921893fd1855f51d0aedc34ca09c2f93d26c78cb3c9817a87d95320094d"
+    }
+  ]
+}

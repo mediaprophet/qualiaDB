@@ -91,7 +91,21 @@ pub fn bezier_eval(control: &[Point3], t: f64) -> Result<Point3, CadError> {
     if control.is_empty() || !t.is_finite() {
         return Err(CadError::InvalidInput);
     }
-    let mut tmp = control.to_vec();
+    let mut tmp = vec![Point3::default(); control.len()];
+    bezier_eval_into(control, t, &mut tmp)
+}
+
+/// The same De Casteljau owner with caller-owned scratch. Repeated curve
+/// sampling can keep fixed scratch instead of allocating for every sample.
+pub fn bezier_eval_into(control: &[Point3], t: f64, scratch: &mut [Point3]) -> Result<Point3, CadError> {
+    if control.is_empty() || !t.is_finite() {
+        return Err(CadError::InvalidInput);
+    }
+    if scratch.len() < control.len() {
+        return Err(CadError::OutputTooSmall { required: control.len() });
+    }
+    let tmp = &mut scratch[..control.len()];
+    tmp.copy_from_slice(control);
     let t = t.clamp(0.0, 1.0);
     for r in 1..control.len() {
         for i in 0..control.len() - r {

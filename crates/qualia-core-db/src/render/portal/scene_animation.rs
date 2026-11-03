@@ -11,6 +11,7 @@ pub(crate) struct SceneActor {
 
 #[derive(Default)]
 pub(crate) struct SceneAnimation {
+    pub(crate) external_controlled: bool,
     pub(crate) actors: Vec<SceneActor>,
     pub(crate) resident_bytes: usize,
     pub(crate) compact_gpu: bool,
@@ -101,6 +102,9 @@ impl QualiaPortal {
         if !dt_ms.is_finite() || dt_ms < 0.0 {
             return Err(JsValue::from_str("invalid animation frame duration"));
         }
+        // A source-bound native MotionPlayer supplies complete posed streams.
+        // It must not be overwritten by this generic SKL1 playback owner.
+        if self.scene_animation.external_controlled { return Ok(()); }
         let dt = (dt_ms as f64 * 0.001).min(1.0);
         let empty = ActivityCue {
             token: 1,

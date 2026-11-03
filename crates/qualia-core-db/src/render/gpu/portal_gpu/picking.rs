@@ -98,7 +98,10 @@ impl PortalGpu {
         }
 
         let tensor_bind = self.projector_tensor_bind.as_ref();
-        let tensor_count = self.tensor_node_count;
+        // Static semantic-node positions do not follow externally authored skin
+        // frames. Keep their data, but pick only the actual posed mesh until a
+        // new mesh upload leaves this external-control lifecycle.
+        let tensor_count = if self.source_motion.externally_controlled() { 0 } else { self.tensor_node_count };
         let mesh_count = self.visible_mesh_instances.count();
         self.pick_semantic_count = if self.mesh.is_some() {
             picking::snapshot_semantic_ids(
