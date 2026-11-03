@@ -9,6 +9,13 @@
 
 Classification:
 
+Migration note (2026-11-04): the paths and line numbers below describe the
+explicit inspected snapshot above. Current `inference/ggml_quants/mod.rs`
+re-exports the canonical Etalon codecs; `ggml_quants/descriptor.rs` retains
+Qualia tensor-index slicing and type-158 container routing. The P64 compiler
+is now directory-backed at `q42/p64_weight/compiler/mod.rs`, with Verbatim
+serialization delegated to Etalon and other conversion policies retained.
+
 | Class | Meaning |
 |---|---|
 | **Live product** | Reached by native or WASM decode/prefill of a Q4_K or Q4_K_SOA checkpoint |

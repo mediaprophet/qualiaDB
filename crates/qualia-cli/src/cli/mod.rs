@@ -1,5 +1,6 @@
 mod app;
 mod evaluate;
+mod inference_policy;
 mod llm;
 mod misc;
 mod qpu;
@@ -10,6 +11,7 @@ mod webizen;
 
 pub use app::AppAction;
 pub use evaluate::EvaluateModality;
+pub use inference_policy::InferencePolicyAction;
 pub use llm::LlmAction;
 pub use misc::*;
 pub use qpu::QpuAction;
@@ -56,6 +58,13 @@ pub enum ImportProgressFormat {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    /// Explicit native Sentinel policy and actor setup for an operator-selected profile.
+    InferencePolicy {
+        #[arg(long)]
+        profile: PathBuf,
+        #[command(subcommand)]
+        action: InferencePolicyAction,
+    },
     /// Manage, install, inspect, and uninstall QApp application packages (.qpkg)
     App {
         #[command(subcommand)]

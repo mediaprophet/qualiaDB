@@ -47,5 +47,8 @@ csv = { workspace = true }
 atoi = { workspace = true }
 spargebra = "0.4"
 
+[dev-dependencies]
+tempfile = { workspace = true }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = "0.7.12"

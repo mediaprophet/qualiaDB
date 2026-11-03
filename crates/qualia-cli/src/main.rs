@@ -48,6 +48,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match &cli.command {
+        Commands::InferencePolicy { profile, action } => {
+            handlers::inference_policy::handle(profile, action)?;
+        }
         Commands::App { action } => {
             handlers::app::handle(action)?;
         }

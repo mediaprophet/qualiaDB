@@ -73,7 +73,7 @@ Comprehensive index of functionality for `inference`. This document serves as th
   - `impl AdapterMemoryInfo`
   - `fn available_local_bytes`
   - *(...and 17 more)*
-- 📄 `ggml_quants.rs`
+- 📁 `ggml_quants/` — Etalon codec re-exports, Qualia descriptor adapters and retained tests
   - `struct BlockQ6K`
   - `struct GgmlBlockLayout`
   - `fn ggml_block_layout`

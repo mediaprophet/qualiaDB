@@ -11,6 +11,8 @@ pub mod dashboard;
 pub mod domains;
 pub mod downloads;
 pub mod guardianship;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod inference_policy;
 pub mod jobs;
 pub mod mail;
 pub mod model;
@@ -35,6 +37,8 @@ pub use dashboard::*;
 pub use domains::*;
 pub use downloads::*;
 pub use guardianship::*;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference_policy::*;
 pub use jobs::*;
 pub use mail::*;
 pub use model::*;

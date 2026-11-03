@@ -16,6 +16,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added signed inference-policy and authenticated multi-identifier association foundations. Subject identity, identifier evidence, controller and policy installation authority remain distinct; normal decoder and browser acceptance integration is still pending.
+- Added explicit local `inference-policy` commands for protected-vault setup, signed project configuration, identifier login checks and policy installation/revocation. These commands do not install default policy or create an identity during ordinary login.
+- Moved the GGUF-to-P64 canonical layout/writer and portable GGML codecs to Etalon-backed compatibility modules, retaining legacy format transforms, descriptor routing and public imports.
+
 - Added `generate_with_validation_via_etalon` to retain shader validation reports while preserving the existing shader-only compatibility API.
 - Added fresh Windows/Linux NPU discovery with independent runtime/workload/execution states, and an optional OpenVINO plugin harness that selects an actual runtime NPU, disables CPU fallback and checks output plus provider execution evidence. Missing hardware is recorded as unverified execution.
 - Made CUDA opt-in in the portable default profile, upgraded optional vision adapters to ORT rc.15 with a shared environment owner and caller-owned environment loaders, and corrected NPU routing and iGPU zero-copy claims.

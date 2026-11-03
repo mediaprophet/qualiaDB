@@ -139,9 +139,10 @@ minimal-fast-build = []
 vibe = { workspace = true }
 qualia-cooperative-core = { workspace = true }
 qualia-inference-kernel = { workspace = true }
-etalon-model = { workspace = true }
+etalon-model = { workspace = true, features = ["ggml"] }
 etalon-resources = { workspace = true }
 etalon-inference = { workspace = true }
+etalon-inference-contract = { workspace = true }
 minicbor = { workspace = true, features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
 futures-channel = "0.3"

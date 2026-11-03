@@ -3,6 +3,7 @@
 mod admission;
 pub mod delegation;
 pub mod enrollment;
+pub mod inference;
 mod workflow;
 pub use workflow::{SourceReviewRequest, WorkflowEvidence};
 mod journal;
@@ -180,14 +181,8 @@ impl NativeAuthority {
         Ok(())
     }
     fn require_admission(&self, state: &State, now: u64) -> Result<(), String> {
-        let admission = &state.durable.admission.snapshot;
-        if state.reconciliation {
-            return Err("native source/authority reconciliation required".into());
-        }
-        if admission.revoked || !live(now, admission.valid_from_unix, admission.valid_until_unix) {
-            return Err("adopted project authority expired/revoked".into());
-        }
-        Ok(())
+        self.require_admission_checked(state, now)
+            .map_err(session::AuthenticatedLookupError::legacy)
     }
     fn view<T>(
         &self,
@@ -196,26 +191,9 @@ impl NativeAuthority {
         now: u64,
         operation: impl FnOnce(&HostAuthorityView<'_>) -> Result<T, String>,
     ) -> Result<T, String> {
-        self.require_admission(state, now)?;
-        if handle.owner != self.incarnation {
-            return Err("native authenticated session unavailable/foreign".into());
-        }
-        let session = state.session(handle)?;
-        if now >= session.expires {
-            return Err("native authenticated session expired".into());
-        }
-        session
-            .grants
-            .issue_permit(session.grant, session.binding, now, 1)
-            .map_err(|e| format!("native session grant denied: {e:?}"))?;
-        let subject = state
-            .durable
-            .admission
-            .snapshot
-            .subjects
-            .iter()
-            .find(|s| s.subject == session.subject)
-            .ok_or("signed native subject association missing")?;
+        let (session, subject) = self
+            .authenticated_lookup(state, handle, now)
+            .map_err(session::AuthenticatedLookupError::legacy)?;
         let identifiers: Vec<_> = subject
             .identifiers
             .iter()

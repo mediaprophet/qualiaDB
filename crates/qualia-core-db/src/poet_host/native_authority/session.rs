@@ -1,6 +1,77 @@
 use super::*;
 
+/// Same authentication checks/order as the legacy authoring view, with typed
+/// failures so the new inference owner can refuse without heap allocation.
+#[derive(Clone, Copy, Debug)]
+pub(super) enum AuthenticatedLookupError {
+    Reconciliation,
+    Admission,
+    Unavailable,
+    Expired,
+    MissingSubject,
+    Grant(crate::net::qdnf::errors::QdnfError),
+}
+impl AuthenticatedLookupError {
+    pub(super) fn legacy(self) -> String {
+        match self {
+            Self::Reconciliation => "native source/authority reconciliation required".into(),
+            Self::Admission => "adopted project authority expired/revoked".into(),
+            Self::Unavailable => "native authenticated session unavailable/foreign".into(),
+            Self::Expired => "native authenticated session expired".into(),
+            Self::MissingSubject => "signed native subject association missing".into(),
+            Self::Grant(error) => format!("native session grant denied: {error:?}"),
+        }
+    }
+}
+
 impl NativeAuthority {
+    pub(super) fn require_admission_checked(
+        &self,
+        state: &State,
+        now: u64,
+    ) -> Result<(), AuthenticatedLookupError> {
+        let admission = &state.durable.admission.snapshot;
+        if state.reconciliation {
+            return Err(AuthenticatedLookupError::Reconciliation);
+        }
+        if admission.revoked || !live(now, admission.valid_from_unix, admission.valid_until_unix) {
+            return Err(AuthenticatedLookupError::Admission);
+        }
+        Ok(())
+    }
+    pub(super) fn authenticated_lookup<'a>(
+        &self,
+        state: &'a State,
+        handle: &SessionHandle,
+        now: u64,
+    ) -> Result<(&'a Session, &'a SubjectAdmission), AuthenticatedLookupError> {
+        self.require_admission_checked(state, now)?;
+        if handle.owner != self.incarnation {
+            return Err(AuthenticatedLookupError::Unavailable);
+        }
+        let session = state
+            .sessions
+            .iter()
+            .flatten()
+            .find(|s| &s.handle == handle)
+            .ok_or(AuthenticatedLookupError::Unavailable)?;
+        if now >= session.expires {
+            return Err(AuthenticatedLookupError::Expired);
+        }
+        session
+            .grants
+            .issue_permit(session.grant, session.binding, now, 1)
+            .map_err(AuthenticatedLookupError::Grant)?;
+        let subject = state
+            .durable
+            .admission
+            .snapshot
+            .subjects
+            .iter()
+            .find(|s| s.subject == session.subject)
+            .ok_or(AuthenticatedLookupError::MissingSubject)?;
+        Ok((session, subject))
+    }
     pub fn begin_session(
         &self,
         subject: &str,

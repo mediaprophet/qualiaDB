@@ -15,9 +15,48 @@ pub fn init_app_state() -> Arc<AppState> {
     let meta = app_meta_dir();
     let _ = std::fs::create_dir_all(&meta);
     let meta_str = meta.to_string_lossy().into_owned();
-    let state = Arc::new(AppState {
+    let tax_suite = load_suite_from_disk(&config.storage_path);
+    let vault = qualia_core_db::key_vault::KeyVault::load_or_generate(&meta_str)
+        .unwrap_or_else(|e| panic!("KeyVault init failed ({meta_str}): {e}"));
+    let state = build_app_state(config, vault, tax_suite);
+    APP_STATE.set(state.clone()).ok();
+    // Person ≠ machine: ensure person principal + local apparatus exist early.
+    // Failures are non-fatal at boot (e.g. read-only meta dir); setup/finish retries.
+    let _ = crate::identity_plane::ensure_local_apparatus(None);
+    state
+}
+
+/// Attach an explicitly opened native vault without creating identity, keys,
+/// directories, fleet records or services. Existing application state is never
+/// replaced. The native operator selects and opens the vault before this call.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn init_inference_host_state(
+    vault: qualia_core_db::key_vault::KeyVault,
+) -> Result<Arc<AppState>, String> {
+    if vault.is_locked() {
+        return Err("An explicitly opened unlocked vault is required".into());
+    }
+    if APP_STATE.get().is_some() {
+        return Err("Application state is already initialized; use its existing host".into());
+    }
+    let state = build_app_state(
+        AgentConfig::default(),
+        vault,
+        TaxRecipientSuite::default_cooperative(),
+    );
+    APP_STATE
+        .set(Arc::clone(&state))
+        .map_err(|_| "Application state was initialized concurrently")?;
+    Ok(state)
+}
+fn build_app_state(
+    config: AgentConfig,
+    vault: qualia_core_db::key_vault::KeyVault,
+    tax_suite: TaxRecipientSuite,
+) -> Arc<AppState> {
+    Arc::new(AppState {
         config: Mutex::new(config.clone()),
-        tax_suite: Mutex::new(load_suite_from_disk(&config.storage_path)),
+        tax_suite: Mutex::new(tax_suite),
         daemon_running: Arc::new(Mutex::new(false)),
         nym_relay_active: Arc::new(AtomicBool::new(false)),
         stark_prover_active: Arc::new(AtomicBool::new(false)),
@@ -30,17 +69,9 @@ pub fn init_app_state() -> Arc<AppState> {
         delegation_rules: Arc::new(Mutex::new(Vec::new())),
         front_doors: Arc::new(Mutex::new(Vec::new())),
         installed_qapps: Arc::new(Mutex::new(Vec::new())),
-        key_vault: Arc::new(Mutex::new(
-            qualia_core_db::key_vault::KeyVault::load_or_generate(&meta_str)
-                .unwrap_or_else(|e| panic!("KeyVault init failed ({meta_str}): {e}")),
-        )),
+        key_vault: Arc::new(Mutex::new(vault)),
         download_events: tokio::sync::broadcast::channel(100).0,
-    });
-    APP_STATE.set(state.clone()).ok();
-    // Person ≠ machine: ensure person principal + local apparatus exist early.
-    // Failures are non-fatal at boot (e.g. read-only meta dir); setup/finish retries.
-    let _ = crate::identity_plane::ensure_local_apparatus(None);
-    state
+    })
 }
 
 #[derive(Clone, Serialize)]

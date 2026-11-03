@@ -545,15 +545,17 @@ P64 version.
 ## 17. Implementation references
 
 - P64 reader, writer, transcoders, roles, CRCs, and validation:
-  `crates/qualia-core-db/src/q42/p64_weight.rs`
+  `crates/qualia-core-db/src/q42/p64_weight/mod.rs` (Qualia compatibility and semantic adapters),
+  with canonical format mechanics in Etalon `crates/etalon-model/src/p64/`
 - GGML type sizes and dequantization:
-  `crates/qualia-core-db/src/inference/ggml_quants.rs`
+  `crates/qualia-core-db/src/inference/ggml_quants/mod.rs` (compatibility re-exports),
+  with canonical codecs in Etalon `crates/etalon-model/src/ggml/`
 - Ternary codec:
   `crates/qualia-core-db/src/inference/ternary.rs`
 - Tensor-name to role mapping:
   `crates/qualia-core-db/src/inference/tensor_roles.rs`
 - Embedded tokenizer:
-  `crates/qualia-core-db/src/inference/gguf_sharder.rs`
+  `crates/qualia-core-db/src/inference/gguf_sharder/mod.rs`
 - 10D manifold record:
   `crates/qualia-core-db/src/modalities/manifold.rs`
 - Q42/P64 architectural boundary:

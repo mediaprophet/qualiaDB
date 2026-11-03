@@ -50,6 +50,8 @@ pub mod github;
 pub mod guardianship;
 pub mod handshake;
 pub mod identity_plane;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod inference_policy;
 pub mod incapacity_switch;
 pub mod inference_backend;
 pub mod introduction;

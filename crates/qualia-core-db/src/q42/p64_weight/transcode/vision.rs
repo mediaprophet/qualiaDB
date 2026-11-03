@@ -1,5 +1,4 @@
 use super::*;
-use crate::container_10d::crc32c::crc32c;
 
 pub const P64_ROLE_VISION_CONV2D: u16 = 0x80;
 pub const P64_ROLE_VISION_BN: u16 = 0x81;

@@ -1,6 +1,7 @@
 pub mod app;
 pub mod bench;
 pub mod evaluate;
+pub mod inference_policy;
 pub mod llm;
 pub mod misc;
 pub mod qpu;
