@@ -7,9 +7,12 @@
 #![recursion_limit = "256"]
 
 pub mod authoring;
+pub mod contextual_assertion;
+pub mod contribution_lifecycle;
 pub mod finance;
 pub mod projects;
 pub mod record;
+pub mod work_graph;
 
 pub mod agency_delegation;
 pub mod agency_domain;
@@ -20,9 +23,12 @@ pub mod taxonomy;
 pub mod trigger;
 pub mod work_item;
 
+pub use contextual_assertion::*;
+pub use contribution_lifecycle::*;
 pub use finance::*;
 pub use projects::*;
 pub use record::{
     DurationBridge, EpistemicStatus, EvidenceType, InstantBridge, NQuin, RecordEnvelope,
     SensitivityClass,
 };
+pub use work_graph::*;

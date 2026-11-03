@@ -38,7 +38,7 @@ fn n3_files(dir: &Path) -> Vec<PathBuf> {
     v
 }
 
-const SPINE: [&str; 7] = [
+const SPINE: [&str; 8] = [
     "selfhood.n3",
     "values.n3",
     "agency.n3",
@@ -46,6 +46,7 @@ const SPINE: [&str; 7] = [
     "tiering.n3",
     "policy.n3",
     "humanitarian-ict.n3",
+    "license-rights.n3",
 ];
 const BOILERPLATE: [&str; 5] = [
     "Download: PDF",
@@ -146,4 +147,50 @@ fn validate_core_ontologies() {
         );
     }
     eprintln!("validate_core_ontologies: PASS — no hard violations.");
+}
+
+#[test]
+fn license_rights_ontology_parses_into_nquins_and_enforces_shacl_non_thing() {
+    use qualia_core_db::modalities::logic::n3_parser::{N3Event, N3Parser, Term};
+    use qualia_core_db::{q_hash, NQuin};
+
+    let path = core_dir().join("license-rights.n3");
+    let content = fs::read_to_string(&path).expect("license-rights.n3 must be readable");
+
+    assert!(content.contains("hro:CreatorProtectionPolicyShape"));
+    assert!(content.contains("hro:LedgerPrivacyShape"));
+    assert!(content.contains("hro:NoAutonomousAdjudicationShape"));
+    assert!(!content.contains("rdfs:subClassOf owl:Thing"));
+    let forbidden_term = format!("{}{}", "sover", "eign");
+    assert!(!content.to_ascii_lowercase().contains(&forbidden_term));
+
+    let term_hash = |term: Term<'_>| match term {
+        Term::Uri(s) | Term::Literal(s) | Term::Variable(s) | Term::Formula(s) => q_hash(s),
+    };
+    let mut quins = Vec::new();
+    let mut parser = N3Parser::new(&content);
+    parser
+        .parse_all(|event| {
+            if let N3Event::StaticTriple(t) = event {
+                let s = term_hash(t.subject);
+                let p = term_hash(t.predicate);
+                let o = term_hash(t.object);
+                let ctx = 0x4852_4F00u64;
+                quins.push(NQuin {
+                    subject: s,
+                    predicate: p,
+                    object: o,
+                    context: ctx,
+                    metadata: 0,
+                    parity: NQuin::calculate_parity(s, p, o, ctx, 0),
+                });
+            }
+            Ok(())
+        })
+        .expect("license-rights.n3 must parse through N3Parser");
+    assert!(
+        quins.len() >= 60,
+        "expected >= 60 NQuins from license-rights.n3, got {}",
+        quins.len()
+    );
 }

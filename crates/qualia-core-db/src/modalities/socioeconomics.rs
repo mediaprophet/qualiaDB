@@ -121,12 +121,6 @@ pub fn liquidity_after(initial: u64, inflow: u64, drain_percent: u64, steps: u32
 }
 
 // ─── Usury circuit-breaker (multi-agent token ceiling) ────────────────────────────
-//
-// MULTI_AGENT_PROTOCOL.md's resource-governance guard: an agent's projected spend may
-// run up to — but not past — an agreed budget plus a small overage; breaching the
-// ceiling is *usurious* and the operation is refused (`ERROR_USURY_LIMIT_EXCEEDED`).
-// A hard anti-extraction cap in the same family as the capped ROI and the E-ROI floor
-// above, not a soft warning. Deterministic saturating integer arithmetic.
 
 /// Default permitted overage above an agreed budget, in percent — the spec's **110%**
 /// token ceiling is `budget × (1 + 10/100)`.
@@ -158,8 +152,7 @@ pub struct UsuryError {
 }
 
 /// Gate a projected spend against the usury ceiling — `Ok(())` while at/under the
-/// ceiling, `Err(UsuryError)` once it is breached. The fiduciary circuit-breaker an
-/// agent's resource declaration is checked through before the spend is admitted.
+/// ceiling, `Err(UsuryError)` once it is breached.
 #[inline]
 pub fn check_usury(
     projected_spend: u64,
@@ -209,9 +202,6 @@ pub const METADATA_LANE_PERMISSIVE_COMMONS: u64 = 0b01u64 << 61;
 pub const METADATA_LANE_OBLIGATION_RECOVERY: u64 = 0b10u64 << 61;
 
 /// Encode a persistent `CommonsObligation` pool checkpoint as a 48-byte [`crate::NQuin`] for `.q42j`.
-///
-/// Automatically transitions `metadata[61..62]` to `EnforcePermissiveCommons` (`0b01`) the instant
-/// `is_commons_discharged(accumulated_pool_cents, capped_cost_cents)` evaluates to `true`.
 #[inline]
 pub fn encode_obligation_pool_quin(
     asset_did_hash: u64,
@@ -222,7 +212,6 @@ pub fn encode_obligation_pool_quin(
 ) -> crate::NQuin {
     let prop_hash = crate::q_hash("https://ns.webcivics.net/economics#obligationPoolState");
     let predicate = (prop_hash << 8) | (OP_COMMONS_OBLIGATION_POOL as u64);
-    // Inline integer tag 0b001 << 60 per resolver.rs
     let object = (0b001u64 << 60) | (accumulated_pool_cents & 0x0FFF_FFFF_FFFF_FFFF);
     let discharged = is_commons_discharged(accumulated_pool_cents, capped_cost_cents);
     let lane_bits = if discharged {
@@ -279,6 +268,78 @@ pub fn replay_obligation_pool_journal(
     best_clock.map(|_| (latest_pool, latest_cost, discharged))
 }
 
+// ─── Zero-Heap Basis-Point Pool Clearing (`Pool Funded != Contributor Paid`) ─────
+
+/// Result of zero-heap basis-point pool clearing (`QUALIADB-IMPLEMENTATION-ROADMAP.md` §13).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PoolClearingResult {
+    pub gross_receipt_cents: i64,
+    pub operating_reserve_cents: i64,
+    pub fiduciary_fee_cents: i64,
+    pub obligation_pool_allocation_cents: i64,
+    pub pool_funded_cents: i64,
+    pub settled_verified_cents: i64,
+    pub remaining_obligation_cents: i64,
+    /// `true` only when `settled_verified_cents + waived_cents >= target_obligation_cents`.
+    /// `pool_funded_cents >= target_obligation_cents` alone NEVER sets this to `true`.
+    pub contributor_obligations_discharged: bool,
+}
+
+#[inline]
+fn div_round_bankers_u128(n: u128, d: u128) -> u128 {
+    let q = n / d;
+    let r = n % d;
+    let twice_r = r * 2;
+    if twice_r > d || (twice_r == d && (q & 1) == 1) {
+        q + 1
+    } else {
+        q
+    }
+}
+
+/// Zero-heap integer basis-point clearing (`clear_pool_obligations_bps`) verifying
+/// `Pool Funded != Contributor Paid` conservation (`Gross = O + F + A`).
+#[inline]
+pub fn clear_pool_obligations_bps(
+    gross_receipt_cents: i64,
+    operating_reserve_bps: u32,
+    fiduciary_fee_bps: u32,
+    prior_pool_funded_cents: i64,
+    target_obligation_cents: i64,
+    settled_verified_cents: i64,
+    waived_obligation_cents: i64,
+) -> Option<PoolClearingResult> {
+    if gross_receipt_cents < 0
+        || prior_pool_funded_cents < 0
+        || target_obligation_cents < 0
+        || settled_verified_cents < 0
+        || waived_obligation_cents < 0
+        || operating_reserve_bps.saturating_add(fiduciary_fee_bps) > 10_000
+    {
+        return None;
+    }
+    let gross_u = gross_receipt_cents as u128;
+    let o_cents = div_round_bankers_u128(gross_u * (operating_reserve_bps as u128), 10_000) as i64;
+    let f_cents = div_round_bankers_u128(gross_u * (fiduciary_fee_bps as u128), 10_000) as i64;
+    let a_cents = gross_receipt_cents.saturating_sub(o_cents).saturating_sub(f_cents);
+    let pool_funded_cents = prior_pool_funded_cents.saturating_add(a_cents);
+    let discharged_amount = settled_verified_cents.saturating_add(waived_obligation_cents);
+    let remaining_obligation_cents = (target_obligation_cents - discharged_amount).max(0);
+    let contributor_obligations_discharged =
+        target_obligation_cents > 0 && remaining_obligation_cents == 0;
+    Some(PoolClearingResult {
+        gross_receipt_cents,
+        operating_reserve_cents: o_cents,
+        fiduciary_fee_cents: f_cents,
+        obligation_pool_allocation_cents: a_cents,
+        pool_funded_cents,
+        settled_verified_cents,
+        remaining_obligation_cents,
+        contributor_obligations_discharged,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -287,90 +348,69 @@ mod tests {
     fn eroi_gates_thermodynamic_viability() {
         assert!((eroi(300, 100) - 3.0).abs() < 1e-6);
         assert_eq!(eroi(5, 0), 0.0);
-        // Viable iff E-ROI ≥ floor.
         assert!(eroi_viable(300, 100, 2.0));
         assert!(!eroi_viable(150, 100, 2.0), "net-extractive → refused");
     }
 
     #[test]
     fn recursive_royalty_tree() {
-        // 50% per generation: parent gets 50, grandparent 25, great-grandparent 12.
         assert_eq!(ancestor_royalty(100, 0, 50), 50);
         assert_eq!(ancestor_royalty(100, 1, 50), 25);
-        assert_eq!(ancestor_royalty(100, 2, 50), 12); // 100*.5*.5*.5 = 12.5 → 12 (integer)
-                                                      // The chain total over 3 generations: 50 + 25 + 12 = 87.
+        assert_eq!(ancestor_royalty(100, 2, 50), 12);
         assert_eq!(royalty_tree_total(100, 3, 50), 87);
     }
 
     #[test]
     fn multi_currency_and_tax() {
-        assert_eq!(convert_currency(100, 1_500_000), 150); // ×1.5
-        assert_eq!(convert_currency(100, 500_000), 50); // ×0.5
-        assert_eq!(apply_tax(10_000, 250), 250); // 2.5% of 10000
+        assert_eq!(convert_currency(100, 1_500_000), 150);
+        assert_eq!(convert_currency(100, 500_000), 50);
+        assert_eq!(apply_tax(10_000, 250), 250);
     }
 
     #[test]
     fn liquidity_ode_converges_to_steady_state() {
-        // inflow 100, drain 10%/step → steady state L* = 100 / 0.10 = 1000.
         let one = liquidity_step(0, 100, 10);
-        assert_eq!(one, 100); // 0 drained + 100 inflow
+        assert_eq!(one, 100);
         let settled = liquidity_after(0, 100, 10, 500);
-        assert!(
-            (settled as i64 - 1000).abs() <= 1,
-            "converges to inflow/drain = 1000, got {settled}"
-        );
-        // Draining a full pool with no inflow shrinks it.
+        assert!((settled as i64 - 1000).abs() <= 1);
         assert!(liquidity_after(1000, 0, 50, 5) < 1000);
     }
 
     #[test]
     fn roi_is_capped() {
-        // 1000 cost, asked-for 50% ROI but cap is 20% → cost = 1000 + 200 = 1200.
         assert_eq!(commons_cost(1000, 50, 20), 1200);
-        // Within cap → applied as-is.
         assert_eq!(commons_cost(1000, 10, 20), 1100);
     }
 
     #[test]
     fn royalty_scales_by_agent_category() {
-        // corporate 300% vs non-profit 50% of the same base.
         assert_eq!(royalty(100, 300), 300);
         assert_eq!(royalty(100, 50), 50);
     }
 
     #[test]
     fn usury_breaker_trips_past_the_110_percent_ceiling() {
-        // A 1000-token budget admits spend up to the 110% ceiling (1100); past it is usurious.
         assert_eq!(usury_ceiling(1000, USURY_OVERAGE_PERCENT_DEFAULT), 1100);
         assert!(check_usury(1000, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok());
-        assert!(
-            check_usury(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok(),
-            "exactly at ceiling is permitted"
-        );
+        assert!(check_usury(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok());
         assert!(!is_usurious(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT));
         let err = check_usury(1101, 1000, USURY_OVERAGE_PERCENT_DEFAULT).unwrap_err();
         assert_eq!(err.ceiling, 1100);
         assert_eq!(err.projected, 1101);
         assert!(is_usurious(1101, 1000, USURY_OVERAGE_PERCENT_DEFAULT));
-        // A zero budget permits no positive spend.
         assert!(check_usury(1, 0, USURY_OVERAGE_PERCENT_DEFAULT).is_err());
         assert!(check_usury(0, 0, USURY_OVERAGE_PERCENT_DEFAULT).is_ok());
-        // The overage is a policy knob: a stricter 0% overage caps exactly at budget.
         assert_eq!(usury_ceiling(1000, 0), 1000);
         assert!(check_usury(1001, 1000, 0).is_err());
     }
 
     #[test]
     fn pool_discharges_at_threshold() {
-        let cost = commons_cost(1000, 20, 20); // 1200
+        let cost = commons_cost(1000, 20, 20);
         let mut pool = 0u64;
-        pool = pool_after(pool, royalty(400, 300)); // corporate use: 1200
-        assert!(
-            is_commons_discharged(pool, cost),
-            "pool met cost → discharged + freed globally"
-        );
+        pool = pool_after(pool, royalty(400, 300));
+        assert!(is_commons_discharged(pool, cost));
         assert_eq!(outstanding(pool, cost), 0);
-        // Before that payment the obligation was outstanding.
         assert!(!is_commons_discharged(500, cost));
         assert_eq!(outstanding(500, cost), 700);
     }
@@ -382,15 +422,33 @@ mod tests {
 
         let reading = MeterReading {
             kind: MeterKind::NetBytes,
-            milli_units: 50_000, // 50 whole MB
+            milli_units: 50_000,
             quality: ObservationQuality::Measured,
         };
-        // 2 cents per MB (2_000_000 micro cents)
         let fee = carriage_fee_from_meters(&reading, 2_000_000);
-        assert_eq!(fee, 100); // 50 * 2 = 100 cents
-
+        assert_eq!(fee, 100);
         let mut pool = 1000u64;
         pool = accumulate_meter_to_pool(pool, &reading, 2_000_000);
         assert_eq!(pool, 1100);
+    }
+
+    #[test]
+    fn clear_pool_obligations_bps_enforces_pool_funded_not_contributor_paid() {
+        let res = clear_pool_obligations_bps(100_000, 1_000, 500, 50_000, 120_000, 40_000, 0)
+            .expect("valid bps clearing");
+        assert_eq!(
+            res.operating_reserve_cents
+                + res.fiduciary_fee_cents
+                + res.obligation_pool_allocation_cents,
+            100_000
+        );
+        assert_eq!(res.pool_funded_cents, 135_000);
+        assert_eq!(res.remaining_obligation_cents, 80_000);
+        assert!(!res.contributor_obligations_discharged);
+
+        let paid = clear_pool_obligations_bps(100_000, 1_000, 500, 50_000, 120_000, 100_000, 20_000)
+            .unwrap();
+        assert_eq!(paid.remaining_obligation_cents, 0);
+        assert!(paid.contributor_obligations_discharged);
     }
 }

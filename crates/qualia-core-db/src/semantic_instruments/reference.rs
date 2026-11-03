@@ -1,4 +1,5 @@
-//! Labelled **Reference** packs (si:Reference). Not Operational, not Host IDs.
+//! Labelled **Reference** packs (`si:Reference`) and the 6 Core Semantic Instruments.
+//! Not Host IDs; bounded evaluators live in [`super::evaluators`].
 
 use super::category::ContentCategory;
 use super::errors::InstrumentError;
@@ -52,11 +53,29 @@ ex:tax-honesty a si:HonestyPolicy ;\n\
 ex:tax-rate a si:DeclaredPercentage ;\n\
     si:exampleRate \"0.10\" .\n";
 
+const CORE_INSTRUMENT_N3: &str = "\
+@prefix si: <https://ns.webizen.org/semantic-instrument/> .\n\
+@prefix cml: <https://ns.webcivics.net/cml/> .\n\
+ex:core-instrument a si:SemanticInstrument ;\n\
+    si:contentCategory si:Reference ;\n\
+    si:entryPoint ex:core-assess ;\n\
+    si:honestyPolicy ex:core-honesty .\n\
+ex:core-assess a si:EntryPoint ;\n\
+    si:entryPointName \"assess\" ;\n\
+    si:logicApplication ex:core-logic .\n\
+ex:core-logic a cml:LogicApplication ;\n\
+    cml:logicSummary \"Bounded core semantic instrument evaluator.\" .\n\
+ex:core-honesty a si:HonestyPolicy ;\n\
+    si:resultKind \"reference-claim\" ;\n\
+    si:requiredNotice \"Reference pack. Bounded semantic instrument review.\" .\n";
+
 const NOTICE_UNITS: &str = "Reference pack. Units conformance fixture. Not operational.";
 const NOTICE_WELLBEING: &str =
     "Reference pack. Training/demo only. Not diagnosis, not a ClinicalRisk kernel, not operational advice.";
 const NOTICE_TAX: &str =
     "Reference pack. Fictional tax-training example. Not professional tax advice.";
+const NOTICE_CORE: &str =
+    "Reference pack. Bounded semantic instrument review. Does not replace human adjudication.";
 
 /// One labelled reference seed. Same shape as [`super::demo::DemoSeed`].
 #[derive(Debug, Clone, Copy)]
@@ -115,9 +134,95 @@ pub fn reference_catalog() -> &'static [ReferenceSeed] {
     ]
 }
 
-/// Reference by slug.
+/// The 6 Core Semantic Instruments defined in `QUALIADB-IMPLEMENTATION-ROADMAP.md` §5.
+pub fn core_instrument_catalog() -> &'static [ReferenceSeed] {
+    &[
+        ReferenceSeed {
+            slug: "source-terminology-reconciliation",
+            instrument_id: "https://ns.webizen.org/reference/source-terminology-reconciliation",
+            release_id: "https://ns.webizen.org/reference/source-terminology-reconciliation/releases/1.0.0",
+            name: "Source Terminology Reconciliation",
+            purpose: "terminology-reconciliation",
+            domain: "https://ns.webizen.org/reference/concepts/terminology",
+            entry_point: "assess",
+            definition_n3: CORE_INSTRUMENT_N3,
+            honesty_notice: NOTICE_CORE,
+            prohibited_interpretation: "automated-exact-match-without-human-attestation",
+        },
+        ReferenceSeed {
+            slug: "contribution-lifecycle-completeness",
+            instrument_id: "https://ns.webizen.org/reference/contribution-lifecycle-completeness",
+            release_id: "https://ns.webizen.org/reference/contribution-lifecycle-completeness/releases/1.0.0",
+            name: "Contribution Lifecycle Completeness",
+            purpose: "contribution-lifecycle-audit",
+            domain: "https://ns.webizen.org/reference/concepts/contribution-lifecycle",
+            entry_point: "assess",
+            definition_n3: CORE_INSTRUMENT_N3,
+            honesty_notice: NOTICE_CORE,
+            prohibited_interpretation: "activity-equals-payable-debt",
+        },
+        ReferenceSeed {
+            slug: "identifier-stewardship-grant-scope",
+            instrument_id: "https://ns.webizen.org/reference/identifier-stewardship-grant-scope",
+            release_id: "https://ns.webizen.org/reference/identifier-stewardship-grant-scope/releases/1.0.0",
+            name: "Identifier Stewardship & Grant Scope",
+            purpose: "identifier-grant-scope-audit",
+            domain: "https://ns.webizen.org/reference/concepts/identifier-stewardship",
+            entry_point: "assess",
+            definition_n3: CORE_INSTRUMENT_N3,
+            honesty_notice: NOTICE_CORE,
+            prohibited_interpretation: "unbounded-cross-context-disclosure",
+        },
+        ReferenceSeed {
+            slug: "contextual-assertions-review",
+            instrument_id: "https://ns.webizen.org/reference/contextual-assertions-review",
+            release_id: "https://ns.webizen.org/reference/contextual-assertions-review/releases/1.0.0",
+            name: "Contextual Assertions Review",
+            purpose: "epistemic-assertion-review",
+            domain: "https://ns.webizen.org/reference/concepts/contextual-assertions",
+            entry_point: "assess",
+            definition_n3: CORE_INSTRUMENT_N3,
+            honesty_notice: NOTICE_CORE,
+            prohibited_interpretation: "universal-reputation-score",
+        },
+        ReferenceSeed {
+            slug: "wellfair-fairness-rights-review",
+            instrument_id: "https://ns.webizen.org/reference/wellfair-fairness-rights-review",
+            release_id: "https://ns.webizen.org/reference/wellfair-fairness-rights-review/releases/1.0.0",
+            name: "Wellfair Fairness & Rights Review",
+            purpose: "six-dimension-fairness-rights-review",
+            domain: "https://ns.webizen.org/reference/concepts/wellfair-review",
+            entry_point: "assess",
+            definition_n3: CORE_INSTRUMENT_N3,
+            honesty_notice: NOTICE_CORE,
+            prohibited_interpretation: "single-scalar-fairness-score",
+        },
+        ReferenceSeed {
+            slug: "licence-transition-readiness",
+            instrument_id: "https://ns.webizen.org/reference/licence-transition-readiness",
+            release_id: "https://ns.webizen.org/reference/licence-transition-readiness/releases/1.0.0",
+            name: "Licence Transition Readiness",
+            purpose: "licence-transition-readiness-gate",
+            domain: "https://ns.webizen.org/reference/concepts/licence-transition",
+            entry_point: "assess",
+            definition_n3: CORE_INSTRUMENT_N3,
+            honesty_notice: NOTICE_CORE,
+            prohibited_interpretation: "pool-funded-equals-contributor-paid",
+        },
+    ]
+}
+
+/// Core instrument seed by slug.
+pub fn core_instrument_by_slug(slug: &str) -> Option<&'static ReferenceSeed> {
+    core_instrument_catalog().iter().find(|s| s.slug == slug)
+}
+
+/// Reference by slug (checks both the 3 reference seeds and the 6 Core Semantic Instruments).
 pub fn reference_by_slug(slug: &str) -> Option<&'static ReferenceSeed> {
-    reference_catalog().iter().find(|s| s.slug == slug)
+    reference_catalog()
+        .iter()
+        .find(|s| s.slug == slug)
+        .or_else(|| core_instrument_by_slug(slug))
 }
 
 fn manifest_for(seed: &ReferenceSeed) -> InstrumentManifest {
@@ -237,6 +342,16 @@ mod tests {
             assert_eq!(seed.entry_point, "assess");
             assert!(!seed.slug.contains("Host"));
             assert!(seed_notice_is_labelled(seed.honesty_notice));
+        }
+    }
+
+    #[test]
+    fn core_catalog_has_six_instruments() {
+        assert_eq!(core_instrument_catalog().len(), 6);
+        for seed in core_instrument_catalog() {
+            let bytes = build_reference(seed.slug).expect(seed.slug);
+            let opened = open_collectable(&bytes).expect(seed.slug);
+            assert_eq!(opened.manifest.instrument_id, seed.instrument_id);
         }
     }
 

@@ -203,7 +203,6 @@ impl RecordEnvelope {
     }
 
     /// Create a RecordEnvelope with an InstantBridge for asserted time (T71 bridge).
-    /// The InstantBridge is projected to Unix seconds for the u32 field.
     pub fn with_asserted_instant(
         id: &str,
         owner_did: &str,
@@ -235,9 +234,8 @@ impl RecordEnvelope {
         }
     }
 
-    /// Create a RecordEnvelope with InstantBridges for asserted and valid time
-    /// (T71 bridge). The InstantBridges are projected to Unix seconds for the
-    /// u32 fields.
+    /// Create a RecordEnvelope with InstantBridges for asserted and valid time (T71 bridge).
+    #[allow(clippy::too_many_arguments)]
     pub fn with_instants(
         id: &str,
         owner_did: &str,
@@ -271,7 +269,6 @@ impl RecordEnvelope {
     }
 
     /// The duration of the valid time window (T71 bridge).
-    /// Returns `None` if either bound is missing.
     pub fn valid_time_duration(&self) -> Option<DurationBridge> {
         let start = self.valid_time_start_instant()?;
         let end = self.valid_time_end_instant()?;
@@ -280,11 +277,6 @@ impl RecordEnvelope {
 }
 
 /// Lightweight nanosecond-resolution instant bridge (T71).
-///
-/// This is a bridge type for the one-clock migration. It stores
-/// Unix seconds + nanoseconds without pulling in `vibe` as a
-/// dependency. When the `qualia` feature is enabled, it can convert
-/// to/from `vibe::value::Instant`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct InstantBridge {
     /// Unix seconds
@@ -300,7 +292,6 @@ impl InstantBridge {
     }
 
     /// True if this instant is the zero value (epoch + 0 nanos).
-    /// Used for serde `skip_serializing_if` on optional instant fields.
     pub fn is_zero(&self) -> bool {
         self.secs == 0 && self.nanos == 0
     }
@@ -321,27 +312,20 @@ impl InstantBridge {
     }
 
     /// The duration between two instants: `self - earlier`.
-    /// Returns a positive `DurationBridge` if `self > earlier`.
     pub fn duration_since(&self, earlier: &InstantBridge) -> DurationBridge {
-        let self_nanos = self.to_unix_nanos();
-        let earlier_nanos = earlier.to_unix_nanos();
-        DurationBridge::from_nanos(self_nanos - earlier_nanos)
+        DurationBridge::from_nanos(self.to_unix_nanos() - earlier.to_unix_nanos())
     }
 
     /// Add a duration to this instant.
     pub fn add_duration(&self, d: &DurationBridge) -> InstantBridge {
-        let total = self.to_unix_nanos() + d.total_nanos();
-        InstantBridge::from_unix_nanos(total)
+        InstantBridge::from_unix_nanos(self.to_unix_nanos() + d.total_nanos())
     }
 
     /// Subtract a duration from this instant.
     pub fn sub_duration(&self, d: &DurationBridge) -> InstantBridge {
-        let total = self.to_unix_nanos() - d.total_nanos();
-        InstantBridge::from_unix_nanos(total)
+        InstantBridge::from_unix_nanos(self.to_unix_nanos() - d.total_nanos())
     }
 
-    /// Create an InstantBridge from total Unix nanoseconds, handling the
-    /// negative-remainder case so `nanos` is always in [0, 999_999_999).
     fn from_unix_nanos(total_nanos: i64) -> InstantBridge {
         let secs = total_nanos / 1_000_000_000;
         let rem = total_nanos % 1_000_000_000;
@@ -394,9 +378,6 @@ impl PartialOrd for InstantBridge {
 }
 
 /// Lightweight duration bridge (T71).
-///
-/// Stores seconds + nanoseconds. Can be negative (for "earlier - later").
-/// Converts to/from `vibe::Duration` when the `qualia` feature is enabled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct DurationBridge {
     /// Seconds (may be negative)
@@ -412,13 +393,10 @@ impl DurationBridge {
     }
 
     /// Create a duration from total nanoseconds (may be negative).
-    /// The nanos field is always in [0, 999_999_999); the sign is carried
-    /// by the secs field.
     pub fn from_nanos(total_nanos: i64) -> Self {
         let secs = total_nanos / 1_000_000_000;
         let rem = total_nanos % 1_000_000_000;
         if rem < 0 {
-            // Borrow from secs so nanos is positive
             Self {
                 secs: secs - 1,
                 nanos: (rem + 1_000_000_000) as u32,
@@ -505,258 +483,5 @@ impl From<&vibe::Duration> for DurationBridge {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn t71_instant_bridge_basic() {
-        let i = InstantBridge::unix(1_700_000_000, 500_000_000);
-        assert_eq!(i.secs, 1_700_000_000);
-        assert_eq!(i.nanos, 500_000_000);
-    }
-
-    #[test]
-    fn t71_instant_bridge_from_coarse() {
-        let i = InstantBridge::from_coarse(1_700_000_000);
-        assert_eq!(i.secs, 1_700_000_000);
-        assert_eq!(i.nanos, 0);
-    }
-
-    #[test]
-    fn t71_instant_bridge_to_unix_nanos() {
-        let i = InstantBridge::unix(1, 500_000_000);
-        assert_eq!(i.to_unix_nanos(), 1_500_000_000);
-    }
-
-    #[test]
-    fn t71_envelope_asserted_instant() {
-        let env = RecordEnvelope {
-            id: "test".into(),
-            owner_did: "did:alice".into(),
-            author_did: "did:alice".into(),
-            proxy_did: None,
-            epistemic_status: EpistemicStatus::Asserted,
-            evidence_type: EvidenceType::SelfReported,
-            sensitivity: SensitivityClass::Public,
-            asserted_time_unix: 1_700_000_000,
-            asserted_instant: None,
-            valid_time_start_unix: None,
-            valid_time_start_instant: None,
-            valid_time_end_unix: None,
-            valid_time_end_instant: None,
-            predecessor_id: None,
-            blob_hash: None,
-            tombstone: false,
-        };
-        let instant = env.asserted_instant();
-        assert_eq!(instant.secs, 1_700_000_000);
-        assert_eq!(instant.nanos, 0);
-    }
-
-    #[test]
-    fn t71_envelope_with_asserted_instant() {
-        let instant = InstantBridge::unix(1_700_000_000, 123_456);
-        let env = RecordEnvelope::with_asserted_instant(
-            "test",
-            "did:alice",
-            "did:alice",
-            EpistemicStatus::Asserted,
-            EvidenceType::SelfReported,
-            SensitivityClass::Public,
-            &instant,
-            None,
-        );
-        assert_eq!(env.asserted_time_unix, 1_700_000_000);
-        let recovered = env.asserted_instant();
-        assert_eq!(recovered.secs, 1_700_000_000);
-    }
-
-    #[test]
-    fn t71_valid_time_instant_bridges() {
-        let env = RecordEnvelope {
-            id: "test".into(),
-            owner_did: "did:alice".into(),
-            author_did: "did:alice".into(),
-            proxy_did: None,
-            epistemic_status: EpistemicStatus::Asserted,
-            evidence_type: EvidenceType::SelfReported,
-            sensitivity: SensitivityClass::Public,
-            asserted_time_unix: 1_700_000_000,
-            asserted_instant: None,
-            valid_time_start_unix: Some(1_699_000_000),
-            valid_time_start_instant: None,
-            valid_time_end_unix: Some(1_701_000_000),
-            valid_time_end_instant: None,
-            predecessor_id: None,
-            blob_hash: None,
-            tombstone: false,
-        };
-        let start = env.valid_time_start_instant().unwrap();
-        assert_eq!(start.secs, 1_699_000_000);
-        let end = env.valid_time_end_instant().unwrap();
-        assert_eq!(end.secs, 1_701_000_000);
-    }
-
-    #[test]
-    fn t71_instant_comparison() {
-        let a = InstantBridge::unix(1_700_000_000, 0);
-        let b = InstantBridge::unix(1_700_000_001, 0);
-        assert!(a.is_before(&b));
-        assert!(b.is_after(&a));
-        assert!(!a.is_after(&b));
-        assert!(!b.is_before(&a));
-        assert_eq!(a.min(b), a);
-        assert_eq!(a.max(b), b);
-    }
-
-    #[test]
-    fn t71_instant_subsecond_comparison() {
-        let a = InstantBridge::unix(1_700_000_000, 500_000_000);
-        let b = InstantBridge::unix(1_700_000_000, 600_000_000);
-        assert!(a.is_before(&b));
-        assert!(b.is_after(&a));
-    }
-
-    #[test]
-    fn t71_instant_ord() {
-        let a = InstantBridge::unix(1, 0);
-        let b = InstantBridge::unix(2, 0);
-        let c = InstantBridge::unix(1, 500_000_000);
-        let mut v = vec![b, c, a];
-        v.sort();
-        assert_eq!(v, vec![a, c, b]);
-    }
-
-    #[test]
-    fn t71_duration_since() {
-        let a = InstantBridge::unix(1_700_000_000, 0);
-        let b = InstantBridge::unix(1_700_000_002, 500_000_000);
-        let d = b.duration_since(&a);
-        assert_eq!(d.secs, 2);
-        assert_eq!(d.nanos, 500_000_000);
-        assert_eq!(d.total_nanos(), 2_500_000_000);
-    }
-
-    #[test]
-    fn t71_duration_since_negative() {
-        let a = InstantBridge::unix(1_700_000_002, 0);
-        let b = InstantBridge::unix(1_700_000_000, 0);
-        let d = b.duration_since(&a);
-        assert!(d.total_nanos() < 0);
-        assert!(!d.is_positive());
-    }
-
-    #[test]
-    fn t71_add_duration() {
-        let a = InstantBridge::unix(1_700_000_000, 500_000_000);
-        let d = DurationBridge::from_secs(2);
-        let b = a.add_duration(&d);
-        assert_eq!(b.secs, 1_700_000_002);
-        assert_eq!(b.nanos, 500_000_000);
-    }
-
-    #[test]
-    fn t71_sub_duration() {
-        let a = InstantBridge::unix(1_700_000_002, 0);
-        let d = DurationBridge::from_secs(2);
-        let b = a.sub_duration(&d);
-        assert_eq!(b.secs, 1_700_000_000);
-    }
-
-    #[test]
-    fn t71_duration_from_nanos() {
-        let d = DurationBridge::from_nanos(1_500_000_000);
-        assert_eq!(d.secs, 1);
-        assert_eq!(d.nanos, 500_000_000);
-    }
-
-    #[test]
-    fn t71_duration_total_millis() {
-        let d = DurationBridge::from_nanos(1_500_000_000);
-        assert_eq!(d.total_millis(), 1500);
-    }
-
-    #[test]
-    fn t71_duration_abs() {
-        let d = DurationBridge::from_nanos(-1_500_000_000);
-        assert!(d.total_nanos() < 0);
-        let a = d.abs();
-        assert_eq!(a.total_nanos(), 1_500_000_000);
-    }
-
-    #[test]
-    fn t71_duration_is_zero() {
-        assert!(DurationBridge::from_nanos(0).is_zero());
-        assert!(!DurationBridge::from_nanos(1).is_zero());
-    }
-
-    #[test]
-    fn t71_envelope_with_instants() {
-        let asserted = InstantBridge::unix(1_700_000_000, 123_456);
-        let start = InstantBridge::unix(1_699_000_000, 0);
-        let end = InstantBridge::unix(1_701_000_000, 0);
-        let env = RecordEnvelope::with_instants(
-            "test",
-            "did:alice",
-            "did:alice",
-            EpistemicStatus::Asserted,
-            EvidenceType::SelfReported,
-            SensitivityClass::Public,
-            &asserted,
-            Some(&start),
-            Some(&end),
-            None,
-        );
-        assert_eq!(env.asserted_time_unix, 1_700_000_000);
-        assert_eq!(env.valid_time_start_unix, Some(1_699_000_000));
-        assert_eq!(env.valid_time_end_unix, Some(1_701_000_000));
-    }
-
-    #[test]
-    fn t71_envelope_valid_time_duration() {
-        let env = RecordEnvelope {
-            id: "test".into(),
-            owner_did: "did:alice".into(),
-            author_did: "did:alice".into(),
-            proxy_did: None,
-            epistemic_status: EpistemicStatus::Asserted,
-            evidence_type: EvidenceType::SelfReported,
-            sensitivity: SensitivityClass::Public,
-            asserted_time_unix: 1_700_000_000,
-            asserted_instant: None,
-            valid_time_start_unix: Some(1_699_000_000),
-            valid_time_start_instant: None,
-            valid_time_end_unix: Some(1_701_000_000),
-            valid_time_end_instant: None,
-            predecessor_id: None,
-            blob_hash: None,
-            tombstone: false,
-        };
-        let d = env.valid_time_duration().unwrap();
-        assert_eq!(d.secs, 2_000_000);
-        assert!(d.is_positive());
-    }
-
-    #[test]
-    fn t71_envelope_valid_time_duration_none() {
-        let env = RecordEnvelope {
-            id: "test".into(),
-            owner_did: "did:alice".into(),
-            author_did: "did:alice".into(),
-            proxy_did: None,
-            epistemic_status: EpistemicStatus::Asserted,
-            evidence_type: EvidenceType::SelfReported,
-            sensitivity: SensitivityClass::Public,
-            asserted_time_unix: 1_700_000_000,
-            asserted_instant: None,
-            valid_time_start_unix: None,
-            valid_time_start_instant: None,
-            valid_time_end_unix: None,
-            valid_time_end_instant: None,
-            predecessor_id: None,
-            blob_hash: None,
-            tombstone: false,
-        };
-        assert!(env.valid_time_duration().is_none());
-    }
-}
+#[path = "record_tests.rs"]
+mod tests;

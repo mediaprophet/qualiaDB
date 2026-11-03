@@ -166,6 +166,7 @@ fn default_roi() -> f32 {
 
 impl Contribution {
     /// Creates a new instance.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         project_id: impl Into<String>,
         contributor_did: impl Into<String>,
@@ -245,9 +246,7 @@ pub fn contribution_record_id(uuid: &str) -> String {
 // ---------------------------------------------------------------------------
 
 /// Merge two contribution sets **add-wins by stable id** (never sum-merge), returning a
-/// deterministically ordered union. Idempotent and order-independent, which is what makes
-/// replayed/reordered sync frames safe. When the same id appears twice the existing copy
-/// is kept (contributions are immutable, so payloads are equal by construction).
+/// deterministically ordered union. Idempotent and order-independent.
 pub fn merge_contributions(
     existing: &[Contribution],
     incoming: &[Contribution],
@@ -258,7 +257,6 @@ pub fn merge_contributions(
             merged.push(entry.clone());
         }
     }
-    // Deterministic order independent of input order: by time, then id.
     merged.sort_by(|a, b| {
         a.occurred_at_unix
             .cmp(&b.occurred_at_unix)
@@ -268,15 +266,10 @@ pub fn merge_contributions(
 }
 
 /// Derive per-(project, contributor) effort obligations purely from the unique-id set.
-/// Duplicate ids in the input are collapsed first, so the result is invariant under
-/// duplication/reordering. Effort is summed into a `u64` to avoid overflow when many
-/// `u32` contributions accumulate.
 pub fn derive_obligations(contributions: &[Contribution]) -> Vec<Obligation> {
-    // Collapse to unique ids (defensive: callers may pass an un-merged list).
     let unique = merge_contributions(contributions, &[]);
     let mut obligations: Vec<Obligation> = Vec::new();
     for c in &unique {
-        // Base-rate logic: (effort minutes + capital cents) scaled by the ROI multiplier.
         let score = (c.effort_minutes as f64 + c.capital_cents as f64) * c.roi_multiplier as f64;
         match obligations
             .iter_mut()
@@ -298,7 +291,6 @@ pub fn derive_obligations(contributions: &[Contribution]) -> Vec<Obligation> {
             }),
         }
     }
-    // Sort for determinism (independent of input order).
     obligations.sort_by(|a, b| {
         a.project_id
             .cmp(&b.project_id)
@@ -311,14 +303,13 @@ pub fn derive_obligations(contributions: &[Contribution]) -> Vec<Obligation> {
 // Envelope builders
 // ---------------------------------------------------------------------------
 
-/// Shared Restricted envelope for cooperative-project records. `valid_time_start_unix`
-/// is set by the caller-facing builders to the record's own event time.
 fn project_envelope(
     id: &str,
     owner_did: &str,
     author_did: &str,
     asserted_unix: u32,
     valid_start_unix: u32,
+    valid_start_instant: Option<InstantBridge>,
     predecessor_id: Option<String>,
     blob_hash: Option<String>,
 ) -> RecordEnvelope {
@@ -333,7 +324,7 @@ fn project_envelope(
         asserted_time_unix: asserted_unix,
         asserted_instant: None,
         valid_time_start_unix: Some(valid_start_unix),
-        valid_time_start_instant: None,
+        valid_time_start_instant: valid_start_instant,
         valid_time_end_unix: None,
         valid_time_end_instant: None,
         predecessor_id,
@@ -351,15 +342,7 @@ pub fn build_project_envelope(
     blob_hash: Option<String>,
 ) -> RecordEnvelope {
     let id = project_record_id(&project.id);
-    project_envelope(
-        &id,
-        owner_did,
-        author_did,
-        asserted_unix,
-        project.created_at_unix,
-        None,
-        blob_hash,
-    )
+    project_envelope(&id, owner_did, author_did, asserted_unix, project.created_at_unix, project.created_at_instant, None, blob_hash)
 }
 
 /// Builds membership-envelope.
@@ -371,15 +354,7 @@ pub fn build_membership_envelope(
     blob_hash: Option<String>,
 ) -> RecordEnvelope {
     let id = project_membership_record_id(&membership.id);
-    project_envelope(
-        &id,
-        owner_did,
-        author_did,
-        asserted_unix,
-        membership.agreed_at_unix,
-        None,
-        blob_hash,
-    )
+    project_envelope(&id, owner_did, author_did, asserted_unix, membership.agreed_at_unix, membership.agreed_at_instant, None, blob_hash)
 }
 
 /// Builds contribution-envelope.
@@ -391,32 +366,23 @@ pub fn build_contribution_envelope(
     blob_hash: Option<String>,
 ) -> RecordEnvelope {
     let id = contribution_record_id(&contribution.id);
-    // Preserve the author chain in the envelope's predecessor link.
-    let predecessor_id = contribution
-        .predecessor_id
-        .as_ref()
-        .map(|p| contribution_record_id(p));
-    project_envelope(
-        &id,
-        owner_did,
-        author_did,
-        asserted_unix,
-        contribution.occurred_at_unix,
-        predecessor_id,
-        blob_hash,
-    )
+    let predecessor_id = contribution.predecessor_id.as_ref().map(|p| contribution_record_id(p));
+    project_envelope(&id, owner_did, author_did, asserted_unix, contribution.occurred_at_unix, contribution.occurred_at_instant, predecessor_id, blob_hash)
 }
 
 // ---------------------------------------------------------------------------
-// Summaries (serde_json object strings, as stored on the journal row)
+// Summaries (lossless serde_json object strings, as stored on the journal row)
 // ---------------------------------------------------------------------------
 
 /// Project summary.
 pub fn project_summary(project: &Project) -> String {
     serde_json::json!({
+        "id": project.id,
         "name": project.name,
         "description": project.description,
+        "licensing_ontologies": project.licensing_ontologies,
         "created_at_unix": project.created_at_unix,
+        "created_at_instant": project.created_at_instant,
     })
     .to_string()
 }
@@ -424,204 +390,69 @@ pub fn project_summary(project: &Project) -> String {
 /// Membership summary.
 pub fn membership_summary(membership: &ProjectMembership) -> String {
     serde_json::json!({
+        "id": membership.id,
         "project_id": membership.project_id,
         "member_did": membership.member_did,
         "role": membership.role,
         "agreed_at_unix": membership.agreed_at_unix,
+        "agreed_at_instant": membership.agreed_at_instant,
     })
     .to_string()
 }
 
-/// Contribution summary.
+/// Lossless contribution summary including `capital_cents`, `roi_multiplier`,
+/// `privacy_level`, `occurred_at_instant`, and `predecessor_id`.
 pub fn contribution_summary(contribution: &Contribution) -> String {
     serde_json::json!({
+        "id": contribution.id,
         "project_id": contribution.project_id,
         "contributor_did": contribution.contributor_did,
         "description": contribution.description,
         "effort_minutes": contribution.effort_minutes,
+        "capital_cents": contribution.capital_cents,
+        "roi_multiplier": contribution.roi_multiplier,
+        "privacy_level": contribution.privacy_level,
         "occurred_at_unix": contribution.occurred_at_unix,
+        "occurred_at_instant": contribution.occurred_at_instant,
         "predecessor_id": contribution.predecessor_id,
     })
     .to_string()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn contribution(
-        id: &str,
-        project: &str,
-        contributor: &str,
-        minutes: u32,
-        at: u32,
-    ) -> Contribution {
-        Contribution {
-            id: id.into(),
-            project_id: project.into(),
-            contributor_did: contributor.into(),
-            description: format!("work-{id}"),
-            effort_minutes: minutes,
-            capital_cents: 0,
-            roi_multiplier: 1.0,
-            privacy_level: ContributionPrivacy::default(),
-            occurred_at_unix: at,
-            occurred_at_instant: None,
-            predecessor_id: None,
-        }
+/// Reconstruct a `Contribution` losslessly from a stored/transmitted summary JSON.
+pub fn parse_contribution_summary(
+    id: impl Into<String>,
+    summary: &str,
+    fallback_occurred_at_unix: u32,
+) -> Option<Contribution> {
+    let v: serde_json::Value = serde_json::from_str(summary).ok()?;
+    if !v.is_object() {
+        return None;
     }
-
-    #[test]
-    fn project_envelope_is_restricted_and_kind_correct() {
-        let p = Project::new("Community Garden", "Shared beds", vec![], 1_700_000_000);
-        let env = build_project_envelope(&p, "did:wf:coop", "did:wf:steward", 10, None);
-        assert!(env.id.contains(":project:"));
-        assert_eq!(env.sensitivity, SensitivityClass::Restricted);
-        assert_eq!(env.valid_time_start_unix, Some(1_700_000_000));
-    }
-
-    #[test]
-    fn membership_envelope_kind_and_class() {
-        let m = ProjectMembership::new("proj-1", "did:wf:alice", ProjectRole::Steward, 42);
-        let env = build_membership_envelope(&m, "did:wf:coop", "did:wf:coop", 50, None);
-        assert!(env.id.contains(":project_membership:"));
-        assert_eq!(env.sensitivity, SensitivityClass::Restricted);
-    }
-
-    #[test]
-    fn contribution_envelope_kind_and_chain() {
-        let first = Contribution::new(
-            "proj-1",
-            "did:wf:bob",
-            "dig beds",
-            60,
-            0,
-            1.0,
-            ContributionPrivacy::default(),
-            100,
-        );
-        let second = Contribution::new(
-            "proj-1",
-            "did:wf:bob",
-            "plant seeds",
-            30,
-            0,
-            1.0,
-            ContributionPrivacy::default(),
-            200,
-        )
-        .following(&first);
-        let env = build_contribution_envelope(&second, "did:wf:coop", "did:wf:bob", 250, None);
-        assert!(env.id.contains(":contribution:"));
-        assert_eq!(env.sensitivity, SensitivityClass::Restricted);
-        // The author chain is preserved as a namespaced predecessor link.
-        assert_eq!(env.predecessor_id, Some(contribution_record_id(&first.id)));
-        assert!(env.predecessor_id.unwrap().contains(":contribution:"));
-    }
-
-    #[test]
-    fn merge_dedupes_by_id_add_wins() {
-        let a = vec![
-            contribution("c1", "p1", "did:wf:a", 60, 1),
-            contribution("c2", "p1", "did:wf:a", 30, 2),
-        ];
-        let dup = vec![contribution("c1", "p1", "did:wf:a", 60, 1)]; // replayed frame
-        let merged = merge_contributions(&a, &dup);
-        assert_eq!(
-            merged.len(),
-            2,
-            "duplicate id must not create a second entry"
-        );
-    }
-
-    #[test]
-    fn obligations_invariant_under_duplication_and_reorder() {
-        let base = vec![
-            contribution("c1", "p1", "did:wf:a", 60, 3),
-            contribution("c2", "p1", "did:wf:a", 30, 1),
-            contribution("c3", "p1", "did:wf:b", 45, 2),
-            contribution("c4", "p2", "did:wf:a", 15, 4),
-        ];
-        // Reordered + replayed incoming set.
-        let incoming = vec![
-            contribution("c3", "p1", "did:wf:b", 45, 2),
-            contribution("c1", "p1", "did:wf:a", 60, 3),
-            contribution("c4", "p2", "did:wf:a", 15, 4),
-            contribution("c2", "p1", "did:wf:a", 30, 1),
-            contribution("c2", "p1", "did:wf:a", 30, 1), // duplicate
-        ];
-        let merged = merge_contributions(&base, &incoming);
-        let obligations = derive_obligations(&merged);
-
-        // (p1, a): 60 + 30 = 90 over 2 contributions.
-        let p1a = obligations
-            .iter()
-            .find(|o| o.project_id == "p1" && o.contributor_did == "did:wf:a")
-            .unwrap();
-        assert_eq!(p1a.total_effort_minutes, 90);
-        assert_eq!(p1a.contribution_count, 2);
-
-        // (p1, b): 45 over 1.
-        let p1b = obligations
-            .iter()
-            .find(|o| o.project_id == "p1" && o.contributor_did == "did:wf:b")
-            .unwrap();
-        assert_eq!(p1b.total_effort_minutes, 45);
-
-        // (p2, a): 15 over 1.
-        let p2a = obligations
-            .iter()
-            .find(|o| o.project_id == "p2" && o.contributor_did == "did:wf:a")
-            .unwrap();
-        assert_eq!(p2a.total_effort_minutes, 15);
-
-        // Order independence: merging the other way round yields identical obligations.
-        let obligations2 = derive_obligations(&merge_contributions(&incoming, &base));
-        assert_eq!(obligations, obligations2);
-    }
-
-    #[test]
-    fn replaying_incoming_twice_does_not_double_effort() {
-        let base = vec![contribution("c1", "p1", "did:wf:a", 120, 1)];
-        let incoming = vec![contribution("c2", "p1", "did:wf:a", 60, 2)];
-        let once = derive_obligations(&merge_contributions(&base, &incoming));
-        let twice = derive_obligations(&merge_contributions(
-            &merge_contributions(&base, &incoming),
-            &incoming,
-        ));
-        assert_eq!(once, twice);
-        assert_eq!(once[0].total_effort_minutes, 180);
-    }
-
-    #[test]
-    fn derive_obligations_dedupes_raw_unmerged_input() {
-        // Passing an un-merged list directly must still collapse duplicates.
-        let raw = vec![
-            contribution("c1", "p1", "did:wf:a", 60, 1),
-            contribution("c1", "p1", "did:wf:a", 60, 1),
-            contribution("c1", "p1", "did:wf:a", 60, 1),
-        ];
-        let obligations = derive_obligations(&raw);
-        assert_eq!(obligations.len(), 1);
-        assert_eq!(obligations[0].total_effort_minutes, 60);
-        assert_eq!(obligations[0].contribution_count, 1);
-    }
-
-    #[test]
-    fn summaries_include_primary_fields() {
-        let p = Project::new("Repair Cafe", "Fix things together", vec![], 1_700_000_000);
-        let ps = project_summary(&p);
-        assert!(ps.contains("Repair Cafe"));
-        assert!(ps.contains("Fix things together"));
-
-        let m = ProjectMembership::new("proj-1", "did:wf:carol", ProjectRole::Observer, 99);
-        let ms = membership_summary(&m);
-        assert!(ms.contains("did:wf:carol"));
-        assert!(ms.contains("observer"));
-
-        let c = contribution("c1", "p1", "did:wf:dave", 90, 5);
-        let cs = contribution_summary(&c);
-        assert!(cs.contains("did:wf:dave"));
-        assert!(cs.contains("90"));
-    }
+    let id_str = id.into();
+    let resolved_id = if id_str.is_empty() {
+        v.get("id").and_then(|x| x.as_str()).unwrap_or_default().to_string()
+    } else {
+        id_str
+    };
+    let privacy_level = v.get("privacy_level").and_then(|x| serde_json::from_value(x.clone()).ok()).unwrap_or_default();
+    let occurred_at_unix = v.get("occurred_at_unix").and_then(|x| x.as_u64()).map(|t| t as u32).unwrap_or(fallback_occurred_at_unix);
+    let occurred_at_instant = v.get("occurred_at_instant").and_then(|x| serde_json::from_value(x.clone()).ok());
+    Some(Contribution {
+        id: resolved_id,
+        project_id: v.get("project_id").and_then(|x| x.as_str()).unwrap_or_default().to_string(),
+        contributor_did: v.get("contributor_did").and_then(|x| x.as_str()).unwrap_or_default().to_string(),
+        description: v.get("description").and_then(|x| x.as_str()).unwrap_or_default().to_string(),
+        effort_minutes: v.get("effort_minutes").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
+        capital_cents: v.get("capital_cents").and_then(|x| x.as_u64()).unwrap_or(0),
+        roi_multiplier: v.get("roi_multiplier").and_then(|x| x.as_f64()).map(|f| f as f32).unwrap_or(1.0),
+        privacy_level,
+        occurred_at_unix,
+        occurred_at_instant,
+        predecessor_id: v.get("predecessor_id").and_then(|x| x.as_str()).map(|s| s.to_string()),
+    })
 }
+
+#[cfg(test)]
+#[path = "projects_tests.rs"]
+mod tests;
