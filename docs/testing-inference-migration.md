@@ -400,3 +400,70 @@ Qwen dense, GGUF/FTW routed and shared experts, hybrid recurrent and streamed
 Qwen execution still require retained model identities, full sequence/state
 comparison and provider-specific evidence. A present optional model fixture or
 an early-returning physical test is not sufficient evidence for those gates.
+
+### Installed evidence policies and retained acceptance
+
+The native policy host now supports explicit V3 evidence-policy installation
+and admission through the existing authenticated authority and invalidation
+gate. Subjects, selected identifiers, controllers and installation authority
+remain distinct. A caller-supplied identity label or copied association evidence
+cannot construct an admitted session.
+
+Persistence dispatches explicitly between the existing record-v1/V2-policy
+representation and the new record-v2 envelope. Loading does not upgrade a
+policy, reinterpret a signature, or invent source/origin permissions. New
+evidence admission requires an explicitly installed V3 policy. Existing V2
+admission remains available under its original contract.
+
+Tokens and artifacts share one exclusive caller-provided retained-byte slot.
+Policy verification uses the complete retained proposal and payload, including
+source, score presence/meaning and signed artifact-origin restrictions. A
+control digest does not stand in for Webizen VM and graph evaluation. Bulk
+payload verification precedes the trusted time used for live rule evaluation;
+acceptance then rechecks the complete current association and policy state
+before committing the contract record.
+
+Accepted bytes are exposed through a one-use borrowed drain record after
+authority locks have been released. The buffer cannot be reused while that
+record is held. Dropping the record, unwinding, or acknowledging the wrong
+delivery length terminates the session. A later revocation prevents subsequent
+acceptance; it cannot retract an already accepted prefix. An acknowledgment is
+the embedding caller's report, not independent proof of external delivery.
+
+This is native authority and retained-record integration. Model/source labels
+still need a qualified runtime adapter that binds actual retained model and
+companion bytes, the prepared provider and the request. It does not yet replace
+the local decoder's acceptance loop, implement browser authority transport,
+restore numerical state, or qualify complete normal-runtime inference.
+
+Focused qualification passed 115 tests in each of the debug and optimized
+profiles, with strict warnings for the focused harness. The independent cases
+exercise expiry after real bulk payload work, owner disconnect and policy
+replacement/revocation, cross-session ticket refusal, graph-rule expiry,
+payload tails beyond 4 KB, artifact event exhaustion and callback reentry.
+Positive-controlled allocation measurements cover successful token/artifact
+acceptance and denial. The 598-line schema test module is retained as one
+cohesive fixture; production modules remain below 500 lines.
+
+An immutable copy of the actual legacy host verifies old-write/new-read and
+new-write/old-read compatibility, including byte-exact installed and revoked
+V2 records, signatures and anchors at the same canonical store path. One
+positive compile probe and eight negative probes check API usability, private
+ticket construction, non-copyable records, borrowed-data lifetime, exclusive
+storage and the absence of a caller-supplied production clock. The oracle
+copies and absolute test registrations are private qualification artifacts.
+
+The actual consuming core suite passed **10,510 tests, zero failures, three
+existing ignores and zero filtered**, in 512.63 seconds. All 10,477 prior test
+names remain, with exactly 36 new evidence-policy cases. The 3,309 frozen source
+and manifest paths remained unchanged through the build and serial run, with
+`QUALIA_REQUIRE_GPU_TESTS=1`. These are native core results; the focused strict
+warning setting does not imply a warning-free workspace build.
+
+The consuming client policy suite passed all four cases and the CLI policy
+suite passed all three. CPU-only compilation, WASM LLM compilation and WASM
+LLM with GPU-runtime compilation also passed with the same 3,309 source paths
+unchanged. Existing target-specific unused warnings remain visible. The final
+reconciliation matches all 72 independently reviewed authority/evidence source
+paths, the complete test inventory and the unchanged lockfile. These WASM
+checks establish compilation, not browser authority transport or execution.

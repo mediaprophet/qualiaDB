@@ -16,6 +16,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- Added explicit V3 evidence-policy installation and retained token/artifact acceptance through the existing native authority gate. Preserve V2 signed policy records and require current association/policy checks before one-use acceptance; prepared model binding and real decoder cutover remain separate migration steps.
+
 - Moved MoE routing, NVFP4 arithmetic, causal convolution/GatedDeltaNet, and Qwen vector/Hyper-Connection primitives to Etalon-backed compatibility exports. Existing public imports, error types and numerical ordering remain available; complete Qwen/MoE model execution and Webizen acceptance integration remain separate migration steps.
 
 - Split the local inference decoder into focused native/browser, preparation, selection, publication and finalization modules, preserving existing behavior and public entrypoints. Real Webizen token-acceptance integration remains a separate required migration step.

@@ -9,89 +9,23 @@ use super::{
         atomic_json_write, read_bounded, validate_json_size, AuthorityAnchor, RecordIdentity,
     },
     controller::{AuthorityState, InstalledController},
-    policy_digest,
-    signature::{signature_parts, verify_signature},
+    evidence::EvidenceController,
+    store::Record,
     GovernedTokenSession, InferenceAdmission, PolicyDocument, PolicyError, PolicyRules,
     SignedPolicy, TrustedPolicyIdentity, MAX_POLICY_JSON_BYTES, POLICY_COLD_BUDGET_BYTES,
     POLICY_VERSION,
 };
-use ed25519_dalek::{Signer, SigningKey};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use ed25519_dalek::SigningKey;
 use std::{
     fs,
     path::{Path, PathBuf},
     sync::{atomic::Ordering, Arc},
 };
 
-const FILE_NAME: &str = "sentinel-inference-policy.json";
+#[path = "host/evidence.rs"]
+mod evidence;
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Record {
-    version: u32,
-    serial: u64,
-    generation: u64,
-    next_session: u64,
-    active: Option<SignedPolicy>,
-    signature: [[u8; 32]; 2],
-}
-impl Record {
-    fn empty() -> Self {
-        Self {
-            version: 1,
-            serial: 0,
-            generation: 0,
-            next_session: 0,
-            active: None,
-            signature: [[0; 32]; 2],
-        }
-    }
-    fn digest(&self, trust: &TrustedPolicyIdentity) -> [u8; 32] {
-        let mut h = Sha256::new();
-        h.update(b"qualia:sentinel:policy-store:v1\0");
-        h.update(self.version.to_le_bytes());
-        h.update(trust.key);
-        for v in [
-            trust.principal,
-            trust.audience,
-            trust.controller_generation,
-            self.serial,
-            self.generation,
-            self.next_session,
-        ] {
-            h.update(v.to_le_bytes());
-        }
-        match &self.active {
-            None => h.update([0]),
-            Some(policy) => {
-                h.update([1]);
-                h.update(policy_digest(&policy.document));
-                h.update(policy.signature[0]);
-                h.update(policy.signature[1]);
-            }
-        }
-        h.finalize().into()
-    }
-    fn sign(&mut self, trust: &TrustedPolicyIdentity, key: &SigningKey) {
-        self.signature = signature_parts(key.sign(&self.digest(trust)).to_bytes());
-    }
-    fn verify(&self, trust: &TrustedPolicyIdentity) -> Result<(), PolicyError> {
-        if self.version != 1 || self.serial == 0 || self.generation == 0 {
-            return Err(PolicyError::InvalidPolicy);
-        }
-        verify_signature(trust.key, self.digest(trust), self.signature)?;
-        if let Some(policy) = &self.active {
-            if policy.document.policy_generation != self.generation {
-                return Err(PolicyError::StaleGeneration);
-            }
-            // Keep expired installations loadable for explicit replacement or
-            // revocation; session admission separately checks the current time.
-            policy.verify(trust, policy.document.not_before)?;
-        }
-        Ok(())
-    }
-}
+const FILE_NAME: &str = "sentinel-inference-policy.json";
 
 #[derive(Debug, Clone, Copy)]
 pub struct PolicyStatus {
@@ -107,6 +41,7 @@ pub struct NativePolicyHost {
     record: Record,
     authority: Arc<AuthorityState>,
     controller: Option<Arc<InstalledController>>,
+    evidence_controller: Option<Arc<EvidenceController>>,
     anchor: AuthorityAnchor,
     // Persistent lockfile is never removed: unlinking would permit split locks.
     _lock: fs::File,
@@ -162,6 +97,7 @@ impl NativePolicyHost {
             record: Record::empty(),
             authority: Arc::new(AuthorityState::new(0)),
             controller: None,
+            evidence_controller: None,
             anchor,
             _lock: lock,
             #[cfg(test)]
@@ -174,14 +110,10 @@ impl NativePolicyHost {
     }
     pub fn status(&self) -> PolicyStatus {
         PolicyStatus {
-            installed: self.record.active.is_some(),
-            generation: self.record.generation,
-            serial: self.record.serial,
-            digest: self
-                .record
-                .active
-                .as_ref()
-                .map(|p| policy_digest(&p.document)),
+            installed: self.record.installed(),
+            generation: self.record.generation(),
+            serial: self.record.serial(),
+            digest: self.record.policy_digest(),
         }
     }
     pub fn trusted_identity(&self) -> TrustedPolicyIdentity {
@@ -199,9 +131,9 @@ impl NativePolicyHost {
         let result = self.read_record();
         match result {
             Ok(record) => {
-                if record.serial < self.record.serial
-                    || record.generation < self.record.generation
-                    || record.next_session < self.record.next_session
+                if record.serial() < self.record.serial()
+                    || record.generation() < self.record.generation()
+                    || record.next_session() < self.record.next_session()
                 {
                     self.disconnect();
                     return Err(PolicyError::StaleGeneration);
@@ -232,7 +164,7 @@ impl NativePolicyHost {
         self.check_generation(expected_generation)?;
         let generation = self
             .record
-            .generation
+            .generation()
             .checked_add(1)
             .ok_or(PolicyError::CounterExhausted)?;
         let doc = PolicyDocument {
@@ -248,8 +180,8 @@ impl NativePolicyHost {
         let policy = SignedPolicy::sign(doc, key)?;
         policy.verify(&self.trust, now)?;
         let mut next = self.next_record()?;
-        next.generation = generation;
-        next.active = Some(policy);
+        next.set_generation(generation);
+        next.install_v2(policy);
         self.persist(&mut next, key)?;
         self.publish(next)?;
         Ok(self.status())
@@ -264,11 +196,12 @@ impl NativePolicyHost {
         self.check_key(key)?;
         self.check_generation(expected_generation)?;
         let mut next = self.next_record()?;
-        next.generation = next
-            .generation
-            .checked_add(1)
-            .ok_or(PolicyError::CounterExhausted)?;
-        next.active = None;
+        next.set_generation(
+            next.generation()
+                .checked_add(1)
+                .ok_or(PolicyError::CounterExhausted)?,
+        );
+        next.clear();
         self.persist(&mut next, key)?;
         self.publish(next)?;
         Ok(self.status())
@@ -308,10 +241,13 @@ impl NativePolicyHost {
     ) -> Result<GovernedTokenSession, PolicyError> {
         check_budget(budget)?;
         self.check_key(key)?;
+        if self.record.v3().is_some() {
+            return Err(PolicyError::PolicyVersionRequired);
+        }
         let controller = self.controller.as_ref().ok_or(PolicyError::MissingPolicy)?;
         let session_id = self
             .record
-            .next_session
+            .next_session()
             .checked_add(1)
             .ok_or(PolicyError::CounterExhausted)?;
         let session = GovernedTokenSession::admit(
@@ -323,7 +259,7 @@ impl NativePolicyHost {
             association,
         )?;
         let mut next = self.next_record()?;
-        next.next_session = session_id;
+        next.set_next_session(session_id);
         self.persist(&mut next, key)?;
         // Session-number bookkeeping does not replace or reconnect authority.
         self.record = next;
@@ -337,7 +273,7 @@ impl NativePolicyHost {
         }
     }
     fn check_generation(&self, expected: u64) -> Result<(), PolicyError> {
-        if expected != self.record.generation {
+        if expected != self.record.generation() {
             Err(PolicyError::StaleGeneration)
         } else {
             Ok(())
@@ -345,10 +281,11 @@ impl NativePolicyHost {
     }
     fn next_record(&self) -> Result<Record, PolicyError> {
         let mut next = self.record.clone();
-        next.serial = next
-            .serial
-            .checked_add(1)
-            .ok_or(PolicyError::CounterExhausted)?;
+        next.set_serial(
+            next.serial()
+                .checked_add(1)
+                .ok_or(PolicyError::CounterExhausted)?,
+        );
         Ok(next)
     }
     fn publish(&mut self, record: Record) -> Result<(), PolicyError> {
@@ -366,7 +303,7 @@ impl NativePolicyHost {
             }
         };
         self.authority.generation.store(epoch, Ordering::Release);
-        self.controller = record.active.as_ref().map(|policy| {
+        self.controller = record.v2().map(|policy| {
             Arc::new(InstalledController {
                 policy: policy.clone(),
                 key: self.trust.key,
@@ -374,18 +311,36 @@ impl NativePolicyHost {
                 epoch,
             })
         });
+        self.evidence_controller = match record
+            .v3()
+            .map(|policy| {
+                EvidenceController::new(
+                    policy.clone(),
+                    self.trust,
+                    Arc::clone(&self.authority),
+                    epoch,
+                )
+            })
+            .transpose()
+        {
+            Ok(controller) => controller.map(Arc::new),
+            Err(error) => {
+                self.authority.connected.store(false, Ordering::Release);
+                return Err(error);
+            }
+        };
         self.record = record;
         self.authority.connected.store(true, Ordering::Release);
         Ok(())
     }
     fn read_record(&self) -> Result<Record, PolicyError> {
         let bytes = read_bounded(&self.root.join(FILE_NAME), MAX_POLICY_JSON_BYTES)?;
-        let record: Record = serde_json::from_slice(&bytes).map_err(|_| PolicyError::Encoding)?;
+        let record = Record::decode(&bytes)?;
         record.verify(&self.trust)?;
         self.anchor.verify(
             RecordIdentity {
-                serial: record.serial,
-                generation: record.generation,
+                serial: record.serial(),
+                generation: record.generation(),
                 digest: record.digest(&self.trust),
             },
             &self.trust,
@@ -395,7 +350,7 @@ impl NativePolicyHost {
     fn persist(&mut self, record: &mut Record, key: &SigningKey) -> Result<(), PolicyError> {
         record.sign(&self.trust, key);
         validate_json_size(record, MAX_POLICY_JSON_BYTES)?;
-        let current = if self.record.serial == 0 {
+        let current = if self.record.serial() == 0 {
             if self.root.join(FILE_NAME).exists() || self.anchor.exists() {
                 Err(PolicyError::StaleGeneration)
             } else {
@@ -422,8 +377,8 @@ impl NativePolicyHost {
         }
         self.anchor.publish(
             RecordIdentity {
-                serial: record.serial,
-                generation: record.generation,
+                serial: record.serial(),
+                generation: record.generation(),
                 digest: record.digest(&self.trust),
             },
             &self.trust,

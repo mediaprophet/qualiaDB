@@ -128,6 +128,7 @@ pub enum PolicyError {
     Session,
     Io,
     Encoding,
+    PolicyVersionRequired,
 }
 impl fmt::Display for PolicyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

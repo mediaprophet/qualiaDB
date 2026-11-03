@@ -15,11 +15,14 @@ mod anchor;
 mod associated;
 mod candidate;
 mod controller;
+pub mod evidence;
 #[cfg(not(target_arch = "wasm32"))]
 mod host;
 mod policy;
 mod program;
 mod signature;
+#[cfg(not(target_arch = "wasm32"))]
+mod store;
 
 pub use actor::*;
 #[cfg(not(target_arch = "wasm32"))]
