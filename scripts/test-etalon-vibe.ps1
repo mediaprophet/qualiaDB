@@ -246,6 +246,24 @@ function Source-Identity([string]$Name, [string]$Root) {
         working_hash = $workingHash; contents_fully_fingerprinted = $exact; changed_files = $files.ToArray() }
 }
 function Toml-String([string]$Value) { return '"' + $Value.Replace('\', '/').Replace('"', '\"') + '"' }
+function Get-EtalonPatchBlock($Metadata) {
+    # Patch the entire source workspace: a partial list can mix local and git
+    # copies of the same public types when Etalon adds a transitive dependency.
+    $members = @($Metadata.workspace_members)
+    if (-not $members.Count) { throw 'Etalon metadata has no workspace members' }
+    $packages = @($Metadata.packages | Where-Object { $members -contains $_.id } | Sort-Object name)
+    if ($packages.Count -ne $members.Count) { throw 'Etalon workspace metadata is incomplete' }
+    $names = @{}
+    $patches = foreach ($package in $packages) {
+        if ($names.ContainsKey($package.name)) { throw "Duplicate Etalon workspace package: $($package.name)" }
+        $names[$package.name] = $true
+        "$($package.name) = { path = $(Toml-String (Split-Path $package.manifest_path)) }"
+    }
+    foreach ($required in @('wgpu', 'naga', 'etalon', 'etalon-agent', 'etalon-wgsl-forge', 'etalon-nquin', 'etalon-tensor', 'etalon-render', 'etalon-wasm')) {
+        if (-not $names.ContainsKey($required)) { throw "Expected one local Etalon package named $required" }
+    }
+    return '[patch."https://github.com/mediaprophet/etalon.git"]' + [Environment]::NewLine + ($patches -join [Environment]::NewLine)
+}
 function Write-Manifest([string]$Path, [string]$Text) {
     New-Item -ItemType Directory -Force -Path (Split-Path $Path) | Out-Null
     if (-not (Test-Path -LiteralPath $Path) -or [IO.File]::ReadAllText($Path) -cne $Text) { [IO.File]::WriteAllText($Path, $Text, [Text.UTF8Encoding]::new($false)) }
@@ -294,12 +312,7 @@ try {
     $metadataPhase = Invoke-OwnedProcess 'etalon-metadata' 'cargo' $metadataArgs 120
     Assert-Success $metadataPhase
     $metadata = Read-BoundedJson $metadataPhase.stdout 16MB
-    $patches = foreach ($name in @('wgpu', 'naga', 'etalon', 'etalon-agent', 'etalon-wgsl-forge', 'etalon-nquin', 'etalon-tensor', 'etalon-render', 'etalon-wasm')) {
-        $package = @($metadata.packages | Where-Object name -EQ $name)
-        if ($package.Count -ne 1) { throw "Expected one local Etalon package named $name" }
-        "$name = { path = $(Toml-String (Split-Path $package[0].manifest_path)) }"
-    }
-    $patchBlock = '[patch."https://github.com/mediaprophet/etalon.git"]' + [Environment]::NewLine + ($patches -join [Environment]::NewLine)
+    $patchBlock = Get-EtalonPatchBlock $metadata
     $template = [IO.File]::ReadAllText((Join-Path $qualiaRoot 'tools/accelerator-harness/Cargo.toml'))
     $oldVibe = 'vibe = { path = "../../crates/vibe" }'
     if (-not $template.Contains($oldVibe)) { throw 'Lightweight manifest Vibe path contract changed' }

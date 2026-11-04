@@ -201,10 +201,22 @@ jobs:
             || git commit -m "chore: update benchmark results [skip ci]"
           # During rebase our just-generated results are the replayed ("theirs")
           # side; prefer them on any conflict so the latest numbers win.
-          git pull --rebase --autostash -X theirs origin "${{ github.ref_name }}"
-          git push origin "HEAD:${{ github.ref_name }}"
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash -X theirs origin "$RESULT_BRANCH"
+            if git push origin "HEAD:$RESULT_BRANCH"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Benchmark result push failed after 3 attempts"
+              exit 1
+            fi
+            sleep "$((attempt * 5))"
+          done
+        env:
+          RESULT_BRANCH: ${{ github.ref_name }}
 
       - name: Upload comparative results artifact
+        if: ${{ !cancelled() && hashFiles('docs/comparative_benchmark_results.json') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results
@@ -212,6 +224,7 @@ jobs:
           retention-days: 30
 
       - name: Upload LLM benchmark results artifact
+        if: ${{ !cancelled() && hashFiles('docs/llm_benchmark_results.json') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: llm-benchmark-results
@@ -302,10 +315,22 @@ jobs:
           git add docs/comparative_benchmark_results.schemaorg-30-current-https.json
           git diff --cached --quiet \
             || git commit -m "chore: update Schema.org comparative benchmark results [skip ci]"
-          git pull --rebase --autostash -X theirs origin "${{ github.ref_name }}"
-          git push origin "HEAD:${{ github.ref_name }}"
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash -X theirs origin "$RESULT_BRANCH"
+            if git push origin "HEAD:$RESULT_BRANCH"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Schema.org result push failed after 3 attempts"
+              exit 1
+            fi
+            sleep "$((attempt * 5))"
+          done
+        env:
+          RESULT_BRANCH: ${{ github.ref_name }}
 
       - name: Upload Schema.org comparative results artifact
+        if: ${{ !cancelled() && hashFiles('docs/comparative_benchmark_results.schemaorg-30-current-https.json') != '' }}
         uses: actions/upload-artifact@v6
         with:
           name: comparative-benchmark-results-schemaorg

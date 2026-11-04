@@ -3,12 +3,42 @@ $PSNativeCommandUseErrorActionPreference = $false
 $tokens = $null; $parseErrors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'test-etalon-vibe.ps1'), [ref]$tokens, [ref]$parseErrors)
 if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
-foreach ($name in @('Read-LogTail', 'Get-ProductTestSelection')) {
+foreach ($name in @('Read-LogTail', 'Get-ProductTestSelection', 'Toml-String', 'Get-EtalonPatchBlock')) {
     $function = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
     if (-not $function) { throw "Missing harness function: $name" }
     . ([scriptblock]::Create($function.Extent.Text))
 }
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+$packageNames = @('wgpu', 'naga', 'etalon', 'etalon-agent', 'etalon-wgsl-forge', 'etalon-nquin', 'etalon-tensor', 'etalon-render', 'etalon-wasm',
+    'etalon-model', 'etalon-resources', 'etalon-diagnostics', 'etalon-inference', 'future-etalon-package')
+$packages = @($packageNames | ForEach-Object { @{ name = $_; id = "path+file:///etalon/$_#0.0.2"; manifest_path = (Join-Path $root "target/fixture-etalon/$_/Cargo.toml") } })
+$metadata = @{ packages = $packages; workspace_members = @($packages | ForEach-Object { $_.id }) }
+$patchBlock = Get-EtalonPatchBlock $metadata
+foreach ($name in $packageNames) {
+    if ($patchBlock -notmatch "(?m)^$([regex]::Escape($name)) = \{ path = ") { throw "Missing local workspace override: $name" }
+}
+$metadata.packages = @($packages | Sort-Object name -Descending)
+if ((Get-EtalonPatchBlock $metadata) -cne $patchBlock) { throw 'Local overrides must be deterministic' }
+$metadata.workspace_members += 'missing-member'
+try { $null = Get-EtalonPatchBlock $metadata; throw 'Incomplete workspace accepted' } catch {
+    if ($_.Exception.Message -ne 'Etalon workspace metadata is incomplete') { throw }
+}
+$metadata.workspace_members = @($packages | ForEach-Object { $_.id })
+$metadata.packages = $packages + @($packages[0])
+$metadata.workspace_members += $packages[0].id
+try { $null = Get-EtalonPatchBlock $metadata; throw 'Duplicate package accepted' } catch {
+    if ($_.Exception.Message -notlike 'Duplicate Etalon workspace package:*') { throw }
+}
+$metadata.packages = @($packages | Where-Object name -NE 'etalon-agent')
+$metadata.workspace_members = @($metadata.packages | ForEach-Object { $_.id })
+try { $null = Get-EtalonPatchBlock $metadata; throw 'Required package omission accepted' } catch {
+    if ($_.Exception.Message -ne 'Expected one local Etalon package named etalon-agent') { throw }
+}
+$reviewedRevision = (Get-Content (Join-Path $root 'tools/accelerator-harness/etalon-revision.txt') -Raw).Trim()
+$harnessManifest = Get-Content (Join-Path $root 'tools/accelerator-harness/Cargo.toml') -Raw
+if ($reviewedRevision -notmatch '^[0-9a-f]{40}$' -or $harnessManifest -notmatch ('etalon-agent = .*rev = "' + $reviewedRevision + '"')) {
+    throw 'Harness agent dependency must match the reviewed checkout revision'
+}
 $fixture = Join-Path $root ('target/qualification/harness-cli-test-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture | Out-Null
 $log = Join-Path $fixture 'tail.log'

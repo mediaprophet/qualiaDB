@@ -83,7 +83,7 @@ jobs:
           node docs/tests/qdnf-pages.test.mjs
           node docs/tests/edge-llm-smoke.test.mjs
           node docs/tests/lexicon-v4-namespaced.test.mjs
-          node --test docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs
+          node --test docs/tests/device-harness.test.mjs scripts/serve-device-harness.test.mjs scripts/device-harness-identity.test.mjs
 
       - name: Install wasm-pack
         run: |

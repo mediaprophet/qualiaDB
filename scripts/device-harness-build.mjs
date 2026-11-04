@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { etalonDependencyIdentity, validateDependencyIdentity } from './device-harness-identity.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -21,16 +22,15 @@ if (!/^[0-9a-f]{40}$/.test(revision) || !/^[0-9a-f]{40}$/.test(etalonRevision)) 
 }
 
 const capturePath = option('--capture-source');
+const cargo = await readFile(resolve(root, 'Cargo.toml'), 'utf8');
+const lock = await readFile(resolve(root, 'Cargo.lock'), 'utf8');
+const dependencyIdentity = (localOverride) => localOverride
+  ? { cargo_toml_sha256: sha256(cargo), cargo_lock_sha256: sha256(lock), local_override: true }
+  : etalonDependencyIdentity(cargo, lock);
 if (capturePath) {
   const status = git('status', '--porcelain=v1', '--untracked-files=all').toString();
   const etalonPath = option('--etalon-path');
-  if (!etalonPath) {
-    const cargo = await readFile(resolve(root, 'Cargo.toml'), 'utf8');
-    const declarations = cargo.split('\n').filter((line) => line.includes('git = "https://github.com/mediaprophet/etalon.git"'));
-    if (declarations.length !== 11 || declarations.some((line) => !line.includes(`rev = "${etalonRevision}"`))) {
-      throw new Error('Production Etalon declarations must all pin the manifest revision; local overrides require --etalon-path');
-    }
-  }
+  const dependencies = dependencyIdentity(Boolean(etalonPath));
   let localEtalon = {};
   if (etalonPath) {
     const etalonGit = (...values) => execFileSync('git', ['-c', 'core.safecrlf=false', ...values], { cwd: etalonPath, maxBuffer: 32 * 1024 * 1024 });
@@ -50,6 +50,7 @@ if (capturePath) {
     schema_version: 1,
     qualia_revision: revision,
     etalon_revision: etalonRevision,
+    etalon_dependencies: dependencies,
     captured_at_utc: new Date().toISOString(),
     dirty,
     attribution: dirty ? 'development checkout; commit alone does not identify these sources' : 'clean commit checkout before asset generation',
@@ -68,6 +69,7 @@ if (capturePath) {
   if (source.schema_version !== 1 || source.qualia_revision !== revision || source.etalon_revision !== etalonRevision || typeof source.dirty !== 'boolean') {
     throw new Error('Source record does not match this checkout and reviewed Etalon revision');
   }
+  validateDependencyIdentity(source.etalon_dependencies, dependencyIdentity(source.etalon_dependencies?.local_override === true));
   const output = option('--output') ?? resolve(root, 'docs/playground/device-harness-build.json');
   const assetDirectory = option('--asset-directory') ?? resolve(root, 'docs/pkg/device-harness');
   if (!assetDirectory.startsWith(resolve(root, 'docs') + sep)) throw new Error('Harness assets must be within public docs');

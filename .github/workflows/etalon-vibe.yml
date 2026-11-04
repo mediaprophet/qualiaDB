@@ -14,6 +14,8 @@ on:
       - ".github/workflows/etalon-vibe.yml"
   pull_request:
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
       - "crates/qualia-core-db/**"
       - "crates/vibe/**"
       - "tools/accelerator-harness/**"
@@ -80,7 +82,7 @@ jobs:
           node-version: 24.22.0
           package-manager-cache: false
 
-      - name: Test harness CPU selection and bounded failure logs
+      - name: Test harness dependency identity, CPU selection and bounded failure logs
         shell: pwsh
         working-directory: etalon
         run: ../qualia/scripts/test-etalon-vibe.test.ps1
@@ -120,7 +122,8 @@ jobs:
           name: etalon-vibe-${{ matrix.os }}
           path: |
             qualia/target/qualification/receipt.json
-            qualia/target/etalon-vibe-harness/runs/*/*-execution.*.log
+            qualia/target/etalon-vibe-harness/runs/*/*.stdout.log
+            qualia/target/etalon-vibe-harness/runs/*/*.stderr.log
             qualia/target/etalon-vibe-harness/runs/*/product-events.jsonl
           retention-days: 7
           if-no-files-found: warn

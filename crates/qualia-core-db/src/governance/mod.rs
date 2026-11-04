@@ -8,16 +8,7 @@
     feature = "wasm-full"
 ))]
 pub mod cell_graph;
-#[cfg(not(all(
-    target_arch = "wasm32",
-    feature = "wasm-ontology",
-    not(any(
-        feature = "wasm-webcivics",
-        feature = "wasm-logic",
-        feature = "wasm-scientific",
-        feature = "wasm-full"
-    ))
-)))]
+// Sensing authorization uses the real consent contract in every profile.
 pub mod consent_contract;
 #[cfg(any(
     not(target_arch = "wasm32"),

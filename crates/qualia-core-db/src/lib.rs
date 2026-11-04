@@ -1582,15 +1582,7 @@ impl Drop for QualiaSuperBlock {
     feature = "wasm-full"
 ))]
 pub mod deontic_logic;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-webcivics",
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full",
-    // Sensing association estimates retain their real epistemic classification.
-    feature = "device-harness"
-))]
+// Sensing association estimates retain their real epistemic classification in every profile.
 pub mod epistemic;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]

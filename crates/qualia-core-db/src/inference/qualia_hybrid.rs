@@ -25,6 +25,12 @@ use crate::q_hash;
 use crate::tensor::Tensor10D;
 use crate::NQuin;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::gguf_bridge::execution_env;
+// Browser configuration does not require the optional GPU inference runtime.
+#[cfg(target_arch = "wasm32")]
+use std::env as execution_env;
+
 /// Logit boost applied to graph answer-token ids (nats; soft guidance).
 pub const GRAPH_LOGIT_BIAS: f32 = 2.5;
 
@@ -45,7 +51,7 @@ pub fn prepare_hybrid_decode(prompt: &str) {
     }
     let hybrid_route = crate::inference_modes::quant_graph_grounding_enabled()
         || matches!(
-            crate::gguf_bridge::execution_env::var("QUALIA_HYBRID_ROUTE").ok().as_deref(),
+            execution_env::var("QUALIA_HYBRID_ROUTE").ok().as_deref(),
             Some("1") | Some("true")
         );
     if hybrid_route {
@@ -188,7 +194,7 @@ pub fn propose_fact_draft(prompt: &str, encode: &dyn Fn(&str) -> Vec<u32>) -> Dr
 #[inline]
 pub fn graph_force_enabled() -> bool {
     matches!(
-        crate::gguf_bridge::execution_env::var("QUALIA_GRAPH_FORCE").ok().as_deref(),
+        execution_env::var("QUALIA_GRAPH_FORCE").ok().as_deref(),
         Some("1") | Some("true")
     )
 }
