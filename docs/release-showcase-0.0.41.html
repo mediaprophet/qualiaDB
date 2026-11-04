@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QualiaDB 0.0.41 preview — Explore the capabilities</title>
+  <meta name="description" content="Explore QualiaDB through browser demos, native workflows and architecture showcases. 0.0.41 preview with a 0.0.40 runtime baseline.">
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="css/release-navigator.css">
+  <script src="js/menu-loader.js" defer></script>
+  <script src="js/release-navigator.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to capabilities</a>
+  <nav class="release-nav" aria-label="Site navigation">
+    <div class="nav-inner">
+      <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">Q</span>Qualia<span>DB</span></a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
+      <a class="nav-progress" href="progress-0.0.41.html">Release progress ↗</a>
+    </div>
+  </nav>
+  <header class="hero page-width">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> 0.0.41 preview <span class="baseline">Runtime baseline · 0.0.40</span></p>
+      <h1>One connected ecosystem.<br><span>Many ways to explore.</span></h1>
+      <p class="hero-lead">Write a rule. Shape a world. Inspect a calculation. Follow the capabilities across QualiaDB, Etalon, Webizen, VibeScript and Poet, with a clear place to start.</p>
+      <div class="hero-actions"><a class="primary-link" href="#explore">Find a demo <span aria-hidden="true">↓</span></a><a class="text-link" href="progress-0.0.41.html#ecosystem">Explore the repositories ↗</a></div>
+    </div>
+    <div class="capability-map" aria-label="Capabilities connected through the semantic engine">
+      <div class="orbit-row"><span>Geometry</span><span>Science</span><span>Graphics</span></div>
+      <div class="map-core"><span class="map-symbol" aria-hidden="true">Q</span><strong>Shared meaning</strong><small>Data · rules · composition</small></div>
+      <div class="orbit-row"><span>Logic</span><span>Authoring</span><span>Instruments</span></div>
+      <p>Explore the surface.<br>Follow its runtime requirements.</p>
+    </div>
+  </header>
+  <main id="main" class="page-width">
+    <section class="release-context" aria-labelledby="context-title">
+      <div><p class="eyebrow">From 0.0.40 to 0.0.41</p><h2 id="context-title">A connected tour of the release.</h2></div>
+      <div><p>Building on the 0.0.40 experiences, the 0.0.41 preview brings the wider ecosystem into view: semantic data and reasoning, scientific libraries, spatial tools, graphics infrastructure and application authoring. Modular libraries support these different surfaces; each destination below explains a specific part of that picture.</p><p>The links open existing demos and documentation. Their deployed artifacts can differ. A browser interaction, a native workflow and a roadmap entry each carry different evidence: use <a href="progress-0.0.41.html">release progress</a> and the <a href="release-matrix.html">release matrix</a> to assess qualification.</p></div>
+    </section>
+    <section id="explore" class="explore" aria-labelledby="explore-title">
+      <div class="section-heading"><div><p class="eyebrow">Choose your route</p><h2 id="explore-title">What would you like to try?</h2></div><p>Start with a capability.<br>See what runs, and what it needs.</p></div>
+      <form id="demo-filters" class="filter-bar" hidden role="search" aria-label="Filter capability destinations">
+        <label class="search-field">Find a destination<input id="demo-search" type="search" placeholder="Try rules, geometry, WASM…" autocomplete="off"></label>
+        <label>Capability<select id="demo-capability"><option value="all">All capabilities</option><option value="data">Semantic data</option><option value="logic">Logic &amp; constraints</option><option value="science">Scientific computing</option><option value="spatial">Spatial &amp; geometry</option><option value="gpu">Graphics &amp; compute</option><option value="authoring">VibeScript authoring</option><option value="instruments">Semantic instruments</option><option value="applications">Poet applications</option><option value="runtime">Runtime profiles</option></select></label>
+        <label>Experience<select id="demo-type"><option value="all">All experiences</option><option value="browser">Browser demo</option><option value="native">Native workflow</option><option value="guide">Guide / showcase</option></select></label>
+        <button type="reset" class="reset-button">Reset</button>
+      </form>
+      <div class="results-line"><p id="demo-count" role="status" aria-live="polite" aria-atomic="true">10 destinations · 9 capability tracks</p><span>No account needed to browse</span></div>
+      <noscript><p class="notice">All destinations are shown below. Enable JavaScript to search and filter this navigator; demo pages have their own runtime requirements.</p></noscript>
+      <div class="demo-grid">
+        <article class="demo-card" data-capability="data" data-type="browser">
+          <div class="card-top"><span class="track">01 / Semantic data</span><span class="type browser">Browser demo</span></div>
+          <h3>From text to semantic structure</h3><p>Explore the compiler surface for SPARQL, N3, Turtle and N-Triples in the Qualia Playground.</p>
+          <dl><dt>Try this</dt><dd>Choose a Compiler preset, then use Compile or Parse to inspect the output.</dd><dt>What it demonstrates</dt><dd>Different textual inputs reaching the engine through a shared browser workbench.</dd><dt>Requirements</dt><dd>JavaScript, HTTP(S) hosting and the playground WASM package. Inspect the page’s engine status first.</dd></dl>
+          <a class="card-link" href="playground/index.html">Open the playground <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="logic" data-type="browser">
+          <div class="card-top"><span class="track">02 / Logic &amp; constraints</span><span class="type browser">Browser demo</span></div>
+          <h3>Make rules and shapes tangible</h3><p>Move between N3 rule analysis, forward chaining and SHACL validation.</p>
+          <dl><dt>Try this</dt><dd>Run Parse &amp; analyze on the N3 example, then Run forward chain. In SHACL, change the bound and validate again.</dd><dt>What it demonstrates</dt><dd>Rule processing and constraint outcomes, alongside explanations of Qualia extensions.</dd><dt>Requirements</dt><dd>The playground WASM package and JavaScript. Wait for the WASM engine badge before running.</dd></dl>
+          <a class="card-link" href="logic-showcase.html">Explore logic &amp; shapes <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="science" data-type="browser">
+          <div class="card-top"><span class="track">03 / Scientific computing</span><span class="type browser">Browser demo</span></div>
+          <h3>Change the inputs. Inspect the math.</h3><p>A workbench for geometric algebra, ODEs, thermodynamics, sequence alignment and chemistry.</p>
+          <dl><dt>Try this</dt><dd>Change a multivector component and press Compute (WASM). Switch to ODE Solvers and press Solve (WASM).</dd><dt>What it demonstrates</dt><dd>Browser calls into scientific WASM exports with editable inputs and visible results.</dd><dt>Requirements</dt><dd>The full playground WASM artifact. Charts also load Chart.js from a CDN; an unavailable engine shows a load error.</dd></dl>
+          <a class="card-link" href="science-playground.html">Open the science workbench <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="spatial" data-type="browser">
+          <div class="card-top"><span class="track">04 / Spatial &amp; geometry</span><span class="type browser">Browser demo</span></div>
+          <h3>See geometry become queryable</h3><p>Inspect generated shapes, spatial relations and semantic geometry encoding.</p>
+          <dl><dt>Try this</dt><dd>Choose Cube or Torus in the viewer. Open the GeoSPARQL tab, choose a relation and run it on the supplied geometries.</dd><dt>What it demonstrates</dt><dd>A visual geometry surface connected to spatial operations and Quin representation.</dd><dt>Requirements</dt><dd>JavaScript and the page’s graphics dependencies; engine operations need portal or playground WASM. Native operations additionally need a local daemon.</dd></dl>
+          <a class="card-link" href="spatial.html">Explore the spatial lab <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="gpu" data-type="guide">
+          <div class="card-top"><span class="track">05 / Graphics &amp; compute</span><span class="type guide">Guide / showcase</span></div>
+          <h3>Look inside the graphics stack</h3><p>Tour temporal reconstruction, lighting, texture transcodes, water, vegetation and spatial media.</p>
+          <dl><dt>Try this</dt><dd>Switch architecture tabs, then inspect the Browser WebGPU Live Probe near the bottom of the page.</dd><dt>What it demonstrates</dt><dd>Pipeline explanations and a browser adapter capability probe. The probe does not execute those rendering pipelines.</dd><dt>Requirements</dt><dd>JavaScript for tabs; a secure context and available WebGPU adapter for the probe. Read qualification evidence separately.</dd></dl>
+          <a class="card-link" href="graphics.html">Tour graphics architecture <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="gpu" data-type="native">
+          <div class="card-top"><span class="track">05 / Graphics &amp; compute</span><span class="type native">Native workflow</span></div>
+          <h3>Follow a shader to certification</h3><p>WGSL Forge explains kernel generation, backend selection and comparison against a CPU oracle.</p>
+          <dl><dt>Try this</dt><dd>Read the certification example and backend settings, then inspect <code>qualia shader --help</code> in a locally built CLI that includes shader support.</dd><dt>What it demonstrates</dt><dd>The native kernel certification workflow and its reported baseline evidence. This destination is an explanatory page.</dd><dt>Requirements</dt><dd>A suitable local CLI build, GPU backend and adapter to execute kernels. Opening this page starts no GPU workload.</dd></dl>
+          <a class="card-link" href="forge-showcase.html">Read the Forge workflow <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="authoring" data-type="browser">
+          <div class="card-top"><span class="track">06 / VibeScript authoring</span><span class="type browser">Browser demo</span></div>
+          <h3>Write, check and run a cell</h3><p>Explore VibeScript with an editor, examples, diagnostics and bytecode inspection.</p>
+          <dl><dt>Try this</dt><dd>Select an example and press Run (Ctrl+Enter). Use Check or Diagnose, then choose Cell mode for Compile · Run.</dd><dt>What it demonstrates</dt><dd>Interactive language execution and a compiled cell that can run again without repeating decode.</dd><dt>Requirements</dt><dd>The deployed VibeScript WASM package and Monaco CDN. Use the published Jekyll site or a Jekyll build; raw source contains template paths.</dd></dl>
+          <a class="card-link" href="vibe/playground.html">Open VibeScript <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="instruments" data-type="browser">
+          <div class="card-top"><span class="track">07 / Semantic instruments</span><span class="type browser">Browser demo</span></div>
+          <h3>Give a method a clear boundary</h3><p>Build a tiny instrument label and explore the difference between a held and a recorded example run.</p>
+          <dl><dt>Try this</dt><dd>Change the purpose or template. Run the example before and after checking the complete example record switch.</dd><dt>What it demonstrates</dt><dd>A local JavaScript illustration of declared inputs and a held-run safeguard; the displayed receipt is illustrative.</dd><dt>Requirements</dt><dd>JavaScript. This label exercise does not package, sign or execute a production Semantic Instrument.</dd></dl>
+          <a class="card-link" href="semantic-instruments.html#playground-title">Try an instrument label <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="applications" data-type="browser">
+          <div class="card-top"><span class="track">08 / Poet applications</span><span class="type browser">Browser demo</span></div>
+          <h3>Explore the application surface</h3><p>Open the packaged Webizen Poet WASM application for its tool-chest and manifolds.</p>
+          <dl><dt>Try this</dt><dd>Wait for the application to load, then explore the tool-chest and available manifold views.</dd><dt>What it demonstrates</dt><dd>A browser application delivered as its own WASM bundle, beyond the standalone engine workbenches.</dd><dt>Requirements</dt><dd>The matching Poet JavaScript and WASM artifacts on HTTP(S). Connected functions can require native services; application loading alone does not qualify every tool.</dd></dl>
+          <a class="card-link" href="poet-app/index.html">Open Webizen Poet <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="demo-card" data-capability="runtime" data-type="guide">
+          <div class="card-top"><span class="track">09 / Runtime profiles</span><span class="type guide">Guide / showcase</span></div>
+          <h3>Know which engine you loaded</h3><p>Compare the browser package profiles and inspect the exports of the deployed portal.</p>
+          <dl><dt>Try this</dt><dd>Review the three package cards, then inspect the portal version, capability counts and export list.</dd><dt>What it demonstrates</dt><dd>Artifact boundaries and runtime introspection, including the distinction between browser and native capabilities.</dd><dt>Requirements</dt><dd>JavaScript and fetchable deployed WASM packages for live measurements. A profile description does not prove the current artifact exports it.</dd></dl>
+          <a class="card-link" href="wasm-engine.html">Inspect engine profiles <span aria-hidden="true">↗</span></a>
+        </article>
+      </div>
+      <p id="demo-empty" class="empty-state" hidden>No destinations match those filters. Try another capability or reset the filters.</p>
+    </section>
+    <section class="next-step" aria-labelledby="next-title"><div><p class="eyebrow">Keep exploring</p><h2 id="next-title">The demo is the doorway.</h2><p>Follow the implementation and acceptance evidence to understand what each runtime supports.</p></div><div class="next-links"><a href="progress-0.0.41.html">0.0.41 progress <span aria-hidden="true">↗</span></a><a href="release-matrix.html">Release matrix <span aria-hidden="true">↗</span></a><a href="manuals/index.html">Developer manuals <span aria-hidden="true">↗</span></a></div></section>
+  </main>
+  <footer class="page-width">QualiaDB / Webizen · 0.0.41 preview · Runtime baseline 0.0.40 <a href="#main">Back to capabilities ↑</a></footer>
+</body>
+</html>

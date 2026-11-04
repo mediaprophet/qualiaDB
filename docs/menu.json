@@ -27,6 +27,13 @@
       "group": "Core"
     },
     {
+      "label": "Demos & Showcases",
+      "href": "release-showcase-0.0.41.html",
+      "icon": "fa-play",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "0.0.40.16 Progress",
       "href": "progress-0.0.40.html",
       "icon": "fa-wand-magic-sparkles",

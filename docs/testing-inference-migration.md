@@ -18,8 +18,7 @@ not claim new full-model or governance runtime qualification.
 
 P64 remains the native model format. GGUF is a compatibility/import format,
 including conversion into P64 where supported; it does not define the inference
-capability boundary. FreeToken is a reference architecture, not a required
-dependency. Generic mixture-of-experts work is distinct from Qwen-specific
+capability boundary. Generic mixture-of-experts work is distinct from Qwen-specific
 architecture handling.
 
 Deferred work includes remaining generic MoE/Qwen integration and qualification,
