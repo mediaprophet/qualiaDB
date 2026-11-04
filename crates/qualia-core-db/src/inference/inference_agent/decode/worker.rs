@@ -208,10 +208,8 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
     .with_governed_scope(gate.cache_scope());
     // Recurrent state is a separate arena: a KV-only prefix cannot restore it.
     // Each new turn starts clean; scalar successful owners retain weights/plans.
-    if governed {
-        engine.ssm_recurrent_state.fill(0.0)
-    }
-    let prefix_cache_allowed = !governed || ssm_layer_count == 0;
+    engine.reset_recurrent_state();
+    let prefix_cache_allowed = ssm_layer_count == 0;
 
     let mut prefix_cached = false;
     if prefix_cache_allowed

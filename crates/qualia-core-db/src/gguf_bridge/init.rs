@@ -450,6 +450,7 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             mc8_bg_cache: std::sync::Mutex::new(std::collections::HashMap::new()),
             ssm_recurrent_state: Box::new([]),
+            ssm_state_byte_budget: DEFAULT_SSM_STATE_BYTE_BUDGET,
         };
         // Exercise the CPU elementwise oracle (ReLU) once at engine init so the fallback
         // path stays linked when GPU elem kernels are unavailable.
@@ -519,6 +520,7 @@ impl QTensorEngine {
             #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
             cuda_decode_plan: super::cuda_decode_plan::CudaDecodePlanState::Unbuilt,
             ssm_recurrent_state: Box::new([]),
+            ssm_state_byte_budget: DEFAULT_SSM_STATE_BYTE_BUDGET,
         }
     }
 
@@ -657,6 +659,7 @@ impl QTensorEngine {
 
     /// Zero the static KV arena at the start of a new decode context (zero heap in decode).
     pub fn reset_kv_cache(&mut self) {
+        self.reset_recurrent_state();
         let Some(layout) = self.kv_layout.as_ref() else {
             return;
         };

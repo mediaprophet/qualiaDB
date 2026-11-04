@@ -1,13 +1,18 @@
 //! Hybrid numerical execution adapter; provider dispatch stays in QTensorEngine.
 use crate::gguf_sharder::{GgufTensorIndex, LayerTensors};
 use etalon_inference::ordinary::ssm_layout::{
-    ssm_layout_for, SsmLayerStateLayout, CONV_HISTORY_DEPTH,
+    ssm_layout_for, SsmLayerStateLayout, SsmStateError, CONV_HISTORY_DEPTH,
 };
 use etalon_inference::ordinary::{HybridEngine, LayerProvider};
 impl LayerProvider for super::QTensorEngine {
     type Index = GgufTensorIndex;
     fn hyperparams(index: &Self::Index) -> etalon_model::inference::ModelHyperparams {
         index.hyperparams.into()
+    }
+    fn moe_routing(
+        index: &Self::Index,
+    ) -> etalon_model::inference::moe_routing::MoeRoutingSettings {
+        index.moe_routing
     }
     fn data_start(index: &Self::Index) -> u64 {
         index.tensor_data_start
@@ -45,7 +50,7 @@ impl LayerProvider for super::QTensorEngine {
         use etalon_inference::ordinary::LayerEvent;
         match event {
             LayerEvent::StateMissing(layer) => {
-                super::wlog(&format!("[ssm] layer={layer} skipped: state not allocated"))
+                super::wlog(&format!("[ssm] layer={layer} refused: state not allocated"))
             }
             LayerEvent::SsmUnrecognized(layer) => {
                 super::wlog(&format!("[ssm] layer={layer} unrecognised SSM flavour"))
@@ -142,44 +147,50 @@ impl LayerProvider for super::QTensorEngine {
     }
 }
 impl super::QTensorEngine {
-    /// Allocate (once) the flat recurrent-state arena for all hybrid SSM layers.
-    ///
-    /// Called after the GGUF index is parsed. Returns the number of f32 elements
-    /// allocated (zero if the model has no hybrid SSM layers).
+    /// Select the external recurrent-state budget for subsequent cold model loads.
+    /// This arena is separate from the 42 MiB Sentinel arena.
+    pub fn set_ssm_state_byte_budget(&mut self, byte_budget: usize) {
+        self.ssm_state_byte_budget = byte_budget;
+    }
+
+    pub fn init_ssm_state_with_budget(
+        &mut self,
+        index: &GgufTensorIndex,
+        byte_budget: usize,
+    ) -> Result<usize, SsmStateError> {
+        use etalon_inference::ordinary::ssm_layout::{
+            allocate_recurrent_state, checked_ssm_layout_for,
+        };
+        let h = index.hyperparams.into();
+        let state = allocate_recurrent_state(
+            (0..index.hyperparams.n_layer).filter_map(|layer| {
+                let tensors = index.get_layer_tensors(layer);
+                tensors.is_hybrid_ssm_layer().then(|| {
+                    checked_ssm_layout_for(&tensors, &h, index.hyperparams.n_embd as usize)
+                        .map(|layout| layout.stride)
+                })
+            }),
+            byte_budget,
+        )?;
+        let count = state.len();
+        self.ssm_recurrent_state = state;
+        Ok(count)
+    }
+
+    /// Compatibility entry point. Loaders use fallible admission; a refused arena
+    /// remains empty and hybrid dispatch fails closed.
     pub fn init_ssm_state(&mut self, index: &GgufTensorIndex) -> usize {
-        let h = &index.hyperparams;
-        let n_layer = h.n_layer as usize;
-        let n_embd = h.n_embd as usize;
-        let mut total_elems = 0usize;
-        let mut any_ssm = false;
-        for layer in 0..n_layer as u32 {
-            let tensors = index.get_layer_tensors(layer);
-            if tensors.is_hybrid_ssm_layer() {
-                any_ssm = true;
-                let layout = ssm_layout_for(&tensors, &(*h).into(), n_embd);
-                total_elems += layout.stride;
+        match self.init_ssm_state_with_budget(index, self.ssm_state_byte_budget) {
+            Ok(count) => count,
+            Err(_) => {
+                self.ssm_recurrent_state = Box::new([]);
+                0
             }
         }
-        if !any_ssm || total_elems == 0 {
-            return 0;
-        }
-        // Sentinel budget check (36 MB ceiling).
-        const MAX_SSM_BYTES: usize = 36 * 1024 * 1024;
-        let byte_budget = total_elems * 4;
-        if byte_budget > MAX_SSM_BYTES {
-            super::wlog(&format!(
-                "[ssm_init] SSM state too large: {byte_budget} bytes > {MAX_SSM_BYTES} ceiling -- SSM layers skipped"
-            ));
-            return 0;
-        }
-        // Tier-2 cold allocation: single Box<[f32]> created once at boot.
-        let state = vec![0.0f32; total_elems].into_boxed_slice();
-        self.ssm_recurrent_state = state;
-        super::wlog(&format!(
-            "[ssm_init] allocated SSM state: {total_elems} f32 ({} kB) for {n_layer} layers",
-            byte_budget / 1024,
-        ));
-        total_elems
+    }
+
+    pub fn reset_recurrent_state(&mut self) {
+        self.ssm_recurrent_state.fill(0.0);
     }
 
     pub(crate) fn dispatch_hybrid_ssm_layer(
@@ -233,14 +244,44 @@ mod tests {
     }
 
     #[test]
-    fn ssm_state_size_within_sentinel_budget() {
+    fn ssm_state_size_example_external_model_arena() {
         // 96-layer Granite: stride per SSM layer = 3*4096 + 128*64 = 20480 f32
         let layout = SsmLayerStateLayout::new(4096, 128, 64, 1);
         let bytes = layout.stride * 96 * 4;
         // 96 * 20480 * 4 = 7,864,320 < 8 MB
         assert!(
             bytes < 8 * 1024 * 1024,
-            "SSM state exceeds 8 MB sentinel: {bytes} bytes"
+            "SSM example external state exceeds 8 MB: {bytes} bytes"
         );
+    }
+    #[test]
+    fn reset_sequence_clears_recurrence_without_kv_layout() {
+        use crate::specialized_libs::computational_geometry::allocation_counter::assert_zero_alloc;
+        let mut engine = super::super::QTensorEngine::new();
+        engine.ssm_recurrent_state = vec![1.0, -2.0, 3.0].into_boxed_slice();
+        engine.kv_layout = None;
+        assert_zero_alloc("reset sequence", || engine.reset_kv_cache());
+        assert_eq!(&*engine.ssm_recurrent_state, &[0.0; 3]);
+    }
+
+    #[test]
+    fn attention_only_replacement_drops_old_recurrence() {
+        let mut engine = super::super::QTensorEngine::new();
+        engine.ssm_recurrent_state = vec![9.0; 8].into_boxed_slice();
+        let index = GgufTensorIndex {
+            entries: Vec::new(),
+            tensor_data_start: 0,
+            token_embd: None,
+            output_weight: None,
+            output_norm: None,
+            ple_ngram_embedding: None,
+            moe_routing: Default::default(),
+            ple_config: None,
+            hyperparams: GgufHyperparams::default(),
+            max_tensor_bytes: 0,
+            max_layer_tensor_bytes: 0,
+        };
+        assert_eq!(engine.init_ssm_state_with_budget(&index, 0), Ok(0));
+        assert!(engine.ssm_recurrent_state.is_empty());
     }
 }

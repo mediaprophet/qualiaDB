@@ -9,11 +9,9 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
-use crate::inference::gguf_sharder::{
-    GgufHyperparams, GgufTensorIndex, GgufTensorInfo, ARCH_QWEN2, DEFAULT_ROPE_FREQ_BASE,
-};
-use crate::inference::safetensor_loader::ModelJsonConfig;
+use crate::inference::gguf_sharder::{GgufTensorIndex, GgufTensorInfo};
 use crate::inference::tensor_roles::name_to_role;
+use etalon_model::inference::ftw_config::FtwConfig;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct FtwTensorEntry {
@@ -107,16 +105,15 @@ impl FtwModelPackage {
             shards.push(Arc::new(mmap));
         }
 
-        // Parse config.json if available
         let config_path = dir.join("config.json");
-        let parsed_cfg = if config_path.is_file() {
-            std::fs::read_to_string(&config_path)
-                .ok()
-                .and_then(|s| ModelJsonConfig::from_json_str(&s))
+        let parsed_cfg: FtwConfig = if config_path.is_file() {
+            let bytes = std::fs::read(&config_path)
+                .map_err(|e| format!("Failed to read FTW config: {e}"))?;
+            serde_json::from_slice(&bytes)
+                .map_err(|e| format!("Failed to parse FTW config: {e}"))?
         } else {
-            None
+            FtwConfig::default()
         };
-
         let mut tensor_locations = HashMap::new();
         let mut named_tensors = Vec::new();
         let mut bank_tensors: HashMap<String, (usize, usize, usize)> = HashMap::new();
@@ -178,7 +175,8 @@ impl FtwModelPackage {
                     match r.role {
                         crate::p64_weight::P64_ROLE_TOKEN_EMBD => {
                             if t.shape.len() >= 2 {
-                                inferred_embd = t.shape[1] as u32;
+                                inferred_embd = u32::try_from(t.shape[1])
+                                    .map_err(|_| "FTW embedding width exceeds u32")?;
                             }
                             named_tensors.push((b"token_embd.weight".to_vec(), info));
                             tensor_locations
@@ -197,7 +195,7 @@ impl FtwModelPackage {
                         _ => {}
                     }
                 } else {
-                    inferred_layers = inferred_layers.max((r.layer + 1) as u32);
+                    inferred_layers = inferred_layers.max(u32::from(r.layer) + 1);
                     if let Some(suffix) = crate::inference::safetensor_loader::role_suffix(r.role) {
                         let mut buf = [0u8; 96];
                         let blk_len = crate::gguf_sharder::write_blk_tensor_name(
@@ -219,7 +217,8 @@ impl FtwModelPackage {
             named_tensors.push((t.name.as_bytes().to_vec(), info));
 
             if t.name.ends_with("embed_tokens.weight") && t.shape.len() >= 2 {
-                inferred_embd = t.shape[1] as u32;
+                inferred_embd =
+                    u32::try_from(t.shape[1]).map_err(|_| "FTW embedding width exceeds u32")?;
             }
         }
 
@@ -277,56 +276,20 @@ impl FtwModelPackage {
             }
         }
 
-        let n_layer = parsed_cfg
-            .as_ref()
-            .and_then(|c| c.num_hidden_layers)
-            .unwrap_or(inferred_layers);
-        let n_embd = parsed_cfg
-            .as_ref()
-            .and_then(|c| c.hidden_size)
-            .unwrap_or(inferred_embd);
-        let head_dim = parsed_cfg.as_ref().and_then(|c| c.head_dim).unwrap_or(64);
-        let n_head = parsed_cfg
-            .as_ref()
-            .and_then(|c| c.num_attention_heads)
-            .unwrap_or(if head_dim > 0 { n_embd / head_dim } else { 16 });
-        let n_kv_head = parsed_cfg
-            .as_ref()
-            .and_then(|c| c.num_key_value_heads)
-            .unwrap_or(n_head);
-        let rope_freq_base = parsed_cfg
-            .as_ref()
-            .and_then(|c| c.rope_theta)
-            .unwrap_or(DEFAULT_ROPE_FREQ_BASE);
-
-        let hyperparams = GgufHyperparams {
-            n_layer,
-            n_embd,
-            n_head,
-            n_kv_head,
-            rope_freq_base,
-            rope_scale: 1.0,
-            head_dim,
-            head_dim_swa: head_dim,
-            sliding_window: 0,
-            shared_kv_layers: 0,
-            logit_softcap: 0.0,
-            ssm_conv_kernel: 0,
-            ssm_state_size: 0,
-            ssm_group_count: 0,
-            ssm_time_step_rank: 0,
-            ssm_inner_size: 0,
-            full_attention_interval: 0,
-            architecture: ARCH_QWEN2,
-            arch_flags: 0,
-        };
-
+        let has_hybrid_tensors = manifest
+            .tensors
+            .iter()
+            .any(|t| t.name.contains(".linear_attn.") || t.name.contains(".ssm_"));
+        let hyperparams = parsed_cfg
+            .hyperparams(inferred_layers, inferred_embd, has_hybrid_tensors)?
+            .into();
         let references: Vec<(&[u8], GgufTensorInfo)> = named_tensors
             .iter()
             .map(|(name, info)| (name.as_slice(), *info))
             .collect();
 
-        let tensor_index = GgufTensorIndex::from_components(&references, hyperparams, 0);
+        let mut tensor_index = GgufTensorIndex::from_components(&references, hyperparams, 0);
+        tensor_index.moe_routing = parsed_cfg.moe_routing()?;
 
         Ok(Self {
             prepared_shards: None,
@@ -347,12 +310,13 @@ impl FtwModelPackage {
 
     /// Read raw bytes for a tensor by global offset and length across shards.
     pub fn fetch_by_global_offset(&self, global_off: u64, len: usize) -> Option<&[u8]> {
+        let end = global_off.checked_add(u64::try_from(len).ok()?)?;
         for (idx, s) in self.manifest.shards.iter().enumerate() {
-            if global_off >= s.global_off && (global_off + len as u64) <= (s.global_off + s.nbytes)
+            if global_off >= s.global_off && end <= s.global_off.checked_add(s.nbytes)?
             {
-                let local_off = (global_off - s.global_off) as usize;
+                let local_off = usize::try_from(global_off.checked_sub(s.global_off)?).ok()?;
                 let shard = self.shard_bytes(idx)?;
-                return shard.get(local_off..local_off + len);
+                return shard.get(local_off..local_off.checked_add(len)?);
             }
         }
         None
@@ -427,7 +391,7 @@ mod tests {
         std::fs::write(temp_dir.path().join("freetoken_weight.json"), manifest_json).unwrap();
 
         let config_json = r#"{
-            "model_type": "qwen3_5_moe",
+            "model_type": "qwen2",
             "text_config": {
                 "hidden_size": 64,
                 "num_hidden_layers": 40,
@@ -446,6 +410,15 @@ mod tests {
         assert!(pkg
             .fetch_tensor_bytes("model.embed_tokens.weight")
             .is_some());
+
+        for config in [
+            "{",
+            r#"{"model_type":"unsupported_hybrid"}"#,
+            r#"{"model_type":"qwen3_5_moe","hidden_size":64}"#,
+        ] {
+            std::fs::write(temp_dir.path().join("config.json"), config).unwrap();
+            assert!(FtwModelPackage::open_from_dir(temp_dir.path()).is_err());
+        }
     }
 
     #[test]

@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Preserve configured generic MoE expert counts and top-k selection through native P64 metadata and Etalon dispatch. Validate recurrent-state budgets, clear recurrent history on sequence reset, prevent KV-only prefix reuse for hybrid models, and propagate recurrent-layer failures.
 - Apply explicit developer admission and lifecycle-generation checks to the legacy browser inference agent, including extension callbacks. Refuse missing engines and invalid vocabulary projections instead of panicking or treating buffer sizes and embedding coordinates as tokens. Browser execution receipts use schema v2, identify the active projection path, and report unmeasured GPU transfer totals as null.
 - Distinguish native epoch, context, token-checkpoint and token-acceptance refusals in diagnostics without exposing proposed token contents or changing Webizen decisions.
 - Native inference checks cancellation at token/artifact acceptance and finalization, discards terminal worker state, and stops on closed output channels. Accepted token IDs and artifact bytes transfer into caller-owned output before retained evidence completes; normal execution continues to require authenticated Webizen acceptance.
@@ -22,7 +23,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Adopt Etalon's canonical inference, model, generic MoE, compute/render resources, Forge, diagnostics and optimization-lab libraries at immutable revision `cf5c195d68ba805065e42c6ac74420245a7d6db6`. P64 is the native model format, with GGUF import/compatibility adapters; Qwen-specific architecture handling remains distinct from generic MoE. QualiaDB retains authenticated Webizen policy and token/artifact acceptance, while explicit developer and lab modes can run independently.
+- Adopt Etalon's canonical inference, model, generic MoE, compute/render resources, Forge, diagnostics and optimization-lab libraries at immutable revision `6252bf58f3078bb26098dfe2e903fa1cf02bbeba`. P64 is the native model format, with GGUF import/compatibility adapters; Qwen-specific architecture handling remains distinct from generic MoE. QualiaDB retains authenticated Webizen policy and token/artifact acceptance, while explicit developer and lab modes can run independently.
+- Add an explicit Qwen35 CPU linear-layer lab adapter with retained verified model leases, checked memory budgets, caller-selected packing and normalization representation, and transactional Etalon execution. This layer API does not admit complete Qwen model execution.
 
 - Split the native tensor engine state into a focused owner and route model-byte access through an internal borrowed/retained interface. Preserve public mapping fields, ownership transfer and existing native/browser numerical paths while preparing for retained-model admission.
 

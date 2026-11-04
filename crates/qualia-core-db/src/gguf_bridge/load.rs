@@ -59,6 +59,7 @@ impl QTensorEngine {
             return Err(msg);
         }
 
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
@@ -181,6 +182,7 @@ impl QTensorEngine {
         if index.hyperparams.n_layer == 0 || index.hyperparams.n_embd == 0 {
             return Err("Safetensor: missing hyperparameters".to_string());
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
@@ -315,6 +317,7 @@ impl QTensorEngine {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
         #[cfg(feature = "gpu-runtime")]
@@ -417,6 +420,7 @@ impl QTensorEngine {
         {
             return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
@@ -579,6 +583,7 @@ impl QTensorEngine {
         {
             return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
         }
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         let staging = index

@@ -304,6 +304,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     fn wgsl_is_naga_valid() {
         let src = point_in_tetra_wgsl(128);
         crate::wgsl_forge::validate_wgsl(&src)

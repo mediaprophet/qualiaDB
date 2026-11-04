@@ -36,6 +36,13 @@ pub(super) fn engine_metadata(engine: &QTensorEngine) -> Result<[u8; 32], String
     if index.hyperparams != hp {
         return Err("inconsistent model hyperparameters".into());
     }
+    for field in [
+        index.moe_routing.expert_count,
+        index.moe_routing.experts_per_token,
+    ] {
+        hash.update([u8::from(field.is_some())]);
+        hash.update(field.unwrap_or(0).to_le_bytes());
+    }
     hash.update(engine.tensor_data_offset.to_le_bytes());
     hash.update(index.tensor_data_start.to_le_bytes());
     hash.update((index.entries.len() as u64).to_le_bytes());

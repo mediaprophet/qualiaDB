@@ -130,6 +130,7 @@ impl QTensorEngine {
         package: Option<Arc<FtwModelPackage>>,
     ) -> Result<(QTensorEngine, NativeModelSources), String> {
         let mut engine = QTensorEngine::new();
+        engine.set_ssm_state_byte_budget(self.ssm_state_byte_budget);
         // Parse container directories from the immutable source. Safetensors/FTW
         // configuration is an owned parsed input, copied from the actual loader;
         // never resolve a mutable config filename again after preparation.
@@ -164,7 +165,9 @@ impl QTensorEngine {
             MAX_STACK_GEMM_OUT as u32,
         );
         engine.ensure_kv_cache(&index.hyperparams);
-        engine.init_ssm_state(&index);
+        engine
+            .init_ssm_state_with_budget(&index, engine.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         #[cfg(feature = "gpu-runtime")]
         if package.is_none() {
             engine.mc8_upload_resident_logits(&index);
@@ -253,7 +256,9 @@ impl QTensorEngine {
         if settings.is_none()
             || sources.settings_digest != settings
             || sources.residency_generation
-                != Some(crate::inference::inference_agent::sticky_infer::current_residency_generation())
+                != Some(
+                    crate::inference::inference_agent::sticky_infer::current_residency_generation(),
+                )
             || !sources
                 .primary
                 .same_owner(&ModelByteHandle::leased(primary.clone()))

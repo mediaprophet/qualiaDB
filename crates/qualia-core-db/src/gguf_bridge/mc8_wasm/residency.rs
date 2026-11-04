@@ -324,6 +324,8 @@ impl QTensorEngine {
         if hp.n_layer == 0 || hp.n_embd == 0 {
             return Err("P64: missing hyperparameters in header".to_string());
         }
+        hp.decode_supported()?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
         let staging = index

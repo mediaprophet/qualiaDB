@@ -282,4 +282,5 @@ pub struct QTensorEngine {
     /// pure-attention models.  During the hot decode loop the arena is accessed as a
     /// `&mut [f32]` slice — no per-token Vec allocation (Tier-1 zero-heap).
     pub(crate) ssm_recurrent_state: Box<[f32]>,
+    pub(crate) ssm_state_byte_budget: usize,
 }

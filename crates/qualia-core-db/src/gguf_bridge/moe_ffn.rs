@@ -12,6 +12,8 @@ impl QTensorEngine {
     pub fn adopt_ftw_package(&mut self, dir: &std::path::Path) -> Result<GgufLoadReport, String> {
         let pkg = Arc::new(FtwModelPackage::open_from_dir(dir)?);
         let index = pkg.tensor_index.clone();
+        index.hyperparams.decode_supported()?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
         self.tensor_index_cache = Some(index.clone());
         self.hyperparams = index.hyperparams;
         self.tensor_data_offset = index.tensor_data_start;
@@ -26,7 +28,7 @@ impl QTensorEngine {
         self.gguf_mmap = pkg.shards.first().cloned();
         self.ftw_package = Some(pkg);
         self.ensure_kv_cache(&index.hyperparams);
-        self.init_ssm_state(&index);
+
 
         Ok(GgufLoadReport {
             mapped_bytes: self

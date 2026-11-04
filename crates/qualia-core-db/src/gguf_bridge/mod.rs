@@ -498,6 +498,9 @@ mod forward;
 mod moe_ffn;
 mod moe_gguf;
 mod ssm_forward;
+pub use etalon_inference::ordinary::ssm_layout::SsmStateError;
+/// Conservative legacy default; callers may admit larger external model state.
+pub const DEFAULT_SSM_STATE_BYTE_BUDGET: usize = 36 * 1024 * 1024;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use forward::PrefillDispatchFailure;
 mod gemm;
@@ -963,6 +966,8 @@ mod provider;
 #[cfg(not(target_arch = "wasm32"))]
 pub use provider::{NativeProviderSnapshot, NativeProviderScope};
 mod model_bytes;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod qwen35;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use model_bytes::ModelByteHandle;
 #[cfg(not(target_arch = "wasm32"))]

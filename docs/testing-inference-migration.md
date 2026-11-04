@@ -737,3 +737,125 @@ field remains false, with the actual computed policy decision supplying proof.
 The production library rebuilt successfully with locked offline Rust 1.96.1;
 native changes in this follow-up add refusal diagnostics only. No policy,
 authority, numerical or publication behavior was weakened to obtain the result.
+
+### Process-restart numerical rollback, 2026-11-04
+
+The retained pre-extraction executable, current production-library consumer and
+retained executable again produced byte-identical complete four-token reports
+for `The capital of France is`. All three used the same marker-owned data parent;
+the persistent thermal eviction WAL remained byte-identical. Each child was
+reaped, its Windows process handle confirmed signalled and closed, and its
+diagnostic reader joined before the next child started. Model and executable
+hashes were checked before and after execution.
+
+The current caller first verified missing-authority refusal, then explicitly
+selected `NativeDecodeRequest::Developer`. This intentional admission adaptation
+preserved the original prompt, token budget, capture and report fields. The old
+executable's identity matches its historical compile and execution receipts;
+its historical source was not independently rebuilt for this exercise.
+
+Evidence is in
+`target/inference-migration-rollback/restart-f78cc310f08c453097a304dc90b4b8bc`.
+The receipt records `PASS_PROCESS_RESTART_PUBLIC_NUMERICAL_ROLLBACK` against
+Qualia `803f703a5353ff2db0937e3bcdd91c5ee56597d9` and the pinned Etalon
+`cf5c195d68ba805065e42c6ac74420245a7d6db6`. The three process durations were
+7.782, 11.141 and 8.718 seconds; these are execution diagnostics, not a paired
+warm-session performance qualification. This result does not qualify in-process
+resource retirement, stale callbacks, governed rollback, hidden recurrent state
+or the full EM-10/G7 promotion gate.
+
+### Candidate hybrid metadata and state repair, 2026-11-04
+
+The uncommitted candidate moves checked FTW configuration mapping into
+`etalon-model`, preserving separate attention and recurrent dimensions. Explicit
+state admission retains the 36 MiB default external-model budget and permits a
+caller-selected budget without changing the Sentinel arena ceiling. Failed cold
+admission preserves the previous arena; sequence reset clears recurrence even
+without KV storage. Hybrid turns in both execution modes cannot reuse KV-only
+prefix snapshots, and a failed recurrent layer cannot be masked by FFN success.
+
+Independent supervision identified a Granite allocator/executor layout mismatch.
+The corrected convolution path uses the admitted layout and propagates errors;
+a single-layer fixture runs with exactly the configured state arena. Specialist
+checks passed four admission and two host-integration cases. Coordinator checks
+passed three FTW metadata cases and all 82 model-library unit tests.
+
+Actual Qualia consumer verification against a temporary coherent 25-package
+local candidate overlay passed six recurrent-state and three FTW-loader tests.
+All 1477 package versions were unchanged, tested sources remained unchanged,
+and the published lockfile was restored byte-for-byte. The first consumer
+compile failed on a missing `SsmStateError` import; that failure is retained and
+the corrected rerun passed. Final evidence:
+`target/inference-migration-qualification/hybrid-consumer-cb3591cfc0a74840a7c4b0503c6676f5`.
+
+This is a bounded metadata/state repair, not full Qwen hybrid execution or
+publication qualification. Corrected metadata exposes the unsupported Qwen35
+kernel rather than treating it as dense Qwen2. Its explicit runtime refusal is
+an intermediate condition; completing the required Qwen numerical path remains
+part of the migration goal. No local fused projection packing is inferred from
+tensor names or shapes alone, and no model payload was rewritten.
+
+### Native linear-layer candidate and generic MoE routing, 2026-11-04
+
+The candidate native Qwen35 lab adapter retains validated source owners and
+delegates normalization, projections, recurrence and residual math to Etalon.
+Packing and raw-versus-folded ordinary normalization are explicit caller inputs.
+Independent source review required admission before metadata allocation and
+checked FTW offset arithmetic; both were corrected, including an early shard
+count check. This API executes one linear layer only, not a complete model.
+
+Etalon's two ordinary-normalization regressions passed, including overflow
+rejection without output mutation and direct multiplication for folded weights.
+The first coherent local-overlay CPU consumer build failed before tests ran:
+two new adapter calls referenced a private hash helper, and three existing test
+functions referenced disabled optional modules. The calls now use the public
+FNV-1a API; those three tests retain execution under their corresponding feature
+gates. The public lease regression also now checks the exact admitted byte
+budget and rejection one byte below it. These corrections await a new consumer
+build; they are not recorded as passing tests.
+
+The failed build and source snapshot remain in
+`target/inference-migration-qualification/qwen-native-20261104-01`.
+Its runner restored the published Cargo.lock byte-for-byte (SHA256
+`88878a629504c1c02666e633beaca8f5af80bd1d42e58a65f910101e755a5a27`).
+No published dependency pin changed.
+
+A separate generic MoE audit found ordinary dispatch hardcodes top-eight
+selection and silently truncates router geometry to 256 experts. The next
+implementation carries explicit expert-count and top-k metadata into admitted
+routing, supports 512 experts within bounded scratch, and preserves legacy
+absent-setting behavior. Existing P64 metadata bytes and architecture gates
+must remain compatible. Generic routing improvements do not establish full
+Qwen4Exp or Qwen35 model support.
+
+The resulting generic routing implementation is now verified at the CPU
+library boundary: 96 model-library tests, three FTW configuration tests, 31
+kernel tests and 23 ordinary/hybrid/Qwen reference tests passed. Counts include
+allocation-counter controls. Ordinary execution used 512 real F32 expert rows
+and independently calculated outputs at top-6/top-8/top-10; native P64 reopened
+explicit top-6/top-10 settings. A test-only offset type annotation corrected an
+initial fixture compilation error before the successful rerun.
+
+The corrected Qualia CPU consumer passed three retained-layer tests, three FTW
+loader tests and six recurrent-state tests against the coherent local Etalon
+overlay. Public lease checks cover exact-budget admission, one-byte-below-budget
+rejection, mismatched source metadata, custody after engine drop, reset/replay,
+and final lease release. Evidence and the preceding failures are retained in
+`target/inference-migration-qualification/qwen-moe-consumer-20261104-02` and
+the earlier `qwen-native-20261104-01` directory. These results do not qualify
+complete Qwen model execution, GPU expert capacity or performance improvements.
+
+The standalone `qwen35_linear_lab` example also passed its CPU-profile build
+check. The final source comparison found only the corrected standalone test
+fixture changed during the consumer build; production sources were unchanged.
+Etalon commit `6252bf58f3078bb26098dfe2e903fa1cf02bbeba` publishes this increment
+on `qualiadb-migration`. Qualia's 19 manifest pins and all 28 cross-platform
+lockfile package sources now select that revision. Published-revision checks
+for core, client, CLI and MCP consumers are recorded separately from the local
+overlay verification.
+
+The locked offline default-profile check for all four consumers passed against
+the published Git revision, without local dependency patches; Cargo.lock stayed
+unchanged. Its command and result are retained in `published-consumers.json`
+alongside the overlay receipts. Two remote benchmark-only commits were then
+fast-forwarded without altering tested production sources.

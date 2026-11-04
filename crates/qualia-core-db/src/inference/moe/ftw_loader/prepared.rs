@@ -70,6 +70,13 @@ impl FtwModelPackage {
     pub(crate) fn prepared_routing_digest(&self) -> [u8; 32] {
         let mut hash = Sha256::new();
         hash.update(b"qualia:ftw-consumed-routing:v1\0");
+        for field in [
+            self.tensor_index.moe_routing.expert_count,
+            self.tensor_index.moe_routing.experts_per_token,
+        ] {
+            hash.update([u8::from(field.is_some())]);
+            hash.update(field.unwrap_or(0).to_le_bytes());
+        }
         hash.update((self.manifest.shards.len() as u64).to_le_bytes());
         for shard in &self.manifest.shards {
             hash.update(shard.global_off.to_le_bytes());

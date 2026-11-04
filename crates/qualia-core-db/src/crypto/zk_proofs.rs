@@ -1608,6 +1608,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "zk-culling")]
     fn test_matrix_multiply_circuit_rejects_false_product() {
         // Soundness for the SUM-OF-PRODUCTS construction: build the 1x2x1 dot-product
         // circuit (c = a0·b0 + a1·b1) exactly as prove_matrix_multiply does, prove the
