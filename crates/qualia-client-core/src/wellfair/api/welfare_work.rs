@@ -188,7 +188,7 @@ impl WebizenHostApi {
         let summary = work_item_summary(item);
         self.submit_record_with_summary(
             QAPP_COOPERATIVE,
-            coop_envelope_to_wellfare(envelope),
+            envelope,
             SOURCE_COOPERATIVE,
             Some(summary),
         )?;
@@ -208,7 +208,7 @@ impl WebizenHostApi {
         let summary = work_item_status_summary(event);
         self.submit_record_with_summary(
             QAPP_COOPERATIVE,
-            coop_envelope_to_wellfare(envelope),
+            envelope,
             SOURCE_COOPERATIVE,
             Some(summary),
         )?;

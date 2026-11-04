@@ -83,6 +83,99 @@ pub enum AccountingError {
     OutputBufferTooSmall,
 }
 
+/// Zero-heap conservation error for integer minor-unit journal verification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AccountingConservationError {
+    EmptyJournal,
+    NegativeAmount { index: usize, amount_cents: i64 },
+    UnbalancedJournal { total_debits: i128, total_credits: i128 },
+}
+
+/// Zero-heap integer minor-unit double-entry conservation verifier (`AGENTS.md` §0-A).
+///
+/// Verifies that all debit and credit legs are non-negative, non-empty, and satisfy
+/// `sum(debits_cents) == sum(credits_cents) > 0` in `i128` without heap allocation.
+#[inline]
+pub fn verify_integer_journal_conservation(
+    debits_cents: &[i64],
+    credits_cents: &[i64],
+) -> Result<i128, AccountingConservationError> {
+    if debits_cents.is_empty() || credits_cents.is_empty() {
+        return Err(AccountingConservationError::EmptyJournal);
+    }
+    let mut total_debits = 0i128;
+    for (index, &d) in debits_cents.iter().enumerate() {
+        if d < 0 {
+            return Err(AccountingConservationError::NegativeAmount {
+                index,
+                amount_cents: d,
+            });
+        }
+        total_debits += d as i128;
+    }
+    let mut total_credits = 0i128;
+    for (index, &c) in credits_cents.iter().enumerate() {
+        if c < 0 {
+            return Err(AccountingConservationError::NegativeAmount {
+                index,
+                amount_cents: c,
+            });
+        }
+        total_credits += c as i128;
+    }
+    if total_debits == 0 || total_debits != total_credits {
+        return Err(AccountingConservationError::UnbalancedJournal {
+            total_debits,
+            total_credits,
+        });
+    }
+    Ok(total_debits)
+}
+
+/// Zero-heap compilation of a [`Posting`] into a 48-byte [`crate::NQuin`].
+#[inline]
+#[allow(non_snake_case)]
+pub fn compile_journal_Posting_quin(
+    posting: &Posting,
+    journal_context_hash: u64,
+    posted_at_unix: u32,
+) -> Result<crate::NQuin, AccountingError> {
+    validate_posting_amounts(posting)?;
+    let is_debit = posting.debit > 0;
+    let amount = if is_debit {
+        posting.debit as u64
+    } else {
+        posting.credit as u64
+    };
+    let s = posting.entry_id ^ posting.account_id.rotate_left(17);
+    let p = if is_debit {
+        crate::q_hash("https://ns.webizen.org/econ/debitPostingCents")
+    } else {
+        crate::q_hash("https://ns.webizen.org/econ/creditPostingCents")
+    };
+    let o = (0b001u64 << 60) | (amount & 0x0FFF_FFFF_FFFF_FFFF);
+    let metadata = (0b01u64 << 61) | ((posted_at_unix as u64) & 0xFFFF_FFFF);
+    let parity = crate::NQuin::calculate_parity(s, p, o, journal_context_hash, metadata);
+    Ok(crate::NQuin {
+        subject: s,
+        predicate: p,
+        object: o,
+        context: journal_context_hash,
+        metadata,
+        parity,
+    })
+}
+
+/// Snake-case alias for [`compile_journal_Posting_quin`].
+#[inline]
+pub fn compile_journal_posting_quin(
+    posting: &Posting,
+    journal_context_hash: u64,
+    posted_at_unix: u32,
+) -> Result<crate::NQuin, AccountingError> {
+    compile_journal_Posting_quin(posting, journal_context_hash, posted_at_unix)
+}
+
 fn validate_posting_amounts(posting: &Posting) -> Result<(), AccountingError> {
     if posting.debit < 0 || posting.credit < 0 {
         return Err(AccountingError::InvalidPosting);
@@ -270,298 +363,5 @@ pub fn trial_balance(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const CASH: u64 = 1;
-    const PAYABLE: u64 = 2;
-    const EQUITY: u64 = 3;
-    const REVENUE: u64 = 4;
-    const EXPENSE: u64 = 5;
-
-    fn accounts() -> [Account; 5] {
-        [
-            Account {
-                id: CASH,
-                account_type: AccountType::Asset,
-            },
-            Account {
-                id: PAYABLE,
-                account_type: AccountType::Liability,
-            },
-            Account {
-                id: EQUITY,
-                account_type: AccountType::Equity,
-            },
-            Account {
-                id: REVENUE,
-                account_type: AccountType::Revenue,
-            },
-            Account {
-                id: EXPENSE,
-                account_type: AccountType::Expense,
-            },
-        ]
-    }
-
-    #[test]
-    fn balanced_entry_is_accepted() {
-        let postings = [
-            Posting {
-                entry_id: 10,
-                account_id: CASH,
-                debit: 1_000,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 10,
-                account_id: REVENUE,
-                debit: 0,
-                credit: 1_000,
-            },
-        ];
-
-        assert_eq!(validate_balanced_entry(10, &postings), Ok(()));
-    }
-
-    #[test]
-    fn unbalanced_entry_is_rejected() {
-        let postings = [
-            Posting {
-                entry_id: 11,
-                account_id: CASH,
-                debit: 1_000,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 11,
-                account_id: REVENUE,
-                debit: 0,
-                credit: 900,
-            },
-        ];
-
-        assert_eq!(
-            validate_balanced_entry(11, &postings),
-            Err(AccountingError::UnbalancedEntry {
-                entry_id: 11,
-                total_debits: 1_000,
-                total_credits: 900,
-            })
-        );
-    }
-
-    #[test]
-    fn account_balance_signs_follow_normal_balance_type() {
-        let ledger_accounts = accounts();
-        let postings = [
-            Posting {
-                entry_id: 20,
-                account_id: CASH,
-                debit: 1_000,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 20,
-                account_id: REVENUE,
-                debit: 0,
-                credit: 1_000,
-            },
-            Posting {
-                entry_id: 21,
-                account_id: EXPENSE,
-                debit: 250,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 21,
-                account_id: CASH,
-                debit: 0,
-                credit: 250,
-            },
-            Posting {
-                entry_id: 22,
-                account_id: PAYABLE,
-                debit: 0,
-                credit: 400,
-            },
-            Posting {
-                entry_id: 22,
-                account_id: EXPENSE,
-                debit: 400,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 23,
-                account_id: CASH,
-                debit: 600,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 23,
-                account_id: EQUITY,
-                debit: 0,
-                credit: 600,
-            },
-        ];
-        let mut out = [AccountBalance {
-            account_id: 0,
-            account_type: AccountType::Asset,
-            balance: 0,
-            debit_total: 0,
-            credit_total: 0,
-        }; 5];
-
-        assert_eq!(
-            account_balances_into(&ledger_accounts, &postings, &mut out),
-            Ok(5)
-        );
-        assert_eq!(out[0].balance, 1_350);
-        assert_eq!(out[1].balance, 400);
-        assert_eq!(out[2].balance, 600);
-        assert_eq!(out[3].balance, 1_000);
-        assert_eq!(out[4].balance, 650);
-    }
-
-    #[test]
-    fn trial_balance_totals_match() {
-        let ledger_accounts = accounts();
-        let postings = [
-            Posting {
-                entry_id: 30,
-                account_id: CASH,
-                debit: 1_000,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 30,
-                account_id: REVENUE,
-                debit: 0,
-                credit: 1_000,
-            },
-            Posting {
-                entry_id: 31,
-                account_id: EXPENSE,
-                debit: 300,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 31,
-                account_id: CASH,
-                debit: 0,
-                credit: 300,
-            },
-        ];
-
-        assert_eq!(
-            trial_balance(&ledger_accounts, &postings),
-            Ok(TrialBalance {
-                total_debits: 1_300,
-                total_credits: 1_300,
-                debit_balance_total: 1_000,
-                credit_balance_total: 1_000,
-            })
-        );
-    }
-
-    #[test]
-    fn unknown_account_is_rejected() {
-        let ledger_accounts = accounts();
-        let postings = [Posting {
-            entry_id: 40,
-            account_id: 99,
-            debit: 100,
-            credit: 0,
-        }];
-        let mut out = [AccountBalance {
-            account_id: 0,
-            account_type: AccountType::Asset,
-            balance: 0,
-            debit_total: 0,
-            credit_total: 0,
-        }; 5];
-
-        assert_eq!(
-            account_balances_into(&ledger_accounts, &postings, &mut out),
-            Err(AccountingError::UnknownAccount { account_id: 99 })
-        );
-        assert_eq!(
-            trial_balance(&ledger_accounts, &postings),
-            Err(AccountingError::UnknownAccount { account_id: 99 })
-        );
-    }
-
-    #[test]
-    fn output_buffer_too_small_is_rejected() {
-        let ledger_accounts = accounts();
-        let postings = [Posting {
-            entry_id: 50,
-            account_id: CASH,
-            debit: 100,
-            credit: 0,
-        }];
-        let mut out = [AccountBalance {
-            account_id: 0,
-            account_type: AccountType::Asset,
-            balance: 0,
-            debit_total: 0,
-            credit_total: 0,
-        }; 4];
-
-        assert_eq!(
-            account_balances_into(&ledger_accounts, &postings, &mut out),
-            Err(AccountingError::OutputBufferTooSmall)
-        );
-    }
-
-    #[test]
-    fn journal_entry_range_validation_checks_ids_and_balance() {
-        let postings = [
-            Posting {
-                entry_id: 60,
-                account_id: CASH,
-                debit: 100,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 60,
-                account_id: REVENUE,
-                debit: 0,
-                credit: 100,
-            },
-        ];
-        let entry = JournalEntry {
-            id: 60,
-            posting_start: 0,
-            posting_len: 2,
-        };
-        assert_eq!(validate_journal_entry(&entry, &postings), Ok(()));
-    }
-
-    #[test]
-    fn journal_entry_rejects_wrong_posting_id_in_range() {
-        let postings = [
-            Posting {
-                entry_id: 70,
-                account_id: CASH,
-                debit: 100,
-                credit: 0,
-            },
-            Posting {
-                entry_id: 71,
-                account_id: REVENUE,
-                debit: 0,
-                credit: 100,
-            },
-        ];
-        let entry = JournalEntry {
-            id: 70,
-            posting_start: 0,
-            posting_len: 2,
-        };
-        assert_eq!(
-            validate_journal_entry(&entry, &postings),
-            Err(AccountingError::InvalidPosting)
-        );
-    }
-}
+#[path = "accounting_tests.rs"]
+mod tests;

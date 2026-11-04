@@ -1,13 +1,17 @@
-//! SI-06 generic demo runner.
+//! SI-06 generic demo & core semantic instrument runner.
 //!
-//! Dispatch is by entry-point name (`assess` / `recognise` only). This is a
-//! labelled identity-transform demo, not a clinical or Host kernel.
+//! Dispatch is by entry-point name (`assess` / `recognise` only). Demo seeds perform a
+//! labelled identity transform; the 6 Core Semantic Instruments run bounded evaluators.
 
 use super::receipt::ExecutionReceipt;
 use crate::semantic_instruments::errors::InstrumentError;
+pub use crate::semantic_instruments::evaluators::{
+    evaluate_core_semantic_instrument, execute_reference_instrument, CoreInstrumentKind,
+    EvaluationOutcome,
+};
 use crate::semantic_instruments::resolve::{InstalledRelease, LocalRegistry};
 
-/// Demo entry points only. Anything else is [`InstrumentError::UnknownEntryPoint`].
+/// Entry points only. Anything else is [`InstrumentError::UnknownEntryPoint`].
 const DEMO_ENTRY_POINTS: &[&str] = &["assess", "recognise"];
 
 pub struct RunRequest<'a> {
@@ -41,7 +45,6 @@ pub fn run_entry(
     installed: &InstalledRelease,
     req: &RunRequest<'_>,
 ) -> RunOutcome {
-    let _ = req.now;
     if let Err(error) = registry.activate(req.release_id) {
         return RunOutcome::Refused { error };
     }
@@ -63,6 +66,25 @@ pub fn run_entry(
     if req.input.is_empty() {
         return RunOutcome::Held {
             receipt: bind_receipt(installed, req, &[], "held"),
+        };
+    }
+    if let Some(kind) = CoreInstrumentKind::from_slug_or_id(installed.release_id.as_str())
+        .or_else(|| CoreInstrumentKind::from_slug_or_id(req.release_id))
+    {
+        return match execute_reference_instrument(kind, req.input, req.now) {
+            Ok(report) => {
+                let out_bytes = serde_json::to_vec(&report).unwrap_or_default();
+                if report.outcome == EvaluationOutcome::Held {
+                    RunOutcome::Held {
+                        receipt: bind_receipt(installed, req, &out_bytes, "held"),
+                    }
+                } else {
+                    RunOutcome::Completed {
+                        receipt: bind_receipt(installed, req, &out_bytes, report.outcome.as_str()),
+                    }
+                }
+            }
+            Err(error) => RunOutcome::Refused { error },
         };
     }
     // Labelled demo: identity transform so callers can check I/O commitments.

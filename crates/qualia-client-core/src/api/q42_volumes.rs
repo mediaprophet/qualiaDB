@@ -286,7 +286,7 @@ mod tests {
         assert!(workspace.volumes[0].open_error.is_none());
 
         let inspect = inspect_q42_volume(path.display().to_string()).unwrap();
-        assert_eq!(inspect.version, 3);
+        assert_eq!(inspect.version, 4);
         assert_eq!(inspect.block_count, 1);
 
         let verify = verify_q42_volume(path.display().to_string(), Some("full".into())).unwrap();

@@ -37,9 +37,10 @@ pub mod welfare;
 pub mod yield_curve;
 
 pub use accounting::{
-    account_balances_into, trial_balance, validate_balanced_entry, validate_journal_entries,
-    validate_journal_entry, Account, AccountBalance, AccountType, AccountingError, JournalEntry,
-    Posting, TrialBalance,
+    account_balances_into, compile_journal_Posting_quin, compile_journal_posting_quin,
+    trial_balance, validate_balanced_entry, validate_journal_entries, validate_journal_entry,
+    verify_integer_journal_conservation, Account, AccountBalance, AccountType,
+    AccountingConservationError, AccountingError, JournalEntry, Posting, TrialBalance,
 };
 pub use agent_based::{
     aggregate_wealth, clear_trades, match_orders_into, simulate_steps_into, zero_intelligence_step,

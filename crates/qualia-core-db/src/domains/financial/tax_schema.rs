@@ -2,6 +2,41 @@
 /// These rules are applied to the immutable Quins to compute dynamic, mutable
 /// tax liabilities without polluting the underlying graph.
 
+/// Integer division with banker's rounding (round half to even) (`AGENTS.md` §0-A).
+#[inline]
+pub fn div_round_bankers(numerator: i128, denominator: i128) -> i128 {
+    assert!(denominator > 0, "denominator must be positive");
+    let sign = if numerator < 0 { -1i128 } else { 1i128 };
+    let abs_num = numerator.abs();
+    let q = abs_num / denominator;
+    let r = abs_num % denominator;
+    let twice_r = r * 2;
+    let rounded = if twice_r > denominator || (twice_r == denominator && (q & 1) == 1) {
+        q + 1
+    } else {
+        q
+    };
+    sign * rounded
+}
+
+/// Zero-heap integer minor-unit (`i64`) & basis-point (`u32`) tax withholding calculation
+/// using banker's rounding (`AGENTS.md` §0-A).
+#[inline]
+pub fn compute_withholding_cents_bankers(gross_cents: i64, rate_bps: u32) -> i64 {
+    if gross_cents <= 0 || rate_bps == 0 {
+        return 0;
+    }
+    let capped_bps = rate_bps.min(10_000) as i128;
+    div_round_bankers((gross_cents as i128) * capped_bps, 10_000) as i64
+}
+
+/// Split `gross_cents` into `(net_cents, withheld_tax_cents)` conserving `net + tax == gross`.
+#[inline]
+pub fn split_gross_net_tax_cents_bankers(gross_cents: i64, rate_bps: u32) -> (i64, i64) {
+    let withheld = compute_withholding_cents_bankers(gross_cents, rate_bps);
+    (gross_cents.saturating_sub(withheld), withheld)
+}
+
 pub struct TaxRuleSchema {
     pub jurisdiction_id: String,
     pub description: String,
@@ -105,12 +140,6 @@ pub struct ClearingResult {
 }
 
 /// Multi-jurisdiction "Information Banking" tax clearing house.
-///
-/// Holds the active regional schemas and clears transaction line items to
-/// per-jurisdiction net liabilities, applying the **correct regional schema per item**
-/// — the jurisdiction-aware clearing the resilience-economics scope calls for. It
-/// derives mutable liabilities over immutable transaction quins without polluting the
-/// graph. Cold-path config (heap, consistent with [`TaxRuleSchema`]).
 pub struct TaxClearingHouse {
     schemas: Vec<TaxRuleSchema>,
 }
@@ -195,7 +224,6 @@ mod tests {
         assert!((house.clear_item("EU_VAT_2026", "Income", 1000.0) - 200.0).abs() < 1e-9);
         assert!((house.clear_item("US_SALES_2026", "Income", 1000.0) - 70.0).abs() < 1e-9);
         assert_eq!(house.clear_item("ZERO_RATED", "Income", 1000.0), 0.0);
-        // Unknown jurisdiction → 0 (fail-safe, never invents a rate).
         assert_eq!(house.clear_item("XX_UNKNOWN", "Income", 1000.0), 0.0);
     }
 
@@ -207,46 +235,43 @@ mod tests {
                 jurisdiction_id: "AU_GST_2026",
                 category: "Income",
                 amount: 1000.0,
-            }, // +100
+            },
             TaxLineItem {
                 jurisdiction_id: "AU_GST_2026",
                 category: "Expense",
                 amount: 400.0,
-            }, // −40
+            },
             TaxLineItem {
                 jurisdiction_id: "EU_VAT_2026",
                 category: "Income",
                 amount: 500.0,
-            }, // +100
+            },
         ];
         let result = house.clear_batch(&items);
-        // Net = 100 − 40 + 100 = 160.
-        assert!(
-            (result.net_liability - 160.0).abs() < 1e-9,
-            "net {}",
-            result.net_liability
-        );
-        // Two distinct jurisdictions cleared.
+        assert!((result.net_liability - 160.0).abs() < 1e-9);
         assert_eq!(result.per_jurisdiction.len(), 2);
         let au = result
             .per_jurisdiction
             .iter()
             .find(|j| j.jurisdiction_id == "AU_GST_2026")
             .unwrap();
-        assert!(
-            (au.liability - 60.0).abs() < 1e-9,
-            "AU net {}",
-            au.liability
-        );
+        assert!((au.liability - 60.0).abs() < 1e-9);
         let eu = result
             .per_jurisdiction
             .iter()
             .find(|j| j.jurisdiction_id == "EU_VAT_2026")
             .unwrap();
-        assert!(
-            (eu.liability - 100.0).abs() < 1e-9,
-            "EU net {}",
-            eu.liability
-        );
+        assert!((eu.liability - 100.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn withholding_cents_bankers_rounds_half_to_even() {
+        // 50 bps = 0.5%: 100 cents -> 0.5 cents -> rounds to even 0
+        assert_eq!(compute_withholding_cents_bankers(100, 50), 0);
+        // 50 bps = 0.5%: 300 cents -> 1.5 cents -> rounds to even 2
+        assert_eq!(compute_withholding_cents_bankers(300, 50), 2);
+        let (net, tax) = split_gross_net_tax_cents_bankers(10_000, 1_000);
+        assert_eq!(net + tax, 10_000);
+        assert_eq!(tax, 1_000);
     }
 }

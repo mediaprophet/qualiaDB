@@ -4,6 +4,9 @@
 //! closed-world field checker that mirrors the named PropertyShapes. This is
 //! not the generic runner and not a package ABI.
 
+#[path = "semantic_instruments_core_evals.rs"]
+mod semantic_instruments_core_evals;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use qualia_core_db::modalities::logic::n3_parser::{N3Event, N3Parser, Term};
@@ -172,11 +175,7 @@ fn parse_graph(n3: &str, label: &str) -> Graph {
     parser
         .parse_all(|event| {
             if let N3Event::StaticTriple(t) = event {
-                g.add(
-                    term_str(t.subject),
-                    term_str(t.predicate),
-                    term_str(t.object),
-                );
+                g.add(term_str(t.subject), term_str(t.predicate), term_str(t.object));
             }
             Ok(())
         })
@@ -187,22 +186,15 @@ fn parse_graph(n3: &str, label: &str) -> Graph {
 fn parse_must_succeed(n3: &str, label: &str) {
     let mut parser = N3Parser::new(n3);
     let mut triples = 0usize;
-    let mut rules = 0usize;
     parser
         .parse_all(|event| {
-            match event {
-                N3Event::StaticTriple(_) => triples += 1,
-                N3Event::LogicRule(_) => rules += 1,
-                _ => {}
+            if let N3Event::StaticTriple(_) = event {
+                triples += 1;
             }
             Ok(())
         })
         .unwrap_or_else(|e| panic!("{label} must parse through N3Parser: {e}"));
-    assert!(
-        triples > 0,
-        "{label} produced no static triples (parser regression)"
-    );
-    let _ = rules;
+    assert!(triples > 0, "{label} produced no static triples (parser regression)");
 }
 
 fn require_missing(g: &Graph, s: &str, p: &str, code: &str, out: &mut BTreeSet<String>) {
@@ -220,10 +212,7 @@ fn violations(g: &Graph) -> BTreeSet<String> {
             ("si:releaseId", "si:MissingReleaseId"),
             ("si:version", "si:MissingVersion"),
             ("si:purpose", "si:MissingPurpose"),
-            (
-                "si:prohibitedInterpretation",
-                "si:MissingProhibitedInterpretation",
-            ),
+            ("si:prohibitedInterpretation", "si:MissingProhibitedInterpretation"),
             ("si:domain", "si:MissingDomain"),
             ("si:ontologyReference", "si:MissingOntologyReference"),
             ("si:entryPoint", "si:MissingEntryPoint"),
@@ -244,20 +233,8 @@ fn violations(g: &Graph) -> BTreeSet<String> {
 
         for ep in g.objects(&release, "si:entryPoint") {
             require_missing(g, &ep, "si:entryPointName", "si:MissingEntryPoint", &mut v);
-            require_missing(
-                g,
-                &ep,
-                "si:inputShape",
-                "si:MissingEntryPointShapes",
-                &mut v,
-            );
-            require_missing(
-                g,
-                &ep,
-                "si:outputShape",
-                "si:MissingEntryPointShapes",
-                &mut v,
-            );
+            require_missing(g, &ep, "si:inputShape", "si:MissingEntryPointShapes", &mut v);
+            require_missing(g, &ep, "si:outputShape", "si:MissingEntryPointShapes", &mut v);
         }
         for honesty in g.objects(&release, "si:honestyPolicy") {
             if !g.has(&honesty, "si:incompleteInputBehaviour")
@@ -346,52 +323,27 @@ fn ontology_files_parse_and_declare_required_terms() {
 
     let vocab = format!("{ONTOLOGY}\n{SHAPES}\n{PROFILE}");
     for class in REQUIRED_CLASSES {
-        assert!(
-            vocab.contains(class),
-            "missing required class declaration: {class}"
-        );
+        assert!(vocab.contains(class), "missing required class declaration: {class}");
     }
     for pred in REQUIRED_PREDICATES {
-        assert!(
-            vocab.contains(pred),
-            "missing required predicate or class token: {pred}"
-        );
+        assert!(vocab.contains(pred), "missing required predicate or class token: {pred}");
     }
     for path in RELEASE_REQUIRED {
-        assert!(
-            SHAPES.contains(path),
-            "shapes file must constrain release field {path}"
-        );
+        assert!(SHAPES.contains(path), "shapes file must constrain release field {path}");
     }
-    assert!(
-        ONTOLOGY.contains("si:signatureIsNotTruth"),
-        "origin-not-truth must be a first-class honesty property"
-    );
-    assert!(
-        PROFILE.contains("si:assessmentInstrument"),
-        "capability credentials must reference the assessment instrument"
-    );
-    assert!(
-        !vocab.contains("qualia.id/ns"),
-        "namespace regression: residual qualia.id/ns"
-    );
+    assert!(ONTOLOGY.contains("si:signatureIsNotTruth"));
+    assert!(PROFILE.contains("si:assessmentInstrument"));
+    assert!(!vocab.contains("qualia.id/ns"));
 }
 
 #[test]
 fn shapes_target_instrument_release_and_named_property_shapes() {
     let g = parse_graph(SHAPES, "shapes");
     let targets = g.objects("si:InstrumentReleaseShape", "sh:targetClass");
-    assert!(
-        targets.iter().any(|t| t == "si:InstrumentRelease"),
-        "InstrumentReleaseShape must target si:InstrumentRelease, got {targets:?}"
-    );
-    assert!(
-        g.has("si:InstrumentRelease-contentDigest", "sh:path"),
-        "content digest must be a named property shape"
-    );
+    assert!(targets.iter().any(|t| t == "si:InstrumentRelease"));
+    assert!(g.has("si:InstrumentRelease-contentDigest", "sh:path"));
     assert_eq!(
-        g.first("si:InstrumentRelease-contentDigest", "sh:path")
-            .as_deref(),
+        g.first("si:InstrumentRelease-contentDigest", "sh:path").as_deref(),
         Some("si:contentDigest")
     );
 }
@@ -400,20 +352,12 @@ fn assert_positive(n3: &str, label: &str) {
     parse_must_succeed(n3, label);
     let g = parse_graph(n3, label);
     let found = violations(&g);
-    assert!(
-        found.is_empty(),
-        "{label} should conform; violations: {found:?}"
-    );
-    assert!(
-        !g.typed("si:InstrumentRelease").is_empty(),
-        "{label} must contain an InstrumentRelease"
-    );
-    assert!(
-        g.typed("si:InstrumentRelease")
-            .iter()
-            .all(|r| g.first(r, "si:contentCategory").as_deref() == Some("si:Demo")),
-        "{label} seed fixtures must be si:Demo"
-    );
+    assert!(found.is_empty(), "{label} should conform; violations: {found:?}");
+    assert!(!g.typed("si:InstrumentRelease").is_empty());
+    assert!(g
+        .typed("si:InstrumentRelease")
+        .iter()
+        .all(|r| g.first(r, "si:contentCategory").as_deref() == Some("si:Demo")));
 }
 
 fn assert_negative(n3: &str, label: &str, expected: &[&str]) {
@@ -421,10 +365,7 @@ fn assert_negative(n3: &str, label: &str, expected: &[&str]) {
     let g = parse_graph(n3, label);
     let found = violations(&g);
     for code in expected {
-        assert!(
-            found.contains(*code),
-            "{label} should fail for {code}; got {found:?}"
-        );
+        assert!(found.contains(*code), "{label} should fail for {code}; got {found:?}");
     }
 }
 
@@ -437,16 +378,8 @@ fn positive_small_instrument_conforms() {
 fn positive_icon_and_ontology_dependency_conforms() {
     assert_positive(POS_ICON, "positive-icon-dependency");
     let g = parse_graph(POS_ICON, "positive-icon-dependency");
-    assert!(
-        !g.typed("si:DependencyRequirement").is_empty(),
-        "icon/dependency fixture must declare a dependency"
-    );
-    assert!(
-        g.typed("si:BadgeAsset")
-            .iter()
-            .any(|a| g.has(a, "si:assetDigest")),
-        "icon must be digested"
-    );
+    assert!(!g.typed("si:DependencyRequirement").is_empty());
+    assert!(g.typed("si:BadgeAsset").iter().any(|a| g.has(a, "si:assetDigest")));
 }
 
 #[test]
@@ -457,21 +390,10 @@ fn positive_rpl_capability_requirement_conforms() {
     assert!(!g.typed("si:GapReport").is_empty());
     assert!(!g.typed("si:CapabilityCredential").is_empty());
     let cred = &g.typed("si:CapabilityCredential")[0];
-    assert!(
-        g.has(cred, "si:assessmentInstrument"),
-        "capability credential must reference the assessment instrument"
-    );
-    assert!(
-        g.typed("si:SemanticInstrument")
-            .iter()
-            .all(|inst| inst != cred),
-        "credential IRI must not be the instrument IRI"
-    );
+    assert!(g.has(cred, "si:assessmentInstrument"));
+    assert!(g.typed("si:SemanticInstrument").iter().all(|inst| inst != cred));
     let report = &g.typed("si:GapReport")[0];
-    assert!(
-        g.has(report, "si:unresolvedEvidence"),
-        "RPL fixture must show unavailable evidence as unresolved"
-    );
+    assert!(g.has(report, "si:unresolvedEvidence"));
 }
 
 #[test]
@@ -495,20 +417,12 @@ fn missing_citation_and_applicability_fails() {
 
 #[test]
 fn inaccessible_or_undigested_icon_fails() {
-    assert_negative(
-        NEG_ICON,
-        "undigested-icon",
-        &["si:InaccessibleOrUndigestedIcon"],
-    );
+    assert_negative(NEG_ICON, "undigested-icon", &["si:InaccessibleOrUndigestedIcon"]);
 }
 
 #[test]
 fn who_tool_claim_identity_collapse_fails() {
-    assert_negative(
-        NEG_COLLAPSE,
-        "who-tool-collapse",
-        &["si:WhoToolClaimCollapse"],
-    );
+    assert_negative(NEG_COLLAPSE, "who-tool-collapse", &["si:WhoToolClaimCollapse"]);
 }
 
 #[test]
@@ -522,11 +436,7 @@ fn capability_incorrectly_treated_as_runtime_permission_fails() {
 
 #[test]
 fn unresolved_required_dependency_fails() {
-    assert_negative(
-        NEG_DEP,
-        "unresolved-dependency",
-        &["si:UnresolvedRequiredDependency"],
-    );
+    assert_negative(NEG_DEP, "unresolved-dependency", &["si:UnresolvedRequiredDependency"]);
 }
 
 #[test]
@@ -537,12 +447,6 @@ fn revoked_release_presented_as_active_fails() {
         &["si:RevokedReleasePresentedAsActive"],
     );
     let g = parse_graph(NEG_REVOKED, "revoked-active");
-    assert!(
-        !g.typed("si:ExecutionReceipt").is_empty(),
-        "revocation must not erase historical execution receipts"
-    );
-    assert!(
-        !g.typed("values:NaturalPerson").is_empty(),
-        "revocation must not erase the author"
-    );
+    assert!(!g.typed("si:ExecutionReceipt").is_empty());
+    assert!(!g.typed("values:NaturalPerson").is_empty());
 }

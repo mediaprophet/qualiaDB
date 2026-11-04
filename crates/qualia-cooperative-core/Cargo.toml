@@ -11,7 +11,8 @@ uuid = { workspace = true, features = ["v4", "serde", "js"] }
 chrono = { workspace = true, default-features = true, features = ["serde"] }
 sha2 = { workspace = true, default-features = true }
 hex = { workspace = true }
+vibe = { path = "../vibe", optional = true }
 
 [features]
 default = []
-qualia = []
+qualia = ["dep:vibe"]

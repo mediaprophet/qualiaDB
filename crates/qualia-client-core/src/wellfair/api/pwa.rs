@@ -2,8 +2,8 @@
 
 use super::super::journal::JournalEntry;
 use wellfare_core::finance::{
-    build_ledger_entry_envelope, derived_balance, ledger_entry_summary, parse_ledger_summary,
-    BalanceReport, LedgerEntry,
+    build_ledger_entry_envelope, derived_balance, ledger_entry_summary,
+    parse_ledger_entry_summary, BalanceReport, LedgerEntry,
 };
 use wellfare_core::life_records::{
     build_case_task_envelope, build_life_event_envelope, build_welfare_case_envelope,
@@ -174,18 +174,12 @@ impl WebizenHostApi {
         let mut entries = Vec::with_capacity(rows.len());
         for row in rows {
             if let Some(ref summary) = row.summary {
-                if let Some((amount_cents, currency)) = parse_ledger_summary(summary) {
-                    entries.push(LedgerEntry {
-                        id: row.id.clone(),
-                        description: String::new(),
-                        amount_cents,
-                        currency,
-                        category: None,
-                        counterparty: None,
-                        project_id: None,
-                        occurred_at_unix: row.asserted_instant.to_unix_secs() as u32,
-                        occurred_at_instant: None,
-                    });
+                if let Some(entry) = parse_ledger_entry_summary(
+                    row.id.clone(),
+                    summary,
+                    row.asserted_instant.to_unix_secs() as u32,
+                ) {
+                    entries.push(entry);
                 }
             }
         }

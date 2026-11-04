@@ -11666,6 +11666,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "uuid",
+ "vibe",
 ]
 
 [[package]]
@@ -16132,6 +16133,7 @@ dependencies = [
  "csv",
  "hex",
  "js-sys",
+ "qualia-cooperative-core",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",

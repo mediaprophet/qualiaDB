@@ -1,4 +1,5 @@
-//! Cooperative work items — tasks, issues, and milestones — with a replay-safe Kanban board.
+//! Cooperative work items — phases, epics, stories, tasks, issues, bugs, and milestones —
+//! with WBS hierarchy, PDM dependencies, and a replay-safe Kanban board.
 //!
 //! A `WorkItem` is created once (immutable core). Status transitions are separate immutable
 //! `WorkItemStatusEvent` records; the *current* status is a **derived projection** — the latest
@@ -9,39 +10,37 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::record::{EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass};
+pub use crate::work_graph::{
+    detect_semantic_conflicts, merge_dependencies, DepKind, Lag, SemanticConflict, TaskConstraint,
+    TaskRef, ThreePointEstimate, TimeEntry, WorkDependency,
+};
 
-/// The kind of work item.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// The kind of work item across WBS and Agile/Kanban views.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkItemType {
+    #[default]
     Task,
     Issue,
     Milestone,
-}
-
-impl Default for WorkItemType {
-    fn default() -> Self {
-        Self::Task
-    }
+    Phase,
+    Epic,
+    Story,
+    Bug,
 }
 
 /// Kanban lifecycle status. `ORDER` gives the canonical column ordering for board rendering.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkItemStatus {
     Proposed,
+    #[default]
     Todo,
     InProgress,
     Blocked,
     InReview,
     Done,
     Cancelled,
-}
-
-impl Default for WorkItemStatus {
-    fn default() -> Self {
-        Self::Todo
-    }
 }
 
 impl WorkItemStatus {
@@ -57,19 +56,14 @@ impl WorkItemStatus {
     ];
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkItemPriority {
     Low,
+    #[default]
     Normal,
     High,
     Urgent,
-}
-
-impl Default for WorkItemPriority {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// The immutable core of a work item. Its status is derived from status events, not stored here.
@@ -84,9 +78,27 @@ pub struct WorkItem {
     pub description: String,
     #[serde(default)]
     pub priority: WorkItemPriority,
+    /// Optional parent work item ID in the WBS hierarchy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
+    /// Dotted WBS code (e.g. `"1.2.3"`).
+    #[serde(default)]
+    pub wbs: String,
+    /// WBS outline depth (`0` = root, `1` = phase/summary, etc.).
+    #[serde(default)]
+    pub outline_level: u16,
     /// Effort estimate in whole minutes (integer discipline, plan §8.4).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub estimate_minutes: Option<u32>,
+    /// Optional three-point PERT duration/effort estimate (`optimistic_m`, `most_likely_m`, `pessimistic_m`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub three_point_estimate: Option<ThreePointEstimate>,
+    /// Scheduling constraint (`Asap`, `Alap`, `Snet`, `Snlt`, `Fnet`, `Fnlt`, `Mso`, `Mfo`).
+    #[serde(default)]
+    pub constraint: TaskConstraint,
+    /// Optional Unix timestamp anchor for date-constrained tasks (`Snet`, `Snlt`, `Fnet`, `Fnlt`, `Mso`, `Mfo`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraint_date_unix: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub assignee_did: Option<String>,
     pub created_at_unix: u32,
@@ -107,10 +119,46 @@ impl WorkItem {
             title: title.into(),
             description: String::new(),
             priority: WorkItemPriority::Normal,
+            parent_id: None,
+            wbs: String::new(),
+            outline_level: 0,
             estimate_minutes: None,
+            three_point_estimate: None,
+            constraint: TaskConstraint::Asap,
+            constraint_date_unix: None,
             assignee_did: None,
             created_at_unix,
         }
+    }
+
+    /// Builder helper to set WBS hierarchy coordinates (`parent_id`, `wbs`, `outline_level`).
+    pub fn with_wbs(
+        mut self,
+        parent_id: Option<String>,
+        wbs: impl Into<String>,
+        outline_level: u16,
+    ) -> Self {
+        self.parent_id = parent_id;
+        self.wbs = wbs.into();
+        self.outline_level = outline_level;
+        self
+    }
+
+    /// Builder helper to attach a `TaskConstraint` and optional anchor timestamp.
+    pub fn with_constraint(
+        mut self,
+        constraint: TaskConstraint,
+        constraint_date_unix: Option<u32>,
+    ) -> Self {
+        self.constraint = constraint;
+        self.constraint_date_unix = constraint_date_unix;
+        self
+    }
+
+    /// Builder helper to attach a `ThreePointEstimate`.
+    pub fn with_three_point_estimate(mut self, estimate: ThreePointEstimate) -> Self {
+        self.three_point_estimate = Some(estimate);
+        self
     }
 }
 
@@ -139,10 +187,6 @@ impl WorkItemStatusEvent {
         }
     }
 }
-
-// ---------------------------------------------------------------------------
-// Record ids + envelopes
-// ---------------------------------------------------------------------------
 
 /// `work-item-record` ID.
 pub fn work_item_record_id(uuid: &str) -> String {
@@ -213,15 +257,22 @@ pub fn build_work_item_status_envelope(
     )
 }
 
-/// Work-item summary.
+/// Work-item summary (lossless across WBS and PDM fields).
 pub fn work_item_summary(item: &WorkItem) -> String {
     serde_json::json!({
         "id": item.id,
         "project_id": item.project_id,
         "item_type": item.item_type,
         "title": item.title,
+        "description": item.description,
         "priority": item.priority,
+        "parent_id": item.parent_id,
+        "wbs": item.wbs,
+        "outline_level": item.outline_level,
         "estimate_minutes": item.estimate_minutes,
+        "three_point_estimate": item.three_point_estimate,
+        "constraint": item.constraint,
+        "constraint_date_unix": item.constraint_date_unix,
         "assignee_did": item.assignee_did,
         "created_at_unix": item.created_at_unix,
     })
@@ -249,10 +300,6 @@ pub fn parse_work_item_summary(summary: &str) -> Option<WorkItem> {
 pub fn parse_work_item_status_summary(summary: &str) -> Option<WorkItemStatusEvent> {
     serde_json::from_str(summary).ok()
 }
-
-// ---------------------------------------------------------------------------
-// Replay-safe derivations
-// ---------------------------------------------------------------------------
 
 /// Merge status-event sets add-wins by stable id (never re-apply), deterministically ordered
 /// by (time, id). Idempotent and order-independent — the basis for replay-safe board derivation.
@@ -302,9 +349,7 @@ pub struct BoardColumn {
     pub cards: Vec<BoardCard>,
 }
 
-/// Derive the Kanban board for a set of work items and their status events. Columns are in
-/// canonical order; each item's column is its current (latest-event) status. Invariant under
-/// duplicated/reordered events because the current status is a pure derivation over unique ids.
+/// Derive the Kanban board for a set of work items and their status events.
 pub fn derive_board(items: &[WorkItem], events: &[WorkItemStatusEvent]) -> Vec<BoardColumn> {
     let merged = merge_status_events(events, &[]);
     let mut columns: Vec<BoardColumn> = WorkItemStatus::ORDER
@@ -314,7 +359,6 @@ pub fn derive_board(items: &[WorkItem], events: &[WorkItemStatusEvent]) -> Vec<B
             cards: Vec::new(),
         })
         .collect();
-    // Stable card order: by item creation time then id, so the board is deterministic.
     let mut ordered = items.to_vec();
     ordered.sort_by(|a, b| {
         a.created_at_unix
@@ -337,108 +381,5 @@ pub fn derive_board(items: &[WorkItem], events: &[WorkItemStatusEvent]) -> Vec<B
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn item(id: &str, project: &str, at: u32) -> WorkItem {
-        WorkItem {
-            id: id.into(),
-            project_id: project.into(),
-            item_type: WorkItemType::Task,
-            title: format!("item-{id}"),
-            description: String::new(),
-            priority: WorkItemPriority::Normal,
-            estimate_minutes: None,
-            assignee_did: None,
-            created_at_unix: at,
-        }
-    }
-
-    fn event(id: &str, work_item: &str, status: WorkItemStatus, at: u32) -> WorkItemStatusEvent {
-        WorkItemStatusEvent {
-            id: id.into(),
-            work_item_id: work_item.into(),
-            status,
-            occurred_at_unix: at,
-        }
-    }
-
-    #[test]
-    fn envelope_kinds_and_class() {
-        let wi = WorkItem::new("proj-1", WorkItemType::Issue, "Fix the bug", 1_700_000_000);
-        let env = build_work_item_envelope(&wi, "did:q42:owner", "did:q42:owner", 10);
-        assert!(env.id.contains(":work_item:"));
-        assert_eq!(env.sensitivity, SensitivityClass::Restricted);
-
-        let ev = WorkItemStatusEvent::new(&wi.id, WorkItemStatus::InProgress, 1_700_000_100);
-        let senv = build_work_item_status_envelope(&ev, "did:q42:owner", "did:q42:owner", 20);
-        assert!(senv.id.contains(":work_item_status:"));
-    }
-
-    #[test]
-    fn current_status_defaults_to_todo_without_events() {
-        assert_eq!(current_status("wi-1", &[]), WorkItemStatus::Todo);
-    }
-
-    #[test]
-    fn current_status_is_latest_event() {
-        let events = vec![
-            event("e1", "wi-1", WorkItemStatus::Todo, 1),
-            event("e2", "wi-1", WorkItemStatus::InProgress, 2),
-            event("e3", "wi-1", WorkItemStatus::Done, 3),
-        ];
-        assert_eq!(current_status("wi-1", &events), WorkItemStatus::Done);
-    }
-
-    #[test]
-    fn board_is_invariant_under_duplicate_and_reordered_events() {
-        let items = vec![item("wi-1", "p1", 1), item("wi-2", "p1", 2)];
-        let base = vec![
-            event("e1", "wi-1", WorkItemStatus::InProgress, 5),
-            event("e2", "wi-2", WorkItemStatus::Done, 6),
-        ];
-        let board = derive_board(&items, &base);
-
-        // Reordered + replayed events yield the same board.
-        let shuffled = vec![
-            event("e2", "wi-2", WorkItemStatus::Done, 6),
-            event("e1", "wi-1", WorkItemStatus::InProgress, 5),
-            event("e2", "wi-2", WorkItemStatus::Done, 6), // duplicate
-        ];
-        assert_eq!(derive_board(&items, &shuffled), board);
-
-        // wi-1 is InProgress, wi-2 is Done.
-        let in_progress = board
-            .iter()
-            .find(|c| c.status == WorkItemStatus::InProgress)
-            .unwrap();
-        assert_eq!(in_progress.cards.len(), 1);
-        assert_eq!(in_progress.cards[0].work_item_id, "wi-1");
-        let done = board
-            .iter()
-            .find(|c| c.status == WorkItemStatus::Done)
-            .unwrap();
-        assert_eq!(done.cards[0].work_item_id, "wi-2");
-    }
-
-    #[test]
-    fn board_columns_are_in_canonical_order() {
-        let board = derive_board(&[], &[]);
-        let statuses: Vec<_> = board.iter().map(|c| c.status).collect();
-        assert_eq!(statuses, WorkItemStatus::ORDER.to_vec());
-    }
-
-    #[test]
-    fn summaries_round_trip() {
-        let wi = WorkItem::new("proj-1", WorkItemType::Milestone, "v1.0", 1_700_000_000);
-        let parsed = parse_work_item_summary(&work_item_summary(&wi)).unwrap();
-        assert_eq!(parsed.id, wi.id);
-        assert_eq!(parsed.item_type, WorkItemType::Milestone);
-        assert_eq!(parsed.title, "v1.0");
-
-        let ev = WorkItemStatusEvent::new(&wi.id, WorkItemStatus::Blocked, 42);
-        let pev = parse_work_item_status_summary(&work_item_status_summary(&ev)).unwrap();
-        assert_eq!(pev.work_item_id, wi.id);
-        assert_eq!(pev.status, WorkItemStatus::Blocked);
-    }
-}
+#[path = "work_item_tests.rs"]
+mod tests;

@@ -8,7 +8,8 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use super::codec::{amendment_canonical_bytes, canonical_bytes, canonical_digest, LICENCE_FORMAT};
 use super::model::{
     AgentKind, Delegation, DomainLicence, LicenceAmendment, LicenceClass, PaymentEvidence,
-    MAX_AMENDMENT_DELTA, MAX_ANCHORS, MAX_DOMAINS, MAX_MEMBERS, MAX_SCOPES,
+    RepresentedPrincipalContext, MAX_AMENDMENT_DELTA, MAX_ANCHORS, MAX_DOMAINS, MAX_MEMBERS,
+    MAX_SCOPES,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,6 +30,7 @@ pub enum LicenceError {
     DelegationNotPermitted,
     LicenceIdMismatch,
     PaymentEvidenceMissing,
+    CommercialPrincipalRequiresCommercialLicence,
 }
 
 impl std::fmt::Display for LicenceError {
@@ -50,12 +52,33 @@ impl std::fmt::Display for LicenceError {
             Self::DelegationNotPermitted => "licence class does not permit delegation",
             Self::LicenceIdMismatch => "amendment targets a different licence",
             Self::PaymentEvidenceMissing => "licence class requires payment evidence",
+            Self::CommercialPrincipalRequiresCommercialLicence => {
+                "commercial principal or beneficiary cannot claim gratis community/personal tier"
+            }
         };
         f.write_str(msg)
     }
 }
 
 impl std::error::Error for LicenceError {}
+
+/// Verify that a [`DomainLicence`] class is valid for the [`RepresentedPrincipalContext`].
+///
+/// Enforces that commercial principals/beneficiaries acting through natural-person or AI agents
+/// cannot claim gratis community or personal tiers.
+pub fn verify_represented_principal(
+    lic: &DomainLicence,
+    principal_ctx: &RepresentedPrincipalContext,
+) -> Result<(), LicenceError> {
+    let class = validate_shape(lic)?;
+    if principal_ctx.requires_commercial_licence() && class.is_gratis_non_commercial() {
+        return Err(LicenceError::CommercialPrincipalRequiresCommercialLicence);
+    }
+    if class.expects_payment() && lic.payment_evidence.is_none() {
+        return Err(LicenceError::PaymentEvidenceMissing);
+    }
+    Ok(())
+}
 
 /// Parameters for [`issue`]. `chain_anchors` and `signature_hex` are set by the
 /// issuer; `licence_id` is derived from a provisional digest.
@@ -83,7 +106,6 @@ pub struct IssueParams {
 pub fn normalize_domain(name: &str) -> String {
     let trimmed = name.trim().trim_end_matches('.').to_ascii_lowercase();
     match trimmed.rsplit_once(':') {
-        // Strip ":port" only when the suffix is purely numeric.
         Some((host, port)) if !port.is_empty() && port.chars().all(|c| c.is_ascii_digit()) => {
             host.to_string()
         }
@@ -161,9 +183,6 @@ fn validate_shape(lic: &DomainLicence) -> Result<LicenceClass, LicenceError> {
     Ok(class)
 }
 
-/// Is `domain` covered — direct subject match, or via the delegation block
-/// (member roster match, or `covers_subdomains` wildcard under a subject)?
-/// Delegation is only honoured for classes where [`LicenceClass::permits_delegation`].
 fn domain_covered(
     lic: &DomainLicence,
     class: LicenceClass,
@@ -191,8 +210,7 @@ fn domain_covered(
             .any(|s| is_subdomain(&d, &normalize_domain(s)))
 }
 
-/// Issue and sign a licence. The issuer verifying key is derived from
-/// `signing_key`; `licence_id` is derived from a provisional canonical digest.
+/// Issue and sign a licence.
 pub fn issue(params: IssueParams, signing_key: &SigningKey) -> Result<DomainLicence, LicenceError> {
     if params.licence_class == LicenceClass::Unknown {
         return Err(LicenceError::UnknownClass);
@@ -233,7 +251,6 @@ pub fn issue(params: IssueParams, signing_key: &SigningKey) -> Result<DomainLice
         terms_uri: params.terms_uri,
         signature_hex: String::new(),
     };
-    // Derive licence_id from a provisional digest, then sign the final form.
     let provisional = canonical_digest(&lic);
     lic.licence_id = format!("did:q42:licence:{}", &hex::encode(provisional)[..32]);
     let sig = signing_key.sign(&canonical_bytes(&lic));
@@ -279,7 +296,6 @@ pub fn verify_amendment(amend: &LicenceAmendment, lic: &DomainLicence) -> Result
 }
 
 /// Effective member roster after applying verified amendments in seq order.
-/// Every amendment must verify; the whole chain is fail-closed.
 pub fn delegated_members(
     lic: &DomainLicence,
     amendments: &[LicenceAmendment],
@@ -311,11 +327,6 @@ pub fn delegated_members(
 }
 
 /// Full fail-closed verification of a licence for a serving domain + scope.
-///
-/// `pinned_issuer_pubkey_hex`: when `Some`, the licence's issuer key must equal
-/// it (the WASM verifier pins the issuer; CLI callers may pass `None`).
-/// `required_scope`: when non-empty, must appear in `capability_scope`.
-/// `amendments`: verified roster amendments; unverified ones deny outright.
 pub fn verify(
     lic: &DomainLicence,
     now_unix: u64,
@@ -361,8 +372,7 @@ pub struct LicenceStatus {
     pub reason: String,
 }
 
-/// Compute a status view without failing — the inspection path for badges and
-/// the `licence_status` MCP tool.
+/// Compute a status view without failing.
 pub fn licence_status(
     lic: Option<&DomainLicence>,
     now_unix: u64,
