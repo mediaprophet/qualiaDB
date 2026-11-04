@@ -1,14 +1,15 @@
-# Inference migration contract tests
+# Inference migration qualification
 
-The first migration increment adds independent evidence validation and explicit
-execution-session contracts in Etalon. Existing QualiaDB inference callers,
-Webizen decisions, accelerator providers and dependency pins remain unchanged.
+This document records the incremental qualification history. The assembled
+migration results below supersede earlier checkpoint status. Etalon owns reusable
+inference execution and P64 model processing; QualiaDB retains authenticated
+Webizen policy and token/artifact acceptance. Developer execution is explicit.
 
 Run the dependency-free source tests against the intended Etalon checkout:
 
 ```powershell
 node --test scripts/test-inference-migration.test.mjs
-node scripts/test-inference-migration.mjs C:/Projects/etalon
+node scripts/test-inference-migration.mjs coordination/worktrees/etalon-migration
 ```
 
 The checkout must contain `crates/etalon-qualification` and
@@ -502,3 +503,169 @@ The failed receipt is retained. A fresh capture used a separate marker-owned
 parent under the unchanged budget and passed; production code and reference
 expectations were unchanged. Actual retained-model preparation and numerical
 commit through Webizen remain subsequent integration gates.
+
+### Assembled migration checks, 2026-11-04
+
+The assembled canonical CPU package run passed 374 distinct tests. Subsequent
+independent lifecycle and diagnostics suites passed 12 new Rust tests; their
+combined package run also included two previously counted SAB tests. The ignored
+diagnostics child entrypoint was explicitly executed by eight parent subprocess
+scenarios. The native Qwen feature profile separately passed 73 tests; this count
+overlaps the CPU package run and must not be added to it as unique coverage.
+The canonical inference library also compiled with its CUDA feature enabled.
+Compilation alone does not establish CUDA hardware execution.
+
+Actual Chromium full-WASM CPU validation passed for both shared rings under
+cross-origin isolation and nonisolated transferable messages. Each run recorded
+14 observations and 12 explicit passing assertions, with no page errors. It used
+the local native P64 SmolLM2 model, generated two tokens directly and one through
+the production dedicated worker, and exercised explicit developer admission,
+governed refusal without authority, model transfer/detachment, release and mode
+invalidation. The browser test found that Chromium rejects shared-backed input
+to TextDecoder. The transport now copies only the bounded message payload into
+an ordinary buffer; the updated Node transport suite passes seven tests.
+Run `node scripts/test-qualia-browser-cpu.cjs`, with `NO_SAB=1` for fallback.
+Receipts are retained under `target/qualia-browser-runtime` with source, model
+and generated-artifact hashes. These CPU checks do not qualify browser GPU use.
+
+The standalone Etalon P64 lab ran the local 239,914,752-byte SmolLM2 fixture in
+release mode with Rust 1.96.1: prompt IDs `1,42,17`, context 32, four generated
+tokens, one warm repeat, 1 GiB caller buffer budget and 64 MiB artifact budget.
+Reversible and direct execution, cold and warm, produced exactly the same IDs
+`31,4093,31,4093` and maximum-logit bits. Its 9,580-byte retained evidence is in
+the Etalon checkout's `target/p64-lab-qualification-20261104/ablation-release-001`;
+no temporary run directory remained. Model SHA-256 is
+`7d597fecbbbd8aa89d3f4c4ef82f3f497a08e336efe1ef055b48832ca53a5292`.
+This establishes bounded execution/parity, not semantic quality or throughput
+qualification. An earlier unoptimized run completed the first configuration
+but reached its 300-second deadline during the second; its failed receipt is
+retained separately as `ablation-001`.
+
+Both full and portal browser distributions were rebuilt with pinned toolchain
+and wasm-bindgen versions. No public exports were removed. The provenance file
+is `target/qualia-browser-build-20261104/final-build-provenance.json`; generated
+closure-symbol changes are distinguished from public API changes.
+
+The consuming core run completed with **10,156 passed, one failed, three
+ignored and zero filtered**, in 817.70 seconds. The physical Qwen NVFP4 fixture
+called the normal entrypoint without authenticated authority and received
+`[native-governance-required]`, so its existing token-generation assertion
+failed. The retained failed run remains evidence. The test caller now explicitly
+selects `NativeDecodeRequest::Developer`, preserving the original assertions.
+Two missing test imports were also corrected. The final affected suite passed
+**38 tests**, zero failures/ignores and 10,124 filtered, in 113.45 seconds;
+two restored original renderer byte-accounting tests separately passed. These
+scoped checks followed the test corrections and canonical Forge formatting/P64
+compatibility repair. There was no subsequent whole-core rerun, so this is not
+a claim that the final complete 10,162-test inventory passed in one run.
+
+The final inventory accounts for all 383 removed original full test names:
+382 map to executed, passing canonical Etalon tests and one was renamed and
+passed within core. The final inventory contains 10,162 names versus 10,516
+before extraction, with 29 additions and two restored original names. The
+mapping establishes retained executed coverage by name; it does not establish
+hardware execution for every mapped test. Two optional P64 real-weight bridge
+cases returned early because their fixture search path was absent and are
+excluded from model qualification. The physical Qwen unit fixture retains its
+layer/vocabulary caps and checks generation/provenance, not full-model numerical
+equivalence or text quality. Core receipts, inventory deltas, exact name mapping
+and the canonical JUnit identity are retained under
+`target/inference-migration-baseline/final-core-repaired-12a674facedb475184a91079c8dda2cd/`;
+`final-summary.json` records these counts and limits. The frozen canonical
+source check covered 592 files with zero changes.
+
+The canonical Etalon checkout is `coordination/worktrees/etalon-migration`.
+Its final main nextest run passed **4,706 tests, zero failures and 49 skipped**
+in 820.515 seconds. `target/nextest/default/junit.xml` records 4,706 executed
+passing tests; its zero skipped attribute excludes tests omitted before
+execution. The 49 selection skips are recorded by `full-xtask.log`, including
+36 excluded by the default profile filter. The GPU summary distinguishes
+2,034 successful dispatch outcomes from 37 expected failure outcomes
+(10 backend-specific and 27 always-failing cases); passing negative tests are
+not successful GPU dispatches. Adapter evidence includes NVIDIA RTX A2000 and
+Intel HD Graphics 530 native backends and the Microsoft software adapter.
+
+Separate required-hardware CUDA qualification passed four tests and the migrated
+DP4A CPU/GPU differential passed one test on the physical NVIDIA RTX A2000 12GB,
+compute capability 8.6, PCI `0000:01:00.0`, driver 616.92 and NVCC 13.4.92.
+These establish execution, not a performance qualification. The canonical
+checkout retains the summary, adapter outcome counts, source/receipt hashes and
+CUDA logs under `target/gpu-migration-qualification-20261104/`. These native
+results do not qualify browser GPU inference.
+
+A separately linked non-test native caller generated four tokens in explicit
+Developer mode. Its report matched the retained original caller report byte
+for byte, including text, provenance, stream chunks, token count and observed
+stage records. Normal entry without authority separately refused with zero
+tokens and no semantic Quin. The receipt is
+`target/inference-migration-baseline/real-native-current-569fd21f3d6b434db474e4f0a843584e/receipt.json`;
+it identifies the model and binary hashes and its unchanged source snapshot.
+Shared Vulkan adapter observation does not identify the actual numerical
+provider. Token IDs/logits, sampler RNG, DOMINO, provider KV/SSM and opaque
+backend state were not captured. This capture precedes subsequent final shader
+text repairs; it does not qualify those changed bytes. No independently
+provisioned authenticated authority session, admitted identifier association,
+signing credential and installed policy host were supplied for a real governed
+positive run, so complete governed model execution remains unqualified.
+
+Actual Chromium WebGPU qualification exposed two failures, both retained and
+repaired. Chromium rejected the rounded `-3.4028235e38` shader constant; the
+canonical shader now uses the exact finite f32 minimum. The browser projection
+adapter then interpreted WebGPU's absent native submission index as failure,
+although the command had been queued. The browser-only adapter now proceeds to
+the existing asynchronous map/readback completion gate. Native admission guards
+are unchanged. Failed receipts remain as
+`target/qualia-browser-runtime/browser-webgpu-before-topk-fix.json` and
+`browser-webgpu-after-topk-argmax-failure.json` in that directory.
+
+The rebuilt final-pin full WASM distribution passes three actual Chromium GPU
+checks: physical NVIDIA adapter compute/readback, exact top-k tie ordering and
+negative-score reduction, and one-token native P64 model inference with no CPU
+fallback. The model has 290 tensors and 32 layers. The retained successful
+receipt is `target/qualia-browser-runtime/browser-webgpu.json`. The production
+path uses GPU GEMM followed by CPU streaming argmax. Existing `gpuTop1`/384-byte
+receipt metadata describes the planned compact path, not this actual production
+path; it must not be used as execution evidence. This one-token explicit
+Developer run is not a model-quality, throughput or browser governed-authority
+qualification.
+
+The publication dependency graph pins all 19 Etalon workspace dependencies and
+compatibility patches to `cf5c195d68ba805065e42c6ac74420245a7d6db6` from
+`https://github.com/mediaprophet/etalon.git`. Windows-filtered Cargo metadata
+resolves 25 Etalon/Naga/wgpu packages to this single source. All 1,477 package
+versions are unchanged from the tested local-path lockfile; gpu-allocator keeps
+its Windows 0.62.2 dependency. Locked offline Rust 1.96.1 checks passed for
+qualia-core-db, qualia-client-core, qualia-cli and qualia-mcp in 6m28s.
+The graph and build receipts are retained under
+`target/inference-migration-publication`. Two remote benchmark-result commits
+were preserved by fast-forward before the migration commit.
+
+The final shader revision passed the full Etalon suite again: 4,706 passed,
+zero failed and 49 existing skips in 1,166.316 seconds. Its independent log and
+summary are under the Etalon checkout's
+`target/gpu-topk-final-qualification-20261104`. This supersedes the previous
+full-suite checkpoint for the changed top-k shader bytes.
+
+The pinned native production library built successfully in 455.031 seconds.
+The unchanged original public caller was recompiled against that library and
+replayed its four-token SmolLM2 comparison in 10.532 seconds. The complete
+observed report is again byte-identical to the original baseline. Normal entry
+without authority still refuses with zero tokens and no semantic Quin. This
+final capture is under
+`target/inference-migration-publication/native-public-4ca6a9b7038140018067fe42cdf0a864`.
+Its numerical-provider, hidden-state and positive governed end-to-end limits
+are the same as the earlier capture; adapter presence is not execution proof.
+
+Both final browser packages were rebuilt from the published pin after the
+browser-only submission repair, using Rust 1.96.1 and wasm-bindgen 0.2.129.
+Full WASM SHA-256 is
+`64a6b0016d299d9b6c995a1ea68397b9aad2cd5ab1b993334348d2b08f6f7b71`;
+Portal WASM SHA-256 is
+`c43f55e6fd99848372bf3a1f6f0fda08b48a09293459ba926ce343d5a4631de6`.
+The final Full bundle also reran both actual Chromium CPU transport modes:
+12 assertions passed in each, zero failures. Earlier receipts are retained
+separately. The final annotated GPU receipt SHA-256 is
+`9aba05bedf4ed50c1bc7cb44a58b97f14adb9034160e52bb5c4a7240cc3d499c`.
+Run `node scripts/test-qualia-browser-webgpu.cjs` for the GPU checks;
+the CPU command and `NO_SAB=1` fallback are documented above. This is browser
+application coverage, not WebGPU CTS or VibeScript integration coverage.

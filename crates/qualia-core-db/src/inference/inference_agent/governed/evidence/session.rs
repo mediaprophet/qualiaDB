@@ -277,11 +277,91 @@ impl<'slot, 'bytes> GovernedEvidenceSession<'slot, 'bytes> {
         }
         result
     }
+    /// CPU profile admission checks against this actual signed immutable policy.
+    /// Returning these fields alone is not authorization; final acceptance still
+    /// performs complete current owner/policy revalidation under both gates.
+    pub(in crate::inference::inference_agent) fn cpu_projection_binding(
+        &self,
+    ) -> Result<crate::inference::inference_agent::governed_cpu::CpuProjectionBinding, PolicyError>
+    {
+        use crate::inference::inference_agent::governed_cpu::{
+            check_projection_program, CpuProjectionBinding,
+        };
+        if self.terminal {
+            return Err(PolicyError::Revoked);
+        }
+        self.owner
+            .with_inference_association_guard(&self.association, |view| {
+                let _gate = self.controller.authority.lock()?;
+                let policy = &self.controller.policy.document;
+                if policy.base.rules.request
+                    != super::super::DigestScope::Exact(self.request.request_digest)
+                    || policy.observations.allowed_sources
+                        & super::CandidateSource::ModelToken.bit()
+                        == 0
+                    || matches!(
+                        policy.observations.score,
+                        super::ScoreRequirement::Required(super::ScoreMeaning::Probability)
+                    )
+                {
+                    return Err(PolicyError::Scope);
+                }
+                check_projection_program(policy.base.rules.program.as_slice())
+                    .map_err(|_| PolicyError::InvalidProgram)?;
+                let actor = ActorPolicyScope::from_evidence(
+                    view.revalidate_current()
+                        .map_err(|_| PolicyError::Revoked)?,
+                );
+                if actor != self.actor {
+                    return Err(PolicyError::Scope);
+                }
+                self.controller.actor(actor, clock()?)?;
+                let stored = self.storage.lock()?;
+                Ok(CpuProjectionBinding {
+                    identity: self.identity,
+                    request_digest: self.request.request_digest,
+                    actor: self.actor.subject,
+                    graph: self.request.graph_scope,
+                    max_payload: stored.limits.max_payload_bytes,
+                    first_position: self.request.first_position,
+                })
+            })
+            .map_err(|_| PolicyError::Revoked)
+            .and_then(|r| r)
+    }
     /// Commit/enqueue is the linearization point under owner -> policy -> slot.
     /// The returned view is drained AFTER all authority locks have been released.
     pub fn accept<'drain>(
         &'drain mut self,
         pending: PendingEvidence,
+    ) -> Result<AcceptedEvidence<'drain, 'bytes>, PolicyError> {
+        self.accept_inner(pending, None, None)
+    }
+    /// Native cooperative cancellation linearizes at the final atomic load
+    /// immediately before commit, under the existing owner/policy/slot guards.
+    pub(in crate::inference::inference_agent) fn accept_native<'drain>(
+        &'drain mut self,
+        pending: PendingEvidence,
+        control: Option<&crate::inference::inference_agent::control::DecodeControl>,
+    ) -> Result<AcceptedEvidence<'drain, 'bytes>, PolicyError> {
+        self.accept_inner(pending, None, control)
+    }
+    /// Private typed numerical integration. No caller-selected callback can run
+    /// under authority locks. The private CPU runner owns the actual transaction.
+    pub(in crate::inference::inference_agent) fn accept_dense<'drain>(
+        &'drain mut self,
+        pending: PendingEvidence,
+        dense: crate::inference::inference_agent::governed_cpu::DenseAcceptanceCommit<'_, '_, '_>,
+    ) -> Result<AcceptedEvidence<'drain, 'bytes>, PolicyError> {
+        self.accept_inner(pending, Some(dense), None)
+    }
+    fn accept_inner<'drain>(
+        &'drain mut self,
+        pending: PendingEvidence,
+        dense: Option<
+            crate::inference::inference_agent::governed_cpu::DenseAcceptanceCommit<'_, '_, '_>,
+        >,
+        control: Option<&crate::inference::inference_agent::control::DecodeControl>,
     ) -> Result<AcceptedEvidence<'drain, 'bytes>, PolicyError> {
         if self.terminal {
             return Err(PolicyError::Revoked);
@@ -296,11 +376,19 @@ impl<'slot, 'bytes> GovernedEvidenceSession<'slot, 'bytes> {
                 if stored.accepted.is_some() {
                     return Err(PolicyError::Capacity);
                 }
-                if pending.decision != c::Decision::Allow
-                    || stored.control_digest()? != pending.digest
-                {
+                let digest = stored.control_digest()?;
+                if pending.decision != c::Decision::Allow || digest != pending.digest {
                     return Err(PolicyError::InvalidCandidate);
                 }
+                // Complete digest/domain check precedes rules and fresh time.
+                // This also precomputes the exact typed key for infallible finish.
+                let dense = match dense {
+                    Some(commit) => match pending.key {
+                        AcceptedKey::Token(key) if commit.matches(digest) => Some((commit, key)),
+                        _ => return Err(PolicyError::InvalidCandidate),
+                    },
+                    None => None,
+                };
                 let bound = stored.bound()?;
                 match pending.key {
                     AcceptedKey::Token(key) => {
@@ -329,6 +417,11 @@ impl<'slot, 'bytes> GovernedEvidenceSession<'slot, 'bytes> {
                 }
                 let now = clock()?;
                 controller.actor(actor, now)?;
+                if control.is_some_and(
+                    crate::inference::inference_agent::control::DecodeControl::is_cancelled,
+                ) {
+                    return Err(PolicyError::Revoked);
+                }
                 // No hashing, parsing, callback or bulk copy follows this final
                 // trusted-time/current-actor check. Contract liveness also rechecks.
                 match pending.key {
@@ -346,6 +439,9 @@ impl<'slot, 'bytes> GovernedEvidenceSession<'slot, 'bytes> {
                             return Err(PolicyError::Session);
                         }
                     }
+                }
+                if let Some((commit, key)) = dense {
+                    commit.finish(key);
                 }
                 stored.accepted = Some(pending.key);
                 Ok(())

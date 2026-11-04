@@ -49,11 +49,13 @@ pub fn llm_infer(args: &[u8]) -> Result<String, McpSystemError> {
             .filter(|c| !c.is_greedy())
     };
     let sampler_installed = sampler_cfg.is_some();
+    let agent = qualia_core_db::llm_agent::LocalLlmAgent::new("did:qualia:mcp-agent", &model_path);
+    qualia_core_db::mcp::inference_session::bind(&agent)
+        .map_err(McpSystemError::ExecutionFailed)?;
     if sampler_installed {
         qualia_core_db::llm_bench::set_sampler_config(sampler_cfg);
     }
 
-    let agent = qualia_core_db::llm_agent::LocalLlmAgent::new("did:qualia:mcp-agent", &model_path);
     let (text, provenance, tokens, semantic_quin) =
         agent.infer_local_model_streaming(prompt, graph_context, None::<fn(String)>);
 

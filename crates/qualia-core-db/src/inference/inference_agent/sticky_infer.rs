@@ -17,6 +17,8 @@ pub static RESIDENCY_TRACKER: ResidencyGenerationTracker = ResidencyGenerationTr
 pub struct StickyEngine {
     pub path: String,
     pub generation: u64,
+    /// Exact effective preparation options used when this engine was loaded.
+    pub settings_digest: Option<[u8; 32]>,
     pub engine: QTensorEngine,
 }
 
@@ -64,23 +66,73 @@ pub fn with_engine<R>(
     mut load: impl FnMut(&mut QTensorEngine),
     f: impl FnOnce(&mut QTensorEngine) -> R,
 ) -> R {
-    let current_gen = RESIDENCY_TRACKER.generation();
+    with_engine_disposition(path, load, f, || false)
+}
+
+/// Failed/uncertain turns discard the numerical owner on completion or unwind.
+/// No checkpoint digest is represented as a rollback image. The epoch advances
+/// before destruction, so queued/prepared handles cannot reuse this state.
+pub fn with_engine_disposition<R>(
+    path: &str,
+    mut load: impl FnMut(&mut QTensorEngine),
+    f: impl FnOnce(&mut QTensorEngine) -> R,
+    discard: impl FnOnce() -> bool,
+) -> R {
+    let mut current_gen = RESIDENCY_TRACKER.generation();
+    let settings_digest = crate::llm_bench::prepared_settings::read(|settings| settings.digest());
     ENGINE.with(|cell| {
         let mut slot = cell.borrow_mut();
         let reload = match slot.as_ref() {
-            Some(s) => s.path != path || s.generation != current_gen,
+            Some(s) => {
+                s.path != path
+                    || s.generation != current_gen
+                    || s.settings_digest != settings_digest
+            }
             None => true,
         };
         if reload {
+            if slot.is_some() {
+                current_gen = invalidate_sticky_residency();
+                #[cfg(feature = "cuda")]
+                crate::inference::cuda_lane::discard_numerical_owner();
+                if let Ok(mut cache) = super::decode_helpers::get_prefix_cache().lock() {
+                    cache.clear();
+                }
+                // Drop the old owner before loading a differently prepared model.
+                *slot = None;
+            }
             let mut engine = QTensorEngine::new();
             load(&mut engine);
             *slot = Some(StickyEngine {
                 path: path.to_string(),
                 generation: current_gen,
+                settings_digest,
                 engine,
             });
         }
-        f(&mut slot.as_mut().expect("sticky engine just loaded").engine)
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            f(&mut slot.as_mut().expect("sticky engine just loaded").engine)
+        }));
+        if result.is_err() || discard() {
+            invalidate_sticky_residency();
+            // The legacy CUDA lane has a separate global KV/graph/slab owner.
+            #[cfg(feature = "cuda")]
+            crate::inference::cuda_lane::discard_numerical_owner();
+            // Destruction owns engine KV/recurrent/device buffers.
+            *slot = None;
+            if let Ok(mut cache) = super::decode_helpers::get_prefix_cache().lock() {
+                cache.clear();
+            }
+            crate::llm_bench::set_domino_masker(None);
+        } else if let Some(sticky) = slot.as_mut() {
+            if let Some(generation) = sticky.engine.prepared_model_residency_generation() {
+                sticky.generation = generation;
+            }
+        }
+        match result {
+            Ok(value) => value,
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
     })
 }
 

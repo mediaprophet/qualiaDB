@@ -11,6 +11,9 @@ use super::types::{default_local_modality, AgentBackend};
 /// The concrete local inference agent. Uses a mock inference path for now;
 /// swap `infer_local_model` for an actual llama.cpp FFI call.
 pub struct LocalLlmAgent {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) native_request:
+        std::sync::Mutex<Option<super::native_request::NativeGovernedRequest>>,
     pub agent_did: String,
     pub backend: AgentBackend,
     pub memory_used_bytes: std::sync::atomic::AtomicU64,
@@ -50,6 +53,8 @@ impl LocalLlmAgent {
     /// Construct an agent with a fully specified backend (e.g. catalog multimodal profile).
     pub fn with_local_backend(agent_did: impl Into<String>, backend: AgentBackend) -> Self {
         Self {
+            #[cfg(not(target_arch = "wasm32"))]
+            native_request: std::sync::Mutex::new(None),
             agent_did: agent_did.into(),
             backend,
             memory_used_bytes: std::sync::atomic::AtomicU64::new(0),
@@ -60,6 +65,24 @@ impl LocalLlmAgent {
             ),
             lora_manager: std::sync::Mutex::new(None),
         }
+    }
+
+    /// Bind one prepared normal-runtime request. Occupied bindings refuse rather
+    /// than replacing another caller's authority. Every infer entry consumes it.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn bind_native_governed_request(
+        &self,
+        request: super::native_request::NativeGovernedRequest,
+    ) -> Result<(), super::governed::PolicyError> {
+        let mut slot = self
+            .native_request
+            .lock()
+            .map_err(|_| super::governed::PolicyError::Revoked)?;
+        if slot.is_some() {
+            return Err(super::governed::PolicyError::Capacity);
+        }
+        *slot = Some(request);
+        Ok(())
     }
 
     // ── LoRA adapter management ───────────────────────────────────────────────

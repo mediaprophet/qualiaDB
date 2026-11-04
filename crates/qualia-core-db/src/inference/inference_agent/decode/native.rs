@@ -11,9 +11,31 @@ impl LocalLlmAgent {
         use_sieve: bool,
         sieve_spec: Option<crate::neuro_symbolic_sieve::SieveLexSpec>,
         sieve_lex_path: Option<String>,
+        execution: Option<super::super::native_request::NativeDecodeRequest>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         use crate::gguf_bridge::QTensorEngine;
         use rtrb::RingBuffer;
+
+        let execution = execution.or_else(|| {
+            self.native_request
+                .lock()
+                .ok()?
+                .take()
+                .map(super::super::native_request::NativeDecodeRequest::Governed)
+        });
+        let Some(execution) = execution else {
+            log::error!("LLM_DECODE|missing-prepared-governed-request");
+            return (
+                String::from("[native-governance-required]"),
+                vec![prov_hash],
+                0,
+                None,
+            );
+        };
+        let discard = matches!(
+            &execution,
+            super::super::native_request::NativeDecodeRequest::Governed(_)
+        );
 
         let (model_path, model_instance_hash) = match &self.backend {
             AgentBackend::Local { model_path, .. } => {
@@ -61,6 +83,7 @@ impl LocalLlmAgent {
             None
         };
         let stream_tx_thread = stream_pair.as_ref().map(|(tx, _)| tx.clone());
+        let control = control.as_ref().map(DecodeControl::frozen_budgets);
         let control_thread = control.clone();
 
         // Move the (optional) LoRA adapter into the inference thread.
@@ -71,8 +94,17 @@ impl LocalLlmAgent {
             std::sync::mpsc::sync_channel::<(String, u32, Option<NQuin>, bool, StageTrace)>(1);
 
         // ── LLM engine job (sticky 1-thread pool) ────────────────────────
+        let prepared_settings = match crate::inference::inference_bench::prepared_settings::PreparedInferenceSettings::capture() {
+            Ok(settings) => settings,
+            Err(error) => {
+                log::error!("LLM_DECODE|settings-capacity-refused|{error:?}");
+                return (String::from("[native-preparation-refused]"), vec![prov_hash], 0, None);
+            }
+        };
         sticky_infer::pool().spawn(move || {
-            let result = sticky_infer::with_engine(
+            let _settings_scope = prepared_settings.clone().enter();
+            let reusable = std::sync::atomic::AtomicBool::new(!discard);
+            let result = sticky_infer::with_engine_disposition(
                 model_path.as_str(),
                 |engine| {
                     // Load only on cache miss / path change.
@@ -108,8 +140,11 @@ impl LocalLlmAgent {
                         prov_hash,
                         lp,
                         cc,
+                        execution,
+                        reusable: &reusable,
                     })
                 }, // sticky_infer::with_engine f
+                || !reusable.load(std::sync::atomic::Ordering::Acquire),
             ); // sticky_infer::with_engine
             let _ = done_tx.send(result);
         }); // sticky pool spawn
@@ -126,6 +161,7 @@ impl LocalLlmAgent {
             }
         };
 
+        let mut completed = None;
         loop {
             drain_tokens();
             match lc.pop() {
@@ -135,14 +171,22 @@ impl LocalLlmAgent {
                         let _ = cp.push(SentMsg::DenyRollback);
                     }
                 }
-                Err(_) => std::hint::spin_loop(),
+                Err(_) => match done_rx.try_recv() {
+                    Ok(result) => {
+                        completed = Some(result);
+                        break;
+                    }
+                    Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
+                    Err(std::sync::mpsc::TryRecvError::Empty) => std::hint::spin_loop(),
+                },
             }
         }
 
         drain_tokens();
 
-        let (text, tokens, semantic_quin, sieve_failed, stage_trace) = done_rx
-            .recv()
+        let (text, tokens, semantic_quin, sieve_failed, stage_trace) = completed
+            .map(Ok)
+            .unwrap_or_else(|| done_rx.recv())
             .unwrap_or_else(|_| (String::new(), 0, None, false, StageTrace::new()));
         if !stage_trace.is_empty() {
             crate::inference::runtime::stage::set_last_stage_trace(stage_trace);

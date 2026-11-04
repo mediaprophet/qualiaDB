@@ -3,6 +3,7 @@
 //! as a remotely callable signing endpoint. Inference never installs a default.
 mod actor;
 mod configuration;
+mod product;
 mod registry;
 mod store;
 pub use actor::{
@@ -10,9 +11,14 @@ pub use actor::{
     SelectedInferenceIdentifier,
 };
 pub use configuration::{InferenceHostConfiguration, CONFIGURATION_BUDGET_BYTES};
+pub(crate) use product::bind_turn;
+pub use product::{
+    bind_chat_inference_session, bind_poet_inference_session, unbind_chat_inference_session,
+    bind_mcp_inference_session, native_product_session,
+};
 pub use store::{
     admit_inference, configure_inference_authority, disconnect_inference_controller,
-    install_policy, load_policy_status, lock_inference_controller_vault,
+    install_evidence_policy, install_policy, load_policy_status, lock_inference_controller_vault,
     replace_inference_admission, revoke_policy,
 };
 

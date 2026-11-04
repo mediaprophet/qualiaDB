@@ -2,6 +2,12 @@
 use super::*;
 
 pub struct QTensorEngine {
+    /// Private prepared backing retains lease exclusion or immutable snapshot
+    /// ownership. Public legacy mappings cannot override this execution source.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) prepared_native_bytes: Option<ModelByteHandle>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) prepared_native_sources: Option<NativeModelSources>,
     /// Browser WASM keeps a private device; native reuses `gpu_context::shared_gpu()`.
     #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub(super) device: wgpu::Device,
@@ -224,16 +230,15 @@ pub struct QTensorEngine {
     /// the toggle is on, else the CPU oracle. Native-only; the wasm ternary path is a later step.
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(super) ternary_ffn: Option<crate::ternary_gpu::TernaryFfnResident>,
-    /// Phase 2 (resident weights): resident VRAM weight buffers, keyed by each weight byte-region's
-    /// absolute mmap address (unique per distinct weight — incl. each output-projection vocab chunk,
-    /// which all share one tensor `byte_offset` — and stable across tokens). Populated lazily on the
-    /// first GEMM that touches a region and reused every token, so a weight is uploaded to VRAM ONCE
-    /// instead of re-`write_buffer`ed (up to ~50 MB for a 3B FFN tensor) on every GEMM, every token —
-    /// the decode-bandwidth lever for large models. Mmap bytes are immutable, so the cache is always
-    /// coherent. Native-only (wasm uses the MC8 arena); active when `resident_weights_enabled()`.
+    /// Bounded cold resident projection cache. Retains immutable source ownership, validates
+    /// device and byte-region length, and invalidates model replacement before dropping sources.
+    /// Same leased source is reused across requests; no per-request epoch or full-weight hashing.
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(super) gemm_resident_weights:
-        std::sync::Mutex<std::collections::HashMap<u64, wgpu::Buffer>>,
+    pub(super) projection_cold_byte_budget: usize,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    pub(super) projection_readback: etalon_inference::projections::readback::ReadbackCompletion,
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    pub(super) gemm_resident_weights: std::sync::Mutex<super::gemm::ResidentProjectionCache>,
     /// Phase 3 (FFN fusion): a small uniform buffer holding the gate/up/down GEMM `GemmGpuParams`
     /// at 256-aligned sub-ranges (3 slots), so all three GEMMs of one fused FFN submit can bind
     /// distinct params simultaneously. Lazily created native-only on the first fused FFN.

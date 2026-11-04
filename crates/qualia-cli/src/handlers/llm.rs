@@ -26,10 +26,14 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         }
         LlmAction::Eval {
             prompt,
+            authority,
             orchestrated,
             stream,
             lora,
         } => {
+            let _authority = authority.as_ref()
+                .map(|path| super::inference_policy::prepare_eval(path))
+                .transpose()?;
             if let Some(l) = lora {
                 println!("Multiplexing LoRA adapter from {:?}", l);
             }
@@ -175,6 +179,8 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
         }
         LlmAction::DecodeQwen4Exp {
             package,
+            authority,
+            developer,
             prompt,
             token_ids,
             chat,
@@ -182,15 +188,25 @@ pub async fn handle(action: &LlmAction) -> Result<(), Box<dyn std::error::Error>
             context,
             trunk_mmap,
         } => {
-            qwen_testing::run_decode_qwen4exp(
-                package,
-                prompt.as_deref(),
-                token_ids,
-                *max_tokens,
-                *context,
-                *chat,
-                *trunk_mmap,
-            )?;
+            if authority.is_some() && *developer {
+                return Err("decode-qwen4exp accepts either --authority or --developer, never both".into());
+            }
+            if let Some(authority) = authority {
+                super::inference_policy::run_qwen_governed(authority, package,
+                    prompt.as_deref(), token_ids, *max_tokens, *context, *chat, *trunk_mmap)?;
+            } else if *developer {
+                qwen_testing::run_decode_qwen4exp(
+                    package,
+                    prompt.as_deref(),
+                    token_ids,
+                    *max_tokens,
+                    *context,
+                    *chat,
+                    *trunk_mmap,
+                )?;
+            } else {
+                return Err("decode-qwen4exp requires --authority or explicit --developer".into());
+            }
         }
         LlmAction::ProbeQwen4ExpTrace {
             package,

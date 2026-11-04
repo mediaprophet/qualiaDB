@@ -11,38 +11,6 @@ use etalon_wasm::{
     WorkerSteward, SAB_RING_MAGIC, SAB_RING_VERSION,
 };
 
-pub trait WorkerStewardExt {
-    fn mark_ready(&mut self);
-    fn notify_device_lost(&mut self);
-    fn recover(&mut self, new_gen: u32);
-    fn state(&self) -> WorkerState;
-    fn generation(&self) -> u32;
-}
-
-impl WorkerStewardExt for WorkerSteward {
-    fn mark_ready(&mut self) {
-        self.set_ready();
-    }
-
-    fn notify_device_lost(&mut self) {
-        self.state = WorkerState::Suspended;
-    }
-
-    fn recover(&mut self, new_gen: u32) {
-        self.state = WorkerState::Ready;
-        let req = self.next_request_id.load(core::sync::atomic::Ordering::Relaxed) & 0x0000_0000_FFFF_FFFF;
-        self.next_request_id.store(((new_gen as u64) << 32) | req, core::sync::atomic::Ordering::Relaxed);
-    }
-
-    fn state(&self) -> WorkerState {
-        self.state
-    }
-
-    fn generation(&self) -> u32 {
-        (self.next_request_id.load(core::sync::atomic::Ordering::Relaxed) >> 32) as u32
-    }
-}
-
 use crate::audio::acoustic_plane::{
     acoustic_enabled_for_mode, acoustic_params_from_tensor, apply_binaural_to_uniform,
     drain_sonic_tokens, push_sonic_token, sonify_tensor_node, AcousticUniform,
@@ -350,8 +318,11 @@ impl QualiaPortal {
             self.body_renderer = BodyRendererBackend::CpuCanvas;
             self.etalon_steward.notify_device_lost();
         } else {
-            let new_gen = self.etalon_steward.generation().wrapping_add(1);
-            self.etalon_steward.recover(new_gen);
+            if let Some(new_gen) = self.etalon_steward.generation().checked_add(1) {
+                let _ = self.etalon_steward.recover(new_gen);
+            } else {
+                self.etalon_steward.terminate();
+            }
         }
     }
 

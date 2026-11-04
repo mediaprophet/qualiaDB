@@ -461,6 +461,11 @@ pub fn run_chat_inference_full(
         return empty("Generation cancelled");
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Err(reason) = crate::inference_policy::bind_turn(session_id, &agent) {
+        return empty(&format!("Inference authority unavailable: {reason}"));
+    }
+
     if graph_mutation {
         return run_orchestrated_inference(
             session_id,

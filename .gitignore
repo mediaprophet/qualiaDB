@@ -170,6 +170,8 @@ scripts/*
 !scripts/test-etalon-vibe.test.ps1
 !scripts/test-inference-migration.mjs
 !scripts/test-inference-migration.test.mjs
+!scripts/test-qualia-browser-cpu.cjs
+!scripts/test-qualia-browser-webgpu.cjs
 !scripts/device-harness-build.mjs
 !scripts/serve-device-harness.mjs
 !scripts/serve-device-harness.test.mjs

@@ -118,6 +118,8 @@ pub fn ontology_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-o1".into(),
                 from: 1,
                 to: 0,
@@ -125,6 +127,8 @@ pub fn ontology_manifold_seed() -> ManifoldSeed {
                 label: "ont:loadedInto".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-o2".into(),
                 from: 2,
                 to: 0,
@@ -132,6 +136,8 @@ pub fn ontology_manifold_seed() -> ManifoldSeed {
                 label: "ont:vocabMapped".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-o3".into(),
                 from: 3,
                 to: 0,
@@ -139,6 +145,8 @@ pub fn ontology_manifold_seed() -> ManifoldSeed {
                 label: "ont:relationAdded".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-o4".into(),
                 from: 4,
                 to: 5,
@@ -146,6 +154,8 @@ pub fn ontology_manifold_seed() -> ManifoldSeed {
                 label: "ont:shapesFor".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-o5".into(),
                 from: 7,
                 to: 1,

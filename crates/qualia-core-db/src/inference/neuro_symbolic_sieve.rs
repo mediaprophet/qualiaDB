@@ -173,6 +173,29 @@ pub struct NeuroSymbolicSieve {
 }
 
 impl NeuroSymbolicSieve {
+    /// Exact initial owned mask/state identity after cold lexicon resolution.
+    /// Execution mutates only this private request's state, never the lex file.
+    pub(crate) fn prepared_digest(&self) -> [u8; 32] {
+        use sha2::{Digest, Sha256};
+        let mut hash = Sha256::new();
+        hash.update(b"qualia:prepared-sieve:v1\0");
+        hash.update([self.state as u8, self.emitted_len]);
+        for mask in &self.masks {
+            hash.update([mask.len]);
+            for slot in &mask.slots {
+                hash.update(slot.token_id.to_le_bytes());
+                hash.update(slot.lexicon_hash.to_le_bytes());
+            }
+        }
+        for value in [self.subject_hash, self.predicate_hash, self.object_hash] {
+            hash.update(value.to_le_bytes());
+        }
+        for value in self.emitted_tokens {
+            hash.update(value.to_le_bytes());
+        }
+        hash.finalize().into()
+    }
+
     /// Build masks from a memory-mapped `.q42.lex` view and GGUF tokenizer (load-time only).
     #[cfg(not(target_arch = "wasm32"))]
     pub fn from_lex_and_tokenizer(

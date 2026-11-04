@@ -30,64 +30,16 @@ impl PortalGpu {
             .as_ref()
             .ok_or_else(|| "offscreen readback buffer is unavailable".to_string())?;
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("qualia-render-readback-encoder"),
-            });
-        encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
-                texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            wgpu::TexelCopyBufferInfo {
-                buffer: staging,
-                layout: wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(self.readback_bytes_per_row),
-                    rows_per_image: Some(self.height),
-                },
-            },
-            wgpu::Extent3d {
-                width: self.width,
-                height: self.height,
-                depth_or_array_layers: 1,
-            },
-        );
-        self.queue
-            .submit(std::iter::once(encoder.finish()))
-            .ok_or_else(|| {
-                "RGBA8 readback: native queue rejected the command submission".to_string()
-            })?;
-
-        let slice = staging.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-        if let Err(error) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
-            staging.unmap();
-            return Err(format!("RGBA8 readback: device poll failed: {error}"));
-        }
-        rx.recv()
-            .map_err(|e| format!("RGBA8 readback callback failed: {e}"))?
-            .map_err(|e| format!("RGBA8 buffer map failed: {e}"))?;
-
-        let mapped = slice
-            .get_mapped_range()
-            .expect("wgpu buffer map_range failed");
-        let tight_row = self.width as usize * 4;
-        let padded_row = self.readback_bytes_per_row as usize;
-        for row in 0..self.height as usize {
-            let src = &mapped[row * padded_row..row * padded_row + tight_row];
-            let dst = &mut out[row * tight_row..(row + 1) * tight_row];
-            dst.copy_from_slice(src);
-        }
-        drop(mapped);
-        staging.unmap();
-        Ok(need)
+        etalon_render::readback::read_rgba8_into(
+            &self.device,
+            &self.queue,
+            texture,
+            staging,
+            self.width,
+            self.height,
+            self.readback_bytes_per_row,
+            out,
+        )
     }
 
     #[cfg(target_arch = "wasm32")]

@@ -81,7 +81,7 @@
         <i class="fas fa-triangle-exclamation text-amber-400 mt-0.5 shrink-0"></i>
         <div>
             <span class="font-semibold text-amber-300">Daemon not detected on localhost:4242</span>
-            <span class="text-white/60 ml-2">— WASM In-Browser active. Run </span>
+            <span class="text-white/60 ml-2">— Browser developer demo active. Run </span>
             <code class="text-cyan-300 mx-1">qualia-cli daemon --dev</code>
             <span class="text-white/60"> to discover locally available models.</span>
         </div>
@@ -136,7 +136,7 @@
                             <div class="w-10 h-5 bg-slate-700 rounded-full transition-colors" id="demo-track"></div>
                             <div class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform" id="demo-thumb"></div>
                         </div>
-                        <span id="demo-label">WASM In-Browser</span>
+                        <span id="demo-label">Browser developer demo</span>
                     </label>
                     <button id="cancel-btn" onclick="cancelLiveInference()" class="spinbtn red text-xs py-1 px-3" disabled><i class="fas fa-ban mr-1"></i>Cancel</button>
                     <button onclick="clearChat()" class="spinbtn red text-xs py-1 px-3"><i class="fas fa-trash mr-1"></i>Clear</button>
@@ -462,7 +462,7 @@ function toggleDemo() {
     if (demoMode) {
         track.style.background = 'rgba(16,185,129,0.5)';
         thumb.style.transform = 'translateX(20px)';
-        label.textContent = 'WASM In-Browser';
+        label.textContent = 'Browser developer demo';
     } else {
         track.style.background = '';
         thumb.style.transform = '';
@@ -537,7 +537,7 @@ function sendMessage() {
 
 window.sendMessage = sendMessage;
 
-// ─── Real In-Browser Rust WASM Engine & Sentinel Governance ───────
+// ─── Browser developer demo: graph checks and optional resident decode ───
 let wasmEngineMod = null;
 let wasmEngineInstance = null;
 let wasmEnginePromise = null;
@@ -551,13 +551,9 @@ async function ensureWasmEngine() {
         const mod = await import('./playground/qualia_core_db.js');
         const wasmResp = await fetchWasmBinary('./playground/qualia_core_db_bg.wasm');
         wasmEngineInstance = await mod.default({ module_or_path: wasmResp });
-        try {
-            if (typeof mod.initializeCpuWasmEngine === 'function') {
-                await mod.initializeCpuWasmEngine(BigInt(42));
-            }
-        } catch (e) {
-            // CPU-WASM initialization ping completed with BigInt(42) pointer
-        }
+        // This app opts into developer execution without Sentinel token acceptance.
+        // Loading WASM does not initialize a model; real model bytes are required.
+        mod.configureBrowserExecutionMode('developer', true);
         wasmEngineMod = mod;
         return wasmEngineMod;
     })();
@@ -661,12 +657,12 @@ If an anomaly (e.g. byte signature \`0x99\`) or policy violation is detected, th
 • **SCF Acceleration**: Roothaan-Hall nonlinear eigenvalue solver accelerated by quasi-Newton Direct Inversion in the Iterative Subspace (DIIS) and Broyden charge-mixing.
 • **Hardware Scheduler**: The QGroup heuristic clusters VQE and quantum circuits by depth and shot count to mitigate parallel hardware latency.`;
     } else {
-        intro = 'Grounded response from in-browser **qualia-core-db WASM** engine (Sentinel verified):';
-        body = `\n\nIn QualiaDB’s edge architecture, queries regarding **"${escHtml(userMsg)}"** are resolved against the resident knowledge graph using 48-byte Super-Quins (\`NQuin\`) and governed under Phase 8 bifurcated compute:
+        intro = 'Scripted architecture illustration (not verified model output):';
+        body = `\n\nThis demonstration selects a predefined architecture explanation for **"${escHtml(userMsg)}"**. It does not resolve this question against a resident knowledge graph:
 
-• **Zero-Heap Guarantees**: Evaluation loops operate on pre-allocated buffers within the 42MB Sentinel arena, preventing browser garbage collection pauses.
-• **Mid-Generation Governance**: The Webizen Sentinel monitors token logits through wait-free SPSC channels, guaranteeing that all output is grounded in verified graph provenance.
-• **Tri-State Execution**: Workloads dynamically balance across Local (\`wgpu\` page-cached weights), Remote (Nym mixnet), and Hybrid backends.`;
+• **Core evaluator design**: Pre-allocated buffers and a bounded Sentinel arena describe the Rust evaluators; this JavaScript text animation does not measure those guarantees.
+• **Governance architecture**: Sentinel token acceptance requires a governed runtime; this developer demonstration does not provide it.
+• **Execution backends**: Local, Remote, and Hybrid are architecture concepts. This scripted fallback does not dispatch model work to them.`;
     }
 
     return intro + body;
@@ -677,7 +673,7 @@ async function runDemoInference(userMsg) {
     document.getElementById('send-btn').disabled = true;
     document.getElementById('cancel-btn').disabled = false;
     streamMsgEl = appendMessage('assistant', '');
-    streamMsgEl.innerHTML = '<span class="text-white/40 text-xs italic"><i class="fas fa-circle-notch fa-spin mr-1.5"></i>Initializing in-browser Rust WASM &amp; Sentinel guard…</span>';
+    streamMsgEl.innerHTML = '<span class="text-white/40 text-xs italic"><i class="fas fa-circle-notch fa-spin mr-1.5"></i>Loading developer demo WASM (no Sentinel token acceptance)…</span>';
 
     let wasm;
     try {
@@ -690,7 +686,7 @@ async function runDemoInference(userMsg) {
         return;
     }
 
-    // 1. Sentinel verification via evaluate_inference_guard_wasm
+    // 1. Supplied graph fixture check; this does not govern emitted tokens.
     const guardScenario = {
         actor: 'did:qualia:edge-llm-hub',
         requiredClaim: 'q42:claim:grounded_provenance',
@@ -701,7 +697,7 @@ async function runDemoInference(userMsg) {
             context: 'q42:world:governed'
         }]
     };
-    let guardVerdict = { action: 'allow', reason: 'none', isolatedCount: 0 };
+    let guardVerdict = { action: 'unavailable', reason: 'not evaluated' };
     try {
         if (typeof wasm.evaluate_inference_guard_wasm === 'function') {
             guardVerdict = wasm.evaluate_inference_guard_wasm(guardScenario) || guardVerdict;
@@ -711,7 +707,7 @@ async function runDemoInference(userMsg) {
     }
 
     // 2. Receipt probe via getBrowserExecutionReceipt
-    let receipt = { schema: 'qualia.browser-execution.v1', backend: 'qualia-core-db WASM' };
+    let receipt = null;
     try {
         if (typeof wasm.getBrowserExecutionReceipt === 'function') {
             receipt = wasm.getBrowserExecutionReceipt() || receipt;
@@ -730,7 +726,7 @@ async function runDemoInference(userMsg) {
 
     document.getElementById('stream-bar').style.removeProperty('display');
     document.getElementById('stream-bar').style.display = 'flex';
-    document.getElementById('sb-phase').textContent = 'Phase 8 WASM Sentinel';
+    document.getElementById('sb-phase').textContent = 'Developer decode attempt';
 
     let wasmStreamSucceeded = false;
     try {
@@ -745,21 +741,23 @@ async function runDemoInference(userMsg) {
                 updateWasmStreamMetrics(wasm);
                 document.getElementById('chat-messages').scrollTop = 9999;
             };
-            try {
-                const res = await wasm.inferWasmStreamingWithContext(userMsg, JSON.stringify(contextChunks), 64, tokenHandler);
-                if (res) wasmStreamSucceeded = true;
-            } catch {
-                const res = await wasm.inferWasmStreamingWithContext(userMsg, JSON.stringify(contextChunks), tokenHandler);
-                if (res) wasmStreamSucceeded = true;
+            const res = await wasm.inferWasmStreamingWithContext(userMsg, JSON.stringify(contextChunks), tokenHandler);
+            wasmStreamSucceeded = streamTokenCount > 0 || (typeof res === 'string' && res.length > 0);
+            if (streamTokenCount === 0 && wasmStreamSucceeded) {
+                streamMsgEl.insertBefore(document.createTextNode(res), streamMsgEl.querySelector('.token-cursor'));
             }
         }
     } catch (e) {
-        // Expected when browser weights are not resident; synthesis stream proceeds
+        console.info('[edge-llm] Developer decode unavailable; using scripted demo:', e);
     }
 
-    // 5. If streaming was not driven by resident weights, stream grounded semantic synthesis
+    // 5. Scripted fallback; no model inference or token acceptance is claimed.
     if (!wasmStreamSucceeded && generating) {
-        const replyText = synthesizeGroundedAnswer(userMsg, contextChunks);
+        // Discard partial failed decode output before the separate scripted demonstration.
+        streamMsgEl.innerHTML = '<span class="token-cursor"></span>';
+        streamTokenCount = 0;
+        document.getElementById('sb-phase').textContent = 'Scripted demo (not model inference)';
+        const replyText = 'Scripted demonstration — no resident browser model generated this response; no Sentinel token acceptance.\n\n' + synthesizeGroundedAnswer(userMsg, contextChunks);
         const tokens = replyText.split(/(?<=\s)|(?=\s)/);
 
         for (let i = 0; i < tokens.length; i++) {
@@ -778,6 +776,8 @@ async function runDemoInference(userMsg) {
         }
     }
 
+    if (wasmStreamSucceeded) document.getElementById('sb-phase').textContent = 'Developer decode (unguarded)';
+
     // Finalize UI
     const cursor = streamMsgEl?.querySelector('.token-cursor');
     if (cursor) cursor.remove();
@@ -787,8 +787,8 @@ async function runDemoInference(userMsg) {
     const totalMs = totalElapsedSec * 1000;
 
     // Real memory telemetry
-    const wasmMemBytes = wasmEngineInstance?.memory?.buffer?.byteLength || 9699328;
-    const wasmMemMb = (wasmMemBytes / (1024 * 1024)).toFixed(1);
+    const wasmMemBytes = wasmEngineInstance?.memory?.buffer?.byteLength;
+    const wasmMemMb = wasmMemBytes == null ? null : (wasmMemBytes / (1024 * 1024)).toFixed(1);
 
     // Append verification footer
     if (streamMsgEl && generating) {
@@ -796,19 +796,19 @@ async function runDemoInference(userMsg) {
         footer.className = 'mt-3 pt-2.5 border-t border-white/10 flex flex-wrap items-center gap-2 text-[10px] text-white/50 font-mono';
         footer.innerHTML = `
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <i class="fas fa-shield-halved"></i> Sentinel: ${escHtml(guardVerdict.action || 'allow')} (${escHtml(guardVerdict.reason || 'none')})
+                <i class="fas fa-shield-halved"></i> Graph fixture only: ${escHtml(guardVerdict.action || 'unavailable')} (${escHtml(guardVerdict.reason || 'not evaluated')})
             </span>
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
-                <i class="fas fa-microchip"></i> engine: qualia-core-db WASM
+                <i class="fas fa-microchip"></i> ${wasmStreamSucceeded ? 'Developer decode (unguarded)' : 'Scripted demo (not model inference)'}
             </span>
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                <i class="fas fa-receipt"></i> receipt: ${escHtml(receipt.schema || 'qualia.browser-execution.v1')}
+                <i class="fas fa-receipt"></i> receipt: ${escHtml(receipt?.schema || 'unavailable')} (no token acceptance)
             </span>
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
                 <i class="fas fa-stopwatch"></i> ${totalMs.toFixed(0)}ms (${finalTps} tok/s)
             </span>
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                <i class="fas fa-memory"></i> ${wasmMemMb} MB WASM memory
+                <i class="fas fa-memory"></i> ${wasmMemMb == null ? 'WASM memory unavailable' : wasmMemMb + ' MB WASM memory'}
             </span>
         `;
         streamMsgEl.appendChild(footer);
@@ -830,13 +830,13 @@ function updateWasmStreamMetrics(wasm) {
         }
     } catch {}
 
-    const wasmMemBytes = wasmEngineInstance?.memory?.buffer?.byteLength || 9699328;
-    const wasmMemMb = (wasmMemBytes / (1024 * 1024)).toFixed(1);
+    const wasmMemBytes = wasmEngineInstance?.memory?.buffer?.byteLength;
+    const wasmMemMb = wasmMemBytes == null ? null : (wasmMemBytes / (1024 * 1024)).toFixed(1);
     const jsHeapMb = (typeof performance !== 'undefined' && performance.memory?.usedJSHeapSize)
         ? (performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(0)
         : null;
 
-    const ramLabel = jsHeapMb ? `${wasmMemMb} MB (${jsHeapMb} MB heap)` : `${wasmMemMb} MB WASM`;
+    const ramLabel = wasmMemMb == null ? 'WASM memory unavailable' : jsHeapMb ? `${wasmMemMb} MB (${jsHeapMb} MB heap)` : `${wasmMemMb} MB WASM`;
 
     document.getElementById('sb-tokens').textContent = streamTokenCount;
     document.getElementById('sb-tps').textContent = tps;
@@ -844,7 +844,7 @@ function updateWasmStreamMetrics(wasm) {
     document.getElementById('sb-ram').textContent = ramLabel;
 
     document.getElementById('t-tps').textContent = tps;
-    document.getElementById('t-rss').textContent = `${wasmMemMb} MB`;
+    document.getElementById('t-rss').textContent = wasmMemMb == null ? 'Unavailable' : `${wasmMemMb} MB`;
     document.getElementById('t-ctx').textContent = streamTokenCount + ' tok';
     if (telem && telem.logic_flashes != null) {
         document.getElementById('t-hot').textContent = Math.round(telem.logic_flashes * 100);
@@ -1087,7 +1087,7 @@ connectTelemetry();
 appendMessage('assistant', '').innerHTML =
     `<div class="text-white/60 text-sm">
         <div class="font-semibold text-white/80 mb-2">Welcome to the Edge LLM Hub</div>
-        <p class="mb-2">Select a model from the catalog, then ask anything. <strong>WASM In-Browser</strong> mode runs real in-browser Rust WASM inference, Sentinel governance, and telemetry without a running daemon.</p>
+        <p class="mb-2"><strong>Browser developer demo</strong> explicitly opts into unguarded developer execution. It runs a graph fixture check and attempts resident browser decode; this page does not load model weights. Without a resident model it shows scripted demonstration text. Neither path provides Sentinel token acceptance.</p>
         <p class="text-xs text-white/40">To run actual daemon inference: <code class="text-cyan-300">qualia-cli llm load gemma-3-1b-it-q4_0</code> then toggle to <strong>Live (daemon)</strong>.</p>
     </div>`;
 </script>

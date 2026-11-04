@@ -204,6 +204,15 @@ impl<'drain, 'bytes> AcceptedEvidence<'drain, 'bytes> {
     pub fn bytes(&self) -> &[u8] {
         &self.retained.bytes[..self.retained.used]
     }
+    pub(in crate::inference::inference_agent) fn token_id(&self) -> Option<u32> {
+        match (
+            self.key(),
+            self.retained.header.map(|header| header.payload),
+        ) {
+            (AcceptedKey::Token(_), Some(PayloadHeader::Token { token, .. })) => Some(token),
+            _ => None,
+        }
+    }
     pub fn artifact_media(&self) -> Option<ArtifactMedia> {
         match self.retained.header.map(|h| h.payload) {
             Some(PayloadHeader::Artifact { media }) => Some(media),

@@ -21,7 +21,15 @@ pub(super) struct ConfiguredHost {
     root: PathBuf,
     configuration_digest: [u8; 32],
     pub owner: Arc<NativeAuthority>,
-    pub host: NativePolicyHost,
+    pub host: Arc<Mutex<NativePolicyHost>>,
+}
+impl Drop for ConfiguredHost {
+    fn drop(&mut self) {
+        self.host
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .disconnect();
+    }
 }
 static HOST: OnceLock<Mutex<Option<ConfiguredHost>>> = OnceLock::new();
 
@@ -29,6 +37,7 @@ static HOST: OnceLock<Mutex<Option<ConfiguredHost>>> = OnceLock::new();
 /// old admitted sessions; a new login cannot resurrect them.
 pub fn disconnect_inference_controller() {
     registry::invalidate();
+    super::product::clear();
     if let Some(host) = HOST.get() {
         let mut slot = host.lock().unwrap_or_else(|e| e.into_inner());
         *slot = None;
@@ -113,7 +122,7 @@ pub(super) fn with_host<T>(
                 root,
                 configuration_digest: digest,
                 owner,
-                host,
+                host: Arc::new(Mutex::new(host)),
             });
         }
         operation(slot.as_mut().expect("host initialized"), &key, vault)
@@ -159,7 +168,7 @@ pub fn configure_inference_authority(
                 root,
                 configuration_digest: configuration::selection_digest(&config, &document),
                 owner,
-                host,
+                host: Arc::new(Mutex::new(host)),
             });
             Ok(())
         })();
@@ -174,7 +183,10 @@ pub fn replace_inference_admission(
 ) -> Result<(), String> {
     configuration::budget(budget)?;
     let result = with_host(|h, _, _| {
-        h.host.disconnect();
+        h.host
+            .lock()
+            .map_err(|_| "Policy host lock failed")?
+            .disconnect();
         registry::invalidate();
         registry::revoke_tracked();
         h.owner.replace_admission(replacement)
@@ -202,6 +214,8 @@ pub fn install_policy(
         serde_json::from_str(rules_json).map_err(|e| format!("Invalid Sentinel policy: {e}"))?;
     with_host(|h, key, _| {
         h.host
+            .lock()
+            .map_err(|_| "Policy host lock failed")?
             .install(
                 key,
                 rules,
@@ -215,11 +229,49 @@ pub fn install_policy(
     })
 }
 pub fn load_policy_status() -> Result<PolicyStatus, String> {
-    with_host(|h, _, _| Ok(h.host.status()))
+    with_host(|h, _, _| {
+        Ok(h.host
+            .lock()
+            .map_err(|_| "Policy host lock failed")?
+            .status())
+    })
+}
+/// Install the actual V3 per-token evidence policy required by native products.
+/// Observation requirements are explicitly selected by the privileged host.
+pub fn install_evidence_policy(
+    rules_json: &str,
+    observations: qualia_core_db::llm_agent::governed::evidence::ObservationRequirements,
+    not_before: u64,
+    expires_at: u64,
+    expected_generation: u64,
+    budget: usize,
+) -> Result<PolicyStatus, String> {
+    if budget < POLICY_COLD_BUDGET_BYTES || rules_json.len() > MAX_POLICY_JSON_BYTES {
+        return Err(PolicyError::Budget.to_string());
+    }
+    let rules: PolicyRules =
+        serde_json::from_str(rules_json).map_err(|e| format!("Invalid Sentinel policy: {e}"))?;
+    with_host(|h, key, _| {
+        h.host
+            .lock()
+            .map_err(|_| "Policy host lock failed")?
+            .install_evidence(
+                key,
+                rules,
+                observations,
+                not_before,
+                expires_at,
+                expected_generation,
+                budget,
+            )
+            .map_err(|e| e.to_string())
+    })
 }
 pub fn revoke_policy(expected_generation: u64, budget: usize) -> Result<PolicyStatus, String> {
     with_host(|h, key, _| {
         h.host
+            .lock()
+            .map_err(|_| "Policy host lock failed")?
             .revoke(key, expected_generation, budget)
             .map_err(|e| e.to_string())
     })
@@ -235,6 +287,8 @@ pub fn admit_inference(
         }
         let association = actor.bind()?;
         h.host
+            .lock()
+            .map_err(|_| "Policy host lock failed")?
             .admit(key, request, budget, Arc::clone(&h.owner), association)
             .map_err(|e| e.to_string())
     })

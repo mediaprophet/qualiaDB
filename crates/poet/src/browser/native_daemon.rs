@@ -431,7 +431,6 @@ thread_local! {
     static DAEMON_STATE: RefCell<DaemonConnectionState> = RefCell::new(DaemonConnectionState::Unchecked);
     static ACTIVE_PULSE_STREAM: RefCell<Option<EventSource>> = RefCell::new(None);
     static ACTIVE_TENSOR_STREAM: RefCell<Option<EventSource>> = RefCell::new(None);
-    static ACTIVE_LLM_STREAM: RefCell<Option<EventSource>> = RefCell::new(None);
     static NATIVE_CAPABILITY_IDS: RefCell<BTreeSet<String>> = RefCell::new(BTreeSet::new());
 }
 
@@ -906,35 +905,16 @@ pub async fn daemon_llm_cancel(job_id: &str) -> Result<NativeLibraryResponse, St
 /// background decoders.
 pub fn open_llm_job_stream(
     job_id: &str,
-    mut on_event: impl FnMut(NativeLlmJobEvent) + 'static,
+    on_event: impl FnMut(NativeLlmJobEvent) + 'static,
 ) -> Result<(), String> {
-    close_llm_job_stream();
     let base_url =
         get_connected_daemon_url().ok_or_else(|| "No native daemon connected".to_string())?;
-    let event_source = EventSource::new(&format!("{base_url}/llm/jobs/events?job_id={job_id}"))
-        .map_err(|error| format!("Could not open local-model event stream: {error:?}"))?;
-    let on_message = Closure::wrap(Box::new(move |event: MessageEvent| {
-        let Some(data) = event.data().as_string() else {
-            return;
-        };
-        match serde_json::from_str::<NativeLlmJobEvent>(&data) {
-            Ok(event) => on_event(event),
-            Err(error) => console_warn(&format!("Ignored malformed local-model event: {error}")),
-        }
-    }) as Box<dyn FnMut(MessageEvent)>);
-    event_source.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
-    on_message.forget();
-    ACTIVE_LLM_STREAM.with(|stream| *stream.borrow_mut() = Some(event_source));
-    Ok(())
+    super::native_llm_transport::open(&base_url, job_id, on_event)
 }
 
 /// Closes llm-job-stream.
 pub fn close_llm_job_stream() {
-    ACTIVE_LLM_STREAM.with(|stream| {
-        if let Some(event_source) = stream.borrow_mut().take() {
-            event_source.close();
-        }
-    });
+    super::native_llm_transport::close();
 }
 
 /// Daemon LLM models call.
@@ -997,7 +977,10 @@ async fn post_record<T: Serialize>(
 
 async fn get_json_string(url: &str) -> Result<String, String> {
     let window = web_sys::window().ok_or_else(|| "Window object unavailable".to_string())?;
-    let value = wasm_bindgen_futures::JsFuture::from(window.fetch_with_str(url))
+    let request = web_sys::Request::new_with_str(url)
+        .map_err(|e| format!("Failed to create request: {e:?}"))?;
+    attach_llm_transport_token(url, &request)?;
+    let value = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
         .await
         .map_err(|error| format!("Fetch failed: {error:?}"))?;
     let response: Response = value
@@ -1023,6 +1006,8 @@ async fn post_json_string(url: &str, json_body: &str) -> Result<String, String> 
         .set("Content-Type", "application/json")
         .map_err(|e| format!("Failed to set header: {e:?}"))?;
 
+    attach_llm_transport_token(url, &request)?;
+
     let resp_val = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request))
         .await
         .map_err(|e| format!("Fetch failed: {e:?}"))?;
@@ -1032,6 +1017,15 @@ async fn post_json_string(url: &str, json_body: &str) -> Result<String, String> 
         .map_err(|_| "Response is not a valid Response object".to_string())?;
 
     response_text(resp).await
+}
+
+fn attach_llm_transport_token(url: &str, request: &web_sys::Request) -> Result<(), String> {
+    let Some(base) = get_connected_daemon_url() else { return Ok(()); };
+    if url.starts_with(&format!("{base}/llm/")) {
+        request.headers().set("x-qualia-token", &super::native_llm_transport::token(&base)?)
+            .map_err(|_| "Could not attach Webizen transport token")?;
+    }
+    Ok(())
 }
 
 async fn response_text(response: Response) -> Result<String, String> {

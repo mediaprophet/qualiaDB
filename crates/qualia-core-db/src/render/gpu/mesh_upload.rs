@@ -98,6 +98,8 @@ impl PortalGpu {
         }
         self.last_visibility_key = None;
         self.shadow_map_dirty = true;
+        self.pick_readback.invalidate(true);
+        self.pick_semantic_result = None;
         self.source_motion.retire();
         Ok(())
     }
@@ -201,10 +203,11 @@ impl PortalGpu {
     ) -> Result<u32, String> {
         self.last_visibility_key = None;
         if positions.is_empty() || indices.len() < 3 {
-            let generation = self.mesh_generation.checked_add(1)
+            let generation = self
+                .mesh_generation
+                .checked_add(1)
                 .ok_or_else(|| "mesh generation exhausted".to_string())?;
             self.mesh = None;
-            self.mesh_reservation = None;
             self.shadow_map_dirty = true;
             self.mesh_generation = generation;
             self.source_motion = Default::default();
@@ -336,28 +339,9 @@ impl PortalGpu {
         } else {
             colors
         };
-        let vertex_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-verts"),
-                contents: bytemuck::cast_slice(positions),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
-        let color_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-colors"),
-                contents: bytemuck::cast_slice(colors),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
+
         let normal_data = authored_normals.unwrap_or_else(|| normal_workspace.normals());
-        let normal_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-normals"),
-                contents: bytemuck::cast_slice(normal_data),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
+
         let generated_tangents;
         let tangent_data = if let Some(tangents) = authored_tangents {
             tangents
@@ -390,20 +374,7 @@ impl PortalGpu {
                 .collect::<Vec<_>>();
             generated_tangents.as_slice()
         };
-        let tangent_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-tangents"),
-                contents: bytemuck::cast_slice(tangent_data),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
-        let index_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-indices"),
-                contents: bytemuck::cast_slice(indices),
-                usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
-            });
+
         let default_uvs;
         let texture_coordinates_0 = if let Some(coordinates) = texture_coordinates_0 {
             coordinates
@@ -411,24 +382,26 @@ impl PortalGpu {
             default_uvs = vec![[0.0, 0.0]; positions.len()];
             default_uvs.as_slice()
         };
-        let uv_buf = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("portal-mesh-uv0"),
-                contents: bytemuck::cast_slice(texture_coordinates_0),
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            });
+
         let index_count = indices.len() as u32;
-        let generation = self.mesh_generation.checked_add(1)
+        let generation = self
+            .mesh_generation
+            .checked_add(1)
             .ok_or_else(|| "mesh generation exhausted".to_string())?;
+        let buffers = etalon_render::mesh::MeshBuffers::upload(
+            &self.device,
+            positions,
+            colors,
+            normal_data,
+            tangent_data,
+            texture_coordinates_0,
+            indices,
+            mesh_reservation,
+        )?;
+        self.pick_readback.invalidate(false);
+        self.pick_semantic_result = None;
         self.mesh = Some(MeshGpu {
-            vertex_buf,
-            color_buf,
-            normal_buf,
-            tangent_buf,
-            uv_buf,
-            index_buf,
-            vertex_count: positions.len() as u32,
+            buffers,
             material_gpu,
             shadow_draws,
             receives_shadows,
@@ -436,7 +409,6 @@ impl PortalGpu {
             cpu_indices: indices.to_vec(),
             normal_workspace,
         });
-        self.mesh_reservation = Some(mesh_reservation);
         self.mesh_base_aabb = Aabb::from_points(positions); // for Phase 2 admission
         self.last_visibility_key = None;
         self.shadow_map_dirty = true;
@@ -463,7 +435,11 @@ impl PortalGpu {
         {
             return;
         }
-        if mesh.normal_workspace.validate_position_span(mesh.cpu_positions.len(), start_us, end).is_err() {
+        if mesh
+            .normal_workspace
+            .validate_position_span(mesh.cpu_positions.len(), start_us, end)
+            .is_err()
+        {
             return;
         }
         mesh.cpu_positions[start_us..end].copy_from_slice(positions);
@@ -480,7 +456,10 @@ impl PortalGpu {
         self.mesh_base_aabb = Aabb::from_points(&mesh.cpu_positions);
         self.last_visibility_key = None;
         self.shadow_map_dirty = true;
-        mesh.normal_workspace.update_positions_prevalidated(&mesh.cpu_positions, start_us, end);
+        mesh.normal_workspace
+            .update_positions_prevalidated(&mesh.cpu_positions, start_us, end);
+        self.pick_readback.invalidate(true);
+        self.pick_semantic_result = None;
         self.source_motion.retire();
         self.queue.write_buffer(
             &mesh.vertex_buf,
@@ -498,7 +477,7 @@ impl PortalGpu {
                     continue;
                 }
                 self.queue.write_buffer(
-                    &mesh.normal_buf,
+                    &mesh.buffers.normal_buf,
                     (run_start * 12) as u64,
                     bytemuck::cast_slice(&normals[run_start..run_end]),
                 );
@@ -506,7 +485,7 @@ impl PortalGpu {
                 run_end = vertex + 1;
             }
             self.queue.write_buffer(
-                &mesh.normal_buf,
+                &mesh.buffers.normal_buf,
                 (run_start * 12) as u64,
                 bytemuck::cast_slice(&normals[run_start..run_end]),
             );

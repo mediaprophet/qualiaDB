@@ -168,6 +168,41 @@ fn pending_ticket_cannot_cross_live_sessions_even_with_identical_payload() {
 }
 
 #[test]
+fn native_cancellation_during_accept_bulk_refuses_actual_commit() {
+    // The unchanged legacy API is the positive reproduction: an Allow ticket
+    // still commits when cancellation is not bound. The native API must refuse
+    // the identical final-window event with that control bound.
+    for native in [false, true] {
+    let dir = tempfile::tempdir().unwrap();
+    let key = SigningKey::from_bytes(&[61; 32]);
+    let (owner, handle, scope) = actor(&dir.path().join("actor"));
+    let mut h = host(dir.path(), &key);
+    install(&mut h, &key, scope, now() + 60);
+    let mut bytes = [0; 64];
+    let mut slot = storage(&mut bytes);
+    let mut session = h.admit_evidence(
+        &key, request(), POLICY_COLD_BUDGET_BYTES,
+        owner.clone(), bind(&owner, &handle), &mut slot,
+    ).unwrap();
+    let pending = session.prepare_token(proposal(&session, b"allowed", 1)).unwrap();
+    assert_eq!(pending.decision(), Decision::Allow);
+    let control = crate::inference::inference_agent::control::DecodeControl::default();
+    let cancel = control.clone();
+    session.after_bulk_once(move || cancel.cancel());
+    if native {
+        assert!(matches!(session.accept_native(pending, Some(&control)), Err(PolicyError::Revoked)));
+    } else {
+        let accepted = session.accept(pending).unwrap();
+        assert_eq!(accepted.bytes(), b"allowed");
+        let len = accepted.bytes().len();
+        accepted.complete(len).unwrap();
+    }
+    assert!(control.is_cancelled());
+    assert_eq!(session.is_terminal(), native);
+    }
+}
+
+#[test]
 fn every_authority_invalidation_rejects_previously_allowed_ticket() {
     for mutation in 0..5 {
         let dir = tempfile::tempdir().unwrap();

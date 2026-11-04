@@ -18,13 +18,25 @@ pub const OUTPUT_WGSL: &str = concat!(
     include_str!("output_transform.wgsl"),
     include_str!("output_composite.wgsl")
 );
+#[cfg(feature = "gpu-runtime")]
+pub const TEMPORAL_RESOLVE_WGSL: &str = etalon_render::temporal::TEMPORAL_RESOLVE_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
 pub const TEMPORAL_RESOLVE_WGSL: &str = include_str!("temporal_resolve.wgsl");
+#[cfg(feature = "gpu-runtime")]
+pub const TEMPORAL_DEPTH_WGSL: &str = etalon_render::temporal::TEMPORAL_DEPTH_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
 pub const TEMPORAL_DEPTH_WGSL: &str = include_str!("temporal_depth.wgsl");
-pub const TEMPORAL_OUTPUT_WGSL: &str = concat!(
-    include_str!("output_transform.wgsl"),
-    include_str!("temporal_output.wgsl")
-);
+#[cfg(feature = "gpu-runtime")]
+pub const TEMPORAL_OUTPUT_WGSL: &str = etalon_render::temporal::TEMPORAL_OUTPUT_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
+pub const TEMPORAL_OUTPUT_WGSL: &str = concat!(include_str!("output_transform.wgsl"), include_str!("temporal_output.wgsl"));
+#[cfg(feature = "gpu-runtime")]
+pub const TEMPORAL_MOTION_WGSL: &str = etalon_render::temporal::TEMPORAL_MOTION_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
 pub const TEMPORAL_MOTION_WGSL: &str = include_str!("temporal_motion.wgsl");
+#[cfg(feature = "gpu-runtime")]
+pub const TEMPORAL_REACTIVE_WGSL: &str = etalon_render::temporal::TEMPORAL_REACTIVE_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
 pub const TEMPORAL_REACTIVE_WGSL: &str = include_str!("temporal_reactive.wgsl");
 pub const BLOOM_WGSL: &str = concat!(
     include_str!("output_transform.wgsl"),
@@ -36,10 +48,10 @@ pub const EMF_VOLUMETRIC_WGSL: &str = include_str!("emf_volumetric.wgsl");
 pub const SURFEL_INSTANCED_WGSL: &str = include_str!("surfel_instanced.wgsl");
 pub const ACOUSTIC_VOXEL_CONE_WGSL: &str = include_str!("acoustic_voxel_cone.wgsl");
 pub const DEFERRED_RESOLVE_WGSL: &str = include_str!("deferred_resolve.wgsl");
-pub const HOLOGRAPHIC_WGSL: &str = concat!(
-    include_str!("spectral.wgsl"),
-    include_str!("holographic.wgsl")
-);
+#[cfg(feature = "gpu-runtime")]
+pub const HOLOGRAPHIC_WGSL: &str = etalon_render::holographic::HOLOGRAPHIC_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
+pub const HOLOGRAPHIC_WGSL: &str = concat!(include_str!("spectral.wgsl"), include_str!("holographic.wgsl"));
 pub const SWE_SOLVER_WGSL: &str = include_str!("swe_solver.wgsl");
 pub const PRECIPITATION_WGSL: &str = include_str!("precipitation.wgsl");
 pub const CLUSTER_LIGHT_WGSL: &str = include_str!("cluster_light.wgsl");

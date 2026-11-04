@@ -1,11 +1,12 @@
 //! GGUF compiler policies and compatibility entrypoints.
 use super::*;
-use crate::container_10d::crc32c::crc32c;
 use crate::gguf_sharder::{GgufTensorIndex, GgufTensorInfo};
 mod converted;
 mod ffn;
 mod legacy;
 mod names;
+mod native_metadata;
+pub use native_metadata::gguf_native_model_metadata;
 mod planning;
 mod verbatim;
 pub use ffn::*;

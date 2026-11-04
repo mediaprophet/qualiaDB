@@ -26,26 +26,33 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "gpu-native-dx12"
 # API explorer / playground:        --features wasm-full
 # Native-only stays native: daemon, filesystem volumes, NVMe/ZNS/CSD, BLE mesh, eBPF.
 gpu-runtime = [
+    "etalon-diagnostics/gpu",
+    "etalon-inference/gpu-attention",
+    "etalon-inference/native-metal-gpu",
     "dep:naga",
     "dep:wgpu",
     "dep:etalon",
     "dep:etalon-agent",
-    "dep:etalon-wgsl-forge",
+    "etalon-wgsl-forge/std",
+    "etalon-wgsl-forge/wgsl",
+    "etalon-wgsl-forge/naga-validate",
+    "etalon-wgsl-forge/runtime",
     "dep:etalon-nquin",
     "dep:etalon-tensor",
-    "dep:etalon-render",
+    "etalon-render/gpu",
     "dep:etalon-wasm",
+    "etalon-wasm/gpu-readback",
     "dep:raw-window-handle",
 ]
 # DX12 remains enabled in the default Windows build. The portable native profile
 # can omit it and use the renderer-only GLES/Vulkan selection path instead.
-gpu-native-dx12 = ["wgpu/dx12", "etalon?/dx12"]
+gpu-native-dx12 = ["wgpu/dx12", "etalon?/dx12", "etalon-wgsl-forge/gpu-native-dx12"]
 gpu-native-portable = []
 metal-native = []
 wgsl-forge = ["gpu-runtime", "dep:naga", "dxc"]
 wgsl-forge-cuda = ["wgsl-forge", "cuda"]
 webgl2 = ["dep:naga"]
-cuda = ["dep:cudarc"]
+cuda = ["dep:cudarc", "etalon-wgsl-forge/cuda", "etalon-inference/cuda"]
 # W7 (ADR-pending): real NVIDIA GPU thermal/power telemetry via NVML (nvml-wrapper dlopens the
 # driver's NVML at runtime — no CUDA SDK needed to build). Opt-in; the base build is unaffected and
 # `thermal_telemetry` degrades to "telemetry unavailable" when the feature is off or NVML is absent.
@@ -54,7 +61,7 @@ nvml = ["dep:nvml-wrapper"]
 # Off by default; the adapters fail closed (WeightAbsent/FeatureDisabled) without it. Pulls the ORT
 # binaries only when explicitly enabled.
 vision-onnx = ["dep:ort"]
-dxc = []
+dxc = ["etalon-wgsl-forge/dxc"]
 portal = ["wasm_simd", "gpu-runtime", "wasm-logic", "wasm-scientific"]
 device-harness = ["wasm_simd", "gpu-runtime"]
 wasm-ontology = []
@@ -139,9 +146,9 @@ minimal-fast-build = []
 vibe = { workspace = true }
 qualia-cooperative-core = { workspace = true }
 qualia-inference-kernel = { workspace = true }
-etalon-model = { workspace = true, features = ["ggml"] }
+etalon-model = { workspace = true, features = ["ggml", "inference-model"] }
 etalon-resources = { workspace = true }
-etalon-inference = { workspace = true }
+etalon-inference = { workspace = true, features = ["qwen-metadata", "metal-lane"] }
 etalon-inference-contract = { workspace = true }
 minicbor = { workspace = true, features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
@@ -239,10 +246,10 @@ etalon = { workspace = true, default-features = false, features = [
     "spirv"
 ], optional = true }
 etalon-agent = { workspace = true, optional = true }
-etalon-wgsl-forge = { workspace = true, optional = true }
+etalon-wgsl-forge = { workspace = true }
 etalon-nquin = { workspace = true, optional = true }
 etalon-tensor = { workspace = true, optional = true }
-etalon-render = { workspace = true, optional = true }
+etalon-render = { workspace = true }
 etalon-wasm = { workspace = true, optional = true }
 naga = { workspace = true, features = ["wgsl-in", "spv-out", "glsl-out"], optional = true }
 raw-window-handle = { workspace = true, optional = true }
@@ -323,6 +330,10 @@ windows = { version = "0.62.2", features = [
 ] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+etalon-diagnostics = { workspace = true }
+etalon-model-io = { workspace = true }
+etalon-inference = { workspace = true, features = ["cpu-inference", "gguf-cpu", "qwen-native"] }
+etalon-inference-lab = { workspace = true, features = ["operator-lab"] }
 libc = "0.2"
 qualia-audio = { path = "../qualia-audio" }
 keyring = "4"
@@ -376,6 +387,7 @@ serde-wasm-bindgen = "0.6.5"
 io-uring = "0.7.12"
 
 [target.'cfg(windows)'.dependencies]
+etalon-inference = { workspace = true, features = ["native-directml"] }
 # Pin the native enrollment owner directly; never use a replaceable global store.
 keyring-core = "1"
 windows-native-keyring-store = "1"
@@ -413,3 +425,6 @@ harness = false
 [[bench]]
 name = "network_benchmark"
 harness = false
+
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
+etalon-inference = { workspace = true, features = ["native-accelerate"] }

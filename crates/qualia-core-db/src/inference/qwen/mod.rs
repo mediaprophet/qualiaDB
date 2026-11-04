@@ -23,6 +23,10 @@ pub mod hyper_connection;
 pub mod native_asset;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native_runtime;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod retained;
+#[cfg(not(target_arch = "wasm32"))]
+mod metadata;
 pub mod numerics;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ple_block;

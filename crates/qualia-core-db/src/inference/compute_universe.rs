@@ -10,6 +10,18 @@
 //! One physical `wgpu::Device` (`gpu_context::shared_gpu`); logical parallelism via queues + rings.
 
 use core::cell::UnsafeCell;
+// Request lifetime and result-envelope ownership are separated from fabric math.
+#[path = "compute_universe_epoch.rs"]
+mod epoch;
+pub use epoch::{begin_request_epoch, ComputeRequestEpoch};
+pub(crate) use epoch::{
+    rebuild_kv as rebuild_context_provenance, record_kv as record_context_provenance,
+};
+#[path = "compute_universe_context.rs"]
+mod context;
+pub(crate) use context::{
+    context_input_digest, context_live, context_node_count, context_tensor_at,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -132,6 +144,7 @@ impl Default for ContextInjectToken {
 
 /// Fixed-capacity SPSC context ring (producer U1, consumer U0).
 pub struct ContextInjectRing {
+    epochs: UnsafeCell<[u64; CONTEXT_INJECT_RING_CAP]>,
     slots: UnsafeCell<[ContextInjectToken; CONTEXT_INJECT_RING_CAP]>,
     write_seq: AtomicU32,
     read_seq: AtomicU32,
@@ -145,6 +158,7 @@ impl ContextInjectRing {
     pub const fn new() -> Self {
         Self {
             slots: UnsafeCell::new([ContextInjectToken::empty(); CONTEXT_INJECT_RING_CAP]),
+            epochs: UnsafeCell::new([0; CONTEXT_INJECT_RING_CAP]),
             write_seq: AtomicU32::new(0),
             read_seq: AtomicU32::new(0),
         }
@@ -166,6 +180,13 @@ impl ContextInjectRing {
 
     /// Producer (U1 tensor search). Returns false when full.
     pub fn try_push(&self, token: ContextInjectToken) -> bool {
+        if !epoch::can_publish() {
+            return false;
+        }
+        let epoch = epoch::current();
+        if !epoch::accepts(epoch) {
+            return false;
+        }
         let w = self.write_seq.load(Ordering::Relaxed);
         let r = self.read_seq.load(Ordering::Acquire);
         if w.wrapping_sub(r) >= CONTEXT_INJECT_RING_CAP as u32 {
@@ -174,6 +195,7 @@ impl ContextInjectRing {
         let slot = (w % CONTEXT_INJECT_RING_CAP as u32) as usize;
         unsafe {
             (*self.slots.get())[slot] = token;
+            (*self.epochs.get())[slot] = epoch;
         }
         self.write_seq.store(w.wrapping_add(1), Ordering::Release);
         true
@@ -181,15 +203,20 @@ impl ContextInjectRing {
 
     /// Consumer (U0 decode loop). Returns None when empty.
     pub fn try_pop(&self) -> Option<ContextInjectToken> {
-        let r = self.read_seq.load(Ordering::Relaxed);
-        let w = self.write_seq.load(Ordering::Acquire);
-        if r == w {
-            return None;
+        loop {
+            let r = self.read_seq.load(Ordering::Relaxed);
+            let w = self.write_seq.load(Ordering::Acquire);
+            if r == w {
+                return None;
+            }
+            let slot = (r % CONTEXT_INJECT_RING_CAP as u32) as usize;
+            let token = unsafe { (*self.slots.get())[slot] };
+            let epoch = unsafe { (*self.epochs.get())[slot] };
+            self.read_seq.store(r.wrapping_add(1), Ordering::Release);
+            if epoch::accepts(epoch) {
+                return Some(token);
+            }
         }
-        let slot = (r % CONTEXT_INJECT_RING_CAP as u32) as usize;
-        let token = unsafe { (*self.slots.get())[slot] };
-        self.read_seq.store(r.wrapping_add(1), Ordering::Release);
-        Some(token)
     }
 }
 
@@ -352,8 +379,6 @@ static DECODE_TOKEN_ID: AtomicU32 = AtomicU32::new(0);
 static DECODE_STEP: AtomicU32 = AtomicU32::new(0);
 static QUERY_SUBJECT_HASH: AtomicU32 = AtomicU32::new(0); // lower 32 bits; upper in QUERY_SUBJECT_HI
 static QUERY_SUBJECT_HI: AtomicU32 = AtomicU32::new(0);
-struct SyncUnsafeCell<T>(UnsafeCell<T>);
-unsafe impl<T> Sync for SyncUnsafeCell<T> {}
 
 const ZERO_TENSOR10D: Tensor10D = Tensor10D {
     q: 0.0,
@@ -368,15 +393,14 @@ const ZERO_TENSOR10D: Tensor10D = Tensor10D {
     sigma: 0.0,
 };
 
-static QUERY_TENSOR_CELL: SyncUnsafeCell<Tensor10D> =
-    SyncUnsafeCell(UnsafeCell::new(ZERO_TENSOR10D));
+static QUERY_TENSOR_CELL: std::sync::Mutex<Tensor10D> = std::sync::Mutex::new(ZERO_TENSOR10D);
 static QUERY_SEQ: AtomicU32 = AtomicU32::new(0);
 
-static ATTENTION_MASK_CELL: SyncUnsafeCell<AttentionRouteMask> =
-    SyncUnsafeCell(UnsafeCell::new(AttentionRouteMask {
+static ATTENTION_MASK_CELL: std::sync::Mutex<AttentionRouteMask> =
+    std::sync::Mutex::new(AttentionRouteMask {
         words: [0u64; ATTENTION_MASK_WORDS],
         active_bits: 0,
-    }));
+    });
 static ATTENTION_MASK_SEQ: AtomicU32 = AtomicU32::new(0);
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -389,6 +413,9 @@ static PRODUCER_STOP: AtomicBool = AtomicBool::new(false);
 /// Publish a decode-step hint (token id + step) for the
 /// speculative-decode consumer.
 pub fn publish_decode_hint(token_id: u32, step: u32) {
+    if !epoch::can_publish() {
+        return;
+    }
     DECODE_TOKEN_ID.store(token_id, Ordering::Relaxed);
     DECODE_STEP.store(step, Ordering::Release);
 }
@@ -398,9 +425,10 @@ pub fn publish_decode_hint(token_id: u32, step: u32) {
 /// Publish the active query tensor and its subject hash for
 /// cross-universe consumers.
 pub fn publish_query_tensor(tensor: Tensor10D, subject_hash: u64) {
-    unsafe {
-        *QUERY_TENSOR_CELL.0.get() = tensor;
+    if !epoch::can_publish() {
+        return;
     }
+    *QUERY_TENSOR_CELL.lock().unwrap_or_else(|e| e.into_inner()) = tensor;
     QUERY_SUBJECT_HASH.store(subject_hash as u32, Ordering::Relaxed);
     QUERY_SUBJECT_HI.store((subject_hash >> 32) as u32, Ordering::Relaxed);
     QUERY_SEQ.fetch_add(1, Ordering::Release);
@@ -417,13 +445,15 @@ pub fn query_subject_hash() -> u64 {
 #[inline]
 /// Load the last published query tensor.
 pub fn load_query_tensor() -> Tensor10D {
-    unsafe { *QUERY_TENSOR_CELL.0.get() }
+    *QUERY_TENSOR_CELL.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 #[inline]
 /// Current published attention route mask.
 pub fn attention_route_mask() -> AttentionRouteMask {
-    unsafe { *ATTENTION_MASK_CELL.0.get() }
+    *ATTENTION_MASK_CELL
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
 }
 
 #[inline]
@@ -437,9 +467,12 @@ pub fn attention_mask_seq() -> u32 {
 /// Publish a new attention route mask and bump the sequence
 /// counter.
 pub fn publish_attention_route_mask(mask: AttentionRouteMask) {
-    unsafe {
-        *ATTENTION_MASK_CELL.0.get() = mask;
+    if !epoch::can_publish() {
+        return;
     }
+    *ATTENTION_MASK_CELL
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = mask;
     ATTENTION_MASK_SEQ.fetch_add(1, Ordering::Release);
 }
 
@@ -474,8 +507,8 @@ pub fn attention_kv_mask_u32(
                 continue;
             }
             let tensor_idx = (word_idx * 64 + bit) as u32;
-            let kv_slot = provenance
-                .kv_slot_for_tensor(tensor_idx)
+            let kv_slot = epoch::scoped_kv_slot(tensor_idx)
+                .unwrap_or_else(|| provenance.kv_slot_for_tensor(tensor_idx))
                 .unwrap_or(tensor_idx);
             if kv_slot < cap {
                 set_kv_mask_bit(&mut words, kv_slot);
@@ -512,6 +545,12 @@ pub fn build_attention_route_mask(
 
 /// One U1 producer cycle: search resident SOA, push ring, refresh mask, draft topology.
 pub fn run_tensor_search_producer_cycle(max_distance: f32, vocab_len: u32) -> usize {
+    epoch::produce(|| run_tensor_search_producer_cycle_in_epoch(max_distance, vocab_len))
+}
+fn run_tensor_search_producer_cycle_in_epoch(max_distance: f32, vocab_len: u32) -> usize {
+    if let Some(source) = epoch::source() {
+        return context::produce_owned(&source, max_distance, vocab_len);
+    }
     let substrate = global_resident_substrate();
     if substrate.node_count() == 0 {
         return 0;
@@ -658,6 +697,7 @@ impl TopologyDraftBatch {
 }
 
 pub struct TopologyDraftRing {
+    epochs: UnsafeCell<[u64; TOPOLOGY_DRAFT_RING_CAP]>,
     slots: UnsafeCell<[TopologyDraftBatch; TOPOLOGY_DRAFT_RING_CAP]>,
     write_seq: AtomicU32,
     read_seq: AtomicU32,
@@ -670,6 +710,7 @@ impl TopologyDraftRing {
     pub const fn new() -> Self {
         Self {
             slots: UnsafeCell::new([TopologyDraftBatch::empty(); TOPOLOGY_DRAFT_RING_CAP]),
+            epochs: UnsafeCell::new([0; TOPOLOGY_DRAFT_RING_CAP]),
             write_seq: AtomicU32::new(0),
             read_seq: AtomicU32::new(0),
         }
@@ -677,6 +718,13 @@ impl TopologyDraftRing {
 
     /// Push a draft batch; `false` when the ring is full.
     pub fn try_push(&self, batch: TopologyDraftBatch) -> bool {
+        if !epoch::can_publish() {
+            return false;
+        }
+        let epoch = epoch::current();
+        if !epoch::accepts(epoch) {
+            return false;
+        }
         if batch.draft_len == 0 {
             return false;
         }
@@ -688,6 +736,7 @@ impl TopologyDraftRing {
         let slot = (w % TOPOLOGY_DRAFT_RING_CAP as u32) as usize;
         unsafe {
             (*self.slots.get())[slot] = batch;
+            (*self.epochs.get())[slot] = epoch;
         }
         self.write_seq.store(w.wrapping_add(1), Ordering::Release);
         true
@@ -695,15 +744,20 @@ impl TopologyDraftRing {
 
     /// Pop the next pending draft batch.
     pub fn try_pop(&self) -> Option<TopologyDraftBatch> {
-        let r = self.read_seq.load(Ordering::Relaxed);
-        let w = self.write_seq.load(Ordering::Acquire);
-        if r == w {
-            return None;
+        loop {
+            let r = self.read_seq.load(Ordering::Relaxed);
+            let w = self.write_seq.load(Ordering::Acquire);
+            if r == w {
+                return None;
+            }
+            let slot = (r % TOPOLOGY_DRAFT_RING_CAP as u32) as usize;
+            let batch = unsafe { (*self.slots.get())[slot] };
+            let epoch = unsafe { (*self.epochs.get())[slot] };
+            self.read_seq.store(r.wrapping_add(1), Ordering::Release);
+            if epoch::accepts(epoch) {
+                return Some(batch);
+            }
         }
-        let slot = (r % TOPOLOGY_DRAFT_RING_CAP as u32) as usize;
-        let batch = unsafe { (*self.slots.get())[slot] };
-        self.read_seq.store(r.wrapping_add(1), Ordering::Release);
-        Some(batch)
     }
 }
 

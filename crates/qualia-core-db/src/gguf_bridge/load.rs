@@ -70,6 +70,13 @@ impl QTensorEngine {
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         }
         self.ensure_kv_cache(&index.hyperparams);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        self.invalidate_resident_projection_weights();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+        }
         self.gguf_mmap = Some(Arc::new(mmap));
         self.p64_index = None;
         self.tensor_index_cache = Some(index.clone());
@@ -185,6 +192,20 @@ impl QTensorEngine {
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         }
         self.ensure_kv_cache(&index.hyperparams);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+        }
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;
         self.tensor_index_cache = Some(index.clone());
@@ -308,6 +329,20 @@ impl QTensorEngine {
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("P64: KV cache allocation failed".to_string());
         }
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+        }
         self.gguf_mmap = Some(mmap);
         // Cache index so decode never re-validates hundreds of MB of tensor CRCs.
         self.p64_index = Some(q.clone());
@@ -393,6 +428,20 @@ impl QTensorEngine {
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         }
         self.ensure_kv_cache(&index.hyperparams);
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
+        }
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;
         self.tensor_index_cache = Some(index.clone());
@@ -507,7 +556,7 @@ impl QTensorEngine {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("EmptyRT"),
                 });
-            self.gpu_queue().submit(Some(enc.finish()));
+            self.submit_commands(Some(enc.finish()));
             let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
         }
         t.elapsed().as_nanos() as u64
@@ -540,6 +589,20 @@ impl QTensorEngine {
         self.ensure_kv_cache(&index.hyperparams);
         if self.kv_layout.is_none() || self.kv_cache_cpu.is_none() {
             return Err("KV cache allocation failed (layout or CPU mirror missing)".to_string());
+        }
+        #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+        if self.prepared_native_bytes.is_some()
+            || !self
+                .gguf_mmap
+                .as_ref()
+                .is_some_and(|old| Arc::ptr_eq(old, &mmap))
+        {
+            self.invalidate_resident_projection_weights();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.prepared_native_bytes = None;
+            self.prepared_native_sources = None;
         }
         self.gguf_mmap = Some(mmap);
         // Full eager upload — required for coherent decode (do not defer).

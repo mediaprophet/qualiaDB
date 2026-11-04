@@ -21,6 +21,7 @@ pub mod timeline;
 pub mod campaign;
 pub mod config_space;
 pub mod experiment;
+mod experiment_adapter;
 pub mod hypothesis;
 pub mod pareto;
 pub mod search;
@@ -60,3 +61,5 @@ pub use pareto::{ApplicationProfileWeight, ParetoFrontier, ParetoPoint};
 pub use search::{
     expected_improvement, KnnSurrogate, SearchEngine, SobolSequence, TrackAndStopBandit,
 };
+
+mod state;

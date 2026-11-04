@@ -146,6 +146,21 @@ impl TensorVolumeGpu {
         if node_count == 0 || out.is_empty() || !self.upload_nodes(queue, node_count) {
             return 0;
         }
+        self.search_uploaded_into(device, queue, query, max_distance, node_count, out)
+    }
+
+    pub(crate) fn search_uploaded_into(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        query: &Tensor10D,
+        max_distance: f32,
+        node_count: u32,
+        out: &mut [usize],
+    ) -> usize {
+        if node_count == 0 || node_count > self.max_nodes || out.is_empty() {
+            return 0;
+        }
 
         queue.write_buffer(&self.query_buf, 0, bytemuck::bytes_of(query));
         let params = VolumeGpuParams {
@@ -246,6 +261,10 @@ impl TensorVolumeGpu {
         n
     }
 }
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[path = "owned_volume_gpu.rs"]
+pub(crate) mod owned;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 static VOLUME_GPU: std::sync::OnceLock<Option<TensorVolumeGpu>> = std::sync::OnceLock::new();

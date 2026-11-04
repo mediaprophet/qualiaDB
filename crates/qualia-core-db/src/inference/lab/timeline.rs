@@ -10,21 +10,10 @@ use crate::llm_bench::{
 #[cfg(feature = "gpu-runtime")]
 use crate::llm_gpu_profiler::{self, Phase};
 
-#[derive(Debug, Clone)]
-pub struct DecodeTimeline {
-    pub model: String,
-    pub tokens: u32,
-    pub tok_s: Option<f64>,
-    pub wall_ms: f64,
-    pub resident_hits: u64,
-    pub resident_fallbacks: u64,
-    pub host_phase_ns: String,
-    pub gpu_phase_ns: String,
-    pub notes: String,
-}
-
+pub use etalon_inference_lab::timeline::DecodeTimeline;
 /// Run a short decode with phase counters; enable GPU timestamps if supported.
 pub fn run_decode_timeline(model: &Path, tokens: u32) -> DecodeTimeline {
+    let _state = super::state::TrialState::capture();
     let tokens = tokens.max(1).min(64);
     reset_phase_metrics();
     reset_resident_path_counts();
@@ -103,25 +92,5 @@ pub fn run_decode_timeline(model: &Path, tokens: u32) -> DecodeTimeline {
         host_phase_ns,
         gpu_phase_ns,
         notes: notes.join("; "),
-    }
-}
-
-impl DecodeTimeline {
-    /// Formats `report`.
-    pub fn format_report(&self) -> String {
-        format!(
-            "Decode timeline\n  model:     {}\n  tokens:    {}\n  tok_s:     {}\n  wall_ms:   {:.2}\n  resident:  hits={} fallbacks={}\n  host_ns:   {}\n  gpu_ns:    {}\n  notes:     {}\n",
-            self.model,
-            self.tokens,
-            self.tok_s
-                .map(|t| format!("{t:.4}"))
-                .unwrap_or_else(|| "fail".into()),
-            self.wall_ms,
-            self.resident_hits,
-            self.resident_fallbacks,
-            self.host_phase_ns,
-            self.gpu_phase_ns,
-            self.notes
-        )
     }
 }

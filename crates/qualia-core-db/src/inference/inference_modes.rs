@@ -84,7 +84,13 @@ impl InferenceMode {
 static MODE: AtomicU8 = AtomicU8::new(InferenceMode::Portable as u8);
 
 #[inline]
-fn atomic_inference_mode() -> InferenceMode {
+pub(crate) fn atomic_inference_mode() -> InferenceMode {
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(mode) =
+        crate::llm_bench::prepared_settings::read(|settings| settings.inference_mode)
+    {
+        return mode;
+    }
     match MODE.load(Ordering::Relaxed) {
         1 => InferenceMode::CudaTc,
         2 => InferenceMode::QuantGraph,
@@ -98,6 +104,12 @@ fn atomic_inference_mode() -> InferenceMode {
 /// A successful environment parse is published to `MODE`. Per-token predicates must read
 /// that atomic via `atomic_inference_mode` instead of allocating a fresh environment string.
 pub fn active_inference_mode() -> InferenceMode {
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(mode) =
+        crate::llm_bench::prepared_settings::read(|settings| settings.inference_mode)
+    {
+        return mode;
+    }
     // Env can override the configured atomic when this cold-boundary API is invoked.
     if let Ok(s) = std::env::var("QUALIA_INFERENCE_MODE") {
         if let Some(m) = InferenceMode::parse(&s) {
@@ -110,6 +122,8 @@ pub fn active_inference_mode() -> InferenceMode {
 
 /// Set process mode and apply associated toggles. Env still wins on next read if set.
 pub fn set_inference_mode(mode: InferenceMode) {
+    #[cfg(all(feature = "cuda", not(target_arch = "wasm32")))]
+    crate::inference::cuda_lane::install_execution_policy();
     MODE.store(mode as u8, Ordering::Relaxed);
     apply_mode_toggles(mode);
     log::info!("LLM_MODE|active|{}|{}", mode.as_str(), mode.description());

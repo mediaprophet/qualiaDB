@@ -17,83 +17,31 @@
 #![cfg_attr(not(feature = "gpu-runtime"), allow(dead_code))]
 
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
 #[cfg(feature = "gpu-runtime")]
 use std::process::Command;
-use std::sync::atomic::AtomicU64;
-#[cfg(feature = "gpu-runtime")]
-use std::sync::atomic::Ordering as AtomicOrdering;
-use std::time::Instant;
 
 #[cfg(feature = "gpu-runtime")]
-const GEMV_BENCH_WGSL: &str = include_str!("../shaders/gemv_bench.wgsl");
+use etalon_diagnostics::device::backend_name;
+use etalon_diagnostics::ipc::{decode_response, encode_response};
+use etalon_diagnostics::measurement::{bench_cpu_gemv, gflops};
+pub use etalon_diagnostics::{
+    CircuitBench, CircuitKind, DeviceBenchmarkRequest, DeviceBenchmarkResponse,
+};
 
-/// A compute circuit's class in the capability matrix.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum CircuitKind {
-    DiscreteGpu,
-    IntegratedGpu,
-    Cpu,
-    Npu,
-    Other,
-}
-
-impl CircuitKind {
-    #[cfg(feature = "gpu-runtime")]
-    fn from_wgpu(t: wgpu::DeviceType) -> Self {
-        match t {
-            wgpu::DeviceType::DiscreteGpu => Self::DiscreteGpu,
-            wgpu::DeviceType::IntegratedGpu => Self::IntegratedGpu,
-            wgpu::DeviceType::Cpu => Self::Cpu,
-            _ => Self::Other,
-        }
+#[cfg(feature = "gpu-runtime")]
+fn backend_rank(b: wgpu::Backend) -> u8 {
+    match b {
+        wgpu::Backend::Metal => 0,
+        wgpu::Backend::Dx12 => 1,
+        wgpu::Backend::Vulkan => 2,
+        wgpu::Backend::Gl => 3,
+        _ => 4,
     }
-}
-
-/// One benchmarked circuit.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CircuitBench {
-    pub label: String,
-    pub kind: CircuitKind,
-    pub backend: String,
-    /// Milliseconds per GEMV dispatch (lower is faster).
-    pub ms_per_gemv: f64,
-    /// Effective GFLOP/s for the GEMV (2·n·n flops / time).
-    pub gflops: f64,
-    /// Host→device upload bandwidth (GB/s) for a representative buffer. The **transfer axis** (D31):
-    /// PCIe for a discrete GPU; staging-path for an iGPU (wgpu can't show true zero-copy → relative
-    /// signal); `f64::INFINITY` for the CPU (data is already in its pool — no transfer). Decode that
-    /// streams weights to a device pays this every token; in-pool compute does not.
-    pub upload_gbps: f64,
-    /// Relative score in \[0,1\]: fastest circuit = 1.0, others = fastest_ms / this_ms
-    /// (or highest decode_proxy_tok_s when decode ranking is active).
-    pub rel_score: f64,
-    /// Optional real-decode proxy (tok/s) from a short resident decode on a small model.
-    /// When present for ≥1 GPU circuit, passport ranking prefers this over GEMV µs.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub decode_proxy_tok_s: Option<f64>,
-}
-
-/// Stable process boundary for one physical adapter/backend benchmark.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceBenchmarkRequest {
-    pub backend: String,
-    pub vendor: u32,
-    pub device: u32,
-    pub gemv_n: usize,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeviceBenchmarkResponse {
-    pub request: DeviceBenchmarkRequest,
-    pub bench: Option<CircuitBench>,
-    pub error: Option<String>,
 }
 
 #[cfg(not(test))]
 const WORKER_ENV: &str = "QUALIA_DEVICE_BENCHMARK_WORKER";
 const WORKER_OUTPUT_ENV: &str = "QUALIA_DEVICE_BENCHMARK_OUTPUT";
-static WORKER_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// The measured capability matrix — circuits sorted fastest-first. This IS the priority order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,7 +76,7 @@ impl CapabilityMatrix {
                 None => "—".into(),
             };
             s.push_str(&format!(
-                "  {}. {:<28} [{:?}/{}] {:>8.3} ms  {:>7.1} GFLOP/s  {:>12}  decode {:>10}  score {:.3}\n",
+                "  {}. {:<28} [{:?}/{}] {:>8.3} ms  {:>7.1} GFLOP/s  {:>12}  decode {:>10}  score {:.3}  timing {:?}\n",
                 i + 1,
                 c.label,
                 c.kind,
@@ -138,6 +86,7 @@ impl CapabilityMatrix {
                 upload,
                 decode,
                 c.rel_score,
+                c.timing_source(),
             ));
         }
         s
@@ -183,277 +132,6 @@ impl CapabilityMatrix {
     }
 }
 
-#[inline]
-fn params_bytes(n_in: u32, n_out: u32) -> [u8; 16] {
-    let mut b = [0u8; 16];
-    b[0..4].copy_from_slice(&n_in.to_le_bytes());
-    b[4..8].copy_from_slice(&n_out.to_le_bytes());
-    b
-}
-
-/// Persistent-pipeline GEMV timing on one wgpu device (ms per dispatch). No readback — we poll to
-/// completion so the timing reflects execution, with submit overhead amortized over K dispatches.
-#[cfg(feature = "gpu-runtime")]
-fn bench_gpu_gemv(device: &wgpu::Device, queue: &wgpu::Queue, n: usize) -> f64 {
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("gemv_bench"),
-        source: wgpu::ShaderSource::Wgsl(GEMV_BENCH_WGSL.into()),
-    });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("gemv_bench_pipeline"),
-        layout: None,
-        module: &shader,
-        entry_point: Some("gemv"),
-        compilation_options: Default::default(),
-        cache: None,
-    });
-    let mk = |contents: &[u8], usage: wgpu::BufferUsages| {
-        let b = device.create_buffer(&wgpu::BufferDescriptor {
-            label: None,
-            size: contents.len().max(4) as u64,
-            usage,
-            mapped_at_creation: false,
-        });
-        if !contents.is_empty() {
-            queue.write_buffer(&b, 0, contents);
-        }
-        b
-    };
-    let input = mk(
-        bytemuck::cast_slice(&vec![0.1f32; n]),
-        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-    );
-    let weight = mk(
-        bytemuck::cast_slice(&vec![0.05f32; n * n]),
-        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-    );
-    let params = mk(
-        &params_bytes(n as u32, n as u32),
-        wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-    );
-    let out = device.create_buffer(&wgpu::BufferDescriptor {
-        label: None,
-        size: (n * 4).max(4) as u64,
-        usage: wgpu::BufferUsages::STORAGE,
-        mapped_at_creation: false,
-    });
-    let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: None,
-        layout: &pipeline.get_bind_group_layout(0),
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: input.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: weight.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: params.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: out.as_entire_binding(),
-            },
-        ],
-    });
-    let wg_x = (n as u32).div_ceil(64).max(1);
-    let (k, s) = (16u32, 5u32);
-    let submit_batch = || {
-        let mut enc =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-        {
-            let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: None,
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind, &[]);
-            for _ in 0..k {
-                pass.dispatch_workgroups(wg_x, 1, 1);
-            }
-        }
-        queue.submit(Some(enc.finish()));
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
-    };
-    submit_batch(); // warmup
-    let t0 = Instant::now();
-    for _ in 0..s {
-        submit_batch();
-    }
-    t0.elapsed().as_secs_f64() * 1e3 / (k * s) as f64
-}
-
-/// Host→device upload bandwidth (GB/s) for a `bytes`-sized buffer — the transfer axis (D31).
-/// Times `write_buffer` + a flushing submit + `poll(Wait)` so the upload is realized. For a discrete
-/// GPU this is the PCIe cost; for an iGPU it's the wgpu staging path (not the true near-zero of a
-/// unified pool — a relative signal, flagged honestly).
-#[cfg(feature = "gpu-runtime")]
-fn bench_upload_gbps(device: &wgpu::Device, queue: &wgpu::Queue, bytes: usize) -> f64 {
-    let data = vec![0u8; bytes];
-    let buf = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("upload_probe"),
-        size: bytes as u64,
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: false,
-    });
-    let flush = || {
-        let enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-        queue.submit(Some(enc.finish()));
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
-    };
-    queue.write_buffer(&buf, 0, &data); // warmup
-    flush();
-    let iters = 3u32;
-    let t0 = Instant::now();
-    for _ in 0..iters {
-        queue.write_buffer(&buf, 0, &data);
-        flush();
-    }
-    let secs = t0.elapsed().as_secs_f64() / iters as f64;
-    if secs <= 0.0 {
-        0.0
-    } else {
-        bytes as f64 / secs / 1e9
-    }
-}
-
-/// Native-Rust (`rayon`) GEMV timing (ms per GEMV) — the CPU compute path, fairly multi-threaded.
-fn bench_cpu_gemv(n: usize) -> f64 {
-    use rayon::prelude::*;
-    let weight = vec![0.05f32; n * n];
-    let input = vec![0.1f32; n];
-    let mut out = vec![0.0f32; n];
-    let gemv = |out: &mut [f32]| {
-        out.par_iter_mut().enumerate().for_each(|(i, o)| {
-            let row = &weight[i * n..(i + 1) * n];
-            *o = row.iter().zip(input.iter()).map(|(a, b)| a * b).sum();
-        });
-    };
-    gemv(&mut out); // warmup
-    let iters = 5u32;
-    let t0 = Instant::now();
-    for _ in 0..iters {
-        gemv(&mut out);
-    }
-    t0.elapsed().as_secs_f64() * 1e3 / iters as f64
-}
-
-#[inline]
-fn gflops(n: usize, ms: f64) -> f64 {
-    if ms <= 0.0 {
-        0.0
-    } else {
-        (2.0 * n as f64 * n as f64) / (ms / 1e3) / 1e9
-    }
-}
-
-#[cfg(feature = "gpu-runtime")]
-fn backend_rank(b: wgpu::Backend) -> u8 {
-    match b {
-        wgpu::Backend::Metal => 0,
-        wgpu::Backend::Dx12 => 1,
-        wgpu::Backend::Vulkan => 2,
-        wgpu::Backend::Gl => 3,
-        _ => 4,
-    }
-}
-
-#[cfg(feature = "gpu-runtime")]
-fn backend_name(backend: wgpu::Backend) -> &'static str {
-    match backend {
-        wgpu::Backend::Vulkan => "vulkan",
-        wgpu::Backend::Dx12 => "dx12",
-        wgpu::Backend::Metal => "metal",
-        wgpu::Backend::Gl => "gl",
-        wgpu::Backend::BrowserWebGpu => "browser-webgpu",
-        wgpu::Backend::Noop => "noop",
-    }
-}
-
-#[cfg(feature = "gpu-runtime")]
-fn backend_from_name(name: &str) -> Option<(wgpu::Backend, wgpu::Backends)> {
-    match name {
-        "vulkan" => Some((wgpu::Backend::Vulkan, wgpu::Backends::VULKAN)),
-        "dx12" => Some((wgpu::Backend::Dx12, wgpu::Backends::DX12)),
-        "metal" => Some((wgpu::Backend::Metal, wgpu::Backends::METAL)),
-        "gl" => Some((wgpu::Backend::Gl, wgpu::Backends::GL)),
-        _ => None,
-    }
-}
-
-fn encode_response(
-    path: &std::path::Path,
-    response: &DeviceBenchmarkResponse,
-) -> Result<(), String> {
-    let mut payload = Vec::new();
-    ciborium::into_writer(response, &mut payload).map_err(|e| format!("encode response: {e}"))?;
-    let mut file =
-        std::fs::File::create(path).map_err(|e| format!("create {}: {e}", path.display()))?;
-    file.write_all(&(payload.len() as u64).to_le_bytes())
-        .map_err(|e| e.to_string())?;
-    file.write_all(&payload).map_err(|e| e.to_string())?;
-    file.sync_all().map_err(|e| e.to_string())
-}
-
-fn decode_response(path: &std::path::Path) -> Result<DeviceBenchmarkResponse, String> {
-    let mut file =
-        std::fs::File::open(path).map_err(|e| format!("open {}: {e}", path.display()))?;
-    let mut length = [0u8; 8];
-    file.read_exact(&mut length)
-        .map_err(|e| format!("read response length: {e}"))?;
-    let length = u64::from_le_bytes(length) as usize;
-    if length == 0 || length > 1024 * 1024 {
-        return Err(format!("invalid worker response length {length}"));
-    }
-    let mut payload = vec![0u8; length];
-    file.read_exact(&mut payload)
-        .map_err(|e| format!("read response: {e}"))?;
-    ciborium::from_reader(payload.as_slice()).map_err(|e| format!("decode response: {e}"))
-}
-
-#[cfg(feature = "gpu-runtime")]
-fn benchmark_one(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
-    let (expected_backend, backends) = backend_from_name(&request.backend)
-        .ok_or_else(|| format!("unsupported backend {}", request.backend))?;
-    let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
-    descriptor.backends = backends;
-    let instance = wgpu::Instance::new(descriptor);
-    let adapters = pollster::block_on(instance.enumerate_adapters(backends));
-    let adapter = adapters
-        .into_iter()
-        .find(|adapter| {
-            let info = adapter.get_info();
-            info.backend == expected_backend
-                && info.vendor == request.vendor
-                && info.device == request.device
-        })
-        .ok_or_else(|| {
-            format!(
-                "adapter {:04x}:{:04x}/{} unavailable",
-                request.vendor, request.device, request.backend
-            )
-        })?;
-    let info = adapter.get_info();
-    let (device, queue) =
-        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
-            .map_err(|e| format!("request_device: {e}"))?;
-    let ms = bench_gpu_gemv(&device, &queue, request.gemv_n);
-    let upload_gbps = bench_upload_gbps(&device, &queue, 16 * 1024 * 1024);
-    Ok(CircuitBench {
-        label: format!("{} ({:?})", info.name, info.backend),
-        kind: CircuitKind::from_wgpu(info.device_type),
-        backend: format!("{:?}", info.backend),
-        ms_per_gemv: ms,
-        gflops: gflops(request.gemv_n, ms),
-        upload_gbps,
-        rel_score: 1.0,
-        decode_proxy_tok_s: None,
-    })
-}
-
 /// Worker entry used by the dedicated binary and the unit-test subprocess route.
 #[cfg(feature = "gpu-runtime")]
 pub fn run_worker_from_env() -> Result<(), String> {
@@ -472,7 +150,7 @@ pub fn run_worker_from_env() -> Result<(), String> {
             .parse()
             .map_err(|_| "invalid n")?,
     };
-    let response = match benchmark_one(&request) {
+    let response = match etalon_diagnostics::device::benchmark_one(&request) {
         Ok(bench) => DeviceBenchmarkResponse {
             request,
             bench: Some(bench),
@@ -516,12 +194,12 @@ fn worker_executable() -> Option<std::path::PathBuf> {
 }
 
 #[cfg(feature = "gpu-runtime")]
-fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
-    let sequence = WORKER_SEQUENCE.fetch_add(1, AtomicOrdering::Relaxed);
-    let output = std::env::temp_dir().join(format!(
-        "qualia-device-bench-{}-{sequence}.cbor",
-        std::process::id()
-    ));
+fn invoke_worker(
+    request: &DeviceBenchmarkRequest,
+    cancelled: &dyn Fn() -> bool,
+) -> Result<CircuitBench, String> {
+    let artifacts = etalon_diagnostics::ipc::WorkerArtifacts::new()?;
+    let output = artifacts.response_path();
     let mut command;
     #[cfg(test)]
     {
@@ -538,59 +216,19 @@ fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
             worker_executable().ok_or_else(|| format!("worker not found; set {WORKER_ENV}"))?,
         );
     }
-    let mut child = command
+    command
         .env("QUALIA_DEVICE_BENCHMARK_BACKEND", &request.backend)
         .env("QUALIA_DEVICE_BENCHMARK_VENDOR", request.vendor.to_string())
         .env("QUALIA_DEVICE_BENCHMARK_DEVICE", request.device.to_string())
         .env("QUALIA_DEVICE_BENCHMARK_N", request.gemv_n.to_string())
-        .env(WORKER_OUTPUT_ENV, &output)
-        .spawn()
-        .map_err(|e| format!("launch worker: {e}"))?;
-    let deadline = Instant::now() + std::time::Duration::from_secs(120);
-    let status = loop {
-        if let Some(status) = child
-            .try_wait()
-            .map_err(|e| format!("wait for worker: {e}"))?
-        {
-            break status;
-        }
-        if Instant::now() >= deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            let _ = std::fs::remove_file(&output);
-            return Err("worker exceeded 120-second deadline".into());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(25));
-    };
-    let decoded = if status.success() {
-        decode_response(&output)
-    } else {
-        Err(format!("worker exited {status}"))
-    };
-    let _ = std::fs::remove_file(&output);
-    let response = decoded?;
-    if response.request.backend != request.backend
-        || response.request.vendor != request.vendor
-        || response.request.device != request.device
-        || response.request.gemv_n != request.gemv_n
-    {
-        return Err("worker response identity mismatch".into());
-    }
-    if let Some(error) = response.error {
-        return Err(error);
-    }
-    let bench = response
-        .bench
-        .ok_or("worker returned neither result nor error")?;
-    if !bench.ms_per_gemv.is_finite()
-        || bench.ms_per_gemv <= 0.0
-        || !bench.gflops.is_finite()
-        || !bench.upload_gbps.is_finite()
-        || bench.upload_gbps < 0.0
-    {
-        return Err("worker returned invalid metrics".into());
-    }
-    Ok(bench)
+        .env(WORKER_OUTPUT_ENV, &output);
+    etalon_diagnostics::process::run_worker(
+        &mut command,
+        &etalon_diagnostics::process::WorkerLimits::default(),
+        cancelled,
+        &|| artifacts.check_budget(),
+    )?;
+    etalon_diagnostics::ipc::decode_matching_response(&output, request)
 }
 
 /// Benchmark every available compute circuit and return the ranked capability matrix.
@@ -600,7 +238,32 @@ fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, Strin
 /// (same physical GPU) can rank against each other — the whole point of the passport.
 /// The software/WARP "CPU" wgpu adapter is skipped — the native `rayon` path is the honest CPU number.
 pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
+    match benchmark_devices_cancellable(n, &|| false) {
+        Ok(matrix) => matrix,
+        Err(error) => {
+            log::warn!("device_benchmark|failed|{error}");
+            CapabilityMatrix {
+                circuits: Vec::new(),
+                gemv_n: n,
+                npu_probed: false,
+            }
+        }
+    }
+}
+
+/// Cancellation aborts the matrix and kills the currently isolated adapter worker.
+pub fn benchmark_devices_cancellable(
+    n: usize,
+    cancelled: &dyn Fn() -> bool,
+) -> Result<CapabilityMatrix, String> {
     let mut circuits: Vec<CircuitBench> = Vec::new();
+    if cancelled() {
+        return Err("device benchmark cancelled".into());
+    }
+    etalon_diagnostics::measurement::validate_shape(
+        n,
+        etalon_diagnostics::measurement::DEFAULT_BENCH_BYTES,
+    )?;
 
     // ── GPUs / iGPU via wgpu — one circuit row per backend that can open the device ──
     #[cfg(feature = "gpu-runtime")]
@@ -630,7 +293,10 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
             }
         }
         for request in chosen {
-            match invoke_worker(&request) {
+            if cancelled() {
+                break;
+            }
+            match invoke_worker(&request, cancelled) {
                 Ok(bench) => circuits.push(bench),
                 Err(error) => log::warn!(
                     "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
@@ -640,14 +306,17 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
                     error
                 ),
             }
-            // Guard: if a backend hangs the probe, the process may stick — operators can
-            // Each worker has a hard deadline, so a wedged backend is skipped without
-            // poisoning the parent or preventing the remaining adapters from running.
         }
     }
 
+    if cancelled() {
+        return Err("device benchmark cancelled".into());
+    }
     // ── CPU via native rayon ──
-    let cpu_ms = bench_cpu_gemv(n);
+    let cpu_ms = bench_cpu_gemv(n, etalon_diagnostics::measurement::DEFAULT_BENCH_BYTES)?;
+    if cancelled() {
+        return Err("device benchmark cancelled".into());
+    }
     circuits.push(CircuitBench {
         label: format!("CPU native (rayon, {} cores)", num_cpus::get()),
         kind: CircuitKind::Cpu,
@@ -677,11 +346,11 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
         }
     }
 
-    CapabilityMatrix {
+    Ok(CapabilityMatrix {
         circuits,
         gemv_n: n,
         npu_probed: false,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -689,6 +358,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(feature = "gpu-runtime")]
     fn device_benchmark_worker_entry() {
         if std::env::var_os(WORKER_OUTPUT_ENV).is_some() {
             run_worker_from_env().expect("device benchmark worker must write its response");
@@ -708,13 +378,10 @@ mod tests {
             bench: None,
             error: Some("expected".into()),
         };
-        let path = std::env::temp_dir().join(format!(
-            "qualia-device-protocol-{}.cbor",
-            std::process::id()
-        ));
+        let artifacts = etalon_diagnostics::ipc::WorkerArtifacts::new().unwrap();
+        let path = artifacts.response_path();
         encode_response(&path, &response).unwrap();
         let decoded = decode_response(&path).unwrap();
-        let _ = std::fs::remove_file(path);
         assert_eq!(decoded.request.backend, request.backend);
         assert_eq!(decoded.error.as_deref(), Some("expected"));
     }

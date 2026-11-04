@@ -86,6 +86,8 @@ pub fn datasets_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-d1".into(),
                 from: 0,
                 to: 1,
@@ -93,6 +95,8 @@ pub fn datasets_manifold_seed() -> ManifoldSeed {
                 label: "dat:importsTo".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-d2".into(),
                 from: 0,
                 to: 2,
@@ -100,6 +104,8 @@ pub fn datasets_manifold_seed() -> ManifoldSeed {
                 label: "dat:usedInPresentation".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-d3".into(),
                 from: 2,
                 to: 3,

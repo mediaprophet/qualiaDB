@@ -471,13 +471,23 @@ pub fn load_qwen4exp_native_hmc(
     package: &Path,
 ) -> Result<Qwen4ExpNativeDescriptor, Qwen4ExpNativeAssetError> {
     let bytes = std::fs::read(package).map_err(|_| Qwen4ExpNativeAssetError::PackageOpen)?;
+    parse_qwen4exp_native_hmc(&bytes)
+}
+
+pub(super) fn parse_qwen4exp_native_hmc(bytes: &[u8]) -> Result<Qwen4ExpNativeDescriptor, Qwen4ExpNativeAssetError> {
     let reader =
-        BundleReader::parse(&bytes).map_err(|_| Qwen4ExpNativeAssetError::PackageInvalid)?;
+        BundleReader::parse(bytes).map_err(|_| Qwen4ExpNativeAssetError::PackageInvalid)?;
     let descriptor_bytes = reader
         .get(HMC_DESCRIPTOR_KEY)
         .ok_or(Qwen4ExpNativeAssetError::PackageInvalid)?;
     let descriptor: Qwen4ExpNativeDescriptor = ciborium::from_reader(descriptor_bytes)
         .map_err(|_| Qwen4ExpNativeAssetError::PackageInvalid)?;
+    validate_qwen4exp_descriptor(descriptor)
+}
+
+pub(super) fn validate_qwen4exp_descriptor(descriptor: Qwen4ExpNativeDescriptor)
+    -> Result<Qwen4ExpNativeDescriptor, Qwen4ExpNativeAssetError>
+{
     if descriptor.format != QWEN4EXP_NATIVE_FORMAT
         || descriptor.architecture != "qwen4exp"
         || descriptor.ple.storage_bytes == 0

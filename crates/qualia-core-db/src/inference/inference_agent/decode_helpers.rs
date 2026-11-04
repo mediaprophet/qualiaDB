@@ -191,9 +191,7 @@ pub(super) enum TopologyDraftStep {
 /// Drains the tensor-context injection.
 pub(super) fn drain_tensor_context_inject() {
     while let Some(inject) = crate::compute_universe::pop_tensor_context() {
-        if let Some(tensor) = crate::tensor::resident_substrate::global_resident_substrate()
-            .tensor_at(inject.tensor_index)
-        {
+        if let Some(tensor) = crate::compute_universe::context_tensor_at(inject.tensor_index) {
             crate::compute_universe::publish_query_tensor(tensor, inject.subject_hash);
         }
     }
@@ -218,6 +216,7 @@ pub(super) fn try_accept_topology_draft(
     stream_tx: Option<&std::sync::mpsc::SyncSender<String>>,
     output_cap: usize,
     mut on_token: Option<&mut dyn FnMut(String)>,
+    mut accept_token: Option<&mut dyn FnMut(Option<(u32, u64)>) -> Option<u32>>,
 ) -> TopologyDraftStep {
     let idx = match tensor_idx {
         Some(i) => i,
@@ -237,6 +236,16 @@ pub(super) fn try_accept_topology_draft(
         return TopologyDraftStep::Denied;
     }
 
+    let first_position = ctx.len().saturating_sub(1) as u64;
+    if accept_token
+        .as_mut()
+        .is_some_and(|accept| accept(None).is_none())
+    {
+        return TopologyDraftStep::Stop {
+            sieve_failed: false,
+            semantic_quin: None,
+        };
+    }
     let accepted = engine
         .verify_topology_draft_batch(
             idx,
@@ -262,7 +271,23 @@ pub(super) fn try_accept_topology_draft(
     let mut sieve_failed = false;
     let mut semantic_quin = None;
     for i in 0..accepted as usize {
-        let id = mapped.draft_ids[i];
+        let proposed = mapped.draft_ids[i];
+        // Verification may have advanced ctx for the whole batch. Publication
+        // positions derive from its original prefix, not the speculative tail.
+        let position = first_position + i as u64;
+        let id = if let Some(accept) = accept_token.as_mut() {
+            match accept(Some((proposed, position))) {
+                Some(accepted) => accepted,
+                None => {
+                    return TopologyDraftStep::Stop {
+                        sieve_failed: false,
+                        semantic_quin: None,
+                    }
+                }
+            }
+        } else {
+            proposed
+        };
         out_ids.push(id);
         if let Some(ref mut s) = sieve {
             if s.apply_token(id).is_err() {

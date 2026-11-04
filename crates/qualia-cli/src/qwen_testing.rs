@@ -1,4 +1,5 @@
-//! Physical, read-only Qwen4Exp forward-component probes.
+//! Developer/debug Qwen4Exp numerical probes and explicitly selected developer decode.
+//! Diagnostic probe commands use NativeDecodeRequest::Developer; product generation uses --authority.
 
 use std::path::Path;
 
@@ -353,6 +354,7 @@ pub fn run_decode_qwen4exp(
     let mut receipt = Qwen4ExpDecodeReceipt::default();
     let mut trace = Vec::new();
     decode_tokens(
+        qualia_core_db::inference::inference_agent::NativeDecodeRequest::Developer,
         &mut runtime,
         &mut session,
         &mut scratch,
@@ -370,6 +372,7 @@ pub fn run_decode_qwen4exp(
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Qwen4Exp native multi-token decode (real execution)");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ execution mode: Developer (explicit --developer)");
     println!("├─ prompt tokens: {}", receipt.prompt_tokens);
     println!(
         "├─ generated tokens: {generated}  ids={:?}",
@@ -469,6 +472,7 @@ pub fn run_probe_qwen4exp_trace(
     let (&traced_token, prefix) = prompt_tokens.split_last().unwrap();
     for &token in prefix {
         decode_step(
+            qualia_core_db::inference::inference_agent::NativeDecodeRequest::Developer,
             &mut runtime,
             &mut session,
             &mut scratch,
@@ -480,6 +484,7 @@ pub fn run_probe_qwen4exp_trace(
     }
     let mut trace = Vec::new();
     let winner = decode_step(
+        qualia_core_db::inference::inference_agent::NativeDecodeRequest::Developer,
         &mut runtime,
         &mut session,
         &mut scratch,

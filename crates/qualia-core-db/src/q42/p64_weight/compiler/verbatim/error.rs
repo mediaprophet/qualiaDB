@@ -23,6 +23,7 @@ pub enum GgufCompileError {
     SourceBounds(usize),
     Dimension,
     Dtype,
+    NativeMetadata,
     Capacity {
         buffer: GgufCompileBuffer,
         required: usize,
@@ -51,6 +52,9 @@ impl core::fmt::Display for GgufCompileError {
                 write!(f, "p64: source tensor {position} is out of bounds")
             }
             Self::Dimension => f.write_str("p64: tensor dimension exceeds u32"),
+            Self::NativeMetadata => {
+                f.write_str("p64: complete native inference metadata extension is required")
+            }
             Self::Dtype => f.write_str("p64: GGML type exceeds u16"),
             Self::Capacity {
                 buffer,

@@ -98,6 +98,7 @@
     </style>
     <script src="js/menu-loader.js"></script></head>
 <body class="bg-zinc-950 text-zinc-200 min-h-screen">
+<p role="note" style="padding:0.75rem;border:1px solid #b7791f">Developer inference mode: browser CPU/WebGPU compute bypasses Sentinel token acceptance. Output is ungoverned. Graph checks on this page do not authorize generated tokens.</p>
 
 <!-- Nav -->
 <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px);padding-top:var(--safe-top)">
@@ -389,6 +390,7 @@
 
 <script type="module">
 import init, {
+    configureBrowserExecutionMode,
     initialize_webgpu_engine,
     inferWasmAsyncMeasured,
     releaseWebgpuEngine,
@@ -412,7 +414,7 @@ const browserCapabilityReceiptPromise = getBrowserCapabilityReceipt({
     engineVersion: '0.0.40',
     sessionId: new URLSearchParams(location.search).get('lab') || '',
 });
-const cpuWorker = new QualiaCpuWorkerClient();
+const cpuWorker = new QualiaCpuWorkerClient({ developerMode: true });
 
 function residentTokenizerVocab() {
     if (selectedInferenceBackend === 'cpu-wasm') return Number(cpuWorker.details?.vocab || 0);
@@ -1020,6 +1022,7 @@ async function loadModel() {
             if (stage) setEngineStatus(stage, 'info');
         }, 400);
         try {
+            configureBrowserExecutionMode('developer', true);
             await Promise.race([
                 selectedInferenceBackend === 'webgpu'
                     ? initialize_webgpu_engine(modelBytes)

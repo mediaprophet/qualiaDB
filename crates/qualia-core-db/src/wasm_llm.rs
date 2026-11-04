@@ -1,6 +1,8 @@
 //! Browser-native LLM exports — Qualia GGUF + WebGPU path (not third-party llama.cpp bindings).
 
 mod cpu;
+mod execution_mode;
+mod lifecycle;
 
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
@@ -69,9 +71,11 @@ async fn run_inference_async(
     on_token: Option<Function>,
     decode_token_budget: usize,
 ) -> Result<WasmAsyncInferenceResult, String> {
+    execution_mode::require_developer()?;
     if cpu::ready() {
         return cpu::infer(prompt, graph_context, on_token, decode_token_budget).await;
     }
+    let request = lifecycle::Request::begin()?;
     let mut engine = take_engine()?;
     // Grounded chat-graph DAG context is admitted as a typed
     // `RequestPart::chat_graph` (ChatGraphThread) — bounded by the fixed byte
@@ -224,6 +228,7 @@ async fn run_inference_async(
         let mut token_piece = [0u8; 1024];
 
         for step in 0..decode_token_budget {
+            request.ensure_current()?;
             let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
 
             let hidden_ok = tensor_idx
@@ -256,6 +261,7 @@ async fn run_inference_async(
                     WASM_LAYER_CAP,
                 )
                 .await;
+            request.ensure_current()?;
             let _ = engine.apply_output_norm_inplace(idx, &mut emb_buf[..emb_dim], emb_dim);
             let argmax = engine
                 .dispatch_output_argmax_chunked_async(
@@ -298,6 +304,7 @@ async fn run_inference_async(
                 let delta = std::str::from_utf8(&pending[..valid_len])
                     .expect("validated UTF-8 prefix");
                 streamed_bytes += valid_len;
+                request.ensure_current()?;
                 if let Some(callback) = on_token.as_ref() {
                     let _ = callback.call1(&JsValue::UNDEFINED, &JsValue::from_str(&delta));
                 }
@@ -312,8 +319,13 @@ async fn run_inference_async(
     }
     .await;
 
-    restore_engine(engine);
-    result
+    if request.is_current() {
+        restore_engine(engine);
+        request.complete()?;
+        result
+    } else {
+        Err("Browser inference was cancelled by a model/session change".into())
+    }
 }
 
 /// Diagnostic: vocab size of the resident model tokenizer (0 if engine empty / parse failed).
@@ -386,6 +398,11 @@ pub fn get_browser_execution_receipt() -> Result<JsValue, JsValue> {
         cpu_working_set_bytes: u64,
         inference_memory_domain: &'static str,
         sentinel_arena_bound: bool,
+        execution_mode: &'static str,
+        developer_bypass: bool,
+        inference_admitted: bool,
+        sentinel_enabled: bool,
+        governed_token_acceptance: bool,
     }
 
     let backend = get_wasm_backend();
@@ -409,6 +426,11 @@ pub fn get_browser_execution_receipt() -> Result<JsValue, JsValue> {
         cpu_working_set_bytes: cpu::working_set_bytes(),
         inference_memory_domain: "llm-independent",
         sentinel_arena_bound: false,
+        execution_mode: execution_mode::name(),
+        developer_bypass: execution_mode::developer(),
+        inference_admitted: execution_mode::developer(),
+        sentinel_enabled: false,
+        governed_token_acceptance: false,
     };
     serde_wasm_bindgen::to_value(&receipt).map_err(|error| JsValue::from_str(&error.to_string()))
 }
@@ -420,6 +442,7 @@ pub fn get_browser_execution_receipt() -> Result<JsValue, JsValue> {
 /// failures without asking a user to inspect opaque generated text.
 #[wasm_bindgen(js_name = verifyFirstLayerQuant)]
 pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
+    execution_mode::require_developer().map_err(|e| JsValue::from_str(&e))?;
     #[derive(serde::Serialize)]
     #[serde(rename_all = "camelCase")]
     struct QuantProbe {
@@ -431,6 +454,7 @@ pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
         passed: bool,
     }
 
+    let request = lifecycle::Request::begin().map_err(|e| JsValue::from_str(&e))?;
     let engine = take_engine().map_err(|e| JsValue::from_str(&e))?;
     let result: Result<QuantProbe, String> = async {
         let index = if let Some(data) = engine.p64_resident.as_ref() {
@@ -492,7 +516,9 @@ pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
         })
     }
     .await;
+    request.ensure_current().map_err(|e| JsValue::from_str(&e))?;
     restore_engine(engine);
+    request.complete().map_err(|e| JsValue::from_str(&e))?;
     let probe = result.map_err(|e| JsValue::from_str(&e))?;
     serde_wasm_bindgen::to_value(&probe).map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -518,6 +544,9 @@ pub fn get_webgpu_init_status() -> String {
 /// the browser between major phases so the status line can update.
 #[wasm_bindgen]
 pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
+    execution_mode::require_developer().map_err(|e| js_sys::Error::new(&e))?;
+    let model_stamp=lifecycle::invalidate_model().map_err(|e| js_sys::Error::new(&e))?;
+    crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| *slot.borrow_mut() = None);
     // Copy once into WASM memory. Can take a few seconds for ~370 MB on phones.
     #[cfg(target_arch = "wasm32")]
     crate::gguf_bridge::wasm_yield::phase(&format!(
@@ -532,7 +561,7 @@ pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<
 
     // Always full eager weight upload — the known-good path that produces coherent text.
     // (Deferred upload was tried for phones and produced garbage / incomplete residency.)
-    crate::gguf_bridge::initialize_webgpu_engine(arc)
+    crate::gguf_bridge::initialize_webgpu_engine_with_stamp(arc,model_stamp)
         .await
         .map_err(|e| js_sys::Error::new(&e))
 }
@@ -543,14 +572,17 @@ pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<
 pub async fn initialize_cpu_wasm_engine(
     model_data: js_sys::Uint8Array,
 ) -> Result<(), js_sys::Error> {
+    execution_mode::require_developer().map_err(|e| js_sys::Error::new(&e))?;
+    let stamp = lifecycle::invalidate_model().map_err(|e| js_sys::Error::new(&e))?;
     crate::gguf_bridge::wasm_yield::phase(&format!(
         "Copying model into CPU-WASM memory ({:.0} MB)…",
         model_data.length() as f64 / (1024.0 * 1024.0)
     ))
     .await;
+    cpu::ensure_initialization_current(stamp).map_err(|e| js_sys::Error::new(&e))?;
     let model: std::sync::Arc<[u8]> = model_data.to_vec().into();
     crate::gguf_bridge::wasm_yield::yield_to_browser().await;
-    cpu::initialize(model)
+    cpu::initialize_with_stamp(model, crate::gguf_bridge::wasm_cpu::CPU_WASM_DEFAULT_CONTEXT, stamp)
         .await
         .map_err(|error| js_sys::Error::new(&error))
 }
@@ -562,8 +594,11 @@ pub async fn initialize_cpu_wasm_engine_with_context(
     model_data: js_sys::Uint8Array,
     max_context: u32,
 ) -> Result<(), js_sys::Error> {
+    execution_mode::require_developer().map_err(|e| js_sys::Error::new(&e))?;
+    let stamp = lifecycle::invalidate_model().map_err(|e| js_sys::Error::new(&e))?;
+    cpu::ensure_initialization_current(stamp).map_err(|e| js_sys::Error::new(&e))?;
     let model: std::sync::Arc<[u8]> = model_data.to_vec().into();
-    cpu::initialize_with_context(model, max_context as usize)
+    cpu::initialize_with_stamp(model, max_context as usize, stamp)
         .await
         .map_err(|error| js_sys::Error::new(&error))
 }
@@ -571,6 +606,7 @@ pub async fn initialize_cpu_wasm_engine_with_context(
 /// Release resident model weights and tear down the WebGPU engine instance.
 #[wasm_bindgen(js_name = releaseWebgpuEngine)]
 pub async fn release_webgpu_engine() -> Result<(), JsValue> {
+    lifecycle::invalidate_model().map_err(|e| JsValue::from_str(&e))?;
     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| {
         *g.borrow_mut() = None;
     });

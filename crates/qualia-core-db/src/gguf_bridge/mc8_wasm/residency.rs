@@ -25,13 +25,8 @@ impl QTensorEngine {
 
     /// Writes `raw` into the `role` buffer, bounded by `max_bytes`.
     pub(crate) fn write_weight_role(&self, role: Mc8WeightRole, raw: &[u8], max_bytes: usize) {
-        let weight_buf = self.mc8_weight_role_buf(role);
-        let upload = if raw.len() <= max_bytes {
-            raw
-        } else {
-            &raw[..max_bytes]
-        };
-        self.gpu_queue().write_buffer(weight_buf, 0, upload);
+        etalon_inference::browser_prefill::PrefillEngine { host: self }
+            .write_weight_role(role, raw, max_bytes)
     }
 
     /// MC8 Part 3x: weight binding for `role` at `layer`. When weights are resident, binds the
@@ -42,17 +37,7 @@ impl QTensorEngine {
         role: Mc8WeightRole,
         layer: u32,
     ) -> wgpu::BindingResource<'_> {
-        let buf = self.mc8_weight_role_buf(role);
-        if self.mc8_weights_resident {
-            let stride = self.mc8_weight_role_stride[role.idx()];
-            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                buffer: buf,
-                offset: layer as u64 * stride,
-                size: std::num::NonZeroU64::new(stride.max(4)),
-            })
-        } else {
-            buf.as_entire_binding()
-        }
+        etalon_inference::browser_prefill::PrefillEngine { host: self }.weight_binding(role, layer)
     }
 
     /// MC8 Part 3x: upload every layer's K/V/Q/O/gate/up/down weights to the GPU **once**, into

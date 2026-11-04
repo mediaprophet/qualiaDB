@@ -2,8 +2,30 @@ use super::*;
 use crate::gguf_bridge::QTensorEngine;
 use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
 pub(super) struct PreparedModel {
-    pub tok: GgufTokenizer,
+    pub tok: std::sync::Arc<GgufTokenizer>,
     pub tensor_idx: Option<GgufTensorIndex>,
+}
+pub(super) fn decode_supported(index: Option<&GgufTensorIndex>) -> bool {
+    if let Some(index) = index {
+        if let Err(reason) = index.hyperparams.decode_supported() {
+            log::error!("LLM_DECODE|unsupported-model|{reason}");
+            return false;
+        }
+    }
+    true
+}
+/// Cold model-native lifecycle census; no per-token tensor discovery.
+pub(super) fn layer_kinds(index: Option<&GgufTensorIndex>) -> (u32, u32) {
+    let mut ssm = 0;
+    let mut moe = 0;
+    if let Some(index) = index {
+        for layer in 0..index.hyperparams.n_layer.min(512) {
+            let tensors = index.get_layer_tensors(layer);
+            ssm += u32::from(tensors.is_hybrid_ssm_layer());
+            moe += u32::from(tensors.moe_router.is_some());
+        }
+    }
+    (ssm, moe)
 }
 pub(super) fn prepare(engine: &QTensorEngine, model_path: &str) -> PreparedModel {
     // Tokenizer + tensor index come from the matching on-disk
@@ -62,5 +84,8 @@ pub(super) fn prepare(engine: &QTensorEngine, model_path: &str) -> PreparedModel
         }
     });
 
-    PreparedModel { tok, tensor_idx }
+    PreparedModel {
+        tok: std::sync::Arc::new(tok),
+        tensor_idx,
+    }
 }

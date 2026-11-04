@@ -8,15 +8,11 @@
 //! - VRAM usage from the GPU context ledger
 //! - CBOR config snapshot for reproduction
 
-use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-use serde::{Deserialize, Serialize};
 
 use crate::gpu_context::global_vram_ledger;
 use crate::inference::runtime::receipt::execution::{
     BackendKind, ExecutionReceipt, COUNTER_COMMITTED_PREFILL_TOKENS, COUNTER_DECODE_STEPS,
-    COUNTER_INTER_TOKEN_LATENCY_US, COUNTER_POOL_HIGH_WATER_BYTES,
     COUNTER_SUBMITTED_PREFILL_TOKENS, COUNTER_TIME_TO_FIRST_TOKEN_US,
 };
 use crate::inference_bench::{
@@ -24,246 +20,21 @@ use crate::inference_bench::{
     set_decode_budget_override, set_ffn_fusion, set_gpu_topk, set_kv_dict, set_kv_int8,
     set_kv_pool_budget_mb, set_prefill_chunk_size_override, set_prefix_cache_enabled,
     set_prompt_precision_mode, set_resident_decode, set_resident_prefill, set_resident_weights,
-    set_spec_decode, set_ternary_ffn, BenchConfig, BenchResult, LlmPhaseSnapshot,
+    set_spec_decode, set_ternary_ffn,
 };
-use crate::post_turn_verify::{verify_and_heal_turn, VerifiedTurn};
-use crate::thermal_telemetry::{sample_gpu_thermal, GpuThermalSample};
+use crate::post_turn_verify::verify_and_heal_turn;
+use crate::thermal_telemetry::sample_gpu_thermal;
 
-use super::config_space::{Configuration, ConfigurationSpace};
+use super::experiment_adapter::*;
 
-/// Evaluation mode distinguishing live measurements from simulation fixtures.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum EvaluationMode {
-    /// Measured execution against a real backend and model weights.
-    MeasuredLiveBackend,
-    /// Synthetic or simulated test fixture (cannot be promoted to production lock-in).
-    SimulationFixture,
+pub use etalon_inference_lab::experiment::*;
+pub trait ExperimentConfigExt {
+    fn apply_toggles(&self);
 }
-
-impl Default for EvaluationMode {
-    fn default() -> Self {
-        Self::MeasuredLiveBackend
-    }
-}
-
-/// Thermal reading before and after an experiment.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-pub struct ThermalSnapshot {
-    pub before_temp_c: u32,
-    pub before_power_w: f64,
-    pub after_temp_c: u32,
-    pub after_power_w: f64,
-    /// Energy estimate in joules: avg_power_w * duration_s.
-    pub energy_j: f64,
-}
-
-impl ThermalSnapshot {
-    fn capture(
-        before: Option<GpuThermalSample>,
-        after: Option<GpuThermalSample>,
-        duration_s: f64,
-    ) -> Self {
-        let (before_temp_c, before_power_w) =
-            before.map(|s| (s.temp_c, s.power_w)).unwrap_or((0, 0.0));
-        let (after_temp_c, after_power_w) =
-            after.map(|s| (s.temp_c, s.power_w)).unwrap_or((0, 0.0));
-        let avg_power = (before_power_w + after_power_w) / 2.0;
-        Self {
-            before_temp_c,
-            before_power_w,
-            after_temp_c,
-            after_power_w,
-            energy_j: avg_power * duration_s,
-        }
-    }
-}
-
-/// Serializable subset of `BenchResult` (the original only derives `Serialize`).
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct BenchResultSerde {
-    pub label: String,
-    pub quantization: String,
-    pub prompt_tokens: u64,
-    pub output_tokens: u64,
-    pub cold_ttft_ms: f64,
-    pub cold_total_ms: f64,
-    pub warm_ttft_ms: f64,
-    pub warm_total_ms: f64,
-    pub load_ms: f64,
-    pub prefill_ms: f64,
-    pub prefill_tok_s: f64,
-    pub decode_ms: f64,
-    pub decode_tok_s: f64,
-    pub mapped_bytes: u64,
-    pub kv_cache_bytes: u64,
-}
-
-impl From<&BenchResult> for BenchResultSerde {
-    fn from(r: &BenchResult) -> Self {
-        Self {
-            label: r.label.clone(),
-            quantization: r.quantization.clone(),
-            prompt_tokens: r.prompt_tokens,
-            output_tokens: r.output_tokens,
-            cold_ttft_ms: r.cold_ttft_ms,
-            cold_total_ms: r.cold_total_ms,
-            warm_ttft_ms: r.warm_ttft_ms,
-            warm_total_ms: r.warm_total_ms,
-            load_ms: r.load_ms,
-            prefill_ms: r.prefill_ms,
-            prefill_tok_s: r.prefill_tok_s,
-            decode_ms: r.decode_ms,
-            decode_tok_s: r.decode_tok_s,
-            mapped_bytes: r.model.mapped_bytes,
-            kv_cache_bytes: r.model.kv_cache_bytes,
-        }
-    }
-}
-
-/// The full result of one experiment run.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExperimentResult {
-    /// FNV-1a hash of the configuration CBOR (dedup key).
-    pub config_hash: u64,
-    /// Execution mode (F14 gate: simulation cannot masquerade as measured promotion).
-    #[serde(default)]
-    pub evaluation_mode: EvaluationMode,
-    /// Schema 3 execution receipt (F8/F14).
-    #[serde(default)]
-    pub receipt: Option<ExecutionReceipt>,
-    /// Links to the hypothesis backlog (if any).
-    pub hypothesis_id: Option<String>,
-    /// The benchmark result (latency, tok/s, phase split).
-    pub bench: Option<BenchResultSerde>,
-    /// Intra-decode phase breakdown.
-    pub phase: PhaseSnapshotSerde,
-    /// Post-turn quality checks.
-    pub quality: QualityScore,
-    /// GPU thermal before/after.
-    pub thermal: ThermalSnapshot,
-    /// VRAM used (bytes) from the GPU context ledger.
-    pub vram_used: u64,
-    /// CBOR config snapshot for reproduction.
-    pub config_cbor: Vec<u8>,
-    /// Unix epoch timestamp (ms).
-    pub timestamp_ms: u64,
-    /// Sampler seed for reproducibility.
-    pub seed: u64,
-    /// Error message if the experiment failed.
-    pub error: Option<String>,
-}
-
-/// Serializable phase snapshot (the atomic counters are copied into plain u64s).
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
-pub struct PhaseSnapshotSerde {
-    pub load_ns: u64,
-    pub prefill_ns: u64,
-    pub prefill_tokens: u64,
-    pub decode_ns: u64,
-    pub decode_tokens: u64,
-    pub decode_forward_ns: u64,
-    pub decode_output_ns: u64,
-}
-
-impl From<LlmPhaseSnapshot> for PhaseSnapshotSerde {
-    fn from(s: LlmPhaseSnapshot) -> Self {
-        Self {
-            load_ns: s.load_ns,
-            prefill_ns: s.prefill_ns,
-            prefill_tokens: s.prefill_tokens,
-            decode_ns: s.decode_ns,
-            decode_tokens: s.decode_tokens,
-            decode_forward_ns: s.decode_forward_ns,
-            decode_output_ns: s.decode_output_ns,
-        }
-    }
-}
-
-/// Quality score derived from `VerifiedTurn` checks.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct QualityScore {
-    /// Fraction of checks that passed (0.0 to 1.0).
-    pub pass_rate: f64,
-    /// Total number of checks.
-    pub total_checks: usize,
-    /// Number of checks that passed.
-    pub passed: usize,
-    /// Whether the draft was repaired by the graph.
-    pub repaired: bool,
-    /// Final text length (chars).
-    pub text_len: usize,
-}
-
-impl QualityScore {
-    /// `QualityScore::from_verified`.
-    pub fn from_verified(v: &VerifiedTurn) -> Self {
-        let total = v.checks.len();
-        let passed = v.checks.iter().filter(|c| c.ok).count();
-        Self {
-            pass_rate: if total > 0 {
-                passed as f64 / total as f64
-            } else {
-                1.0
-            },
-            total_checks: total,
-            passed,
-            repaired: v.repaired,
-            text_len: v.final_text.len(),
-        }
-    }
-
-    /// A composite quality score in [0, 1]: pass_rate weighted by whether repair was needed.
-    pub fn composite(&self) -> f64 {
-        let base = self.pass_rate;
-        if self.repaired {
-            base * 0.9
-        } else {
-            base
-        }
-    }
-}
-
-/// Configuration for one experiment run.
-#[derive(Debug, Clone)]
-pub struct ExperimentConfig {
-    /// The configuration space this experiment belongs to.
-    pub space: ConfigurationSpace,
-    /// The concrete configuration to test.
-    pub config: Configuration,
-    /// Model path for the benchmark.
-    pub model_path: String,
-    /// Quantization label.
-    pub quantization: String,
-    /// Prompt to run.
-    pub prompt: String,
-    /// Decode token budget (0 = production default).
-    pub decode_tokens: u32,
-    /// Warm repeats.
-    pub warm_repeats: u32,
-    /// Sampler seed.
-    pub seed: u64,
-    /// Linked hypothesis ID.
-    pub hypothesis_id: Option<String>,
-    /// Evaluation mode for this run (defaults to MeasuredLiveBackend).
-    pub evaluation_mode: EvaluationMode,
-}
-
-impl ExperimentConfig {
-    /// Build a `BenchConfig` from this experiment config.
-    pub fn to_bench_config(&self) -> BenchConfig {
-        BenchConfig {
-            label: format!("{}_h{:016x}", self.space.name, self.config.hash()),
-            model_path: self.model_path.clone(),
-            quantization: self.quantization.clone(),
-            prompt: self.prompt.clone(),
-            decode_tokens: self.decode_tokens,
-            warm_repeats: self.warm_repeats,
-        }
-    }
-
+impl ExperimentConfigExt for ExperimentConfig {
     /// Apply the configuration's toggle values to the runtime.
     /// This reads known parameter names from the config and sets the corresponding toggles.
-    pub fn apply_toggles(&self) {
+    fn apply_toggles(&self) {
         if let Some(v) = self.config.get_bool("gpu_topk") {
             set_gpu_topk(v);
         }
@@ -318,6 +89,7 @@ impl ExperimentConfig {
 /// Run one experiment end-to-end: apply toggles, run benchmark, verify quality,
 /// sample thermal, collect results.
 pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
+    let _state = super::state::TrialState::capture();
     let config_hash = cfg.config.hash();
     let config_cbor = cfg.config.to_cbor();
     let timestamp_ms = SystemTime::now()
@@ -340,11 +112,16 @@ pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
 
     // Thermal sample after
     let thermal_after = sample_gpu_thermal();
-    let thermal = ThermalSnapshot::capture(thermal_before, thermal_after, elapsed);
+    let thermal = capture_thermal(thermal_before, thermal_after, elapsed);
+    let energy_state = if thermal_before.is_some() && thermal_after.is_some() {
+        etalon_inference_lab::runner::MetricState::Estimated(thermal.energy_j)
+    } else {
+        etalon_inference_lab::runner::MetricState::Unavailable
+    };
 
     // Collect phase metrics
     let phase = crate::inference_bench::phase_snapshot();
-    let phase_serde = PhaseSnapshotSerde::from(phase);
+    let phase_serde = phase_serde(phase);
 
     // VRAM usage from the global VRAM ledger
     let vram_used = global_vram_ledger().used_bytes();
@@ -378,7 +155,7 @@ pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
     set_decode_budget_override(0);
 
     let (bench, error) = match bench_result {
-        Ok(r) => (Some(BenchResultSerde::from(&r)), None),
+        Ok(r) => (Some(bench_serde(&r)), None),
         Err(e) => (None, Some(e)),
     };
 
@@ -391,7 +168,7 @@ pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
         rc.counters.committed_prefill_tokens = br.prompt_tokens;
         rc.mark_measured(COUNTER_COMMITTED_PREFILL_TOKENS);
         rc.counters.pool_high_water_bytes = vram_used;
-        rc.mark_measured(COUNTER_POOL_HIGH_WATER_BYTES);
+        // A ledger snapshot is not a measured high-water mark.
 
         let ttft_us = (br.cold_ttft_ms * 1000.0) as u64;
         let itl_us = if br.output_tokens > 1 {
@@ -402,7 +179,7 @@ pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
         rc.latency.time_to_first_token_us = ttft_us;
         rc.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
         rc.latency.inter_token_latency_us = itl_us;
-        rc.mark_measured(COUNTER_INTER_TOKEN_LATENCY_US);
+        // Inter-token latency is derived from aggregate decode duration.
         Some(rc)
     } else {
         None
@@ -422,12 +199,21 @@ pub fn run_experiment(cfg: &ExperimentConfig) -> ExperimentResult {
         timestamp_ms,
         seed: cfg.seed,
         error,
+        evidence: TrialEvidence {
+            schema_version: 1,
+            requested_token_budget: Some(cfg.decode_tokens),
+            actual_token_budget: Some(cfg.decode_tokens),
+            quality_is_token_proxy: true,
+            energy_j: energy_state,
+            ..Default::default()
+        },
     }
 }
 
 /// Run an experiment with quality verification (uses `decode_with_metrics` to get
 /// the actual generated text, then runs `verify_and_heal_turn` on it).
 pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
+    let _state = super::state::TrialState::capture();
     use crate::inference_bench::{decode_with_metrics, reset_phase_metrics};
 
     let config_hash = cfg.config.hash();
@@ -449,18 +235,41 @@ pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
 
     let elapsed = t_start.elapsed().as_secs_f64();
     let thermal_after = sample_gpu_thermal();
-    let thermal = ThermalSnapshot::capture(thermal_before, thermal_after, elapsed);
+    let thermal = capture_thermal(thermal_before, thermal_after, elapsed);
+    let energy_state = if thermal_before.is_some() && thermal_after.is_some() {
+        etalon_inference_lab::runner::MetricState::Estimated(thermal.energy_j)
+    } else {
+        etalon_inference_lab::runner::MetricState::Unavailable
+    };
 
     let phase = crate::inference_bench::phase_snapshot();
-    let phase_serde = PhaseSnapshotSerde::from(phase);
+    let phase_serde = phase_serde(phase);
 
     let vram_used = global_vram_ledger().used_bytes();
 
+    let mut evidence = TrialEvidence {
+        energy_j: energy_state,
+        schema_version: 1,
+        requested_token_budget: Some(cfg.decode_tokens),
+        actual_token_budget: Some(decode_tokens),
+        ..Default::default()
+    };
     let (bench, quality, error) = match result {
         Ok((text, tok_s)) => {
             // Run post-turn verification on the generated text
+            let repair_start = std::time::Instant::now();
             let verified = verify_and_heal_turn(&cfg.prompt, &text);
-            let qs = QualityScore::from_verified(&verified);
+            let qs = quality_from_verified(&verified);
+            evidence.raw_output = Some(text);
+            evidence.repair_duration_ms = etalon_inference_lab::runner::MetricState::Measured(
+                repair_start.elapsed().as_secs_f64() * 1000.0,
+            );
+            if verified.repaired {
+                evidence.repaired_output = Some(verified.final_text.clone());
+                evidence.repaired_quality = Some(qs.clone());
+            } else {
+                evidence.raw_quality = Some(qs.clone());
+            }
 
             // Build a serializable bench result from the decode metrics
             let bench = BenchResultSerde {
@@ -500,7 +309,7 @@ pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
         rc.counters.committed_prefill_tokens = br.prompt_tokens;
         rc.mark_measured(COUNTER_COMMITTED_PREFILL_TOKENS);
         rc.counters.pool_high_water_bytes = vram_used;
-        rc.mark_measured(COUNTER_POOL_HIGH_WATER_BYTES);
+        // A ledger snapshot is not a measured high-water mark.
 
         let ttft_us = (br.warm_total_ms * 1000.0) as u64;
         let itl_us = if br.output_tokens > 1 {
@@ -509,9 +318,9 @@ pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
             0
         };
         rc.latency.time_to_first_token_us = ttft_us;
-        rc.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
+        // Total elapsed time is retained as a legacy proxy, not TTFT evidence.
         rc.latency.inter_token_latency_us = itl_us;
-        rc.mark_measured(COUNTER_INTER_TOKEN_LATENCY_US);
+        // Inter-token latency is derived from aggregate decode duration.
         Some(rc)
     } else {
         None
@@ -531,240 +340,21 @@ pub fn run_experiment_with_quality(cfg: &ExperimentConfig) -> ExperimentResult {
         timestamp_ms,
         seed: cfg.seed,
         error,
+        evidence,
     }
 }
 
-/// Append-only JSONL experiment log.
-pub fn append_experiment_jsonl(path: &Path, result: &ExperimentResult) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let line = serde_json::to_string(result).map_err(|e| e.to_string())?;
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .map_err(|e| format!("open {}: {e}", path.display()))?;
-    use std::io::Write;
-    writeln!(file, "{line}").map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-/// Load all experiment results from a JSONL log.
-pub fn load_experiment_log(path: &Path) -> Result<Vec<ExperimentResult>, String> {
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let mut results = Vec::new();
-    for line in content.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        match serde_json::from_str::<ExperimentResult>(line) {
-            Ok(r) => results.push(r),
-            Err(e) => log::warn!("experiment_log|skip_line|{e}"),
+pub struct QualiaExecutor;
+impl etalon_inference_lab::runner::ExperimentExecutor for QualiaExecutor {
+    fn execute(&mut self, cfg: &ExperimentConfig, with_quality: bool) -> ExperimentResult {
+        if with_quality {
+            run_experiment_with_quality(cfg)
+        } else {
+            run_experiment(cfg)
         }
     }
-    Ok(results)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::inference::lab::config_space::{ConfigurationSpace, ParameterDef};
-
-    #[test]
-    fn quality_score_from_verified() {
-        use crate::post_turn_verify::{VerifiedTurn, VerifyCheck};
-        let v = VerifiedTurn {
-            final_text: "Paris".into(),
-            display_html: String::new(),
-            cml_turtle: String::new(),
-            repaired: false,
-            checks: vec![
-                VerifyCheck {
-                    id: "a".into(),
-                    ok: true,
-                    detail: "ok".into(),
-                },
-                VerifyCheck {
-                    id: "b".into(),
-                    ok: true,
-                    detail: "ok".into(),
-                },
-            ],
-            grounding_reason: None,
-        };
-        let qs = QualityScore::from_verified(&v);
-        assert_eq!(qs.pass_rate, 1.0);
-        assert_eq!(qs.total_checks, 2);
-        assert!(!qs.repaired);
-    }
-
-    #[test]
-    fn quality_score_with_repair() {
-        use crate::post_turn_verify::{VerifiedTurn, VerifyCheck};
-        let v = VerifiedTurn {
-            final_text: "Paris".into(),
-            display_html: String::new(),
-            cml_turtle: String::new(),
-            repaired: true,
-            checks: vec![
-                VerifyCheck {
-                    id: "a".into(),
-                    ok: true,
-                    detail: "ok".into(),
-                },
-                VerifyCheck {
-                    id: "b".into(),
-                    ok: false,
-                    detail: "fail".into(),
-                },
-            ],
-            grounding_reason: Some("capital".into()),
-        };
-        let qs = QualityScore::from_verified(&v);
-        assert_eq!(qs.pass_rate, 0.5);
-        assert!(qs.repaired);
-        assert!((qs.composite() - 0.45).abs() < 1e-9);
-    }
-
-    #[test]
-    fn experiment_config_builds_bench_config() {
-        let space = ConfigurationSpace::new("test").with("gpu_topk", ParameterDef::Bool);
-        let cfg = space.build_from_normalized(&[1.0]);
-        let ec = ExperimentConfig {
-            space,
-            config: cfg,
-            model_path: "/dev/null".into(),
-            quantization: "Q8_0".into(),
-            prompt: "Hello".into(),
-            decode_tokens: 16,
-            warm_repeats: 1,
-            seed: 42,
-            hypothesis_id: Some("H-001".into()),
-            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
-        };
-        let bc = ec.to_bench_config();
-        assert_eq!(bc.quantization, "Q8_0");
-        assert_eq!(bc.decode_tokens, 16);
-        assert!(bc.label.contains("test_"));
-    }
-
-    #[test]
-    fn jsonl_log_roundtrip() {
-        let tmp =
-            std::env::temp_dir().join(format!("qualia_lab_test_{}.jsonl", std::process::id()));
-        let result = ExperimentResult {
-            config_hash: 42,
-            hypothesis_id: Some("H-001".into()),
-            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
-            receipt: None,
-            bench: None,
-            phase: PhaseSnapshotSerde::default(),
-            quality: QualityScore::default(),
-            thermal: ThermalSnapshot::default(),
-            vram_used: 0,
-            config_cbor: vec![0xA1, 0x01],
-            timestamp_ms: 12345,
-            seed: 99,
-            error: Some("test".into()),
-        };
-        append_experiment_jsonl(&tmp, &result).unwrap();
-        let loaded = load_experiment_log(&tmp).unwrap();
-        assert_eq!(loaded.len(), 1);
-        assert_eq!(loaded[0].config_hash, 42);
-        assert_eq!(loaded[0].seed, 99);
-        let _ = std::fs::remove_file(&tmp);
-    }
-
-    #[test]
-    fn experiment_result_schema3_receipt_roundtrip() {
-        let mut receipt = ExecutionReceipt::new(
-            BackendKind::WgpuVulkan,
-            BackendKind::WgpuVulkan,
-            "mod-1",
-            "plan-1",
-        );
-        receipt.counters.decode_steps = 32;
-        receipt.mark_measured(COUNTER_DECODE_STEPS);
-        receipt.latency.time_to_first_token_us = 45000;
-        receipt.mark_measured(COUNTER_TIME_TO_FIRST_TOKEN_US);
-
-        let result = ExperimentResult {
-            config_hash: 101,
-            hypothesis_id: Some("H-002".into()),
-            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
-            receipt: Some(receipt),
-            bench: None,
-            phase: PhaseSnapshotSerde::default(),
-            quality: QualityScore::default(),
-            thermal: ThermalSnapshot::default(),
-            vram_used: 1024 * 1024 * 512,
-            config_cbor: vec![],
-            timestamp_ms: 1000,
-            seed: 7,
-            error: None,
-        };
-
-        let json = serde_json::to_string(&result).unwrap();
-        let de: ExperimentResult = serde_json::from_str(&json).unwrap();
-        assert_eq!(de.evaluation_mode, EvaluationMode::MeasuredLiveBackend);
-        let rc = de.receipt.expect("receipt preserved");
-        assert_eq!(rc.schema_version, 3);
-        assert!(rc.is_measured(COUNTER_DECODE_STEPS));
-        assert_eq!(rc.counters.decode_steps, 32);
-        assert_eq!(rc.latency.time_to_first_token_us, 45000);
-    }
-
-    #[test]
-    fn test_experiment_apply_toggles_consumes_all_parameters() {
-        use super::super::config_space::ParameterValue;
-        use crate::inference_bench::{
-            kv_pool_budget_mb, prefill_chunk_size_override, prefix_cache_enabled,
-            prompt_precision_mode,
-        };
-
-        let mut values = std::collections::BTreeMap::new();
-        values.insert(
-            "prefix_cache_enabled".to_string(),
-            ParameterValue::Bool(false),
-        );
-        values.insert("kv_pool_budget_mb".to_string(), ParameterValue::Int(512));
-        values.insert("prefill_chunk_size".to_string(), ParameterValue::Int(128));
-        values.insert(
-            "prompt_precision_mode".to_string(),
-            ParameterValue::String("strict_evidence".to_string()),
-        );
-
-        let cfg = ExperimentConfig {
-            space: ConfigurationSpace::new("test"),
-            config: Configuration {
-                space_name: "test".to_string(),
-                values,
-            },
-            model_path: "test".to_string(),
-            quantization: "F16".to_string(),
-            prompt: "hello".to_string(),
-            decode_tokens: 16,
-            warm_repeats: 0,
-            seed: 42,
-            hypothesis_id: None,
-            evaluation_mode: EvaluationMode::MeasuredLiveBackend,
-        };
-
-        cfg.apply_toggles();
-
-        assert!(!prefix_cache_enabled());
-        assert_eq!(kv_pool_budget_mb(), 512);
-        assert_eq!(prefill_chunk_size_override(), 128);
-        assert_eq!(prompt_precision_mode(), "strict_evidence");
-
-        // Clean up / reset
-        crate::inference_bench::set_prefix_cache_enabled(true);
-        crate::inference_bench::set_kv_pool_budget_mb(0);
-        crate::inference_bench::set_prefill_chunk_size_override(0);
-        crate::inference_bench::set_prompt_precision_mode("");
-    }
-}
+#[path = "experiment_tests.rs"]
+mod tests;

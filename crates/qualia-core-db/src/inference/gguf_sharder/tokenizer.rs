@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 mod decode;
+mod prepared;
 pub mod hf_json;
 mod pretokenizer;
 pub use pretokenizer::{PretokenError, PretokenSpan};

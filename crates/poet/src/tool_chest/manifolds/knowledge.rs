@@ -51,6 +51,8 @@ pub fn knowledge_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-k1".into(),
                 from: 0,
                 to: 1,
@@ -58,6 +60,8 @@ pub fn knowledge_manifold_seed() -> ManifoldSeed {
                 label: "ont:usesOntology".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-k2".into(),
                 from: 2,
                 to: 0,

@@ -60,6 +60,20 @@ pub struct InferenceActorSession {
     epoch: u64,
 }
 impl InferenceActorSession {
+    pub(super) fn product_session(
+        &self,
+        capability: Arc<qualia_core_db::llm_agent::native_request::NativeHostCapability>,
+        preparation: qualia_core_db::llm_agent::native_request::NativePreparationSpec,
+    ) -> Result<qualia_core_db::llm_agent::native_request::NativeProductSession, String> {
+        self.current()?;
+        qualia_core_db::llm_agent::native_request::NativeProductSession::new(
+            capability,
+            self.session.clone(),
+            self.selected.selection(),
+            preparation,
+        )
+        .map_err(|e| e.to_string())
+    }
     pub(super) fn owner(&self) -> &Arc<NativeAuthority> {
         &self.owner
     }

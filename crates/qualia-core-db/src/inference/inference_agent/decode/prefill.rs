@@ -3,6 +3,7 @@ use crate::gguf_bridge::QTensorEngine;
 use crate::gguf_sharder::GgufTensorIndex;
 
 pub(super) struct Prefill<'a> {
+    pub prefix_cache_allowed: bool,
     pub engine: &'a mut QTensorEngine,
     pub tensor_idx: &'a Option<GgufTensorIndex>,
     pub ctx: &'a Vec<u32>,
@@ -23,6 +24,7 @@ pub(super) struct Prefill<'a> {
 }
 pub(super) fn run(input: Prefill<'_>) -> Result<StageTrace, WorkerResult> {
     let Prefill {
+        prefix_cache_allowed,
         engine,
         tensor_idx,
         ctx,
@@ -91,7 +93,11 @@ pub(super) fn run(input: Prefill<'_>) -> Result<StageTrace, WorkerResult> {
             ));
         }
         super::super::prefill_executor::PrefillOutcome::Completed { .. } => {
-            if !prefix_cached && kv_floats > 0 && crate::llm_bench::prefix_cache_enabled() {
+            if prefix_cache_allowed
+                && !prefix_cached
+                && kv_floats > 0
+                && crate::llm_bench::prefix_cache_enabled()
+            {
                 if let Some(cpu_kv) = engine.get_kv_cache_cpu() {
                     if let Ok(mut cache) = get_prefix_cache().lock() {
                         if cpu_kv.len() * std::mem::size_of::<f32>() <= cache.max_bytes() {

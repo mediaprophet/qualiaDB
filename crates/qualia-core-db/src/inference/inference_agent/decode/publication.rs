@@ -2,7 +2,9 @@ use super::*;
 
 use crate::gguf_sharder::GgufTokenizer;
 
-pub(super) struct Publication<'a> {
+pub(super) struct Publication<'a, 'slot, 'bytes> {
+    pub gate: &'a mut super::super::native_request::PublicationGate<'slot, 'bytes>,
+    pub top_v: f32,
     pub top_i: usize,
     pub vlen: u32,
     pub tok: &'a GgufTokenizer,
@@ -24,8 +26,10 @@ pub(super) struct Publication<'a> {
     pub streamed_len: usize,
     pub gen_budget: usize,
 }
-pub(super) fn run(input: Publication<'_>) -> (bool, usize, bool, Option<NQuin>) {
+pub(super) fn run(input: Publication<'_, '_, '_>) -> (bool, usize, bool, Option<NQuin>) {
     let Publication {
+        gate,
+        top_v,
         top_i,
         vlen,
         tok,
@@ -47,7 +51,33 @@ pub(super) fn run(input: Publication<'_>) -> (bool, usize, bool, Option<NQuin>) 
         mut streamed_len,
         gen_budget,
     } = input;
-    let next = (top_i as u32) % vlen;
+    let proposed = (top_i as u32) % vlen;
+    let mut accepted = None;
+    if let Err(error) = gate.token(
+        proposed,
+        ctx.len().saturating_sub(1) as u64,
+        super::super::governed::evidence::CandidateSource::ModelToken,
+        Some(super::super::governed::evidence::NumericalObservation {
+            meaning: super::super::governed::evidence::ScoreMeaning::Logit,
+            value: top_v,
+        }),
+        tok,
+        &mut accepted,
+    ) {
+        log::warn!("LLM_DECODE|native-token-refused|{error}");
+        if stage_telemetry {
+            stage_trace.record(
+                InferenceStageKind::SentinelMidDecodeGuard,
+                StageStatus::Quarantined,
+                0,
+                1,
+            );
+        }
+        return (true, streamed_len, sieve_failed, semantic_quin);
+    }
+    let next = accepted
+        .expect("successful native token output transfer")
+        .token_id();
 
     // T53/W11: feed the selected token back into the DOMINO
     // grammar state machine so the mask advances for the next
@@ -143,7 +173,10 @@ pub(super) fn run(input: Publication<'_>) -> (bool, usize, bool, Option<NQuin>) 
             if full.len() > streamed_len {
                 let delta = full[streamed_len..].to_string();
                 streamed_len = full.len();
-                let _ = tx.send(delta);
+                if tx.send(delta).is_err() {
+                    gate.invalidate();
+                    return (true, streamed_len, sieve_failed, semantic_quin);
+                }
             }
         }
         // Stop on eos AND chat end-of-turn — unless fixed-token bench override.

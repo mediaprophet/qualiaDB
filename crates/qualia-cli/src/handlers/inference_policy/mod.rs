@@ -3,6 +3,10 @@
 mod integration_tests;
 mod io;
 mod profile;
+mod eval;
+mod qwen;
+pub(super) use qwen::run_qwen_governed;
+pub(super) use eval::prepare_eval;
 use crate::cli::InferencePolicyAction;
 use qualia_client_core::{api::inference_policy as api, inference_policy as policy};
 use qualia_core_db::key_vault::{KeyRole, KeyVault};
@@ -71,6 +75,12 @@ pub fn handle(
             expires_at,
             expected_generation,
         } => api::install_inference_policy(io::policy(rules)?, *expires_at, *expected_generation)?,
+        InferencePolicyAction::InstallNative {
+            rules, observations, expires_at, expected_generation,
+        } => api::install_native_inference_policy(
+            io::policy(rules)?, io::json(observations, 32 * 1024)?,
+            *expires_at, *expected_generation,
+        )?,
         InferencePolicyAction::Revoke {
             expected_generation,
         } => api::revoke_inference_policy(*expected_generation)?,

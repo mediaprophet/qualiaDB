@@ -6,32 +6,15 @@
 
 use crate::render::instance_culling::GpuInstanceRecord;
 
-pub(super) const MESH_PICK_FLAG: u32 = 1 << 31;
-pub(super) const MESH_PICK_SLOT_MASK: u32 = !MESH_PICK_FLAG;
-
 #[cfg(test)]
-/// Encodes `mesh-slot`.
-pub(super) fn encode_mesh_slot(slot: u32) -> Option<u32> {
-    (slot < MESH_PICK_FLAG).then_some(MESH_PICK_FLAG | slot)
-}
+use etalon_render::picking::encode_mesh_slot;
+pub(super) use etalon_render::picking::{decode_mesh_slot, MESH_PICK_FLAG};
 
-/// Decodes `mesh-slot`.
-pub(super) fn decode_mesh_slot(encoded: u32) -> Option<usize> {
-    (encoded & MESH_PICK_FLAG != 0).then_some((encoded & MESH_PICK_SLOT_MASK) as usize)
-}
-
-/// `snapshot_semantic_ids`.
 pub(super) fn snapshot_semantic_ids(
     source: &[GpuInstanceRecord],
     out: &mut [u64],
 ) -> Option<usize> {
-    if source.len() > out.len() || source.len() >= MESH_PICK_FLAG as usize {
-        return None;
-    }
-    for (record, slot) in source.iter().zip(out.iter_mut()) {
-        *slot = record.semantic_id();
-    }
-    Some(source.len())
+    etalon_render::picking::snapshot_ids(source, out, |record| record.semantic_id())
 }
 
 #[cfg(test)]

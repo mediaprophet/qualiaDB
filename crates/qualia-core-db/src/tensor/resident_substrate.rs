@@ -10,6 +10,9 @@ use super::q42_integration::{
 };
 use super::Tensor10D;
 use crate::NQuin;
+#[path = "resident_snapshot.rs"]
+mod snapshot;
+pub use snapshot::ResidentSnapshot;
 
 /// Maximum nodes pinned in U1 ledger (structural cap, not heap growth).
 pub const MAX_RESIDENT_NODES: usize = 4096;

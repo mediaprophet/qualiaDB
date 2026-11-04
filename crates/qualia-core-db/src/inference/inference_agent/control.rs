@@ -24,6 +24,17 @@ impl Default for DecodeControl {
 }
 
 impl DecodeControl {
+    /// Freeze numerical request budgets while retaining the caller's live
+    /// cooperative cancellation channel. A later UI budget mutation cannot
+    /// change an already prepared request's admitted settings.
+    pub(crate) fn frozen_budgets(&self) -> Self {
+        Self {
+            cancelled: Arc::clone(&self.cancelled),
+            max_tokens: Arc::new(AtomicU32::new(self.max_tokens.load(Ordering::Acquire))),
+            thinking_tokens: Arc::new(AtomicU32::new(self.thinking_tokens.load(Ordering::Acquire))),
+        }
+    }
+
     /// Cooperatively cancels the decode job.
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Release);

@@ -107,6 +107,7 @@ impl PortalGpu {
 
     /// Sets yaw/pitch/zoom, preserving target/near-plane/lighting, then clamps and flags a temporal-history reset.
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) {
+        let previous = self.camera;
         let current_target = self.camera.target;
         let sun_dir = self.camera.sun_dir;
         let sun_intensity = self.camera.sun_intensity;
@@ -122,6 +123,10 @@ impl PortalGpu {
             ambient_intensity,
         }
         .clamped();
+        if self.camera != previous {
+            self.pick_readback.invalidate(true);
+            self.pick_semantic_result = None;
+        }
         self.temporal_reset_pending = true;
     }
     /// Sets the near plane; `false` when `near` is non-finite or outside [1e-5, 1.0] — fails closed without touching the camera.
@@ -130,6 +135,8 @@ impl PortalGpu {
             return false;
         }
         if near != self.camera.near_plane {
+            self.pick_readback.invalidate(true);
+            self.pick_semantic_result = None;
             self.camera.near_plane = near;
             self.invalidate_temporal_history();
         }
@@ -138,6 +145,10 @@ impl PortalGpu {
 
     /// Moves the camera look-at target and flags a temporal-history reset.
     pub fn set_camera_pan(&mut self, target_x: f32, target_y: f32, target_z: f32) {
+        if self.camera.target != [target_x, target_y, target_z] {
+            self.pick_readback.invalidate(true);
+            self.pick_semantic_result = None;
+        }
         self.camera.target = [target_x, target_y, target_z];
         self.temporal_reset_pending = true;
     }
@@ -152,6 +163,7 @@ impl PortalGpu {
         target_y: f32,
         target_z: f32,
     ) {
+        let previous = self.camera;
         let sun_dir = self.camera.sun_dir;
         let sun_intensity = self.camera.sun_intensity;
         let ambient_intensity = self.camera.ambient_intensity;
@@ -166,6 +178,10 @@ impl PortalGpu {
             ambient_intensity,
         }
         .clamped();
+        if self.camera != previous {
+            self.pick_readback.invalidate(true);
+            self.pick_semantic_result = None;
+        }
         self.temporal_reset_pending = true;
     }
 

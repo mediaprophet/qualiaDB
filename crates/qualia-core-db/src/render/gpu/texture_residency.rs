@@ -4,124 +4,20 @@ use super::texture_mips::AlphaCoverageDiagnostics;
 use super::PortalGpu;
 use std::collections::BTreeMap;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TextureColorSpace {
-    Srgb,
-    Linear,
-}
+pub(super) use etalon_render::texture_layout::TextureIdentity;
+#[cfg(test)]
+use etalon_render::texture_layout::{mip_chain_layout,mip_semantic_matches,validate_upload};
+pub use etalon_render::texture_layout::{TextureColorSpace, TextureUploadError};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) struct TextureIdentity {
-    pub source_digest: [u8; 32],
-    pub color_space: TextureColorSpace,
-    pub mip_semantic: super::texture_mips::TextureMipSemantic,
-}
+pub(super) type ResidentTexture =
+    etalon_render::texture_residency::ResidentTexture<crate::gpu_context::VramReservation<'static>>;
 
-pub(super) struct ResidentTexture {
-    pub(super) _texture: wgpu::Texture,
-    pub(super) view: wgpu::TextureView,
-    pub(super) _reservation: crate::gpu_context::VramReservation<'static>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TextureUploadError {
-    InvalidDimensions,
-    InvalidRgba8Length,
-    TextureDimensionLimit,
-    ByteSizeOverflow,
-    GpuBudgetRefused,
-    UploadBudgetRefused,
-    InvalidMipSemantic,
-    InvalidMipLevelCount,
-    InvalidMipLevelLength { level: usize },
-    TooManyMipLevels,
-}
-
-impl std::fmt::Display for TextureUploadError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "texture upload: {self:?}")
-    }
-}
-
-impl std::error::Error for TextureUploadError {}
-
-/// Validates `upload`.
-pub(super) fn validate_upload(
-    width: u32,
-    height: u32,
-    adapter_limit: u32,
-    rgba8_len: usize,
-) -> Result<(u64, u32), TextureUploadError> {
-    if width == 0 || height == 0 {
-        return Err(TextureUploadError::InvalidDimensions);
-    }
-    if width > adapter_limit || height > adapter_limit {
-        return Err(TextureUploadError::TextureDimensionLimit);
-    }
-    let byte_len = (width as usize)
-        .checked_mul(height as usize)
-        .and_then(|pixels| pixels.checked_mul(4))
-        .ok_or(TextureUploadError::ByteSizeOverflow)?;
-    let bytes_per_row = width
-        .checked_mul(4)
-        .ok_or(TextureUploadError::ByteSizeOverflow)?;
-    if rgba8_len != byte_len {
-        return Err(TextureUploadError::InvalidRgba8Length);
-    }
-    Ok((
-        u64::try_from(byte_len).map_err(|_| TextureUploadError::ByteSizeOverflow)?,
-        bytes_per_row,
-    ))
-}
-
-/// `mip_chain_layout`.
-pub(super) fn mip_chain_layout(width: u32, height: u32) -> Result<(u32, u64), TextureUploadError> {
-    if width == 0 || height == 0 {
-        return Err(TextureUploadError::InvalidDimensions);
-    }
-    let mut level_width = width;
-    let mut level_height = height;
-    let mut levels = 1u32;
-    let mut total = 0u64;
-    loop {
-        let level_bytes = u64::from(level_width)
-            .checked_mul(u64::from(level_height))
-            .and_then(|pixels| pixels.checked_mul(4))
-            .ok_or(TextureUploadError::ByteSizeOverflow)?;
-        total = total
-            .checked_add(level_bytes)
-            .ok_or(TextureUploadError::ByteSizeOverflow)?;
-        if level_width == 1 && level_height == 1 {
-            break;
-        }
-        level_width = (level_width / 2).max(1);
-        level_height = (level_height / 2).max(1);
-        levels = levels
-            .checked_add(1)
-            .ok_or(TextureUploadError::ByteSizeOverflow)?;
-    }
-    Ok((levels, total))
-}
-
+#[cfg(test)]
 fn alpha_mip_scratch_bytes(width: u32, height: u32) -> Result<u64, TextureUploadError> {
     u64::from(width)
         .checked_mul(u64::from(height))
         .and_then(|pixels| pixels.checked_mul(4))
         .ok_or(TextureUploadError::ByteSizeOverflow)
-}
-
-/// `mip_semantic_matches`.
-pub(super) fn mip_semantic_matches(
-    color_space: TextureColorSpace,
-    semantic: super::texture_mips::TextureMipSemantic,
-) -> bool {
-    use super::texture_mips::TextureMipSemantic::{AlphaMask, Color, LinearData, Normal};
-    match (color_space, semantic) {
-        (TextureColorSpace::Srgb, Color) => true,
-        (TextureColorSpace::Srgb, AlphaMask { .. }) => semantic.alpha_cutoff().is_some(),
-        (TextureColorSpace::Linear, LinearData | Normal) => true,
-        _ => false,
-    }
 }
 
 impl PortalGpu {
@@ -185,136 +81,32 @@ impl PortalGpu {
         height: u32,
         rgba8: &[u8],
     ) -> Result<Option<AlphaCoverageDiagnostics>, TextureUploadError> {
-        if !mip_semantic_matches(color_space, mip_semantic) {
-            return Err(TextureUploadError::InvalidMipSemantic);
-        }
-        let (base_bytes, bytes_per_row) = validate_upload(
-            width,
-            height,
-            self.device.limits().max_texture_dimension_2d,
-            rgba8.len(),
-        )?;
-        let (mip_level_count, resident_bytes) = mip_chain_layout(width, height)?;
-        let key = TextureIdentity {
+        etalon_render::texture_residency::upload_rgba8(
+            &self.device,
+            &self.queue,
+            &self.mip_generator,
+            &mut self.resident_textures,
             source_digest,
             color_space,
             mip_semantic,
-        };
-        if self.resident_textures.contains_key(&key) {
-            let alpha_scratch_reservation = if mip_semantic.alpha_cutoff().is_some() {
-                Some(
-                    crate::gpu_context::global_vram_ledger()
-                        .try_reserve_graphics(
-                            crate::gpu_context::VramResourceClass::UploadStaging,
-                            alpha_mip_scratch_bytes(width, height)?,
-                        )
-                        .map_err(|_| TextureUploadError::UploadBudgetRefused)?,
-                )
-            } else {
-                None
-            };
-            let diagnostics = mip_semantic
-                .alpha_cutoff()
-                .map(|cutoff| {
-                    super::texture_mips::alpha_coverage_plan(rgba8, width, height, cutoff)
-                })
-                .map(AlphaCoverageDiagnostics::from);
-            drop(alpha_scratch_reservation);
-            return Ok(diagnostics);
-        }
-        let reservation = crate::gpu_context::global_vram_ledger()
-            .try_reserve_graphics(
-                crate::gpu_context::VramResourceClass::TextureResidency,
-                resident_bytes,
-            )
-            .map_err(|_| TextureUploadError::GpuBudgetRefused)?;
-        let alpha_scratch_reservation = if mip_semantic.alpha_cutoff().is_some() {
-            Some(
-                crate::gpu_context::global_vram_ledger()
-                    .try_reserve_graphics(
-                        crate::gpu_context::VramResourceClass::UploadStaging,
-                        alpha_mip_scratch_bytes(width, height)?,
-                    )
-                    .map_err(|_| TextureUploadError::UploadBudgetRefused)?,
-            )
-        } else {
-            None
-        };
-        let alpha_plan = mip_semantic
-            .alpha_cutoff()
-            .map(|cutoff| super::texture_mips::alpha_coverage_plan(rgba8, width, height, cutoff));
-        let diagnostics = alpha_plan.map(AlphaCoverageDiagnostics::from);
-        let upload_reservation = crate::gpu_context::global_vram_ledger()
-            .try_reserve_graphics(
-                crate::gpu_context::VramResourceClass::UploadStaging,
-                base_bytes,
-            )
-            .map_err(|_| TextureUploadError::UploadBudgetRefused)?;
-        let format = match color_space {
-            TextureColorSpace::Srgb => wgpu::TextureFormat::Rgba8UnormSrgb,
-            TextureColorSpace::Linear => wgpu::TextureFormat::Rgba8Unorm,
-        };
-        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("qualia-resident-material-texture"),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::COPY_DST
-                | wgpu::TextureUsages::RENDER_ATTACHMENT
-                | if cfg!(test) {
-                    wgpu::TextureUsages::COPY_SRC
-                } else {
-                    wgpu::TextureUsages::empty()
-                },
-            view_formats: &[],
-        });
-        self.queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
+            width,
+            height,
             rgba8,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(bytes_per_row),
-                rows_per_image: Some(height),
+            cfg!(test),
+            |class, bytes| {
+                let class = match class {
+                    etalon_render::texture_residency::TextureAllocation::TextureResidency => {
+                        crate::gpu_context::VramResourceClass::TextureResidency
+                    }
+                    etalon_render::texture_residency::TextureAllocation::UploadStaging => {
+                        crate::gpu_context::VramResourceClass::UploadStaging
+                    }
+                };
+                crate::gpu_context::global_vram_ledger()
+                    .try_reserve_graphics(class, bytes)
+                    .ok()
             },
-            wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-        );
-        self.mip_generator.generate(
-            &self.device,
-            &self.queue,
-            &texture,
-            mip_level_count,
-            mip_semantic,
-            alpha_plan.as_ref(),
-        );
-        drop(alpha_scratch_reservation);
-        self.queue
-            .on_submitted_work_done(move || drop(upload_reservation));
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        self.resident_textures.insert(
-            key,
-            ResidentTexture {
-                _texture: texture,
-                view,
-                _reservation: reservation,
-            },
-        );
-        Ok(diagnostics)
+        )
     }
 
     /// Borrow the resident view and shared default sampler for `(digest, colour-space)`.
@@ -384,20 +176,7 @@ impl PortalGpu {
 pub(super) type ResidentTextureMap = BTreeMap<TextureIdentity, ResidentTexture>;
 
 /// `resident_view`.
-pub(super) fn resident_view<'a>(
-    textures: &'a ResidentTextureMap,
-    digest: &[u8; 32],
-    color_space: TextureColorSpace,
-    mip_semantic: super::texture_mips::TextureMipSemantic,
-) -> Option<&'a wgpu::TextureView> {
-    textures
-        .get(&TextureIdentity {
-            source_digest: *digest,
-            color_space,
-            mip_semantic,
-        })
-        .map(|resident| &resident.view)
-}
+pub(super) use etalon_render::texture_residency::resident_view;
 
 #[cfg(test)]
 mod tests {

@@ -35,9 +35,21 @@ pub fn compare_topk_decode(
     let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
 
     set_gpu_topk(false);
-    let (off_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let (off_text, _, _, _) = agent.infer_local_model_with_execution::<fn(String)>(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        None,
+    );
     set_gpu_topk(true);
-    let (on_text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let (on_text, _, _, _) = agent.infer_local_model_with_execution::<fn(String)>(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        None,
+    );
 
     set_gpu_topk(false);
     crate::resident_model::clear_resident_model();
@@ -98,7 +110,13 @@ pub fn decode_with_metrics(
         let _ = crate::resident_model::mount_resident_gguf(model_id, model_path, false);
     }
     reset_phase_metrics();
-    let (text, _, _, _) = agent.infer_local_model_streaming::<fn(String)>(prompt, "", None);
+    let (text, _, _, _) = agent.infer_local_model_with_execution::<fn(String)>(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        None,
+    );
     let snap = phase_snapshot();
     let decode_tok_s = tok_per_s(snap.decode_tokens, snap.decode_ns);
     crate::resident_model::clear_resident_model();

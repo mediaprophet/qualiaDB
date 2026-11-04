@@ -67,6 +67,8 @@ pub fn vibe_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-v1".into(),
                 from: 0,
                 to: 1,
@@ -74,6 +76,8 @@ pub fn vibe_manifold_seed() -> ManifoldSeed {
                 label: "vibe:rendersTo".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-v2".into(),
                 from: 0,
                 to: 2,

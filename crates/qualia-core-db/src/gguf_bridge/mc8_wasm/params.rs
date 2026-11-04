@@ -4,11 +4,7 @@ use super::super::*;
 impl QTensorEngine {
     /// Dynamic-offset uniform binding for `buf`.
     pub(crate) fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {
-        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-            buffer: buf,
-            offset: 0,
-            size: std::num::NonZeroU64::new(MC8_UNIFORM_ALIGN as u64),
-        })
+        etalon_inference::browser_prefill::encoding::dynamic_uniform_binding(buf)
     }
 
     /// Packs GEMM dispatch params for the MC8 kernel.
@@ -21,16 +17,15 @@ impl QTensorEngine {
         in_row_stride: u32,
         out_row_stride: u32,
     ) -> GemmGpuParams {
-        GemmGpuParams {
-            n_in: n_in as u32,
-            n_out: n_out as u32,
-            weight_ggml_type: info.ggml_type,
-            weight_row_elems: info.dims[0] as u32,
-            weight_byte_len: raw_len as u32,
-            n_batch: n_batch.max(1),
+        etalon_inference::browser_prefill::params::mc8_gemm_params(
+            info,
+            raw_len,
+            n_in,
+            n_out,
+            n_batch,
             in_row_stride,
             out_row_stride,
-        }
+        )
     }
 
     /// Uploads attention params; returns the binding offset.
@@ -59,19 +54,17 @@ impl QTensorEngine {
         b_slot: u32,
         out_slot: u32,
     ) -> ElemGpuParams {
-        ElemGpuParams {
-            n,
-            batch: batch.max(1),
+        etalon_inference::browser_prefill::params::mc8_elem_params(
             op,
-            eps: RMS_NORM_EPS,
+            n,
+            batch,
             a_row_stride,
             b_row_stride,
             out_row_stride,
             a_slot,
             b_slot,
             out_slot,
-            _pad: 0,
-        }
+        )
     }
 
     /// A bounded slice of a buffer for a dispatch.
@@ -80,21 +73,17 @@ impl QTensorEngine {
         byte_off: wgpu::BufferAddress,
         byte_len: wgpu::BufferAddress,
     ) -> wgpu::BindingResource<'_> {
-        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-            buffer: buf,
-            offset: byte_off,
-            size: std::num::NonZeroU64::new(byte_len.max(4)),
-        })
+        etalon_inference::browser_prefill::encoding::buf_slice(buf, byte_off, byte_len)
     }
 
     /// Byte offset of prefill row `t` given `row_stride_floats`.
     pub(crate) fn mc8_prefill_row_off(t: u32, row_stride_floats: usize) -> wgpu::BufferAddress {
-        (t as usize * row_stride_floats * 4) as wgpu::BufferAddress
+        etalon_inference::browser_prefill::params::mc8_prefill_row_off(t, row_stride_floats)
     }
 
     /// Byte offset of embedding `t` in an `n_embd`-wide matrix.
     pub(crate) fn mc8_emb_off(t: u32, n_embd: usize) -> wgpu::BufferAddress {
-        (t as usize * n_embd * 4) as wgpu::BufferAddress
+        etalon_inference::browser_prefill::params::mc8_emb_off(t, n_embd)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -104,8 +93,10 @@ impl QTensorEngine {
         n_ffn_est: usize,
         gemm_max_out_dim: u32,
     ) -> usize {
-        (n_embd + 2 * n_ffn_est + n_embd)
-            .max(gemm_max_out_dim as usize * 2)
-            .max(n_embd)
+        etalon_inference::browser_prefill::params::mc8_prefill_row_stride(
+            n_embd,
+            n_ffn_est,
+            gemm_max_out_dim,
+        )
     }
 }

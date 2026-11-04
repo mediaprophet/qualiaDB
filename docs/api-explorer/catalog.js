@@ -3208,9 +3208,11 @@ if (caps.includes('BlackScholes')) {
         returns: 'Promise<void>',
         snippets: [
             js(`
-import init, { initialize_webgpu_engine, compileGgufToP64, p64FormatVersion } from '../playground/qualia_core_db.js';
+import init, { configureBrowserExecutionMode, initialize_webgpu_engine, compileGgufToP64, p64FormatVersion } from '../playground/qualia_core_db.js';
 import { loadOrCompileP64 } from '../js/opfs-model-cache.js';
 await init();
+// Explicit developer opt-in: no Sentinel token acceptance.
+configureBrowserExecutionMode('developer', true);
 
 // AOT: compile GGUF → P64 once, cache in OPFS, warm-boot thereafter.
 const { bytes } = await loadOrCompileP64(
@@ -3269,8 +3271,11 @@ console.log('P64 v' + p64FormatVersion() + ', ' + (p64.length / 1048576).toFixed
         returns: 'Promise<string> — the full generated text',
         snippets: [
             js(`
-import init, { inferWasmStreaming } from '../playground/qualia_core_db.js';
-// (initialize_webgpu_engine must have run first)
+import init, { configureBrowserExecutionMode, inferWasmStreaming } from '../playground/qualia_core_db.js';
+await init();
+// Explicit developer opt-in: no Sentinel token acceptance.
+configureBrowserExecutionMode('developer', true);
+// initialize_webgpu_engine must have run first in this module instance.
 let out = '';
 const full = await inferWasmStreaming('The capital of France is', (delta) => {
   out += delta;
@@ -3292,8 +3297,10 @@ console.log(full);
         returns: 'Promise<string> — generated text',
         snippets: [
             js(`
-import init, { initialize_webgpu_engine, infer_wasm } from '../playground/qualia_core_db.js';
+import init, { configureBrowserExecutionMode, initialize_webgpu_engine, infer_wasm } from '../playground/qualia_core_db.js';
 await init();
+// Explicit developer opt-in: no Sentinel token acceptance.
+configureBrowserExecutionMode('developer', true);
 const modelBytes = await (await fetch('models/SmolLM2-360M-Instruct-Q4_K_M.gguf')).arrayBuffer();
 await initialize_webgpu_engine(new Uint8Array(modelBytes));
 console.log(await infer_wasm('The capital of France is'));

@@ -80,7 +80,7 @@ pub(super) fn prepare<'names: 'work, 'work>(
             | P64_FLAG_LAYER_MAJOR
             | P64_FLAG_LAYER_PACK
             | P64_FLAG_LAYER_SCHEDULE,
-        header_reserved: [0; 20],
+        header_reserved: native_metadata::locator(index, tokenizer)?,
         hparams_bytes: hparams,
         manifold_bytes: &workspace.manifolds[..required.manifold_bytes],
         tokenizer_bytes: tokenizer,

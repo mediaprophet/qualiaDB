@@ -70,6 +70,7 @@ pub mod manifold_authoring;
 pub mod manifold_social;
 pub mod media_codecs;
 pub mod native_daemon;
+mod native_llm_transport;
 pub mod ontology_views;
 pub mod project_views;
 pub mod projections;

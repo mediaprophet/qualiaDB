@@ -224,6 +224,7 @@ impl TemporalOutputSchedule {
     }
 }
 
+
 impl CompiledSchedule {
     /// Schedule slot for pass `id`, or `None`.
     pub fn pass_index(&self, id: PassId) -> Option<usize> {

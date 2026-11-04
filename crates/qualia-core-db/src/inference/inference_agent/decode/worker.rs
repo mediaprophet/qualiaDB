@@ -2,6 +2,7 @@ use super::*;
 use crate::gguf_bridge::QTensorEngine;
 
 pub(super) struct Worker<'a> {
+    pub reusable: &'a std::sync::atomic::AtomicBool,
     pub engine: &'a mut QTensorEngine,
     pub model_path: &'a str,
     pub model_instance_hash: u64,
@@ -16,9 +17,11 @@ pub(super) struct Worker<'a> {
     pub prov_hash: u64,
     pub lp: rtrb::Producer<LlmMsg>,
     pub cc: rtrb::Consumer<SentMsg>,
+    pub execution: super::super::native_request::NativeDecodeRequest,
 }
 pub(super) fn run(input: Worker<'_>) -> WorkerResult {
     let Worker {
+        reusable,
         engine,
         model_path,
         model_instance_hash,
@@ -33,7 +36,11 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         prov_hash,
         mut lp,
         mut cc,
+        mut execution,
     } = input;
+    // Every refusal/cancellation/closed output defaults to destruction. Only a
+    // successful completed turn opts the sticky numerical owner back into reuse.
+    reusable.store(false, std::sync::atomic::Ordering::Release);
     // Initialize Tokio runtime for the sticky thread (once per job; cheap if already warm).
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -44,72 +51,126 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
     // A0 phase timing (D17/D22): once-per-phase, off the per-token hot path.
     let t_phase = std::time::Instant::now();
 
-    // Thermal-eviction WAL is a native-only file mmap (`memmap2`); on
-    // wasm there is no mmap'd-file WAL, so the telemetry is simply absent.
-    #[cfg(not(target_arch = "wasm32"))]
-    let mut thermal_wal_opt = {
-        let wal_path = std::env::var("QUALIA_DATA_DIR")
-            .map(|p| std::path::PathBuf::from(p).join("thermal_eviction.wal"))
-            .unwrap_or_else(|_| std::env::temp_dir().join("thermal_eviction.wal"));
-        crate::inference::thermal_wal::ThermalWal::open(&wal_path, 1024).ok()
-    };
+    let mut thermal_wal_opt = admission::thermal_wal();
 
-    let lora_adapter = lora_for_thread;
-    let sieve_spec = sieve_spec;
-    let sieve_lex_path = sieve_lex_path;
+    let lora_adapter = std::sync::Arc::new(lora_for_thread);
+    let mut stage_trace = StageTrace::new();
+    if let Err(error) = execution.prepare_model(engine) {
+        return admission::refused(&mut lp, stage_trace, error);
+    }
 
     let model::PreparedModel { tok, tensor_idx } = model::prepare(engine, &model_path);
-    // Lifecycle stage telemetry (`stage:*` in
-    // core-ontologies/inference-lifecycle.n3): a fixed-capacity,
-    // zero-heap trace coalesced per stage kind. Presence of the
-    // model-native SSM / MoE stages is probed once per turn from
-    // the tensor index — cold work, not per-token.
+    // Resolve model stage telemetry once per cold request.
     let stage_telemetry = crate::llm_bench::stage_telemetry_enabled();
-    let mut stage_trace = StageTrace::new();
-    let thinking_budget = control_thread
-        .as_ref()
-        .map(DecodeControl::thinking_token_budget)
-        .filter(|&budget| budget > 0);
+    let thinking_budget = admission::thinking_budget(control_thread.as_ref());
     let track_thinking = stage_telemetry || thinking_budget.is_some();
     let mut think_tracker = ThinkingTracker::new();
     let mut think_piece = [0u8; 64];
-    let (ssm_layer_count, moe_layer_count) = tensor_idx
-        .as_ref()
-        .map(|idx| {
-            let mut ssm = 0u32;
-            let mut moe = 0u32;
-            for layer in 0..idx.hyperparams.n_layer.min(512) {
-                let tensors = idx.get_layer_tensors(layer);
-                if tensors.is_hybrid_ssm_layer() {
-                    ssm += 1;
-                }
-                if tensors.moe_router.is_some() {
-                    moe += 1;
-                }
-            }
-            (ssm, moe)
-        })
-        .unwrap_or((0, 0));
+    let (ssm_layer_count, moe_layer_count) = model::layer_kinds(tensor_idx.as_ref());
 
-    // The fail-soft loader is still used by interactive callers;
-    // enforce compatibility at the execution boundary so an
-    // unsupported architecture cannot masquerade as a prefill
-    // throughput failure.
-    if let Some(idx) = tensor_idx.as_ref() {
-        if let Err(reason) = idx.hyperparams.decode_supported() {
-            eprintln!("[decode] Native model rejected: {reason}");
-            let _ = lp.push(LlmMsg::Eos);
-            return (
-                String::from("[unsupported-model]"),
-                0u32,
-                None,
-                false,
-                stage_trace,
-            );
-        }
+    if !model::decode_supported(tensor_idx.as_ref()) {
+        return admission::unsupported(&mut lp, stage_trace);
     }
 
-    let mut ctx = tok.encode_chat_prompt(&prompt_owned);
+    let cold::Inputs {
+        mut ctx,
+        mut sieve,
+        gen_budget,
+        grammar_scope: _grammar_scope,
+    } = match cold::prepare(
+        &execution,
+        &tok,
+        &prompt_owned,
+        use_sieve,
+        sieve_spec.as_ref(),
+        sieve_lex_path.as_deref(),
+        control.as_ref(),
+    ) {
+        Ok(inputs) => inputs,
+        Err(error) => return admission::refused(&mut lp, stage_trace, error),
+    };
+    let governed = matches!(
+        &execution,
+        super::super::native_request::NativeDecodeRequest::Governed(_)
+    );
+    let compute_epoch = crate::compute_universe::begin_request_epoch();
+    let _grounding_scope = match execution.input_budget() {
+        Some(budget) => match crate::quant_graph_grounding::scoped::GroundingScope::capture(
+            budget.retained_bytes / 3,
+        ) {
+            Ok(scope) => Some(scope),
+            Err(_) => {
+                return admission::refused(
+                    &mut lp,
+                    stage_trace,
+                    super::super::governed::PolicyError::Budget,
+                )
+            }
+        },
+        None => None,
+    };
+    let _provider_scope = if let (Some(budget), Some(facts), Some(grammar)) = (
+        execution.input_budget(),
+        _grounding_scope.as_ref(),
+        _grammar_scope.as_ref(),
+    ) {
+        let context = match super::super::native_request::capture_context(
+            &compute_epoch,
+            facts,
+            &prompt_owned,
+            prov_hash,
+            &ctx,
+            budget.retained_bytes - budget.retained_bytes / 3,
+        ) {
+            Ok(context) => context,
+            Err(error) => return admission::refused(&mut lp, stage_trace, error),
+        };
+        match execution.seal_request(
+            engine,
+            context,
+            grammar.lease(),
+            &prompt_owned,
+            prov_hash,
+            &ctx,
+            std::sync::Arc::clone(&tok),
+            std::sync::Arc::clone(&lora_adapter),
+            sieve.clone(),
+            gen_budget,
+            thinking_budget.unwrap_or(0),
+        ) {
+            Ok(scope) => scope,
+            Err(error) => return admission::refused(&mut lp, stage_trace, error),
+        }
+    } else {
+        None
+    };
+    let mut evidence_bytes = [0u8; admission::EVIDENCE_BYTES];
+    let mut evidence = match admission::storage(&mut evidence_bytes, gen_budget as u64 + 16) {
+        Ok(storage) => storage,
+        Err(error) => return admission::refused(&mut lp, stage_trace, error),
+    };
+    let (mut gate, _compute_epoch) = match admission::start(
+        execution,
+        compute_epoch,
+        engine,
+        &prompt_owned,
+        prov_hash,
+        &ctx,
+        &mut evidence,
+    ) {
+        Ok(admitted) => admitted,
+        Err(error) => return admission::refused(&mut lp, stage_trace, error),
+    };
+    gate.bind_control(control_thread.clone());
+    // Initial input admission precedes prefix restoration and numerical prefill.
+    crate::tensor::kv_provenance::rebuild_prompt_provenance(
+        ctx.len() as u32,
+        crate::compute_universe::context_node_count(),
+        0,
+    );
+    if let Err(error) = gate.context_input() {
+        return admission::refused(&mut lp, stage_trace, error);
+    }
     // Keep `eos` for draft/topology APIs that still take a single id; decode
     // termination uses the full stop set (eos + chat end-of-turn specials).
     let eos = tok.eos_token_id;
@@ -143,10 +204,21 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         prov_hash,
         kv_floats,
         n_layers as usize,
-    );
+    )
+    .with_governed_scope(gate.cache_scope());
+    // Recurrent state is a separate arena: a KV-only prefix cannot restore it.
+    // Each new turn starts clean; scalar successful owners retain weights/plans.
+    if governed {
+        engine.ssm_recurrent_state.fill(0.0)
+    }
+    let prefix_cache_allowed = !governed || ssm_layer_count == 0;
 
     let mut prefix_cached = false;
-    if prefill_tokens > 0 && kv_floats > 0 && crate::llm_bench::prefix_cache_enabled() {
+    if prefix_cache_allowed
+        && prefill_tokens > 0
+        && kv_floats > 0
+        && crate::llm_bench::prefix_cache_enabled()
+    {
         if let Ok(mut cache) = get_prefix_cache().lock() {
             if cache
                 .restore_if_match_exact(&cache_key, &ctx[..prefill_tokens], |cached_kv| {
@@ -168,11 +240,6 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
     let t_prefill = std::time::Instant::now();
 
     // Chunked prefill: populate KV for prompt tokens [0, prompt_len-1).
-    crate::tensor::kv_provenance::rebuild_prompt_provenance(
-        prompt_len as u32,
-        crate::tensor::resident_substrate::global_resident_substrate().node_count(),
-        0,
-    );
     let draft_mapper = crate::topology_draft::TopologyDraftMapper::new(&tok);
     stage_trace = match prefill::run(prefill::Prefill {
         engine,
@@ -192,59 +259,29 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         lp: &mut lp,
         stage_telemetry,
         stage_trace,
+        prefix_cache_allowed,
     }) {
         Ok(trace) => trace,
         Err(result) => return result,
     };
     let mut out_ids: Vec<u32> = Vec::new();
     let mut streamed_len = 0usize;
-    let mut sieve = if use_sieve {
-        build_sieve(&tok, sieve_spec.as_ref(), sieve_lex_path.as_deref())
-    } else {
-        None
-    };
     let mut semantic_quin: Option<NQuin> = None;
     let mut sieve_failed = false;
-    let gen_budget = if sieve.is_some() {
-        3usize
-    } else {
-        // Benchmark override (A0): a fixed decode count for stable tok/s; 0 = default.
-        let ov = crate::llm_bench::decode_budget_override();
-        if ov > 0 {
-            ov as usize
-        } else {
-            DECODE_TOKEN_BUDGET as usize
-        }
+
+    if let Err(error) = admission::activate_compute(&_compute_epoch, &prompt_owned) {
+        return admission::refused(&mut lp, stage_trace, error);
     }
-    .min(
-        control
-            .as_ref()
-            .map(DecodeControl::token_budget)
-            .unwrap_or(usize::MAX),
-    );
-
-    #[cfg(not(target_arch = "wasm32"))]
-    crate::compute_universe::start_tensor_search_producer();
-    crate::compute_universe::publish_query_tensor(crate::tensor::Tensor10D::default(), 0);
-    // Qualia-unique hybrid: graph route mask + 10D query + deontic obligation.
-    // Must run *after* the default query publish so it is not wiped.
-    crate::qualia_hybrid::prepare_hybrid_decode(&prompt_owned);
-
     let t_decode = std::time::Instant::now();
-    // A1a: GPU top-1 decode path toggle (default-on; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
     let gpu_topk_enabled = crate::llm_bench::gpu_topk_enabled();
-    // W2: exact CPU sampler. `None` ⇒ greedy argmax (pre-W2 byte-identical path). When
-    // active, decode uses the legacy forward (leaves the normed hidden in `emb_buf`),
-    // reads back the FULL logit vector, and runs the penalty/temp/top-k/top-p chain.
+    // Exact sampler retains the existing penalty/temperature/top-k/top-p chain.
     #[cfg(not(target_arch = "wasm32"))]
     let mut sampler = crate::llm_bench::sampler_config().map(crate::sampler::SamplerState::new);
     #[cfg(target_arch = "wasm32")]
     let mut sampler: Option<crate::sampler::SamplerState> = None;
     let mut sampler_logits: Vec<f32> = Vec::new();
-    // Decode-profiler (gated): one-shot empty submit→wait baseline on the SAME device, so
-    // the bench can separate per-token fence latency from real kernel compute time.
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    if std::env::var("QUALIA_LLM_PROFILE_DECODE").is_ok() {
+    if crate::gguf_bridge::execution_env::var("QUALIA_LLM_PROFILE_DECODE").is_ok() {
         let n = 64u32;
         crate::llm_bench::record_empty_rt(engine.bench_empty_submit_roundtrip(n), n as u64);
     }
@@ -271,14 +308,31 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         stream_tx_thread: &stream_tx_thread,
         streamed_len,
         gen_budget,
+        gate: &mut gate,
+        lp: &lp,
     });
     streamed_len = force_streamed_len;
     if !graph_force_emitted {
         for step in 0..gen_budget {
+            if lp.is_abandoned() {
+                gate.invalidate();
+                break;
+            }
+            let Some(_context_step) = _compute_epoch.pause() else {
+                return admission::refused(
+                    &mut lp,
+                    stage_trace,
+                    super::super::governed::PolicyError::Revoked,
+                );
+            };
+            if let Err(error) = gate.context_input() {
+                return admission::refused(&mut lp, stage_trace, error);
+            }
             if control_thread
                 .as_ref()
                 .is_some_and(DecodeControl::is_cancelled)
             {
+                gate.invalidate();
                 break;
             }
             crate::gpu_context::record_llm_decode_step();
@@ -318,6 +372,7 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
                 ssm_layer_count,
                 moe_layer_count,
                 stage_trace: &mut stage_trace,
+                gate: &mut gate,
             });
             streamed_len = spec_streamed_len;
             match spec_step {
@@ -325,6 +380,15 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
                 speculative::SpecStep::Stop => break,
                 speculative::SpecStep::NotHandled => {}
             }
+            let stream_failed = std::cell::Cell::new(false);
+            let mut stream_draft = |delta| {
+                if stream_tx_thread
+                    .as_ref()
+                    .is_some_and(|tx| tx.send(delta).is_err())
+                {
+                    stream_failed.set(true);
+                }
+            };
             let draft_step = try_accept_topology_draft(
                 engine,
                 tensor_idx.as_ref(),
@@ -340,10 +404,42 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
                 eos,
                 &tok,
                 &mut streamed_len,
-                stream_tx_thread.as_ref(),
-                gen_budget,
                 None,
+                gen_budget,
+                Some(&mut stream_draft),
+                Some(&mut |proposal| {
+                    if stream_failed.get() || lp.is_abandoned() {
+                        gate.invalidate();
+                        return None;
+                    }
+                    match proposal {
+                        Some((token, position)) => {
+                            let mut accepted = None;
+                            if gate.token(
+                                token,
+                                position,
+                                super::super::governed::evidence::CandidateSource::TopologyToken,
+                                None,
+                                &tok,
+                                &mut accepted,
+                            )
+                            .is_ok() {
+                                accepted.map(super::super::native_request::NativeAcceptedToken::token_id)
+                            } else { None }
+                        }
+                        None => {
+                            gate.tentative_branch();
+                            Some(0)
+                        }
+                    }
+                }),
             );
+            if stream_failed.get() {
+                gate.invalidate();
+            }
+            if gate.is_terminal() {
+                break;
+            }
             // A draft batch can accept several tokens in one outer decode step. Enforce
             // the same output cap used by the scalar path before any continuation.
             if out_ids.len() >= gen_budget {
@@ -448,9 +544,15 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
                     break;
                 }
             }
+            if lp.is_abandoned() {
+                gate.invalidate();
+                break;
+            }
             let (stop, next_streamed_len, next_sieve_failed, next_semantic_quin) =
                 publication::run(publication::Publication {
                     top_i,
+                    top_v,
+                    gate: &mut gate,
                     vlen,
                     tok: &tok,
                     sieve: &mut sieve,
@@ -480,7 +582,7 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         }
     } // end else: normal decode (not QUALIA_GRAPH_FORCE)
 
-    render::run(render::Finalization {
+    let result = render::run(render::Finalization {
         t_decode,
         out_ids: &out_ids,
         stage_telemetry,
@@ -490,5 +592,16 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         sieve_failed,
         tok: &tok,
         prompt_owned: &prompt_owned,
-    })
+        gate: &mut gate,
+    });
+    if !sieve_failed
+        && !gate.is_terminal()
+        && !control_thread
+            .as_ref()
+            .is_some_and(DecodeControl::is_cancelled)
+        && (t_decode.elapsed().as_millis() as u64) < effective_inference_timeout_ms()
+    {
+        reusable.store(gate.reusable(), std::sync::atomic::Ordering::Release);
+    }
+    result
 }

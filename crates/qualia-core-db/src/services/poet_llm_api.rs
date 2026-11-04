@@ -4,7 +4,8 @@ use std::path::Path;
 
 use axum::{
     body::Bytes,
-    http::StatusCode,
+    extract::State,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -374,12 +375,20 @@ pub(crate) fn decode_request(body: &Bytes) -> Result<PoetLlmRequest, Response> {
 }
 
 /// Generates `handler`.
-pub async fn generate_handler(body: Bytes) -> Response {
+pub async fn generate_handler(
+    State(state): State<std::sync::Arc<super::webizen_server::WebizenState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let session = match super::poet_llm_authority::authenticate(&state, &headers) {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
     let request = match decode_request(&body) {
         Ok(request) => request,
         Err(response) => return response,
     };
-    match tokio::task::spawn_blocking(move || run_local_turn(request)).await {
+    match tokio::task::spawn_blocking(move || run_local_turn(request, session)).await {
         Ok(Ok(value)) => Json(value).into_response(),
         Ok(Err(message)) => failure(
             StatusCode::UNPROCESSABLE_ENTITY,
@@ -394,9 +403,13 @@ pub async fn generate_handler(body: Bytes) -> Response {
     }
 }
 
-fn run_local_turn(request: PoetLlmRequest) -> Result<serde_json::Value, String> {
+fn run_local_turn(
+    request: PoetLlmRequest,
+    session: std::sync::Arc<crate::llm_agent::native_request::NativeProductSession>,
+) -> Result<serde_json::Value, String> {
     let prepared = prepare_prompt(&request)?;
     let agent = LocalLlmAgent::new(&request.agent_did, &request.model_path);
+    super::poet_llm_authority::bind(&agent, &session)?;
     let context_hash = crate::q_hash(&request.graph_context);
     let intent = AgentIntent {
         intent_predicate: crate::q_hash("llm:ReadGraph"),

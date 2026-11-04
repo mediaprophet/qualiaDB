@@ -40,6 +40,17 @@ pub enum InferencePolicyAction {
         #[arg(long)]
         expected_generation: u64,
     },
+    /// Install a reviewed native evidence policy; observations are explicit JSON.
+    InstallNative {
+        #[arg(long)]
+        rules: PathBuf,
+        #[arg(long)]
+        observations: PathBuf,
+        #[arg(long)]
+        expires_at: u64,
+        #[arg(long)]
+        expected_generation: u64,
+    },
     Revoke {
         #[arg(long)]
         expected_generation: u64,

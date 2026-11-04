@@ -1,148 +1,9 @@
-//! Exact Qwen4Exp PLE row selection.
-//!
-//! The PLE table is a trained, hash-addressed n-gram embedding.  This module
-//! computes its selected rows using only caller-provided token history and
-//! fixed arrays; it never materialises the table or substitutes a generic
-//! string hash.
-
+#[cfg(test)]
 use crate::gguf_sharder::Qwen4ExpPleConfig;
-
-pub const MAX_PLE_NGRAM: usize = 8;
-pub const MAX_PLE_HEADS: usize = 32;
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct PleTokenHistory {
-    previous: [u32; MAX_PLE_NGRAM - 1],
-    count: usize,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PleNgramError {
-    IncompleteConfig,
-    UnsupportedNgramSize,
-    OutputTooSmall,
-    RowOutOfRange,
-}
-
-impl core::fmt::Display for PleNgramError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::IncompleteConfig => write!(f, "Qwen4Exp PLE metadata is incomplete"),
-            Self::UnsupportedNgramSize => write!(f, "Qwen4Exp PLE n-gram size is unsupported"),
-            Self::OutputTooSmall => write!(f, "PLE row-ID output buffer is too small"),
-            Self::RowOutOfRange => write!(f, "PLE row ID exceeds the extracted table"),
-        }
-    }
-}
-
-impl std::error::Error for PleNgramError {}
-
-impl PleTokenHistory {
-    /// Compute row IDs for `token` and then retain it for the following step.
-    ///
-    /// Missing history, and history preceding EOS, is represented by the
-    /// checkpoint's EOS token. This is the reference `shift_right` behaviour:
-    /// a n-gram never crosses an EOS boundary.
-    pub fn select_and_push(
-        &mut self,
-        config: &Qwen4ExpPleConfig,
-        token: u32,
-        table_rows: u64,
-        out: &mut [u64],
-    ) -> Result<usize, PleNgramError> {
-        let count = select_rows(config, token, self, table_rows, out)?;
-        if token == config.eos_token_id {
-            self.count = 0;
-            return Ok(count);
-        }
-        let retain = self.previous.len();
-        if self.count < retain {
-            for index in (1..=self.count).rev() {
-                self.previous[index] = self.previous[index - 1];
-            }
-            self.count += 1;
-        } else {
-            for index in (1..retain).rev() {
-                self.previous[index] = self.previous[index - 1];
-            }
-        }
-        self.previous[0] = token;
-        Ok(count)
-    }
-}
-
-/// Generate the model's global PLE row IDs for one token.
-///
-/// For a 3-gram model this emits eight bigram and eight trigram row IDs.  The
-/// signed Euclidean remainder matches tensor-runtime modulo for a negative
-/// i64 XOR result.
-pub fn select_rows(
-    config: &Qwen4ExpPleConfig,
-    token: u32,
-    history: &PleTokenHistory,
-    table_rows: u64,
-    out: &mut [u64],
-) -> Result<usize, PleNgramError> {
-    if !config.is_complete() {
-        return Err(PleNgramError::IncompleteConfig);
-    }
-    let ngram_size = config.ngram_size as usize;
-    if !(2..=MAX_PLE_NGRAM).contains(&ngram_size) {
-        return Err(PleNgramError::UnsupportedNgramSize);
-    }
-    let required = (ngram_size - 1)
-        .checked_mul(config.heads_per_ngram as usize)
-        .ok_or(PleNgramError::OutputTooSmall)?;
-    if required > MAX_PLE_HEADS || out.len() < required {
-        return Err(PleNgramError::OutputTooSmall);
-    }
-
-    let mut shifted = [config.eos_token_id; MAX_PLE_NGRAM];
-    shifted[0] = token;
-    for shift in 1..ngram_size {
-        if shift <= history.count {
-            shifted[shift] = history.previous[shift - 1];
-        }
-    }
-
-    let heads_per_ngram = config.heads_per_ngram as usize;
-    let mut written = 0usize;
-    for ngram in 2..=ngram_size {
-        let mut mixed = (shifted[0] as i64).wrapping_mul(config.layer_multipliers[0]);
-        for position in 1..ngram {
-            mixed ^= (shifted[position] as i64).wrapping_mul(config.layer_multipliers[position]);
-        }
-        let first_head = (ngram - 2) * heads_per_ngram;
-        for head in first_head..first_head + heads_per_ngram {
-            let size = config.head_vocab_sizes[head];
-            let offset = config.head_offsets[head];
-            let row = mixed
-                .rem_euclid(size)
-                .checked_add(offset)
-                .ok_or(PleNgramError::RowOutOfRange)?;
-            if row < 0 || row as u64 >= table_rows {
-                return Err(PleNgramError::RowOutOfRange);
-            }
-            out[written] = row as u64;
-            written += 1;
-        }
-    }
-    Ok(written)
-}
-
-/// Sort and deduplicate a selected row list in caller storage.
-pub fn sort_dedup_rows(rows: &mut [u64]) -> usize {
-    rows.sort_unstable();
-    let mut kept = 0usize;
-    for read in 0..rows.len() {
-        if kept == 0 || rows[read] != rows[kept - 1] {
-            rows[kept] = rows[read];
-            kept += 1;
-        }
-    }
-    kept
-}
-
+#[cfg(test)]
+use qualia_inference_kernel::qwen::ple::PleNgramConfigSource;
+// Compatibility with the canonical inference PLE selector.
+pub use etalon_inference::qwen::ple_ngram::*;
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,5 +64,67 @@ mod tests {
         let mut rows = [9, 2, 9, 7, 2];
         assert_eq!(sort_dedup_rows(&mut rows), 3);
         assert_eq!(&rows[..3], &[2, 7, 9]);
+    }
+    #[test]
+    fn host_projection_borrows_exact_arrays_and_preserves_completeness() {
+        let mut cfg = config();
+        cfg.layer_count = 0;
+        cfg.layers = [u32::MAX; 8];
+        let view = cfg.ple_ngram_config();
+        assert!(core::ptr::eq(
+            view.layer_multipliers,
+            &cfg.layer_multipliers
+        ));
+        assert!(core::ptr::eq(view.head_offsets, &cfg.head_offsets));
+        assert!(core::ptr::eq(view.head_vocab_sizes, &cfg.head_vocab_sizes));
+        assert_eq!(view.ngram_size, cfg.ngram_size);
+        assert_eq!(view.heads_per_ngram, cfg.heads_per_ngram);
+        assert_eq!(view.eos_token_id, cfg.eos_token_id);
+        assert_eq!(view.embedding_row_width, cfg.embedding_row_width);
+        assert_eq!(view.multiplier_count, cfg.multiplier_count);
+        assert_eq!(view.head_count, cfg.head_count);
+        assert_eq!(view.is_complete(), cfg.is_complete());
+        for ngram in [0, 1, 2, 8, 9, u32::MAX] {
+            cfg.ngram_size = ngram;
+            assert_eq!(cfg.ple_ngram_config().is_complete(), cfg.is_complete());
+        }
+        cfg = config();
+        cfg.embedding_row_width = 0;
+        assert!(!cfg.ple_ngram_config().is_complete());
+    }
+
+    #[test]
+    fn concrete_legacy_calls_share_canonical_history_and_error_types() {
+        use qualia_inference_kernel::qwen::ple as canonical;
+        type Select = fn(
+            &Qwen4ExpPleConfig,
+            u32,
+            &PleTokenHistory,
+            u64,
+            &mut [u64],
+        ) -> Result<usize, PleNgramError>;
+        type Advance = fn(
+            &mut PleTokenHistory,
+            &Qwen4ExpPleConfig,
+            u32,
+            u64,
+            &mut [u64],
+        ) -> Result<usize, PleNgramError>;
+        let select: Select = select_rows;
+        let advance: Advance = PleTokenHistory::select_and_push;
+        let cfg = config();
+        let mut history: canonical::PleTokenHistory = PleTokenHistory::default();
+        let mut rows = [u64::MAX; 6];
+        let mut expected = rows;
+        assert_eq!(
+            select(&cfg, 7, &history, 60, &mut rows),
+            canonical::select_rows(&cfg, 7, &history, 60, &mut expected)
+        );
+        assert_eq!(rows, expected);
+        assert_eq!(advance(&mut history, &cfg, 7, 60, &mut rows), Ok(4));
+        let error: canonical::PleNgramError = select(&cfg, 8, &history, 60, &mut []).unwrap_err();
+        assert_eq!(error, PleNgramError::OutputTooSmall);
+        assert_eq!(MAX_PLE_NGRAM, canonical::MAX_PLE_NGRAM);
+        assert_eq!(MAX_PLE_HEADS, canonical::MAX_PLE_HEADS);
     }
 }

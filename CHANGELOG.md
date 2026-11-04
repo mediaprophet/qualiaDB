@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Native inference checks cancellation at token/artifact acceptance and finalization, discards terminal worker state, and stops on closed output channels. Accepted token IDs and artifact bytes transfer into caller-owned output before retained evidence completes; normal execution continues to require authenticated Webizen acceptance.
+- Browser CPU workers support explicit developer execution with native P64 models, lifecycle invalidation and both shared-memory and transferable transports. Shared-memory messages are copied into bounded ordinary buffers before decoding for Chromium compatibility.
+- Browser GPU projection waits for mapped readback after submission instead of treating WebGPU's absent native submission index as failure. The top-k shader uses an exactly representable f32 minimum.
+
 - Browser diagnostics distinguish direct page/worker adapter refusal from the Rust request, retain unsupported GPU results, and include bounded renderer and adapter evidence in exported reports.
 - Browser device diagnostics request WebGPU compatibility adapters and only the compute limits they need, supporting browsers that cannot provide a core adapter. Compact email drafts include the GPU rejection reason and API visibility.
 - Forge manifests no longer label absent, native-only or mismatched evidence as Naga validation; numerical certification rejects invalid tolerances and nonfinite values.
@@ -15,6 +19,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Isolated browser device diagnostics from the portal build, restored explicit unsupported diagnostics for excluded scientific functions, and made CPU harness selection exclude GPU tests exactly.
 
 ### Added
+
+- Adopt Etalon's canonical inference, model, generic MoE, compute/render resources, Forge, diagnostics and optimization-lab libraries at immutable revision `cf5c195d68ba805065e42c6ac74420245a7d6db6`. P64 is the native model format, with GGUF import/compatibility adapters; Qwen-specific architecture handling remains distinct from generic MoE. QualiaDB retains authenticated Webizen policy and token/artifact acceptance, while explicit developer and lab modes can run independently.
 
 - Split the native tensor engine state into a focused owner and route model-byte access through an internal borrowed/retained interface. Preserve public mapping fields, ownership transfer and existing native/browser numerical paths while preparing for retained-model admission.
 

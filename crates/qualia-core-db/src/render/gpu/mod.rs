@@ -21,8 +21,8 @@ pub use texture_mips::AlphaCoverageDiagnostics;
 pub use texture_mips::TextureMipSemantic;
 pub use texture_residency::{TextureColorSpace, TextureUploadError};
 mod animated_upload;
-mod source_frame;
 pub mod holographic;
+mod source_frame;
 pub use holographic::{HolographicNodeGpu, HolographicPipelineGpu, HolographicPrimitive};
 pub mod ibl_cubemap;
 pub use ibl_cubemap::{
@@ -43,17 +43,20 @@ pub use mesh_slab::{
     ProceduralSynthesisGpu, ResidentAssetEntry, SkinAttrVertex, SlabRange, SlabRangeAllocator,
     SubmeshSlice,
 };
-pub use shadows::{
-    camera_csm_4_sun_view_projections, compute_csm_4_splits_zero_heap, csm_cascade_blend_factor,
-    Csm4ShadowUniform, ShadowAtlasAllocator, SpotPointShadowAtlasSlot, CSM_4_CASCADE_COUNT,
-};
 pub use portal_gpu::lighting_passes::{
     ClusterGridParamsGpu, ClusterLightPipelineGpu, DeferredSpectralResolvePipelineGpu,
     DielectricVolumeIopGpu, FoliageLodPipelineGpu,
 };
+pub use shadows::{
+    camera_csm_4_sun_view_projections, compute_csm_4_splits_zero_heap, csm_cascade_blend_factor,
+    Csm4ShadowUniform, ShadowAtlasAllocator, SpotPointShadowAtlasSlot, CSM_4_CASCADE_COUNT,
+};
+pub mod emf_cue_bridge;
+pub mod frame_lock;
 mod mesh_normals;
 mod mesh_upload;
 mod output_pass;
+pub mod residency_budget;
 mod scene_depth;
 mod shadows;
 mod sky;
@@ -61,9 +64,6 @@ mod temporal_producers_gpu;
 mod temporal_resolve_gpu;
 mod texture_mips;
 mod water;
-pub mod frame_lock;
-pub mod residency_budget;
-pub mod emf_cue_bridge;
 pub use frame_lock::*;
 
 use crate::gpu_context::{
@@ -317,90 +317,12 @@ pub(super) fn portal_fixed_buffer_bytes() -> Option<u64> {
     .try_fold(0u64, |total, size| total.checked_add(size as u64))
 }
 const HDR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
-const BLOOM_THRESHOLD: f32 = 1.0;
-const BLOOM_INTENSITY: f32 = 1.15;
-const BLOOM_STRENGTH: f32 = 0.85;
-const BLOOM_EXPOSURE: f32 = 1.05;
-const KAWASE_OFFSETS: [f32; 4] = [1.0, 2.0, 4.0, 8.0];
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct BloomParamsGpu {
-    threshold: f32,
-    intensity: f32,
-    offset: f32,
-    _pad: f32,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct CompositeParamsGpu {
-    exposure: f32,
-    bloom_strength: f32,
-    surface_is_srgb: f32,
-    _pad1: f32,
-    white_balance_gains: [f32; 3],
-    _pad2: f32,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct BloomUniformBlock {
-    bloom: BloomParamsGpu,
-    composite: CompositeParamsGpu,
-}
-
-/// HDR scene target + half-res Kawase ping-pong (allocated only in `OperationalMode::Full`).
-struct BloomChain {
-    hdr_texture: wgpu::Texture,
-    hdr_view: wgpu::TextureView,
-    blur_a: wgpu::Texture,
-    blur_a_view: wgpu::TextureView,
-    blur_b: wgpu::Texture,
-    blur_b_view: wgpu::TextureView,
-    dummy_view: wgpu::TextureView,
-    sampler: wgpu::Sampler,
-    uniform_buf: wgpu::Buffer,
-    bind_layout: wgpu::BindGroupLayout,
-    extract_pipeline: wgpu::RenderPipeline,
-    kawase_pipeline: wgpu::RenderPipeline,
-    composite_pipeline: wgpu::RenderPipeline,
-    half_width: u32,
-    half_height: u32,
-    exposure_scale: f32,
-    surface_is_srgb: bool,
-    white_balance_gains: [f32; 3],
-    _frame_target_reservation: crate::gpu_context::VramReservation<'static>,
-}
-
-impl BloomChain {
-    /// HDR scene target extent in pixels.
-    pub(super) fn hdr_extent(&self) -> (u32, u32) {
-        (self.hdr_texture.width(), self.hdr_texture.height())
-    }
-
-    /// Half-resolution Kawase ping-pong extent.
-    pub(super) fn blur_extent(&self) -> (u32, u32) {
-        (self.half_width, self.half_height)
-    }
-
-    /// Keep texture handles alive for resize validation / VRAM accounting.
-    pub(super) fn texture_handles(&self) -> (&wgpu::Texture, &wgpu::Texture, &wgpu::Texture) {
-        (&self.hdr_texture, &self.blur_a, &self.blur_b)
-    }
-}
-
+type BloomChain = etalon_render::bloom::BloomChain<crate::gpu_context::VramReservation<'static>>;
 /// WebGPU phenomenal viewport — tensor projector + ambient particles.
 /// GPU buffers for an imported triangle mesh (Phase 1.2). Positions are model-space `f32x3`
 /// (already centred + scaled to the orbit frame by the caller); `index_count` is `triangles * 3`.
 struct MeshGpu {
-    vertex_buf: wgpu::Buffer,
-    color_buf: wgpu::Buffer,
-    normal_buf: wgpu::Buffer,
-    tangent_buf: wgpu::Buffer,
-    uv_buf: wgpu::Buffer,
-    index_buf: wgpu::Buffer,
-    vertex_count: u32,
+    buffers: etalon_render::mesh::MeshBuffers<crate::gpu_context::VramReservation<'static>>,
     material_gpu: materials::MaterialGpu,
     shadow_draws: Vec<materials::MaterialDraw>,
     receives_shadows: bool,
@@ -409,6 +331,13 @@ struct MeshGpu {
     cpu_positions: Vec<[f32; 3]>,
     cpu_indices: Vec<u32>,
     normal_workspace: mesh_normals::MeshNormalWorkspace,
+}
+
+impl std::ops::Deref for MeshGpu {
+    type Target = etalon_render::mesh::MeshBuffers<crate::gpu_context::VramReservation<'static>>;
+    fn deref(&self) -> &Self::Target {
+        &self.buffers
+    }
 }
 
 fn default_gpu_tangent(normal: [f32; 3]) -> [f32; 4] {
@@ -455,15 +384,10 @@ pub struct PortalGpu {
     _fixed_buffer_reservation: crate::gpu_context::VramReservation<'static>,
     picking_pipeline: wgpu::RenderPipeline,
     mesh_picking_pipeline: wgpu::RenderPipeline,
-    pick_staging_buf: wgpu::Buffer,
-    _pick_staging_reservation: crate::gpu_context::VramReservation<'static>,
-    pending_pick: Option<(u32, u32)>,
-    pick_copy_submitted: bool,
-    pick_map_rx: Option<std::sync::mpsc::Receiver<bool>>,
-    pick_result: Option<u32>,
+    pick_readback: etalon_render::picking_readback::PickingReadback<
+        crate::gpu_context::VramReservation<'static>,
+    >,
     pick_semantic_result: Option<u64>,
-    pick_semantic_count: usize,
-    pick_instance_semantics: Vec<u64>,
     ambient_pipeline: wgpu::RenderPipeline,
     projector_pipeline: wgpu::RenderPipeline,
     sky_pipeline: wgpu::RenderPipeline,
@@ -514,7 +438,6 @@ pub struct PortalGpu {
     mesh: Option<MeshGpu>,
     mesh_generation: u64,
     source_motion: crate::render::source_frame::SourceFrameState,
-    mesh_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     water: water::WaterGpu,
     model_buf: wgpu::Buffer,
     mesh_model_bind: wgpu::BindGroup,
@@ -603,6 +526,8 @@ impl PortalGpu {
 
     /// Resizes to `width`×`height`.
     pub fn resize(&mut self, width: u32, height: u32) -> Result<(u32, u32), String> {
+        self.pick_readback.invalidate(false);
+        self.pick_semantic_result = None;
         if width == 0 || height == 0 {
             return Ok((self.width, self.height));
         }

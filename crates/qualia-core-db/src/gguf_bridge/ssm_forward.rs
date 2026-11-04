@@ -1,138 +1,146 @@
-//! Per-step hybrid SSM forward pass (Granite Hybrid / Qwen GatedDeltaNet).
-//!
-//! This module wires the recurrent-state primitives in
-//! `crates/qualia-core-db/src/inference/qwen/gated_deltanet.rs` into the
-//! `QTensorEngine` decode loop.  Each hybrid layer either executes a
-//! GatedDeltaNet recurrence (Qwen) or a Mamba-style causal-conv +
-//! recurrent projection (Granite) instead of scaled-dot-product attention.
-//!
-//! Memory contract (zero-heap hot path):
-//! The SSM recurrent state is a single heap allocation made once at model-
-//! load time (`QTensorEngine::init_ssm_state`).  During the hot decode loop
-//! the state is accessed as a mutable `&mut [f32]` slice -- no Vec::push, no
-//! per-token allocation.  This keeps the hot path in Tier 1 (zero-heap) while
-//! the one-shot construction is Tier 2 (cold bounded) per the AGENTS.md
-//! two-tier contract.
-
-use super::{
-    cpu_ops::{add_residual_inplace, dequant_norm_row_into, rms_norm_inplace},
-    RMS_NORM_EPS,
+//! Hybrid numerical execution adapter; provider dispatch stays in QTensorEngine.
+use crate::gguf_sharder::{GgufTensorIndex, LayerTensors};
+use etalon_inference::ordinary::ssm_layout::{
+    ssm_layout_for, SsmLayerStateLayout, CONV_HISTORY_DEPTH,
 };
-use crate::{
-    gguf_sharder::{GgufTensorIndex, LayerTensors},
-    inference::qwen::gated_deltanet::{step_causal_conv1d, step_gated_deltanet},
-};
-
-/// Maximum supported SSM state width (d_state).
-pub(crate) const MAX_SSM_STATE: usize = 256;
-/// Maximum supported SSM head dimension (d_head).
-pub(crate) const MAX_SSM_HEAD: usize = 256;
-/// Maximum supported SSM inner (expanded) dimension.
-pub(crate) const MAX_SSM_INNER: usize = 8192;
-/// Causal convolution history depth (CAUSAL_CONV_KERNEL - 1 = 3).
-pub(crate) const CONV_HISTORY_DEPTH: usize = 3;
-
-/// Per-layer recurrent state layout stored contiguously in ssm_recurrent_state:
-/// [conv_history: CONV_HISTORY_DEPTH * inner_dim f32]
-/// [delta_state : d_state * d_head * n_heads f32   ]
-#[derive(Clone, Copy, Debug)]
-pub(crate) struct SsmLayerStateLayout {
-    /// Layer stride in f32 elements.
-    pub(crate) stride: usize,
-    /// Offset of conv history region within the stride (always 0).
-    #[allow(dead_code)]
-    pub(crate) conv_offset: usize,
-    /// Length of conv history region.
-    pub(crate) conv_len: usize,
-    /// Offset of GatedDeltaNet state matrix.
-    pub(crate) delta_offset: usize,
-    /// Length of GatedDeltaNet state matrix.
-    pub(crate) delta_len: usize,
-}
-
-impl SsmLayerStateLayout {
-    /// Creates `SsmLayerStateLayout` with the given state.
-    pub(crate) fn new(inner_dim: usize, d_state: usize, d_head: usize, n_heads: usize) -> Self {
-        let conv_len = CONV_HISTORY_DEPTH * inner_dim;
-        let delta_len = d_state * d_head * n_heads;
-        let delta_offset = conv_len;
-        let stride = conv_len + delta_len;
-        Self {
-            stride,
-            conv_offset: 0,
-            conv_len,
-            delta_offset,
-            delta_len,
+use etalon_inference::ordinary::{HybridEngine, LayerProvider};
+impl LayerProvider for super::QTensorEngine {
+    type Index = GgufTensorIndex;
+    fn hyperparams(index: &Self::Index) -> etalon_model::inference::ModelHyperparams {
+        index.hyperparams.into()
+    }
+    fn data_start(index: &Self::Index) -> u64 {
+        index.tensor_data_start
+    }
+    fn tensors(index: &Self::Index, layer: u32) -> LayerTensors {
+        index.get_layer_tensors(layer)
+    }
+    fn model_bytes(&self) -> Option<&[u8]> {
+        super::QTensorEngine::model_bytes(self)
+    }
+    fn state(&self) -> &[f32] {
+        &self.ssm_recurrent_state
+    }
+    fn state_mut(&mut self) -> &mut [f32] {
+        &mut self.ssm_recurrent_state
+    }
+    fn gemm(
+        &self,
+        index: &Self::Index,
+        info: &crate::gguf_sharder::GgufTensorInfo,
+        input: &[f32],
+        out: &mut [f32],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        self.dispatch_gemm_into(index, info, input, out, n_in, n_out)
+    }
+    fn norm(&self, info: &crate::gguf_sharder::GgufTensorInfo, out: &mut [f32]) -> usize {
+        self.dequant_norm_tensor_into(info, out)
+    }
+    fn raw(&self, info: &crate::gguf_sharder::GgufTensorInfo) -> Option<&[u8]> {
+        self.fetch_tensor_raw_bytes(info)
+    }
+    fn event(&self, event: etalon_inference::ordinary::LayerEvent) {
+        use etalon_inference::ordinary::LayerEvent;
+        match event {
+            LayerEvent::StateMissing(layer) => {
+                super::wlog(&format!("[ssm] layer={layer} skipped: state not allocated"))
+            }
+            LayerEvent::SsmUnrecognized(layer) => {
+                super::wlog(&format!("[ssm] layer={layer} unrecognised SSM flavour"))
+            }
+            LayerEvent::GraniteModelMissing(layer) => {
+                super::wlog(&format!("[granite_ssm] layer={layer} mmap None"))
+            }
+            LayerEvent::GraniteInputProjection(layer) => {
+                super::wlog(&format!("[granite_ssm] layer={layer} ssm_in GEMM fail"))
+            }
+            LayerEvent::GraniteConvolutionFetch(layer) => {
+                super::wlog(&format!("[granite_ssm] layer={layer} conv fetch fail"))
+            }
+            LayerEvent::QwenModelMissing(layer) => {
+                super::wlog(&format!("[qwen_ssm] layer={layer} mmap None"))
+            }
+            LayerEvent::QwenQkvProjection(layer) => {
+                super::wlog(&format!("[qwen_ssm] layer={layer} QKV GEMM fail"))
+            }
+        }
+    }
+    fn moe(
+        &mut self,
+        index: &Self::Index,
+        emb_dim: usize,
+        tensors: &LayerTensors,
+        out: &mut [f32],
+        input: &[f32],
+    ) -> bool {
+        self.dispatch_moe_ffn(index, emb_dim, tensors, out, input)
+    }
+    fn record_ffn_input(&self, input: &[f32]) {
+        crate::llm_awq::record_ffn_input(input)
+    }
+    fn attention(
+        &mut self,
+        index: &Self::Index,
+        layer: u32,
+        token: u32,
+        hidden: &[f32],
+        emb_dim: usize,
+        tensors: &LayerTensors,
+        a: &mut [f32],
+        b: &mut [f32],
+    ) -> Option<usize> {
+        self.dispatch_attention_layer(index, layer, token, hidden, emb_dim, tensors, a, b)
+    }
+    fn ffn_dispatch(
+        &mut self,
+        index: &Self::Index,
+        hidden: &mut [f32],
+        emb_dim: usize,
+        tensors: &LayerTensors,
+        a: &mut [f32],
+        b: &mut [f32],
+    ) -> bool {
+        self.dispatch_ffn_block_pre_norm(index, hidden, emb_dim, tensors, a, b)
+    }
+    fn profile_attention(&self, ns: u64) {
+        #[cfg(not(target_arch = "wasm32"))]
+        crate::llm_bench::add_decode_attn_ns(ns);
+    }
+    fn profile_ffn(&self, ns: u64) {
+        #[cfg(not(target_arch = "wasm32"))]
+        crate::llm_bench::add_decode_ffn_ns(ns);
+    }
+    fn layer_diagnostic(
+        &self,
+        layer: u32,
+        attn_ok: bool,
+        tensors: &LayerTensors,
+        attention: &[f32],
+        hidden: &[f32],
+    ) {
+        if layer < 3 && crate::gguf_bridge::execution_env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
+            let max_attn = attention.iter().fold(0f32, |m, &v| m.max(v.abs()));
+            let max_hid = hidden.iter().fold(0f32, |m, &v| m.max(v.abs()));
+            eprintln!("[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}", layer, attn_ok, tensors.attn_norm.is_some(), tensors.ffn_norm.is_some(), max_attn, max_hid);
+        }
+    }
+    fn expert_source(
+        &self,
+    ) -> Option<&dyn etalon_inference::ordinary::expert_source::ExpertSource> {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.ftw_package
+                .as_deref()
+                .map(|s| s as &dyn etalon_inference::ordinary::expert_source::ExpertSource)
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            None
         }
     }
 }
-
-/// Derive the SsmLayerStateLayout from a layer's tensor metadata.
-pub(crate) fn ssm_layout_for(
-    tensors: &LayerTensors,
-    h: &crate::gguf_sharder::GgufHyperparams,
-    n_embd: usize,
-) -> SsmLayerStateLayout {
-    let inner_dim = if h.ssm_inner_size > 0 {
-        h.ssm_inner_size as usize
-    } else if let Some(info) = tensors.ssm_conv1d.as_ref() {
-        if info.n_dims >= 3 && info.dims[2] > 0 {
-            info.dims[2] as usize
-        } else {
-            info.dims[0] as usize
-        }
-    } else if let Some(info) = tensors.ssm_in.as_ref().or(tensors.attn_qkv.as_ref()) {
-        let (n_in, n_out) = crate::gguf_bridge::QTensorEngine::matmul_dims(info);
-        if tensors.attn_qkv.is_some() {
-            n_out.min(MAX_SSM_INNER)
-        } else {
-            n_in
-        }
-    } else {
-        n_embd * 2
-    };
-    let inner_dim = inner_dim.min(MAX_SSM_INNER).max(1);
-
-    let d_state = if h.ssm_state_size > 0 {
-        h.ssm_state_size as usize
-    } else {
-        128
-    }
-    .min(MAX_SSM_STATE)
-    .max(1);
-
-    let d_head = if h.head_dim() > 0 {
-        h.head_dim() as usize
-    } else {
-        d_state
-    }
-    .min(MAX_SSM_HEAD)
-    .max(1);
-
-    let n_heads = if h.ssm_group_count > 0 {
-        h.ssm_group_count as usize
-    } else {
-        let alpha_dim = tensors
-            .ssm_alpha
-            .map(|i| {
-                if i.dims[1] > 0 {
-                    i.dims[1] as usize
-                } else {
-                    i.dims[0] as usize
-                }
-            })
-            .unwrap_or(0);
-        if d_head > 0 && alpha_dim > 0 {
-            alpha_dim / d_head
-        } else {
-            16
-        }
-    }
-    .max(1);
-
-    SsmLayerStateLayout::new(inner_dim, d_state, d_head, n_heads)
-}
-
 impl super::QTensorEngine {
     /// Allocate (once) the flat recurrent-state arena for all hybrid SSM layers.
     ///
@@ -148,7 +156,7 @@ impl super::QTensorEngine {
             let tensors = index.get_layer_tensors(layer);
             if tensors.is_hybrid_ssm_layer() {
                 any_ssm = true;
-                let layout = ssm_layout_for(&tensors, h, n_embd);
+                let layout = ssm_layout_for(&tensors, &(*h).into(), n_embd);
                 total_elems += layout.stride;
             }
         }
@@ -174,7 +182,6 @@ impl super::QTensorEngine {
         total_elems
     }
 
-    /// Execute one decode step for a hybrid SSM layer.
     pub(crate) fn dispatch_hybrid_ssm_layer(
         &mut self,
         index: &GgufTensorIndex,
@@ -185,463 +192,10 @@ impl super::QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
-        if self.ssm_recurrent_state.is_empty() {
-            super::wlog(&format!("[ssm] layer={layer} skipped: state not allocated"));
-            return false;
-        }
-        let state_offset = self.ssm_state_offset_for_layer(index, layer);
-        if tensors.ssm_in.is_some() {
-            self.dispatch_granite_ssm_layer(
-                index,
-                layer,
-                hidden,
-                emb_dim,
-                tensors,
-                scratch_a,
-                scratch_b,
-                state_offset,
-            )
-        } else if tensors.attn_qkv.is_some() && tensors.ssm_alpha.is_some() {
-            self.dispatch_qwen_ssm_layer(
-                index,
-                layer,
-                hidden,
-                emb_dim,
-                tensors,
-                scratch_a,
-                scratch_b,
-                state_offset,
-            )
-        } else {
-            super::wlog(&format!("[ssm] layer={layer} unrecognised SSM flavour"));
-            false
-        }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn dispatch_granite_ssm_layer(
-        &mut self,
-        index: &GgufTensorIndex,
-        layer: u32,
-        hidden: &mut [f32],
-        emb_dim: usize,
-        tensors: &LayerTensors,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-        state_offset: usize,
-    ) -> bool {
-        if self.model_bytes().is_none() {
-            super::wlog(&format!("[granite_ssm] layer={layer} mmap None"));
-            return false;
-        }
-        let h = index.hyperparams;
-        let n_embd = h.n_embd as usize;
-        let tds = index.tensor_data_start;
-
-        let ssm_in_info = match tensors.ssm_in.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-        let ssm_conv1d_info = match tensors.ssm_conv1d.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-        let ssm_out_info = match tensors.ssm_out.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-
-        let (inner_dim, proj_in) = Self::matmul_dims(&ssm_in_info);
-        if proj_in == 0 || inner_dim == 0 || inner_dim > MAX_SSM_INNER {
-            return false;
-        }
-
-        // 1. Pre-norm: inline mmap access; borrow released after block.
-        let ssm_input_is_norm = {
-            if let Some(ni) = tensors.attn_norm.as_ref() {
-                let mmap = self.model_bytes().unwrap();
-                let mut norm_w = [0f32; MAX_SSM_INNER];
-                let n = dequant_norm_row_into(mmap, tds, ni, &mut norm_w);
-                if n >= n_embd {
-                    scratch_b[..n_embd].copy_from_slice(&hidden[..n_embd]);
-                    rms_norm_inplace(&mut scratch_b[..n_embd], &norm_w[..n_embd], RMS_NORM_EPS);
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            }
-        };
-        // scratch_b[..n_embd] holds the normalised input if ssm_input_is_norm.
-
-        // 2. Input projection: scratch_b → scratch_a via ssm_in weight.
-        //    dispatch_gemm_into takes &self — only works if no &mut self field is live.
-        if ssm_input_is_norm {
-            let snap_in: [f32; MAX_SSM_INNER] = {
-                let mut buf = [0f32; MAX_SSM_INNER];
-                buf[..n_embd].copy_from_slice(&scratch_b[..n_embd]);
-                buf
-            };
-            if !self.dispatch_gemm_into(
-                index,
-                &ssm_in_info,
-                &snap_in[..proj_in],
-                scratch_a,
-                proj_in,
-                inner_dim,
-            ) {
-                super::wlog(&format!("[granite_ssm] layer={layer} ssm_in GEMM fail"));
-                return false;
-            }
-        } else {
-            let snap_in: [f32; MAX_SSM_INNER] = {
-                let mut buf = [0f32; MAX_SSM_INNER];
-                buf[..n_embd.min(proj_in)].copy_from_slice(&hidden[..n_embd.min(proj_in)]);
-                buf
-            };
-            if !self.dispatch_gemm_into(
-                index,
-                &ssm_in_info,
-                &snap_in[..proj_in],
-                scratch_a,
-                proj_in,
-                inner_dim,
-            ) {
-                super::wlog(&format!("[granite_ssm] layer={layer} ssm_in GEMM fail"));
-                return false;
-            }
-        }
-        // scratch_a[..inner_dim] = projected input x
-
-        // 3. Causal conv1d on projected input.
-        //    mmap borrow ends after its last use (dequantize_row_into) — NLL allows
-        //    ssm_recurrent_state mutable borrow to start in the same block afterwards.
-        {
-            let layout = SsmLayerStateLayout::new(inner_dim, MAX_SSM_STATE, MAX_SSM_HEAD, 1);
-            let avail = self.ssm_recurrent_state.len().saturating_sub(state_offset);
-            if avail < layout.stride {
-                return false;
-            }
-            let mut conv_w = [0f32; MAX_SSM_INNER * 4];
-            {
-                let mmap = self.model_bytes().unwrap();
-                let conv_raw =
-                    match crate::ggml_quants::fetch_tensor_bytes(mmap, tds, &ssm_conv1d_info) {
-                        Ok(s) => s,
-                        Err(_) => {
-                            super::wlog(&format!("[granite_ssm] layer={layer} conv fetch fail"));
-                            return false;
-                        }
-                    };
-                let _ = crate::ggml_quants::dequantize_row_into(
-                    conv_raw,
-                    ssm_conv1d_info.ggml_type,
-                    inner_dim * 4,
-                    &mut conv_w[..inner_dim * 4],
-                );
-            } // mmap and conv_raw dropped here
-            let mut conv_inp = [0f32; MAX_SSM_INNER];
-            conv_inp[..inner_dim].copy_from_slice(&scratch_a[..inner_dim]);
-            let layer_state =
-                &mut self.ssm_recurrent_state[state_offset..state_offset + layout.stride];
-            let (conv_region, _) = layer_state.split_at_mut(layout.conv_len);
-            let _ = step_causal_conv1d(
-                conv_region,
-                &conv_w[..inner_dim * 4],
-                &conv_inp[..inner_dim],
-                &mut scratch_b[..inner_dim],
-            );
-        }
-
-        // 4. dt_bias softplus gate.
-        if let Some(dt_info) = tensors.ssm_dt_bias.as_ref() {
-            let mmap = self.model_bytes().unwrap();
-            let mut dt_w = [0f32; MAX_SSM_INNER];
-            let dt_n = dequant_norm_row_into(mmap, tds, dt_info, &mut dt_w);
-            for i in 0..dt_n.min(inner_dim) {
-                let v = scratch_b[i] + dt_w[i];
-                scratch_b[i] = if v >= 20.0 {
-                    v
-                } else {
-                    (1.0f32 + v.exp()).ln()
-                };
-            }
-        }
-
-        // 5. SSM norm.
-        if let Some(norm_info) = tensors.ssm_norm.as_ref() {
-            let mmap = self.model_bytes().unwrap();
-            let mut ssm_norm_w = [0f32; MAX_SSM_INNER];
-            let n = dequant_norm_row_into(mmap, tds, norm_info, &mut ssm_norm_w);
-            if n >= inner_dim {
-                rms_norm_inplace(
-                    &mut scratch_b[..inner_dim],
-                    &ssm_norm_w[..inner_dim],
-                    RMS_NORM_EPS,
-                );
-            }
-        }
-
-        // 6. Output projection (snap scratch_b to avoid conflict with dispatch_gemm_into).
-        let (out_in, out_out) = Self::matmul_dims(&ssm_out_info);
-        if out_in > inner_dim || out_out == 0 {
-            return false;
-        }
-        let snap_b: [f32; MAX_SSM_INNER] = {
-            let mut buf = [0f32; MAX_SSM_INNER];
-            buf[..out_in].copy_from_slice(&scratch_b[..out_in]);
-            buf
-        };
-        if !self.dispatch_gemm_into(
-            index,
-            &ssm_out_info,
-            &snap_b[..out_in],
-            scratch_a,
-            out_in,
-            out_out,
-        ) {
-            return false;
-        }
-
-        // 7. Residual add.
-        add_residual_inplace(
-            &mut hidden[..emb_dim],
-            &scratch_a[..out_out],
-            emb_dim.min(out_out),
-        );
-        true
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn dispatch_qwen_ssm_layer(
-        &mut self,
-        index: &GgufTensorIndex,
-        layer: u32,
-        hidden: &mut [f32],
-        emb_dim: usize,
-        tensors: &LayerTensors,
-        scratch_a: &mut [f32],
-        scratch_b: &mut [f32],
-        state_offset: usize,
-    ) -> bool {
-        if self.model_bytes().is_none() {
-            super::wlog(&format!("[qwen_ssm] layer={layer} mmap None"));
-            return false;
-        }
-        let h = index.hyperparams;
-        let n_embd = h.n_embd as usize;
-        let _tds = index.tensor_data_start;
-
-        let qkv_info = match tensors.attn_qkv.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-        let alpha_info = match tensors.ssm_alpha.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-        let beta_info = match tensors.ssm_beta.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-        let conv_info = match tensors.ssm_conv1d.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-        let out_info = match tensors.ssm_out.as_ref() {
-            Some(i) => *i,
-            None => return false,
-        };
-
-        let alpha_dim = alpha_info.dims[0] as usize;
-        let d_head_ssm = if h.head_dim() > 0 {
-            h.head_dim() as usize
-        } else {
-            MAX_SSM_HEAD
-        };
-        let n_heads_ssm = (if d_head_ssm > 0 {
-            alpha_dim / d_head_ssm
-        } else {
-            1
-        })
-        .max(1);
-
-        let (qkv_in, qkv_out) = Self::matmul_dims(&qkv_info);
-        let inner_dim = if let Some(ci) = tensors.ssm_conv1d.as_ref() {
-            if ci.n_dims >= 3 && ci.dims[2] > 0 {
-                ci.dims[2] as usize
-            } else {
-                ci.dims[0] as usize
-            }
-        } else {
-            qkv_out / 3
-        }
-        .min(MAX_SSM_INNER);
-        if inner_dim == 0 || qkv_out > scratch_a.len() {
-            return false;
-        }
-
-        // 1. Pre-norm: snap normalised input into a stack buffer.
-        let qkv_input_snap: [f32; MAX_SSM_INNER] = {
-            let mut buf = [0f32; MAX_SSM_INNER];
-            if let Some(ni) = tensors.attn_norm.as_ref() {
-                let mut norm_w = [0f32; MAX_SSM_INNER];
-                let n = self.dequant_norm_tensor_into(ni, &mut norm_w);
-                if n >= n_embd {
-                    buf[..n_embd].copy_from_slice(&hidden[..n_embd]);
-                    rms_norm_inplace(&mut buf[..n_embd], &norm_w[..n_embd], RMS_NORM_EPS);
-                } else {
-                    buf[..n_embd].copy_from_slice(&hidden[..n_embd]);
-                }
-            } else {
-                buf[..n_embd].copy_from_slice(&hidden[..n_embd]);
-            }
-            buf
-        };
-
-        // 2. Fused QKV projection → scratch_a[0..qkv_out].
-        if !self.dispatch_gemm_into(
-            index,
-            &qkv_info,
-            &qkv_input_snap[..qkv_in.min(n_embd)],
-            scratch_a,
-            qkv_in,
-            qkv_out,
-        ) {
-            super::wlog(&format!("[qwen_ssm] layer={layer} QKV GEMM fail"));
-            return false;
-        }
-
-        // 3. Causal conv on channels (up to inner_dim); decode conv weights + snap input.
-        let mut conv_w = [0f32; 32768];
-        let conv_elems = (inner_dim * 4).min(conv_w.len());
-        {
-            let conv_raw = match self.fetch_tensor_raw_bytes(&conv_info) {
-                Some(s) => s,
-                None => {
-                    return false;
-                }
-            };
-            let _ = crate::ggml_quants::dequantize_row_into(
-                conv_raw,
-                conv_info.ggml_type,
-                conv_elems,
-                &mut conv_w[..conv_elems],
-            );
-        } // mmap borrow released
-        {
-            let layout = SsmLayerStateLayout::new(inner_dim, d_head_ssm, d_head_ssm, n_heads_ssm);
-            let avail = self.ssm_recurrent_state.len().saturating_sub(state_offset);
-            if avail < layout.stride {
-                return false;
-            }
-            let layer_state =
-                &mut self.ssm_recurrent_state[state_offset..state_offset + layout.stride];
-            let (conv_region, _) = layer_state.split_at_mut(layout.conv_len);
-            let _ = step_causal_conv1d(
-                conv_region,
-                &conv_w[..conv_elems],
-                &scratch_a[..inner_dim],
-                &mut scratch_b[..inner_dim],
-            );
-        }
-
-        // 4. Alpha / beta gates.
-        let mut alpha_buf = [1.0f32; MAX_SSM_HEAD];
-        let mut beta_buf = [1.0f32; MAX_SSM_HEAD];
-        {
-            let _ = self.dequant_norm_tensor_into(
-                &alpha_info,
-                &mut alpha_buf[..d_head_ssm.min(MAX_SSM_HEAD)],
-            );
-            let _ = self.dequant_norm_tensor_into(
-                &beta_info,
-                &mut beta_buf[..d_head_ssm.min(MAX_SSM_HEAD)],
-            );
-        }
-
-        // 5. GatedDeltaNet recurrence: scoped state borrow.
-        let mut ssm_out_buf = [0f32; MAX_SSM_INNER];
-        let ssm_len = n_heads_ssm * d_head_ssm;
-        {
-            let layout2 = SsmLayerStateLayout::new(inner_dim, d_head_ssm, d_head_ssm, n_heads_ssm);
-            let layer_state2 =
-                &mut self.ssm_recurrent_state[state_offset..state_offset + layout2.stride];
-            let delta_state =
-                &mut layer_state2[layout2.delta_offset..layout2.delta_offset + layout2.delta_len];
-            let d_state = d_head_ssm;
-            for head in 0..n_heads_ssm {
-                let hs = head * d_head_ssm;
-                let he = hs + d_head_ssm;
-                let vs = 2 * inner_dim + hs;
-                let ve = 2 * inner_dim + he;
-                let ss = head * d_state * d_head_ssm;
-                let se = ss + d_state * d_head_ssm;
-                if ve > scratch_a.len() || se > delta_state.len() {
-                    break;
-                }
-                let _ = step_gated_deltanet(
-                    &mut delta_state[ss..se],
-                    &scratch_a[hs..he],
-                    &scratch_b[hs..he],
-                    &scratch_a[vs..ve],
-                    &alpha_buf[..1],
-                    &beta_buf[..1],
-                    d_state,
-                    d_head_ssm,
-                    &mut ssm_out_buf[hs..he],
-                );
-            }
-        }
-
-        // 6. Sigmoid gate from q.
-        for i in 0..ssm_len {
-            let gate = 1.0f32 / (1.0 + (-scratch_a[i]).exp());
-            ssm_out_buf[i] *= gate;
-        }
-
-        // 7. Output projection.
-        let (out_in, out_out) = Self::matmul_dims(&out_info);
-        if out_in > ssm_out_buf.len() || out_out == 0 {
-            return false;
-        }
-        if !self.dispatch_gemm_into(
-            index,
-            &out_info,
-            &ssm_out_buf[..out_in],
-            scratch_a,
-            out_in,
-            out_out,
-        ) {
-            return false;
-        }
-
-        // 8. Residual add.
-        add_residual_inplace(
-            &mut hidden[..emb_dim],
-            &scratch_a[..out_out],
-            emb_dim.min(out_out),
-        );
-        true
-    }
-
-    /// Sum strides of all preceding hybrid SSM layers to find the arena offset for 	arget_layer.
-    fn ssm_state_offset_for_layer(&self, index: &GgufTensorIndex, target_layer: u32) -> usize {
-        let h = index.hyperparams;
-        let n_embd = h.n_embd as usize;
-        let mut offset = 0usize;
-        for layer in 0..target_layer {
-            let tensors = index.get_layer_tensors(layer);
-            if tensors.is_hybrid_ssm_layer() {
-                let layout = ssm_layout_for(&tensors, &h, n_embd);
-                offset += layout.stride;
-            }
-        }
-        offset
+        HybridEngine { host: self }
+            .dispatch(index, layer, hidden, emb_dim, tensors, scratch_a, scratch_b)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -673,7 +227,7 @@ mod tests {
         h.ssm_group_count = 4;
         h.n_embd = 512;
         let tensors = LayerTensors::default();
-        let layout = ssm_layout_for(&tensors, &h, 512);
+        let layout = ssm_layout_for(&tensors, &h.into(), 512);
         assert_eq!(layout.conv_len, CONV_HISTORY_DEPTH * 1024);
         assert!(layout.delta_len > 0);
     }

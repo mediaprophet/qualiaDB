@@ -7,7 +7,8 @@ pub(super) enum SpecStep {
     Stop,
 }
 
-pub(super) struct Speculative<'a> {
+pub(super) struct Speculative<'a, 'slot, 'bytes> {
+    pub gate: &'a mut super::super::native_request::PublicationGate<'slot, 'bytes>,
     pub engine: &'a mut QTensorEngine,
     pub tensor_idx: &'a Option<GgufTensorIndex>,
     pub sieve: &'a Option<crate::neuro_symbolic_sieve::NeuroSymbolicSieve>,
@@ -26,8 +27,9 @@ pub(super) struct Speculative<'a> {
     pub moe_layer_count: u32,
     pub stage_trace: &'a mut StageTrace,
 }
-pub(super) fn run(input: Speculative<'_>) -> (SpecStep, usize) {
+pub(super) fn run(input: Speculative<'_, '_, '_>) -> (SpecStep, usize) {
     let Speculative {
+        gate,
         engine,
         tensor_idx,
         sieve,
@@ -46,6 +48,10 @@ pub(super) fn run(input: Speculative<'_>) -> (SpecStep, usize) {
         moe_layer_count,
         stage_trace,
     } = input;
+    if lp.is_abandoned() {
+        gate.invalidate();
+        return (SpecStep::Stop, streamed_len);
+    }
     // W6a — prompt-lookup / graph fact speculative decode (default OFF, exact-output).
     // Prefer quant-graph fact draft when mode=quant-graph; else n-gram prompt-lookup.
     // FastVerify: skip mid-decode fact draft (post-turn heal only) for Ollama-like speed.
@@ -70,6 +76,7 @@ pub(super) fn run(input: Speculative<'_>) -> (SpecStep, usize) {
                 let pos = ctx.len().saturating_sub(1) as u32;
                 let mut amax: Vec<u32> = Vec::new();
                 let mut alog: Vec<f32> = Vec::new();
+                gate.tentative_branch();
                 if engine
                     .verify_draft_batch(idx, &inputs, pos, &mut amax, &mut alog)
                     .is_some()
@@ -85,6 +92,10 @@ pub(super) fn run(input: Speculative<'_>) -> (SpecStep, usize) {
                     crate::llm_bench::record_spec_step(m as u64, k as u64);
                     let mut stop = false;
                     for i in 0..=k {
+                        if lp.is_abandoned() {
+                            gate.invalidate();
+                            return (SpecStep::Stop, streamed_len);
+                        }
                         let (tokn, _logv) = if i < k {
                             (draft.tokens[i], alog[i])
                         } else {
@@ -95,7 +106,26 @@ pub(super) fn run(input: Speculative<'_>) -> (SpecStep, usize) {
                             _top_id: tokn,
                             anomaly: 0x01u8,
                         }));
-                        let next = tokn % vlen;
+                        let mut accepted = None;
+                        if gate
+                            .token(
+                                tokn % vlen,
+                                ctx.len().saturating_sub(1) as u64,
+                                super::super::governed::evidence::CandidateSource::SpeculativeToken,
+                                Some(super::super::governed::evidence::NumericalObservation {
+                                    meaning: super::super::governed::evidence::ScoreMeaning::Logit,
+                                    value: _logv,
+                                }),
+                                tok,
+                                &mut accepted,
+                            )
+                            .is_err()
+                        {
+                            return (SpecStep::Stop, streamed_len);
+                        }
+                        let next = accepted
+                            .expect("successful speculative token output transfer")
+                            .token_id();
                         out_ids.push(next);
                         ctx.push(next);
                         if let Some(ref tx) = stream_tx_thread {
@@ -103,7 +133,10 @@ pub(super) fn run(input: Speculative<'_>) -> (SpecStep, usize) {
                             if full.len() > streamed_len {
                                 let delta = full[streamed_len..].to_string();
                                 streamed_len = full.len();
-                                let _ = tx.send(delta);
+                                if tx.send(delta).is_err() {
+                                    gate.invalidate();
+                                    return (SpecStep::Stop, streamed_len);
+                                }
                             }
                         }
                         let fixed = crate::llm_bench::decode_budget_fixed_tokens();

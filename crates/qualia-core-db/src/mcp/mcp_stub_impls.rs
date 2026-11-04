@@ -266,11 +266,13 @@ pub fn llm_infer(args: &[u8]) -> Result<String, McpSystemError> {
             .filter(|c| !c.is_greedy())
     };
     let sampler_installed = sampler_cfg.is_some();
+    let agent = crate::llm_agent::LocalLlmAgent::new("did:qualia:mcp-agent", &model_path);
+    crate::mcp::inference_session::bind(&agent)
+        .map_err(|_| McpSystemError::SanctuaryGateTriggered)?;
     if sampler_installed {
         crate::llm_bench::set_sampler_config(sampler_cfg);
     }
 
-    let agent = crate::llm_agent::LocalLlmAgent::new("did:qualia:mcp-agent", &model_path);
     let (text, provenance, tokens, semantic_quin) =
         agent.infer_local_model_streaming(prompt, graph_context, None::<fn(String)>);
 

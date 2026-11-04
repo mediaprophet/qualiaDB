@@ -78,6 +78,25 @@ pub fn recommend_convert_layout(source_bytes: u64, vram_budget_bytes: u64) -> P6
 }
 
 impl P64TensorIndex {
+    /// Prepare the native inference directory while retaining authoritative P64 bytes.
+    /// Metadata extensions are explicit because the fixed v4 header has no recurrent/PLE fields.
+    pub fn prepare_native<'a>(
+        data: &'a [u8],
+        integrity: IntegrityMode,
+        budget: etalon_model::inference::ModelPreparationBudget,
+        metadata: Option<etalon_model::inference::ModelMetadata>,
+    ) -> Result<
+        etalon_model::inference::PreparedP64<'a, GgufHyperparams>,
+        etalon_model::inference::PrepareModelError,
+    > {
+        let integrity = match integrity {
+            IntegrityMode::Full => etalon_model::p64::IntegrityMode::Full,
+            IntegrityMode::Metadata => etalon_model::p64::IntegrityMode::Metadata,
+            IntegrityMode::Structure => etalon_model::p64::IntegrityMode::Structure,
+        };
+        etalon_model::inference::PreparedP64::parse(data, integrity, budget, metadata)
+    }
+
     /// Parses a tensor index from a `.q42` volume blob; `Err` on malformed header/directory.
     pub fn from_q42(data: &[u8]) -> Result<Self, String> {
         Self::from_p64(data)

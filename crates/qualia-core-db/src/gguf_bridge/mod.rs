@@ -117,6 +117,8 @@ impl QTensor {
 // GPU uniform-buffer param structs (EmbeddingGpuParams / GemmGpuParams / AttentionGpuParams /
 // ElemGpuParams + ELEM_OP_* codes) and the quant-support gates now live in dedicated files.
 mod gpu_params;
+#[cfg(feature = "gpu-runtime")]
+mod submission;
 mod quant_support;
 pub(crate) use gpu_params::*;
 pub(crate) use quant_support::*;
@@ -130,13 +132,8 @@ pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION
 #[cfg(target_arch = "wasm32")]
 #[inline]
 pub(crate) fn mc8_bg_hash(parts: &[u64]) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325;
-    for &p in parts {
-        h ^= p;
-        h = h.wrapping_mul(0x100000001b3);
+        etalon_inference::browser_prefill::encoding::bg_hash(parts)
     }
-    h
-}
 
 /// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
 #[cfg(target_arch = "wasm32")]
@@ -173,41 +170,11 @@ pub(crate) const MC8_MAX_GEMM_UNIFORM_CHUNK_SLOTS: usize =
 
 /// Part 3v: absolute uniform slot cursors within one encoder chunk.
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8ChunkUniformCursors {
-    attn: usize,
-    elem: usize,
-    gemm: usize,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8ChunkUniformCursors;
 
 /// MC8 Part 3t: disjoint weight staging — eliminates `write_buffer` races within one layer submit.
 #[cfg(target_arch = "wasm32")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Mc8WeightRole {
-    AttnK,
-    AttnV,
-    AttnQ,
-    OProj,
-    Gate,
-    Up,
-    Down,
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Mc8WeightRole {
-    /// Stable index into the per-role resident stride table (`mc8_weight_role_stride`).
-    #[inline]
-    pub(crate) fn idx(self) -> usize {
-        match self {
-            Mc8WeightRole::AttnK => 0,
-            Mc8WeightRole::AttnV => 1,
-            Mc8WeightRole::AttnQ => 2,
-            Mc8WeightRole::OProj => 3,
-            Mc8WeightRole::Gate => 4,
-            Mc8WeightRole::Up => 5,
-            Mc8WeightRole::Down => 6,
-        }
-    }
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8WeightRole;
 
 /// One buffer per GEMM role so mid-layer weight uploads never clobber in-flight dispatches.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
@@ -223,195 +190,26 @@ pub(crate) struct Mc8WeightArenaBufs {
 
 /// Part 3u: dynamic offsets for one full prefill layer (staged before encoder dispatches).
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8PrefillLayerUniforms {
-    k_off: u32,
-    v_off: u32,
-    q_off: u32,
-    attn_norm_elem_off: Option<u32>,
-    off_o: Option<u32>,
-    off_attn_res: u32,
-    off_ffn_norm: Option<u32>,
-    off_gate: u32,
-    off_up: u32,
-    off_silu: u32,
-    off_down: u32,
-    off_ffn_res: u32,
-    /// Phase 5.5: dynamic offsets for the Q/K/V projection GEMMs (parallel kernel).
-    off_q_gemm: u32,
-    off_k_gemm: u32,
-    off_v_gemm: u32,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8PrefillLayerUniforms;
 
 /// Strided work-buffer geometry shared by layer dispatches.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) struct Mc8PrefillLayerGeom {
-    row_stride: usize,
-    row_stride_u32: u32,
-    batch_in_bytes: wgpu::BufferAddress,
-    work_span_bytes: wgpu::BufferAddress,
-    emb_bytes: wgpu::BufferAddress,
-    n_embd_bytes: wgpu::BufferAddress,
-    slot_o: wgpu::BufferAddress,
-    slot_gate: wgpu::BufferAddress,
-    slot_up: wgpu::BufferAddress,
-    slot_save: wgpu::BufferAddress,
-    slot_scratch_half: wgpu::BufferAddress,
-    slot_o_f: u32,
-    slot_save_f: u32,
-    slot_gate_f: u32,
-    slot_up_f: u32,
-    slot_scratch_half_f: u32,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8PrefillLayerGeom;
 
 /// Stack arena for batched uniform uploads (one `write_buffer` per layer section).
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8UniformArena {
-    bytes: [u8; MC8_MAX_GEMM_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
-    slots: usize,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8UniformArena;
 
 /// Part 3u: larger elem arena for full-layer super-staging.
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8ElemUniformArena {
-    bytes: [u8; MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS * MC8_UNIFORM_ALIGN],
-    slots: usize,
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8ElemUniformArena;
 
 #[cfg(target_arch = "wasm32")]
-pub(crate) struct Mc8AttnUniformArena {
-    bytes: [u8; MC8_MAX_ATTN_UNIFORM_SLOTS * MC8_UNIFORM_ALIGN],
-    slots: usize,
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-impl Mc8ElemUniformArena {
-    /// Appends `value` to the elementwise uniform arena; returns the assigned slot.
-    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
-        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
-        debug_assert!(self.slots < MC8_MAX_ELEM_UNIFORM_LAYER_SLOTS);
-        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
-        self.slots += 1;
-        self.bytes[byte_off..byte_off + std::mem::size_of::<T>()]
-            .copy_from_slice(bytemuck::bytes_of(value));
-        byte_off as u32
-    }
-
-    /// Uploads the whole arena contents to `buf` via `queue`.
-    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
-        if self.slots == 0 {
-            return;
-        }
-        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-
-    /// Uploads arena contents starting at `base_slot`.
-    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
-        if self.slots == 0 {
-            return;
-        }
-        if base_slot == 0 {
-            self.upload(queue, buf);
-            return;
-        }
-        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
-        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-impl Mc8AttnUniformArena {
-    /// Appends `value` to the attention uniform arena; returns the assigned slot.
-    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
-        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
-        debug_assert!(self.slots < MC8_MAX_ATTN_UNIFORM_SLOTS);
-        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
-        self.slots += 1;
-        self.bytes[byte_off..byte_off + std::mem::size_of::<T>()]
-            .copy_from_slice(bytemuck::bytes_of(value));
-        byte_off as u32
-    }
-
-    /// Uploads the attention arena to `buf`.
-    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
-        if self.slots == 0 {
-            return;
-        }
-        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-
-    /// Uploads the attention arena starting at `base_slot`.
-    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
-        if self.slots == 0 {
-            return;
-        }
-        if base_slot == 0 {
-            self.upload(queue, buf);
-            return;
-        }
-        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
-        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-}
-
-#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-impl Mc8UniformArena {
-    /// Appends `value` to the GEMM uniform arena; returns the assigned slot.
-    pub(crate) fn push<T: bytemuck::Pod>(&mut self, value: &T) -> u32 {
-        debug_assert!(std::mem::size_of::<T>() <= MC8_UNIFORM_ALIGN);
-        debug_assert!(self.slots < MC8_MAX_GEMM_UNIFORM_SLOTS);
-        let byte_off = self.slots * MC8_UNIFORM_ALIGN;
-        self.slots += 1;
-        let dst = &mut self.bytes[byte_off..byte_off + std::mem::size_of::<T>()];
-        dst.copy_from_slice(bytemuck::bytes_of(value));
-        byte_off as u32
-    }
-
-    /// Uploads the GEMM arena to `buf`.
-    pub(crate) fn upload(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer) {
-        if self.slots == 0 {
-            return;
-        }
-        queue.write_buffer(buf, 0, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-
-    /// Uploads the GEMM arena starting at `base_slot`.
-    pub(crate) fn upload_at(&self, queue: &wgpu::Queue, buf: &wgpu::Buffer, base_slot: usize) {
-        if self.slots == 0 {
-            return;
-        }
-        let byte_off = (base_slot * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress;
-        queue.write_buffer(buf, byte_off, &self.bytes[..self.slots * MC8_UNIFORM_ALIGN]);
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Mc8ChunkUniformCursors {
-    /// Resets the per-chunk uniform cursor state.
-    pub(crate) fn reset(&mut self) {
-        self.attn = 0;
-        self.elem = 0;
-        self.gemm = 0;
-    }
-
-    /// Byte offset of the attention uniform region.
-    pub(crate) fn attn_base_byte(&self) -> u32 {
-        (self.attn * MC8_UNIFORM_ALIGN) as u32
-    }
-
-    /// Byte offset of the elementwise uniform region.
-    pub(crate) fn elem_base_byte(&self) -> u32 {
-        (self.elem * MC8_UNIFORM_ALIGN) as u32
-    }
-
-    /// Byte offset of the GEMM uniform region.
-    pub(crate) fn gemm_base_byte(&self) -> u32 {
-        (self.gemm * MC8_UNIFORM_ALIGN) as u32
-    }
-}
+pub(crate) use etalon_inference::browser_prefill::types::Mc8AttnUniformArena;
 
 /// MC8: accumulates compute passes; submit + map_async only at pipeline boundary.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) struct WasmGpuPipeline {
+pub struct WasmGpuPipeline {
     encoder: wgpu::CommandEncoder,
 }
 
@@ -421,11 +219,7 @@ pub(crate) struct WasmGpuPipeline {
 /// Await `map_async` without `poll(Wait)` — yields to the browser event loop (MC6).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub(crate) async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
-    let (tx, rx) = futures_channel::oneshot::channel();
-    slice.map_async(wgpu::MapMode::Read, move |r| {
-        let _ = tx.send(r);
-    });
-    matches!(rx.await, Ok(Ok(())))
+    etalon_wasm::readback::await_map(slice, etalon_wasm::readback::browser_worker()).await
 }
 
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
@@ -648,11 +442,7 @@ const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
 pub const VOCAB_CHUNK_ROWS: usize = MAX_STACK_GEMM_OUT;
 
 /// Streaming argmax result across chunked vocabulary projection.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct StreamingArgmaxResult {
-    pub best_token_id: u32,
-    pub max_logit: f32,
-}
+pub use etalon_inference::projections::StreamingArgmaxResult;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GgufLoadReport {
@@ -683,6 +473,16 @@ pub(crate) use pipeline_cache::*;
 // pub(crate) so they call across modules freely; types/imports arrive via each file's `use super::*`.
 mod async_dispatch;
 mod attention;
+mod attention_adapter;
+mod projection_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod projection_gpu_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_resident_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_resident_planning_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_attention_adapter;
 #[cfg(target_arch = "wasm32")]
 mod browser;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
@@ -1076,34 +876,7 @@ pub fn reset_gpu_wait_count() {
 /// In-place NEOX-style RoPE over `n_heads` consecutive `head_dim` blocks of `vec`.
 /// Rotates split-half pairs `(i, i + head_dim/2)` — required for Llama/SmolLM2 GGUF weights.
 /// (`fused_attention.wgsl` mirrors this NEOX split-half layout since MC8 Part 2.)
-fn rope_inplace(vec: &mut [f32], n_heads: usize, head_dim: usize, pos: u32, base: f32, scale: f32) {
-    let half = head_dim / 2;
-    if half == 0 {
-        return;
-    }
-    let scale = if scale > 0.0 && scale.is_finite() {
-        scale
-    } else {
-        1.0
-    };
-    let scaled_pos = pos as f32 / scale;
-    for head in 0..n_heads {
-        let off = head * head_dim;
-        if off + head_dim > vec.len() {
-            return;
-        }
-        for i in 0..half {
-            // Interleaved ("normal"/llama) rope: pair adjacent dims (2i, 2i+1). GGUF llama-arch
-            // (SmolLM2) is is_neox=false — weights are permuted for interleaved, NOT split-half.
-            let theta = scaled_pos * base.powf(-2.0 * i as f32 / head_dim as f32);
-            let (s, c) = theta.sin_cos();
-            let x0 = vec[off + 2 * i];
-            let x1 = vec[off + 2 * i + 1];
-            vec[off + 2 * i] = x0 * c - x1 * s;
-            vec[off + 2 * i + 1] = x0 * s + x1 * c;
-        }
-    }
-}
+use etalon_inference::ordinary::rope::rope_inplace;
 
 /// STEM-grounding proof: the LLM's `rope_inplace` is the 2-D rotation defined in
 /// `solvers::rope` — RoPE is trigonometry (a rotation per dimension pair), not a proprietary
@@ -1178,14 +951,23 @@ pub(crate) fn stack_gemm_quant(
             .map(|(w, x)| w * x)
             .sum();
     }
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    etalon_agent::provider_scope::record_route(1);
     true
 }
 
 mod state;
 pub use state::QTensorEngine;
+#[cfg(not(target_arch = "wasm32"))]
+mod provider;
+#[cfg(not(target_arch = "wasm32"))]
+pub use provider::{NativeProviderSnapshot, NativeProviderScope};
 mod model_bytes;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use model_bytes::ModelByteHandle;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use model_bytes::NativeModelSources;
+pub(crate) mod execution_env;
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
@@ -1200,7 +982,22 @@ thread_local! {
 /// clear status line first (phones will freeze briefly — that is correct).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
+    let stamp = etalon_wasm::readback::begin_browser_model().map_err(|e| format!("Browser model context: {e:?}"))?;
+    initialize_webgpu_engine_with_stamp(model_data,stamp).await
+}
+
+#[cfg(all(target_arch="wasm32",feature="gpu-runtime"))]
+pub(crate) async fn initialize_webgpu_engine_with_stamp(model_data:std::sync::Arc<[u8]>,stamp:etalon_wasm::worker_steward::CompletionStamp)->Result<(),String> {
     use wasm_yield::{clear_init_status, phase, set_init_status};
+
+    {
+        let worker = etalon_wasm::readback::browser_worker();
+        let worker = worker.lock().unwrap();
+        if worker.completion_stamp() != stamp || !worker.is_ready() {
+            return Err("Browser model initialization superseded or cancelled".into());
+        }
+        WASM_ENGINE_INSTANCE.with(|slot| *slot.borrow_mut() = None);
+    }
 
     // Use `try_new()` (not `new_async()`) so a missing/incompatible WebGPU adapter
     // surfaces as a rejected promise the JS layer can display, rather than an
@@ -1229,6 +1026,9 @@ pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Resul
         engine.adopt_resident_mmap(model_data)?;
     }
     phase("Engine resident — ready").await;
+    let worker=etalon_wasm::readback::browser_worker();
+    let current=worker.lock().unwrap();
+    if current.completion_stamp()!=stamp || !current.is_ready() {return Err("Browser model initialization superseded or cancelled".into());}
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     clear_init_status();
     Ok(())
@@ -1258,3 +1058,14 @@ impl QTensorEngine {
         gpu_ok && cpu_ok
     }
 }
+
+mod cpu_attention_adapter;
+
+#[cfg(target_arch = "wasm32")]
+mod async_attention_adapter;
+
+#[cfg(target_arch = "wasm32")]
+mod prefill_adapter;
+
+#[cfg(target_arch = "wasm32")]
+mod browser_projection_adapter;

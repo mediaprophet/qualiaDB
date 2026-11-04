@@ -73,6 +73,8 @@ pub fn devices_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "dev-to-display".into(),
                 from: 0,
                 to: 1,
@@ -80,6 +82,8 @@ pub fn devices_manifold_seed() -> ManifoldSeed {
                 label: "displays".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "dev-to-sync".into(),
                 from: 0,
                 to: 2,
@@ -87,6 +91,8 @@ pub fn devices_manifold_seed() -> ManifoldSeed {
                 label: "syncs".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "dev-to-roles".into(),
                 from: 0,
                 to: 3,
@@ -94,6 +100,8 @@ pub fn devices_manifold_seed() -> ManifoldSeed {
                 label: "roles".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "roles-to-remote".into(),
                 from: 3,
                 to: 4,

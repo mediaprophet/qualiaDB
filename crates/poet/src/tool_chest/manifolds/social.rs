@@ -54,6 +54,8 @@ pub fn social_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-s1".into(),
                 from: 0,
                 to: 1,
@@ -61,6 +63,8 @@ pub fn social_manifold_seed() -> ManifoldSeed {
                 label: "soc:requestsConnection".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-s2".into(),
                 from: 0,
                 to: 2,

@@ -29,7 +29,13 @@ fn timed_infer(agent: &LocalLlmAgent, prompt: &str) -> RunTiming {
             v.push(Instant::now());
         }
     };
-    let (_text, _prov, tokens, _quin) = agent.infer_local_model_streaming(prompt, "", Some(cb));
+    let (_text, _prov, tokens, _quin) = agent.infer_local_model_with_execution(
+        prompt,
+        "",
+        crate::llm_agent::NativeDecodeRequest::Developer,
+        None,
+        Some(cb),
+    );
     let total = start.elapsed();
     let v = stamps.lock().map(|g| g.clone()).unwrap_or_default();
     let ttft = v.first().map(|f| f.duration_since(start)).unwrap_or(total);

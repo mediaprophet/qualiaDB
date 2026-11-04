@@ -23,28 +23,32 @@ pub use reservation::{GraphicsReservationError, VramReservation, VramResourceCla
 // qdnf-only does not, and must not `use wgpu` here.
 #[cfg(feature = "gpu-runtime")]
 mod caps;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime", feature = "wgsl-forge"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "gpu-runtime",
+    feature = "wgsl-forge"
+))]
 pub(crate) use caps::experimental_features_allowed;
 #[cfg(feature = "gpu-runtime")]
 pub(crate) use caps::requested_native_llm_features;
 #[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
 pub use caps::{
-    qualia_backend_override, recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps,
-    GpuLimitCaps,
+    GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps, qualia_backend_override,
+    recommend_inference_backend,
 };
 #[cfg(all(feature = "gpu-runtime", target_arch = "wasm32"))]
-pub use caps::{recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
+pub use caps::{GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps, recommend_inference_backend};
 
 #[cfg(feature = "gpu-runtime")]
 pub use etalon_agent::{
-    AccessRights as EtalonAccessRights, AllocationId as EtalonAllocationId,
-    BufferRegion as EtalonBufferRegion, CapabilityState as EtalonCapabilityState,
-    HalComputeLane as EtalonHalComputeLane, MemoryTopology as EtalonMemoryTopology,
-    QualiaSlabAllocator as EtalonSlabAllocator, SiliconCapability as EtalonSiliconCapability,
-    SubmissionLease as EtalonSubmissionLease, QueueId as EtalonQueueId,
-    SubmissionToken as EtalonSubmissionToken, AccessRights, AllocationId, BufferRegion,
-    CapabilityState, HalComputeLane, MemoryTopology, QualiaSlabAllocator, QueueId,
-    SiliconCapability, SubmissionLease, SubmissionToken,
+    AccessRights as EtalonAccessRights, AccessRights, AllocationId as EtalonAllocationId,
+    AllocationId, BufferRegion as EtalonBufferRegion, BufferRegion,
+    CapabilityState as EtalonCapabilityState, CapabilityState,
+    HalComputeLane as EtalonHalComputeLane, HalComputeLane, MemoryTopology as EtalonMemoryTopology,
+    MemoryTopology, QualiaSlabAllocator as EtalonSlabAllocator, QualiaSlabAllocator,
+    QueueId as EtalonQueueId, QueueId, SiliconCapability as EtalonSiliconCapability,
+    SiliconCapability, SubmissionLease as EtalonSubmissionLease, SubmissionLease,
+    SubmissionToken as EtalonSubmissionToken, SubmissionToken,
 };
 
 /// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
@@ -744,6 +748,7 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 
 #[cfg(feature = "gpu-runtime")]
 pub struct SharedGpuContext {
+    pub provider_lease: etalon_agent::device_lease::DeviceLease,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
     /// The wgpu instance — needed to create surfaces (must be same instance as adapter).
@@ -799,7 +804,6 @@ impl SharedGpuContext {
             etalon_agent::slab::DEFAULT_BINDING_ALIGNMENT,
         )
     }
-
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
@@ -883,8 +887,8 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
             // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
             desc.backends = wgpu::Backends::DX12;
             log::info!(
-            "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
-        );
+                "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
+            );
         }
         #[cfg(not(feature = "gpu-native-dx12"))]
         {
@@ -921,46 +925,8 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     init_shared_gpu_for_adapter(instance, adapter).await
 }
 
-/// WebGPU minimum limits from the spec. On wasm, `Adapter::limits` reads
-/// `GPUAdapter.limits`. A null adapter throws `TypeError` there and the
-/// canvas stays empty. These minimums never touch that getter. Native code
-/// still asks the adapter.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) fn webgpu_minimum_limits() -> wgpu::Limits {
-    wgpu::Limits {
-        max_texture_dimension_1d: 8192,
-        max_texture_dimension_2d: 8192,
-        max_texture_dimension_3d: 2048,
-        max_texture_array_layers: 256,
-        max_bind_groups: 4,
-        max_bindings_per_bind_group: 1000,
-        max_dynamic_uniform_buffers_per_pipeline_layout: 8,
-        max_dynamic_storage_buffers_per_pipeline_layout: 4,
-        max_sampled_textures_per_shader_stage: 16,
-        max_samplers_per_shader_stage: 16,
-        max_storage_buffers_per_shader_stage: 8,
-        max_storage_textures_per_shader_stage: 4,
-        max_uniform_buffers_per_shader_stage: 12,
-        max_uniform_buffer_binding_size: 64 << 10,
-        max_storage_buffer_binding_size: 128 << 20,
-        max_vertex_buffers: 8,
-        max_buffer_size: 256 << 20,
-        max_vertex_attributes: 16,
-        max_vertex_buffer_array_stride: 2048,
-        min_uniform_buffer_offset_alignment: 256,
-        min_storage_buffer_offset_alignment: 256,
-        max_inter_stage_shader_variables: 16,
-        max_color_attachments: 8,
-        max_color_attachment_bytes_per_sample: 32,
-        max_compute_workgroup_storage_size: 16384,
-        max_compute_invocations_per_workgroup: 256,
-        max_compute_workgroup_size_x: 256,
-        max_compute_workgroup_size_y: 256,
-        max_compute_workgroup_size_z: 64,
-        max_compute_workgroups_per_dimension: 65535,
-        ..wgpu::Limits::downlevel_defaults()
-    }
-}
+pub(crate) use etalon_resources::device_caps::webgpu_minimum_limits;
 
 /// Build a [`SharedGpuContext`] from a GIVEN instance + adapter — the reusable core shared by the
 /// process-wide primary device ([`init_shared_gpu_async`], which requests its own HighPerformance
@@ -1040,31 +1006,27 @@ pub(crate) async fn init_shared_gpu_for_adapter(
     } else {
         wgpu::ExperimentalFeatures::disabled()
     };
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor {
+    let context = etalon_agent::shared_device::DeviceContext::request(
+        instance,
+        adapter,
+        &wgpu::DeviceDescriptor {
             required_features,
             required_limits,
             experimental_features,
             ..Default::default()
-        })
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let timestamp_period_ns = if ts_supported {
-        queue.get_timestamp_period()
-    } else {
-        0.0
-    };
-
+        },
+    )
+    .await?;
     Ok(SharedGpuContext {
-        device,
-        queue,
-        instance,
-        adapter,
-        adapter_caps,
-        enabled_features,
-        timestamps_supported: ts_supported,
-        timestamp_period_ns,
+        provider_lease: context.lease,
+        device: context.device,
+        queue: context.queue,
+        instance: context.instance,
+        adapter: context.adapter,
+        adapter_caps: context.adapter_caps,
+        enabled_features: context.enabled_features,
+        timestamps_supported: context.timestamps_supported,
+        timestamp_period_ns: context.timestamp_period_ns,
     })
 }
 
@@ -1076,6 +1038,8 @@ pub(crate) async fn init_shared_gpu_for_adapter(
 /// machine probes once. (Init is lazy and reused by QTensorEngine + render.)
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+    crate::wgsl_forge::install_device_policy();
     SHARED_GPU
         .get_or_init(|| {
             let handle = match tokio::runtime::Handle::try_current() {
@@ -1104,9 +1068,34 @@ pub async fn ensure_shared_gpu() -> Result<(), String> {
     if WASM_SHARED_GPU.with(|c| c.get().is_some()) {
         return Ok(());
     }
+    etalon_wasm::readback::recover_browser_worker()
+        .map_err(|error| format!("Browser device recovery: {error:?}"))?;
     let ctx = init_shared_gpu_wasm().await?;
+    // Another initializer may have installed the shared device while we awaited the adapter.
+    if WASM_SHARED_GPU.with(|c| c.get().is_some()) {
+        return Ok(());
+    }
     let leaked: &'static SharedGpuContext = Box::leak(Box::new(ctx));
     WASM_SHARED_GPU.with(|c| c.set(Some(leaked)));
+    let owner_identity = leaked as *const SharedGpuContext as usize;
+    let worker = etalon_wasm::readback::browser_worker();
+    leaked.device.set_device_lost_callback(move |reason, message| {
+        let retired = WASM_SHARED_GPU.with(|slot| {
+            if slot.get().is_some_and(|current| current as *const SharedGpuContext as usize == owner_identity) {
+                slot.set(None);
+                true
+            } else {
+                false
+            }
+        });
+        if retired {
+            worker.lock().unwrap().notify_device_lost();
+            crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| {
+                *slot.borrow_mut() = None;
+            });
+            log::warn!("shared_gpu|browser_device_lost|{reason:?}|{message}");
+        }
+    });
     Ok(())
 }
 

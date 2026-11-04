@@ -4,7 +4,7 @@ use etalon_model::p64::build::{
     PlanError, PlanField, TensorDescriptor,
 };
 mod error;
-mod metadata;
+pub(super) mod metadata;
 mod source;
 #[cfg(test)]
 mod tests;
@@ -70,7 +70,8 @@ pub(super) fn compile_compat(input: &[u8], page: u16) -> Result<Vec<u8>, String>
     let required = gguf_verbatim_requirements(&index).map_err(|e| e.to_string())?;
     // Parsing/tokenizer allocations retain their existing cold policy; this is
     // not a total-transcoder-memory budget. Adapter buffers are checked below.
-    let tokenizer = crate::gguf_sharder::GgufTokenizer::from_gguf(input).to_p64_section();
+    let mut tokenizer = crate::gguf_sharder::GgufTokenizer::from_gguf(input).to_p64_section();
+    native_metadata::append(&index, &mut tokenizer)?;
     let mut order = allocate(required.tensor_capacity, GgufCompileTensor::default())?;
     let mut descriptors = allocate(required.tensor_capacity, empty_descriptor())?;
     let mut entries = allocate(required.tensor_capacity, empty_entry())?;

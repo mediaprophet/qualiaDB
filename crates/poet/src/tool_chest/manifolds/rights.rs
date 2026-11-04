@@ -52,6 +52,8 @@ pub fn rights_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-rw1".into(),
                 from: 0,
                 to: 1,
@@ -59,6 +61,8 @@ pub fn rights_manifold_seed() -> ManifoldSeed {
                 label: "rights:hasWallet".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-rw2".into(),
                 from: 0,
                 to: 2,

@@ -97,43 +97,13 @@ pub fn enabled() -> bool {
 // ── Native timestamp resources + accumulation ─────────────────────────────────
 
 #[cfg(not(target_arch = "wasm32"))]
-struct TsResources {
-    qset: wgpu::QuerySet,
-    resolve: wgpu::Buffer,
-    staging: wgpu::Buffer,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-const TS_BYTES: u64 = 2 * std::mem::size_of::<u64>() as u64; // begin + end
-
-#[cfg(not(target_arch = "wasm32"))]
-fn resources() -> &'static TsResources {
-    use std::sync::OnceLock;
-    static R: OnceLock<TsResources> = OnceLock::new();
+fn resources() -> &'static etalon_wgsl_forge::numerical::profiling::TimestampResources {
+    static R: std::sync::OnceLock<etalon_wgsl_forge::numerical::profiling::TimestampResources> =
+        std::sync::OnceLock::new();
     R.get_or_init(|| {
-        let device = &crate::gpu_context::shared_gpu().device;
-        let qset = device.create_query_set(&wgpu::QuerySetDescriptor {
-            label: Some("llm-ts-qset"),
-            ty: wgpu::QueryType::Timestamp,
-            count: 2,
-        });
-        let resolve = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("llm-ts-resolve"),
-            size: TS_BYTES,
-            usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        let staging = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("llm-ts-staging"),
-            size: TS_BYTES,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        TsResources {
-            qset,
-            resolve,
-            staging,
-        }
+        etalon_wgsl_forge::numerical::profiling::TimestampResources::new(
+            &crate::gpu_context::shared_gpu().device,
+        )
     })
 }
 
@@ -144,11 +114,7 @@ pub fn pass_writes_both() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
     if !enabled() {
         return None;
     }
-    Some(wgpu::ComputePassTimestampWrites {
-        query_set: &resources().qset,
-        beginning_of_pass_write_index: Some(0),
-        end_of_pass_write_index: Some(1),
-    })
+    Some(resources().pass_writes(true, true))
 }
 
 /// `timestamp_writes` for the FIRST pass of a multi-pass kernel (begin only).
@@ -157,11 +123,7 @@ pub fn pass_writes_begin() -> Option<wgpu::ComputePassTimestampWrites<'static>> 
     if !enabled() {
         return None;
     }
-    Some(wgpu::ComputePassTimestampWrites {
-        query_set: &resources().qset,
-        beginning_of_pass_write_index: Some(0),
-        end_of_pass_write_index: None,
-    })
+    Some(resources().pass_writes(true, false))
 }
 
 /// `timestamp_writes` for the LAST pass of a multi-pass kernel (end only).
@@ -170,11 +132,7 @@ pub fn pass_writes_end() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
     if !enabled() {
         return None;
     }
-    Some(wgpu::ComputePassTimestampWrites {
-        query_set: &resources().qset,
-        beginning_of_pass_write_index: None,
-        end_of_pass_write_index: Some(1),
-    })
+    Some(resources().pass_writes(false, true))
 }
 
 /// Encode the query-set resolve into `encoder` (call after the pass, before `finish()`).
@@ -184,9 +142,7 @@ pub fn resolve(encoder: &mut wgpu::CommandEncoder) {
     if !enabled() {
         return;
     }
-    let r = resources();
-    encoder.resolve_query_set(&r.qset, 0..2, &r.resolve, 0);
-    encoder.copy_buffer_to_buffer(&r.resolve, 0, &r.staging, 0, TS_BYTES);
+    resources().resolve(encoder);
 }
 
 /// Read the resolved timestamps and add `end - begin` ns to `phase`'s accumulator.
@@ -197,28 +153,16 @@ pub fn accumulate(phase: Phase) {
         return;
     }
     let ctx = crate::gpu_context::shared_gpu();
-    let r = resources();
-    let slice = r.staging.slice(..);
-    let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |res| {
-        let _ = tx.send(res);
-    });
-    // poll(Wait) blocks until the GPU is done and drives the map callback.
-    let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
-    if rx.recv().map(|r| r.is_ok()).unwrap_or(false) {
-        let data = slice
-            .get_mapped_range()
-            .expect("wgpu buffer map_range failed");
-        let ts: &[u64] = bytemuck::cast_slice(&data);
-        if ts.len() >= 2 {
-            let ticks = ts[1].saturating_sub(ts[0]);
-            let ns = (ticks as f64 * ctx.timestamp_period_ns as f64) as u64;
+    if let Ok(ts) = resources().read_ticks(&ctx.device) {
+        if let Some(ns) = etalon_diagnostics::measurement::timestamp_nanoseconds(
+            ts[0],
+            ts[1],
+            ctx.timestamp_period_ns,
+        ) {
             ACC_NS[phase as usize].fetch_add(ns, Ordering::Relaxed);
             ACC_CALLS[phase as usize].fetch_add(1, Ordering::Relaxed);
         }
-        drop(data);
     }
-    r.staging.unmap();
 }
 
 #[cfg(target_arch = "wasm32")]

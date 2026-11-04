@@ -186,7 +186,11 @@ pub fn run_comprehensive_llm_test(
         // BUGFIX: the second field is provenance (often len=1), NOT token ids — using
         // `.len()` reported Tokens:1 and ~100× low tok/s. The third field is the count.
         let (response, _provenance, tokens_generated, _quin) = tokio::task::block_in_place(|| {
-            agent.infer_local_model_streaming::<fn(String)>(prompt, "graph_context:cli_test", None)
+            agent.infer_local_model_with_execution::<fn(String)>(
+                prompt, "graph_context:cli_test",
+                qualia_core_db::llm_agent::native_request::NativeDecodeRequest::Developer,
+                None, None,
+            )
         });
 
         let elapsed = started.elapsed();

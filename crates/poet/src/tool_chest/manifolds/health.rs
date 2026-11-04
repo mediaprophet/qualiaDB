@@ -100,6 +100,8 @@ pub fn health_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-h-docs".into(),
                 from: 0,
                 to: 1,
@@ -107,6 +109,8 @@ pub fn health_manifold_seed() -> ManifoldSeed {
                 label: "med:hasDocuments".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-h-share".into(),
                 from: 0,
                 to: 2,
@@ -114,6 +118,8 @@ pub fn health_manifold_seed() -> ManifoldSeed {
                 label: "med:hasDisclosure".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-h-cond".into(),
                 from: 0,
                 to: 3,

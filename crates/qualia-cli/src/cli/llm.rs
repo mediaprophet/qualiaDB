@@ -19,6 +19,9 @@ pub enum LlmAction {
     Status,
     Eval {
         prompt: String,
+        /// Explicit native profile, actor selection, model and preparation budgets (JSON).
+        #[arg(long)]
+        authority: Option<PathBuf>,
         #[arg(long)]
         orchestrated: bool,
         #[arg(long)]
@@ -218,12 +221,19 @@ pub enum LlmAction {
         #[arg(long, default_value_t = 151644)]
         token_id: u32,
     },
-    /// Real multi-token Qwen4Exp generation through the native streamed path:
+    /// Real multi-token Qwen4Exp generation; select --authority or --developer.
+    /// Native streamed path:
     /// embedding → PLE → 48 layers (HC→GDN|QSA→HC→MoE) → final HC mixer → argmax → decode.
     #[command(name = "decode-qwen4exp")]
     DecodeQwen4Exp {
         /// Existing `.hmc` package with C:-resident PLE and external trunk contract.
         package: PathBuf,
+        /// Governed execution using an existing authenticated profile and retained source identities.
+        #[arg(long, conflicts_with = "developer", required_unless_present = "developer")]
+        authority: Option<PathBuf>,
+        /// Explicit developer/debug execution using the numerical engine without product policy admission.
+        #[arg(long, conflicts_with = "authority")]
+        developer: bool,
         /// Prompt text encoded by the model's own GGUF tokenizer.
         #[arg(long)]
         prompt: Option<String>,
@@ -244,7 +254,7 @@ pub enum LlmAction {
         #[arg(long)]
         trunk_mmap: bool,
     },
-    /// Lab instrument: run the prompt prefix through the real 48-layer graph,
+    /// Developer/debug lab instrument: run the prompt prefix through the real 48-layer graph,
     /// then trace the final token's step — per-layer fingerprint/RMS/abs-max
     /// for every stage plus the top-k vocabulary logits.
     #[command(name = "probe-qwen4exp-trace")]

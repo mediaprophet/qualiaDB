@@ -159,6 +159,7 @@
   </style>
 </head>
 <body>
+<p role="note" style="padding:0.75rem;border:1px solid #b7791f">Developer inference mode: browser CPU/WebGPU compute bypasses Sentinel token acceptance. Output is ungoverned. Graph checks on this page do not authorize generated tokens.</p>
 
 <h1>Qualia WASM vs wllama — Inference Lab Benchmark</h1>
 <p class="subtitle">Internal tool for comparing Webizen (Qualia WASM+WebGPU) against wllama (llama.cpp WASM). Results persist to localStorage and can be exported as JSON for iterative optimization.</p>
@@ -416,6 +417,7 @@
         bytes = r.bytes; source = r.source;
       }
       setStatus('qualia-status', 'initializing WebGPU engine…');
+      mod.configureBrowserExecutionMode('developer', true);
       await mod.initialize_webgpu_engine(bytes);
       if (!mod.isWebgpuEngineReady()) throw new Error('Qualia engine failed to initialise');
       loadMs = performance.now() - t0;
@@ -439,6 +441,7 @@
     const ttftMs = firstAt === null ? generationMs : firstAt - start;
     const result = {
       engine: 'qualia', loadMs, ttftMs, generationMs, outputText, approxTokens,
+      executionReceipt: mod.getBrowserExecutionReceipt(),
       tokensPerSecond: generationMs > 0 ? (approxTokens * 1000) / generationMs : 0,
       source, format,
     };

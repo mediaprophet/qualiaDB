@@ -35,7 +35,7 @@ use std::collections::HashMap;
 pub const MAX_TRIE_DEPTH: usize = 32;
 
 /// A node in the token prefix trie.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct TrieNode {
     /// Children keyed by byte value.
     children: HashMap<u8, TrieNode>,
@@ -44,6 +44,7 @@ struct TrieNode {
 }
 
 /// A prefix trie over token byte strings. Built once from the vocabulary.
+#[derive(Clone)]
 pub struct TokenTrie {
     root: TrieNode,
     vocab_size: usize,
@@ -173,6 +174,7 @@ impl Default for GrammarState {
 
 /// The grammar state machine. Tracks the current parse position and a stack
 /// of nested contexts (blocks, parens, triples, etc.) for proper nesting.
+#[derive(Clone)]
 pub struct GrammarStateMachine {
     /// Current state.
     state: GrammarState,
@@ -579,6 +581,7 @@ impl Default for GrammarStateMachine {
 
 /// The DOMINO constrained decoding masker. Combines a token trie with a
 /// grammar state machine to produce logit masks.
+#[derive(Clone)]
 pub struct DominoMasker {
     trie: TokenTrie,
     grammar: GrammarStateMachine,
@@ -962,3 +965,7 @@ mod tests {
         assert!(gsm.byte_allowed(b'!', 0));
     }
 }
+
+#[path = "speculative_decode/prepared.rs"]
+mod prepared;
+pub use prepared::{DominoPreparationBudget, PreparedDomino};

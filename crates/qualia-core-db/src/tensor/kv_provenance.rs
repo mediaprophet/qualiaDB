@@ -121,6 +121,9 @@ pub fn rebuild_prompt_provenance(
     tensor_node_count: u32,
     root_page_id: u64,
 ) {
+    if crate::compute_universe::rebuild_context_provenance(prompt_token_count, root_page_id) {
+        return;
+    }
     kv_lock()
         .write()
         .expect("kv provenance poisoned")
@@ -130,6 +133,9 @@ pub fn rebuild_prompt_provenance(
 #[inline]
 /// `KvProvenanceMap::record_kv_provenance`.
 pub fn record_kv_provenance(tensor_index: u32, kv_slot: u32, parent_page_id: u64) {
+    if crate::compute_universe::record_context_provenance(tensor_index, kv_slot, parent_page_id) {
+        return;
+    }
     kv_lock().write().expect("kv provenance poisoned").record(
         tensor_index,
         kv_slot,

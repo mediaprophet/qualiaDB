@@ -128,6 +128,8 @@ impl PortalGpu {
         self.shadow_map_dirty = true;
         // Any generic writer retires external source identity. The source-bound
         // owner restores its already-preflighted next state after this commit.
+        self.pick_readback.invalidate(true);
+        self.pick_semantic_result=None;
         self.source_motion.retire();
         true
     }

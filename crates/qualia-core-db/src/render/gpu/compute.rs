@@ -88,10 +88,8 @@ struct CachedPipeline {
 
 /// Outstanding compute readback awaiting poll.
 pub(crate) struct PendingCompute {
-    staging: wgpu::Buffer,
-    bytes: usize,
+    readback: etalon_render::compute_readback::ComputeReadback,
     dispatch_id: u64,
-    copy_submitted: bool,
 }
 
 /// A pooled binding buffer, reused across dispatches with the same shape.
@@ -217,6 +215,9 @@ impl super::PortalGpu {
         readback_binding: Option<u32>,
         readback_bytes: usize,
     ) -> Result<u64, String> {
+        if self.compute.pending.is_some() {
+            return Err("compute_dispatch: previous readback is still pending".into());
+        }
         if bindings.is_empty() {
             return Err("compute_dispatch: at least one binding is required".into());
         }
@@ -482,12 +483,17 @@ impl super::PortalGpu {
 
         let dispatch_id = self.compute.next_dispatch_id;
         self.compute.next_dispatch_id = self.compute.next_dispatch_id.wrapping_add(1);
-        self.compute.pending = staging.map(|s| PendingCompute {
-            staging: s,
-            bytes: readback_bytes,
-            dispatch_id,
-            copy_submitted: true,
-        });
+        self.compute.pending = match staging {
+            Some(staging) => Some(PendingCompute {
+                readback: etalon_render::compute_readback::ComputeReadback::begin(
+                    &staging,
+                    readback_bytes,
+                    etalon_wasm::readback::ready_worker(false),
+                )?,
+                dispatch_id,
+            }),
+            None => None,
+        };
         Ok(dispatch_id)
     }
 
@@ -495,50 +501,25 @@ impl super::PortalGpu {
     /// staging buffer is mapped and read, `None` when there is no pending
     /// dispatch or the map has not resolved.
     pub fn compute_readback(&mut self) -> Option<Result<Vec<u8>, String>> {
-        let pending = self.compute.pending.as_ref()?;
-        if !pending.copy_submitted {
-            return None;
-        }
+        let pending = self.compute.pending.as_mut()?;
         let dispatch_id = pending.dispatch_id;
-        let bytes = pending.bytes;
-        let staging = pending.staging.clone();
-        let slice = staging.slice(..);
-        let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
-            let _ = tx.send(result);
-        });
-        if let Err(error) = self.device.poll(wgpu::PollType::wait_indefinitely()) {
-            staging.unmap();
-            self.compute.pending = None;
-            return Some(Err(format!(
-                "compute_readback: dispatch {dispatch_id}: device poll failed: {error}"
-            )));
+        match pending.readback.poll(&self.device) {
+            Ok(None) => return None,
+            Ok(Some(true)) => {}
+            Ok(Some(false)) => {
+                self.compute.pending = None;
+                return Some(Err(format!("compute_readback: dispatch {dispatch_id}: map failed or stale")));
+            }
+            Err(error) => {
+                self.compute.pending = None;
+                return Some(Err(format!("compute_readback: dispatch {dispatch_id}: {error}")));
+            }
         }
-        // Block until the map callback fires (native synchronous readback, mirrors
-        // the RGBA8 readback path). `poll(wait_indefinitely)` drives the device
-        // queue; `recv()` guarantees we observe the callback result.
-        if let Err(e) = rx
-            .recv()
-            .map_err(|e| format!("compute_readback: callback dropped: {e}"))
-            .and_then(|r| r.map_err(|e| format!("compute_readback: map failed: {e}")))
-        {
-            // Map failed but the staging buffer may still be mapped; unmap defensively.
-            staging.unmap();
-            self.compute.pending = None;
-            return Some(Err(format!(
-                "compute_readback: dispatch {dispatch_id}: {e}"
-            )));
-        }
-        let mapped = slice
-            .get_mapped_range()
-            .expect("wgpu compute staging map_range failed");
-        let out = mapped[..bytes].to_vec();
-        drop(mapped);
-        staging.unmap();
+        let mut out = vec![0; pending.readback.bytes()];
+        let result = pending.readback.copy_into(&mut out).map(|_| out);
         self.compute.pending = None;
-        Some(Ok(out))
+        Some(result)
     }
-
     /// Number of cached compute pipelines (diagnostic / test helper).
     pub fn compute_pipeline_cache_size(&self) -> usize {
         self.compute.cache.len()

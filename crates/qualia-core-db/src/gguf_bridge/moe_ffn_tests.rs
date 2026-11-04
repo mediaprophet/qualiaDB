@@ -388,10 +388,11 @@ fn local_llm_agent_autoregressive_decode_physical_qwen_nvfp4() {
 
     let control = DecodeControl::default();
     control.set_token_budget(3);
-    let (text, provenance, tokens_gen, _quin) = agent.infer_local_model_controlled(
+    let (text, provenance, tokens_gen, _quin) = agent.infer_local_model_with_execution(
         "What is 2+2?",
         "test:graph:context",
-        control,
+        crate::inference::inference_agent::native_request::NativeDecodeRequest::Developer,
+        Some(control),
         None::<fn(String)>,
     );
 

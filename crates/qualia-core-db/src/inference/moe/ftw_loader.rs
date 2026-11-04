@@ -63,61 +63,23 @@ pub struct FtwExpertBankSlice {
     pub down_global_len: usize,
 }
 
-/// Zero-copy byte slices for one expert's NVFP4 tensors.
-pub struct FtwExpertData<'a> {
-    pub gate_up_packed: &'a [u8],
-    pub gate_up_scale: &'a [u8],
-    pub gate_up_global: &'a [u8],
-    pub down_packed: &'a [u8],
-    pub down_scale: &'a [u8],
-    pub down_global: &'a [u8],
-}
-
-impl<'a> FtwExpertData<'a> {
-    /// Convert zero-copy slice into typed `ExpertWeightView` for zero-heap SwiGLU computation.
-    pub fn to_view(
-        &self,
-        emb_dim: usize,
-        intermediate_dim: usize,
-    ) -> super::dispatch::ExpertWeightView<'a> {
-        let gate_up_global = if self.gate_up_global.len() >= 4 {
-            let mut b = [0u8; 4];
-            b.copy_from_slice(&self.gate_up_global[..4]);
-            f32::from_le_bytes(b)
-        } else {
-            1.0
-        };
-        let down_global = if self.down_global.len() >= 4 {
-            let mut b = [0u8; 4];
-            b.copy_from_slice(&self.down_global[..4]);
-            f32::from_le_bytes(b)
-        } else {
-            1.0
-        };
-
-        super::dispatch::ExpertWeightView {
-            gate_up_packed: self.gate_up_packed,
-            gate_up_scale: self.gate_up_scale,
-            gate_up_global,
-            down_packed: self.down_packed,
-            down_scale: self.down_scale,
-            down_global,
-            intermediate_dim,
-            emb_dim,
-        }
-    }
-}
+pub use etalon_inference::ordinary::expert_source::FtwExpertData;
 
 use std::sync::Arc;
 
 /// Container owning memory-mapped FTW shards and tensor index.
+#[derive(Clone)]
 pub struct FtwModelPackage {
+    prepared_shards: Option<Vec<crate::gguf_bridge::ModelByteHandle>>,
     pub manifest: FtwManifest,
     pub shards: Vec<Arc<Mmap>>,
     pub tensor_index: GgufTensorIndex,
     pub expert_slices: HashMap<(u16, u16), FtwExpertBankSlice>,
     tensor_locations: HashMap<String, (usize, usize, usize)>, // name -> (shard_idx, local_off, len)
 }
+
+#[path = "ftw_loader/prepared.rs"]
+mod prepared;
 
 impl FtwModelPackage {
     /// Load an FTW model package from a directory containing `freetoken_weight.json` and `.ftw` shards.
@@ -367,6 +329,7 @@ impl FtwModelPackage {
         let tensor_index = GgufTensorIndex::from_components(&references, hyperparams, 0);
 
         Ok(Self {
+            prepared_shards: None,
             manifest,
             shards,
             tensor_index,
@@ -378,7 +341,7 @@ impl FtwModelPackage {
     /// Read raw bytes for a shared weight tensor by name.
     pub fn fetch_tensor_bytes(&self, name: &str) -> Option<&[u8]> {
         let &(shard_idx, off, len) = self.tensor_locations.get(name)?;
-        let shard = self.shards.get(shard_idx)?;
+        let shard = self.shard_bytes(shard_idx)?;
         shard.get(off..off + len)
     }
 
@@ -388,7 +351,7 @@ impl FtwModelPackage {
             if global_off >= s.global_off && (global_off + len as u64) <= (s.global_off + s.nbytes)
             {
                 let local_off = (global_off - s.global_off) as usize;
-                let shard = self.shards.get(idx)?;
+                let shard = self.shard_bytes(idx)?;
                 return shard.get(local_off..local_off + len);
             }
         }
@@ -398,7 +361,7 @@ impl FtwModelPackage {
     /// Get zero-copy byte slices for one expert in a given layer.
     pub fn get_expert_data(&self, layer: u16, expert_idx: u16) -> Option<FtwExpertData<'_>> {
         let slice = self.expert_slices.get(&(layer, expert_idx))?;
-        let shard = self.shards.get(slice.shard_idx)?;
+        let shard = self.shard_bytes(slice.shard_idx)?;
 
         Some(FtwExpertData {
             gate_up_packed: shard.get(
@@ -506,5 +469,14 @@ mod tests {
         let view = exp_data.to_view(pkg.tensor_index.emb_dim() as usize, 1024);
         assert!(!view.gate_up_packed.is_empty());
         assert!(!view.down_packed.is_empty());
+    }
+}
+
+impl etalon_inference::ordinary::expert_source::ExpertSource for FtwModelPackage {
+    fn fetch_tensor_bytes(&self, name: &str) -> Option<&[u8]> {
+        FtwModelPackage::fetch_tensor_bytes(self, name)
+    }
+    fn get_expert_data(&self, layer: u16, expert: u16) -> Option<FtwExpertData<'_>> {
+        FtwModelPackage::get_expert_data(self, layer, expert)
     }
 }

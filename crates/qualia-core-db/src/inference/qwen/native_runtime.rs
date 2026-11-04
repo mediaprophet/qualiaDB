@@ -142,3 +142,9 @@ impl Qwen4ExpNativeRuntime {
         })
     }
 }
+
+impl Qwen4ExpNativeRuntime {
+    pub fn engine(&mut self) -> etalon_inference::qwen::Qwen4ExpRuntime<'_, crate::gguf_sharder::GgufHyperparams> {
+        etalon_inference::qwen::Qwen4ExpRuntime { index: &self.index, ple: &mut self.ple, trunk: &mut self.trunk }
+    }
+}

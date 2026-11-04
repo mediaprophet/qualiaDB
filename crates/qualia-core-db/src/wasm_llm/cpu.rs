@@ -43,21 +43,16 @@ pub(super) fn release() {
     CPU_ENGINE.with(|engine| *engine.borrow_mut() = None);
 }
 
-/// Initializes.
-pub(super) async fn initialize(model: std::sync::Arc<[u8]>) -> Result<(), String> {
-    initialize_with_context(
-        model,
-        crate::gguf_bridge::wasm_cpu::CPU_WASM_DEFAULT_CONTEXT,
-    )
-    .await
-}
-
-/// `initialize_with_context`.
-pub(super) async fn initialize_with_context(
+/// Initialize using the generation admitted before any browser yield or model copy.
+pub(super) async fn initialize_with_stamp(
     model: std::sync::Arc<[u8]>,
     max_context: usize,
+    stamp: etalon_wasm::worker_steward::CompletionStamp,
 ) -> Result<(), String> {
+    ensure_initialization_current(stamp)?;
+    CPU_ENGINE.with(|slot| *slot.borrow_mut() = None);
     crate::gguf_bridge::wasm_yield::phase("Preparing Qualia CPU-WASM model…").await;
+    ensure_initialization_current(stamp)?;
     let engine =
         CpuWasmEngine::new_with_context(model, max_context).map_err(|error| error.to_string())?;
     crate::gguf_bridge::wlog(&format!(
@@ -66,8 +61,25 @@ pub(super) async fn initialize_with_context(
         engine.max_context(),
         engine.working_set_bytes() as f64 / (1024.0 * 1024.0)
     ));
+    let worker = etalon_wasm::readback::browser_worker();
+    let worker = worker.lock().unwrap();
+    if worker.completion_stamp() != stamp || !worker.is_ready() {
+        return Err("CPU-WASM initialization superseded or cancelled".into());
+    }
     CPU_ENGINE.with(|slot| *slot.borrow_mut() = Some(engine));
     crate::gguf_bridge::wasm_yield::clear_init_status();
+    Ok(())
+}
+
+pub(super) fn ensure_initialization_current(
+    stamp: etalon_wasm::worker_steward::CompletionStamp,
+) -> Result<(), String> {
+    super::execution_mode::require_developer()?;
+    let worker = etalon_wasm::readback::browser_worker();
+    let worker = worker.lock().unwrap();
+    if worker.completion_stamp() != stamp || !worker.is_ready() {
+        return Err("CPU-WASM initialization superseded or cancelled".into());
+    }
     Ok(())
 }
 
@@ -88,6 +100,7 @@ pub(super) async fn infer(
     on_token: Option<Function>,
     decode_budget: usize,
 ) -> Result<WasmAsyncInferenceResult, String> {
+    let request = super::lifecycle::Request::admit()?;
     let mut engine = take()?;
     let result = async {
         if !graph_context.is_empty() {
@@ -117,6 +130,7 @@ pub(super) async fn infer(
             .take(context.len().saturating_sub(1))
             .enumerate()
         {
+            request.ensure_current()?;
             engine
                 .ingest_token(token, position)
                 .map_err(|error| error.to_string())?;
@@ -132,6 +146,7 @@ pub(super) async fn infer(
         let budget = decode_budget.min(available);
 
         for step in 0..budget {
+            request.ensure_current()?;
             let current = *context.last().unwrap_or(&engine.tokenizer().bos_token_id);
             let position = context.len().saturating_sub(1);
             let next = engine
@@ -170,6 +185,8 @@ pub(super) async fn infer(
         })
     }
     .await;
+    request.ensure_current()?;
     restore(engine);
+    request.complete()?;
     result
 }

@@ -1,6 +1,25 @@
 //! GPU resource builders — depth/picking textures, bind-group layouts/groups, target states.
 use super::*;
 
+#[cfg(test)]
+mod tests {
+    use super::{checked_padded_bytes_per_row, frame_target_vram_bytes, readback_buffer_bytes};
+
+    #[test]
+    fn portal_target_estimate_counts_depth_picking_and_offscreen_color() {
+        assert_eq!(frame_target_vram_bytes(1920, 1080, false), Some(16_588_800));
+        assert_eq!(frame_target_vram_bytes(1920, 1080, true), Some(24_883_200));
+        assert_eq!(frame_target_vram_bytes(u32::MAX, u32::MAX, true), None);
+    }
+
+    #[test]
+    fn readback_staging_size_uses_checked_row_pitch_and_height() {
+        assert_eq!(checked_padded_bytes_per_row(1), Some(256));
+        assert_eq!(readback_buffer_bytes(1920, 1080), Some(8_294_400));
+        assert_eq!(readback_buffer_bytes(u32::MAX, u32::MAX), None);
+    }
+}
+
 /// Logical residency estimate for the portal's persistent depth and picking
 /// targets, plus its RGBA8 offscreen target when present. Surface swapchain
 /// colour storage is driver-owned and is not included here.
@@ -71,180 +90,7 @@ pub(super) fn reserve_view_resources(
     ))
 }
 
-/// `checked_padded_bytes_per_row`.
-pub(super) fn checked_padded_bytes_per_row(width: u32) -> Option<u32> {
-    let tight = width.max(1).checked_mul(4)?;
-    let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
-    tight
-        .checked_add(align - 1)
-        .map(|value| value / align * align)
-}
-
-/// `readback_buffer_bytes`.
-pub(super) fn readback_buffer_bytes(width: u32, height: u32) -> Option<u64> {
-    u64::from(checked_padded_bytes_per_row(width)?).checked_mul(u64::from(height.max(1)))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{checked_padded_bytes_per_row, frame_target_vram_bytes, readback_buffer_bytes};
-
-    #[test]
-    fn portal_target_estimate_counts_depth_picking_and_offscreen_color() {
-        assert_eq!(frame_target_vram_bytes(1920, 1080, false), Some(16_588_800));
-        assert_eq!(frame_target_vram_bytes(1920, 1080, true), Some(24_883_200));
-        assert_eq!(frame_target_vram_bytes(u32::MAX, u32::MAX, true), None);
-    }
-
-    #[test]
-    fn readback_staging_size_uses_checked_row_pitch_and_height() {
-        assert_eq!(checked_padded_bytes_per_row(1), Some(256));
-        assert_eq!(readback_buffer_bytes(1920, 1080), Some(8_294_400));
-        assert_eq!(readback_buffer_bytes(u32::MAX, u32::MAX), None);
-    }
-}
-
-/// Creates `offscreen-texture`.
-pub(super) fn create_offscreen_texture(
-    device: &wgpu::Device,
-    format: wgpu::TextureFormat,
-    width: u32,
-    height: u32,
-) -> wgpu::Texture {
-    device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("qualia-render-offscreen"),
-        size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
-    })
-}
-
-/// `padded_bytes_per_row`.
-pub(super) fn padded_bytes_per_row(width: u32) -> u32 {
-    checked_padded_bytes_per_row(width)
-        .unwrap_or(u32::MAX & !(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT - 1))
-}
-
-/// Creates `readback-buffer`.
-pub(super) fn create_readback_buffer(
-    device: &wgpu::Device,
-    padded_bytes_per_row: u32,
-    height: u32,
-) -> wgpu::Buffer {
-    device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("qualia-render-readback"),
-        size: padded_bytes_per_row as u64 * height.max(1) as u64,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    })
-}
-
-/// Creates `picking-texture`.
-pub(super) fn create_picking_texture(
-    device: &wgpu::Device,
-    width: u32,
-    height: u32,
-) -> (wgpu::Texture, wgpu::TextureView) {
-    let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("portal-picking"),
-        size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::R32Uint,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
-    });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    (texture, view)
-}
-
-/// `picking_color_target_state`.
-pub(super) fn picking_color_target_state() -> wgpu::ColorTargetState {
-    wgpu::ColorTargetState {
-        format: wgpu::TextureFormat::R32Uint,
-        blend: None,
-        write_mask: wgpu::ColorWrites::ALL,
-    }
-}
-
-/// Creates `depth-texture`.
-pub(super) fn create_depth_texture(
-    device: &wgpu::Device,
-    width: u32,
-    height: u32,
-) -> (wgpu::Texture, wgpu::TextureView) {
-    let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("portal-depth"),
-        size: wgpu::Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Depth32Float,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-        view_formats: &[],
-    });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    (texture, view)
-}
-
-/// `depth_stencil_state`.
-pub(super) fn depth_stencil_state(format: wgpu::TextureFormat) -> wgpu::DepthStencilState {
-    wgpu::DepthStencilState {
-        format,
-        depth_write_enabled: Some(true),
-        depth_compare: Some(wgpu::CompareFunction::Less),
-        stencil: wgpu::StencilState::default(),
-        bias: wgpu::DepthBiasState::default(),
-    }
-}
-
-/// `depth_stencil_state_read_only`.
-pub(super) fn depth_stencil_state_read_only() -> wgpu::DepthStencilState {
-    wgpu::DepthStencilState {
-        format: wgpu::TextureFormat::Depth32Float,
-        depth_write_enabled: Some(false),
-        depth_compare: Some(wgpu::CompareFunction::Less),
-        stencil: wgpu::StencilState::default(),
-        bias: wgpu::DepthBiasState::default(),
-    }
-}
-
-/// `color_target_state`.
-pub(super) fn color_target_state(format: wgpu::TextureFormat) -> wgpu::ColorTargetState {
-    wgpu::ColorTargetState {
-        format,
-        blend: Some(wgpu::BlendState {
-            color: wgpu::BlendComponent {
-                src_factor: wgpu::BlendFactor::SrcAlpha,
-                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                operation: wgpu::BlendOperation::Add,
-            },
-            alpha: wgpu::BlendComponent {
-                src_factor: wgpu::BlendFactor::One,
-                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                operation: wgpu::BlendOperation::Add,
-            },
-        }),
-        write_mask: wgpu::ColorWrites::ALL,
-    }
-}
+pub(super) use etalon_render::targets::*;
 
 /// `uniform_128_bind_entry`.
 pub(super) fn uniform_128_bind_entry(

@@ -903,8 +903,6 @@ impl PortalGpu {
             vec![0; crate::render::instance_culling::MAX_GPU_MESH_INSTANCES];
         let visible_instance_scratch =
             vec![identity_instance; crate::render::instance_culling::MAX_GPU_MESH_INSTANCES];
-        let pick_instance_semantics =
-            vec![0; crate::render::instance_culling::MAX_GPU_MESH_INSTANCES];
 
         Ok(Self {
             device,
@@ -929,15 +927,12 @@ impl PortalGpu {
             _fixed_buffer_reservation: fixed_buffer_reservation,
             picking_pipeline,
             mesh_picking_pipeline,
-            pick_staging_buf,
-            _pick_staging_reservation: pick_staging_reservation,
-            pending_pick: None,
-            pick_copy_submitted: false,
-            pick_map_rx: None,
-            pick_result: None,
+            pick_readback: etalon_render::picking_readback::PickingReadback::new(
+                pick_staging_buf,
+                pick_staging_reservation,
+                crate::render::instance_culling::MAX_GPU_MESH_INSTANCES,
+            ),
             pick_semantic_result: None,
-            pick_semantic_count: 0,
-            pick_instance_semantics,
             ambient_pipeline,
             projector_pipeline,
             sky_pipeline,
@@ -984,7 +979,6 @@ impl PortalGpu {
             mesh: None,
             mesh_generation: 0,
             source_motion: Default::default(),
-            mesh_reservation: None,
             water,
             model_buf,
             mesh_model_bind,

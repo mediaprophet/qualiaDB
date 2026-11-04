@@ -48,7 +48,7 @@ impl LocalLlmAgent {
         graph_context: &str,
         on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner(prompt, graph_context, None, on_token)
+        self.infer_local_model_inner(prompt, graph_context, None, on_token, None)
     }
 
     /// Run local inference with a caller-owned cooperative cancellation token.
@@ -59,7 +59,7 @@ impl LocalLlmAgent {
         control: DecodeControl,
         on_token: Option<F>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner(prompt, graph_context, Some(control), on_token)
+        self.infer_local_model_inner(prompt, graph_context, Some(control), on_token, None)
     }
 
     /// Runs local inference.
@@ -68,7 +68,21 @@ impl LocalLlmAgent {
         prompt: &str,
         graph_context: &str,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
-        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None, None)
+        self.infer_local_model_inner::<fn(String)>(prompt, graph_context, None, None, None)
+    }
+
+    /// Explicit developer/debug/lab execution through the same numerical backend.
+    /// Neither diagnostics nor environment settings select this request mode.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn infer_local_model_with_execution<F: FnMut(String) + Send + 'static>(
+        &self,
+        prompt: &str,
+        graph_context: &str,
+        execution: super::native_request::NativeDecodeRequest,
+        control: Option<DecodeControl>,
+        on_token: Option<F>,
+    ) -> (String, Vec<u64>, u32, Option<NQuin>) {
+        self.infer_local_model_inner(prompt, graph_context, control, on_token, Some(execution))
     }
 
     #[cfg_attr(target_arch = "wasm32", allow(unused_variables, unused_mut))]
@@ -78,6 +92,10 @@ impl LocalLlmAgent {
         graph_context: &str,
         control: Option<DecodeControl>,
         on_token: Option<F>,
+        #[cfg(not(target_arch = "wasm32"))] execution: Option<
+            super::native_request::NativeDecodeRequest,
+        >,
+        #[cfg(target_arch = "wasm32")] _execution: Option<()>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
         let prov_hash = crate::q_hash(graph_context);
         let use_sieve = self
@@ -108,6 +126,7 @@ impl LocalLlmAgent {
                 use_sieve,
                 sieve_spec,
                 sieve_lex_path,
+                execution,
             )
         }
         #[cfg(target_arch = "wasm32")]
@@ -154,8 +173,12 @@ mod messages {
 }
 #[cfg(not(target_arch = "wasm32"))]
 use messages::{LlmMsg, LogitSummary, SentMsg};
+#[cfg(not(target_arch = "wasm32"))]
+mod admission;
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 mod browser_select;
+#[cfg(not(target_arch = "wasm32"))]
+mod cold;
 #[cfg(not(target_arch = "wasm32"))]
 mod diagnostic;
 #[cfg(not(target_arch = "wasm32"))]
@@ -174,3 +197,5 @@ mod select;
 mod speculative;
 #[cfg(not(target_arch = "wasm32"))]
 mod worker;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod cancellation_tests;

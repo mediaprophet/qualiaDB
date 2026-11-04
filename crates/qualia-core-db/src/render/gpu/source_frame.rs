@@ -142,14 +142,7 @@ impl PortalGpu {
     fn invalidate_source_pose_picks(&mut self, retain_unsubmitted_pointer: bool) {
         // Pointer coordinates not submitted yet may target the new pose. Old
         // readbacks/results cannot claim to describe it.
-        if !retain_unsubmitted_pointer {
-            self.pending_pick = None;
-        }
-        self.pick_result = None;
-        self.pick_semantic_result = None;
-        self.pick_copy_submitted = false;
-        if self.pick_map_rx.take().is_some() {
-            self.pick_staging_buf.unmap();
-        }
+        self.pick_readback.invalidate(retain_unsubmitted_pointer);
+        self.pick_semantic_result=None;
     }
 }

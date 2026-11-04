@@ -48,6 +48,8 @@ pub fn anatomy_manifold_seed() -> ManifoldSeed {
             },
         ],
         connections: vec![SeedConnection {
+            graph_ids: Vec::new(),
+            cell_anchor: None,
             id: "wire-anat-docs".into(),
             from: 0,
             to: 1,

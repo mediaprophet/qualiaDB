@@ -241,6 +241,7 @@ impl LocalLlmAgent {
                         None,
                         gen_budget,
                         on_token_sink,
+                        None,
                     );
                     match draft_step {
                         TopologyDraftStep::AcceptedFull => continue,

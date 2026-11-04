@@ -1,9 +1,7 @@
-//! Canonical Etalon GGML codecs with the existing Qualia tensor-index adapter.
-//! Descriptor and type-158 container routing remain local; codec arithmetic is shared.
-use crate::gguf_sharder::GgufTensorInfo;
+//! Canonical numerical encodings and descriptor helpers, with legacy Qualia paths.
 pub use etalon_model::ggml::*;
-mod descriptor;
-pub use descriptor::*;
+#[cfg(test)]
+use crate::gguf_sharder::GgufTensorInfo;
 #[cfg(test)]
 mod tests;
 
@@ -13,7 +11,11 @@ fn dequant_q4_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
 }
 
 #[cfg(test)]
-fn dequant_q4_k_soa(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+fn dequant_q4_k_soa(
+    raw: &[u8],
+    n_elems: usize,
+    out: &mut [f32],
+) -> Result<usize, GgmlDequantError> {
     dequantize_row_into(raw, GGML_TYPE_Q4_K_SOA, n_elems, out)
 }
 
@@ -29,5 +31,6 @@ fn dequant_q8_0(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
 
 #[cfg(test)]
 fn quantize_block_f32_to_q4_k_soa(src: &[f32], out: &mut [u8]) {
-    quantize_f32_to_q4_k_soa_tensor(src, src.len(), 1, out).expect("valid original single-block fixture");
+    quantize_f32_to_q4_k_soa_tensor(src, src.len(), 1, out)
+        .expect("valid original single-block fixture");
 }

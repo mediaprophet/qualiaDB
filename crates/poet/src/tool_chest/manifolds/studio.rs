@@ -54,6 +54,8 @@ pub fn studio_manifold_seed() -> ManifoldSeed {
         ],
         connections: vec![
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-studio-scene".into(),
                 from: 0,
                 to: 1,
@@ -61,6 +63,8 @@ pub fn studio_manifold_seed() -> ManifoldSeed {
                 label: "vis:sceneSession".into(),
             },
             SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: "wire-studio-audio".into(),
                 from: 0,
                 to: 2,

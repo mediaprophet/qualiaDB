@@ -7,17 +7,7 @@ use quantized::{transcode_safetensor_with_policy, SafetensorQuantization};
 pub use verbatim::*;
 pub use vision::*;
 
-/// Compatibility report for a completed streaming transcode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TranscodeReport {
-    pub n_tensors: usize,
-    pub bytes_written: usize,
-    pub largest_tensor_bytes: usize,
-    pub total_tensor_bytes: usize,
-    /// Historical maximum source/encoded tensor-buffer estimate. Excludes metadata,
-    /// decoded float scratch, source parsing and sink storage; not total live memory.
-    pub peak_working_bytes: usize,
-}
+pub use etalon_model::p64::convert::TranscodeReport;
 
 /// Transcodes a SafeTensor to the P64 weight stream.
 pub fn transcode_safetensor_to_p64<W: std::io::Write>(

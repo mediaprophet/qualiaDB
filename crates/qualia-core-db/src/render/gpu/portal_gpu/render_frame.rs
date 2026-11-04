@@ -147,6 +147,8 @@ impl PortalGpu {
             if fw > 0 && fh > 0 && (fw, fh) != (self.width, self.height) {
                 let (_, _, frame_target_reservation, _) = reserve_view_resources(fw, fh, false)?;
                 let temporal_was_enabled = self.temporal_resolve.take().is_some();
+                self.pick_readback.invalidate(false);
+                self.pick_semantic_result=None;
                 self.scene_depth.replace(&self.device, fw, fh);
                 if temporal_was_enabled {
                     self.temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(

@@ -26,6 +26,7 @@
 </style>
 </head>
 <body>
+<p role="note" style="padding:0.75rem;border:1px solid #b7791f">Developer inference mode: browser CPU/WebGPU compute bypasses Sentinel token acceptance. Output is ungoverned. Graph checks on this page do not authorize generated tokens.</p>
 <h1>Qualia WASM LLM — Test Harness</h1>
 <p class="dim">Drives <code>initialize_webgpu_engine</code> / <code>inferWasmStreaming</code> from <code>playground/qualia_core_db.js</code> (the wasm-full bundle). Models served from <code>/models/</code> (gitignored). Caching uses the Cache Storage API so a model is downloaded once.</p>
 
@@ -64,7 +65,7 @@
   </label>
   <span class="stat" id="guardstat">guard: allow / none</span>
 </div>
-<div class="dim" id="guard-explainer">The guard runs in WASM over graph quins before inference. A deny prevents token generation; a steer adds a graph-grounded corrective instruction.</div>
+<div class="dim" id="guard-explainer">The demonstration checks graph quins in WASM before developer inference; it is not per-token Sentinel acceptance. A deny prevents token generation; a steer adds a graph-grounded corrective instruction.</div>
 <div class="row">
   <button id="run" disabled>Run inference</button>
   <button id="probe" disabled>Verify quant kernel</button>
@@ -79,7 +80,7 @@
 <script type="module">
 import init, * as QualiaWasm from './playground/qualia_core_db.js?v=0.0.40-graph-guard1';
 const {
-  initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
+  configureBrowserExecutionMode, initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
   releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToP64, p64FormatVersion,
   verifyFirstLayerQuant, evaluate_inference_guard_wasm,
 } = QualiaWasm;
@@ -226,6 +227,7 @@ $('load').onclick = async () => {
     }
     const t0 = performance.now();
     log('initialize_webgpu_engine…');
+    configureBrowserExecutionMode('developer', true);
     await initialize_webgpu_engine(bytes);
     const ready = isWebgpuEngineReady();
     log(`engine ready=${ready} (init ${Math.round(performance.now()-t0)} ms)`, ready ? 'ok' : 'err');
@@ -292,7 +294,7 @@ $('run').onclick = async () => {
     verdict = runGraphGuard();
   } catch (e) {
     log('GRAPH GUARD ERROR: ' + (e?.message ?? e), 'err');
-    $('out').textContent = 'Graph guard unavailable. Rebuild the WASM bundle before using guarded inference.';
+    $('out').textContent = 'Graph guard unavailable. Rebuild the WASM bundle before using the developer graph-check demonstration.';
     $('out').className = 'err'; $('run').disabled = false;
     return;
   }

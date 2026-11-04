@@ -439,121 +439,9 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
-        let tensors = index.get_layer_tensors(layer);
-        let mut attn_ok = false;
-        // Decode-profiler: intra-layer split — attention (this block) vs FFN (below).
-        // Native-only: `llm_bench` is `#[cfg(not(wasm32))]`; the wasm-full LLM bundle skips profiling.
-        #[cfg(not(target_arch = "wasm32"))]
-        let t_attn = std::time::Instant::now();
-
-        if tensors.is_hybrid_ssm_layer() {
-            // Hybrid SSM path (Granite / Qwen GatedDeltaNet): replaces the attention block.
-            // The FFN block runs below as normal (SSM + FFN is the standard hybrid layer layout).
-            attn_ok = self.dispatch_hybrid_ssm_layer(
-                index, layer, hidden, emb_dim, &tensors, scratch_a, scratch_b,
-            );
-        } else if tensors.attn_q.is_some() && tensors.attn_k.is_some() && tensors.attn_v.is_some() {
-            if let Some(n) = self.dispatch_attention_layer(
-                index,
-                layer,
-                token_idx,
-                &hidden[..emb_dim],
-                emb_dim,
-                &tensors,
-                scratch_a,
-                scratch_b,
-            ) {
-                add_residual_inplace(&mut hidden[..emb_dim], &scratch_a[..n], n);
-                attn_ok = true;
-            }
-        } else if let Some(qkv_info) = tensors.attn_qkv {
-            let (n_in, n_out) = Self::matmul_dims(&qkv_info);
-            if n_in <= emb_dim
-                && self.dispatch_gemm_into(
-                    index,
-                    &qkv_info,
-                    &hidden[..n_in],
-                    scratch_a,
-                    n_in,
-                    n_out,
-                )
-            {
-                if let Some(out_info) = tensors.attn_output {
-                    let (out_in, out_out) = Self::matmul_dims(&out_info);
-                    if self.dispatch_gemm_into(
-                        index,
-                        &out_info,
-                        &scratch_a[..out_in.min(n_out)],
-                        scratch_b,
-                        out_in,
-                        out_out,
-                    ) {
-                        add_residual_inplace(
-                            &mut hidden[..emb_dim],
-                            &scratch_b[..out_out],
-                            emb_dim.min(out_out),
-                        );
-                        attn_ok = true;
-                    }
-                } else {
-                    add_residual_inplace(
-                        &mut hidden[..emb_dim],
-                        &scratch_a[..n_out],
-                        emb_dim.min(n_out),
-                    );
-                    attn_ok = true;
-                }
-            }
-        } else if let Some(info) = tensors.attn_output {
-            let (n_in, n_out) = Self::matmul_dims(&info);
-            if n_in <= emb_dim
-                && self.dispatch_gemm_into(index, &info, &hidden[..n_in], scratch_a, n_in, n_out)
-            {
-                add_residual_inplace(
-                    &mut hidden[..emb_dim],
-                    &scratch_a[..n_out],
-                    emb_dim.min(n_out),
-                );
-                attn_ok = true;
-            }
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        crate::llm_bench::add_decode_attn_ns(t_attn.elapsed().as_nanos() as u64);
-
-        if !attn_ok
-            && tensors.attn_output.is_none()
-            && tensors.ffn_gate.is_none()
-            && tensors.moe_router.is_none()
-            && !tensors.is_hybrid_ssm_layer()
-        {
-            return false;
-        }
-
-        // #48 diagnostic: localize the residual explosion — attention output magnitude per layer.
-        if layer < 3 && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
-            let max_attn = scratch_a[..emb_dim]
-                .iter()
-                .fold(0f32, |m, &v| m.max(v.abs()));
-            let max_hid = hidden[..emb_dim].iter().fold(0f32, |m, &v| m.max(v.abs()));
-            eprintln!(
-                "[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}",
-                layer,
-                attn_ok,
-                tensors.attn_norm.is_some(),
-                tensors.ffn_norm.is_some(),
-                max_attn,
-                max_hid,
-            );
-        }
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let t_ffn = std::time::Instant::now();
-        let ffn_ok = self
-            .dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b);
-        #[cfg(not(target_arch = "wasm32"))]
-        crate::llm_bench::add_decode_ffn_ns(t_ffn.elapsed().as_nanos() as u64);
-        ffn_ok
+        etalon_inference::ordinary::HybridEngine { host: self }.layer(
+            index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
+        )
     }
 
     /// Attempt the CUDA mega-pass: all layers in one fenced CUDA stream.
@@ -808,7 +696,7 @@ impl QTensorEngine {
         // #48 diagnostic: localize where the hidden state turns non-finite (gated; runs once).
         use std::sync::atomic::{AtomicBool, Ordering as DbgOrdering};
         static FWD_DBG_DONE: AtomicBool = AtomicBool::new(false);
-        let dbg = std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
+        let dbg = crate::gguf_bridge::execution_env::var("QUALIA_LLM_DEBUG_DECODE").is_ok()
             && !FWD_DBG_DONE.swap(true, DbgOrdering::Relaxed);
         if dbg {
             let nf = hidden[..emb_dim].iter().filter(|v| !v.is_finite()).count();
@@ -2050,7 +1938,7 @@ impl QTensorEngine {
 
         // One submit/fence. Logits remain on-device; only bounded block
         // candidates are mapped for the deterministic global merge.
-        self.gpu_queue().submit(Some(enc.encoder.finish()));
+        self.submit_commands(Some(enc.encoder.finish()));
         self.read_browser_top1(staging, top1_plan).await
     }
 
@@ -2118,3 +2006,4 @@ impl QTensorEngine {
         accepted
     }
 }
+

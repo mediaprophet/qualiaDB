@@ -8,105 +8,17 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-use memmap2::Mmap;
-use serde::{Deserialize, Serialize};
 
 use crate::bundle::{BundleReader, BundleWriter};
 use crate::gguf_sharder::GgufTensorInfo;
 
-pub const QWEN_EXPERT_TILE_FORMAT: &str = "qualia.qwen4exp.expert-tile.v1";
-pub const QWEN_EXPERT_TILE_SUFFIX: &str = ".qwen-expert.hmc";
+pub use etalon_inference::qwen::expert_tile::{QwenExpertPlane, QwenExpertTileDescriptor, QwenExpertTileAdmission, QwenExpertTileError, QwenExpertTilePlaneKind, QWEN_EXPERT_TILE_FORMAT, QWEN_EXPERT_TILE_SUFFIX};
 const COPY_CHUNK_BYTES: usize = 1024 * 1024;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct QwenExpertPlane {
-    pub dims: [u64; 4],
-    pub n_dims: u32,
-    pub ggml_type: u32,
-    pub source_byte_offset: u64,
-    pub bytes: u64,
+pub struct QwenExpertTileReader { inner: etalon_inference::qwen::expert_tile::QwenExpertTileReader }
+impl core::ops::Deref for QwenExpertTileReader {
+ type Target = etalon_inference::qwen::expert_tile::QwenExpertTileReader;
+ fn deref(&self) -> &Self::Target { &self.inner }
 }
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct QwenExpertTileDescriptor {
-    pub format: String,
-    pub layer: u16,
-    pub expert: u16,
-    pub source_file_name: String,
-    pub source_byte_len: u64,
-    pub gate: QwenExpertPlane,
-    pub up: QwenExpertPlane,
-    pub down: QwenExpertPlane,
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct QwenExpertTileAdmission {
-    pub cache_used_bytes: u64,
-    pub requested_bytes: u64,
-    pub cache_limit_bytes: u64,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum QwenExpertTileError {
-    InvalidTensor,
-    ExpertOutOfRange,
-    OffsetOverflow,
-    SourceIo,
-    OutputExists,
-    OutputPath,
-    CacheBudgetExceeded,
-    Bundle,
-    Serialize,
-    Write,
-    InvalidPackage,
-    BufferTooSmall,
-}
-
-impl core::fmt::Display for QwenExpertTileError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::InvalidTensor => write!(
-                f,
-                "expert tensor is not a supported [input, output, expert] GGML plane"
-            ),
-            Self::ExpertOutOfRange => {
-                write!(f, "expert id is outside the tensor's expert dimension")
-            }
-            Self::OffsetOverflow => write!(f, "expert tile byte range overflowed"),
-            Self::SourceIo => write!(f, "could not read source GGUF expert plane"),
-            Self::OutputExists => write!(f, "refusing to overwrite an existing Qwen expert tile"),
-            Self::OutputPath => write!(f, "Qwen expert tile output path is invalid"),
-            Self::CacheBudgetExceeded => write!(
-                f,
-                "Qwen expert tile would exceed the configured cache budget"
-            ),
-            Self::Bundle => write!(f, "could not build Qwen expert HMC tile"),
-            Self::Serialize => write!(f, "could not serialize Qwen expert tile descriptor"),
-            Self::Write => write!(f, "could not write Qwen expert tile"),
-            Self::InvalidPackage => write!(f, "Qwen expert tile HMC is invalid"),
-            Self::BufferTooSmall => write!(f, "Qwen expert tile caller buffer is too small"),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum QwenExpertTilePlaneKind {
-    Gate,
-    Up,
-    Down,
-}
-
-/// A validated C:-resident expert tile. Its mapping is bounded by one explicit
-/// promotion artifact, never the original multi-gigabyte GGUF.
-pub struct QwenExpertTileReader {
-    mapped: Mmap,
-    pub descriptor: QwenExpertTileDescriptor,
-    gate_offset: usize,
-    up_offset: usize,
-    down_offset: usize,
-}
-
-impl std::error::Error for QwenExpertTileError {}
 
 fn plane_for_expert(
     tensor: &GgufTensorInfo,
@@ -340,68 +252,9 @@ impl QwenExpertTileReader {
         let up_offset = entry_offset("up", descriptor.up.bytes)?;
         let down_offset = entry_offset("down", descriptor.down.bytes)?;
         drop(bundle);
-        Ok(Self {
-            mapped,
-            descriptor,
-            gate_offset,
-            up_offset,
-            down_offset,
-        })
+        Ok(Self { inner: etalon_inference::qwen::expert_tile::QwenExpertTileReader::from_mapping(mapped, descriptor, [gate_offset, up_offset, down_offset])? })
     }
 
-    fn plane(&self, kind: QwenExpertTilePlaneKind) -> (QwenExpertPlane, usize) {
-        match kind {
-            QwenExpertTilePlaneKind::Gate => (self.descriptor.gate, self.gate_offset),
-            QwenExpertTilePlaneKind::Up => (self.descriptor.up, self.up_offset),
-            QwenExpertTilePlaneKind::Down => (self.descriptor.down, self.down_offset),
-        }
-    }
-
-    /// Compute a cached expert plane directly from its C: HMC segment. Caller
-    /// storage bounds every dequantized row and output vector.
-    pub fn gemv_into(
-        &self,
-        kind: QwenExpertTilePlaneKind,
-        input: &[f32],
-        out: &mut [f32],
-        row_scratch: &mut [f32],
-    ) -> Result<usize, QwenExpertTileError> {
-        let (plane, offset) = self.plane(kind);
-        let width = plane.dims[0] as usize;
-        let rows = plane.dims[1] as usize;
-        let row_bytes = crate::ggml_quants::ggml_row_bytes(plane.ggml_type, width)
-            .ok_or(QwenExpertTileError::InvalidPackage)?;
-        if input.len() < width || out.len() < rows || row_scratch.len() < width {
-            return Err(QwenExpertTileError::BufferTooSmall);
-        }
-        for row in 0..rows {
-            let start = offset
-                .checked_add(
-                    row.checked_mul(row_bytes)
-                        .ok_or(QwenExpertTileError::OffsetOverflow)?,
-                )
-                .ok_or(QwenExpertTileError::OffsetOverflow)?;
-            let end = start
-                .checked_add(row_bytes)
-                .ok_or(QwenExpertTileError::OffsetOverflow)?;
-            if end > self.mapped.len() {
-                return Err(QwenExpertTileError::InvalidPackage);
-            }
-            crate::ggml_quants::dequantize_row_into(
-                &self.mapped[start..end],
-                plane.ggml_type,
-                width,
-                &mut row_scratch[..width],
-            )
-            .map_err(|_| QwenExpertTileError::InvalidPackage)?;
-            let mut sum = 0.0f32;
-            for index in 0..width {
-                sum += row_scratch[index] * input[index];
-            }
-            out[row] = sum;
-        }
-        Ok(rows)
-    }
 }
 
 #[cfg(test)]

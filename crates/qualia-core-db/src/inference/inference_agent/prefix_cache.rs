@@ -47,6 +47,9 @@ pub fn digest_prompt_tokens(tokens: &[u32]) -> [u64; 4] {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct InferenceCacheKey {
+    /// Full SHA-256 scope from the real governed admission. Developer caches
+    /// never collide with an admitted model/request/actor/policy/device scope.
+    pub governed_scope: Option<[u8; 32]>,
     pub model_instance: u64,
     pub tokenizer_revision: u64,
     pub adapter_hash: u64,
@@ -95,6 +98,7 @@ impl InferenceCacheKey {
         n_layers: usize,
     ) -> Self {
         Self {
+            governed_scope: None,
             model_instance,
             tokenizer_revision,
             adapter_hash,
@@ -106,6 +110,11 @@ impl InferenceCacheKey {
             kv_floats,
             n_layers,
         }
+    }
+
+    pub fn with_governed_scope(mut self, scope: Option<[u8; 32]>) -> Self {
+        self.governed_scope = scope;
+        self
     }
 }
 

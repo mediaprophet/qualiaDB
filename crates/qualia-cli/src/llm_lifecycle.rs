@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::sync_channel;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
@@ -24,6 +24,7 @@ static CLI_SESSION: OnceLock<Mutex<Option<CliSession>>> = OnceLock::new();
 struct CliSession {
     record: ActiveModelRecord,
     agent: LocalLlmAgent,
+    authority: Option<Arc<qualia_core_db::llm_agent::native_request::NativeProductSession>>,
 }
 
 fn session_lock() -> &'static Mutex<Option<CliSession>> {
@@ -31,7 +32,19 @@ fn session_lock() -> &'static Mutex<Option<CliSession>> {
 }
 
 fn store_session(record: ActiveModelRecord, agent: LocalLlmAgent) {
-    *session_lock().lock().expect("cli session lock") = Some(CliSession { record, agent });
+    *session_lock().lock().expect("cli session lock") = Some(CliSession { record, agent, authority: None });
+}
+
+/// Explicit injection by an authenticated embedding after model load. CLI
+/// prompts, environment variables and model paths are never authority evidence.
+pub fn bind_session_authority(
+    authority: Arc<qualia_core_db::llm_agent::native_request::NativeProductSession>,
+) -> Result<(), String> {
+    authority.bind().map_err(|e| e.to_string())?;
+    let mut slot = session_lock().lock().map_err(|e| e.to_string())?;
+    let session = slot.as_mut().ok_or("Load a model before binding CLI inference authority")?;
+    session.authority = Some(authority);
+    Ok(())
 }
 
 fn with_session<F, T>(f: F) -> Result<T, String>
@@ -242,6 +255,11 @@ pub fn run_status() -> Result<(), String> {
 /// CLI: .
 pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), String> {
     with_session(|session| {
+        let authority = session.authority.as_ref().ok_or(
+            "CLI inference requires a native host session: configure signed admission, log in with the selected identifier, install an evidence policy, then bind_session_authority after model load"
+        )?;
+        session.agent.bind_native_governed_request(authority.bind().map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
         if orchestrated {
             let intent = cli_read_intent();
             let orch = model_lifecycle::task_orchestrator();

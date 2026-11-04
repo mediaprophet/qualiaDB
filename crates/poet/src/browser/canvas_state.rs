@@ -123,6 +123,8 @@ pub fn snapshot_seed_from_dom(document: &Document, base: &ManifoldSeed) -> Manif
                 continue;
             };
             seed.connections.push(SeedConnection {
+                graph_ids: Vec::new(),
+                cell_anchor: None,
                 id: path.get_attribute("data-id").unwrap_or_else(next_wire_id),
                 from,
                 to,
@@ -293,6 +295,8 @@ mod tests {
             ],
             connections: vec![
                 SeedConnection {
+                    graph_ids: Vec::new(),
+                    cell_anchor: None,
                     id: "wire-old".into(),
                     from: 0,
                     to: 1,
@@ -300,6 +304,8 @@ mod tests {
                     label: "a".into(),
                 },
                 SeedConnection {
+                    graph_ids: Vec::new(),
+                    cell_anchor: None,
                     id: "wire-old".into(),
                     from: 1,
                     to: 0,

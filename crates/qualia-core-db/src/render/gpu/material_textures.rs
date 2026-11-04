@@ -84,28 +84,7 @@ pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 /// Build the fixed texture/sampler slots at a caller-selected binding offset. The mesh renderer
 /// places these after its dynamic material uniform so a draw uses one material bind group.
 pub(super) fn layout_entries(binding_offset: u32) -> Vec<wgpu::BindGroupLayoutEntry> {
-    let mut entries = Vec::with_capacity(12);
-    for binding in 0..6 {
-        entries.push(wgpu::BindGroupLayoutEntry {
-            binding: binding_offset + binding,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                view_dimension: wgpu::TextureViewDimension::D2,
-                multisampled: false,
-            },
-            count: None,
-        });
-    }
-    for slot in 0..6 {
-        entries.push(wgpu::BindGroupLayoutEntry {
-            binding: binding_offset + 6 + slot,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-            count: None,
-        });
-    }
-    entries
+    etalon_render::materials::layout_entries(binding_offset).to_vec()
 }
 
 /// Creates `defaults`.

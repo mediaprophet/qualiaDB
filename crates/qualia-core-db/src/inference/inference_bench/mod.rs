@@ -33,6 +33,8 @@
 
 mod counters;
 mod metrics;
+pub mod prepared_settings;
+pub mod prepared_domino;
 mod probes;
 pub mod raw_decode;
 mod reporting;

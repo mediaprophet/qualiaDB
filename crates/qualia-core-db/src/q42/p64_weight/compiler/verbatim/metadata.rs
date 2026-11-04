@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn prepare(index: &GgufTensorIndex, hparams: &mut [u8], manifolds: &mut [u8]) {
+pub(crate) fn prepare(index: &GgufTensorIndex, hparams: &mut [u8], manifolds: &mut [u8]) {
     let hp = P64HParams {
         n_layer: index.hyperparams.n_layer,
         n_embd: index.hyperparams.n_embd,

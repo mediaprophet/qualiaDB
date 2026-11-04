@@ -44,10 +44,14 @@ pub mod sticky_infer;
 mod config;
 mod control;
 pub mod governed;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod governed_cpu;
 mod decode;
 #[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod decode_helpers;
 mod local_agent;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod native_request;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod prefill_executor;
 pub mod prefix_cache;
@@ -58,6 +62,8 @@ mod validation;
 pub use config::*;
 pub use control::*;
 pub use local_agent::*;
+#[cfg(not(target_arch = "wasm32"))]
+pub use native_request::{NativeDecodeRequest, NativePreparedReceipt};
 pub use types::*;
 
 #[cfg(test)]

@@ -151,7 +151,21 @@ fn pp005_shared_prepare_is_identical_for_http_and_route_agnostic_entry() {
 
 #[test]
 fn pp006_product_chat_reaches_legacy_prefix_cache_not_paged_kv() {
-    let decode = include_str!("../src/inference/inference_agent/decode.rs");
+    let decode = concat!(
+        include_str!("../src/inference/inference_agent/decode/mod.rs"),
+        include_str!("../src/inference/inference_agent/decode/browser.rs"),
+        include_str!("../src/inference/inference_agent/decode/browser_select.rs"),
+        include_str!("../src/inference/inference_agent/decode/diagnostic.rs"),
+        include_str!("../src/inference/inference_agent/decode/forced.rs"),
+        include_str!("../src/inference/inference_agent/decode/model.rs"),
+        include_str!("../src/inference/inference_agent/decode/native.rs"),
+        include_str!("../src/inference/inference_agent/decode/prefill.rs"),
+        include_str!("../src/inference/inference_agent/decode/publication.rs"),
+        include_str!("../src/inference/inference_agent/decode/render.rs"),
+        include_str!("../src/inference/inference_agent/decode/select.rs"),
+        include_str!("../src/inference/inference_agent/decode/speculative.rs"),
+        include_str!("../src/inference/inference_agent/decode/worker.rs"),
+    );
     assert!(
         decode.contains("encode_chat_prompt"),
         "product decode tokenises via encode_chat_prompt"
