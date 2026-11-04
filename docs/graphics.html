@@ -59,7 +59,7 @@
       <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-emerald-300 to-violet-300">Zero heap allocation in frame loops.</span>
     </h1>
     <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8 leading-relaxed">
-      QualiaDB's graphics pipeline delivers advanced temporal reconstruction, image-based lighting, multi-format compressed texture transcoding, and dynamic secondary motion — qualified identically in native desktops and browser WebGPU runtimes. In <strong>v0.0.41 Release Prep (v0.0.40 Baseline)</strong>, the architecture expands with the 7-crate pure-Rust Etalon GPU &amp; compute stack, cross-platform WASM volumetric rendering in <code>webizen-render</code>, zero-heap Flexbox HUD layouts, and the 10-Epic Superior Game Engine.
+      QualiaDB's graphics pipeline includes temporal reconstruction, image-based lighting, multi-format compressed texture transcoding, and dynamic secondary motion. Native and browser capabilities have separate qualification evidence. In <strong>v0.0.41 Release Prep (v0.0.40 Baseline)</strong>, the architecture expands with the Etalon GPU &amp; compute stack, WASM volumetric rendering in <code>webizen-render</code>, zero-heap Flexbox HUD layouts, and the 10-Epic Superior Game Engine.
     </p>
 
     <!-- Key Engine Metrics Grid -->
@@ -89,6 +89,11 @@
 
   <!-- Interactive Capabilities Section -->
   <main class="max-w-6xl mx-auto px-6 pb-24">
+    <section class="glass-strong rounded-3xl p-6 mb-8" aria-labelledby="graphics-migration-update">
+      <h2 id="graphics-migration-update" class="text-2xl font-semibold mb-3">0.0.41 migration: device lifecycle and recovery</h2>
+      <p class="text-white/70 mb-3">The 4 November closeout adds foreign device/queue rejection, retained-device liveness checks, stale readback refusal and cancellation cleanup in Etalon. Browser qualification covers shared and transferable worker transports, cancellation, teardown, real device loss and fresh-device render/pick/compute recovery. A separate actual Portal test destroys its owned device, replaces the DOM canvas and resumes rendering retained scene geometry.</p>
+      <p class="text-white/70">Native GPU cases passed on RTX A2000 Vulkan/DX12; both browser transports passed seven checks and Portal recovery passed without recorded GPU errors. The component fixture renders into an independent texture; its canvas stewardship assertion is separate from the Portal DOM test. Metal hardware was not exercised, and these functional results establish no performance improvement. See the <a class="text-emerald-300 underline" href="progress-0.0.41.html#migration-closeout">release outline and exact revisions</a> and <a class="text-cyan-300 underline" href="testing-etalon-vibe.md">qualification record</a>.</p>
+    </section>
     <!-- Tab Controls -->
     <div class="flex flex-wrap items-center gap-2 mb-8 p-1.5 bg-black/40 border border-white/10 rounded-full w-fit tab-nav">
       <button class="tab-btn active" onclick="switchTab('temporal')" id="btn-temporal">

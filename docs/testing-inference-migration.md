@@ -1,5 +1,38 @@
 # Inference migration qualification
 
+## Current scope for the 0.0.41 target (4 November 2026)
+
+The non-inference Etalon migration closeout is published and qualified on the
+available native/browser targets. Its current results are recorded in
+[Etalon qualification](testing-etalon-vibe.md) and the
+[0.0.41 release outline](progress-0.0.41.html#migration-closeout).
+**Remaining MoE/Qwen and further inference work is deferred to a later sprint.**
+Historical checkpoints below do not make those unfinished extensions complete.
+
+Existing production inference continues to retain QualiaDB's authenticated
+Webizen token/artifact acceptance. Independent developer/debug execution is an
+explicit mode for testing and optimization, not an implicit production bypass.
+Identity can describe a person, entity or agent with multiple identifiers.
+This non-inference closeout leaves those runtime contracts unchanged and does
+not claim new full-model or governance runtime qualification.
+
+P64 remains the native model format. GGUF is a compatibility/import format,
+including conversion into P64 where supported; it does not define the inference
+capability boundary. FreeToken is a reference architecture, not a required
+dependency. Generic mixture-of-experts work is distinct from Qwen-specific
+architecture handling.
+
+Deferred work includes remaining generic MoE/Qwen integration and qualification,
+P64 inference product extensions, tokenizer/sampler transfer and acceptance-coupled
+sampling state, and the inference optimization lab/campaign. Existing committed
+functionality is retained. Unpublished implementation work is preserved locally
+on `inference-sprint-deferred-20261104`, in recovery stashes, and in the bounded
+snapshot `target/inference-migration-qualification/deferred-inference-20261104/`.
+That directory contains the exact recovery manifest and handoff; it is not a
+public Pages artifact. No deferred drafts were activated by the closeout.
+
+## Incremental qualification history
+
 This document records the incremental qualification history. The assembled
 migration results below supersede earlier checkpoint status. Etalon owns reusable
 inference execution and P64 model processing; QualiaDB retains authenticated

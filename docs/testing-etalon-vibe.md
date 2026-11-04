@@ -1,5 +1,70 @@
 # Etalon/VibeScript and accelerator harness
 
+## 0.0.41 preparation: non-inference migration qualification (4 November 2026)
+
+The non-inference migration closeout is published in
+[Etalon `0f929b490`](https://github.com/mediaprophet/etalon/commit/0f929b49090d1acde52a0f88e99f0ffbf63f97e2)
+and consumed by
+[QualiaDB `b4e1b6215`](https://github.com/mediaprophet/qualiaDB/commit/b4e1b62155c36764b0888e07e80a86db1e8a290b).
+These are preparation commits for **0.0.41**, not a release tag or a claim that
+new installers or deployed Pages WASM artifacts have been published. See the
+[release outline](progress-0.0.41.html#migration-closeout) for ownership and scope.
+
+The closeout covers shared resources, Forge, tensors/native adapters, rendering,
+browser lifecycle and diagnostic/scientific-compute integration. Device leases
+reject known foreign queues before changing registry state. Tensor readback
+checks the creating device before mapping and checks liveness again before
+returning output; cancellation and errors release mapping/busy state. Forge
+checks retained device liveness before allocation, upload, submission and
+readback, with implementation split into focused lifecycle, pipeline, operations
+and readback modules.
+
+| Qualification | Observed result | Scope and limits |
+| --- | --- | --- |
+| Etalon `cargo +1.96.1 xtask test --test-threads 4` | 4,810 passed; 0 failed; 54 skipped | Published Etalon revision above; skipped cases are not passes. |
+| Targeted resources/tensor/Forge units | 14 + 16 + 256 = 286 passed | These overlap the full suite; do not add them as unique tests. |
+| Five explicitly executed GPU lifecycle cases | 5 passed | Foreign queue/shared loss; wrong device/reuse; cancellation/unmap/reuse; loss after mapping; Forge lost-device refusal. RTX A2000, Vulkan and DX12. |
+| Browser canonical lifecycle, shared transport | 7 checks passed | Cancellation, teardown, real device loss and fresh-device render/pick/compute recovery. |
+| Browser canonical lifecycle, transferable transport | 7 checks passed | Same assertions through the alternative transport. |
+| Actual Portal host recovery | Passed | Destroyed owned WebGPU device; replaced DOM canvas; advanced generation; retained geometry rendered again; awaited queue completion; no recorded GPU errors. |
+| Published-pin Qualia consumer check | Passed | Locked core, client, CLI and MCP build; no local overrides; lockfile unchanged. |
+
+Browser results identify the adapter as `nvidia ampere` through the browser API.
+The canonical component test checks canvas stewardship separately from rendering
+into an independent GPU texture. The Portal test exercises the actual production
+host and DOM canvas recovery; these are distinct pieces of evidence. Metal
+hardware was not executed on this host. The browser fixtures use root crate
+optimization level 1 for functional qualification, and establish no performance
+uplift or production benchmark result. This closeout adds no NPU execution claim.
+
+Reproduction entry points are
+[`test-qualia-browser-render-lifecycle.cjs`](https://github.com/mediaprophet/qualiaDB/blob/b4e1b62155c36764b0888e07e80a86db1e8a290b/scripts/test-qualia-browser-render-lifecycle.cjs)
+and [`test-qualia-portal-recovery.cjs`](https://github.com/mediaprophet/qualiaDB/blob/b4e1b62155c36764b0888e07e80a86db1e8a290b/scripts/test-qualia-portal-recovery.cjs).
+Use fresh source-matched WASM: `device-harness` for the component fixture and
+`portal,device-harness` for the combined Portal fixture. Select its package with
+`WASM_ASSET_DIR` and a caller-owned receipt directory with `ARTIFACT_DIR`.
+The final native consumer command was:
+
+```powershell
+cargo +1.96.1 check --locked -p qualia-core-db -p qualia-client-core -p qualia-cli -p qualia-mcp -j 1
+```
+
+Retained local evidence is under `target/inference-migration-qualification/`:
+`noninference-runtime-20261104`, `noninference-full-20261104`,
+`noninference-browser-20261104-02`, `noninference-portal-20261104`, and
+`noninference-consumers-20261104`. These are local evidence directories, not
+download links served by Pages. Initial WASM lock resolution, fixture compilation,
+bindgen schema and consumed-adapter failures remain recorded alongside their
+corrected reruns. The matching existing wasm-bindgen 0.2.129 tool was used;
+dependency versions were not downgraded.
+
+Remaining MoE/Qwen and inference expansion is deferred to a separate sprint.
+The existing Webizen token-acceptance loop and explicit developer/debug modes
+are preserved; this qualification does not claim a new full-model inference or
+governance runtime test. See [inference qualification](testing-inference-migration.md).
+
+## Accelerator harness operation
+
 Run from the QualiaDB root with PowerShell 7 and Rust installed. The runner
 always uses the selected local Etalon checkout, rather than silently testing
 the production git pin.

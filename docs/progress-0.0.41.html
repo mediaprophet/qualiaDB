@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QualiaDB 0.0.41 Release Preparation | Etalon 7-Crate Stack &amp; WASM Volumetric SDK</title>
-    <meta name="description" content="QualiaDB 0.0.41 Release Preparation: End-to-End 7-Crate Etalon GPU &amp; Compute Wiring, Cross-Platform WASM Volumetric Renderer, 10-Epic Game Engine, EcoPunk Biological Continuum, and 28-Crate Workspace.">
+    <title>QualiaDB 0.0.41 Release Preparation | Etalon Migration &amp; WASM Volumetric SDK</title>
+    <meta name="description" content="QualiaDB 0.0.41 preparation: published non-inference Etalon closeout, native and browser lifecycle evidence, deferred inference sprint, WASM volumetric SDK, 10D engine and EcoPunk continuum.">
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="css/release-showcase.css">
@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
     <script src="js/menu-loader.js"></script>
     <style>
+        #migration-closeout { overflow-wrap: anywhere; }
+        #migration-closeout .table-scroll { max-width: 100%; overflow-x: auto; margin: 1.5rem 0; }
+        #migration-closeout .table-scroll table { min-width: 640px; margin: 0; }
         .showcase-hero {
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(56, 189, 248, 0.10) 50%, rgba(168, 85, 247, 0.12) 100%);
             border: 1px solid rgba(16, 185, 129, 0.35);
@@ -190,11 +193,12 @@
     <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
         <div class="showcase-hero">
             <div class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.35);">Release Preparation · v0.0.41 Preview (Built on v0.0.40 Baseline)</div>
-            <h1 style="margin-top: 0.75rem; font-size: 2.5rem;">QualiaDB 0.0.41: Etalon 7-Crate GPU Stack, WASM Volumetric SDK &amp; 10D Engine</h1>
+            <h1 style="margin-top: 0.75rem; font-size: 2.5rem;">QualiaDB 0.0.41 Preparation: Etalon Migration, WASM Volumetric SDK &amp; 10D Engine</h1>
             <p class="subtitle" style="max-width: 920px; font-size: 1.12rem; line-height: 1.65;">
-                Building upon the <code>0.0.40</code> production baseline, the <strong>0.0.41 release preparation</strong> completes the end-to-end wiring of the <strong>7-crate Etalon pure-Rust GPU &amp; compute stack</strong> across <code>qualia-core-db</code>, <code>webizen-render</code>, and <code>webizen-web</code> (<code>qualia-wasm</code>), unifies cross-platform <strong>WebGPU volumetric and Canvas2D scene rendering on <code>wasm32-unknown-unknown</code></strong>, and ships the <strong>10-Epic Superior Game Engine</strong> and <strong>EcoPunk 26.5 km Biological Continuum</strong> across all 28 workspace crates.
+                Building upon the <code>0.0.40</code> baseline, <strong>0.0.41 release preparation</strong> now includes the published <strong>non-inference Etalon migration closeout (EM-02–EM-09)</strong> and its native GPU, browser lifecycle and production Portal recovery evidence. The broader outline retains the <strong>WASM volumetric SDK</strong>, <strong>10-Epic game engine</strong>, <strong>EcoPunk 26.5 km Biological Continuum</strong> and workspace topics below. Remaining inference, MoE/Qwen and model-lab extensions are deferred to a separate sprint. This page records preparation; it does not announce a 0.0.41 release or change runtime versions.
             </p>
             <div style="display: flex; gap: 0.85rem; flex-wrap: wrap; margin-top: 1.5rem;">
+                <a href="#migration-closeout" class="btn btn-primary" style="text-decoration: none;">4 November Migration Closeout →</a>
                 <a href="graphics.html" class="btn btn-primary" style="text-decoration: none;">Explore Etalon Graphics &amp; HUD →</a>
                 <a href="wasm-engine.html" class="btn" style="text-decoration: none; background: rgba(56, 189, 248, 0.14); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8;">WASM Volumetric &amp; Portal SDK →</a>
                 <a href="vibe/index.html" class="btn" style="text-decoration: none; background: rgba(168, 85, 247, 0.14); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc;">Vibe-0.1 &amp; EcoPunk Continuum →</a>
@@ -204,12 +208,12 @@
 
         <div class="metric-strip">
             <div class="metric-tile">
-                <div class="val" style="color: #34d399;">7 / 7</div>
-                <div class="lbl">Etalon GPU &amp; Compute Crates Wired End-to-End</div>
+                <div class="val" style="color: #34d399;">EM-02–09</div>
+                <div class="lbl">Published Non-Inference Migration Closeout</div>
             </div>
             <div class="metric-tile">
-                <div class="val">28 / 28</div>
-                <div class="lbl">Workspace Crates Synchronized (Native + WASM)</div>
+                <div class="val">4,810</div>
+                <div class="lbl">Etalon Suite Passed · 0 Failed · 54 Skipped</div>
             </div>
             <div class="metric-tile">
                 <div class="val" style="color: #38bdf8;">Tier 1 + 2</div>
@@ -225,16 +229,93 @@
             </div>
             <div class="metric-tile">
                 <div class="val" style="color: #34d399;">42 MiB</div>
-                <div class="lbl">Prolog Sentinel Cap &amp; Zero-Heap Hot-Path ABI Verified</div>
+                <div class="lbl">Sentinel Arena Ceiling · Zero-Heap Hot-Path Contract</div>
             </div>
         </div>
+
+        <section id="migration-closeout" style="margin-bottom: 4rem; scroll-margin-top: 6rem;">
+            <span class="pillar-badge pillar-1">4 November 2026 · Published Non-Inference Closeout</span>
+            <h2>Etalon migration: reusable execution owners, preserved Qualia authority</h2>
+            <p>
+                The scoped EM-02–EM-09 closeout is published and remote-verified. Reusable compute and lifecycle mechanics have canonical owners in Etalon; QualiaDB keeps application policy, semantic adaptation and host integration. Source audits and independent lifecycle review establish this ownership boundary. Runtime receipts qualify the exercised paths separately. The original full migration programme includes additional inference work, which remains deferred at the requested sprint boundary.
+            </p>
+            <div class="table-scroll" role="region" aria-label="Migration details table" tabindex="0"><table>
+                <caption style="text-align: left; padding: 0.75rem 0;">Immutable published source pair for this closeout</caption>
+                <thead><tr><th scope="col">Repository / branch</th><th scope="col">Published commit</th><th scope="col">Selection</th></tr></thead>
+                <tbody>
+                    <tr><td>Etalon · <code>qualiadb-migration</code></td><td><a href="https://github.com/mediaprophet/etalon/commit/0f929b49090d1acde52a0f88e99f0ffbf63f97e2"><code style="overflow-wrap: anywhere;">0f929b49090d1acde52a0f88e99f0ffbf63f97e2</code></a></td><td>Canonical non-inference lifecycle increment and qualification fixes.</td></tr>
+                    <tr><td>QualiaDB · <code>0.0.40.12-etalon-migration</code></td><td><a href="https://github.com/mediaprophet/qualiaDB/commit/b4e1b62155c36764b0888e07e80a86db1e8a290b"><code style="overflow-wrap: anywhere;">b4e1b62155c36764b0888e07e80a86db1e8a290b</code></a></td><td>Production dependency pins select the published Etalon revision; Portal recovery coverage is committed.</td></tr>
+                </tbody>
+            </table></div>
+            <p>
+                Publication verified both branches and clean tracked worktrees at closeout. The final locked core/client/CLI/MCP check used published Git dependencies with no local overrides and left its lockfile unchanged. Earlier local-overlay qualification is recorded independently and does not substitute for the published-pin check.
+            </p>
+            <p>
+                The Qualia integration also incorporates the upstream cooperative lifecycle and Semantic Instrument updates through <a href="https://github.com/mediaprophet/qualiaDB/commit/2e18a46fef4d06b8055a3254b69c7ac91607e161">the upstream merge</a>, preserving the newer comparative benchmark snapshots. The cooperative board fixture was updated for the expanded work-item schema; cooperative/wellfare configuration checks and the affected test compilation passed. This is integration evidence, not a new benchmark performance claim.
+            </p>
+            <h3>Migration outline and ownership boundary</h3>
+            <div class="table-scroll" role="region" aria-label="Migration details table" tabindex="0"><table>
+                <thead><tr><th scope="col">Package</th><th scope="col">Canonical reusable responsibility</th><th scope="col">Qualia host responsibility and closeout boundary</th></tr></thead>
+                <tbody>
+                    <tr><td>EM-02 · Resources</td><td>Device/queue ownership, shared leases, resource budgets and retained-device liveness.</td><td>Bind application resources to the shared owner; preserve the 42 MiB Sentinel and explicit external budgets.</td></tr>
+                    <tr><td>EM-03 · Forge</td><td>Kernel specifications, shader generation/certification, portable execution and upload/readback lifecycle.</td><td>Adapt existing builtins, schedules and application requests to the canonical implementation.</td></tr>
+                    <tr><td>EM-04 · Tensors</td><td>Prepared tensor kernels, forward-arena ownership and guarded readback.</td><td>Supply caller buffers and admitted host state; this closeout does not qualify new model families.</td></tr>
+                    <tr><td>EM-05 · Native paths</td><td>Reusable native backend mechanics and retained resource ownership.</td><td>Keep provider selection and host adaptation. Vulkan/DX12 evidence below does not prove CUDA, DirectML or Metal execution.</td></tr>
+                    <tr><td>EM-06 · Render</td><td>Reusable render resources/passes and their device lifecycle.</td><td>Retain Portal scene, geometry, canvas and application integration.</td></tr>
+                    <tr><td>EM-07 · Browser</td><td>Worker generations, shared/transferable transport and stale-completion refusal.</td><td>Bind canonical lifecycle state to the production Portal and DOM recovery path.</td></tr>
+                    <tr><td>EM-08 · Diagnostics</td><td>Reusable isolated diagnostic and benchmark execution.</td><td>Keep host entry points, explicit developer admission and evidence attribution.</td></tr>
+                    <tr><td>EM-09 · Signal/science</td><td>Selected reusable signal, geometry and science kernels.</td><td>Preserve semantic/domain APIs through thin adapters; source ownership is not exhaustive scientific workload validation.</td></tr>
+                </tbody>
+            </table></div>
+            <p>
+                Device leases now reject known foreign queues and retain loss checks across shared ownership. Forward-arena readback refuses the wrong device and stale/lost owners, including loss after mapping completes. Cancellation and unmapping use RAII cleanup so buffers can be reused safely. Forge checks owner liveness before uploads and readbacks and refuses lost-device progress without advancing the weight cursor. Its large execution backend was split into focused files to separate lifecycle and execution responsibilities.
+            </p>
+            <p>
+                These changes preserve the 48-byte <code>NQuin</code> ABI, deterministic evaluation and caller-buffered hot paths. Cold construction remains bounded outside the Sentinel, with caller-selected budgets and fail-closed admission. Source consolidation preserves committed capability; it does not authorize stub replacement or removal of working inference.
+            </p>
+            <h3>Observed qualification and its limits</h3>
+            <div class="table-scroll" role="region" aria-label="Migration details table" tabindex="0"><table>
+                <thead><tr><th scope="col">Evidence row</th><th scope="col">Observed result</th><th scope="col">Interpretation</th></tr></thead>
+                <tbody>
+                    <tr><td>Full Etalon suite</td><td><strong>4,810 passed, 0 failed, 54 skipped</strong> via <code>cargo +1.96.1 xtask test --test-threads 4</code>.</td><td>The skips remain explicit; this is the Etalon suite, not a new full Qualia workspace runtime run.</td></tr>
+                    <tr><td>Focused lifecycle regression</td><td><strong>286 ordinary unit tests</strong> (14 resources, 16 tensor, 256 Forge) plus <strong>5 explicit native GPU cases</strong> passed.</td><td>Overlaps the full suite; counts must not be added as unique tests. The GPU cases were explicitly selected despite their default ignored status.</td></tr>
+                    <tr><td>Native physical GPU</td><td>NVIDIA RTX A2000: Vulkan for lease/arena checks and DX12 for Forge lifecycle.</td><td>Foreign queue, shared loss, wrong device, cancellation/unmap/reuse, post-map loss and lost-upload refusal exercised actual hardware.</td></tr>
+                    <tr><td>Browser lifecycle component</td><td>Shared and transferable transport runs each passed <strong>7 checks</strong>.</td><td>Canonical generation and stale-callback handling; component canvas stewardship is distinct from GPU texture ownership and actual Portal DOM recovery.</td></tr>
+                    <tr><td>Production Portal recovery</td><td>Actual owned WebGPU device destruction, DOM canvas replacement, generation <strong>0 → 1</strong> and retained geometry rendering passed.</td><td>Separate production-host run awaited GPU queue completion with no GPU or page errors. Geometry retained 4 vertices and 12 indices. Browser adapter reported <code>nvidia / ampere</code>; its device/model fields were blank.</td></tr>
+                    <tr><td>Published dependency consumers</td><td>Locked <code>qualia-core-db</code>, <code>qualia-client-core</code>, <code>qualia-cli</code> and <code>qualia-mcp</code> check passed.</td><td>Published Etalon pin, no local overrides, lock unchanged. This is a compilation/integration gate.</td></tr>
+                </tbody>
+            </table></div>
+            <p>
+                Browser functionality was qualified with root optimization level 1; no measured performance uplift is claimed. Metal hardware was not executed. These Windows/native and Chromium observations do not establish all-platform validation, phone coverage, NPU execution or retired WebGPU CTS coverage. Browser adapter reporting must not be expanded into a more precise hardware identity than the receipt supplies.
+            </p>
+            <p>
+                Earlier failed harness/build attempts remain retained alongside corrected reruns. They include WASM dependency-resolution and descriptor/configuration failures and browser fixture capture/fresh-adapter corrections. A failed or compile-only attempt is not a runtime pass; the final successful receipts identify the observed results.
+            </p>
+            <h3>Inference continuity and the next sprint</h3>
+            <p>
+                Existing production inference, real Webizen token acceptance and explicit independent developer/debug execution remain preserved. This non-inference closeout makes no claim that those inference modes were newly runtime-tested here. Qualia retains authenticated controller/policy checks and token/artifact acceptance; developer execution requires explicit admission and cannot silently replace missing authority. Persons, entities and agents may each have multiple identifiers; subject, identifier, controller and delegation remain distinct concepts.
+            </p>
+            <p>
+                <strong>P64 is the native model format.</strong> GGUF remains a compatibility/import route. FreeToken supplies reference architecture, not a dependency or replacement native format. Existing committed model functionality remains available. Further generic MoE and Qwen work, tokenizer/sampler integration, P64 inference product extensions and the independent optimization lab remain deferred EM-12–EM-15 work; they are neither declared complete nor removed from the programme.
+            </p>
+            <p>
+                Unpublished inference drafts were parked safely on <code>inference-sprint-deferred-20261104</code> (retained tip <code>7d8b3362a</code>), with both inference stashes preserved. They were not applied to the published non-inference closeout. The next sprint must reconcile those drafts with the immutable published pair, preserve working model paths, assemble the affected consumers and qualify actual family/state, mode, backend and publication behavior before cutover. Full-depth MoE/Qwen preservation, inference state equivalence, remaining product/lab integration and paired warmed-session performance remain future gates. Their deferral does not reopen the completed scoped non-inference closeout.
+            </p>
+            <h3>Evidence and release follow-through</h3>
+            <p>
+                Read the <a href="testing-etalon-vibe.md">Etalon/Vibe harness guide and closeout evidence</a> and <a href="testing-inference-migration.md">inference qualification history</a> for scope, commands, source identities and historical checkpoints. Maintainer-local planning records remain under <code>docs/plans/etalon-gpu-migration-tracker.md</code> and <code>docs/plans/etalon-gpu-migration-plan-2026-11-03.md</code>; they are not published Pages downloads. The dated closeout supersedes earlier pending-status entries for this scope, while retaining their failures and limitations.
+            </p>
+            <p>
+                Local receipts are retained under <code>target/inference-migration-qualification/</code>: <code>noninference-closeout-20261104</code>, <code>noninference-runtime-20261104</code>, <code>noninference-full-20261104</code>, <code>noninference-browser-20261104-02</code>, <code>noninference-portal-20261104</code> and <code>noninference-consumers-20261104</code>. These are local evidence directories, not promised public downloads. Publication of a 0.0.41 release, runtime version changes and broader platform/performance claims require their own release decisions and corresponding evidence.
+            </p>
+        </section>
 
         <!-- PILLAR 1: ETALON 7-CRATE GPU & COMPUTE STACK -->
         <section style="margin-bottom: 4rem;">
             <span class="pillar-badge pillar-1">Pillar I · Pure-Rust GPU &amp; Compute Stack</span>
-            <h2>End-to-End 7-Crate Etalon Architecture Wiring</h2>
+            <h2>Seven-Crate GPU Architecture and Canonical Etalon Ownership</h2>
             <p>
-                Previously, only the top-level <code>etalon</code> crate (re-exporting <code>wgpu 30.0.0-etalon</code>) was consumed directly while the six companion Etalon crates lived alongside duplicate kernels in <code>qualia-core-db</code>. In preparation for <strong>0.0.41</strong>, all seven Etalon crates are wired end-to-end into <code>qualia-core-db</code>, <code>webizen-render</code>, and <code>webizen-web</code>:
+                The seven-crate GPU overview below describes established integration across <code>qualia-core-db</code>, <code>webizen-render</code> and <code>webizen-web</code>. The migration also establishes focused resource, native, diagnostic and science libraries in Etalon, with thin Qualia host adapters. This overview is not a count of every Etalon workspace crate or a claim that every inference/backend combination has been qualified; the dated closeout above defines the published scope and observed targets.
             </p>
 
             <div class="arch-diagram">
@@ -314,7 +395,7 @@
             <span class="pillar-badge pillar-2">Pillar II · Cross-Platform Browser &amp; Edge Runtime</span>
             <h2>Unified <code>webizen-render</code> &amp; <code>webizen-web</code> WASM Volumetric Pipeline</h2>
             <p>
-                In <strong>0.0.41</strong>, <code>webizen-render</code>'s <code>volumetric</code>, <code>volumetric_hmc</code>, and <code>volumetric_texture</code> modules are no longer restricted to native desktop builds—they compile and run natively on <code>wasm32-unknown-unknown</code>, and are wired directly into <code>webizen-web</code> (<code>qualia-wasm</code>).
+                The <strong>0.0.41 preparation outline</strong> includes <code>webizen-render</code>'s <code>volumetric</code>, <code>volumetric_hmc</code> and <code>volumetric_texture</code> modules for native and <code>wasm32-unknown-unknown</code> integration with <code>webizen-web</code> (<code>qualia-wasm</code>). The closeout qualifies the browser cases recorded above; compilation and API wiring do not establish every renderer feature on every platform.
             </p>
 
             <table>
@@ -387,7 +468,7 @@ try {
             <span class="pillar-badge pillar-3">Pillar III · 10-Epic Game Engine &amp; EcoPunk World Continuum</span>
             <h2><code>.10d</code> Living Containers, PGA Motor Skinning, XPBD Fracture &amp; 18 Vibe-0.1 Capabilities</h2>
             <p>
-                <code>qualia-core-db::scene_graph_10d</code> and <code>qualia-vibe-compiler</code> deliver a complete zero-heap 10D spatial simulation and biological world-building stack:
+                <code>qualia-core-db::scene_graph_10d</code> and <code>qualia-vibe-compiler</code> provide the 10D spatial simulation and biological world-building capabilities below, under the zero-heap hot-path and bounded cold-construction contracts:
             </p>
 
             <div class="grid">
@@ -442,12 +523,12 @@ try {
             </div>
         </section>
 
-        <!-- PILLAR 4: 28-CRATE WORKSPACE, QAPPS & MCP 2.0 -->
+        <!-- PILLAR 4: WORKSPACE, QAPPS & MCP 2.0 -->
         <section style="margin-bottom: 3rem;">
-            <span class="pillar-badge pillar-4">Pillar IV · 28-Crate Workspace, QApps &amp; Agent Protocol</span>
-            <h2>Synchronized 28-Crate Architecture &amp; Autonomous Verification</h2>
+            <span class="pillar-badge pillar-4">Pillar IV · 29-Crate Workspace, QApps &amp; Agent Protocol</span>
+            <h2>29-Crate Workspace Architecture &amp; Automated Verification</h2>
             <p>
-                All 28 Rust crates in the QualiaDB workspace share synchronized metadata, zero-heap hot-path enforcement, and automated GitHub Actions verification across native and WASM targets:
+                The current Cargo workspace lists 29 member crates. Shared metadata, zero-heap hot-path enforcement and automated native/WASM checks support the release programme; individual feature and platform qualification remains scoped to its evidence:
             </p>
             <ul>
                 <li><strong><code>qualia-qapps</code>:</strong> Portable Semantic Application Manifest registry, capability readiness inspector, and surface schema verifier for sovereign QApps.</li>
