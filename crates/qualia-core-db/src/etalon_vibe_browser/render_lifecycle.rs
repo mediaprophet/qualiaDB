@@ -279,8 +279,29 @@ async fn run(shared: bool, action: &str) -> Result<Value, String> {
         let w = replacement.lock().unwrap();
         w.attach_offscreen_canvas() && !w.attach_offscreen_canvas()
     };
-    // Always use a fresh device, never reuse a destroyed WebGPU device.
-    let (fresh, queue2) = adapter
+    // WebGPU adapter admission is single-use. Recovery needs a fresh adapter
+    // request as well as a fresh device; retain the original invalidated owners.
+    let fresh_adapter = match instance
+        .request_webgpu_adapter(&Default::default(), gpu::FeatureLevel::Compatibility)
+        .await
+    {
+        Ok(adapter) => adapter,
+        Err(error) => {
+            return Ok(json!({"outcome":"unsupported", "action":action,
+            "phase":"recovery-adapter", "reason":error.to_string()}))
+        }
+    };
+    let fresh_info = fresh_adapter.get_info();
+    if fresh_info.backend != gpu::Backend::BrowserWebGpu {
+        return Err("Unexpected recovery backend".into());
+    }
+    if fresh_info.device_type == gpu::DeviceType::Cpu {
+        return Ok(json!({"outcome":"unsupported", "action":action,
+            "phase":"recovery-adapter",
+            "reason":"Recovery returned a CPU/software adapter; GPU lifecycle qualification refused",
+            "adapter":{"name":fresh_info.name,"backend":format!("{:?}",fresh_info.backend),"deviceType":format!("{:?}",fresh_info.device_type)}}));
+    }
+    let (fresh, queue2) = fresh_adapter
         .request_device(&Default::default())
         .await
         .map_err(|e| e.to_string())?;
@@ -304,6 +325,7 @@ async fn run(shared: bool, action: &str) -> Result<Value, String> {
     Ok(
         json!({"outcome":"passed", "action":action, "transportShared":shared,
         "adapter": {"name":info.name,"backend":format!("{:?}",info.backend),"deviceType":format!("{:?}",info.device_type),"vendor":info.vendor,"device":info.device},
+        "recoveryAdapter": {"name":fresh_info.name,"backend":format!("{:?}",fresh_info.backend),"deviceType":format!("{:?}",fresh_info.device_type),"vendor":fresh_info.vendor,"device":fresh_info.device},
         "oldMapRejected":rejected,"pendingBeforeYield":true,"canvasExclusive":canvas_exclusive,
         "canvasReacquired":canvas_reacquired,"output":output,
         "canvasScope":"canonical stewardship admission only; GPU render uses an independent offscreen texture, not the transferred OffscreenCanvas",

@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Pin the qualified Etalon resource, tensor and Forge lifecycle update: reject foreign device/queue use and stale device readback, retain cancellation cleanup, and add browser transport and actual Portal device-loss recovery qualification. Remaining MoE and inference expansion is deferred to a separate sprint.
+
 - Preserve configured generic MoE expert counts and top-k selection through native P64 metadata and Etalon dispatch. Validate recurrent-state budgets, clear recurrent history on sequence reset, prevent KV-only prefix reuse for hybrid models, and propagate recurrent-layer failures.
 - Apply explicit developer admission and lifecycle-generation checks to the legacy browser inference agent, including extension callbacks. Refuse missing engines and invalid vocabulary projections instead of panicking or treating buffer sizes and embedding coordinates as tokens. Browser execution receipts use schema v2, identify the active projection path, and report unmeasured GPU transfer totals as null.
 - Distinguish native epoch, context, token-checkpoint and token-acceptance refusals in diagnostics without exposing proposed token contents or changing Webizen decisions.
