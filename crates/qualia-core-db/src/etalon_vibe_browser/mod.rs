@@ -2,6 +2,8 @@
 
 #[cfg(target_arch = "wasm32")]
 mod gpu;
+#[cfg(target_arch = "wasm32")]
+mod render_lifecycle;
 
 use crate::vibe_host::VibeHost;
 use serde_json::{json, Value as Json};

@@ -1587,7 +1587,9 @@ pub mod deontic_logic;
     feature = "wasm-webcivics",
     feature = "wasm-logic",
     feature = "wasm-scientific",
-    feature = "wasm-full"
+    feature = "wasm-full",
+    // Sensing association estimates retain their real epistemic classification.
+    feature = "device-harness"
 ))]
 pub mod epistemic;
 pub mod storage;
