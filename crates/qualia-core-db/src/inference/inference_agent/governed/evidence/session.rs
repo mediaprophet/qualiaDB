@@ -273,7 +273,15 @@ impl<'slot, 'bytes> GovernedEvidenceSession<'slot, 'bytes> {
             .and_then(|r| r);
         match &result {
             Ok(p) if p.decision == c::Decision::Allow => self.terminal = false,
-            _ => self.cancel(),
+            Ok(p) => {
+                log::warn!(
+                    "LLM_DECODE|webizen-proposal-decision|source={:?}|decision={:?}",
+                    proposal.source,
+                    p.decision
+                );
+                self.cancel();
+            }
+            Err(_) => self.cancel(),
         }
         result
     }

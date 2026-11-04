@@ -319,6 +319,7 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
                 break;
             }
             let Some(_context_step) = _compute_epoch.pause() else {
+                log::warn!("LLM_DECODE|native-epoch-refused");
                 return admission::refused(
                     &mut lp,
                     stage_trace,
@@ -326,6 +327,7 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
                 );
             };
             if let Err(error) = gate.context_input() {
+                log::warn!("LLM_DECODE|native-context-refused|{error}");
                 return admission::refused(&mut lp, stage_trace, error);
             }
             if control_thread

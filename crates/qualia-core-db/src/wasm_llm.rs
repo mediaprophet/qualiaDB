@@ -1,8 +1,11 @@
 //! Browser-native LLM exports — Qualia GGUF + WebGPU path (not third-party llama.cpp bindings).
 
 mod cpu;
-mod execution_mode;
+pub(crate) mod execution_mode;
+mod execution_receipt;
 mod lifecycle;
+
+pub use execution_mode::configure_browser_execution_mode;
 
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
@@ -386,53 +389,7 @@ pub fn get_wasm_backend() -> String {
 /// Stable cold-path receipt for the resident browser execution plan.
 #[wasm_bindgen(js_name = getBrowserExecutionReceipt)]
 pub fn get_browser_execution_receipt() -> Result<JsValue, JsValue> {
-    #[derive(serde::Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Receipt {
-        schema: &'static str,
-        backend: String,
-        vocab_size: u32,
-        gpu_top1: bool,
-        device_to_host_bytes_per_token: u32,
-        full_logits_bytes_per_token: u32,
-        cpu_working_set_bytes: u64,
-        inference_memory_domain: &'static str,
-        sentinel_arena_bound: bool,
-        execution_mode: &'static str,
-        developer_bypass: bool,
-        inference_admitted: bool,
-        sentinel_enabled: bool,
-        governed_token_acceptance: bool,
-    }
-
-    let backend = get_wasm_backend();
-    let vocab_size = get_resident_tokenizer_vocab();
-    let compact_bytes = if backend == "webgpu" {
-        crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| {
-            slot.borrow()
-                .as_ref()
-                .and_then(|engine| engine.browser_top1_readback_bytes(vocab_size as usize))
-        })
-    } else {
-        None
-    };
-    let receipt = Receipt {
-        schema: "qualia.browser-execution.v1",
-        backend,
-        vocab_size,
-        gpu_top1: compact_bytes.is_some(),
-        device_to_host_bytes_per_token: compact_bytes.unwrap_or(0),
-        full_logits_bytes_per_token: vocab_size.saturating_mul(4),
-        cpu_working_set_bytes: cpu::working_set_bytes(),
-        inference_memory_domain: "llm-independent",
-        sentinel_arena_bound: false,
-        execution_mode: execution_mode::name(),
-        developer_bypass: execution_mode::developer(),
-        inference_admitted: execution_mode::developer(),
-        sentinel_enabled: false,
-        governed_token_acceptance: false,
-    };
-    serde_wasm_bindgen::to_value(&receipt).map_err(|error| JsValue::from_str(&error.to_string()))
+    execution_receipt::build()
 }
 
 /// Differential WebGPU/CPU probe for the first layer's Q projection.
@@ -516,7 +473,9 @@ pub async fn verify_first_layer_quant() -> Result<JsValue, JsValue> {
         })
     }
     .await;
-    request.ensure_current().map_err(|e| JsValue::from_str(&e))?;
+    request
+        .ensure_current()
+        .map_err(|e| JsValue::from_str(&e))?;
     restore_engine(engine);
     request.complete().map_err(|e| JsValue::from_str(&e))?;
     let probe = result.map_err(|e| JsValue::from_str(&e))?;
@@ -545,7 +504,7 @@ pub fn get_webgpu_init_status() -> String {
 #[wasm_bindgen]
 pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
     execution_mode::require_developer().map_err(|e| js_sys::Error::new(&e))?;
-    let model_stamp=lifecycle::invalidate_model().map_err(|e| js_sys::Error::new(&e))?;
+    let model_stamp = lifecycle::invalidate_model().map_err(|e| js_sys::Error::new(&e))?;
     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|slot| *slot.borrow_mut() = None);
     // Copy once into WASM memory. Can take a few seconds for ~370 MB on phones.
     #[cfg(target_arch = "wasm32")]
@@ -561,7 +520,7 @@ pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<
 
     // Always full eager weight upload — the known-good path that produces coherent text.
     // (Deferred upload was tried for phones and produced garbage / incomplete residency.)
-    crate::gguf_bridge::initialize_webgpu_engine_with_stamp(arc,model_stamp)
+    crate::gguf_bridge::initialize_webgpu_engine_with_stamp(arc, model_stamp)
         .await
         .map_err(|e| js_sys::Error::new(&e))
 }
@@ -582,9 +541,13 @@ pub async fn initialize_cpu_wasm_engine(
     cpu::ensure_initialization_current(stamp).map_err(|e| js_sys::Error::new(&e))?;
     let model: std::sync::Arc<[u8]> = model_data.to_vec().into();
     crate::gguf_bridge::wasm_yield::yield_to_browser().await;
-    cpu::initialize_with_stamp(model, crate::gguf_bridge::wasm_cpu::CPU_WASM_DEFAULT_CONTEXT, stamp)
-        .await
-        .map_err(|error| js_sys::Error::new(&error))
+    cpu::initialize_with_stamp(
+        model,
+        crate::gguf_bridge::wasm_cpu::CPU_WASM_DEFAULT_CONTEXT,
+        stamp,
+    )
+    .await
+    .map_err(|error| js_sys::Error::new(&error))
 }
 
 /// Prepare CPU-WASM with an explicit LLM context allocation. This memory domain

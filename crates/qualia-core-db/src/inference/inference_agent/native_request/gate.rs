@@ -165,7 +165,10 @@ impl<'slot, 'bytes> PublicationGate<'slot, 'bytes> {
         // Raw tokenizer bytes, including partial UTF-8 and empty special tokens.
         // A bounded buffer refuses large pieces rather than truncating evidence.
         let mut piece = [0u8; 65536];
-        self.checkpoint()?;
+        self.checkpoint().map_err(|error| {
+            log::warn!("LLM_DECODE|native-token-checkpoint-refused|source={source:?}|{error}");
+            error
+        })?;
         if matches!(self, Self::Developer { .. }) {
             *output = Some(NativeAcceptedToken::new(token));
             return Ok(());
@@ -199,7 +202,8 @@ impl<'slot, 'bytes> PublicationGate<'slot, 'bytes> {
                 let len = accepted.bytes().len();
                 accepted.complete(len)
             });
-        if result.is_err() {
+        if let Err(error) = &result {
+            log::warn!("LLM_DECODE|native-token-acceptance-refused|source={source:?}|{error}");
             *output = None;
             self.invalidate()
         }

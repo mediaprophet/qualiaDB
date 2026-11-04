@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Apply explicit developer admission and lifecycle-generation checks to the legacy browser inference agent, including extension callbacks. Refuse missing engines and invalid vocabulary projections instead of panicking or treating buffer sizes and embedding coordinates as tokens. Browser execution receipts use schema v2, identify the active projection path, and report unmeasured GPU transfer totals as null.
+- Distinguish native epoch, context, token-checkpoint and token-acceptance refusals in diagnostics without exposing proposed token contents or changing Webizen decisions.
 - Native inference checks cancellation at token/artifact acceptance and finalization, discards terminal worker state, and stops on closed output channels. Accepted token IDs and artifact bytes transfer into caller-owned output before retained evidence completes; normal execution continues to require authenticated Webizen acceptance.
 - Browser CPU workers support explicit developer execution with native P64 models, lifecycle invalidation and both shared-memory and transferable transports. Shared-memory messages are copied into bounded ordinary buffers before decoding for Chromium compatibility.
 - Browser GPU projection waits for mapped readback after submission instead of treating WebGPU's absent native submission index as failure. The top-k shader uses an exactly representable f32 minimum.

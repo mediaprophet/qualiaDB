@@ -669,3 +669,71 @@ separately. The final annotated GPU receipt SHA-256 is
 Run `node scripts/test-qualia-browser-webgpu.cjs` for the GPU checks;
 the CPU command and `NO_SAB=1` fallback are documented above. This is browser
 application coverage, not WebGPU CTS or VibeScript integration coverage.
+
+### Authenticated real-model and legacy browser follow-up
+
+An isolated SoftwareAgent authenticated through the production NativeAuthority
+and installed NativePolicyHost APIs. Two independently signed identifiers for
+the same subject were selected in separate governed model runs. Both matched
+explicit Developer execution for four tokens of text, provenance, semantic
+result and all stream bytes/boundaries. An installed deny policy published no
+tokens, text, stream or semantic artifact; disconnect refused a new request
+binding. The run took 145.54 seconds against a 180-second bound. The retained
+model lease verified SHA-256
+`c004ac34cce45e03e4452bca472535bc371fcb0d07ae560bba2c57ce4a284b7b`.
+See `target/inference-migration-publication/governed-real-20261104` for the signed
+test-actor fixture, public caller, source/binary freeze, report and receipt.
+This closes the earlier unprovisioned positive test prerequisite. It does not
+claim enrollment of a real person, hidden-state equivalence or all model families.
+
+The legacy public WASM LocalLlmAgent now uses the same explicit developer
+admission as the async browser exports, before either local GPU execution or
+extension-bus offload. Its socket response text is not evidence of governed
+token acceptance. Reconfiguration invalidates captured completion generations,
+including developer/governed/developer round trips. A missing engine returns a
+diagnostic instead of panicking. Failed vocabulary projection no longer falls
+back to a readback byte count or hidden-state coordinate as a token. These were
+pre-existing legacy defects, not introduced by the extraction.
+
+The browser receipt is now `qualia.browser-execution.v2`. It reports the actual
+GPU GEMM/CPU streaming-argmax path with `gpuTop1=false`; total GPU device-to-host
+bytes are explicitly `null`/unmeasured. CPU mode reports zero device transfers.
+The full-logits byte field is labelled as a tokenizer-vocabulary estimate, not
+a measured total. The earlier v1 receipt limitation above is historical.
+
+Both Full and Portal packages rebuilt with the same pinned toolchain. Actual
+Chromium CPU shared/transferable and real P64 GPU checks passed again, including
+the v2 assertions. A separate Rust-to-WASM consumer linked the production Full
+rlib and called the public LocalLlmAgent and execution-mode APIs in Chromium.
+It verified governed and revoked-developer refusal with zero tokens/callbacks,
+explicit developer/no-engine handling without panic, and stale public-worker
+token rejection after a mode round trip. Newly added WASM unit-test source was
+not itself executed; these are separate observed consumer checks.
+
+Evidence: `target/qualia-browser-gate-20261104-legacy-v2`, including exact commands,
+source stability, both CPU receipts, GPU receipt, external Rust-consumer source
+and receipt, and artifact hashes. Full WASM SHA-256 is
+`36fd9a83c64936a22f2620ce802f907d14f39808724e77e06c6cbdafd634388a`;
+Portal WASM SHA-256 is
+`6bb2608581c70cf867abf7e4b7a2ba1e7e9a8f115d93b64db8b5ffc777635ec4`.
+
+The stricter real-model denial gate is now directly observed. A signed installed
+Webizen context-input-only policy allowed actual prefill of 13 prompt tokens,
+then computed `Deny` for a `SpeculativeToken` proposal. The run published zero
+tokens, text, streaming bytes or semantic artifact; disconnect again refused
+new binding. It completed in 69.718 seconds within the unchanged 180-second
+child bound. The decisive diagnostic is
+`webizen-proposal-decision|source=SpeculativeToken|decision=Deny`, emitted only
+after the owner/policy closure releases its locks and without token contents.
+The subsequent `Revoked` is terminal state following this actual Deny, not
+evidence of an unrelated continuity defect. Earlier ambiguous attempts remain
+retained and are not retroactively labelled passing.
+
+See `target/inference-migration-publication/governed-token-decision-20261104`:
+the receipt records `OBSERVED_ACTUAL_WEBIZEN_SPECULATIVE_TOKEN_DENY`, together
+with exact build/fixture/model identities and cleaned temporary directories.
+The speculative path still does not emit a `Quarantined` stage; that historical
+field remains false, with the actual computed policy decision supplying proof.
+The production library rebuilt successfully with locked offline Rust 1.96.1;
+native changes in this follow-up add refusal diagnostics only. No policy,
+authority, numerical or publication behavior was weakened to obtain the result.

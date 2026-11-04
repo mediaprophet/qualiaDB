@@ -48,7 +48,7 @@ const server=http.createServer((req,res)=>{
  });result.checks.push(...controls);console.log('CONTROLS',JSON.stringify(controls));
  const model=await page.evaluate(async()=>{
   const bytes=new Uint8Array(await (await fetch('/model.p64')).arrayBuffer());window.model=bytes;const start=performance.now();await q.initializeCpuWasmEngineWithContext(bytes,32);
-  return {name:'P64 CPU model initialization',passed:q.isWasmEngineReady()&&q.getWasmBackend()==='cpu-wasm',backend:q.getWasmBackend(),vocab:q.getResidentTokenizerVocab(),elapsedMs:performance.now()-start,receipt:q.getBrowserExecutionReceipt()};
+  const receipt=q.getBrowserExecutionReceipt();return {name:'P64 CPU model initialization',passed:q.isWasmEngineReady()&&q.getWasmBackend()==='cpu-wasm'&&receipt.schema==='qualia.browser-execution.v2'&&receipt.outputProjection==='cpu'&&receipt.gpuTop1===false&&receipt.deviceToHostBytesPerToken===0&&receipt.readbackBasis==='no-device-transfers',backend:q.getWasmBackend(),vocab:q.getResidentTokenizerVocab(),elapsedMs:performance.now()-start,receipt};
  });result.checks.push(model);console.log('MODEL',JSON.stringify(model));
  const inference=await page.evaluate(async()=>{const pieces=[];const start=performance.now();const value=await q.inferWasmAsyncMeasured('Hello',2,p=>pieces.push(p));return {name:'P64 CPU real inference',passed:value.generatedTokens===2,value,pieces,elapsedMs:performance.now()-start};});result.checks.push(inference);console.log('INFERENCE',JSON.stringify(inference));
  const lifecycle=await page.evaluate(async()=>{

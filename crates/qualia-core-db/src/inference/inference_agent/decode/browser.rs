@@ -1,5 +1,19 @@
-// Mechanical transitional partition; no acceptance changes. See proposal.md.
+// Browser numerical execution requires the same explicit developer admission as
+// the async exports. The legacy extension bus has no token-acceptance attestation.
 use super::*;
+
+fn developer_execution_generation() -> Option<(u32, u32, u64, u64)> {
+    #[cfg(feature = "wasm-llm")]
+    {
+        crate::wasm_llm::execution_mode::generation()
+            .map(|stamp| (stamp.session, stamp.device, stamp.frame, stamp.model))
+    }
+    #[cfg(not(feature = "wasm-llm"))]
+    {
+        None
+    }
+}
+
 impl LocalLlmAgent {
     #[allow(unused_variables, unused_mut)]
     pub(super) fn infer_wasm_partition<F: FnMut(String) + Send + 'static>(
@@ -13,9 +27,32 @@ impl LocalLlmAgent {
         sieve_spec: Option<crate::neuro_symbolic_sieve::SieveLexSpec>,
         sieve_lex_path: Option<String>,
     ) -> (String, Vec<u64>, u32, Option<NQuin>) {
+        #[cfg(feature = "wasm-llm")]
+        if let Err(reason) = crate::wasm_llm::execution_mode::require_developer() {
+            return (format!("[{reason}]"), vec![prov_hash], 0, None);
+        }
+        #[cfg(not(feature = "wasm-llm"))]
+        return (
+            String::from("[Browser local inference requires the wasm-llm profile and explicit developer execution; no governed token acceptance is connected]"),
+            vec![prov_hash],
+            0,
+            None,
+        );
+
+        // Extension-bus replies can arrive after reconfiguration. Recheck at
+        // publication as well as entry; an earlier developer request is no grant
+        // to stream after the caller has returned to governed mode.
+        let generation = developer_execution_generation();
+        let mut on_token = on_token.map(|mut callback| {
+            move |text| {
+                if generation.is_some() && generation == developer_execution_generation() {
+                    callback(text);
+                }
+            }
+        });
+
         #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
         {
-            use crate::gguf_bridge::QTensor;
             use crate::gguf_sharder::GgufTokenizer;
 
             let model_path = match &self.backend {
@@ -77,9 +114,15 @@ impl LocalLlmAgent {
                 let mut engine = {
                     let engine_guard =
                         crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| g.borrow_mut().take());
-                    engine_guard.expect(
-                        "WASM WebGPU engine not initialized. Call initialize_webgpu_engine first.",
-                    )
+                    match engine_guard {
+                        Some(engine) => engine,
+                        None => return (
+                            String::from("[WASM WebGPU engine not initialized. Call initialize_webgpu_engine first.]"),
+                            vec![prov_hash],
+                            0,
+                            None,
+                        ),
+                    }
                 };
 
                 let is_p64_mmap = engine
@@ -217,7 +260,9 @@ impl LocalLlmAgent {
                 crate::qualia_hybrid::prepare_hybrid_decode(&prompt_owned);
 
                 for step in 0..gen_budget {
-                    if control.as_ref().is_some_and(DecodeControl::is_cancelled) {
+                    if generation != developer_execution_generation()
+                        || control.as_ref().is_some_and(DecodeControl::is_cancelled)
+                    {
                         break;
                     }
                     crate::gpu_context::record_llm_decode_step();
@@ -296,7 +341,7 @@ impl LocalLlmAgent {
                             top_i
                         );
                     }
-                    let next = (top_i as u32) % vlen;
+                    let next = top_i as u32;
 
                     // T53/W11: feed the selected token back into the DOMINO
                     // grammar state machine so the mask advances for the next
@@ -339,6 +384,16 @@ impl LocalLlmAgent {
                     }
                 }
 
+                // A callback can synchronously reconfigure execution. Do not
+                // restore an engine or return a completion from that request.
+                if generation != developer_execution_generation() {
+                    return (
+                        String::from("[Browser inference cancelled by execution-mode change]"),
+                        vec![prov_hash],
+                        0,
+                        None,
+                    );
+                }
                 let text = if semantic_quin.is_some() {
                     String::new()
                 } else if sieve_failed {
@@ -401,3 +456,7 @@ impl LocalLlmAgent {
         }
     }
 }
+
+#[cfg(all(test, feature = "wasm-llm"))]
+#[path = "browser_tests.rs"]
+mod admission_tests;

@@ -18,12 +18,24 @@ pub(super) fn name() -> &'static str {
     }
 }
 
-pub(super) fn require_developer() -> Result<(), String> {
+pub(crate) fn require_developer() -> Result<(), String> {
     if developer() {
         Ok(())
     } else {
         Err("Browser governed inference is unavailable: no Qualia/Webizen token acceptance is connected. For ungoverned numerical debugging, explicitly call configureBrowserExecutionMode('developer', true). Sentinel is disabled in developer mode.".into())
     }
+}
+
+/// Snapshot the existing lifecycle generation without holding a request slot.
+/// Legacy extension replies have no completion protocol, but become stale on
+/// release, model replacement, and execution-mode changes (including round trips).
+pub(crate) fn generation() -> Option<etalon_wasm::worker_steward::CompletionStamp> {
+    developer().then(|| {
+        etalon_wasm::readback::browser_worker()
+            .lock()
+            .unwrap()
+            .completion_stamp()
+    })
 }
 
 /// Explicitly acknowledge the absence of Sentinel token acceptance for browser

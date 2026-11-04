@@ -8,7 +8,7 @@ const allow=new Map([['/qualia.js','docs/playground/qualia_core_db.js'],['/quali
 allow.set('/topk.wgsl','coordination/worktrees/etalon-migration/crates/etalon-inference/src/projections/topk_reduction.wgsl');
 const hash=p=>crypto.createHash('sha256').update(fs.readFileSync(path.join(root,p))).digest('hex');
 const receipt={startedUtc:new Date().toISOString(),kind:'Actual Chromium WebGPU; developer mode',artifacts:Object.fromEntries([...allow.values()].map(p=>[p,hash(p)])),checks:[],console:[]};
-receipt.qualificationNotes={executedProductionPath:'Per-chunk GPU GEMM projection with CPU streaming argmax; WebGPU backend, no CPU backend fallback',metadataLimitation:'Engine receipt gpuTop1/deviceToHostBytesPerToken describe the planned compact top-1 path; production wasm_llm currently uses full per-chunk logits readback. Separate shader regression validates GPU top-K only.'};
+receipt.qualificationNotes={executedProductionPath:'Per-chunk GPU GEMM projection with CPU streaming argmax; WebGPU backend, no CPU backend fallback',transferMeasurement:'Receipt v2 identifies GPU GEMM with CPU streaming argmax; complete device transfers remain unmeasured (null). Full-logits bytes are a tokenizer-vocabulary estimate. Separate shader regression validates GPU top-K only.'};
 const server=http.createServer((req,res)=>{
  const pathname=new URL(req.url,'http://localhost').pathname;
  res.setHeader('Cross-Origin-Opener-Policy','same-origin');res.setHeader('Cross-Origin-Embedder-Policy','require-corp');
@@ -64,7 +64,7 @@ const server=http.createServer((req,res)=>{
   const q=await import('/qualia.js');await q.default();q.configureBrowserExecutionMode('developer',true);
   const graphics=await q.probe_portal_graphics();
   const bytes=new Uint8Array(await(await fetch('/model.p64')).arrayBuffer());const start=performance.now();
-  try{await q.initialize_webgpu_engine(bytes);const before=q.getBrowserExecutionReceipt();if(q.getWasmBackend()!=='webgpu')throw new Error('Unexpected backend '+q.getWasmBackend());const pieces=[];const value=await q.inferWasmAsyncMeasured('Hello',1,p=>pieces.push(p));return {passed:q.isWebgpuEngineReady()&&value.generatedTokens===1,graphics,receipt:before,value,pieces,elapsedMs:performance.now()-start};}
+  try{await q.initialize_webgpu_engine(bytes);const before=q.getBrowserExecutionReceipt();if(before.schema!=='qualia.browser-execution.v2'||before.gpuTop1!==false||before.outputProjection!=='gpu-gemm-cpu-streaming-argmax'||before.deviceToHostBytesPerToken!==null||before.readbackBasis!=='unmeasured')throw new Error('Incorrect active-path receipt '+JSON.stringify(before));if(q.getWasmBackend()!=='webgpu')throw new Error('Unexpected backend '+q.getWasmBackend());const pieces=[];const value=await q.inferWasmAsyncMeasured('Hello',1,p=>pieces.push(p));return {passed:q.isWebgpuEngineReady()&&value.generatedTokens===1,graphics,receipt:before,value,pieces,elapsedMs:performance.now()-start};}
   finally{await q.releaseWebgpuEngine();q.configureBrowserExecutionMode('governed',false);}
  });
  const result=await Promise.race([workload,new Promise((_,reject)=>{const timer=setTimeout(()=>reject(new Error('Browser WebGPU model/inference exceeded180s')),180000);timer.unref();})]);receipt.checks.push({name:'actual generated WASM WebGPU real P64 one-token inference',...result});console.log('MODEL',JSON.stringify(result));
