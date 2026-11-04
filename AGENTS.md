@@ -1514,3 +1514,16 @@ CPU-only compilation passed, with one unused CRC import warning in the separated
 vision module. WASM/native and final publication evidence belong to the matching
 section of docs/testing-inference-migration.md. These ownership changes do not
 establish physical KV rollback or real Webizen-controlled numerical execution.
+
+### 2026-11-04 — GitHub Actions repair
+
+Repair bd25ae957 removes stale Etalon source-identity assumptions, derives complete
+local harness dependency overrides, aligns the harness with the existing reviewed
+production revision, restores real consent/epistemic modules to all required WASM
+profiles, decouples browser environment reads from optional GPU imports, and retries
+benchmark result pushes with artifact retention on failure. All five hosted workflows
+passed, including Pages deployment. Node tests: 19 passed; all five local WASM profiles
+passed. The full native suite reported 10,164 passed, 6 failed, 3 ignored; physical Qwen
+failures reproduce on the pre-change binary, ring tests pass isolated on both binaries,
+and the socket-address-conflict test passes isolated. See
+`docs/plans/github-actions-repair-2026-11-04.md` for exact runs and limits.
