@@ -1,5 +1,5 @@
 use super::super::host_dto::SyncQueueState;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `SyncState` component.

@@ -4,7 +4,7 @@
 //! router; shell path uses `navigate(qappId)` / `createTab`.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 use crate::Route;
 

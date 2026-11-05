@@ -1,5 +1,5 @@
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const DASHBOARD_CSS: &str = r#"
     .home-tab { 

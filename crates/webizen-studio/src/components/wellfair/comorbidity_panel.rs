@@ -2,7 +2,7 @@
 
 use super::host_client::{evaluate_comorbidity, ComorbidityReportDto};
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn status_label(status: u8) -> &'static str {
     match status {

@@ -1,6 +1,6 @@
 //! WellFair Tools — companion bundle ingest (primary) + folder import (dev fallback).
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct ImportUiState {

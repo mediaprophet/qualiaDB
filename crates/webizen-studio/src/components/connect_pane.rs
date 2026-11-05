@@ -12,7 +12,7 @@
 //! Backend commands are Tauri `invoke` calls (camelCase args). Mirrors `directory_pane.rs`'s
 //! cfg-gating so the component compiles on both host and `wasm32-unknown-unknown`.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;

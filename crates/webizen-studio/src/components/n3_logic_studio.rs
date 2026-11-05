@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `N3LogicStudio` component.

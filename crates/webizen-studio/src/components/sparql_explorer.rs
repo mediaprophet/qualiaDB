@@ -4,7 +4,7 @@
 //! Honesty: **Partial** — real local SPARQL planner/executor over the resident graph;
 //! results are hex slot dumps, not full IRI-resolved SPARQL result sets.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::qapp_engine::invoke_json;

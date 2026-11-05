@@ -1,5 +1,5 @@
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `RelationshipTechnicalInspector` component.

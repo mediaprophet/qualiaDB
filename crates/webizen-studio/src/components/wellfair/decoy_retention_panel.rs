@@ -13,7 +13,7 @@
 //! someone under duress. No "audit log", no "manifold", no "provenance".
 
 use super::host_client::{get_decoy_retention_mode, set_decoy_retention_mode};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const MODE_AUTO: &str = "auto_archive";
 const MODE_MANUAL: &str = "manual_triage";

@@ -1,5 +1,5 @@
 use super::super::host_dto::SensitivityClassDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `SensitivityBadge` component.

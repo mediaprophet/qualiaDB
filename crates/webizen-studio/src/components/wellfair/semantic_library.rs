@@ -6,7 +6,7 @@
 use super::host_client::{ingest_document, library_stats, query_library_faceted, IngestFacets};
 use crate::components::qapp_engine::invoke_json;
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 mod views;
 use views::{EmptyCollection, ItemInspector, LibraryOverview, SemanticPipeline};

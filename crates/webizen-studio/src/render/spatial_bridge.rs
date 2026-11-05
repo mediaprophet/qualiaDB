@@ -4,7 +4,7 @@
 //! Public web demo: informative fallback until portal wasm is bundled for GH Pages.
 
 use crate::canvas_model::Page;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use crate::tauri_ffi::invoke as tauri_invoke;

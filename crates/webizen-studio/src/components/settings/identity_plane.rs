@@ -4,7 +4,7 @@
 
 use super::{FIELD, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SUCCESS_CARD, WARNING_CARD};
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

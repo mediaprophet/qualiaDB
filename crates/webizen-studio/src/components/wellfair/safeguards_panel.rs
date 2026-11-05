@@ -15,7 +15,7 @@ use super::host_client::{
     list_dead_mans_switches, list_incapacity_switches, reconstruct_and_release, regain_capacity,
     split_dek_recovery,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Parse `"did=pubkeyhex, did2=pubkeyhex2"` into `(did, pubkey_hex)` pairs.
 fn party_keys(s: &str) -> Vec<(String, String)> {

@@ -6,7 +6,7 @@ use super::host_client::{
     set_med_reminders_enabled, DueMedReminderDto, MedReminderPrefsDto,
 };
 use super::host_dto::HealthRecordDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `WellfairMedicationPanel` component.

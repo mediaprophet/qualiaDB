@@ -1,5 +1,5 @@
 use crate::components::QAppEngine;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `ScienceTechnologyAndSocietyStsQapp` component.

@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use js_sys::Uint8ClampedArray;
 #[cfg(target_arch = "wasm32")]

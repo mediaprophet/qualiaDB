@@ -10,7 +10,7 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 mod engine {
     use super::invoke_json;

@@ -1,6 +1,6 @@
 //! Global background-work indicator and full job-centre page.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]

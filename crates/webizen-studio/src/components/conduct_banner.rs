@@ -5,7 +5,7 @@
 //! missed. Dismissible; reappears on the next deny. U1-B.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Visual severity for conduct / gate denials.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

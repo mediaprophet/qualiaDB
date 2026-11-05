@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Dioxus `AgreementsRights` component.
 pub fn AgreementsRights() -> Element {

@@ -6,7 +6,7 @@
 //! to the GPU swapchain. The render loop runs on a background thread in the
 //! native host.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde_json::json;
 
 use crate::components::qapp_engine::invoke_json;
@@ -113,9 +113,9 @@ pub fn NativeGpuViewport(
 
     let onwheel = move |e: WheelEvent| {
         let delta = match e.data().delta() {
-            dioxus::html::geometry::WheelDelta::Pixels(p) => p.y,
-            dioxus::html::geometry::WheelDelta::Lines(l) => l.y * 100.0,
-            dioxus::html::geometry::WheelDelta::Pages(p) => p.y * 800.0,
+            aether::html::geometry::WheelDelta::Pixels(p) => p.y,
+            aether::html::geometry::WheelDelta::Lines(l) => l.y * 100.0,
+            aether::html::geometry::WheelDelta::Pages(p) => p.y * 800.0,
         };
         let mut zoom = camera_zoom.write();
         *zoom *= if delta > 0.0 { 0.9 } else { 1.1 };

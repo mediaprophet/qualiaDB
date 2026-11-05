@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 struct OntologicalDefinition {

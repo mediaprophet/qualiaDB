@@ -11,7 +11,7 @@ use crate::components::settings::{
     EMPTY_CARD, FIELD, PANEL, PRIMARY_BUTTON, SECONDARY_BUTTON, SELECTED_ROW, SUCCESS_CARD,
     WARNING_CARD,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const LIST_ROW: &str = "width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border:1px solid var(--qualia-border);border-radius:10px;background:transparent;color:var(--qualia-text);font:inherit;text-align:left;cursor:pointer;";
 const LIST_ROW_ON: &str = "width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border:1px solid var(--qualia-accent);border-radius:10px;background:var(--qualia-accent-glow);color:var(--qualia-text);font:inherit;text-align:left;cursor:pointer;";

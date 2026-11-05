@@ -1,5 +1,5 @@
 use super::super::host_dto::ProvenanceHop;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `ProvenanceTrail` component.

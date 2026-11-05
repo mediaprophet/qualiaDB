@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `LoraManager` component.

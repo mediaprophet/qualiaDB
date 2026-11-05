@@ -3,7 +3,7 @@
 use super::host_client::{fetch_health_records, fetch_host_snapshot};
 use super::host_dto::HealthRecordDto;
 use super::shared::DomainChrome;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn format_unix(ts: u32) -> String {
     if ts == 0 {

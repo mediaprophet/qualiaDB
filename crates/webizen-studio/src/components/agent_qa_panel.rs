@@ -2,7 +2,7 @@
 
 use crate::components::settings::host::invoke_json;
 use crate::components::settings::types::{AgentQaModelProbe, AgentQaSnapshot};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `AgentQaPanel` component.

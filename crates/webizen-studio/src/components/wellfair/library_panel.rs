@@ -19,7 +19,7 @@ use super::host_client::{
 };
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const SECTIONS: &[(&str, &str, &str)] = &[
     ("all", "All", "Everything you can see"),

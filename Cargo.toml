@@ -84,7 +84,7 @@ criterion = "0.8.2"
 crossbeam-channel = "0.5.17"
 csv = "1.4.0"
 dhat = "0.3.3"
-dioxus = { version = "0.8.0-alpha.3", git = "https://github.com/mediaprophet/Aether.git", rev = "7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0" }
+aether = { version = "=0.8.0-alpha.3", git = "https://github.com/mediaprophet/Aether.git", rev = "f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f" }
 ed25519-dalek = { version = "3.0", default-features = false }
 fast_qr = "0.13.1"
 futures-util = "0.3.34"

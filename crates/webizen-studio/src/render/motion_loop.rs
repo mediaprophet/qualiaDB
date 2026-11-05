@@ -65,7 +65,7 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
 /// Non-desktop fallback.
 pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
     // UI signals are !Send — drive springs on the Dioxus runtime thread, not a worker.
-    dioxus::prelude::spawn(async move {
+    aether::prelude::spawn(async move {
         let mut last = std::time::Instant::now();
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(16)).await;

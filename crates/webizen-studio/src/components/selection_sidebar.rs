@@ -1,6 +1,6 @@
 //! Graph-driven pane picker — neighbors and companion suggestions for the selected HUD pane.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 use std::collections::HashSet;
 

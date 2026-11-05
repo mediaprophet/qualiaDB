@@ -1,6 +1,6 @@
 use super::host::invoke_json;
 use super::types::AgentQaModelProbe;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn model_label(model: &serde_json::Value) -> String {
     for key in ["name", "filename", "file_name", "model_id", "path"] {

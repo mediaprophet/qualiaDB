@@ -1,5 +1,5 @@
 use super::super::host_dto::{ConsentGrantDraft, PolicyDecisionDto};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `ConsentGrantEditor` component.

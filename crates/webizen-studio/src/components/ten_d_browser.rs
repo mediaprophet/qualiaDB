@@ -8,7 +8,7 @@
 //! `scrub_vision_10d_paint`). Citable mode fails closed — Deny/Forbid surfaces
 //! as visible error text (never silent success).
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};

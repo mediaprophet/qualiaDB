@@ -15,7 +15,7 @@ use super::host_client::{
     fetch_agency_domains, revoke_agency_delegation, set_agency_delegation_consent,
     AgencyDecisionDto, AgencyDelegationDto, AgencyDomainDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]

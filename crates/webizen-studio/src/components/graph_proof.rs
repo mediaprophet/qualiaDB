@@ -1,6 +1,6 @@
 //! Desktop surface for the bounded N-Triples → Q42 graph proof.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::qapp_engine::invoke_json;

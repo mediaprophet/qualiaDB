@@ -5,7 +5,7 @@
 //! `agent_set_allowed_mcp_tools` / roster upsert.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 

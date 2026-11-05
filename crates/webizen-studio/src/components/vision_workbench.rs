@@ -9,7 +9,7 @@
 //! Calls native Tauri commands when hosted in desktop; otherwise shows honest
 //! offline messaging (WASM alone cannot run the detector).
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};

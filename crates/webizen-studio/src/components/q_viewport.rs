@@ -33,7 +33,7 @@
 //! - The sim-time advances by `1/target_fps` per frame.
 //! - The loop stops when the component unmounts.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde_json::json;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
@@ -354,9 +354,9 @@ pub fn QViewport(
 
     let onwheel = move |e: WheelEvent| {
         let delta = match e.data().delta() {
-            dioxus::html::geometry::WheelDelta::Pixels(p) => p.y,
-            dioxus::html::geometry::WheelDelta::Lines(l) => l.y * 100.0,
-            dioxus::html::geometry::WheelDelta::Pages(p) => p.y * 800.0,
+            aether::html::geometry::WheelDelta::Pixels(p) => p.y,
+            aether::html::geometry::WheelDelta::Lines(l) => l.y * 100.0,
+            aether::html::geometry::WheelDelta::Pages(p) => p.y * 800.0,
         };
         let mut zoom = camera_zoom.write();
         *zoom *= if delta > 0.0 { 0.9 } else { 1.1 };

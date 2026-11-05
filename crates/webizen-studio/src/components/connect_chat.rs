@@ -9,8 +9,8 @@
 //! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
 //! `shield_alert`, and `chat-done` — never silent.
 
-use dioxus::html::input_data::keyboard_types::Modifiers;
-use dioxus::prelude::*;
+use aether::html::input_data::keyboard_types::Modifiers;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use crate::components::conduct_banner::{

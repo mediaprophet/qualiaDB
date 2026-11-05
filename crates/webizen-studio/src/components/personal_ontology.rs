@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `PersonalOntologyBuilder` component.

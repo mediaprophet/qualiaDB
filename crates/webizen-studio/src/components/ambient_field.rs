@@ -1,7 +1,7 @@
 //! Canvas2D ambient knowledge field (BACKGROUND_VISUALISATION.md).
 //! Cheap particle cymatics driven by `SystemTelemetry` uniforms.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;

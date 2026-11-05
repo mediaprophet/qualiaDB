@@ -12,7 +12,7 @@
 use super::host_client::{
     compute_scorecard, get_weight_model, reset_weight_model, set_weight_model,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
     v.get(key)

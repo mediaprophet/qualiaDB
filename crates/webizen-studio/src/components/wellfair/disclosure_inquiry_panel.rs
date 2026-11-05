@@ -11,7 +11,7 @@ use super::host_client::{
     actors_with_access, assess_duty_of_inquiry, disclosure_chain, list_transparency_ccs,
     record_disclosure, record_transparency_cc, trace_leak,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
     v.get(key)

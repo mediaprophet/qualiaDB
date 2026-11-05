@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Epistemic state for quantum context management
 #[derive(Clone, Copy, PartialEq, Debug)]

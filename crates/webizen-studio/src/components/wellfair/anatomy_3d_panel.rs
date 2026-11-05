@@ -14,7 +14,7 @@
 
 use super::host_client::{body_assets_status, render_body_snapshot, BodyAssetsStatus};
 use crate::components::experience_mode::use_experience_mode;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Anatomy3dUi {

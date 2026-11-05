@@ -3,7 +3,7 @@
 
 #![allow(non_snake_case)]
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use webizen_studio::tauri_ffi::invoke as tauri_invoke;
 

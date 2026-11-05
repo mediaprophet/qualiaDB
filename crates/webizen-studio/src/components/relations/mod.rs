@@ -8,7 +8,7 @@ pub mod technical;
 pub mod types;
 
 use crate::components::experience_mode::{use_experience_mode, ExperienceModeSwitch};
-use dioxus::prelude::*;
+use aether::prelude::*;
 use groups::GroupsOverview;
 use people::PeopleOverview;
 use technical::RelationshipTechnicalInspector;

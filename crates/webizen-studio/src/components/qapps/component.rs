@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const LAUNCH_BTN: &str = "display: inline-flex; align-items: center; gap: 0.35rem; background: var(--qualia-accent); color: white; border-radius: 8px; padding: 0.38rem 0.75rem; font-size: 0.76rem; font-weight: 600; text-decoration: none; transition: opacity 0.15s;";
 

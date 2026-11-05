@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::shoelace::*;
-use dioxus::prelude::*;
+use aether::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]

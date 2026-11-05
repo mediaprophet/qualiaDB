@@ -1,6 +1,6 @@
 //! Vault console for unified Q42 volumes — list, inspect, verify, magnet, compact.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::qapp_engine::invoke_json;

@@ -15,7 +15,7 @@ pub mod telemetry;
 pub use webizen_studio::tauri_ffi;
 pub use webizen_studio::{canvas_graph, canvas_model, endpoints, render, theme_engine};
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 use studio_canvas::DynamicPage;
 use theme_engine::ResolvedTheme;
@@ -157,7 +157,7 @@ fn main() {
     #[cfg(target_arch = "wasm32")]
     install_native_diagnostics();
 
-    dioxus::launch(App);
+    aether::launch(App);
 }
 
 #[derive(Clone, Routable, Debug, PartialEq)]

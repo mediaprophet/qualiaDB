@@ -2,7 +2,7 @@
 
 mod companion_device;
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{MessageEvent, WebSocket};
@@ -10,7 +10,7 @@ use wellfare_core::companion_pairing::MSG_CHALLENGE;
 use wellfare_core::companion_sync::{CompanionCsvFile, CompanionHealthBundle};
 
 fn main() {
-    dioxus::launch(App);
+    aether::launch(App);
 }
 
 const OUTBOX_KEY: &str = "qualia-wellfair-health-outbox";

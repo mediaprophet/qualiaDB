@@ -138,6 +138,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aether"
+version = "0.8.0-alpha.3"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
+dependencies = [
+ "dioxus",
+ "refract",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2096,7 +2105,7 @@ dependencies = [
 [[package]]
 name = "const-serialize"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "const-serialize-macro",
  "dioxus-const-vec",
@@ -2106,7 +2115,7 @@ dependencies = [
 [[package]]
 name = "const-serialize-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3282,7 +3291,7 @@ dependencies = [
 [[package]]
 name = "dioxus"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-asset-resolver",
  "dioxus-cli-config",
@@ -3309,7 +3318,7 @@ dependencies = [
 [[package]]
 name = "dioxus-asset-resolver"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-cli-config",
  "http 1.5.0",
@@ -3329,7 +3338,7 @@ dependencies = [
 [[package]]
 name = "dioxus-cli-config"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -3337,22 +3346,22 @@ dependencies = [
 [[package]]
 name = "dioxus-config-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 
 [[package]]
 name = "dioxus-config-macros"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 
 [[package]]
 name = "dioxus-const-vec"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 
 [[package]]
 name = "dioxus-core"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "anyhow",
  "const_format",
@@ -3377,7 +3386,7 @@ dependencies = [
 [[package]]
 name = "dioxus-core-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "convert_case 0.8.0",
  "dioxus-rsx",
@@ -3389,7 +3398,7 @@ dependencies = [
 [[package]]
 name = "dioxus-core-template"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-const-vec",
  "serde",
@@ -3399,12 +3408,12 @@ dependencies = [
 [[package]]
 name = "dioxus-core-types"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 
 [[package]]
 name = "dioxus-devtools"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-cli-config",
  "dioxus-core",
@@ -3421,7 +3430,7 @@ dependencies = [
 [[package]]
 name = "dioxus-devtools-types"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core",
  "serde",
@@ -3431,7 +3440,7 @@ dependencies = [
 [[package]]
 name = "dioxus-document"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core",
  "dioxus-core-macro",
@@ -3449,7 +3458,7 @@ dependencies = [
 [[package]]
 name = "dioxus-fullstack"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -3507,7 +3516,7 @@ dependencies = [
 [[package]]
 name = "dioxus-fullstack-core"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "anyhow",
  "axum-core",
@@ -3534,7 +3543,7 @@ dependencies = [
 [[package]]
 name = "dioxus-fullstack-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "const_format",
  "convert_case 0.8.0",
@@ -3547,7 +3556,7 @@ dependencies = [
 [[package]]
 name = "dioxus-history"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core",
  "tracing",
@@ -3556,7 +3565,7 @@ dependencies = [
 [[package]]
 name = "dioxus-hooks"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core",
  "dioxus-signals",
@@ -3571,7 +3580,7 @@ dependencies = [
 [[package]]
 name = "dioxus-html"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "async-trait",
  "bytes",
@@ -3594,7 +3603,7 @@ dependencies = [
 [[package]]
 name = "dioxus-html-internal-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "convert_case 0.8.0",
  "proc-macro2",
@@ -3605,7 +3614,7 @@ dependencies = [
 [[package]]
 name = "dioxus-interpreter-js"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "js-sys",
  "lazy-js-bundle",
@@ -3620,7 +3629,7 @@ dependencies = [
 [[package]]
 name = "dioxus-logger"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-cli-config",
  "tracing",
@@ -3631,7 +3640,7 @@ dependencies = [
 [[package]]
 name = "dioxus-router"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-cli-config",
  "dioxus-core",
@@ -3650,7 +3659,7 @@ dependencies = [
 [[package]]
 name = "dioxus-router-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "base16",
  "digest 0.10.7",
@@ -3664,7 +3673,7 @@ dependencies = [
 [[package]]
 name = "dioxus-rsx"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core-template",
  "proc-macro2",
@@ -3677,7 +3686,7 @@ dependencies = [
 [[package]]
 name = "dioxus-signals"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core",
  "futures-channel",
@@ -3692,7 +3701,7 @@ dependencies = [
 [[package]]
 name = "dioxus-stores"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-core",
  "dioxus-signals",
@@ -3703,7 +3712,7 @@ dependencies = [
 [[package]]
 name = "dioxus-stores-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "convert_case 0.8.0",
  "proc-macro2",
@@ -3714,7 +3723,7 @@ dependencies = [
 [[package]]
 name = "dioxus-web"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dioxus-cli-config",
  "dioxus-core",
@@ -5143,7 +5152,7 @@ dependencies = [
 [[package]]
 name = "generational-box"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "parking_lot",
  "tracing",
@@ -6821,7 +6830,7 @@ checksum = "a4933f3f57a8e9d9da04db23fb153356ecaf00cbd14aee46279c33dc80925c37"
 [[package]]
 name = "lazy-js-bundle"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 
 [[package]]
 name = "lazy_static"
@@ -7716,7 +7725,7 @@ checksum = "fc04a4c58212d57930a24bf47d3fa87485264a3a054e9c10e042eb373573ad3c"
 [[package]]
 name = "manganis"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "const-serialize",
  "jni 0.21.1",
@@ -7730,7 +7739,7 @@ dependencies = [
 [[package]]
 name = "manganis-core"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "const-serialize",
  "dioxus-cli-config",
@@ -7742,7 +7751,7 @@ dependencies = [
 [[package]]
 name = "manganis-macro"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "dunce",
  "macro-string",
@@ -11858,7 +11867,7 @@ dependencies = [
 name = "qualia-mobile-harness"
 version = "0.0.40"
 dependencies = [
- "dioxus",
+ "aether",
  "ed25519-dalek 3.0.0",
  "futures-util",
  "getrandom 0.4.3",
@@ -12378,6 +12387,11 @@ dependencies = [
  "quote",
  "syn 3.0.3",
 ]
+
+[[package]]
+name = "refract"
+version = "0.1.0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 
 [[package]]
 name = "regex"
@@ -14136,7 +14150,7 @@ dependencies = [
 [[package]]
 name = "subsecond"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "js-sys",
  "libc",
@@ -14154,7 +14168,7 @@ dependencies = [
 [[package]]
 name = "subsecond-types"
 version = "0.8.0-alpha.3"
-source = "git+https://github.com/mediaprophet/Aether.git?rev=7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0#7be4eb2c6f2fe95f30315fbbb48bfa4ad9d3abc0"
+source = "git+https://github.com/mediaprophet/Aether.git?rev=f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f#f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f"
 dependencies = [
  "serde",
 ]
@@ -15884,9 +15898,9 @@ dependencies = [
 name = "webizen-studio"
 version = "0.0.40"
 dependencies = [
+ "aether",
  "base64 0.23.1",
  "console_error_panic_hook",
- "dioxus",
  "dirs-next",
  "futures-util",
  "getrandom 0.4.3",

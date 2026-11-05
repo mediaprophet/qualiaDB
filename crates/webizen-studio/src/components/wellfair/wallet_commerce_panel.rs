@@ -3,7 +3,7 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use super::host_client::add_ledger_entry;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChainKind {

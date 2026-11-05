@@ -8,7 +8,7 @@ use super::chora_host_client::{
     seed_canvas_demo, set_active_canvas_world, set_canvas_temporal, set_gpu_camera_mode,
 };
 use crate::components::experience_mode::use_experience_mode;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
     v.get(key)

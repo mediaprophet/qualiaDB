@@ -3,7 +3,7 @@
 //! Host: `calculate_chemistry_properties` → organic_chemistry::parse_smiles + compute_descriptors.
 //! Honesty: **Partial** — MW + Crippen LogP are real engine numbers; 2D structure view is still a placeholder.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};

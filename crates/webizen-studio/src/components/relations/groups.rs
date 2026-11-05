@@ -1,5 +1,5 @@
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 fn value_text(value: &serde_json::Value, key: &str) -> String {
     value

@@ -3,7 +3,7 @@
 //! The mode changes vocabulary and control density, never capability or access.
 //! It is stored locally because it is a presentation preference, not identity.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 const STORAGE_KEY: &str = "webizen_experience_mode";

@@ -9,7 +9,7 @@
 //! This pane owns: tabs, omnibox, back/forward/reload (app history + engine), focus,
 //! and the dialectical sidebar. See `docs/plans/webizen-browser-and-trust.md` P0/P0.1.
 
-pub use dioxus::prelude::*;
+pub use aether::prelude::*;
 pub use serde_json::json;
 pub use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]

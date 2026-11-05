@@ -11,7 +11,7 @@ use super::host_client::{
     fetch_guardianship_proposals, propose_proxy_condition, vote_guardianship_proposal,
     GuardianshipProposalDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug)]
 struct GuardUi {

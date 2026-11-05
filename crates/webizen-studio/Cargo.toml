@@ -13,9 +13,9 @@ reqwest = { workspace = true, default-features = false, features = ["json"] }
 
 # ── Native-only dependencies (webizen-desktop uses webizen-studio as a library) ─
 # These give the native build access to the render pipeline types.
-# dioxus is included with "router" only (not "desktop") to avoid wry conflicts.
+# aether is included with "router" only (not "desktop") to avoid wry conflicts.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-dioxus = { workspace = true, features = ["router"] }
+aether = { workspace = true, features = ["router"] }
 qualia-core-db = { workspace = true, default-features = true }
 webizen-render = { workspace = true }
 qualia-client-core = { workspace = true }
@@ -24,7 +24,7 @@ dirs-next = "2.0.0"
 
 # ── WASM-only dependencies ────────────────────────────────────────────────────
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-dioxus = { workspace = true, features = ["router", "web"] }
+aether = { workspace = true, features = ["router", "web"] }
 uuid = { workspace = true, features = ["v4", "js"] }
 # Exact pin: must match installed wasm-bindgen-cli (see scripts/build_frontend.*).
 # Mismatch surfaces as: failed to find `__wbindgen_externref_table_dealloc` (mac CI).

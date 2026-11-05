@@ -4,7 +4,7 @@
 //! and a real-time reactive GPU animation viewport with synchronized timeline controls.
 //! Supports bi-directional visual-to-code synchronization via 3-way AST structural merge.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde_json::json;
 
 use crate::components::q_viewport::QViewport;

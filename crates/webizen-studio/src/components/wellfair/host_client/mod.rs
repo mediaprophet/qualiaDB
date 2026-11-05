@@ -5,7 +5,7 @@ use super::host_dto::{
     ActorDto, ConsentGrantDto, DelegationRuleDto, GraphCoverageDto, HealthRecordDto,
     PolicyDecisionDto, ReceiptDto, WellfairHostSnapshot,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]

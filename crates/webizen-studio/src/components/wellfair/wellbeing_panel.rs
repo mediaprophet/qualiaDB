@@ -2,7 +2,7 @@
 
 use super::host_client::{add_therapy_note, add_wellbeing_observation, fetch_health_records};
 use super::host_dto::HealthRecordDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `WellfairWellbeingPanel` component.

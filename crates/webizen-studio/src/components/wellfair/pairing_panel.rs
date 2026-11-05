@@ -1,6 +1,6 @@
 //! Desktop pairing QR — scan from phone companion to open WS ingest.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq, serde::Deserialize)]
 struct CompanionPairingInfo {

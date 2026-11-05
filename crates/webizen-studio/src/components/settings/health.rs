@@ -1,5 +1,5 @@
 use super::types::AgentQaSnapshot;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[component]
 /// Dioxus `SetupHealthPanel` component.

@@ -3,7 +3,7 @@
 use super::host_client::{evaluate_policy, fetch_consents, grant_consent, revoke_consent};
 use super::host_dto::{ConsentGrantDraft, ConsentGrantDto, PolicyDecisionDto};
 use super::shared::ConsentGrantEditor;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const SCOPES: &[&str] = &["write_record", "read_record"];
 

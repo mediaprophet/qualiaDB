@@ -9,7 +9,7 @@ use super::host_client::{
 #[cfg(target_arch = "wasm32")]
 use super::host_client::{ingest_document, view_select_uri, IngestFacets};
 use crate::Route;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const STATUSES: &[(&str, &str)] = &[
     ("proposed", "Proposed"),

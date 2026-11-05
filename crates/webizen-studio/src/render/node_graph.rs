@@ -2,7 +2,7 @@
 
 use crate::canvas_graph::{derive_graph_edges, edge_visual};
 use crate::canvas_model::{Page, PanePlacement};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Pixels per layout point (matches grid and spatial canvases).
 const POINT_SCALE: f64 = 6.0;

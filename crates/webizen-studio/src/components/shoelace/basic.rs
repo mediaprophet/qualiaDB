@@ -2,7 +2,7 @@
 
 #![allow(non_snake_case)]
 use core::option::Option;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Dioxus wrapper for `sl-alert`
 #[component]

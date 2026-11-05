@@ -4,7 +4,7 @@
 //! Not a full virtual scroller library — intentionally small and zero-dep.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Default row height (px) when the caller does not specify one.
 pub const DEFAULT_ROW_HEIGHT_PX: f64 = 28.0;

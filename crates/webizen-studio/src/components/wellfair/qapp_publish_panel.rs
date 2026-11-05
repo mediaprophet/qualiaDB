@@ -6,7 +6,7 @@
 //! phone can install it is the next stage (P1) — see the companion-PWA plan.
 
 use super::host_client::{pick_directory, publish_qapp_pwa};
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const KINDS: &[(&str, &str)] = &[
     ("cooperative", "Cooperative"),

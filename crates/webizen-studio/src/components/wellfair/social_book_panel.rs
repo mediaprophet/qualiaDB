@@ -6,7 +6,7 @@ use super::host_client::{
 };
 use super::host_dto::{ActorDto, ConsentGrantDraft, DelegationRuleDto, PolicyDecisionDto};
 use super::shared::ConsentGrantEditor;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 const ACTOR_TYPES: &[&str] = &["person", "organization", "care_team"];
 const SHARE_FIELDS: &[&str] = &["weight", "medication", "sleep", "condition"];

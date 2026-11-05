@@ -5,7 +5,7 @@
 //! `mcp_call_tool_gated` with `principal_permitted = true` after allowlist check.
 
 #![allow(non_snake_case)]
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 

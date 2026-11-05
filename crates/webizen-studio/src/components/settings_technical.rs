@@ -1,5 +1,5 @@
 use crate::theme_engine::{self, ResolvedTheme, ThemeDefinition};
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]

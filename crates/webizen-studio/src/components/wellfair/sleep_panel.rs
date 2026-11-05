@@ -2,7 +2,7 @@
 
 use super::host_client::{fetch_health_records, fetch_sleep_analytics, SleepAnalyticsDto};
 use super::host_dto::HealthRecordDto;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[derive(Debug, Clone, Default)]
 struct SleepMetrics {

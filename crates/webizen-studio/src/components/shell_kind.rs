@@ -1,6 +1,6 @@
 //! Classic (default) vs Poet chrome. Presentation only — Classic routes stay.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 const STORAGE_KEY: &str = "webizen_shell_kind";

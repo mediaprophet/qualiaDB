@@ -8,7 +8,7 @@
 
 use crate::components::experience_mode::ExperienceModeSwitch;
 use crate::components::settings::host::invoke_json;
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// First-run spine (matches `REQUIRED_SETUP_STEPS` in `qualia_client_core::setup`).

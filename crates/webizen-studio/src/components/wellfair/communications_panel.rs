@@ -3,7 +3,7 @@
 use super::host_client::{
     approve_live_share, deny_live_share, fetch_pending_live_shares, LiveShareRequestDto,
 };
-use dioxus::prelude::*;
+use aether::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]

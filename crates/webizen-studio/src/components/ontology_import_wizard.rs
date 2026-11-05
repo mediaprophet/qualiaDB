@@ -1,6 +1,6 @@
 //! Ontology import + domain-matched layout presets for the studio canvas.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 use serde::Deserialize;
 
 use crate::canvas_model::{PanePlacement, PresentationMode};

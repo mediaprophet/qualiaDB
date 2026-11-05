@@ -9,7 +9,7 @@
 //! `docs/plans/rights-aware-peer-agreement-addressbook.md`). Agreement wiring lands with the agreement
 //! store (plan P1); until then each entry shows its agreement slot honestly as empty.
 
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;

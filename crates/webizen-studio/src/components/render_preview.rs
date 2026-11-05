@@ -9,7 +9,7 @@
 
 use crate::components::camera_controls::{CameraControlState, CameraControls};
 use crate::components::native_gpu_viewport::NativeGpuViewport;
-use dioxus::prelude::*;
+use aether::prelude::*;
 
 /// Camera state for zero-heap compliance (all Copy types)
 #[allow(dead_code)]
