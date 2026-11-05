@@ -177,6 +177,8 @@ use messages::{LlmMsg, LogitSummary, SentMsg};
 mod admission;
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 mod browser_select;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod cancellation_tests;
 #[cfg(not(target_arch = "wasm32"))]
 mod cold;
 #[cfg(not(target_arch = "wasm32"))]
@@ -190,6 +192,8 @@ mod prefill;
 #[cfg(not(target_arch = "wasm32"))]
 mod publication;
 #[cfg(not(target_arch = "wasm32"))]
+mod qwen35;
+#[cfg(not(target_arch = "wasm32"))]
 mod render;
 #[cfg(not(target_arch = "wasm32"))]
 mod select;
@@ -197,5 +201,3 @@ mod select;
 mod speculative;
 #[cfg(not(target_arch = "wasm32"))]
 mod worker;
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod cancellation_tests;

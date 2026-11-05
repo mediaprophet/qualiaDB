@@ -13,6 +13,12 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         _scratch_b: &mut [f32],
     ) -> bool {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            return self.qwen35_ffn(index, hidden, emb_dim, tensors);
+            #[cfg(target_arch = "wasm32")]
+            return false;
+        }
         // Phase 3: try the single-submit fused FFN first (one round-trip/layer). Requires resident
         // weights; on any ineligibility it returns false and we fall through to the per-GEMM path.
         // 0.0.22: fused FFN now selects the cooperative GEMV entry point for its gate/up/down GEMMs

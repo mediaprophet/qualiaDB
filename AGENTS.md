@@ -1527,3 +1527,29 @@ passed. The full native suite reported 10,164 passed, 6 failed, 3 ignored; physi
 failures reproduce on the pre-change binary, ring tests pass isolated on both binaries,
 and the socket-address-conflict test passes isolated. See
 `docs/plans/github-actions-repair-2026-11-04.md` for exact runs and limits.
+
+### 2026-11-05 — Six native failures repaired
+
+The complete serial native core suite passes 10,194 tests, zero failures and three
+existing ignores (10,197 total; 1,940.39 seconds). All six previously failing tests
+execute successfully, including both physical Qwen NVFP4 tests on the installed
+model. Twenty-four additional regressions cover numerical equivalence, zero hot
+allocations, source identity, bounded state, cross-shard ownership and lifecycle.
+
+Qwen now has a reviewed, architecture-owned FTW admission/session path with mixed
+recurrent/full attention and complete model execution. The generic unsupported
+architecture guard remains unchanged and tested. Ring tests exercise real request
+activation/cancellation in checked isolated processes; production epoch gates are
+unchanged. TLS/H2 endpoints retain their listener reservation and synchronously
+join owned I/O teardown. The historical Windows socket error was not independently
+reproduced, so the ownership repair is not claimed as proof of that error's cause.
+
+Physical functional qualification selects a scoped finite 30-minute batch deadline;
+all original generation/provenance assertions and complete layers/vocabulary remain.
+The production 30-second interactive deadline is unchanged. This scalar CPU path
+does not establish interactive latency, unreviewed exporter compatibility, or new
+source custody guarantees. See docs/plans/native-test-repair-2026-11-05.md for the
+measured deadline failure, exporter evidence, verification and remaining limits.
+
+The Rust 1.96.1 wasm32 `wasm-llm` locked compile check also passes (120 warnings,
+no errors); this does not qualify browser/mobile execution. Dependencies are unchanged.

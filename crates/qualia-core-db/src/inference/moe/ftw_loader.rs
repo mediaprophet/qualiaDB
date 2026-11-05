@@ -46,7 +46,10 @@ pub struct FtwManifest {
 /// Slices within the memory-mapped shards for a single expert in a given layer.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FtwExpertBankSlice {
+    /// Legacy primary shard (gate/up packed). Components can cross shard boundaries.
     pub shard_idx: usize,
+    /// gate/up packed, scale, global; down packed, scale, global.
+    pub component_shards: [usize; 6],
     pub gate_up_packed_off: usize,
     pub gate_up_packed_len: usize,
     pub gate_up_scale_off: usize,
@@ -258,6 +261,7 @@ impl FtwModelPackage {
                 for e in 0..num_experts {
                     let slice = FtwExpertBankSlice {
                         shard_idx: gup.0,
+                        component_shards: [gup.0, gus.0, gug.0, dnp.0, dns.0, dng.0],
                         gate_up_packed_off: gup.1 + e * gup_step,
                         gate_up_packed_len: gup_step,
                         gate_up_scale_off: gus.1 + e * gus_step,
@@ -312,8 +316,7 @@ impl FtwModelPackage {
     pub fn fetch_by_global_offset(&self, global_off: u64, len: usize) -> Option<&[u8]> {
         let end = global_off.checked_add(u64::try_from(len).ok()?)?;
         for (idx, s) in self.manifest.shards.iter().enumerate() {
-            if global_off >= s.global_off && end <= s.global_off.checked_add(s.nbytes)?
-            {
+            if global_off >= s.global_off && end <= s.global_off.checked_add(s.nbytes)? {
                 let local_off = usize::try_from(global_off.checked_sub(s.global_off)?).ok()?;
                 let shard = self.shard_bytes(idx)?;
                 return shard.get(local_off..local_off.checked_add(len)?);
@@ -325,27 +328,25 @@ impl FtwModelPackage {
     /// Get zero-copy byte slices for one expert in a given layer.
     pub fn get_expert_data(&self, layer: u16, expert_idx: u16) -> Option<FtwExpertData<'_>> {
         let slice = self.expert_slices.get(&(layer, expert_idx))?;
-        let shard = self.shard_bytes(slice.shard_idx)?;
+        let component = |index: usize, off: usize, len: usize| {
+            self.shard_bytes(slice.component_shards[index])?
+                .get(off..off.checked_add(len)?)
+        };
 
         Some(FtwExpertData {
-            gate_up_packed: shard.get(
-                slice.gate_up_packed_off..slice.gate_up_packed_off + slice.gate_up_packed_len,
-            )?,
-            gate_up_scale: shard
-                .get(slice.gate_up_scale_off..slice.gate_up_scale_off + slice.gate_up_scale_len)?,
-            gate_up_global: shard.get(
-                slice.gate_up_global_off..slice.gate_up_global_off + slice.gate_up_global_len,
-            )?,
-            down_packed: shard
-                .get(slice.down_packed_off..slice.down_packed_off + slice.down_packed_len)?,
-            down_scale: shard
-                .get(slice.down_scale_off..slice.down_scale_off + slice.down_scale_len)?,
-            down_global: shard
-                .get(slice.down_global_off..slice.down_global_off + slice.down_global_len)?,
+            gate_up_packed: component(0, slice.gate_up_packed_off, slice.gate_up_packed_len)?,
+            gate_up_scale: component(1, slice.gate_up_scale_off, slice.gate_up_scale_len)?,
+            gate_up_global: component(2, slice.gate_up_global_off, slice.gate_up_global_len)?,
+            down_packed: component(3, slice.down_packed_off, slice.down_packed_len)?,
+            down_scale: component(4, slice.down_scale_off, slice.down_scale_len)?,
+            down_global: component(5, slice.down_global_off, slice.down_global_len)?,
         })
     }
 }
 
+#[cfg(test)]
+#[path = "ftw_loader/shard_tests.rs"]
+mod shard_tests;
 #[cfg(test)]
 mod tests {
     use super::*;

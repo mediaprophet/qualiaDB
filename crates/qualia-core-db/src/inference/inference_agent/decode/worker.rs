@@ -68,9 +68,22 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
     let mut think_piece = [0u8; 64];
     let (ssm_layer_count, moe_layer_count) = model::layer_kinds(tensor_idx.as_ref());
 
-    if !model::decode_supported(tensor_idx.as_ref()) {
-        return admission::unsupported(&mut lp, stage_trace);
-    }
+    // Qwen3.5 requires its own reviewed mixed-attention owner. The generic
+    // GGUF architecture guard remains authoritative for every other model.
+    let qwen35_plan = if let Some(index) = tensor_idx
+        .as_ref()
+        .filter(|index| index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE)
+    {
+        let Some(plan) = engine.qwen35_plan(index).cloned() else {
+            return admission::unsupported(&mut lp, stage_trace);
+        };
+        Some(plan)
+    } else {
+        if !model::decode_supported(tensor_idx.as_ref()) {
+            return admission::unsupported(&mut lp, stage_trace);
+        }
+        None
+    };
 
     let cold::Inputs {
         mut ctx,
@@ -170,6 +183,68 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
     );
     if let Err(error) = gate.context_input() {
         return admission::refused(&mut lp, stage_trace, error);
+    }
+    if let Some(plan) = qwen35_plan {
+        // This typed route currently implements exact scalar greedy decoding.
+        // Refuse modifiers it cannot execute rather than silently changing the
+        // frozen numerical request or falling back to the generic architecture.
+        if sieve.is_some()
+            || lora_adapter.is_some()
+            || crate::llm_bench::sampler_config().is_some()
+            || crate::llm_bench::domino_active()
+            || crate::qualia_hybrid::graph_force_enabled()
+        {
+            gate.invalidate();
+            return admission::refused(
+                &mut lp,
+                stage_trace,
+                super::super::governed::PolicyError::InvalidCandidate,
+            );
+        }
+        // Check again after source preparation and policy sealing. A detached
+        // old mmap owner cannot execute under a replacement source's receipt.
+        let index = tensor_idx.as_ref().expect("typed Qwen index");
+        if !engine
+            .qwen35_plan(index)
+            .is_some_and(|current| std::sync::Arc::ptr_eq(current, &plan))
+        {
+            gate.invalidate();
+            return admission::refused(
+                &mut lp,
+                stage_trace,
+                super::super::governed::PolicyError::InvalidCandidate,
+            );
+        }
+        let Some(session) = engine.take_qwen35_session(index) else {
+            gate.invalidate();
+            return admission::refused(
+                &mut lp,
+                stage_trace,
+                super::super::governed::PolicyError::InvalidCandidate,
+            );
+        };
+        // This turn consumes the numerical owner. Keep sticky reuse disabled
+        // even after success so the next request cold-loads a fresh session.
+        reusable.store(false, std::sync::atomic::Ordering::Release);
+        crate::llm_bench::record_load_ns(t_phase.elapsed().as_nanos() as u64);
+        return qwen35::run(qwen35::Request {
+            plan,
+            session,
+            ctx: &mut ctx,
+            tok: &tok,
+            gate: &mut gate,
+            epoch: &_compute_epoch,
+            control: &control_thread,
+            lp: &mut lp,
+            cc: &mut cc,
+            stream: &stream_tx_thread,
+            prompt: &prompt_owned,
+            graph: prov_hash,
+            gen_budget,
+            stage_telemetry,
+            stage_trace,
+            thinking_budget,
+        });
     }
     // Keep `eos` for draft/topology APIs that still take a single id; decode
     // termination uses the full stop set (eos + chat end-of-turn specials).

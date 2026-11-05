@@ -402,6 +402,9 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> Option<usize> {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            return None; // Gated attention executes only through its admitted owner.
+        }
         etalon_inference::ordinary::attention::AttentionEngine { host: self }
             .dispatch_attention_layer(
                 index, layer, token_idx, hidden, emb_dim, tensors, scratch_a, scratch_b,
@@ -420,6 +423,9 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            return false;
+        }
         etalon_inference::ordinary::attention::AttentionEngine { host: self }
             .dispatch_attention_q_ffn_token(
                 index, layer, token_idx, hidden, emb_dim, tensors, scratch_a, scratch_b,

@@ -190,6 +190,10 @@ impl super::QTensorEngine {
     }
 
     pub fn reset_recurrent_state(&mut self) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &mut self.qwen35_ftw {
+            session.reset();
+        }
         self.ssm_recurrent_state.fill(0.0);
     }
 
@@ -203,6 +207,12 @@ impl super::QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            return self.qwen35_attention(index, layer, hidden, emb_dim, tensors);
+            #[cfg(target_arch = "wasm32")]
+            return false;
+        }
         HybridEngine { host: self }
             .dispatch(index, layer, hidden, emb_dim, tensors, scratch_a, scratch_b)
     }

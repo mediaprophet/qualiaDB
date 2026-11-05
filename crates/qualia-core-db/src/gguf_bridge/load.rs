@@ -10,6 +10,10 @@ impl QTensorEngine {
 
     /// KV-cache size in bytes.
     pub fn kv_cache_bytes(&self) -> u64 {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &self.qwen35_ftw {
+            return session.kv_cache_bytes() as u64;
+        }
         self.kv_layout
             .as_ref()
             .map(|layout| (layout.total_f32_elems * std::mem::size_of::<f32>()) as u64)
@@ -59,7 +63,8 @@ impl QTensorEngine {
             return Err(msg);
         }
 
-        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
@@ -77,6 +82,8 @@ impl QTensorEngine {
         {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(Arc::new(mmap));
         self.p64_index = None;
@@ -182,7 +189,8 @@ impl QTensorEngine {
         if index.hyperparams.n_layer == 0 || index.hyperparams.n_embd == 0 {
             return Err("Safetensor: missing hyperparameters".to_string());
         }
-        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
@@ -207,6 +215,8 @@ impl QTensorEngine {
         {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;
@@ -317,7 +327,8 @@ impl QTensorEngine {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
         }
-        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
         #[cfg(feature = "gpu-runtime")]
@@ -345,6 +356,8 @@ impl QTensorEngine {
         {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
         // Cache index so decode never re-validates hundreds of MB of tensor CRCs.
@@ -420,7 +433,8 @@ impl QTensorEngine {
         {
             return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
         }
-        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
@@ -445,6 +459,8 @@ impl QTensorEngine {
         {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
         self.p64_index = None;
@@ -583,7 +599,8 @@ impl QTensorEngine {
         {
             return Err("GGUF header parse failed or yielded no tensor metadata".to_string());
         }
-        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
+        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+            .map_err(|e| e.to_string())?;
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
         let staging = index
@@ -608,6 +625,8 @@ impl QTensorEngine {
         {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
+            self.qwen35_ftw = None;
+            self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
         // Full eager upload — required for coherent decode (do not defer).

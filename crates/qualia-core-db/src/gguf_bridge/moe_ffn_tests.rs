@@ -383,6 +383,15 @@ fn local_llm_agent_autoregressive_decode_physical_qwen_nvfp4() {
     if !p.exists() || !p.join("freetoken_weight.json").exists() {
         return;
     }
+    // This functional qualification executes all 40 layers and the complete
+    // vocabulary on the scalar CPU reference path, including in debug builds.
+    // It is a bounded batch request; the interactive product deadline remains
+    // 30 seconds. The thread-local scope follows this request onto its worker
+    // and restores the previous settings on success or unwind.
+    let mut settings = crate::llm_bench::prepared_settings::PreparedInferenceSettings::capture()
+        .expect("capture physical qualification settings");
+    settings.inference_timeout_ms = 30 * 60 * 1000;
+    let _settings = settings.enter();
     use crate::llm_agent::{DecodeControl, LocalLlmAgent};
     let agent = LocalLlmAgent::new("did:git:a2000-parity-test", p.to_str().unwrap());
 

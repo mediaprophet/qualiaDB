@@ -322,6 +322,8 @@ impl QTensorEngine {
             prepared_native_bytes: None,
             #[cfg(not(target_arch = "wasm32"))]
             prepared_native_sources: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            qwen35_ftw: None,
             gguf_mmap: None,
             #[cfg(target_arch = "wasm32")]
             cached_tokenizer: None,
@@ -488,6 +490,8 @@ impl QTensorEngine {
             prepared_native_bytes: None,
             #[cfg(not(target_arch = "wasm32"))]
             prepared_native_sources: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            qwen35_ftw: None,
             gguf_mmap: None,
             #[cfg(target_arch = "wasm32")]
             cached_tokenizer: None,

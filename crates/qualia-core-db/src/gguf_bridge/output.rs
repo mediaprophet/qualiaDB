@@ -14,6 +14,12 @@ impl QTensorEngine {
         max_chunks: u32,
         sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            return self.qwen35_argmax(index, hidden, emb_dim, max_chunks, sieve_mask);
+            #[cfg(target_arch = "wasm32")]
+            return None;
+        }
         etalon_inference::projections::ProjectionEngine { host: self }
             .dispatch_output_argmax_chunked(
                 index,
@@ -99,6 +105,12 @@ impl QTensorEngine {
         hidden: &mut [f32],
         emb_dim: usize,
     ) -> bool {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            return self.qwen35_output_norm(index, hidden, emb_dim);
+            #[cfg(target_arch = "wasm32")]
+            return false;
+        }
         etalon_inference::projections::ProjectionEngine { host: self }
             .apply_output_norm_inplace(index, hidden, emb_dim)
     }

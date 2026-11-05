@@ -2,6 +2,8 @@
 //! This is not whole-model decode admission. Packing and ordinary norm storage
 //! are caller-selected source contracts; no exporter-version heuristic is used.
 mod source;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ftw;
 #[cfg(test)]
 mod tests;
 

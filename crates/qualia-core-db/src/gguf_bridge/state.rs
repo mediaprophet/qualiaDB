@@ -8,6 +8,9 @@ pub struct QTensorEngine {
     pub(super) prepared_native_bytes: Option<ModelByteHandle>,
     #[cfg(not(target_arch = "wasm32"))]
     pub(super) prepared_native_sources: Option<NativeModelSources>,
+    /// Architecture-owned Qwen3.5 state; generic Llama execution never admits it.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) qwen35_ftw: Option<qwen35::ftw::session::Session>,
     /// Browser WASM keeps a private device; native reuses `gpu_context::shared_gpu()`.
     #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub(super) device: wgpu::Device,

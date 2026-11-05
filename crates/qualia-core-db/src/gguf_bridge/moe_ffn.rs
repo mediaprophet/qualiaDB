@@ -10,10 +10,50 @@ impl QTensorEngine {
     /// Adopt an FTW multi-shard model directory for native MoE execution.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn adopt_ftw_package(&mut self, dir: &std::path::Path) -> Result<GgufLoadReport, String> {
+        self.adopt_ftw_package_with_budget(dir, 1024, 128 * 1024 * 1024)
+    }
+
+    /// Select the external whole-model state budget and context capacity for
+    /// admitted Qwen execution. This is separate from the legacy SSM-only
+    /// budget and the 42 MiB Sentinel arena; the default reserves at most 128 MiB.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn adopt_ftw_package_with_budget(
+        &mut self,
+        dir: &std::path::Path,
+        max_context: usize,
+        model_state_byte_budget: usize,
+    ) -> Result<GgufLoadReport, String> {
+        let metadata_bytes = std::fs::metadata(dir.join("freetoken_weight.json"))
+            .map_err(|e| format!("FTW manifest metadata: {e}"))?.len();
+        if max_context == 0 || metadata_bytes > model_state_byte_budget as u64 {
+            return Err("FTW model state/metadata budget exhausted".into());
+        }
         let pkg = Arc::new(FtwModelPackage::open_from_dir(dir)?);
         let index = pkg.tensor_index.clone();
-        index.hyperparams.decode_supported()?;
-        self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget).map_err(|e| e.to_string())?;
+        // A Qwen artifact needs an architecture-owned plan, not permission to
+        // run through the generic Llama forward. Automatic admission is bound
+        // to a reviewed exporter receipt; other FTW formats retain their guard.
+        let qwen35 = if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            let plan = qwen35::ftw::admission::admit_known(
+                Arc::clone(&pkg),
+                dir,
+                max_context,
+                model_state_byte_budget,
+            )?;
+            let remaining = model_state_byte_budget
+                .checked_sub(plan.reserved_bytes())
+                .ok_or("Qwen plan exhausts caller byte budget")?;
+            Some(
+                qwen35::ftw::session::Session::new(plan, remaining)
+                    .map_err(|e| format!("Qwen session admission: {e:?}"))?,
+            )
+        } else {
+            index.hyperparams.decode_supported()?;
+            self.init_ssm_state_with_budget(&index, self.ssm_state_byte_budget)
+                .map_err(|e| e.to_string())?;
+            None
+        };
+        self.qwen35_ftw = qwen35;
         self.tensor_index_cache = Some(index.clone());
         self.hyperparams = index.hyperparams;
         self.tensor_data_offset = index.tensor_data_start;
@@ -27,8 +67,15 @@ impl QTensorEngine {
         }
         self.gguf_mmap = pkg.shards.first().cloned();
         self.ftw_package = Some(pkg);
-        self.ensure_kv_cache(&index.hyperparams);
-
+        if self.qwen35_ftw.is_some() {
+            // The architecture owner includes both recurrent and full-attention
+            // storage in its checked budget, outside the Sentinel arena.
+            self.ssm_recurrent_state = Box::new([]);
+            self.kv_layout = None;
+            self.kv_cache_cpu = None;
+        } else {
+            self.ensure_kv_cache(&index.hyperparams);
+        }
 
         Ok(GgufLoadReport {
             mapped_bytes: self

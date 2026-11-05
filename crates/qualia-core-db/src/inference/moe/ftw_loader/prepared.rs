@@ -98,6 +98,9 @@ impl FtwModelPackage {
         for (&(layer, expert), s) in experts {
             hash.update(layer.to_le_bytes());
             hash.update(expert.to_le_bytes());
+            for shard in s.component_shards {
+                hash.update((shard as u64).to_le_bytes());
+            }
             for value in [
                 s.shard_idx,
                 s.gate_up_packed_off,

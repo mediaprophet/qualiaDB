@@ -382,6 +382,14 @@ impl QTensorEngine {
         scratch_b: &mut [f32],
         max_layers: u32,
     ) -> Result<(), PrefillDispatchFailure> {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            // Qwen prompt execution is token-major in its admitted Session;
+            // the generic layer-major KV prefill has incompatible state rules.
+            return Err(PrefillDispatchFailure::Layer {
+                layer: 0,
+                stage: PrefillLayerStage::DispatchQueryFfn,
+            });
+        }
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 || n_tokens == 0 {
             return Err(PrefillDispatchFailure::EmptyInput);
@@ -439,6 +447,27 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let Some(plan) = self.qwen35_plan(index) else {
+                    return false;
+                };
+                if emb_dim != plan.profile.hidden
+                    || hidden.len() != emb_dim
+                    || layer as usize >= plan.layers.len()
+                {
+                    return false;
+                }
+                let Some(session) = &mut self.qwen35_ftw else {
+                    return false;
+                };
+                return session.position() == Ok(token_idx as usize)
+                    && session.forward(layer as usize..layer as usize + 1, hidden) == Ok(1);
+            }
+            #[cfg(target_arch = "wasm32")]
+            return false;
+        }
         etalon_inference::ordinary::HybridEngine { host: self }.layer(
             index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
         )
@@ -684,6 +713,12 @@ impl QTensorEngine {
         token_idx: u32,
         max_layers: u32,
     ) -> u32 {
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
+            #[cfg(not(target_arch = "wasm32"))]
+            return self.qwen35_forward(index, hidden, emb_dim, token_idx, max_layers);
+            #[cfg(target_arch = "wasm32")]
+            return 0;
+        }
         let n_layer = index.hyperparams.n_layer;
         if n_layer == 0 {
             return 0;
@@ -2006,4 +2041,3 @@ impl QTensorEngine {
         accepted
     }
 }
-
