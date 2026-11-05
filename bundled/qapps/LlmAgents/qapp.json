@@ -11,7 +11,7 @@
     "app_id": "did:qualia:qap:llm-agents",
     "display_name": "LLM & Social AI Agents",
     "category": "ai-instruments",
-    "did_git": "did:git:github.com/webizen/qap-llm-agents",
+    "did_git": "did:git:github.com/WebizenAI/qualia-agent",
     "export_targets": [
       "tauri-desktop",
       "wasm-mobile",
@@ -41,7 +41,7 @@
       "route": "/tools"
     },
     "notes": [
-      "LLM & Social AI Agents is developed in its own independent repository (did:git:github.com/webizen/qap-llm-agents).",
+      "LLM & Social AI Agents is developed in its own independent repository (did:git:github.com/WebizenAI/qualia-agent).",
       "Installs into {storage}/Qapps/LlmAgents and controls local GGUF/P64 weight streaming under strict user allowlists.",
       "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
     ]

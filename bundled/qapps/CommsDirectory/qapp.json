@@ -11,7 +11,7 @@
     "app_id": "did:qualia:qap:comms-directory",
     "display_name": "Communications & Directory",
     "category": "communications",
-    "did_git": "did:git:github.com/webizen/qap-comms-directory",
+    "did_git": "did:git:github.com/WebizenAI/webizen-comms",
     "export_targets": [
       "tauri-desktop",
       "wasm-mobile",
@@ -41,8 +41,8 @@
       "route": "/talk/directory"
     },
     "notes": [
-      "Communications & Directory is developed in its own independent repository (did:git:github.com/webizen/qap-comms-directory).",
-      "Installs into {storage}/Qapps/CommsDirectory and drives sovereign peer address books, mail inboxes, and relationship topologies.",
+      "Communications & Directory is developed in its own independent repository (did:git:github.com/WebizenAI/webizen-comms).",
+      "Installs into {storage}/Qapps/CommsDirectory and drives human-centric peer address books, mail inboxes, and relationship topologies.",
       "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
     ]
   }

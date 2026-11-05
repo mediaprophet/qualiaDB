@@ -11,7 +11,7 @@
     "app_id": "did:qualia:qap:browser",
     "display_name": "Webizen Web Browser",
     "category": "web-reach",
-    "did_git": "did:git:github.com/webizen/qap-browser",
+    "did_git": "did:git:github.com/WebizenAI/webizen-browser",
     "export_targets": [
       "tauri-desktop",
       "wasm-mobile",
@@ -41,7 +41,7 @@
       "route": "/browser"
     },
     "notes": [
-      "Webizen Web Browser is developed in its own independent repository (did:git:github.com/webizen/qap-browser).",
+      "Webizen Web Browser is developed in its own independent repository (did:git:github.com/WebizenAI/webizen-browser).",
       "Installs into {storage}/Qapps/Browser and enables secure, isolated web reach and hypermedia navigation.",
       "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
     ]

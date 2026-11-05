@@ -11,7 +11,7 @@
     "app_id": "did:qualia:qap:poet",
     "display_name": "POET Authoring Shed",
     "category": "semantic-authoring",
-    "did_git": "did:git:github.com/webizen/qap-poet",
+    "did_git": "did:git:github.com/WebizenAI/poet",
     "export_targets": [
       "tauri-desktop",
       "wasm-mobile",
@@ -41,7 +41,7 @@
       "route": "/poet"
     },
     "notes": [
-      "POET is developed in its own independent multi-repo package (did:git:github.com/webizen/qap-poet).",
+      "POET is developed in its own independent multi-repo package (did:git:github.com/WebizenAI/poet).",
       "Installs into {storage}/Qapps/Poet and shares the QualiaDB NQuin / STUDIO_STORE zero-copy storage layer.",
       "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
     ]

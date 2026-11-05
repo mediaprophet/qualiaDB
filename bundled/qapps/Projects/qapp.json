@@ -11,7 +11,7 @@
     "app_id": "did:qualia:qap:projects",
     "display_name": "Cooperative Projects & Work",
     "category": "cooperative-work",
-    "did_git": "did:git:github.com/webizen/qap-projects",
+    "did_git": "did:git:github.com/WebizenAI/cooperative-projects",
     "export_targets": [
       "tauri-desktop",
       "wasm-mobile",
@@ -41,7 +41,7 @@
       "route": "/work"
     },
     "notes": [
-      "Cooperative Projects & Work is developed in its own independent multi-repo package (did:git:github.com/webizen/qap-projects).",
+      "Cooperative Projects & Work is developed in its own independent multi-repo package (did:git:github.com/WebizenAI/cooperative-projects).",
       "Installs into {storage}/Qapps/Projects and records labor, capital, and effort obligations to the local QualiaDB NQuin ledger.",
       "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
     ]

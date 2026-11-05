@@ -11,7 +11,7 @@
     "app_id": "did:qualia:qap:library",
     "display_name": "Hypermedia Library",
     "category": "hypermedia-memory",
-    "did_git": "did:git:github.com/webizen/qap-library",
+    "did_git": "did:git:github.com/WebizenAI/hypermedia-production",
     "export_targets": [
       "tauri-desktop",
       "wasm-mobile",
@@ -41,7 +41,7 @@
       "route": "/library"
     },
     "notes": [
-      "Hypermedia Library is developed in its own independent repository (did:git:github.com/webizen/qap-library).",
+      "Hypermedia Library is developed in its own independent repository (did:git:github.com/WebizenAI/hypermedia-production).",
       "Installs into {storage}/Qapps/Library and surfaces Lived Memory cards, hypermedia reading, and artifact provenance.",
       "Consumes the OS-Shell shared services: scheduler, networking, permissive commons, communications, and identifiers."
     ]

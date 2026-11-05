@@ -37,7 +37,7 @@ Write-Host "Packaging QApp: $pkgId (v$pkgVersion) from $AppDir..."
 
 # Collect files and calculate sha256
 $files = Get-ChildItem -Path $AppDir -Recurse -File | Where-Object {
-    $_.FullName -notmatch '[\\/](\.git|\.staging|dist|target|pkg-poet|\.qpkg)[\\/]' -and
+    $_.FullName -notmatch '[\\/](\.git|\.staging|dist|target|pkg-poet|reference|\.qpkg)[\\/]' -and
     $_.Name -ne "package-manifest.json" -and
     $_.Extension -ne ".qpkg"
 }
@@ -68,7 +68,8 @@ Write-Host "Generated content manifest: $sidecarPath"
 
 # Create output bundle
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-$bundleName = "$pkgId-v$pkgVersion.qpkg"
+$safeBundlePrefix = if ($pkgId -match ':') { $pkgName } else { $pkgId }
+$bundleName = "$safeBundlePrefix-v$pkgVersion.qpkg"
 $bundlePath = Join-Path $OutDir $bundleName
 
 if (Test-Path $bundlePath) {
