@@ -10,8 +10,8 @@ license-file = "../../LICENSE"
 
 [dependencies]
 qualia-core-db = { path = "../qualia-core-db", default-features = false }
-etalon-sense-core = { path = "../../../etalon/crates/etalon-sense-core" }
-etalon-sense-nfc = { path = "../../../etalon/crates/etalon-sense-nfc" }
+etalon-sense-core = { git = "https://github.com/mediaprophet/etalon.git", branch = "qualiadb-migration" }
+etalon-sense-nfc = { git = "https://github.com/mediaprophet/etalon.git", branch = "qualiadb-migration" }
 ed25519-dalek = { version = "3.0", default-features = false }
 
 [dev-dependencies]
