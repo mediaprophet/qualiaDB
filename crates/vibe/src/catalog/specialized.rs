@@ -940,9 +940,9 @@ mod tests {
         let Value::Record(sm) = site else { panic!() };
         assert_eq!(sm.get("site_id"), Some(&Value::String("YarrangobillyKarstGorge".into())));
 
-        let drive_src = include_str!("../../../../../ecopunk/vibe/ecopunk_continuum_drive.vibe");
-        let lab_src = include_str!("../../../../../ecopunk/vibe/ecopunk_biological_lab.vibe");
-        let talbingo_src = include_str!("../../../../../game-demo/web/fixtures/talbingo-drive.vibe");
+        let drive_src = include_str!("../../fixtures/ecopunk_continuum_drive.vibe");
+        let lab_src = include_str!("../../fixtures/ecopunk_biological_lab.vibe");
+        let talbingo_src = include_str!("../../fixtures/talbingo-drive.vibe");
 
         let p_drive = crate::load_program(drive_src).expect("ecopunk_continuum_drive.vibe must typecheck");
         let c_drive = crate::bytecode::compile(&p_drive).expect("ecopunk_continuum_drive.vibe must compile to .qbc");

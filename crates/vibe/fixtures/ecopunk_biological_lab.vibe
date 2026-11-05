@@ -1,0 +1,67 @@
+// Ecopunk Biological Lab — 10D Botanical & Zoological Anatomy + Ontology Dissection Fixture
+module <https://qualiadb.org/modules/ecopunk/biological_lab>;
+using BotanicalAnatomy;
+using ZoologicalAnatomy;
+using BiologicalOntology;
+using SceneGraph10D;
+
+effect fn evaluate_biological_specimen(scale: i64, explode_01: f64, cutaway_01: f64, anthesis_01: f64) -> Record {
+    let organ = BotanicalAnatomy.synthesize_organ_10d({
+        species_id: "corymbia_aparrerinja",
+        scale: scale,
+        explode_01: explode_01,
+        cutaway_01: cutaway_01,
+        anthesis_01: anthesis_01
+    });
+    let tissue = BotanicalAnatomy.dissect_tissue_layer({
+        scale: scale,
+        explode_01: explode_01,
+        cutaway_01: cutaway_01,
+        layer_index: 2.0
+    });
+    let anthesis = BotanicalAnatomy.evaluate_anthesis({ anthesis_01: anthesis_01 });
+    let stomata = BotanicalAnatomy.evaluate_stomatal_conductance({
+        par_umol_m2_s: 1450.0,
+        vpd_kpa: 1.6,
+        leaf_water_potential_mpa: -1.35
+    });
+    let sapwood = BotanicalAnatomy.evaluate_pipe_model_sapwood({
+        leaf_area_m2: 185.0,
+        huber_value: 0.00028,
+        dbh_cm: 62.0
+    });
+    let vertebrate = ZoologicalAnatomy.synthesize_vertebrate_10d({
+        species_id: "macropus_rufus",
+        peel_01: cutaway_01,
+        explode_01: explode_01,
+        hop_phase_01: 0.5
+    });
+    let peel = ZoologicalAnatomy.peel_layer({ peel_01: cutaway_01, explode_01: explode_01 });
+    let tendon = ZoologicalAnatomy.evaluate_tendon_strain({
+        stiffness_n_m: 185000.0,
+        delta_l_m: 0.042,
+        recovery_ratio: 0.65
+    });
+    let pin = BiologicalOntology.query_callout_pin({ scale: scale, pin_index: 0.0 });
+    let curie = BiologicalOntology.resolve_curie({ curie: "PO:0009084" });
+    let ontogeny = SceneGraph10D.step_ontogeny({ month: 11.0, growth_01: 0.72 });
+    let affordance = SceneGraph10D.dispatch_affordance({
+        verb: "InspectHistology",
+        target: "corymbia_aparrerinja"
+    });
+    return {
+        organ: organ,
+        tissue: tissue,
+        anthesis: anthesis,
+        stomata: stomata,
+        sapwood: sapwood,
+        vertebrate: vertebrate,
+        peel: peel,
+        tendon: tendon,
+        pin: pin,
+        curie: curie,
+        ontogeny: ontogeny,
+        affordance: affordance
+    };
+}
+

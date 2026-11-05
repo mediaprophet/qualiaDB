@@ -1,0 +1,26 @@
+// Talbingo Corridor Drive — Snowy Mountains Study Corridor & Character Traversal Fixture
+module <https://qualiadb.org/modules/ecopunk/talbingo_drive>;
+using WorldContinuum;
+using SceneGraph10D;
+
+effect fn step_talbingo_corridor(wx_m: f64, wz_m: f64, yaw_rad: f64) -> Record {
+    let character = WorldContinuum.step_character_3d({
+        wx_m: wx_m,
+        wz_m: wz_m,
+        yaw_rad: yaw_rad,
+        move_fwd: 1.0,
+        move_strafe: 0.0,
+        sprint: true,
+        dt_s: 0.015625
+    });
+    let site = WorldContinuum.locate_study_site({ wx_m: wx_m, wz_m: wz_m });
+    let elev = WorldContinuum.sample_elevation_normal({ wx_m: wx_m, wz_m: wz_m });
+    let cull = SceneGraph10D.cull_indirect_4tier({ instance_count: 256.0 });
+    return {
+        character: character,
+        site: site,
+        elevation: elev,
+        cull: cull
+    };
+}
+
