@@ -23,7 +23,7 @@ use web_sys::{
     Response,
 };
 
-use super::{console_log, console_warn};
+use super::console_log;
 
 /// Daemon HTTP loopback only — not libp2p (4243) or Poet HTML (8080),
 /// which can 200 `/health` without being the QualiaDB engine.

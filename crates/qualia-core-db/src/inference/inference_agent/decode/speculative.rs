@@ -28,7 +28,7 @@ pub(super) struct Speculative<'a, 'slot, 'bytes> {
     pub moe_layer_count: u32,
     pub stage_trace: &'a mut StageTrace,
 }
-#[allow(unused_variables)]
+#[allow(unused_variables, unused_mut)]
 pub(super) fn run(input: Speculative<'_, '_, '_>) -> (SpecStep, usize) {
     let Speculative {
         gate,

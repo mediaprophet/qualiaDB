@@ -392,6 +392,7 @@ mod tests {
                 to: 1,
                 wire_type: "active".into(),
                 label: "p".into(),
+                ..Default::default()
             },
             SeedConnection {
                 id: "external".into(),
@@ -399,6 +400,7 @@ mod tests {
                 to: 2,
                 wire_type: "active".into(),
                 label: "q".into(),
+                ..Default::default()
             },
         ];
         let mut target = ManifoldSeed {
