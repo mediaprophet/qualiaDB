@@ -27,6 +27,7 @@ impl DecodeControl {
     /// Freeze numerical request budgets while retaining the caller's live
     /// cooperative cancellation channel. A later UI budget mutation cannot
     /// change an already prepared request's admitted settings.
+    #[allow(dead_code)]
     pub(crate) fn frozen_budgets(&self) -> Self {
         Self {
             cancelled: Arc::clone(&self.cancelled),

@@ -321,7 +321,7 @@ impl WaterGpu {
             shore_distance_accelerated_into, shore_topology_into, spatial_working_bytes,
             ShoreSpatialScratch,
         };
-        use crate::specialized_libs::computational_geometry::{Aabb, BvhNode, Point3};
+        use etalon_render::water_surface::{Aabb, BvhNode, Point3};
         let topology = shore_topology_into(positions, indices, &mut edges)
             .map_err(|error| format!("water shoreline topology: {error:?}"))?;
         let boundary = topology.boundary_edges();

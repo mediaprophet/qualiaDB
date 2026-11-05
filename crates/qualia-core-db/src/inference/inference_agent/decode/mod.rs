@@ -14,6 +14,7 @@ use super::control::DecodeControl;
 #[cfg(not(target_arch = "wasm32"))]
 use super::decode_helpers::get_prefix_cache;
 #[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+#[allow(unused_imports)]
 use super::decode_helpers::{
     apply_model_helper_stops, build_sieve, drain_tensor_context_inject, embedding_fallback_logits,
     try_accept_topology_draft, TopologyDraftStep,

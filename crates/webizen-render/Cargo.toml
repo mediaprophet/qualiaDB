@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
 wgpu = { workspace = true, default-features = false, features = ["std", "parking_lot", "metal", "gles", "vulkan", "wgsl", "webgpu", "spirv"] }
-etalon-render = { workspace = true }
+etalon-render = { workspace = true, features = ["gpu"] }
 bytemuck = { workspace = true, features = ["derive"] }
 log = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

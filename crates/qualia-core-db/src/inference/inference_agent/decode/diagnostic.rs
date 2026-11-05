@@ -14,6 +14,7 @@ pub(super) struct Diagnostic<'a> {
     pub emb_buf: &'a [f32; 8192],
     pub emb_dim: usize,
 }
+#[allow(unused_variables)]
 pub(super) fn run(input: Diagnostic<'_>) -> () {
     let Diagnostic {
         step,

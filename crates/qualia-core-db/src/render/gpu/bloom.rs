@@ -1,9 +1,7 @@
 //! Bloom policy and output calibration adapter.
 use super::*;
 use crate::gpu_context::{global_vram_ledger, VramResourceClass};
-pub(super) use etalon_render::bloom::{
-    hdr_color_target_state, probe_hdr_format, run_bloom_passes, write_bloom_uniform,
-};
+pub(super) use etalon_render::bloom::{hdr_color_target_state, probe_hdr_format, run_bloom_passes};
 /// `true` when portal bloom is enabled.
 pub(super) fn portal_bloom_enabled() -> bool {
     let ledger = global_vram_ledger();

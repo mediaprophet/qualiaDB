@@ -1,4 +1,5 @@
 //! Hybrid numerical execution adapter; provider dispatch stays in QTensorEngine.
+#![allow(unused_imports, unused_variables, unused_mut)]
 use crate::gguf_sharder::{GgufTensorIndex, LayerTensors};
 use etalon_inference::ordinary::ssm_layout::{
     ssm_layout_for, SsmLayerStateLayout, SsmStateError, CONV_HISTORY_DEPTH,

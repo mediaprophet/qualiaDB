@@ -42,6 +42,7 @@ impl LocalLlmAgent {
         // Extension-bus replies can arrive after reconfiguration. Recheck at
         // publication as well as entry; an earlier developer request is no grant
         // to stream after the caller has returned to governed mode.
+        #[allow(unreachable_code)]
         let generation = developer_execution_generation();
         let mut on_token = on_token.map(|mut callback| {
             move |text| {

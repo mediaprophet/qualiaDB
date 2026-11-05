@@ -1,3 +1,4 @@
+#![allow(unused_variables, unused_mut)]
 use super::*;
 use etalon_inference::ordinary::cpu_attention::CpuAttentionHost;
 pub(super) struct CpuAttentionAdapter<'a> {

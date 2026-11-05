@@ -1,7 +1,7 @@
 use super::*;
 use crate::inference::lab::config_space::{Configuration, ConfigurationSpace, ParameterDef};
 use crate::inference::runtime::receipt::execution::COUNTER_TIME_TO_FIRST_TOKEN_US;
-use crate::inference_bench::BenchConfig;
+
 
 #[test]
 fn quality_score_from_verified() {

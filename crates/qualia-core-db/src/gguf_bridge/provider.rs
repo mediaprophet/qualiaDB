@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_mut)]
 use super::QTensorEngine;
 use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicU64, Ordering};

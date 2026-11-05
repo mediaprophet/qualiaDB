@@ -102,7 +102,7 @@ pub(super) fn run(input: Worker<'_>) -> WorkerResult {
         Ok(inputs) => inputs,
         Err(error) => return admission::refused(&mut lp, stage_trace, error),
     };
-    let governed = matches!(
+    let _governed = matches!(
         &execution,
         super::super::native_request::NativeDecodeRequest::Governed(_)
     );

@@ -1,5 +1,6 @@
 //! Attention: GQA params, KV mask, attention pass, CPU SDPA ref, layer + q/ffn dispatch
 //! Split from gguf_bridge/mod.rs (structural refactor; no behaviour change).
+#![allow(dead_code, unused_variables, unused_mut)]
 use super::*;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]

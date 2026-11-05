@@ -1,4 +1,5 @@
 //! Private evolving grammar with a frozen initial grammar/trie identity.
+#![allow(dead_code)]
 use super::*;
 use sha2::{Digest, Sha256};
 

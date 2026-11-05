@@ -63,7 +63,7 @@ pub fn current_residency_generation() -> u64 {
 /// Validates both pathname equality and residency generation freshness.
 pub fn with_engine<R>(
     path: &str,
-    mut load: impl FnMut(&mut QTensorEngine),
+    load: impl FnMut(&mut QTensorEngine),
     f: impl FnOnce(&mut QTensorEngine) -> R,
 ) -> R {
     with_engine_disposition(path, load, f, || false)
@@ -74,10 +74,11 @@ pub fn with_engine<R>(
 /// before destruction, so queued/prepared handles cannot reuse this state.
 pub fn with_engine_disposition<R>(
     path: &str,
-    mut load: impl FnMut(&mut QTensorEngine),
+    load: impl FnMut(&mut QTensorEngine),
     f: impl FnOnce(&mut QTensorEngine) -> R,
     discard: impl FnOnce() -> bool,
 ) -> R {
+    let mut load = load;
     let mut current_gen = RESIDENCY_TRACKER.generation();
     let settings_digest = crate::llm_bench::prepared_settings::read(|settings| settings.digest());
     ENGINE.with(|cell| {

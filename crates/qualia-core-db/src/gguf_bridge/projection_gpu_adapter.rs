@@ -1,3 +1,4 @@
+#![allow(unused_variables, unused_mut)]
 use super::*;
 use etalon_inference::projections::{
     Phase, Profile, ProjectionGpuProvider, ProjectionResources, ProjectionTensor,

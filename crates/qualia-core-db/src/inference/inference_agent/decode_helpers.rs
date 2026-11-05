@@ -6,6 +6,7 @@
 // across the new submodule boundary while keeping them crate-internal — the
 // external public API is unchanged.
 
+#![allow(dead_code)]
 use crate::NQuin;
 
 use super::config::{TEST_TRANSFORMER_LAYER_CAP, TEST_VOCAB_CHUNK_CAP};

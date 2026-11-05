@@ -88,7 +88,9 @@ pub fn begin_request_epoch() -> ComputeRequestEpoch {
         _thread: std::marker::PhantomData,
     }
 }
+#[allow(dead_code)]
 impl ComputeRequestEpoch {
+    #[allow(unused_variables)]
     pub(crate) fn bind_source(&self, source: Arc<ResidentSnapshot>, gpu_budget: usize) -> bool {
         let _guard = WORK.lock().unwrap_or_else(|e| e.into_inner());
         if current() != self.epoch || ACTIVE.load(Ordering::Acquire) {
@@ -152,6 +154,7 @@ pub(crate) fn scoped_kv_slot(index: u32) -> Option<Option<u32>> {
         .as_ref()
         .map(|kv| kv.kv_slot_for_tensor(index))
 }
+#[allow(dead_code)]
 pub(crate) fn rebuild_kv(prompt: u32, page: u64) -> bool {
     let Some(source) = source() else {
         return false;
@@ -164,6 +167,7 @@ pub(crate) fn rebuild_kv(prompt: u32, page: u64) -> bool {
     *KV.lock().unwrap_or_else(|e| e.into_inner()) = Some(kv);
     true
 }
+#[allow(dead_code)]
 pub(crate) fn record_kv(tensor: u32, slot: u32, page: u64) -> bool {
     if source().is_none() {
         return false;
@@ -175,6 +179,7 @@ pub(crate) fn record_kv(tensor: u32, slot: u32, page: u64) -> bool {
     }
     true
 }
+#[allow(dead_code)]
 pub(super) fn kv_digest() -> [u8; 32] {
     use sha2::{Digest, Sha256};
     let mut h = Sha256::new();
@@ -206,6 +211,7 @@ pub(super) fn owned_gpu_search(
         None
     }
 }
+#[allow(dead_code)]
 pub(crate) fn live(identity: u64, digest: [u8; 32]) -> bool {
     current() == identity && source().is_some_and(|s| s.digest() == digest)
 }

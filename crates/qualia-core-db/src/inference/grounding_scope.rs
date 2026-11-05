@@ -1,4 +1,5 @@
 //! Cold bounded fact capture; all request grounding reads the retained owner.
+#![allow(dead_code)]
 use super::{fact_store, GroundingFact};
 use sha2::{Digest, Sha256};
 use std::{cell::RefCell, marker::PhantomData, rc::Rc, sync::Arc};

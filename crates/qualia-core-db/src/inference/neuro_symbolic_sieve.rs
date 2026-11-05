@@ -175,6 +175,7 @@ pub struct NeuroSymbolicSieve {
 impl NeuroSymbolicSieve {
     /// Exact initial owned mask/state identity after cold lexicon resolution.
     /// Execution mutates only this private request's state, never the lex file.
+    #[allow(dead_code)]
     pub(crate) fn prepared_digest(&self) -> [u8; 32] {
         use sha2::{Digest, Sha256};
         let mut hash = Sha256::new();

@@ -69,6 +69,7 @@ impl PortalGpu {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn source_motion_mesh_counts(&self) -> Option<(u32, u32)> {
         self.mesh
             .as_ref()

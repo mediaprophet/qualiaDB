@@ -79,7 +79,6 @@ use crate::render::telemetry::{
 use crate::tensor::buffer_export::{read_tensor_at, tensor_node_count, TENSOR_STRIDE};
 
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 thread_local! {

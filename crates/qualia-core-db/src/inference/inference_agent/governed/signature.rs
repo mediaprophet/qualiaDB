@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use super::{DigestScope, PolicyDocument, PolicyError};
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};

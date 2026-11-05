@@ -972,7 +972,7 @@ pub(crate) async fn init_shared_gpu_for_adapter(
             "shared_gpu|cooperative_matrix_supported_but_disabled|set QUALIA_WGPU_EXPERIMENTAL_FEATURES=1 to request it"
         );
     }
-    let ts_supported = enabled_features.timestamp_query;
+    let _ts_supported = enabled_features.timestamp_query;
     // Modern weight tensors blow past the wgpu DEFAULTS (max_buffer_size = 256 MiB,
     // max_storage_buffer_binding_size = 128 MiB): the all-F16 Llama-3.2-3B tied lm_head
     // (token_embd, 3072×128256×2 = 751 MiB) is a single resident buffer that the defaults reject

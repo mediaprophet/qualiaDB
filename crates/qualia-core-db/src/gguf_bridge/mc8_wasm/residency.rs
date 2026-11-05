@@ -1,4 +1,5 @@
 //! WASM MC8 engine — residency concern (split from mc8_wasm.rs; verbatim, no behaviour change).
+#![allow(dead_code)]
 use super::super::*;
 use std::sync::Arc;
 

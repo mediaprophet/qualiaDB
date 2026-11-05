@@ -1,6 +1,7 @@
 //! CPU numeric kernels + pre-norm helpers used by the native/fallback LLM forward path.
 //! Split out of the monolithic `gguf_bridge` module (structural refactor; no behaviour change).
 
+#![allow(dead_code, unused_imports)]
 use super::gpu_params::{elem_op_label, ELEM_OP_RELU};
 use super::VOCAB_CHUNK_ROWS;
 

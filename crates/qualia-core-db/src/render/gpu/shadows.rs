@@ -23,9 +23,7 @@ impl ShadowTarget {
 }
 #[path = "shadow_math.rs"]
 mod shadow_math;
-pub(super) use shadow_math::{
-    aabb_outside_shadow_clip, camera_range_sun_view_projections, SHADOW_RESOLUTION_CANDIDATES,
-};
+pub(super) use shadow_math::{aabb_outside_shadow_clip, camera_range_sun_view_projections};
 pub use shadow_math::{
     camera_csm_4_sun_view_projections, compute_csm_4_splits_zero_heap, csm_cascade_blend_factor,
     ShadowAtlasAllocator, SpotPointShadowAtlasSlot, CSM_4_CASCADE_COUNT,

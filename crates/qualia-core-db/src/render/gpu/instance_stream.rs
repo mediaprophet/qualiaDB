@@ -1,7 +1,6 @@
 //! Universe admission for canonical bounded instance uploads.
 use crate::gpu_context::{global_vram_ledger, VramReservation, VramResourceClass};
 pub use etalon_render::instance_stream::MeshInstanceUploadError;
-pub(super) use etalon_render::instance_stream::MAX_MESH_INSTANCES;
 pub(super) struct GpuInstanceStream(
     etalon_render::instance_stream::GpuInstanceStream<VramReservation<'static>>,
 );

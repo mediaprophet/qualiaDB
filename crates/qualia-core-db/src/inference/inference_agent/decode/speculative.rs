@@ -1,6 +1,7 @@
 use super::*;
 use crate::gguf_bridge::QTensorEngine;
 use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
+#[allow(dead_code)]
 pub(super) enum SpecStep {
     NotHandled,
     Continue,
@@ -27,6 +28,7 @@ pub(super) struct Speculative<'a, 'slot, 'bytes> {
     pub moe_layer_count: u32,
     pub stage_trace: &'a mut StageTrace,
 }
+#[allow(unused_variables)]
 pub(super) fn run(input: Speculative<'_, '_, '_>) -> (SpecStep, usize) {
     let Speculative {
         gate,

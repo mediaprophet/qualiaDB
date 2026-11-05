@@ -3,6 +3,7 @@ use crate::NQuin;
 use etalon_inference_contract::CandidateOutput;
 use sha2::{Digest, Sha256};
 
+#[allow(dead_code)]
 pub const TOKEN_EVIDENCE_BYTES: usize = 68;
 
 /// Actual proposal data supplied by the numerical/caller adapter. This is not a
@@ -15,6 +16,7 @@ pub struct TokenProposal {
     pub logit: f32,
     pub observation: NQuin,
 }
+#[allow(dead_code)]
 impl TokenProposal {
     pub(crate) fn encode(self) -> Result<[u8; TOKEN_EVIDENCE_BYTES], PolicyError> {
         let q = self.observation;
@@ -80,6 +82,7 @@ impl TokenProposal {
 /// Admission values supplied by the authenticated host, then frozen for the
 /// request. Model identity must identify actual immutable model bytes/revision.
 #[derive(Clone, Copy, Debug)]
+#[allow(dead_code)]
 pub struct InferenceAdmission {
     pub request_digest: [u8; 32],
     pub model_digest: [u8; 32],

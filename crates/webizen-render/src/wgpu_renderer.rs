@@ -1917,7 +1917,7 @@ impl<'a> WgpuRenderer<'a> {
                 time_seconds,
                 vegetation_effects::DEFAULT_WORLD_SEED,
             );
-            let telemetry = crate::telemetry::SystemTelemetry::default();
+            let telemetry = vegetation_effects::SystemTelemetry::default();
             self.ambient_effects.update(
                 frame,
                 vegetation_effects::WindField::from_telemetry(&telemetry),

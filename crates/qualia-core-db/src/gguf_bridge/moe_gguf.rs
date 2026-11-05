@@ -1,4 +1,5 @@
 //! Compatibility adapter for canonical ordinary tensor execution.
+#![allow(unused_imports)]
 pub(super) use etalon_inference::ordinary::experts::*;
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 //! Decode-tail dispatch: final logits projection + async GEMM / async attention paths.
 //! Split from gguf_bridge/forward.rs (structural; no behaviour change).
+#![allow(dead_code)]
 use super::*;
 
 impl QTensorEngine {

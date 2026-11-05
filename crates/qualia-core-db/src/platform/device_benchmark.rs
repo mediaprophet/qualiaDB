@@ -22,7 +22,10 @@ use std::process::Command;
 
 #[cfg(feature = "gpu-runtime")]
 use etalon_diagnostics::device::backend_name;
-use etalon_diagnostics::ipc::{decode_response, encode_response};
+#[cfg(feature = "gpu-runtime")]
+use etalon_diagnostics::ipc::encode_response;
+#[cfg(test)]
+use etalon_diagnostics::ipc::decode_response;
 use etalon_diagnostics::measurement::{bench_cpu_gemv, gflops};
 pub use etalon_diagnostics::{
     CircuitBench, CircuitKind, DeviceBenchmarkRequest, DeviceBenchmarkResponse,

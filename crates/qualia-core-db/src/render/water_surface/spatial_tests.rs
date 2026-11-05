@@ -1,6 +1,6 @@
 use super::*;
-use crate::specialized_libs::computational_geometry::bvh::BvhNode;
-use crate::specialized_libs::computational_geometry::{Aabb, Point3};
+use etalon_render::water_surface::BvhNode;
+use etalon_render::water_surface::{Aabb, Point3};
 
 fn accelerated(p: &[[f32; 3]], indices: &[u32]) -> (Vec<f32>, Vec<f32>, ShoreReceipt) {
     let mut edges = vec![0; indices.len() + p.len()];

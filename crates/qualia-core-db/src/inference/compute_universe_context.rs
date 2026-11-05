@@ -33,12 +33,14 @@ pub(crate) fn context_tensor_at(index: u32) -> Option<Tensor10D> {
         None => global_resident_substrate().tensor_at(index),
     }
 }
+#[allow(dead_code)]
 pub(crate) fn context_node_count() -> u32 {
     epoch::source().map_or_else(
         || global_resident_substrate().node_count(),
         |source| source.node_count(),
     )
 }
+#[allow(dead_code)]
 pub(crate) fn context_live(identity: u64, digest: [u8; 32]) -> bool {
     epoch::live(identity, digest)
 }
@@ -50,6 +52,7 @@ pub(crate) fn context_live(identity: u64, digest: [u8; 32]) -> bool {
 /// one pause guard, so these slot reads cannot race a request producer.
 /// Bind every pending source record, including tensors resolved from indices,
 /// rather than treating an epoch label as source provenance.
+#[allow(dead_code)]
 pub(crate) fn context_input_digest() -> [u8; 32] {
     let mut h = Sha256::new();
     h.update(b"qualia:actual-context-step:v1\0");

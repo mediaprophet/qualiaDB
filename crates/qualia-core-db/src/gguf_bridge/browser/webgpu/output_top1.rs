@@ -1,4 +1,5 @@
 //! Host resource adapter for canonical compact browser top-1 reduction.
+#![allow(dead_code)]
 use crate::gguf_bridge::{QTensorEngine, StreamingArgmaxResult};
 pub use etalon_inference::browser_projection::BrowserTop1Plan;
 use etalon_inference::browser_projection::{read_browser_top1, BrowserTop1Resources};

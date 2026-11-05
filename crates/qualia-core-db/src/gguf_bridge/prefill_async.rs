@@ -1,5 +1,6 @@
 //! Async + MC8-fused prefill, fused-block async, async output-argmax, async engine init.
 //! Split from gguf_bridge/forward.rs (structural; no behaviour change).
+#![allow(dead_code, unused_variables, unused_mut)]
 use super::*;
 
 impl QTensorEngine {

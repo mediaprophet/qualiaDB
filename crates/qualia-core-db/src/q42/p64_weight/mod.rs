@@ -42,11 +42,13 @@ pub use transcode::*;
 // module so every child (compiler / transcode / reader / tests) can reach them unchanged.
 
 #[inline]
+#[allow(dead_code)]
 fn align_up(x: usize, a: usize) -> usize {
     debug_assert!(a.is_power_of_two());
     (x + a - 1) & !(a - 1)
 }
 
+#[allow(dead_code)]
 fn write_manifold_coordinate(
     coordinate: &crate::modalities::manifold::ManifoldCoordinate10D,
     out: &mut [u8],
@@ -59,6 +61,7 @@ fn write_manifold_coordinate(
     }
 }
 
+#[allow(dead_code)]
 fn write_tensor_entry(entry: &P64TensorEntry, out: &mut [u8]) {
     assert!(out.len() >= P64_TENSOR_ENTRY_BYTES);
     out[..P64_TENSOR_ENTRY_BYTES].fill(0);

@@ -14,11 +14,13 @@ use core::cell::UnsafeCell;
 #[path = "compute_universe_epoch.rs"]
 mod epoch;
 pub use epoch::{begin_request_epoch, ComputeRequestEpoch};
+#[allow(unused_imports)]
 pub(crate) use epoch::{
     rebuild_kv as rebuild_context_provenance, record_kv as record_context_provenance,
 };
 #[path = "compute_universe_context.rs"]
 mod context;
+#[allow(unused_imports)]
 pub(crate) use context::{
     context_input_digest, context_live, context_node_count, context_tensor_at,
 };

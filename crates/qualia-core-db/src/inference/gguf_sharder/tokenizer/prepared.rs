@@ -1,5 +1,6 @@
 //! Fingerprint the tokenizer actually consumed by a prepared request, including
 //! resolved helper stop metadata. No subsequent sidecar filename lookup is used.
+#![allow(dead_code)]
 use super::*;
 use sha2::{Digest, Sha256};
 

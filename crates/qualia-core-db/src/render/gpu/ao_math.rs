@@ -98,12 +98,14 @@ pub(super) fn half_extent(width: u32, height: u32) -> (u32, u32) {
 }
 
 /// Target byte size.
+#[allow(dead_code)]
 pub(super) fn target_bytes(width: u32, height: u32) -> Option<u64> {
     let (width, height) = half_extent(width, height);
     target_bytes_at_half(width, height)
 }
 
 /// Target bytes at half res.
+#[allow(dead_code)]
 pub(super) fn target_bytes_at_half(width: u32, height: u32) -> Option<u64> {
     u64::from(width)
         .checked_mul(u64::from(height))?
