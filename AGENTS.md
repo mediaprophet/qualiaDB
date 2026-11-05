@@ -1553,3 +1553,9 @@ measured deadline failure, exporter evidence, verification and remaining limits.
 
 The Rust 1.96.1 wasm32 `wasm-llm` locked compile check also passes (120 warnings,
 no errors); this does not qualify browser/mobile execution. Dependencies are unchanged.
+
+Repair commit 9dde4e62e91faeb4718c1652ac5615f3f635faf9 also passes all five hosted
+workflows: Etalon/VibeScript, QDNF, WASM Release, Pages deployment and Comparative
+Benchmarks. Exact run links are in the qualification record. Remote benchmark
+results and independently published qapp changes were preserved by fast-forward;
+these results identify the repair commit rather than qualifying later qapp edits.

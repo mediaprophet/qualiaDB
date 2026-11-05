@@ -155,3 +155,22 @@ with 120 warnings and no errors. Jobs=1, incremental disabled, dev debug=0;
 repository target flags and the existing target directory were used. This is a
 compile check, not a mobile inference or browser execution qualification.
 `git diff --check` also passed. No dependency versions or lockfiles changed.
+
+## Publication and hosted validation
+
+Implementation commit: `9dde4e62e91faeb4718c1652ac5615f3f635faf9` on
+`0.0.40.12-etalon-migration`. All five workflows on that exact commit passed:
+
+| Workflow | Result |
+| --- | --- |
+| [Etalon and VibeScript](https://github.com/mediaprophet/qualiaDB/actions/runs/41950022258) | Success; Windows product CPU and Linux language discovery |
+| [QDNF MSVC](https://github.com/mediaprophet/qualiaDB/actions/runs/41950022202) | Success; Windows MSVC and Linux GNU |
+| [WASM Release](https://github.com/mediaprophet/qualiaDB/actions/runs/41950022305) | Success; capability smoke checks, playground and Portal builds |
+| [Pages](https://github.com/mediaprophet/qualiaDB/actions/runs/41950022227) | Success; build and deployment |
+| [Comparative Benchmarks](https://github.com/mediaprophet/qualiaDB/actions/runs/41950022234) | Success; native and Schema.org jobs |
+
+Preserved remote follow-up commits by fast-forward: benchmark results `47cea4917`,
+concurrent qapp manifest/packaging changes `44daba529`, and Schema.org results
+`d813e2c77`. The validation above identifies the repair commit, not a new
+qualification of independently published qapp changes. This final record changes
+only documentation; the tested Rust source is unchanged.
