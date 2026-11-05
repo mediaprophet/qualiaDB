@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-progress-bar`
+/// Aether wrapper for `sl-progress-bar`
 #[component]
 pub fn SlProgressBar(
     localize: Option<String>,
@@ -25,7 +25,7 @@ pub fn SlProgressBar(
     }
 }
 
-/// Dioxus wrapper for `sl-progress-ring`
+/// Aether wrapper for `sl-progress-ring`
 #[component]
 pub fn SlProgressRing(
     localize: Option<String>,
@@ -48,7 +48,7 @@ pub fn SlProgressRing(
     }
 }
 
-/// Dioxus wrapper for `sl-radio`
+/// Aether wrapper for `sl-radio`
 #[component]
 pub fn SlRadio(
     dependencies: Option<String>,
@@ -79,7 +79,7 @@ pub fn SlRadio(
     }
 }
 
-/// Dioxus wrapper for `sl-qr-code`
+/// Aether wrapper for `sl-qr-code`
 #[component]
 pub fn SlQrCode(
     canvas: Option<String>,
@@ -108,7 +108,7 @@ pub fn SlQrCode(
     }
 }
 
-/// Dioxus wrapper for `sl-radio-button`
+/// Aether wrapper for `sl-radio-button`
 #[component]
 pub fn SlRadioButton(
     hasSlotController: Option<String>,
@@ -137,7 +137,7 @@ pub fn SlRadioButton(
     }
 }
 
-/// Dioxus wrapper for `sl-radio-group`
+/// Aether wrapper for `sl-radio-group`
 #[component]
 pub fn SlRadioGroup(
     dependencies: Option<String>,
@@ -188,7 +188,7 @@ pub fn SlRadioGroup(
     }
 }
 
-/// Dioxus wrapper for `sl-range`
+/// Aether wrapper for `sl-range`
 #[component]
 pub fn SlRange(
     formControlController: Option<String>,
@@ -247,7 +247,7 @@ pub fn SlRange(
     }
 }
 
-/// Dioxus wrapper for `sl-rating`
+/// Aether wrapper for `sl-rating`
 #[component]
 pub fn SlRating(
     dependencies: Option<String>,
@@ -284,7 +284,7 @@ pub fn SlRating(
     }
 }
 
-/// Dioxus wrapper for `sl-relative-time`
+/// Aether wrapper for `sl-relative-time`
 #[component]
 pub fn SlRelativeTime(
     localize: Option<String>,
@@ -313,7 +313,7 @@ pub fn SlRelativeTime(
     }
 }
 
-/// Dioxus wrapper for `sl-resize-observer`
+/// Aether wrapper for `sl-resize-observer`
 #[component]
 pub fn SlResizeObserver(
     resizeObserver: Option<String>,

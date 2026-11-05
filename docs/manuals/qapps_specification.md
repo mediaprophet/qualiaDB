@@ -39,7 +39,7 @@ pages:
 
 ## 3. Data Binding & Semantic Linking
 
-Components instantiated by a QApp specify `data_bindings` which act as RDF-Star / LTL pointers. When the Dioxus UI renders a `<qualia-sensor-data>` widget, the Webizen server streams the relevant `NQuin` records matching that binding over the DID-locked WebSocket (`/mobile/stream` or local RPC).
+Components instantiated by a QApp specify `data_bindings` which act as RDF-Star / LTL pointers. When the Aether UI renders a `<qualia-sensor-data>` widget, the Webizen server streams the relevant `NQuin` records matching that binding over the DID-locked WebSocket (`/mobile/stream` or local RPC).
 
 The data binding string is converted to a `q_hash()` inside the engine. The frontend never manages complex local state—it simply reflects the state of the graph.
 

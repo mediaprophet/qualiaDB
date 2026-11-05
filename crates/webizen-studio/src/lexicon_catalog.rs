@@ -1,7 +1,7 @@
 //! Framing chips, held-gate copy, and `lexicon_manifest` result mapping.
 //!
 //! Cherry-picked from `crates/poet/src/browser/lexicon_bay/model.rs` so Desktop
-//! Dioxus chrome and WASM Poet share one Catalog · Lexicon dialect. No Host widen.
+//! Aether chrome and WASM Poet share one Catalog · Lexicon dialect. No Host widen.
 
 /// Live ALL_BOUND id. Do not invent a Host method.
 pub const INVOKE_ID: &str = "GraphDatabase.lexicon_manifest";

@@ -1,7 +1,7 @@
 # Contextual Workspace QApp Specification
 
 **Version:** 1.0.0
-**Target Framework:** Webizen Studio (Dioxus / Rust)
+**Target Framework:** Webizen Studio (Aether / Rust)
 **Engine Backend:** QualiaDB `.q42` Context Hashes
 
 ---
@@ -55,6 +55,6 @@ Because the Reader and Writer are unified, robust capability gating is required:
 
 ## 6. Implementation Roadmap
 
-1. **Phase 1 (Canvas Primitives):** Map existing Dioxus `text-input`, `tab-group`, and `card-view` components to individual `context` hashes.
+1. **Phase 1 (Canvas Primitives):** Map existing Aether `text-input`, `tab-group`, and `card-view` components to individual `context` hashes.
 2. **Phase 2 (The Unified Reader):** Implement the overlay system where user annotations generate Quins with a diverging `context` hash, rendered as semi-transparent nodes over the root graph.
 3. **Phase 3 (Multi-Modal Blocks):** Introduce spreadsheet cell evaluation (mapping N3 rules to cells) and presentation sequence logic.

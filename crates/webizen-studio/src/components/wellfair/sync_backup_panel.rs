@@ -20,7 +20,7 @@ struct SyncBackupUi {
 }
 
 #[component]
-/// Dioxus `WellfairSyncBackupPanel` component.
+/// Aether `WellfairSyncBackupPanel` component.
 pub fn WellfairSyncBackupPanel() -> Element {
     let mut ui = use_signal(SyncBackupUi::default);
 

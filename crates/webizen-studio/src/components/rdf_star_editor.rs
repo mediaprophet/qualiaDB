@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `RdfStarEditor` component.
+/// Aether `RdfStarEditor` component.
 pub fn RdfStarEditor() -> Element {
     let mut expanded = use_signal(|| false);
 

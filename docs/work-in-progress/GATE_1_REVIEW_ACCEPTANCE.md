@@ -12,7 +12,7 @@ In accordance with Playbook §18.5 and Implementation Plan ST-E and ST-K, Gate 1
 - [x] **Deterministic Catalog & Aliases**: `CommandCatalog` maintains deterministic insertion order, rejects duplicate command IDs, and forbids overlapping aliases.
 - [x] **Standardized Engine Boundary**: `AppAdapter` trait unifies headless engine lifecycles (`describe`, `open`, `availability`, `inspect`, `execute`, `begin_gesture`, `update_gesture`, `commit_gesture`, `cancel_gesture`, `snapshot`, `restore`, `poll_job`, `cancel_job`, `close`).
 - [x] **Effects & Authorization Granularity**: Categorizes effects into `Read`, `DocumentMutation`, `WorkspaceMutation`, `FilesystemWrite`, `NetworkDisclosure`, `DeviceCapture`, `ExternalCharge`, and `PackageLifecycle`. UI presentations are advisory; authority validation is mandatory.
-- [x] **Zero UI/Native Heavy Dependencies**: Dependency tree for `qualia-app-contract` contains only `serde`, `serde_json`, `ciborium`, and `thiserror`. Zero Dioxus, Tauri, egui, wgpu, CUDA, or daemon runtime dependencies.
+- [x] **Zero UI/Native Heavy Dependencies**: Dependency tree for `qualia-app-contract` contains only `serde`, `serde_json`, `ciborium`, and `thiserror`. Zero Aether, Tauri, egui, wgpu, CUDA, or daemon runtime dependencies.
 
 ## 3. Accepted Version & Signoff
 - **Accepted Interface Version**: `1.0.0`

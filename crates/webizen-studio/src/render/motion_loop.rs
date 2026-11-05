@@ -64,7 +64,7 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
 #[cfg(not(target_arch = "wasm32"))]
 /// Non-desktop fallback.
 pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
-    // UI signals are !Send — drive springs on the Dioxus runtime thread, not a worker.
+    // UI signals are !Send — drive springs on the Aether runtime thread, not a worker.
     aether::prelude::spawn(async move {
         let mut last = std::time::Instant::now();
         loop {

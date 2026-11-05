@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `PhotographyQapp` component.
+/// Aether `PhotographyQapp` component.
 pub fn PhotographyQapp() -> Element {
     rsx! {
         QAppEngine {

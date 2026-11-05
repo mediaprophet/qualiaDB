@@ -84,7 +84,7 @@ criterion = "0.8.2"
 crossbeam-channel = "0.5.17"
 csv = "1.4.0"
 dhat = "0.3.3"
-aether = { version = "=0.8.0-alpha.3", git = "https://github.com/mediaprophet/Aether.git", rev = "f9ab2e10cc305bc59c619e3c4b10d7a6faf8135f" }
+aether = { version = "=0.8.0-alpha.3", git = "https://github.com/mediaprophet/Aether.git", rev = "d5ccce3bb9d6cab2aa5d7ef185d57ad786737c27" }
 ed25519-dalek = { version = "3.0", default-features = false }
 fast_qr = "0.13.1"
 futures-util = "0.3.34"
@@ -160,7 +160,7 @@ lto = true
 codegen-units = 1
 strip = "symbols"
 
-# Dioxus CLI (`dx build --web --release`) uses this named profile for webizen-studio.
+# Aether CLI (`dx build --web --release`) uses this named profile for webizen-studio.
 # Fat LTO / embed-bitcode on wasm32 fails at rust-lld with:
 #   failed to load bitcode of module "webizen_studio-*.rcgu.o"
 # Keep LTO off here. Do not reuse [profile.wasm-release] (LTO=true for mobile-harness).

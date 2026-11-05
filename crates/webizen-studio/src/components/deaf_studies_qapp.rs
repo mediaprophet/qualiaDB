@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `DeafStudiesQapp` component.
+/// Aether `DeafStudiesQapp` component.
 pub fn DeafStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

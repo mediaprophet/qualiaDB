@@ -130,7 +130,7 @@ const SYSTEM_SERVICES: &[SystemService] = &[
 ];
 
 #[component]
-/// Dioxus `OsSharedServicesPanel` component.
+/// Aether `OsSharedServicesPanel` component.
 pub fn OsSharedServicesPanel() -> Element {
     let mut selected_service = use_signal(|| "service_scheduler".to_string());
     let mut service_receipt = use_signal(|| String::new());

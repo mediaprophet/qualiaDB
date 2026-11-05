@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SystemsBiologyQapp` component.
+/// Aether `SystemsBiologyQapp` component.
 pub fn SystemsBiologyQapp() -> Element {
     rsx! {
         QAppEngine {

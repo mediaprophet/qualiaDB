@@ -47,7 +47,7 @@ impl Default for BrowserCapabilities {
 /// Zero-heap considerations:
 /// - Browser API calls (navigator.gpu) return heap-allocated objects (unavoidable)
 /// - String allocations for adapter names (unavoidable for user display)
-/// - Component state uses heap allocation (inherent to Dioxus framework)
+/// - Component state uses heap allocation (inherent to Aether framework)
 /// - The actual capability detection happens in browser (not Rust heap)
 #[component]
 pub fn HardwareCapabilities(

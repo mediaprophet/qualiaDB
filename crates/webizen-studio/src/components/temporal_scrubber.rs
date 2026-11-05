@@ -6,7 +6,7 @@ use aether::prelude::*;
 /// Filters nodes by version <= current_t.
 ///
 /// Zero-heap considerations:
-/// - Component state uses heap allocation (inherent to Dioxus/React framework)
+/// - Component state uses heap allocation (inherent to Aether/React framework)
 /// - f64 values are stack-allocated in the component state
 /// - The actual temporal filtering happens in backend daemon (zero-heap compliant)
 #[component]

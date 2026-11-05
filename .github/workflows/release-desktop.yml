@@ -34,8 +34,8 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
-      - name: Install Dioxus CLI
-        run: cargo install dioxus-cli --version 0.8.0-alpha.1 --locked
+      - name: Install Aether CLI
+        run: cargo install aether-cli --version 0.8.0-alpha.1 --locked
 
       # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents mac/linux
       # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
@@ -254,8 +254,8 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
-      - name: Install Dioxus CLI
-        run: cargo install dioxus-cli --version 0.8.0-alpha.1 --locked
+      - name: Install Aether CLI
+        run: cargo install aether-cli --version 0.8.0-alpha.1 --locked
 
       # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents macOS
       # dx failures: failed to find `__wbindgen_externref_table_dealloc`.

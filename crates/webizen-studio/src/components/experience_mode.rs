@@ -67,7 +67,7 @@ pub fn use_experience_mode() -> Signal<ExperienceMode> {
 }
 
 #[component]
-/// Dioxus `ExperienceModeSwitch` component.
+/// Aether `ExperienceModeSwitch` component.
 pub fn ExperienceModeSwitch() -> Element {
     let mut mode = use_experience_mode();
     let current = mode();

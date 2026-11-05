@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ComparativeLiteratureQapp` component.
+/// Aether `ComparativeLiteratureQapp` component.
 pub fn ComparativeLiteratureQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `EnvironmentalChemistryQapp` component.
+/// Aether `EnvironmentalChemistryQapp` component.
 pub fn EnvironmentalChemistryQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ArtsManagementAndAdministrationQapp` component.
+/// Aether `ArtsManagementAndAdministrationQapp` component.
 pub fn ArtsManagementAndAdministrationQapp() -> Element {
     rsx! {
         QAppEngine {

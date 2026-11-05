@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `MorphologyQapp` component.
+/// Aether `MorphologyQapp` component.
 pub fn MorphologyQapp() -> Element {
     rsx! {
         QAppEngine {

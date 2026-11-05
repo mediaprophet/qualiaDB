@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `InternationalRelationsQapp` component.
+/// Aether `InternationalRelationsQapp` component.
 pub fn InternationalRelationsQapp() -> Element {
     rsx! {
         QAppEngine {

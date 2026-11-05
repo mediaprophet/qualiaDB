@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `StructuralismQapp` component.
+/// Aether `StructuralismQapp` component.
 pub fn StructuralismQapp() -> Element {
     rsx! {
         QAppEngine {

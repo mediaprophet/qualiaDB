@@ -11,7 +11,7 @@ struct CompanionPairingInfo {
 }
 
 #[component]
-/// Dioxus `CompanionPairingPanel` component.
+/// Aether `CompanionPairingPanel` component.
 pub fn CompanionPairingPanel() -> Element {
     let mut pairing = use_signal(CompanionPairingInfo::default);
     let mut loaded = use_signal(|| false);

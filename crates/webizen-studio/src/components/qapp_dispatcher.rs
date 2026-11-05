@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `QAppDispatcher` component.
+/// Aether `QAppDispatcher` component.
 pub fn QAppDispatcher(element_tag: String) -> Element {
     match element_tag.as_str() {
         "web-browser-pane" => rsx! { crate::components::browser_panes::WebBrowserPane {} },

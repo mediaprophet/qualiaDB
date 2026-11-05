@@ -426,13 +426,13 @@ Start with `ST-00`; execute packets from playbook section 18. Use the existing [
 | `C:\github\qualiaDB` | Engine, Q42, Vibe, graphics, governance and reusable computation | Multiple crates; shared ownership is not a mandate to put everything in `qualia-core-db` |
 | `C:\github\poet\wasm` | Extracted Poet browser UI, toolchest, containers, manifolds | The old `qualiaDB/crates/poet` directory remains but is not a listed workspace member |
 | `C:\github\poet\native` | `poet-cli`: REPL, format, lint, eval | Not the graphical native Poet application |
-| `C:\github\webizen-os-shell` | Dioxus shell, Halo, launcher, StageHost | StageHost is placeholder content; fixed peer/mixnet defaults are not real status |
+| `C:\github\webizen-os-shell` | Aether shell, Halo, launcher, StageHost | StageHost is placeholder content; fixed peer/mixnet defaults are not real status |
 | `C:\github\webizen-desktop` | Tauri host with native services and command wrappers | Extract useful implementations; do not retain this executable as a mandatory dependency |
-| `qualiaDB/crates/webizen-studio/src/components/poet` | Older Dioxus Poet presentation | Reconcile useful behaviour, do not grow another independent Poet frontend |
+| `qualiaDB/crates/webizen-studio/src/components/poet` | Older Aether Poet presentation | Reconcile useful behaviour, do not grow another independent Poet frontend |
 | `qualiaDB/crates/webizen-render` | SDK/serde adapter to canonical graphics | Canonical drawing/device ownership is core `render/gpu`, not a second renderer |
 | `C:\github\storytold\<slug>-main` | Eleven supplied upstream source snapshots | Treat these as read-only migration sources; some may not carry Git history |
 
-This planning session inspected source, not runtime behaviour. Do not inherit build success, upstream command counts, latency, browser parity, or test percentages from this chapter. Measure the baseline in `ST-00`, retaining failures. Existing OS-shell README claims do not prove hosting works. Its current lockfile includes Dioxus Desktop, Wry, Tao and WebView2. The selected component framework is Dioxus; eliminating webviews is a separate decision, not a claimed consequence of removing Tauri.
+This planning session inspected source, not runtime behaviour. Do not inherit build success, upstream command counts, latency, browser parity, or test percentages from this chapter. Measure the baseline in `ST-00`, retaining failures. Existing OS-shell README claims do not prove hosting works. Its current lockfile includes Aether Desktop, Wry, Tao and WebView2. The selected component framework is Aether; eliminating webviews is a separate decision, not a claimed consequence of removing Tauri.
 
 Existing contracts to reuse:
 
@@ -458,7 +458,7 @@ Own window/surface creation, platform file handles, clipboard, notifications, de
 
 ### C3. Presentation and apps
 
-The OS shell owns the operating-environment presentation. Poet owns authoring and Construct composition. Both use a shared Dioxus component library, common tokens, accessible controls and one contextual command model. The Qualia renderer draws specialised content/spatial surfaces. The shared UI library cannot depend on the shell executable, Tauri, Studio or an app engine.
+The OS shell owns the operating-environment presentation. Poet owns authoring and Construct composition. Both use a shared Aether component library, common tokens, accessible controls and one contextual command model. The Qualia renderer draws specialised content/spatial surfaces. The shared UI library cannot depend on the shell executable, Tauri, Studio or an app engine.
 
 Each fork owns specialised domain state/behaviour, format interoperability, an app adapter and tests. Reusable algorithms migrate into QualiaDB capability libraries; app adapters consume them. Standalone upstream egui/React builds remain regression references during transition, not permanent alternative embedded UI kits.
 
@@ -468,7 +468,7 @@ Each fork owns specialised domain state/behaviour, format interoperability, an a
 |---|---|
 | `qualiaDB/crates/qualia-app-contract` | Portable command/context/session/surface DTOs and validators; serde/CBOR utilities only, no engine/UI/process runtime |
 | `webizen-os-shell/crates/webizen-host` | UI-independent platform and lifecycle implementations; narrow Qualia contracts/core features and target-specific OS adapters |
-| `webizen-os-shell/crates/webizen-ui` | Dioxus components + pure menu/orb/navigation models; contract crate, optional graphics adapter, no legacy desktop dependency |
+| `webizen-os-shell/crates/webizen-ui` | Aether components + pure menu/orb/navigation models; contract crate, optional graphics adapter, no legacy desktop dependency |
 | `poet/shared` | Poet-specific composition model shared by CLI/browser/native projection; contract and UI dependencies only where required |
 | `<app-repo>/crates/poet-adapter` | One engine/session adapter; engine crates + app contract, no global shell state |
 | `<app-repo>/apps/poet-wasm` | Worker/WASM execution entry, not another ribbon shell |
@@ -657,7 +657,7 @@ UAT must exercise browser-local with daemon absent, native-backed with connectio
 
 ## ST-M. Decisions and release criteria
 
-Defaults specified here let implementation start without rediscovering architecture: Dioxus components, Qualia graphics, one canonical portable manifest, process-isolated native engines, worker WASM engines, revision-checked single-writer first, no automatic external effects and no legacy Desktop executable dependency. A reviewer may change a default only through a recorded contract update with affected packets/tests.
+Defaults specified here let implementation start without rediscovering architecture: Aether components, Qualia graphics, one canonical portable manifest, process-isolated native engines, worker WASM engines, revision-checked single-writer first, no automatic external effects and no legacy Desktop executable dependency. A reviewer may change a default only through a recorded contract update with affected packets/tests.
 
 Principal-only decisions: public repository owner/names/branding; licensing/relicensing; trusted signing identity and provider credential provisioning; paid/network effects; genuine new ABI/tag/opcode; destructive migration/deletion; accepting unsupported-feature exceptions; fully webview-free native renderer; release/push/publication. Until resolved, implement local testable work and mark the affected release/external action blocked. Do not hold every unrelated packet hostage to a remote/signing decision.
 
@@ -667,7 +667,7 @@ Release criteria: eleven independent buildable app forks and installable compati
 
 ### N1. Product goal and authoritative extension policy
 
-VibeScript replaces handwritten JavaScript/TypeScript application scripting in Poet, imported apps and the Webizen environment: app orchestration, commands, reactive state, event handlers, declarative presentation, workflows and supervised-agent programmes. Rust remains the compiled implementation language for engine/host/components; Vibe scripts edit/hot-reload without rebuilding that Rust host. This is a three-layer system, not a requirement to rewrite codecs, Dioxus, operating-system drivers or GPU kernels in interpreted code.
+VibeScript replaces handwritten JavaScript/TypeScript application scripting in Poet, imported apps and the Webizen environment: app orchestration, commands, reactive state, event handlers, declarative presentation, workflows and supervised-agent programmes. Rust remains the compiled implementation language for engine/host/components; Vibe scripts edit/hot-reload without rebuilding that Rust host. This is a three-layer system, not a requirement to rewrite codecs, Aether, operating-system drivers or GPU kernels in interpreted code.
 
 Read [VibeScript Core](../manuals/standards/vibescript-core.md), especially sections 0, 4-6, 8, 11, 14-17, and [current host DevRel](../vibe/devrel-frozen-host.md) before extending. The current dialect may grow through versioned documented changes. The four operations parse/check/diagnose/capability.invoke are the stable facade; `vibe-host-0.1` does NOT freeze `ALL_BOUND` or the grammar. Historical freeze wording in this plan/playbook means do not break that facade or bypass review, NOT leave a necessary app capability permanently unavailable. Additive catalogue/library growth is expected. Breaking source, AST, bytecode, effect or wire semantics require explicit version negotiation and migration; never silently redefine an old version.
 
@@ -719,7 +719,7 @@ Reactive cells use versioned dependencies and cycle detection; update only after
 
 ### N6. Vibe-authored UI without another UI kit
 
-Use normative declarative presentation/records as input to the same shared Dioxus components and orb/menu descriptors. Scripts return a bounded keyed UI tree with validated node kinds/properties/accessibility and command IDs, not arbitrary DOM/HTML/CSS/JS functions. Rust renderer maps allowlisted presentation tokens and semantic assets to Dioxus/Qualia graphics. User text is escaped, children/depth bounded, duplicate keys refused. Events are tagged serialisable payloads (command_id/context/target/revision/input), not raw DOM events or executable callback strings. UI mutation remains an authorised effect.
+Use normative declarative presentation/records as input to the same shared Aether components and orb/menu descriptors. Scripts return a bounded keyed UI tree with validated node kinds/properties/accessibility and command IDs, not arbitrary DOM/HTML/CSS/JS functions. Rust renderer maps allowlisted presentation tokens and semantic assets to Aether/Qualia graphics. User text is escaped, children/depth bounded, duplicate keys refused. Events are tagged serialisable payloads (command_id/context/target/revision/input), not raw DOM events or executable callback strings. UI mutation remains an authorised effect.
 
 Script source updates parse/check/validate in isolation, atomically replace an accepted module and reconcile keyed views without rebuilding the host. On invalid update retain last valid module/view and show precise diagnostics. Old event subscriptions/resources are released; UI editing state is preserved only through an explicit version-compatible state migration. No automatic rerun of old external effects or agent approvals on hot reload. A Vibe-authored panel, menu contribution, child orb and job-progress view must render native/WASM with the same action IDs and accessible projection.
 

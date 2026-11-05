@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `UrbanPlanningAndDesignQapp` component.
+/// Aether `UrbanPlanningAndDesignQapp` component.
 pub fn UrbanPlanningAndDesignQapp() -> Element {
     rsx! {
         QAppEngine {

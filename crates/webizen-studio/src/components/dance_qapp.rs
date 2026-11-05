@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `DanceQapp` component.
+/// Aether `DanceQapp` component.
 pub fn DanceQapp() -> Element {
     rsx! {
         QAppEngine {

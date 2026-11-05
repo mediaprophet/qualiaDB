@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `WebtorrentSeeder` component.
+/// Aether `WebtorrentSeeder` component.
 pub fn WebtorrentSeeder() -> Element {
     rsx! {
         div { style: "padding: 24px; background: #2d3748; color: white; height: 100%; overflow: auto;",

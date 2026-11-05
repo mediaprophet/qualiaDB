@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `PhilosophyOfMindQapp` component.
+/// Aether `PhilosophyOfMindQapp` component.
 pub fn PhilosophyOfMindQapp() -> Element {
     rsx! {
         QAppEngine {

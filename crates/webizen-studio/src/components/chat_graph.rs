@@ -3,7 +3,7 @@ use crate::components::shoelace::*;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `NeuroSymbolicChat` component.
+/// Aether `NeuroSymbolicChat` component.
 pub fn NeuroSymbolicChat() -> Element {
     rsx! {
         div { class: "neuro-symbolic-chat-pane flex flex-col h-full",

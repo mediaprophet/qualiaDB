@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `QpuOptimizer` component.
+/// Aether `QpuOptimizer` component.
 pub fn QpuOptimizer() -> Element {
     rsx! {
         div {

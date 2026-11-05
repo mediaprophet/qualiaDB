@@ -24,7 +24,7 @@ enum ChemPhase {
 }
 
 #[component]
-/// Dioxus `ChemistryModeler` component.
+/// Aether `ChemistryModeler` component.
 pub fn ChemistryModeler() -> Element {
     let mut smiles = use_signal(|| "CCO".to_string());
     let phase = use_signal(|| ChemPhase::Idle);

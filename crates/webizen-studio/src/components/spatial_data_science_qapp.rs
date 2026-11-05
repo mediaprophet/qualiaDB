@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SpatialDataScienceQapp` component.
+/// Aether `SpatialDataScienceQapp` component.
 pub fn SpatialDataScienceQapp() -> Element {
     rsx! {
         QAppEngine {

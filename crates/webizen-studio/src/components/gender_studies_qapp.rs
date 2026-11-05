@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `GenderStudiesQapp` component.
+/// Aether `GenderStudiesQapp` component.
 pub fn GenderStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

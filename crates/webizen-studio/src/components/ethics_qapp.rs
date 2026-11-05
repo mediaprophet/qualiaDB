@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `EthicsQapp` component.
+/// Aether `EthicsQapp` component.
 pub fn EthicsQapp() -> Element {
     rsx! {
         QAppEngine {

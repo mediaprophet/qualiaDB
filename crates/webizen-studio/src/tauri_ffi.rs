@@ -3,7 +3,7 @@
 //! Call sites use `invoke` / `listen` (re-exported) and must not declare
 //! their own extern blocks. Uses dynamic dispatch via `window.__TAURI__`
 //! to ensure zero duplicate wasm-bindgen describe symbols and 100% reliable
-//! adapter-free linking across dual lib/bin compilation under Dioxus CLI.
+//! adapter-free linking across dual lib/bin compilation under Aether CLI.
 
 #![cfg(target_arch = "wasm32")]
 

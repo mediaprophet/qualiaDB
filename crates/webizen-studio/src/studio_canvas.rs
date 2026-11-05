@@ -432,7 +432,7 @@ fn default_presentation_mode(app_id: Option<&str>) -> PresentationMode {
 // ─────────────────────────────────────────────────────────────
 
 #[component]
-/// Dioxus `DynamicPage` component.
+/// Aether `DynamicPage` component.
 pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) -> Element {
     let mock_quin = use_signal(|| NQuin {
         subject: 0,
@@ -1927,7 +1927,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         div {
                                             span { style: "color: var(--qualia-text-muted, #888);", "UI Mode: " }
                                             span {
-                                                if pane.ui_mode == Some(UiMode::IFrameSandbox) { "IFrame Sandbox" } else { "Native Dioxus" }
+                                                if pane.ui_mode == Some(UiMode::IFrameSandbox) { "IFrame Sandbox" } else { "Native Aether" }
                                             }
                                         }
                                     }

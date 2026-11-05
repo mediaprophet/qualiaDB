@@ -1,4 +1,4 @@
-//! Derive `WellfairHostSnapshot` from live host services (not Dioxus signals).
+//! Derive `WellfairHostSnapshot` from live host services (not Aether signals).
 
 use super::accessibility_prefs;
 use super::host_state::{NetworkExposure, SyncQueueState, VaultLifecycle, WellfairHostSnapshot};

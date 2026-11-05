@@ -3,7 +3,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ComorbidityAnalyzer` component.
+/// Aether `ComorbidityAnalyzer` component.
 pub fn ComorbidityAnalyzer() -> Element {
     rsx! {
         div { style: "padding:1rem;",

@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `OralHistoryQapp` component.
+/// Aether `OralHistoryQapp` component.
 pub fn OralHistoryQapp() -> Element {
     rsx! {
         QAppEngine {

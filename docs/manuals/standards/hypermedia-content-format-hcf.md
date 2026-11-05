@@ -102,7 +102,7 @@ QualiaDB replaces flat playback with a **Generative Articulatory Speech & Audito
 HCF eliminates legacy HTML, XML, and JavaScript in favor of **RDF-Native serializations**:
 - **Authoring Layer:** Expressed in **`yaml-ld-q42`** — clean, indentation-based semantic documents without closing tags or DOM boilerplate.
 - **Machine & Wire Layer:** Serialized as **CBOR-LD 1.0** — binary compressed Linked Data with shared term-dictionaries for zero-copy memory mapping on WASM, Mobile, and IoT.
-- **Application language:** **Vibe** (Poet), not JavaScript. Cells in HCF are Vibe (`= …`); modules are `.vibe`. JSON and JS remain a *temporary host* (Tauri IPC, Dioxus-web glue), not the format.
+- **Application language:** **Vibe** (Poet), not JavaScript. Cells in HCF are Vibe (`= …`); modules are `.vibe`. JSON and JS remain a *temporary host* (Tauri IPC, Aether-web glue), not the format.
 
 The incremental cut from that host to this pair is in [`docs/plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md`](../../plans/native-presentation-and-vibe-beyond-webview-2026-08-16.md) §0.1.
 

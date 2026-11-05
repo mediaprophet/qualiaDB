@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `QpuProviders` component.
+/// Aether `QpuProviders` component.
 pub fn QpuProviders() -> Element {
     rsx! {
         div {

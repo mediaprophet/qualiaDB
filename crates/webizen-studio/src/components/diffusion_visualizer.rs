@@ -128,7 +128,7 @@ async fn draw_snapshot(snapshot: RuntimeSnapshotRecord) -> Result<(), String> {
 }
 
 #[component]
-/// Dioxus `DiffusionVisualizer` component.
+/// Aether `DiffusionVisualizer` component.
 pub fn DiffusionVisualizer() -> Element {
     let latest_epoch = use_signal(|| 0u64);
     let dimensions = use_signal(|| (128u32, 128u32));
@@ -298,7 +298,7 @@ pub fn DiffusionVisualizer() -> Element {
                     }
                     p {
                         style: "margin: 0; font-size: 0.76rem; color: var(--qualia-text-muted); line-height: 1.45;",
-                        "Canvas blits consume completed runtime epochs directly from the native substrate. No RGBA frame bytes pass through the Dioxus Virtual DOM."
+                        "Canvas blits consume completed runtime epochs directly from the native substrate. No RGBA frame bytes pass through the Aether Virtual DOM."
                     }
                 }
                 div {

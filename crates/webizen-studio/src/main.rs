@@ -1028,7 +1028,7 @@ fn AppLayout() -> Element {
     let navigator = use_navigator();
     let native_menu_listener_started = use_signal(|| false);
     let host_status = use_signal(DesktopStatus::default);
-    // Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
+    // Tools→Settings / Ctrl+, : Closure only sets this; a aether use_effect
     // performs navigator.push so we never push on the Tauri RefCell stack
     // and never rely on synthetic popstate (which did not remount Settings).
     let mut pending_settings = use_signal(|| false);
@@ -1431,7 +1431,7 @@ fn AppLayout() -> Element {
         }
     });
 
-    // Run on dioxus's stack (not the Tauri Closure): paint SettingsRoute.
+    // Run on aether's stack (not the Tauri Closure): paint SettingsRoute.
     use_effect(move || {
         if pending_settings() {
             pending_settings.set(false);

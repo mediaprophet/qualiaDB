@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `GeographyHumanGeographyQapp` component.
+/// Aether `GeographyHumanGeographyQapp` component.
 pub fn GeographyHumanGeographyQapp() -> Element {
     rsx! {
         QAppEngine {

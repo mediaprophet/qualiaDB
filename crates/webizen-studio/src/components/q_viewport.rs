@@ -1,6 +1,6 @@
 //! `<q-viewport>` — declarative GPU viewport component (plan §7.3 W5).
 //!
-//! A Dioxus component that mounts a canvas, detects the GPU backend,
+//! A Aether component that mounts a canvas, detects the GPU backend,
 //! initializes the GPU portal, runs a reactive frame loop driving
 //! `Render.gpu_render_frame`, handles resize/camera events, and cleans up
 //! on unmount.

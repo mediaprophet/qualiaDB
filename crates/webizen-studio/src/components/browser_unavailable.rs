@@ -2,7 +2,7 @@ use crate::Route;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `BrowserUnavailable` component.
+/// Aether `BrowserUnavailable` component.
 pub fn BrowserUnavailable() -> Element {
     rsx! {
         div {

@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-skeleton`
+/// Aether wrapper for `sl-skeleton`
 #[component]
 pub fn SlSkeleton(effect: Option<String>, children: Element) -> Element {
     rsx! {
@@ -16,7 +16,7 @@ pub fn SlSkeleton(effect: Option<String>, children: Element) -> Element {
     }
 }
 
-/// Dioxus wrapper for `sl-select`
+/// Aether wrapper for `sl-select`
 #[component]
 pub fn SlSelect(
     dependencies: Option<String>,
@@ -113,7 +113,7 @@ pub fn SlSelect(
     }
 }
 
-/// Dioxus wrapper for `sl-spinner`
+/// Aether wrapper for `sl-spinner`
 #[component]
 pub fn SlSpinner(localize: Option<String>, children: Element) -> Element {
     rsx! {
@@ -125,7 +125,7 @@ pub fn SlSpinner(localize: Option<String>, children: Element) -> Element {
     }
 }
 
-/// Dioxus wrapper for `sl-switch`
+/// Aether wrapper for `sl-switch`
 #[component]
 pub fn SlSwitch(
     formControlController: Option<String>,
@@ -170,7 +170,7 @@ pub fn SlSwitch(
     }
 }
 
-/// Dioxus wrapper for `sl-split-panel`
+/// Aether wrapper for `sl-split-panel`
 #[component]
 pub fn SlSplitPanel(
     cachedPositionInPixels: Option<f64>,
@@ -215,7 +215,7 @@ pub fn SlSplitPanel(
     }
 }
 
-/// Dioxus wrapper for `sl-tab-group`
+/// Aether wrapper for `sl-tab-group`
 #[component]
 pub fn SlTabGroup(
     dependencies: Option<String>,
@@ -268,7 +268,7 @@ pub fn SlTabGroup(
     }
 }
 
-/// Dioxus wrapper for `sl-tab`
+/// Aether wrapper for `sl-tab`
 #[component]
 pub fn SlTab(
     dependencies: Option<String>,
@@ -299,7 +299,7 @@ pub fn SlTab(
     }
 }
 
-/// Dioxus wrapper for `sl-tab-panel`
+/// Aether wrapper for `sl-tab-panel`
 #[component]
 pub fn SlTabPanel(
     attrId: Option<f64>,

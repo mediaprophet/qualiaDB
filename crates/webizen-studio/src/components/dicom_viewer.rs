@@ -3,7 +3,7 @@ use aether::prelude::*;
 use crate::components::qapp_engine::invoke_json;
 
 #[component]
-/// Dioxus `DicomViewer` component.
+/// Aether `DicomViewer` component.
 pub fn DicomViewer() -> Element {
     let mut slice_idx = use_signal(|| 45);
     let window_level = use_signal(|| 40);

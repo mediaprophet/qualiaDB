@@ -6,7 +6,7 @@
 //! - **Surface** — a windowed swapchain (`WgpuRenderer::new`), for a future native
 //!   windowed host.
 //! - **Offscreen** — a render-target texture (`WgpuRenderer::new_offscreen`), with
-//!   CPU readback via [`WgpuRenderer::read_pixels`]. This is what the dioxus/webview
+//!   CPU readback via [`WgpuRenderer::read_pixels`]. This is what the aether/webview
 //!   studio uses: there is no OS window to hand us a surface, so we render headless
 //!   and present the pixels through the existing CPU frame-buffer display path.
 
@@ -854,7 +854,7 @@ impl<'a> WgpuRenderer<'a> {
     /// Create a headless renderer that draws to an offscreen texture.
     ///
     /// Requires no window/surface, so it runs anywhere a GPU adapter is available
-    /// (including CI and the dioxus/webview studio). Read the result with
+    /// (including CI and the aether/webview studio). Read the result with
     /// [`WgpuRenderer::read_pixels`].
     pub async fn new_offscreen(width: u32, height: u32) -> Result<WgpuRenderer<'static>, String> {
         let requested_extent = (width, height);

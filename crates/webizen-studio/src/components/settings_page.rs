@@ -3,7 +3,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SettingsPage` component.
+/// Aether `SettingsPage` component.
 pub fn SettingsPage() -> Element {
     rsx! { crate::components::settings::SettingsShell {} }
 }

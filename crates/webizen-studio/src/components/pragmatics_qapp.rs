@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `PragmaticsQapp` component.
+/// Aether `PragmaticsQapp` component.
 pub fn PragmaticsQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -2,7 +2,7 @@ use super::super::host_dto::{ConsentGrantDraft, PolicyDecisionDto};
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ConsentGrantEditor` component.
+/// Aether `ConsentGrantEditor` component.
 pub fn ConsentGrantEditor(
     draft: ConsentGrantDraft,
     decision: Option<PolicyDecisionDto>,

@@ -39,7 +39,7 @@ From root `Cargo.toml` `members = [...]` (resolver `"2"`):
 | 26 | `crates/poet` | also bin `poet-ui` |
 | 27 | `crates/qualia-peer` | |
 
-Workspace also defines `[profile.wasm-release]` (LTO on, for mobile-harness) and `[profile.web-release]` (LTO off, for Dioxus studio) with comments documenting wasm-opt / rust-lld failure modes. Large `[patch.crates-io]` pins Dioxus to a git rev and vendors `imap-proto`.
+Workspace also defines `[profile.wasm-release]` (LTO on, for mobile-harness) and `[profile.web-release]` (LTO off, for Aether studio) with comments documenting wasm-opt / rust-lld failure modes. Large `[patch.crates-io]` pins Aether to a git rev and vendors `imap-proto`.
 
 Edition skew: most crates `2021`; `wellfare-core`, `webizen-component-harvester`, `qualia-q-forge` use `2024`. Declared crate versions are mostly `0.0.39` while the branch name is `0.0.40-dev`.
 
@@ -61,11 +61,11 @@ Edition skew: most crates `2021`; `wellfare-core`, `webizen-component-harvester`
 | `qualia-client-core` | **app support lib** | Desktop/studio shared business + chat/API surface |
 | `webizen-render` | **module** | wgpu 30 N-D renderer (optional qualia/vibe features) |
 | `webizen-runtime` | **module** | Fixed-timestep GPU diffusion / ledger runtime |
-| `webizen-studio` | **app (UI lib+wasm)** | Dioxus UI; native lib for desktop + wasm web target |
+| `webizen-studio` | **app (UI lib+wasm)** | Aether UI; native lib for desktop + wasm web target |
 | `webizen-desktop` | **app** | Tauri 2 shell hosting studio + client-core + daemon bridges |
 | `webizen-web` / `qualia-wasm` | **app (wasm)** | Combined qualia engine + web graphics glue (`wasm-full`) |
 | `webizen-lite-wasm` | **app (wasm)** | Ontology-site MCP JSON-RPC (`wasm-ontology` only) |
-| `qualia-mobile-harness` | **app (wasm)** | WellFair companion / mobile Dioxus harness |
+| `qualia-mobile-harness` | **app (wasm)** | WellFair companion / mobile Aether harness |
 | `qualia-cli` | **app** | Operator CLI (ingest, query, MCP, benches, daemon helpers) |
 | `poet` | **app (wasm+rlib)** | Poet HyperCanvas — spatial hypermedia / tool-chest browser |
 | `poet-cli` | **app** | VibeScript REPL/format/lint/eval CLI (bin name `poet`) |
@@ -74,7 +74,7 @@ Edition skew: most crates `2021`; `wellfare-core`, `webizen-component-harvester`
 | `qualia-q-forge` | **module** | Quantum forge (`no_std` qasm/sim) |
 | `qualia-peer` | **app facade** | QDNF peer runtime facade (no libp2p) |
 | `qualia-semantic-library` | **tooling** | Offline `.hmc` corpus → library toolchain |
-| `webizen-component-harvester` | **tooling** | Harvests Dioxus component stubs |
+| `webizen-component-harvester` | **tooling** | Harvests Aether component stubs |
 | `work-graph` | **tooling** | Implementation-graph presence indexer |
 
 ---
@@ -107,7 +107,7 @@ Notable edges:
 **Ship / host binaries & cdylibs**
 
 - `webizen-desktop` (Tauri)
-- `webizen-studio` (Dioxus web + native lib)
+- `webizen-studio` (Aether web + native lib)
 - `webizen-web` (`qualia-wasm` cdylib)
 - `webizen-lite-wasm` (cdylib)
 - `qualia-mobile-harness`
@@ -199,7 +199,7 @@ Notable edges:
 CI (`.github/workflows/pages.yml`, `release-wasm.yml`, `benchmarks.yml`) builds multiple feature matrices with size budgets (e.g. lite-wasm raw 640 KiB / gzip 200 KiB; portal sanity caps). Root comments document:
 
 - wasm-opt Windows stack overflow → `profile.wasm-release`
-- Dioxus fat LTO bitcode failure → `profile.web-release` must keep LTO off
+- Aether fat LTO bitcode failure → `profile.web-release` must keep LTO off
 
 `webizen-studio` and `webizen-lite-wasm` use `cfg(target_arch = "wasm32")` dependency splits extensively.
 

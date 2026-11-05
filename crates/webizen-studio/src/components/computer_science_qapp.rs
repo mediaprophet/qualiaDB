@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ComputerScienceQapp` component.
+/// Aether `ComputerScienceQapp` component.
 pub fn ComputerScienceQapp() -> Element {
     rsx! {
         QAppEngine {

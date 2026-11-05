@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `EnglishLanguageAndLiteratureQapp` component.
+/// Aether `EnglishLanguageAndLiteratureQapp` component.
 pub fn EnglishLanguageAndLiteratureQapp() -> Element {
     rsx! {
         QAppEngine {

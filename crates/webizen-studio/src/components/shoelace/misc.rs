@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-textarea`
+/// Aether wrapper for `sl-textarea`
 #[component]
 pub fn SlTextarea(
     formControlController: Option<String>,
@@ -81,7 +81,7 @@ pub fn SlTextarea(
     }
 }
 
-/// Dioxus wrapper for `sl-tag`
+/// Aether wrapper for `sl-tag`
 #[component]
 pub fn SlTag(
     dependencies: Option<String>,
@@ -106,7 +106,7 @@ pub fn SlTag(
     }
 }
 
-/// Dioxus wrapper for `sl-tooltip`
+/// Aether wrapper for `sl-tooltip`
 #[component]
 pub fn SlTooltip(
     dependencies: Option<String>,
@@ -161,7 +161,7 @@ pub fn SlTooltip(
     }
 }
 
-/// Dioxus wrapper for `sl-tree`
+/// Aether wrapper for `sl-tree`
 #[component]
 pub fn SlTree(
     defaultSlot: Option<String>,
@@ -198,7 +198,7 @@ pub fn SlTree(
     }
 }
 
-/// Dioxus wrapper for `sl-tree-item`
+/// Aether wrapper for `sl-tree-item`
 #[component]
 pub fn SlTreeItem(
     dependencies: Option<String>,
@@ -241,7 +241,7 @@ pub fn SlTreeItem(
     }
 }
 
-/// Dioxus wrapper for `sl-visually-hidden`
+/// Aether wrapper for `sl-visually-hidden`
 #[component]
 pub fn SlVisuallyHidden(children: Element) -> Element {
     rsx! {

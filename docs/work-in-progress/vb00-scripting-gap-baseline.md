@@ -130,7 +130,7 @@ In accordance with playbook §19.2 and §18.5, the following typed capability fa
 ## 5. Summary of JavaScript/TypeScript Deprecations & Bridges
 
 1. **ArtCraft Frontend (React / Zustand / Tauri)**:
-   - Full migration of application state and task orchestration to `.vibe` scripts feeding shared Dioxus UI.
+   - Full migration of application state and task orchestration to `.vibe` scripts feeding shared Aether UI.
    - Complete removal of nonconsented analytics and telemetry libraries.
    - Prohibition of browser-session cookie scraping; all model provider APIs require explicit credential handles.
 2. **Platform Bridges (Preserved as Minimal Transport Glue Only)**:

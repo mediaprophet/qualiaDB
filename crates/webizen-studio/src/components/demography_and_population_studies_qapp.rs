@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `DemographyAndPopulationStudiesQapp` component.
+/// Aether `DemographyAndPopulationStudiesQapp` component.
 pub fn DemographyAndPopulationStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

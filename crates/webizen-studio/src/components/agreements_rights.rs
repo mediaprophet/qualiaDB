@@ -1,6 +1,6 @@
 use aether::prelude::*;
 
-/// Dioxus `AgreementsRights` component.
+/// Aether `AgreementsRights` component.
 pub fn AgreementsRights() -> Element {
     let mut is_drafting = use_signal(|| false);
     let mut jurisdiction = use_signal(|| String::new());

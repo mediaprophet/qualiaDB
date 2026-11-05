@@ -66,7 +66,7 @@ fn take_stored_talk_tab() -> Option<String> {
 }
 
 #[component]
-/// Dioxus `RelationsShell` component.
+/// Aether `RelationsShell` component.
 pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
     let nav = navigator();
     let mode = use_experience_mode();

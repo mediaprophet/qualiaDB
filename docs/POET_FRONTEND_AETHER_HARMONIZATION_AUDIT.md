@@ -1,5 +1,5 @@
 # POET Frontend Harmonization Audit & Implementation Tracker
-_Tracking Dioxus (`webizen-studio`) Features for Porting & Harmonization into Standalone POET (`crates/poet`)_
+_Tracking Aether (`webizen-studio`) Features for Porting & Harmonization into Standalone POET (`crates/poet`)_
 
 **Branch:** `0.0.40-dev`  
 **Authoritative Reference:** `crates/webizen-studio/src/components/poet/` vs `crates/poet/src/browser/`  
@@ -10,10 +10,10 @@ _Tracking Dioxus (`webizen-studio`) Features for Porting & Harmonization into St
 ## 1. Executive Summary & Architectural Overview
 
 The QualiaDB ecosystem maintains two frontend presentations of the **POET HyperCanvas (POET-SPEC-001..023)**:
-1. **Dioxus Component Tree (`crates/webizen-studio/src/components/poet/`)**: Integrated into Webizen Desktop and Webizen Studio via Dioxus signals (`Signal<Workbench>`), asynchronous Tauri IPC bridges (`engine.rs`), and direct GPU frame integration (`webizen-render`).
+1. **Aether Component Tree (`crates/webizen-studio/src/components/poet/`)**: Integrated into Webizen Desktop and Webizen Studio via Aether signals (`Signal<Workbench>`), asynchronous Tauri IPC bridges (`engine.rs`), and direct GPU frame integration (`webizen-render`).
 2. **Standalone Web-Sys / WASM App (`crates/poet/`)**: High-performance browser-native application utilizing direct DOM manipulation, `wasm-bindgen`, and local execution engines.
 
-While `crates/poet` has extensive coverage of domain containers (Workstreams A–D with 100+ typed container views, 71 logic modality tabs, and 178 unit tests), several high-utility interactive mechanisms, rendering bridges, and UI ergonomics developed in the Dioxus version need to be ported and harmonized.
+While `crates/poet` has extensive coverage of domain containers (Workstreams A–D with 100+ typed container views, 71 logic modality tabs, and 178 unit tests), several high-utility interactive mechanisms, rendering bridges, and UI ergonomics developed in the Aether version need to be ported and harmonized.
 
 ---
 
@@ -21,7 +21,7 @@ While `crates/poet` has extensive coverage of domain containers (Workstreams A�
 
 ### 2.1 Tool-Chest & Dock Ergonomics
 
-| Feature / Element | Dioxus Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
+| Feature / Element | Aether Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
 |---|---|---|---|---|
 | **4-Way Docking (`Left/Top/Bottom/Right`)** | `chest.rs`: Interactive position toggles (`◀ ▲ ▼ ▶`), dynamic `dock-{pos}` CSS classes, and repositioned floating palette. | `docks.rs`: Full 4-way docking with persistent local storage, active button highlights, and dynamic flyout classes. | `[done]` | Complete. |
 | **Typography & Font Selector Widget** | `chest.rs`: Font family dropdown (`Inter`, `Fira Code`, `Merriweather`, `JetBrains Mono`) and size selector (`11px`–`20px`) inside Office tool pallet. | `tool_widgets.rs`: `ToolWidget::Dropdown` for font family, font size, heading style, and color pickers. | `[done]` | Complete. |
@@ -29,7 +29,7 @@ While `crates/poet` has extensive coverage of domain containers (Workstreams A�
 
 ### 2.2 Live GPU Viewport & Rendering Pipeline
 
-| Feature / Element | Dioxus Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
+| Feature / Element | Aether Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
 |---|---|---|---|---|
 | **`PoetGpuFrame` Component** | `gpu_frame.rs`: Async query to `poet_render_preview` via Tauri; receives PNG data URI from `webizen-render` WGPU scene with node/edge/face counts. | `projections.rs` / `shader_pipelines.rs`: Static/SVG previews; `native_daemon.rs` has `daemon_render_preview`. | `[done]` | Connected via `native_daemon.rs` IPC bridge. |
 | **Dynamic Fallback Gradients & Ambient Shaders** | `gpu_frame.rs`: Radial ambient gradient fallback (`#05070c` with cyan/purple aura) with diagnostic badges. | `shader_pipelines.rs`: Ambient live preview frame and dynamic fallback rendering with diagnostic telemetry. | `[done]` | Standardized viewport styling across spatial/shader containers. |
@@ -37,7 +37,7 @@ While `crates/poet` has extensive coverage of domain containers (Workstreams A�
 
 ### 2.3 Interactive Container Body Execution Snippets
 
-| Feature / Element | Dioxus Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
+| Feature / Element | Aether Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
 |---|---|---|---|---|
 | **WGSL Shader Pipeline Runner** | `bodies/shaders.rs`: Embedded Vibe script `Shaders.list` with interactive "Run" button and JSON/CBOR result view. | `shader_pipelines.rs`: Interactive "▶ Run Pipeline" button with zero-heap validation and latency metrics. | `[done]` | Complete. |
 | **Ontological Economics Rate Calculator** | `bodies/economics.rs`: Embedded `Econ.evaluate_peer` script with human commons quota calculation. | `cooperative_economics.rs`: Interactive peer ontology selector and "⚡ Evaluate" policy engine button. | `[done]` | Complete. |
@@ -48,7 +48,7 @@ While `crates/poet` has extensive coverage of domain containers (Workstreams A�
 
 ### 2.4 Stage Gestures, Math, & Ergonomics
 
-| Feature / Element | Dioxus Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
+| Feature / Element | Aether Reference (`webizen-studio`) | Standalone POET (`crates/poet`) | Status | Action Required |
 |---|---|---|---|---|
 | **Smart Grid Collision Placement** | `store.rs`: `find_smart_placement_slot(w, h)` (4×6 grid scanning with 24px bounding box collision avoidance). | Basic cascading offset. | `[done]` | (Harmonized in commit `38c17781` in `interactions.rs`). |
 | **Auto-Arrange Desktops (`Alt+A`)** | `store.rs`: 3-column auto-tidy layout with min dimensions (380×260). | `interactions.rs`: Auto-tidy layout. | `[done]` | (Harmonized in commit `38c17781`). |

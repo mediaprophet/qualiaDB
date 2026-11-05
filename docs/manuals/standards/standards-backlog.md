@@ -239,7 +239,7 @@ Each of those should become its own draft with its own conformance language.
 - Primary SDO: internal first
 - Recommended format: internal explainer or ADR first
 - Why this fit: the design is still tightly coupled to current desktop /
-  Dioxus host behavior and is not ready for external submission.
+  Aether host behavior and is not ready for external submission.
 - Exit criteria before submission:
   - local trust model clearly documented
   - browser and desktop embeddings converge

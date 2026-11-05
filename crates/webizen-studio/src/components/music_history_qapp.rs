@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `MusicHistoryQapp` component.
+/// Aether `MusicHistoryQapp` component.
 pub fn MusicHistoryQapp() -> Element {
     rsx! {
         QAppEngine {

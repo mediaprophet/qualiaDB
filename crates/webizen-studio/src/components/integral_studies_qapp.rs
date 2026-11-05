@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `IntegralStudiesQapp` component.
+/// Aether `IntegralStudiesQapp` component.
 pub fn IntegralStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

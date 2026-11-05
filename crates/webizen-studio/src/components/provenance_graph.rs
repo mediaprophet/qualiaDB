@@ -3,7 +3,7 @@ use aether::prelude::*;
 use crate::components::qapp_engine::invoke_json;
 
 #[component]
-/// Dioxus `ProvenanceGraph` component.
+/// Aether `ProvenanceGraph` component.
 pub fn ProvenanceGraph() -> Element {
     let mut nodes = use_signal(Vec::<(String, String)>::new);
     let mut edges = use_signal(Vec::<(String, String, String)>::new);

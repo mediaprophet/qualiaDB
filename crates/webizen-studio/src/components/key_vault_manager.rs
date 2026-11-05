@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `KeyVaultManager` component.
+/// Aether `KeyVaultManager` component.
 pub fn KeyVaultManager() -> Element {
     rsx! {
         div {

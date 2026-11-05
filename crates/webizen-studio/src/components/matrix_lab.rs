@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `MatrixLab` component.
+/// Aether `MatrixLab` component.
 pub fn MatrixLab() -> Element {
     rsx! {
         div {

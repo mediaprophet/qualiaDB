@@ -3,7 +3,7 @@
 //! Triggers a headless `wgpu` render in the Tauri host (`update_render_preview`)
 //! and displays the result via the `webizen://localhost/render/preview.png`
 //! custom protocol. The PNG bytes are fetched by the `<img>` directly from the
-//! backend and never cross the Dioxus Virtual DOM — mirroring the diffusion
+//! backend and never cross the Aether Virtual DOM — mirroring the diffusion
 //! visualizer's zero-VDOM frame path, but using `<img>` + the host's PNG encoder
 //! rather than manual canvas blitting.
 
@@ -59,7 +59,7 @@ pub fn RenderPreview(width: u32, height: u32) -> Element {
             }
             p {
                 style: "margin: 0 0 0.9rem 0; font-size: 0.76rem; color: var(--qualia-text-muted); line-height: 1.45;",
-                "Direct-to-swapchain native wgpu surface. No image bytes pass through the Dioxus Virtual DOM."
+                "Direct-to-swapchain native wgpu surface. No image bytes pass through the Aether Virtual DOM."
             }
 
             div {

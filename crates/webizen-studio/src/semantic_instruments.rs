@@ -1,7 +1,7 @@
 //! Webizen library dialect for semantic instruments (SI-10).
 //!
 //! Held-gate copy, Demo/Reference chips, collect ≠ activate. No Host widen.
-//! Shared by Desktop Dioxus and WASM Poet. No Dioxus tree here.
+//! Shared by Desktop Aether and WASM Poet. No Aether tree here.
 
 /// Soft why-text for missing / unknown pack. Never "broken".
 pub const HELD_WHY: &str = "held / not yet — open a pack or seed demos";

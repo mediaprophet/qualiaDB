@@ -46,7 +46,7 @@ impl PresentationLevel {
     }
 }
 
-/// Card descriptor for flat HID (Dioxus / browser chrome lists).
+/// Card descriptor for flat HID (Aether / browser chrome lists).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlatCard {
     pub entity_id: u64,

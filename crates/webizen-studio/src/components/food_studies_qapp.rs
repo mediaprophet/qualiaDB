@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `FoodStudiesQapp` component.
+/// Aether `FoodStudiesQapp` component.
 pub fn FoodStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

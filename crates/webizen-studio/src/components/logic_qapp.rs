@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `LogicQapp` component.
+/// Aether `LogicQapp` component.
 pub fn LogicQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `MetamodernismQapp` component.
+/// Aether `MetamodernismQapp` component.
 pub fn MetamodernismQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -110,7 +110,7 @@ human-controlled applications.
 
 **Live playground (no install):** [webizen.au/playground/](https://webizen.au/playground/index.html)
 
-**Desktop app (Webizen — Windows, macOS, Linux; Tauri + Dioxus, native GPU dispatch, signed installer/updater):** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases).
+**Desktop app (Webizen — Windows, macOS, Linux; Tauri + Aether, native GPU dispatch, signed installer/updater):** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases).
 
 **CLI:**
 ```bash

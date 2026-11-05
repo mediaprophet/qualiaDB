@@ -123,7 +123,7 @@ struct OntologySchema {
 }
 
 #[component]
-/// Dioxus `QAppEngine` component.
+/// Aether `QAppEngine` component.
 pub fn QAppEngine(props: QAppEngineProps) -> Element {
     let mut schema = use_signal(|| None::<OntologySchema>);
     let ontology_id = props.ontology_id.clone();

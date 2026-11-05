@@ -54,7 +54,7 @@ impl Default for PublishUi {
 }
 
 #[component]
-/// Dioxus `WellfairQappPublishPanel` component.
+/// Aether `WellfairQappPublishPanel` component.
 pub fn WellfairQappPublishPanel() -> Element {
     let mut ui = use_signal(PublishUi::default);
 

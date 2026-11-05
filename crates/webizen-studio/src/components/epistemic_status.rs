@@ -17,7 +17,7 @@ pub enum EpistemicState {
 /// Provides UI to collapse wavefunction and promote to ground truth.
 ///
 /// Zero-heap considerations:
-/// - Component state uses heap allocation (inherent to Dioxus/React framework)
+/// - Component state uses heap allocation (inherent to Aether/React framework)
 /// - String props are heap-allocated (unavoidable for UI text)
 /// - The actual quantum state management happens in backend (zero-heap compliant)
 #[component]

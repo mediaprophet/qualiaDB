@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `CliBridge` component.
+/// Aether `CliBridge` component.
 pub fn CliBridge() -> Element {
     rsx! {
         div { style: "display: flex; flex-direction: column; height: 100vh; background: #1e1e1e; font-family: 'Fira Code', monospace;",

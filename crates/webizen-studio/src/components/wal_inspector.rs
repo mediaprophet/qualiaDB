@@ -10,7 +10,7 @@ struct DeployRecord {
 }
 
 #[component]
-/// Dioxus `WalInspector` component.
+/// Aether `WalInspector` component.
 pub fn WalInspector() -> Element {
     let mut records = use_signal(Vec::<DeployRecord>::new);
     let mut status = use_signal(|| "Loading deploy history…".to_string());

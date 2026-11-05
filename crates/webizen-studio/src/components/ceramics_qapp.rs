@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `CeramicsQapp` component.
+/// Aether `CeramicsQapp` component.
 pub fn CeramicsQapp() -> Element {
     rsx! {
         QAppEngine {

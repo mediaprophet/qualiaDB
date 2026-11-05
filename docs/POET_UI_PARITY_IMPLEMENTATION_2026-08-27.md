@@ -1,7 +1,7 @@
 # POET Standalone UI Parity — Implementation Tracker
 
 **Opened:** 2026-08-27  
-**Scope:** standalone `crates/poet` browser UI parity with the Dioxus POET UI and
+**Scope:** standalone `crates/poet` browser UI parity with the Aether POET UI and
 the requirements recorded in `poet_ui_handover.md`.  
 **Completion rule:** a visible control must perform its advertised operation,
 or be visibly disabled with a specific prerequisite. Placeholder notifications,

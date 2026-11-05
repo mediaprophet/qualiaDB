@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `LoraManager` component.
+/// Aether `LoraManager` component.
 pub fn LoraManager() -> Element {
     let mut selected_adapter = use_signal(|| None::<usize>);
     let adapters = vec![

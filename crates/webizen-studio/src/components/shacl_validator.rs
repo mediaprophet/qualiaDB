@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ShaclValidator` component.
+/// Aether `ShaclValidator` component.
 pub fn ShaclValidator() -> Element {
     let mut progress = use_signal(|| 0);
     let mut is_validating = use_signal(|| false);

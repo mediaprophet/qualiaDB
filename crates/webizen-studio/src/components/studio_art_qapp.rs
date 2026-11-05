@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `StudioArtQapp` component.
+/// Aether `StudioArtQapp` component.
 pub fn StudioArtQapp() -> Element {
     rsx! {
         QAppEngine {

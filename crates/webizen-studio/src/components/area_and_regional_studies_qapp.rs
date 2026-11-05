@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `AreaAndRegionalStudiesQapp` component.
+/// Aether `AreaAndRegionalStudiesQapp` component.
 pub fn AreaAndRegionalStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

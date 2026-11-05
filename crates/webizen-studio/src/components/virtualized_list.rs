@@ -84,7 +84,7 @@ pub fn VirtualizedListFrame(
         div {
             style: "{base}",
             onscroll: move |e| {
-                // Dioxus scroll event: read via data attributes is limited; keep signal
+                // Aether scroll event: read via data attributes is limited; keep signal
                 // updates best-effort. Parents that need precise scroll can call window_range
                 // themselves with measured values.
                 let _ = e;

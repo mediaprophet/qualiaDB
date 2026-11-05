@@ -34,7 +34,7 @@ fn qapp_capabilities(id: &str) -> Vec<&'static str> {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
-/// Dioxus `QApps` component.
+/// Aether `QApps` component.
 pub fn QApps() -> Element {
     let all_apps = qapp_catalog();
     let mut selected_cat = use_signal(|| Cat::All);

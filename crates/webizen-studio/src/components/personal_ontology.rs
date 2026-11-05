@@ -3,7 +3,7 @@ use crate::components::shoelace::*;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `PersonalOntologyBuilder` component.
+/// Aether `PersonalOntologyBuilder` component.
 pub fn PersonalOntologyBuilder() -> Element {
     rsx! {
         div { class: "personal-ontology-pane flex flex-col h-full",

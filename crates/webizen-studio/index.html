@@ -70,7 +70,7 @@
 <body>
   <div id="main"></div>
 
-  <!-- Boot loader lives OUTSIDE #main. Dioxus mounts the app INTO #main (it
+  <!-- Boot loader lives OUTSIDE #main. Aether mounts the app INTO #main (it
        appends its root node rather than clearing the element), so the loader is
        removed explicitly once the app node appears — otherwise it lingered as a
        banner above the app. -->
@@ -87,7 +87,7 @@
       var main = document.getElementById('main');
 
       function appMounted() {
-        // Dioxus mounts its root as a child of #main.
+        // Aether mounts its root as a child of #main.
         return main && main.children.length > 0;
       }
       function removeLoader() {

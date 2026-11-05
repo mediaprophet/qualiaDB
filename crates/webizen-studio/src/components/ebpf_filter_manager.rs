@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `EbpfFilterManager` component.
+/// Aether `EbpfFilterManager` component.
 pub fn EbpfFilterManager() -> Element {
     let filters = vec![
         ("TCP RST Dropper", "XDP", "Loaded", 14502),

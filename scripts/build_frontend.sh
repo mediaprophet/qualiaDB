@@ -13,18 +13,18 @@ if [[ -n "$(git -C "$repo_root" status --porcelain)" ]]; then
   source_revision="${source_revision}-dirty"
 fi
 
-# Keep dx in lockstep with crates/webizen-studio dioxus "=0.8.0-alpha.1".
+# Keep dx in lockstep with crates/webizen-studio aether "=0.8.0-alpha.1".
 DX_CLI_VERSION="${DX_CLI_VERSION:-0.8.0-alpha.1}"
 need_dx_install=1
 if command -v dx >/dev/null 2>&1; then
-  # `dx --version` prints e.g. "dioxus 0.8.0-alpha.1" (or dx/dioxus-cli variants).
+  # `dx --version` prints e.g. "aether 0.8.0-alpha.1" (or dx/aether-cli variants).
   if dx --version 2>/dev/null | grep -Eq "${DX_CLI_VERSION}"; then
     need_dx_install=0
   fi
 fi
 if [[ "$need_dx_install" -eq 1 ]]; then
-  echo "Installing dioxus-cli ${DX_CLI_VERSION} (must match studio dioxus pin)..."
-  cargo install dioxus-cli --version "${DX_CLI_VERSION}" --locked --force
+  echo "Installing aether-cli ${DX_CLI_VERSION} (must match studio aether pin)..."
+  cargo install aether-cli --version "${DX_CLI_VERSION}" --locked --force
 fi
 
 # dx shell-outs to whatever `wasm-bindgen` is on PATH. A CLI/crate mismatch fails with:
@@ -87,7 +87,7 @@ if ! command -v wasm-opt >/dev/null 2>&1; then
   fi
 fi
 
-# Dioxus otherwise ignores the verified PATH binary and attempts to
+# Aether otherwise ignores the verified PATH binary and attempts to
 # redownload a managed wasm-bindgen on every invocation.
 export NO_DOWNLOADS=1
 # Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.

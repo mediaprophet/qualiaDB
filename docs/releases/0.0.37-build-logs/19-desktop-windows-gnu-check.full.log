@@ -224,7 +224,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking aead v0.5.2
    Compiling ark-ff-asm v0.6.0
    Compiling slotmap v1.1.1
-    Checking dioxus-core-types v0.8.0-alpha.1
+    Checking aether-core-types v0.8.0-alpha.1
     Checking konst_macro_rules v0.2.19
     Checking konst v0.2.20
    Compiling peg-macros v0.8.6
@@ -265,7 +265,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking xxhash-rust v0.8.18
     Checking base16ct v0.2.0
     Checking sec1 v0.7.3
-    Checking dioxus-core v0.8.0-alpha.1
+    Checking aether-core v0.8.0-alpha.1
     Checking wgpu-naga-bridge v30.0.0
     Checking group v0.13.0
     Checking spargebra v0.4.6
@@ -369,7 +369,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking wgpu-core v30.0.0
     Checking oxigraph v0.5.9
     Checking tokio-rustls v0.24.1
-    Checking dioxus-signals v0.8.0-alpha.1
+    Checking aether-signals v0.8.0-alpha.1
     Checking ndarray v0.17.2
     Checking hickory-resolver v0.25.2
     Checking yamux v0.13.10
@@ -427,7 +427,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking serde_path_to_error v0.1.20
     Checking librqbit-clone-to-owned v3.0.1
    Compiling tauri-runtime-wry v2.11.4
-    Checking dioxus-cli-config v0.8.0-alpha.1
+    Checking aether-cli-config v0.8.0-alpha.1
    Compiling windows_x86_64_gnu v0.53.1
     Checking crc-catalog v2.5.0
     Checking sha3 v0.12.0
@@ -454,7 +454,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking pkcs8 v0.11.0
     Checking librqbit-sha1-wrapper v4.1.0
     Checking fhe v0.1.1
-   Compiling dioxus-rsx v0.8.0-alpha.1
+   Compiling aether-rsx v0.8.0-alpha.1
    Compiling tauri-codegen v2.6.3
    Compiling enumset_derive v0.15.0
     Checking ark-groth16 v0.6.0
@@ -488,14 +488,14 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
    Compiling tauri-macros v2.6.3
     Checking x509-parser v0.16.0
     Checking enumset v1.1.14
-   Compiling dioxus-core-macro v0.8.0-alpha.1
+   Compiling aether-core-macro v0.8.0-alpha.1
     Checking librqbit-bencode v3.1.0
     Checking elliptic-curve v0.14.1
     Checking rancor v0.1.2
    Compiling const-serialize v0.8.0-alpha.1
-    Checking dioxus-hooks v0.8.0-alpha.1
+    Checking aether-hooks v0.8.0-alpha.1
     Checking tokio-native-tls v0.3.1
-   Compiling dioxus-html-internal-macro v0.8.0-alpha.1
+   Compiling aether-html-internal-macro v0.8.0-alpha.1
     Checking directories v6.0.0
    Compiling tauri-plugin-fs v2.5.1
     Checking ecb v0.1.2
@@ -513,8 +513,8 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking simdutf8 v0.1.5
     Checking anstyle-wincon v3.0.11
     Checking bytecheck v0.8.2
-    Checking dioxus-html v0.8.0-alpha.1
-   Compiling dioxus-document v0.8.0-alpha.1
+    Checking aether-html v0.8.0-alpha.1
+   Compiling aether-document v0.8.0-alpha.1
     Checking lopdf v0.42.0
     Checking cssparser v0.37.0
     Checking headers v0.4.1
@@ -543,7 +543,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking winnow v0.7.15
    Compiling base16 v0.2.1
     Checking anstream v1.0.0
-   Compiling dioxus-router-macro v0.8.0-alpha.1
+   Compiling aether-router-macro v0.8.0-alpha.1
     Checking wyz v0.5.1
     Checking pdf-extract v0.12.0
     Checking tungstenite v0.28.0
@@ -561,9 +561,9 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking rend v0.5.4
     Checking stun v0.17.2
     Checking k256 v0.13.4
-   Compiling dioxus-stores-macro v0.8.0-alpha.1
-    Checking dioxus-history v0.8.0-alpha.1
-    Checking dioxus-devtools-types v0.8.0-alpha.1
+   Compiling aether-stores-macro v0.8.0-alpha.1
+    Checking aether-history v0.8.0-alpha.1
+    Checking aether-devtools-types v0.8.0-alpha.1
     Checking rtcp v0.17.2
    Compiling tauri-plugin-dialog v2.7.2
    Compiling tauri-plugin-notification v2.3.3
@@ -601,15 +601,15 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking rcgen v0.13.2
     Checking windows-core v0.54.0
     Checking webrtc-srtp v0.17.2
-    Checking dioxus-stores v0.8.0-alpha.1
-    Checking dioxus-devtools v0.8.0-alpha.1
-    Checking dioxus-router v0.8.0-alpha.1
+    Checking aether-stores v0.8.0-alpha.1
+    Checking aether-devtools v0.8.0-alpha.1
+    Checking aether-router v0.8.0-alpha.1
     Checking turn v0.17.2
     Checking num v0.2.1
     Checking manganis v0.8.0-alpha.1
     Checking k256 v0.14.0
     Checking bip39 v2.2.2
-    Checking dioxus-logger v0.8.0-alpha.1
+    Checking aether-logger v0.8.0-alpha.1
     Checking p256 v0.13.2
     Checking p384 v0.13.1
     Checking webrtc-sctp v0.17.2
@@ -627,15 +627,15 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
    Compiling clap_derive v4.6.4
     Checking leaky-bucket v1.1.2
    Compiling librqbit v8.1.1
-    Checking dioxus-asset-resolver v0.8.0-alpha.1
+    Checking aether-asset-resolver v0.8.0-alpha.1
     Checking winreg v0.56.0
     Checking bincode v1.3.3
     Checking spinning_top v0.3.0
-   Compiling dioxus-config-macro v0.8.0-alpha.1
+   Compiling aether-config-macro v0.8.0-alpha.1
     Checking generic-array v0.12.4
     Checking typed-path v0.12.3
     Checking weezl v0.2.1
-    Checking dioxus-config-macros v0.8.0-alpha.1
+    Checking aether-config-macros v0.8.0-alpha.1
    Compiling cpal v0.15.3
     Checking unty v0.0.4
     Checking nonzero_ext v0.3.0
@@ -643,7 +643,7 @@ CMD: cargo check -p webizen-desktop --target x86_64-pc-windows-gnu
     Checking zip v8.6.0
     Checking bincode v2.0.1
     Checking clap v4.6.4
-    Checking dioxus v0.8.0-alpha.1
+    Checking aether v0.8.0-alpha.1
     Checking lopdf v0.44.0
     Checking size_format v1.0.2
     Checking librqbit-peer-protocol v4.3.0

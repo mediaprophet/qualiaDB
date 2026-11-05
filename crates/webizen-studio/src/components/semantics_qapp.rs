@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SemanticsQapp` component.
+/// Aether `SemanticsQapp` component.
 pub fn SemanticsQapp() -> Element {
     rsx! {
         QAppEngine {

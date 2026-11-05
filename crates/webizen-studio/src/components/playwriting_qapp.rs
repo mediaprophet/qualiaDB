@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `PlaywritingQapp` component.
+/// Aether `PlaywritingQapp` component.
 pub fn PlaywritingQapp() -> Element {
     rsx! {
         QAppEngine {

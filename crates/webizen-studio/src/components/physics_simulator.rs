@@ -240,7 +240,7 @@ fn draw_scene(
 }
 
 #[component]
-/// Dioxus `PhysicsSimulator` component.
+/// Aether `PhysicsSimulator` component.
 pub fn PhysicsSimulator() -> Element {
     let mut orbit_speed = use_signal(|| 1.15_f64);
     let mut wave_amplitude = use_signal(|| 2.8_f64);
@@ -358,7 +358,7 @@ pub fn PhysicsSimulator() -> Element {
                         style: "display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.8rem;",
                         div {
                             h2 { style: "margin: 0 0 0.28rem 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;", "Physics Simulator" }
-                            p { style: "margin: 0 0 0.45rem 0; font-size: 0.82rem; line-height: 1.5; color: rgba(226,232,240,0.72);", "A procedural manifold viewport paired with an explicit QualiaDB Forge kinematics certification probe. Preview pixels never cross the Dioxus VDOM." }
+                            p { style: "margin: 0 0 0.45rem 0; font-size: 0.82rem; line-height: 1.5; color: rgba(226,232,240,0.72);", "A procedural manifold viewport paired with an explicit QualiaDB Forge kinematics certification probe. Preview pixels never cross the Aether VDOM." }
                             HonestyChip {
                                 level: HonestyLevel::Partial,
                                 detail: "Forge certify_forge_physics real · viewport procedural".to_string(),

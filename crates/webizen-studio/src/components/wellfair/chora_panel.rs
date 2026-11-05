@@ -36,7 +36,7 @@ fn layer_source(v: &serde_json::Value) -> String {
 }
 
 #[component]
-/// Dioxus `WellfairChoraPanel` component.
+/// Aether `WellfairChoraPanel` component.
 pub fn WellfairChoraPanel() -> Element {
     let experience_mode = use_experience_mode();
     let advanced = experience_mode().is_advanced();

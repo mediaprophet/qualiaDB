@@ -125,7 +125,7 @@ qualia-cli
 5. Geometry / chemistry / … library → `specialized_libs/<family>` or extracted science crate — **not** studio
 6. Wellfare record types → **`wellfare-core`**
 7. Cooperative workflow → **`qualia-cooperative-core`**
-8. Dioxus screens → **`webizen-studio`**
+8. Aether screens → **`webizen-studio`**
 9. Tauri commands / OS → **`webizen-desktop`**
 10. HyperCanvas tools / manifolds → **`poet`** (+ future poet-host)
 11. Public ontology site MCP → **`webizen-lite-wasm`**

@@ -18,12 +18,12 @@ $sourceTreeDirty = -not [string]::IsNullOrWhiteSpace(($initialStatus -join "`n")
 
 # Keep in lockstep with crates/webizen-studio/Cargo.toml wasm-bindgen pin.
 $WasmBindgenCliVersion = if ($env:WASM_BINDGEN_CLI_VERSION) { $env:WASM_BINDGEN_CLI_VERSION } else { "0.2.125" }
-# Keep in lockstep with crates/webizen-studio dioxus "=0.8.0-alpha.1" and dx esbuild bundling.
+# Keep in lockstep with crates/webizen-studio aether "=0.8.0-alpha.1" and dx esbuild bundling.
 $EsbuildVersion = if ($env:ESBUILD_VERSION) { $env:ESBUILD_VERSION } else { "0.27.3" }
 
-# Keep dx in lockstep with crates/webizen-studio dioxus "=0.8.0-alpha.1".
+# Keep dx in lockstep with crates/webizen-studio aether "=0.8.0-alpha.1".
 $DxCliVersion = if ($env:DX_CLI_VERSION) { $env:DX_CLI_VERSION } else { "0.8.0-alpha.1" }
-Write-Host "Ensuring dioxus-cli $DxCliVersion is installed..."
+Write-Host "Ensuring aether-cli $DxCliVersion is installed..."
 $needDxInstall = $true
 if (Get-Command "dx" -ErrorAction SilentlyContinue) {
     $dxVer = (& dx --version 2>$null | Out-String).Trim()
@@ -32,8 +32,8 @@ if (Get-Command "dx" -ErrorAction SilentlyContinue) {
     }
 }
 if ($needDxInstall) {
-    Write-Host "Installing dioxus-cli $DxCliVersion (must match studio dioxus pin)..."
-    cargo install dioxus-cli --version $DxCliVersion --locked --force
+    Write-Host "Installing aether-cli $DxCliVersion (must match studio aether pin)..."
+    cargo install aether-cli --version $DxCliVersion --locked --force
 }
 
 # dx uses whatever wasm-bindgen is on PATH. CLI/crate mismatch fails with:
@@ -66,9 +66,9 @@ $toolPath = (@($cargoBin) + @($managedToolDirs) + @($env:Path)) -join ";"
 $env:Path = $toolPath
 Write-Host "Using wasm-bindgen: $((Get-Command wasm-bindgen).Source) $(wasm-bindgen --version)"
 
-# NO_DOWNLOADS prevents Dioxus from replacing the pinned wasm-bindgen CLI, but
+# NO_DOWNLOADS prevents Aether from replacing the pinned wasm-bindgen CLI, but
 # it also requires esbuild to exist before dx starts. Fresh Windows runners do
-# not carry Dioxus' ~/.dx/tools cache, so provision the exact pinned binary.
+# not carry Aether' ~/.dx/tools cache, so provision the exact pinned binary.
 $esbuildOk = $false
 if (Get-Command "esbuild" -ErrorAction SilentlyContinue) {
     $foundEsbuildVersion = (& esbuild --version 2>$null | Out-String).Trim()
@@ -79,7 +79,7 @@ if (-not $esbuildOk) {
     if (-not $npm) {
         throw "esbuild $EsbuildVersion is required, but npm.cmd is unavailable."
     }
-    Write-Host "Installing esbuild $EsbuildVersion (must match dioxus-cli pin)..."
+    Write-Host "Installing esbuild $EsbuildVersion (must match aether-cli pin)..."
     & $npm.Source install --global "esbuild@$EsbuildVersion"
     if ($LASTEXITCODE -ne 0) {
         throw "Could not install esbuild $EsbuildVersion."
@@ -95,7 +95,7 @@ if ($resolvedEsbuildVersion -ne $EsbuildVersion) {
 }
 Write-Host "Using esbuild: $($resolvedEsbuild.Source) $resolvedEsbuildVersion"
 
-# NO_DOWNLOADS also blocks Dioxus from fetching Binaryen. Fresh Windows runners
+# NO_DOWNLOADS also blocks Aether from fetching Binaryen. Fresh Windows runners
 # then fail at the end of `dx build` with:
 #   Failed to create wasm-opt instance / Missing wasm-opt
 # Provision wasm-opt into ~/.dx/tools (or PATH) before NO_DOWNLOADS is set.
@@ -184,7 +184,7 @@ if (-not $wasmOptOk -or -not (Get-Command "wasm-opt" -ErrorAction SilentlyContin
 }
 Write-Host "Using wasm-opt: $((Get-Command wasm-opt).Source)"
 
-# Dioxus 0.8 otherwise ignores the verified PATH binary and attempts to
+# Aether 0.8 otherwise ignores the verified PATH binary and attempts to
 # redownload a managed wasm-bindgen on every invocation. Agents and offline
 # builds must use the exact pinned local CLI established above.
 $env:NO_DOWNLOADS = "1"
@@ -215,7 +215,7 @@ $dxBuildCommand = "dx build --web --release 2>&1"
 cmd.exe /d /s /c $dxBuildCommand
 $dxBuildExitCode = $LASTEXITCODE
 if ($dxBuildExitCode -ne 0) {
-    Write-Error "Dioxus build failed."
+    Write-Error "Aether build failed."
     Pop-Location
     exit $dxBuildExitCode
 }
@@ -227,7 +227,7 @@ $assets = Join-Path $dist "assets"
 $browserSource = Resolve-Path "$PSScriptRoot/../crates/webizen-desktop/src/browser"
 
 if (-not (Test-Path (Join-Path $public "index.html"))) {
-    throw "Dioxus output is missing index.html: $public"
+    throw "Aether output is missing index.html: $public"
 }
 
 New-Item -ItemType Directory -Path $assets -Force | Out-Null

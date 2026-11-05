@@ -34,7 +34,7 @@ pub struct HardwareConfigState {
 }
 
 #[component]
-/// Dioxus `HardwareConfigurator` component.
+/// Aether `HardwareConfigurator` component.
 pub fn HardwareConfigurator() -> Element {
     let mut state = use_signal(|| HardwareConfigState {
         baseplate_id: "baseplate_v1".to_string(),

@@ -8,7 +8,7 @@ use aether::prelude::*;
 const SCOPES: &[&str] = &["write_record", "read_record"];
 
 #[component]
-/// Dioxus `WellfairConsentPanel` component.
+/// Aether `WellfairConsentPanel` component.
 pub fn WellfairConsentPanel() -> Element {
     let mut qapp_id = use_signal(|| "wellfair-care".to_string());
     let mut scope = use_signal(|| "write_record".to_string());

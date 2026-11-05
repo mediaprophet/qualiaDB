@@ -2,7 +2,7 @@ use super::types::AgentQaSnapshot;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SetupHealthPanel` component.
+/// Aether `SetupHealthPanel` component.
 pub fn SetupHealthPanel(
     snapshot: Option<AgentQaSnapshot>,
     loading: bool,

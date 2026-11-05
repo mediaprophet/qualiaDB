@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ChicanoAndLatinoStudiesQapp` component.
+/// Aether `ChicanoAndLatinoStudiesQapp` component.
 pub fn ChicanoAndLatinoStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

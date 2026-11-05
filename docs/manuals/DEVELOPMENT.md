@@ -12,7 +12,7 @@ _Branch: `0.0.40` | Last updated: 2026-09-08_
 |---|---|---|
 | [Rust stable](https://rustup.rs/) | Everything | `rustup update stable` |
 | [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) | WASM browser build | |
-| [Dioxus CLI](https://dioxuslabs.com/learn/0.5/getting_started) | Webizen Studio | Primary shipped desktop target (`cargo binstall dioxus-cli`) |
+| [Aether CLI](https://aetherlabs.com/learn/0.5/getting_started) | Webizen Studio | Primary shipped desktop target (`cargo binstall aether-cli`) |
 | Node.js ≥ 18 | Docs test suite, API explorer | `docs/tests/run-local.ps1` |
 | [Tauri CLI v1.x](https://tauri.app/v1/guides/getting-started/prerequisites/) | Legacy desktop only | `qualia-desktop` crate — not in release CI |
 

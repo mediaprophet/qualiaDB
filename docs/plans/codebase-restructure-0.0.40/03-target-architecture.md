@@ -39,7 +39,7 @@ Preserve Continuity (**handle ≠ who**), fiduciary-to-principal duty, and “ag
 
 ### Core libraries
 
-**Definition:** Small dependency closure; stable ABI; testable without Tauri/Dioxus/Poet; safe to link into lite WASM.
+**Definition:** Small dependency closure; stable ABI; testable without Tauri/Aether/Poet; safe to link into lite WASM.
 
 **Today already close:**
 
@@ -81,7 +81,7 @@ Until extracted, document these as **logical cores inside core-db** with module 
 | App | Responsibility |
 |-----|----------------|
 | `webizen-desktop` | Native shell, OS integration, updater, tray, daemon spawn |
-| `webizen-studio` | Shared Dioxus UI (web + embedded in desktop) |
+| `webizen-studio` | Shared Aether UI (web + embedded in desktop) |
 | `poet` | HyperCanvas / tool-chest living document host |
 | `qualia-cli` | Operator / science / bench / MCP CLI |
 | `webizen-lite-wasm` | Ontology MCP for public ontology sites |
@@ -96,7 +96,7 @@ Until extracted, document these as **logical cores inside core-db** with module 
 ## 3. Layering rules (normative for future PRs)
 
 1. **Apps → modules → core** only. No core → app edges. No module → app edges.
-2. **Core** may not depend on wgpu UI shells, Tauri, Dioxus, or Poet browser registration.
+2. **Core** may not depend on wgpu UI shells, Tauri, Aether, or Poet browser registration.
 3. **WASM lite** (`wasm-ontology`) links **core + minimal query/ontology only** — never specialized_libs, poet_host, or desktop chat stacks.
 4. **Feature flags** describe *capability profiles*, not catch-all “full product in one crate forever”. New large domains prefer a crate or a clearly named module with its own Cargo feature.
 5. **Re-exports** during migration are OK (`pub use new_crate::…` from core-db) — same pattern as `MODULE_REORG_PLAN.md`.

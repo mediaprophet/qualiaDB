@@ -49,7 +49,7 @@ struct PersonTransferBundleView {
 }
 
 #[component]
-/// Dioxus `IdentityPlanePanel` component.
+/// Aether `IdentityPlanePanel` component.
 pub fn IdentityPlanePanel() -> Element {
     let mut plane = use_signal(|| Option::<IdentityPlaneView>::None);
     let mut status = use_signal(String::new);

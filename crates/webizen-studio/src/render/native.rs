@@ -19,7 +19,7 @@ pub struct NativeRenderer {
 impl NativeRenderer {
     /// Create a new native WebGPU renderer backed by an offscreen target.
     ///
-    /// The native studio runs inside a dioxus/webview host, so there is no OS
+    /// The native studio runs inside a aether/webview host, so there is no OS
     /// window to provide a `wgpu::Surface`. We render headless into a texture and
     /// expose the frame via [`NativeRenderer::read_pixels`], to be displayed
     /// through the same CPU frame-buffer path the diffusion compute already uses.

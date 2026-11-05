@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `IndigenousLanguageRevitalizationQapp` component.
+/// Aether `IndigenousLanguageRevitalizationQapp` component.
 pub fn IndigenousLanguageRevitalizationQapp() -> Element {
     rsx! {
         QAppEngine {

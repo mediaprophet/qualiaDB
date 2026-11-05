@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `AstrophysicsQapp` component.
+/// Aether `AstrophysicsQapp` component.
 pub fn AstrophysicsQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -10,7 +10,7 @@ struct ClinicalRiskProps {
 }
 
 #[component]
-/// Dioxus `ClinicalRiskScorer` component.
+/// Aether `ClinicalRiskScorer` component.
 pub fn ClinicalRiskScorer() -> Element {
     let mut age = use_signal(|| 45u8);
     let mut gender = use_signal(|| "Male".to_string());

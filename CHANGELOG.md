@@ -853,7 +853,7 @@ real implementations for previously-stubbed security and query primitives.
 ### Added — Native-First WASM-LLM Offloading
 
 - **`extension_bus::wasm_bus`**: Implemented `did:q42` WebSocket handshake and event routing for WASM targets (`qualia-core-db/src/extension_bus.rs`).
-- **Zero-Allocation Sync/Async Bridge**: Refactored `llm_agent.rs` WASM execution path to intercept inference requests and cleanly pipe synchronous LLM traits into the non-blocking Dioxus `on_token` event loop callback.
+- **Zero-Allocation Sync/Async Bridge**: Refactored `llm_agent.rs` WASM execution path to intercept inference requests and cleanly pipe synchronous LLM traits into the non-blocking Aether `on_token` event loop callback.
 - **WASM Extension Fallback**: The WASM inference pipeline now intelligently escalates to the Qualia Native Daemon (port 4242) if installed, or gracefully falls back to the in-browser WebGPU engine if not.
 
 ---

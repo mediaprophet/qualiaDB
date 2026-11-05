@@ -4,7 +4,7 @@ use super::shared::*;
 
 // ── Dialectical Sidebar Pane (Web Annotations & Semantic Manifold) ──
 #[component]
-/// Dioxus `DialecticalSidebarPane` component.
+/// Aether `DialecticalSidebarPane` component.
 pub fn DialecticalSidebarPane(active_url: String) -> Element {
     let mut message = use_signal(String::new);
     let mut permission = use_signal(|| "permissive".to_string());

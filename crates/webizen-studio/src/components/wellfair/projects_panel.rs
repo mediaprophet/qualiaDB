@@ -70,7 +70,7 @@ impl Default for ProjectsUi {
 }
 
 #[component]
-/// Dioxus `WellfairProjectsPanel` component.
+/// Aether `WellfairProjectsPanel` component.
 pub fn WellfairProjectsPanel() -> Element {
     let mut ui = use_signal(ProjectsUi::default);
 

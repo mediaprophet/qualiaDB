@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-drawer`
+/// Aether wrapper for `sl-drawer`
 #[component]
 pub fn SlDrawer(
     dependencies: Option<String>,
@@ -47,7 +47,7 @@ pub fn SlDrawer(
     }
 }
 
-/// Dioxus wrapper for `sl-dropdown`
+/// Aether wrapper for `sl-dropdown`
 #[component]
 pub fn SlDropdown(
     dependencies: Option<String>,
@@ -98,7 +98,7 @@ pub fn SlDropdown(
     }
 }
 
-/// Dioxus wrapper for `sl-format-bytes`
+/// Aether wrapper for `sl-format-bytes`
 #[component]
 pub fn SlFormatBytes(
     localize: Option<String>,
@@ -119,7 +119,7 @@ pub fn SlFormatBytes(
     }
 }
 
-/// Dioxus wrapper for `sl-format-date`
+/// Aether wrapper for `sl-format-date`
 #[component]
 pub fn SlFormatDate(
     localize: Option<String>,
@@ -158,7 +158,7 @@ pub fn SlFormatDate(
     }
 }
 
-/// Dioxus wrapper for `sl-format-number`
+/// Aether wrapper for `sl-format-number`
 #[component]
 pub fn SlFormatNumber(
     localize: Option<String>,
@@ -193,7 +193,7 @@ pub fn SlFormatNumber(
     }
 }
 
-/// Dioxus wrapper for `sl-icon`
+/// Aether wrapper for `sl-icon`
 #[component]
 pub fn SlIcon(
     initialRender: Option<bool>,
@@ -218,7 +218,7 @@ pub fn SlIcon(
     }
 }
 
-/// Dioxus wrapper for `sl-include`
+/// Aether wrapper for `sl-include`
 #[component]
 pub fn SlInclude(
     src: Option<String>,
@@ -237,7 +237,7 @@ pub fn SlInclude(
     }
 }
 
-/// Dioxus wrapper for `sl-icon-button`
+/// Aether wrapper for `sl-icon-button`
 #[component]
 pub fn SlIconButton(
     dependencies: Option<String>,

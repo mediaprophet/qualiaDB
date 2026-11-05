@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `NeuroscienceQapp` component.
+/// Aether `NeuroscienceQapp` component.
 pub fn NeuroscienceQapp() -> Element {
     rsx! {
         QAppEngine {

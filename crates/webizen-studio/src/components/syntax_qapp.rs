@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SyntaxQapp` component.
+/// Aether `SyntaxQapp` component.
 pub fn SyntaxQapp() -> Element {
     rsx! {
         QAppEngine {

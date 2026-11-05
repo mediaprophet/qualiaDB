@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `CanonLawQapp` component.
+/// Aether `CanonLawQapp` component.
 pub fn CanonLawQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-card`
+/// Aether wrapper for `sl-card`
 #[component]
 pub fn SlCard(hasSlotController: Option<String>, children: Element) -> Element {
     rsx! {
@@ -16,7 +16,7 @@ pub fn SlCard(hasSlotController: Option<String>, children: Element) -> Element {
     }
 }
 
-/// Dioxus wrapper for `sl-carousel`
+/// Aether wrapper for `sl-carousel`
 #[component]
 pub fn SlCarousel(
     dependencies: Option<String>,
@@ -75,7 +75,7 @@ pub fn SlCarousel(
     }
 }
 
-/// Dioxus wrapper for `sl-carousel-item`
+/// Aether wrapper for `sl-carousel-item`
 #[component]
 pub fn SlCarouselItem(children: Element) -> Element {
     rsx! {
@@ -86,7 +86,7 @@ pub fn SlCarouselItem(children: Element) -> Element {
     }
 }
 
-/// Dioxus wrapper for `sl-checkbox`
+/// Aether wrapper for `sl-checkbox`
 #[component]
 pub fn SlCheckbox(
     dependencies: Option<String>,
@@ -135,7 +135,7 @@ pub fn SlCheckbox(
     }
 }
 
-/// Dioxus wrapper for `sl-color-picker`
+/// Aether wrapper for `sl-color-picker`
 #[component]
 pub fn SlColorPicker(
     dependencies: Option<String>,
@@ -220,7 +220,7 @@ pub fn SlColorPicker(
     }
 }
 
-/// Dioxus wrapper for `sl-copy-button`
+/// Aether wrapper for `sl-copy-button`
 #[component]
 pub fn SlCopyButton(
     dependencies: Option<String>,
@@ -267,7 +267,7 @@ pub fn SlCopyButton(
     }
 }
 
-/// Dioxus wrapper for `sl-details`
+/// Aether wrapper for `sl-details`
 #[component]
 pub fn SlDetails(
     dependencies: Option<String>,
@@ -300,7 +300,7 @@ pub fn SlDetails(
     }
 }
 
-/// Dioxus wrapper for `sl-dialog`
+/// Aether wrapper for `sl-dialog`
 #[component]
 pub fn SlDialog(
     dependencies: Option<String>,
@@ -339,7 +339,7 @@ pub fn SlDialog(
     }
 }
 
-/// Dioxus wrapper for `sl-divider`
+/// Aether wrapper for `sl-divider`
 #[component]
 pub fn SlDivider(vertical: Option<bool>, children: Element) -> Element {
     rsx! {

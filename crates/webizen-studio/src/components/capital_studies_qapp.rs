@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `CapitalStudiesQapp` component.
+/// Aether `CapitalStudiesQapp` component.
 pub fn CapitalStudiesQapp() -> Element {
     rsx! {
         QAppEngine {

@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-image-comparer`
+/// Aether wrapper for `sl-image-comparer`
 #[component]
 pub fn SlImageComparer(
     scopedElement: Option<String>,
@@ -27,7 +27,7 @@ pub fn SlImageComparer(
     }
 }
 
-/// Dioxus wrapper for `sl-input`
+/// Aether wrapper for `sl-input`
 #[component]
 pub fn SlInput(
     dependencies: Option<String>,
@@ -124,7 +124,7 @@ pub fn SlInput(
     }
 }
 
-/// Dioxus wrapper for `sl-menu`
+/// Aether wrapper for `sl-menu`
 #[component]
 pub fn SlMenu(defaultSlot: Option<String>, children: Element) -> Element {
     rsx! {
@@ -136,7 +136,7 @@ pub fn SlMenu(defaultSlot: Option<String>, children: Element) -> Element {
     }
 }
 
-/// Dioxus wrapper for `sl-menu-label`
+/// Aether wrapper for `sl-menu-label`
 #[component]
 pub fn SlMenuLabel(children: Element) -> Element {
     rsx! {
@@ -147,7 +147,7 @@ pub fn SlMenuLabel(children: Element) -> Element {
     }
 }
 
-/// Dioxus wrapper for `sl-mutation-observer`
+/// Aether wrapper for `sl-mutation-observer`
 #[component]
 pub fn SlMutationObserver(
     mutationObserver: Option<String>,
@@ -176,7 +176,7 @@ pub fn SlMutationObserver(
     }
 }
 
-/// Dioxus wrapper for `sl-menu-item`
+/// Aether wrapper for `sl-menu-item`
 #[component]
 pub fn SlMenuItem(
     dependencies: Option<String>,
@@ -217,7 +217,7 @@ pub fn SlMenuItem(
     }
 }
 
-/// Dioxus wrapper for `sl-option`
+/// Aether wrapper for `sl-option`
 #[component]
 pub fn SlOption(
     dependencies: Option<String>,
@@ -248,7 +248,7 @@ pub fn SlOption(
     }
 }
 
-/// Dioxus wrapper for `sl-popup`
+/// Aether wrapper for `sl-popup`
 #[component]
 pub fn SlPopup(
     anchorEl: Option<String>,

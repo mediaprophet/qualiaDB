@@ -87,7 +87,7 @@ const AREA_GROUPS: &[(&str, &[(&str, &str)])] = &[
 ];
 
 #[component]
-/// Dioxus `WellfairShell` component.
+/// Aether `WellfairShell` component.
 pub fn WellfairShell() -> Element {
     let snapshot = use_host_snapshot();
     let snap = snapshot();

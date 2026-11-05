@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `RhetoricAndCompositionQapp` component.
+/// Aether `RhetoricAndCompositionQapp` component.
 pub fn RhetoricAndCompositionQapp() -> Element {
     rsx! {
         QAppEngine {

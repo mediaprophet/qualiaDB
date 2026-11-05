@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `AffectTheoryQapp` component.
+/// Aether `AffectTheoryQapp` component.
 pub fn AffectTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

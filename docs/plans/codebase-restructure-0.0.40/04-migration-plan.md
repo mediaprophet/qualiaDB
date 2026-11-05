@@ -125,7 +125,7 @@
 
 ## Explicitly deferred / out of scope
 
-- Rewriting Dioxus version pins / Tauri major upgrades.
+- Rewriting Aether version pins / Tauri major upgrades.
 - Merging Poet and Studio into one crate in a single PR.
 - Relicensing or policy changes.
 - Deleting specialized science libraries “to simplify” — extract or feature-gate, don’t cull capability for tidiness.

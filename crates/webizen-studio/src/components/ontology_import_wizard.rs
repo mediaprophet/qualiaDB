@@ -271,7 +271,7 @@ async fn enqueue_ontology_import(ontology_id: &str, bundled: bool) -> Result<Str
 }
 
 #[component]
-/// Dioxus `OntologyImportWizard` component.
+/// Aether `OntologyImportWizard` component.
 pub fn OntologyImportWizard(on_apply: EventHandler<OntologyLayoutSuggestion>) -> Element {
     let mut catalog = use_signal(Vec::<CatalogOntology>::new);
     let import_status = use_signal(|| String::new());

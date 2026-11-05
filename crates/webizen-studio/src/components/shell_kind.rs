@@ -73,7 +73,7 @@ pub fn use_shell_kind() -> Signal<ShellKind> {
 }
 
 #[component]
-/// Dioxus `ShellKindSwitch` component.
+/// Aether `ShellKindSwitch` component.
 pub fn ShellKindSwitch() -> Element {
     let mut kind = use_shell_kind();
     let current = kind();

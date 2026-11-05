@@ -56,7 +56,7 @@ async fn reload(mut ui: Signal<AgencyUi>) {
 }
 
 #[component]
-/// Dioxus `WellfairAgencyPanel` component.
+/// Aether `WellfairAgencyPanel` component.
 pub fn WellfairAgencyPanel() -> Element {
     let mut ui = use_signal(|| AgencyUi {
         values_anchor: "urn:un:hr:udhr".into(),

@@ -83,7 +83,7 @@ Persistence is a foundation, not a substitute for items 1–8.
 
 ### R1 — recover the product specification without principal re-authoring
 
-- [ ] Build a machine-readable surface inventory from the Dioxus UI, the
+- [ ] Build a machine-readable surface inventory from the Aether UI, the
   standalone POET sources before collapse, Workstream A, the original handover,
   registrations, and capability catalogue.
 - [ ] For every surface, record the intended user job, preserved interaction

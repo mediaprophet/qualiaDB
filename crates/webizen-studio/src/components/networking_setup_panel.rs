@@ -57,7 +57,7 @@ struct ContactEntry {
 }
 
 #[component]
-/// Dioxus `NetworkingSetupPanel` component.
+/// Aether `NetworkingSetupPanel` component.
 pub fn NetworkingSetupPanel() -> Element {
     let mut active_tab = use_signal(|| "nym".to_string());
 

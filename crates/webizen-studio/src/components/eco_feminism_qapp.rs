@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `EcoFeminismQapp` component.
+/// Aether `EcoFeminismQapp` component.
 pub fn EcoFeminismQapp() -> Element {
     rsx! {
         QAppEngine {

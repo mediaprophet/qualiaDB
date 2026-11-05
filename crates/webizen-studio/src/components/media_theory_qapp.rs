@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `MediaTheoryQapp` component.
+/// Aether `MediaTheoryQapp` component.
 pub fn MediaTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

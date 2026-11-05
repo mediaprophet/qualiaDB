@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ArchaeologyQapp` component.
+/// Aether `ArchaeologyQapp` component.
 pub fn ArchaeologyQapp() -> Element {
     rsx! {
         QAppEngine {

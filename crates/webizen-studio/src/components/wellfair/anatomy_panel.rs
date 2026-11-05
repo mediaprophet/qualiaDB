@@ -169,7 +169,7 @@ fn level_word(level: &str) -> &'static str {
 }
 
 #[component]
-/// Dioxus `WellfairAnatomyPanel` component.
+/// Aether `WellfairAnatomyPanel` component.
 pub fn WellfairAnatomyPanel() -> Element {
     let mut ui = use_signal(|| AnatomyUi {
         lens: "person".to_string(),

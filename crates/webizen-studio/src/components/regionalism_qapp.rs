@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `RegionalismQapp` component.
+/// Aether `RegionalismQapp` component.
 pub fn RegionalismQapp() -> Element {
     rsx! {
         QAppEngine {

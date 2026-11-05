@@ -3,7 +3,7 @@ use aether::prelude::*;
 use crate::components::qapp_engine::invoke_json;
 
 #[component]
-/// Dioxus `SolidLdpBrowser` component.
+/// Aether `SolidLdpBrowser` component.
 pub fn SolidLdpBrowser() -> Element {
     let mut current_path = use_signal(|| "solid://alice.q42/profile/".to_string());
     let mut validation_status = use_signal(|| "".to_string());

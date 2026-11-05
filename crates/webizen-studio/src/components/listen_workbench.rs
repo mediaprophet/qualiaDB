@@ -94,7 +94,7 @@ fn default_tracks() -> Vec<MixerTrackDto> {
 }
 
 #[component]
-/// Dioxus `ListenWorkbench` component.
+/// Aether `ListenWorkbench` component.
 pub fn ListenWorkbench() -> Element {
     let mut status = use_signal(|| {
         String::from("Run Ears demo or use the mixer strips below (reference DAW — not Pro Tools).")

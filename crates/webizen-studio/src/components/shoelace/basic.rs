@@ -4,7 +4,7 @@
 use core::option::Option;
 use aether::prelude::*;
 
-/// Dioxus wrapper for `sl-alert`
+/// Aether wrapper for `sl-alert`
 #[component]
 pub fn SlAlert(
     dependencies: Option<String>,
@@ -49,7 +49,7 @@ pub fn SlAlert(
     }
 }
 
-/// Dioxus wrapper for `sl-animated-image`
+/// Aether wrapper for `sl-animated-image`
 #[component]
 pub fn SlAnimatedImage(
     dependencies: Option<String>,
@@ -76,7 +76,7 @@ pub fn SlAnimatedImage(
     }
 }
 
-/// Dioxus wrapper for `sl-animation`
+/// Aether wrapper for `sl-animation`
 #[component]
 pub fn SlAnimation(
     animation: Option<String>,
@@ -125,7 +125,7 @@ pub fn SlAnimation(
     }
 }
 
-/// Dioxus wrapper for `sl-avatar`
+/// Aether wrapper for `sl-avatar`
 #[component]
 pub fn SlAvatar(
     dependencies: Option<String>,
@@ -152,7 +152,7 @@ pub fn SlAvatar(
     }
 }
 
-/// Dioxus wrapper for `sl-badge`
+/// Aether wrapper for `sl-badge`
 #[component]
 pub fn SlBadge(
     variant: Option<String>,
@@ -171,7 +171,7 @@ pub fn SlBadge(
     }
 }
 
-/// Dioxus wrapper for `sl-breadcrumb`
+/// Aether wrapper for `sl-breadcrumb`
 #[component]
 pub fn SlBreadcrumb(
     dependencies: Option<String>,
@@ -196,7 +196,7 @@ pub fn SlBreadcrumb(
     }
 }
 
-/// Dioxus wrapper for `sl-button`
+/// Aether wrapper for `sl-button`
 #[component]
 pub fn SlButton(
     dependencies: Option<String>,
@@ -271,7 +271,7 @@ pub fn SlButton(
     }
 }
 
-/// Dioxus wrapper for `sl-breadcrumb-item`
+/// Aether wrapper for `sl-breadcrumb-item`
 #[component]
 pub fn SlBreadcrumbItem(
     hasSlotController: Option<String>,
@@ -296,7 +296,7 @@ pub fn SlBreadcrumbItem(
     }
 }
 
-/// Dioxus wrapper for `sl-button-group`
+/// Aether wrapper for `sl-button-group`
 #[component]
 pub fn SlButtonGroup(
     defaultSlot: Option<String>,

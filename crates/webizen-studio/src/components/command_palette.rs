@@ -1,6 +1,6 @@
 //! Command palette (U6-A) — Ctrl/Cmd+K or Ctrl/Cmd+P to jump to product destinations.
 //!
-//! Mirrors the desktop shell palette (`shell_html.rs`). Studio path uses the Dioxus
+//! Mirrors the desktop shell palette (`shell_html.rs`). Studio path uses the Aether
 //! router; shell path uses `navigate(qappId)` / `createTab`.
 
 #![allow(non_snake_case)]

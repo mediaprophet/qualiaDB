@@ -56,7 +56,7 @@ async fn volume_commit(path: String) -> Result<VolumeEvalResult, String> {
 }
 
 #[component]
-/// Dioxus `KeepHub` component.
+/// Aether `KeepHub` component.
 pub fn KeepHub() -> Element {
     let mut recents = use_signal(load_recents);
     let mut browse = use_signal(Vec::<RecentVolume>::new);

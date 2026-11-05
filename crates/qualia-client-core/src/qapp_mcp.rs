@@ -122,7 +122,7 @@ pub fn describe_qapp_surface_schema_json() -> Result<String, String> {
             "static-web",
             "wasm-local",
             "online-daemon-aware",
-            "native-dioxus-pane",
+            "native-aether-pane",
         ],
         mcp_tools: vec![
             "list_qapps",

@@ -20,7 +20,7 @@ Comprehensive index of functionality for `src`. This document serves as the grou
   - `fn map_ts_type_to_rust`
   - `fn sanitize_ident`
   - `fn main`
-  - `fn generate_dioxus_macro`
+  - `fn generate_aether_macro`
 
 ## Changelog
 - **2026-06-30**: Automated full index generation, extracting code definitions.

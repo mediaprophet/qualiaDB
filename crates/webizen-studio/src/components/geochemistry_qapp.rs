@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `GeochemistryQapp` component.
+/// Aether `GeochemistryQapp` component.
 pub fn GeochemistryQapp() -> Element {
     rsx! {
         QAppEngine {

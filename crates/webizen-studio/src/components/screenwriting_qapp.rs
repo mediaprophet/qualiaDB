@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `ScreenwritingQapp` component.
+/// Aether `ScreenwritingQapp` component.
 pub fn ScreenwritingQapp() -> Element {
     rsx! {
         QAppEngine {

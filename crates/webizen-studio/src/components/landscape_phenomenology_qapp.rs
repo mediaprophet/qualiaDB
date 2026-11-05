@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `LandscapePhenomenologyQapp` component.
+/// Aether `LandscapePhenomenologyQapp` component.
 pub fn LandscapePhenomenologyQapp() -> Element {
     rsx! {
         QAppEngine {

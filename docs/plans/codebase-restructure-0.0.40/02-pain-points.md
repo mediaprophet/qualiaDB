@@ -30,7 +30,7 @@ Each item ties to **real paths** on `0.0.40-dev`. Severity is for a small team /
 
 **Evidence:**
 
-- `webizen-studio` (Dioxus) + `webizen-desktop` (Tauri hosting studio) + `poet` (separate HyperCanvas wasm/rlib) + leftover portal static under desktop
+- `webizen-studio` (Aether) + `webizen-desktop` (Tauri hosting studio) + `poet` (separate HyperCanvas wasm/rlib) + leftover portal static under desktop
 - Studio still contains hundreds of `*_qapp.rs` academic stubs under `components/`
 - Human-surface WIP vows “One Poet · two hosts” but crate layout still looks like three products
 

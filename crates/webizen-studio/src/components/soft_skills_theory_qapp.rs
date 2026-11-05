@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `SoftSkillsTheoryQapp` component.
+/// Aether `SoftSkillsTheoryQapp` component.
 pub fn SoftSkillsTheoryQapp() -> Element {
     rsx! {
         QAppEngine {

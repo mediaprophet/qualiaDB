@@ -1,4 +1,4 @@
-//! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
+//! Host API client — all operating state flows through Tauri invoke, not Aether authority.
 
 use super::host_dto::ConsentGrantDraft;
 use super::host_dto::{
@@ -36,7 +36,7 @@ pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
 }
 
 #[component]
-/// Dioxus `HostSnapshotProvider` component.
+/// Aether `HostSnapshotProvider` component.
 pub fn HostSnapshotProvider(children: Element) -> Element {
     let mut snapshot = use_signal(WellfairHostSnapshot::default);
     let mut loaded = use_signal(|| false);

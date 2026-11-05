@@ -15,7 +15,7 @@ Comprehensive index of functionality for `webizen-component-harvester`. This doc
 
 ### Files & Exported Functionality
 - 📄 `Cargo.toml`
-- 📄 `generated_dioxus_components.rs`
+- 📄 `generated_aether_components.rs`
   - `fn SlAlert`
   - `fn SlAnimatedImage`
   - `fn SlAnimation`

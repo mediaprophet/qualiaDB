@@ -21,7 +21,7 @@ struct LifeUi {
 }
 
 #[component]
-/// Dioxus `WellfairLifePanel` component.
+/// Aether `WellfairLifePanel` component.
 pub fn WellfairLifePanel() -> Element {
     let mut ui = use_signal(LifeUi::default);
 

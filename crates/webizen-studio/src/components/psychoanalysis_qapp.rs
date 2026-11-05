@@ -2,7 +2,7 @@ use crate::components::QAppEngine;
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `PsychoanalysisQapp` component.
+/// Aether `PsychoanalysisQapp` component.
 pub fn PsychoanalysisQapp() -> Element {
     rsx! {
         QAppEngine {

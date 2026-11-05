@@ -1,7 +1,7 @@
 use aether::prelude::*;
 
 #[component]
-/// Dioxus `DeonticLogicEditor` component.
+/// Aether `DeonticLogicEditor` component.
 pub fn DeonticLogicEditor() -> Element {
     rsx! {
         div {
