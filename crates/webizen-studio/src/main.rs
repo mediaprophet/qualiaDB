@@ -220,17 +220,6 @@ pub enum Route {
     #[route("/agent-qa")]
     AgentQaRoute {},
 
-    #[route("/poet")]
-    PoetRoute {},
-
-    /// Secondary deep link — Catalog · Lexicon on Poet (not a top-level IA peer).
-    #[route("/poet/catalog")]
-    PoetCatalogRoute {},
-
-    /// Catalog · Instruments on Poet (Demo/Reference packs).
-    #[route("/poet/instruments")]
-    PoetInstrumentRoute {},
-
     #[route("/about")]
     AboutRoute {},
 
@@ -471,11 +460,6 @@ fn route_from_omnibox(query: &str) -> Route {
         "logs" => return Route::LogsRoute {},
         "jobs" | "tasks" | "downloads" | "queue" => return Route::JobsRoute {},
         "qa" | "debug" | "diagnostics" | "agent-qa" => return Route::AgentQaRoute {},
-        "poet" | "vibe" | "vibescript" => return Route::PoetRoute {},
-        "catalog" | "lexicon" | "lexicon-pack" => return Route::PoetCatalogRoute {},
-        "instruments" | "semantic-instrument" | "semantic-instruments" => {
-            return Route::PoetInstrumentRoute {}
-        }
         "identifiers" | "identifier" | "keys" | "selfhood" | "identity" => return Route::IdentityRoute {},
         "sanctuary" => return Route::SanctuaryRoute {},
         _ => {}
@@ -831,21 +815,6 @@ fn AgentQaRoute() -> Element {
 }
 
 #[component]
-fn PoetRoute() -> Element {
-    rsx! { components::poet_harness::PoetHarness {} }
-}
-
-#[component]
-fn PoetCatalogRoute() -> Element {
-    rsx! { components::poet_harness::PoetHarness {} }
-}
-
-#[component]
-fn PoetInstrumentRoute() -> Element {
-    rsx! { components::poet_harness::PoetHarness {} }
-}
-
-#[component]
 fn SupervisorRoute() -> Element {
     rsx! { components::problems_pane::ProblemsPane {} }
 }
@@ -1055,13 +1024,9 @@ fn DesktopLogsPage() -> Element {
 
 #[component]
 fn AppLayout() -> Element {
-    let route = use_route::<Route>();
     let theme_state = consume_context::<Signal<ResolvedTheme>>();
     let navigator = use_navigator();
     let native_menu_listener_started = use_signal(|| false);
-    // Poet routes used to early-return before shell-navigate / open-settings listeners,
-    // so Tools→Settings / Ctrl+, closed without painting Settings. Listeners always attach;
-    // Poet stays full-bleed via PoetHarness; Tools→Settings forces Classic + deferred Settings push.
     let host_status = use_signal(DesktopStatus::default);
     // Tools→Settings / Ctrl+, : Closure only sets this; a dioxus use_effect
     // performs navigator.push so we never push on the Tauri RefCell stack
@@ -1493,15 +1458,6 @@ fn AppLayout() -> Element {
     let mut omnibox = use_signal(String::new);
     let omnibox_nav = use_navigator();
 
-    // All hooks above have run. Poet routes full-bleed; Tools→Settings / Ctrl+,
-    // hash force + listeners (always subscribed) leave Poet for SettingsRoute.
-    if matches!(
-        route,
-        Route::PoetRoute {} | Route::PoetCatalogRoute {} | Route::PoetInstrumentRoute {}
-    ) {
-        return rsx! { Outlet::<Route> {} };
-    }
-
     rsx! {
         div {
             // min-height:0 on flex children is required so nested pages can scroll
@@ -1516,28 +1472,15 @@ fn AppLayout() -> Element {
                 // Keep popups from the top bar above the omnibox and route content below.
                 style: "position: relative; z-index: 100; overflow: visible; display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
-                if poet_chrome {
-                    Link {
-                        to: Route::PoetRoute {},
-                        style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
-                        title: "Poet — write Vibe, run Qualia. Classic routes remain.",
-                        div {
-                            style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
-                            "⬡"
-                        }
-                        span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Poet" }
+                Link {
+                    to: Route::TalkRoute {},
+                    style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
+                    title: "Talk — home (chat & people). Lived Memory is Memory / Library.",
+                    div {
+                        style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
+                        "⬡"
                     }
-                } else {
-                    Link {
-                        to: Route::TalkRoute {},
-                        style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
-                        title: "Talk — home (chat & people). Lived Memory is Memory / Library.",
-                        div {
-                            style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
-                            "⬡"
-                        }
-                        span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
-                    }
+                    span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
                 }
 
                 div {
@@ -1608,15 +1551,6 @@ fn AppLayout() -> Element {
                         sl-icon { "name": "tools", style: "font-size: 0.9rem;" }
                         "Instruments"
                     }
-                    if poet_chrome {
-                        Link {
-                            to: Route::PoetRoute {},
-                            class: "qtab",
-                            title: "Poet harness — Vibe 0.1 interpreter (Classic routes remain)",
-                            sl-icon { "name": "lightning", style: "font-size: 0.9rem;" }
-                            "Poet"
-                        }
-                    }
                     Link {
                         to: Route::SettingsRoute {},
                         class: "qtab",
@@ -1659,7 +1593,7 @@ fn AppLayout() -> Element {
                         style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.88rem; width: 100%; font-family: 'Inter', sans-serif;",
                         oninput: move |e| omnibox.set(e.value()),
                         onkeydown: move |e| {
-                            if e.key() == Key::Enter {
+                            if e.key().to_string() == "Enter" {
                                 let q = omnibox();
                                 let dest = route_from_omnibox(&q);
                                 omnibox.set(String::new());
@@ -1698,10 +1632,6 @@ fn AppLayout() -> Element {
                         }
                         Link { to: Route::WorkRoute {}, class: "nav-item", title: "Practice", sl-icon { "name": "kanban" } "Practice" }
                         Link { to: Route::ToolsRoute {}, class: "nav-item", title: "Instruments", sl-icon { "name": "tools" } "Instruments" }
-                        if poet_chrome {
-                            span { class: "app-sidebar-label", "Mindware" }
-                            Link { to: Route::PoetRoute {}, class: "nav-item", title: "Poet / Vibe harness", sl-icon { "name": "lightning" } "Poet / Vibe" }
-                        }
                         Link {
                             to: Route::SettingsRoute {},
                             class: "nav-item",
@@ -1742,7 +1672,6 @@ fn AppLayout() -> Element {
                                 Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
                                 Link { to: Route::JobsRoute {}, class: "nav-item", "Job centre" }
                                 Link { to: Route::AgentQaRoute {}, class: "nav-item", "Agent QA" }
-                                Link { to: Route::PoetRoute {}, class: "nav-item", "Poet / Vibe" }
                                 Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
                                 Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
@@ -2084,7 +2013,6 @@ mod route_identity_tests {
             Route::TalkDirectoryRoute {}
         );
         assert_eq!(route_from_omnibox("mail"), Route::TalkMailRoute {});
-        assert_ne!(route_from_omnibox("mail"), Route::PoetRoute {});
     }
 
     #[test]
@@ -2096,9 +2024,5 @@ mod route_identity_tests {
         assert_eq!(Route::TalkDirectoryRoute {}.to_string(), "/talk/directory");
         assert_eq!(Route::LibraryRoute {}.to_string(), "/library");
         assert_eq!(Route::SettingsRoute {}.to_string(), "/settings");
-        assert_ne!(
-            Route::TalkMailRoute {}.to_string(),
-            Route::PoetRoute {}.to_string()
-        );
     }
 }

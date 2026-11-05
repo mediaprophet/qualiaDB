@@ -9,7 +9,7 @@
 //! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
 //! `shield_alert`, and `chat-done` — never silent.
 
-use dioxus::html::input_data::keyboard_types::{Key, Modifiers};
+use dioxus::html::input_data::keyboard_types::Modifiers;
 use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
@@ -1605,7 +1605,7 @@ pub fn ConnectChat() -> Element {
                             onkeydown: move |e| {
                                 // Enter sends when draft non-empty; Shift+Enter keeps newline.
                                 // Empty draft: still preventDefault on bare Enter (no blank line).
-                                if e.key() == Key::Enter && !e.modifiers().contains(Modifiers::SHIFT) {
+                                if e.key().to_string() == "Enter" && !e.modifiers().contains(Modifiers::SHIFT) {
                                     e.prevent_default();
                                     if draft().trim().is_empty() {
                                         return;

@@ -9,9 +9,34 @@
 //! Follows `AGENTS.md` §0-B (< 480 lines).
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
-use crate::components::poet::engine;
-use crate::components::poet::host::copy_to_clipboard;
+use crate::components::settings::host::invoke_json;
 use dioxus::prelude::*;
+
+mod engine {
+    use super::invoke_json;
+
+    pub async fn eval(source: String, as_cell: bool, function: Option<String>) -> Result<serde_json::Value, String> {
+        invoke_json(
+            "poet_eval",
+            serde_json::json!({ "source": source, "as_cell": as_cell, "function": function }),
+        )
+        .await
+    }
+}
+
+fn copy_to_clipboard(text: String) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(window) = web_sys::window() {
+            let clipboard = window.navigator().clipboard();
+            let _ = clipboard.write_text(&text);
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = text;
+    }
+}
 
 const LBL: &str = "font-size:0.68rem;color:var(--text-muted,#94a3b8);text-transform:uppercase;letter-spacing:0.04em;font-weight:600;display:block;margin-bottom:3px;";
 const INP: &str = "width:100%;background:#111622;border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;border-radius:6px;padding:4px 8px;font-size:0.74rem;box-sizing:border-box;";

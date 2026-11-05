@@ -142,12 +142,6 @@ pub fn RelationsShell(#[props(default)] initial_tab: String) -> Element {
                         onclick: move |_| { nav.push(crate::Route::QAppsRoute {}); },
                         "📦 Qaps Launcher"
                     }
-                    button {
-                        r#type: "button",
-                        style: "padding:2px 8px;border-radius:4px;background:#1e293b;color:#f59e0b;border:1px solid #334155;cursor:pointer;",
-                        onclick: move |_| { nav.push(crate::Route::PoetRoute {}); },
-                        "⬡ POET Shed"
-                    }
                 }
                 match section() {
                     RelationsSection::Inbox => rsx! { crate::components::connect_chat::ConnectChat {} },

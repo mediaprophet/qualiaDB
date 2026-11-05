@@ -10,20 +10,22 @@ fn record_uuid(record_id: &str) -> Option<String> {
     record_id.rsplit(':').next().map(str::to_string)
 }
 
-pub fn stash_poet_project_handoff(project_id: &str, project_name: &str) {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.session_storage() {
-            let json = format!(
-                r#"{{"project_id":"{}","project_name":"{}"}}"#,
-                project_id.replace('"', "\\\""),
-                project_name.replace('"', "\\\"")
-            );
-            let _ = storage.set_item("webizen_poet_project", &json);
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _ = (project_id, project_name);
+#[derive(serde::Deserialize)]
+struct HostEvalResult {
+    #[serde(default)]
+    ok: bool,
+    #[serde(default)]
+    value: String,
+    #[serde(default)]
+    diagnostic: Option<String>,
+}
+
+async fn host_eval(source: String) -> Result<HostEvalResult, String> {
+    crate::components::settings::host::invoke_json(
+        "poet_eval",
+        serde_json::json!({ "source": source, "as_cell": false, "function": Option::<String>::None }),
+    )
+    .await
 }
 
 #[derive(Clone, Debug)]
@@ -72,7 +74,6 @@ impl Default for ProjectsUi {
 pub fn WellfairProjectsPanel() -> Element {
     let mut ui = use_signal(ProjectsUi::default);
 
-    let nav = use_navigator();
     let reload = move || {
         spawn(async move {
             if let Ok(list) = fetch_health_records(96).await {
@@ -126,20 +127,6 @@ pub fn WellfairProjectsPanel() -> Element {
             super::shared::DomainChrome { domain: "Practice", chip: "Labour · cooperative work", show_memory: true }
             div { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:6px;",
                 h2 { style: "margin:0;font-size:1rem;", "Cooperative projects" }
-                button {
-                    r#type: "button",
-                    style: "background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);color:var(--accent-cyan,#0284c7);font-size:11px;font-weight:650;padding:3px 9px;border-radius:6px;cursor:pointer;",
-                    title: "Open Selected Project in POET Shed",
-                    onclick: {
-                        let nav = nav;
-                        move |_| {
-                            let pid = ui().selected_project_id.clone();
-                            stash_poet_project_handoff(&pid, "Active Project");
-                            let _ = nav.push(crate::Route::PoetRoute {});
-                        }
-                    },
-                    "⬡ Open in POET Shed"
-                }
             }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
@@ -324,7 +311,7 @@ pub fn WellfairProjectsPanel() -> Element {
                                 "Poet.toolchain_execute(\"coop_contribution_log\", \"{}\")",
                                 format!("#{{ project: \"{}\", contributor: \"{}\", effort_mins: {}, capital_cents: {}, roi: {}, artifact: \"{}\" }}", proj, did.trim(), eff, cap_cents, roi, artifact)
                             );
-                            let msg = match crate::components::poet::engine::eval(eval_code, false, None).await {
+                            let msg = match host_eval(eval_code).await {
                                 Ok(res) if res.ok => {
                                     let l = 0x0001_A3F2u32 & 0x1FFF_FFFF;
                                     format!("✅ Contribution saved & bound to POET!\nReceipt: did:q42:{proj}:0x8000000000000000 [Lamport: #{l} | 48B NQuins: 16]")
@@ -360,7 +347,6 @@ pub fn WellfairProjectsPanel() -> Element {
                                 th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Capital" }
                                 th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Resolved ROI" }
                                 th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Count" }
-                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "POET" }
                             }
                         }
                         tbody {
@@ -373,21 +359,6 @@ pub fn WellfairProjectsPanel() -> Element {
                                     td { style: "padding:0.4rem;", "${(ob.total_capital_cents as f64) / 100.0:.2}" }
                                     td { style: "padding:0.4rem;font-weight:bold;color:var(--qualia-accent,#2a6f97);", "{ob.resolved_obligation_score:.2}" }
                                     td { style: "padding:0.4rem;", "{ob.contribution_count}" }
-                                    td { style: "padding:0.4rem;",
-                                        button {
-                                            r#type: "button",
-                                            style: "background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:var(--accent-cyan,#0284c7);font-size:10px;padding:2px 6px;border-radius:4px;cursor:pointer;",
-                                            onclick: {
-                                                let nav = nav;
-                                                let pid = ob.project_id.clone();
-                                                move |_| {
-                                                    stash_poet_project_handoff(&pid, &pid);
-                                                    let _ = nav.push(crate::Route::PoetRoute {});
-                                                }
-                                            },
-                                            "⬡ POET"
-                                        }
-                                    }
                                 }
                             }
                         }

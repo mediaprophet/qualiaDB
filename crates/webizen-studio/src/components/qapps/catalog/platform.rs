@@ -10,7 +10,7 @@ pub(super) fn apps() -> Vec<QApp> {
             tagline: "Volumetric Studio & Mind-Map",
             desc: "Author containers, 10D manifolds, context-adaptive toolboxes, custom toolchains, and formal logic mind-map connections.",
             icon: "bounding-box-circles",
-            route: Some(AppRoute::Poet),
+            route: None,
             stat: Stat::Active,
             cat: Cat::Platform,
         },

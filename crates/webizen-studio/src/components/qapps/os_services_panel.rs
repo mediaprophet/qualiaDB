@@ -5,8 +5,30 @@
 //! Copyright (c) 2026 Timothy Charles Holborn. All rights reserved.
 
 use crate::Route;
-use crate::components::poet::engine;
+use crate::components::settings::host::invoke_json;
 use dioxus::prelude::*;
+
+mod engine {
+    use super::invoke_json;
+
+    #[derive(serde::Deserialize)]
+    pub struct EvalResult {
+        #[serde(default)]
+        pub ok: bool,
+        #[serde(default)]
+        pub value: String,
+        #[serde(default)]
+        pub committed: bool,
+    }
+
+    pub async fn eval(source: String, as_cell: bool, function: Option<String>) -> Result<EvalResult, String> {
+        invoke_json(
+            "poet_eval",
+            serde_json::json!({ "source": source, "as_cell": as_cell, "function": function }),
+        )
+        .await
+    }
+}
 
 const BADGE_CORE: &str = "font-size:0.60rem;font-weight:700;color:var(--accent-cyan,#38bdf8);background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);border-radius:6px;padding:1px 5px;letter-spacing:0.03em;text-transform:uppercase;";
 const BADGE_MODULAR: &str = "font-size:0.60rem;font-weight:700;color:#a855f7;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:6px;padding:1px 5px;letter-spacing:0.03em;text-transform:uppercase;";
@@ -32,9 +54,9 @@ struct LaunchableApp {
 fn launchable_apps() -> Vec<LaunchableApp> {
     vec![
         LaunchableApp {
-            id: "poet-authoring", name: "POET Authoring Shed", tagline: "Volumetric Studio, Shed Constructs & Mind-Map", icon: "bounding-box-circles", is_core: true,
+            id: "poet-authoring", name: "POET Authoring Shed", tagline: "Volumetric Studio, Shed Constructs & Mind-Map", icon: "bounding-box-circles", is_core: false,
             package_dir: "Poet", did_git: "did:git:github.com/webizen/qap-poet", repo_url: "https://github.com/webizen/qap-poet",
-            version: "0.1.0", offered_version: "0.1.2", shared_services: &["Scheduler", "PermissiveCommons", "Identifiers"], route: Route::PoetRoute {},
+            version: "0.1.0", offered_version: "0.1.2", shared_services: &["Scheduler", "PermissiveCommons", "Identifiers"], route: Route::QAppsRoute {},
         },
         LaunchableApp {
             id: "wallet-crypto", name: "Wallet & Crypto Commerce", tagline: "Blockchain Wallets, Token Assets & Settlement", icon: "wallet2", is_core: true,

@@ -94,7 +94,6 @@ pub(crate) enum AppRoute {
     TalkPeople,
     /// Daily inbox under Talk → Mail — not Poet Domain.info admin.
     TalkMail,
-    Poet,
     WorkProjects,
     WalletCrypto,
     HypermediaLibrary,
@@ -214,7 +213,6 @@ pub(crate) enum BtnKind {
     LaunchNexus,
     LaunchTalkPeople,
     LaunchTalkMail,
-    LaunchPoet,
     LaunchWorkProjects,
     LaunchWalletCrypto,
     LaunchHypermediaLibrary,

@@ -1465,7 +1465,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         onkeydown: {
                                             let mut generate_nonce = generate_nonce.clone();
                                             move |e: Event<KeyboardData>| {
-                                                if e.key() == Key::Enter {
+                                                if e.key().to_string() == "Enter" {
                                                     generate_nonce.set(generate_nonce() + 1);
                                                 }
                                             }

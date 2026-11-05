@@ -14,8 +14,6 @@ pub mod nexus;
 pub mod onboarding;
 pub mod ontology_import_wizard;
 pub mod personal_ontology;
-pub mod poet;
-pub mod poet_harness;
 pub mod q_viewport;
 pub mod qapp_dispatcher;
 pub mod qapps;

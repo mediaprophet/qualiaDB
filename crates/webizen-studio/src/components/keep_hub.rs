@@ -12,9 +12,48 @@ use webizen_studio::keep_volume::{
 #[cfg(target_arch = "wasm32")]
 use webizen_studio::keep_volume::{parse_recents_json, recents_json, RECENT_STORAGE_KEY};
 
-use crate::components::poet::engine::{self, PoetEvalResult};
 use crate::components::qapp_engine::invoke_json;
 use crate::Route;
+
+#[derive(serde::Deserialize)]
+struct VolumeEvalResult {
+    #[serde(default)]
+    ok: bool,
+    #[serde(default)]
+    value: String,
+    #[serde(default)]
+    diagnostic: Option<String>,
+}
+
+async fn browse_q42_volume() -> Result<Option<String>, String> {
+    let value = invoke_json("browse_q42_volume", serde_json::json!({})).await?;
+    Ok(value.get("path").and_then(|v| v.as_str()).map(str::to_string))
+}
+
+async fn start_q42_volume() -> Result<Option<String>, String> {
+    let value = invoke_json("start_q42_volume", serde_json::json!({})).await?;
+    Ok(value.get("path").and_then(|v| v.as_str()).map(str::to_string))
+}
+
+async fn volume_open(path: String, create: bool) -> Result<VolumeEvalResult, String> {
+    let source = format!("GraphDatabase.volume_open({path:?}, {create})");
+    let value = invoke_json(
+        "poet_eval",
+        serde_json::json!({ "source": source, "as_cell": false, "function": Option::<String>::None }),
+    )
+    .await?;
+    serde_json::from_value(value).map_err(|e| e.to_string())
+}
+
+async fn volume_commit(path: String) -> Result<VolumeEvalResult, String> {
+    let source = format!("GraphDatabase.volume_commit({path:?})");
+    let value = invoke_json(
+        "poet_eval",
+        serde_json::json!({ "source": source, "as_cell": false, "function": Option::<String>::None }),
+    )
+    .await?;
+    serde_json::from_value(value).map_err(|e| e.to_string())
+}
 
 #[component]
 /// Dioxus `KeepHub` component.
@@ -235,8 +274,6 @@ fn KeepDirectory() -> Element {
             KeepLink { to: Route::AnatomyRoute {}, title: "Care — Anatomy", blurb: "See systems and conditions on a reference body." }
             KeepLink { to: Route::HealthRoute {}, title: "Care — Health vault", blurb: "Vitals, sleep, medication, wellbeing — local journal, not cloud." }
             KeepLink { to: Route::LibraryRoute {}, title: "Memory — Lived Memory", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
-            KeepLink { to: Route::PoetCatalogRoute {}, title: "Catalog · Lexicon", blurb: "Open a lexicon pack — or honest held / not yet. Live GraphDatabase.lexicon_manifest." }
-            KeepLink { to: Route::PoetInstrumentRoute {}, title: "Catalog · Instruments", blurb: "Demo and Reference semantic instruments. Collect is not activate. Artwork is not proof." }
             KeepLink { to: Route::VisionRoute {}, title: "Instruments — Vision", blurb: "Local detect/overlay — not a peer person. Synthetic scenes, reject/correct without erasing claims." }
             KeepLink { to: Route::ListenRoute {}, title: "Instruments — Listen", blurb: "Local ears — features, reference events (not full ASR). Not social." }
             KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }
@@ -378,7 +415,7 @@ fn browse_existing(
     }
     busy.set(true);
     spawn(async move {
-        match engine::browse_q42_volume().await {
+        match browse_q42_volume().await {
             Ok(Some(path)) if !path.trim().is_empty() => {
                 selected.set(path.clone());
                 remember_path(&path, &mut recents, &mut browse);
@@ -403,7 +440,7 @@ fn start_keep(
     }
     busy.set(true);
     spawn(async move {
-        match engine::start_q42_volume().await {
+        match start_q42_volume().await {
             Ok(Some(path)) if !path.trim().is_empty() => {
                 selected.set(path.clone());
                 remember_path(&path, &mut recents, &mut browse);
@@ -432,12 +469,11 @@ fn open_selected(
     }
     busy.set(true);
     spawn(async move {
-        let next = match engine::volume_open(path.clone(), create).await {
-            Ok(PoetEvalResult {
+        let next = match volume_open(path.clone(), create).await {
+            Ok(VolumeEvalResult {
                 ok,
                 value,
                 diagnostic,
-                ..
             }) => interpret_open(ok, &value, diagnostic.as_deref(), &path),
             Err(_) => held_outcome(HELD_WHY),
         };
@@ -463,12 +499,11 @@ fn commit_selected(
     }
     busy.set(true);
     spawn(async move {
-        let next = match engine::volume_commit(path.clone()).await {
-            Ok(PoetEvalResult {
+        let next = match volume_commit(path.clone()).await {
+            Ok(VolumeEvalResult {
                 ok,
                 value,
                 diagnostic,
-                ..
             }) => interpret_commit(ok, &value, diagnostic.as_deref(), &path),
             Err(_) => held_outcome(HELD_WHY),
         };

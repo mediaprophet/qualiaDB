@@ -71,7 +71,6 @@ pub fn QApps() -> Element {
                 (Stat::Active, Some(AppRoute::Nexus)) => BtnKind::LaunchNexus,
                 (Stat::Active, Some(AppRoute::TalkPeople)) => BtnKind::LaunchTalkPeople,
                 (Stat::Active, Some(AppRoute::TalkMail)) => BtnKind::LaunchTalkMail,
-                (Stat::Active, Some(AppRoute::Poet)) => BtnKind::LaunchPoet,
                 (Stat::Active, Some(AppRoute::WorkProjects)) => BtnKind::LaunchWorkProjects,
                 (Stat::Active, Some(AppRoute::WalletCrypto)) => BtnKind::LaunchWalletCrypto,
                 (Stat::Active, Some(AppRoute::HypermediaLibrary)) => BtnKind::LaunchHypermediaLibrary,
@@ -330,9 +329,6 @@ pub fn QApps() -> Element {
                                                 sl-icon { "name": "pencil", style: "font-size: 0.68rem;" }
                                                 "Edit"
                                             }
-                                        },
-                                        BtnKind::LaunchPoet => rsx! {
-                                            Link { to: Route::PoetRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }
                                         },
                                         BtnKind::LaunchWorkProjects => rsx! {
                                             Link { to: Route::WorkRoute {}, style: "{LAUNCH_BTN}", sl-icon { "name": "box-arrow-up-right", style: "font-size: 0.68rem;" } "Launch" }

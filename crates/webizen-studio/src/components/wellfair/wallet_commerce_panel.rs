@@ -144,15 +144,24 @@ impl PermissiveRoutingLane {
     }
 }
 
-pub fn stash_poet_handoff(construct: &str) {
-    #[cfg(target_arch = "wasm32")]
-    if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.session_storage() {
-            let _ = storage.set_item("webizen_poet_handoff", construct);
-        }
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    let _ = construct;
+#[derive(serde::Deserialize)]
+struct HostEvalResult {
+    #[serde(default)]
+    ok: bool,
+    #[serde(default)]
+    value: String,
+    #[serde(default)]
+    committed: bool,
+    #[serde(default)]
+    diagnostic: Option<String>,
+}
+
+async fn host_eval(source: String) -> Result<HostEvalResult, String> {
+    crate::components::settings::host::invoke_json(
+        "poet_eval",
+        serde_json::json!({ "source": source, "as_cell": false, "function": Option::<String>::None }),
+    )
+    .await
 }
 
 #[component]
@@ -170,7 +179,6 @@ pub fn WellfairWalletCommercePanel() -> Element {
     let mut receipt = use_signal(|| String::new());
     let mut busy = use_signal(|| false);
 
-    let nav = use_navigator();
     let chain = selected_chain();
     let lane = selected_lane();
 
@@ -181,19 +189,6 @@ pub fn WellfairWalletCommercePanel() -> Element {
             super::shared::DomainChrome { domain: "Finance", chip: "Qap · Multi-Chain Wallet & Cooperative Commerce", show_memory: true }
             div { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;flex-wrap:wrap;gap:6px;",
                 h2 { style: "margin:0;font-size:1rem;color:var(--qualia-text,#1e293b);", "Multi-Chain Sovereign Wallet & Commerce Ledger" }
-                button {
-                    r#type: "button",
-                    style: "background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);color:var(--accent-cyan,#0284c7);font-size:11px;font-weight:650;padding:3px 9px;border-radius:6px;cursor:pointer;",
-                    title: "Switch to POET Shed Economics Construct",
-                    onclick: {
-                        let nav = nav;
-                        move |_| {
-                            stash_poet_handoff("economics");
-                            let _ = nav.push(crate::Route::PoetRoute {});
-                        }
-                    },
-                    "⬡ Open Wallet & Commerce Construct in POET Shed"
-                }
             }
             p { style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
                 "Non-custodial cryptographic keys, deterministic hardware addresses, and cross-chain cooperative settlements backed by 48-byte Super-Quins."
@@ -254,7 +249,7 @@ pub fn WellfairWalletCommercePanel() -> Element {
                                     "Poet.toolchain_execute(\"service_permissive_commons\", \"#{{ lane: \\\"{}\\\", chain: \\\"{}\\\", op: \\\"sync_quota\\\" }}\")",
                                     lane_code, ch_id
                                 );
-                                let msg = match crate::components::poet::engine::eval(code, false, None).await {
+                                let msg = match host_eval(code).await {
                                     Ok(res) if res.ok => {
                                         format!("⚡ SDN Quota Synced: Lane {lane_code} on {ch_id} [25GB Commons Allocated | Lamport #0x1A42]")
                                     }
@@ -370,7 +365,7 @@ pub fn WellfairWalletCommercePanel() -> Element {
                             "Poet.toolchain_execute(\"commerce_settle\", \"{}\")",
                             format!("#{{ chain: \"{}\", asset: \"{}\", amount: {}, counterparty: \"{}\", project: \"{}\" }}", c.id(), ast, amt_str, cp, proj)
                         );
-                        let msg = match crate::components::poet::engine::eval(code, false, None).await {
+                        let msg = match host_eval(code).await {
                             Ok(res) if res.ok => {
                                 let l = 0x0001_A3F2u32 & 0x1FFF_FFFF;
                                 format!(

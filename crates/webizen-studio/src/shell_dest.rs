@@ -57,11 +57,6 @@ pub fn route_from_shell_target(raw: &str) -> Route {
         "logs" => Route::LogsRoute {},
         "jobs" => Route::JobsRoute {},
         "gpu-viewport" => Route::GpuViewportRoute {},
-        "poet" | "vibe" => Route::PoetRoute {},
-        "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
-        "instruments" | "semantic-instrument" | "semantic-instruments" => {
-            Route::PoetInstrumentRoute {}
-        }
         _ => Route::TalkRoute {},
     }
 }
@@ -95,7 +90,6 @@ mod tests {
             route_from_shell_target("/studio/#/mail"),
             Route::TalkMailRoute {}
         );
-        assert_ne!(route_from_shell_target("mail"), Route::PoetRoute {});
     }
 
     #[test]

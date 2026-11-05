@@ -151,11 +151,10 @@ pub fn route_for_palette_id(id: &str) -> Route {
         "10d-browser" | "10d" | "infosphere" => Route::TenDBrowserRoute {},
         "settings" | "prefs" => Route::SettingsRoute {},
         "qapps" | "apps" => Route::QAppsRoute {},
-        "catalog" | "lexicon" | "lexicon-pack" => Route::PoetCatalogRoute {},
+        "catalog" | "lexicon" | "lexicon-pack" => Route::LibraryRoute {},
         "semantic-instrument" | "semantic-instruments" | "instrument-pack" => {
-            Route::PoetInstrumentRoute {}
+            Route::ToolsRoute {}
         }
-        "poet" | "vibe" => Route::PoetRoute {},
         "logs" => Route::LogsRoute {},
         _ => Route::TalkRoute {},
     }
@@ -319,24 +318,24 @@ pub fn CommandPalette() -> Element {
                             } else {
                                 active().min(count - 1)
                             };
-                            match e.key() {
-                                Key::Escape => {
+                            match e.key().to_string().as_str() {
+                                "Escape" => {
                                     open.set(false);
                                     query.set(String::new());
                                 }
-                                Key::ArrowDown => {
+                                "ArrowDown" => {
                                     e.prevent_default();
                                     if count > 0 {
                                         active.set((idx + 1) % count);
                                     }
                                 }
-                                Key::ArrowUp => {
+                                "ArrowUp" => {
                                     e.prevent_default();
                                     if count > 0 {
                                         active.set((idx + count - 1) % count);
                                     }
                                 }
-                                Key::Enter => {
+                                "Enter" => {
                                     e.prevent_default();
                                     if let Some(dest) = items.get(idx) {
                                         prepare_palette_navigation(dest.id);
@@ -473,15 +472,15 @@ mod tests {
         );
         assert!(matches!(
             route_for_palette_id("catalog"),
-            Route::PoetCatalogRoute {}
+            Route::LibraryRoute {}
         ));
         assert!(matches!(
             route_for_palette_id("lexicon"),
-            Route::PoetCatalogRoute {}
+            Route::LibraryRoute {}
         ));
         assert!(matches!(
             route_for_palette_id("semantic-instrument"),
-            Route::PoetInstrumentRoute {}
+            Route::ToolsRoute {}
         ));
     }
 
@@ -493,7 +492,6 @@ mod tests {
             route_for_palette_id("mail"),
             Route::TalkMailRoute {}
         ));
-        assert_ne!(route_for_palette_id("mail"), Route::PoetRoute {});
         assert_eq!(Route::TalkMailRoute {}.to_string(), "/talk/mail");
     }
 
