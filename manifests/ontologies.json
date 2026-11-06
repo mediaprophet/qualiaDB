@@ -182,7 +182,16 @@
       "description": "OGC spatial ontology — SpatialObject/Feature/Geometry classes, Simple Features topological relations (sfWithin, sfIntersects), WKT/GML geometry serialisations. Needed for scene placement and corridor geometry semantics.",
       "url": "http://schemas.opengis.net/geosparql/1.0/geosparql_vocab_all.rdf",
       "filename": "geosparql_vocab_all.rdf"
+    },
+    {
+      "id": "identifier-fabric-shapes",
+      "name": "QualiaDB Identifier Fabric SHACL Shapes",
+      "version": "4.0",
+      "type": "Turtle",
+      "size": "~12 KB",
+      "description": "SHACL shapes separating Who/NaturalAgent, Claim, SpatiotemporalHandle, and Instrument planes, co-attestation bundles, and key roles.",
+      "url": "ontologies/identifier_fabric_shapes.ttl",
+      "filename": "identifier_fabric_shapes.ttl"
     }
   ]
 }
-

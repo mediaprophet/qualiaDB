@@ -227,6 +227,30 @@ impl ReservationLedger {
         self.sub_used(add, verified_peer)
     }
 
+    /// Release `handle` only if `(slot, generation)` matches AND the authoritative
+    /// recorded byte reservation equals `expected_bytes` (`R10` / `R11`).
+    pub fn release_checked_bytes(
+        &mut self,
+        handle: ReservationHandle,
+        expected_bytes: u64,
+    ) -> Result<(), QdnfError> {
+        let i = handle.slot as usize;
+        if i >= HANDLE_SLOTS {
+            return Err(QdnfError::Range);
+        }
+        let slot = &self.handles[i];
+        if !slot.occupied {
+            return Err(QdnfError::DoubleRelease);
+        }
+        if slot.generation != handle.generation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        if slot.budget.bytes != expected_bytes {
+            return Err(QdnfError::Conflict);
+        }
+        self.release(handle)
+    }
+
     fn sub_used(&mut self, add: ResourceBudget, verified_peer: bool) -> Result<(), QdnfError> {
         self.used.host.bytes = self.used.host.bytes.saturating_sub(add.bytes);
         self.used.host.work = self.used.host.work.saturating_sub(add.work);
@@ -369,5 +393,24 @@ mod tests {
         };
         let _ = handle;
         assert_eq!(ledger.release(forged), Err(QdnfError::StaleGeneration));
+    }
+
+    #[test]
+    fn r10_r11_release_checked_bytes_rejects_mismatched_caller_amount_and_stale_generation() {
+        let mut ledger = caps();
+        let add = ResourceBudget {
+            bytes: 32,
+            work: 1,
+            io: 1,
+        };
+        let handle = ledger.reserve(add, true).unwrap();
+        let wrong_amount_ref = handle.as_ref();
+        assert_eq!(
+            ledger.release_checked_bytes(ReservationHandle::from_ref(wrong_amount_ref), 64),
+            Err(QdnfError::Conflict)
+        );
+        assert_eq!(ledger.used().host.bytes, 32);
+        assert_eq!(ledger.release_checked_bytes(handle, 32), Ok(()));
+        assert_eq!(ledger.used().host.bytes, 0);
     }
 }

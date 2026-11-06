@@ -124,9 +124,18 @@ const TERMS = [
     'https://schema.org/Person',
     'https://schema.org/Organization',
     'https://schema.org/CreativeWork',
+    'http://www.w3.org/ns/shacl#NodeShape',
+    'http://www.w3.org/ns/shacl#PropertyShape',
+    'http://www.w3.org/ns/shacl#ValidationReport',
     'did:q42:z6MkpTHR8VNsA',
     'did:q42:z6MkpTHR8VNsB',
     'did:q42:z6MkpTHR8VNsC',
+    'did:qi:instrument-sensor-01',
+    'did:qi:instrument-sensor-02',
+    'did:qi:instrument-sensor-03',
+    'urn:omni:handle:earth-tile-01',
+    'urn:omni:handle:earth-tile-02',
+    'urn:omni:handle:earth-tile-03',
     'bare-literal-no-separator',
 ];
 
@@ -137,9 +146,16 @@ function assert(condition, message) {
     }
 }
 
-// v4: every term — HTTP IRI, DID namespace, and bare literal — round-trips.
+// v4: every term — HTTP IRI, SHACL IRI, DID namespace, URN namespace, and bare literal — round-trips.
+const v4Bytes = buildPagedLexicon(TERMS, 4);
+const v2Bytes = buildPagedLexicon(TERMS, 2);
+assert(
+    v4Bytes.byteLength <= v2Bytes.byteLength,
+    `v4 namespaced lexicon (${v4Bytes.byteLength} B) must be <= v2 verbatim (${v2Bytes.byteLength} B)`
+);
+
 const vfsV4 = new VFS('http://example.invalid/vol.q42');
-vfsV4._parseLexiconBytes(buildPagedLexicon(TERMS, 4));
+vfsV4._parseLexiconBytes(v4Bytes);
 assert(vfsV4.lexLoaded, 'v4 lexicon must load');
 for (const term of TERMS) {
     const got = vfsV4.lookup(fnv1a64(term));
@@ -148,11 +164,11 @@ for (const term of TERMS) {
         `v4 term must round-trip: expected ${term}, got ${got}`
     );
 }
-console.log(`lexicon-v4: ${vfsV4._lexMap.size}/${TERMS.length} terms reconstructed`);
+console.log(`lexicon-v4: ${vfsV4._lexMap.size}/${TERMS.length} terms reconstructed (${v4Bytes.byteLength} B vs ${v2Bytes.byteLength} B v2)`);
 
 // v2: plain verbatim pages still parse (back-compat for pre-v4 volumes).
 const vfsV2 = new VFS('http://example.invalid/vol.q42');
-vfsV2._parseLexiconBytes(buildPagedLexicon(TERMS, 2));
+vfsV2._parseLexiconBytes(v2Bytes);
 for (const term of TERMS) {
     const got = vfsV2.lookup(fnv1a64(term));
     assert(got === term, `v2 term must round-trip: expected ${term}, got ${got}`);

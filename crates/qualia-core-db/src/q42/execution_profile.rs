@@ -16,6 +16,57 @@ pub const EXECUTION_PROFILE_VERSION: u32 = 1;
 /// File suffix: `model.f16.p64` → `model.f16.execution-profile.json` (stem-preserving).
 pub const EXECUTION_PROFILE_SUFFIX: &str = "execution-profile.json";
 
+/// Exactness class of an execution lane (`ADR 0003` / Q42 v4 §6.2.3).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum ExactnessProfile {
+    /// Exact integer, rational, symbolic, or bitwise-deterministic evaluation (`mismatches == 0`).
+    Exact,
+    /// Bounded numerical evaluation with explicit non-negative finite error bounds.
+    DeterministicApproximate { abs_bound: f64, rel_bound: f64 },
+    /// Heuristic, stochastic, or fast-math GPU preview lane; never admissible as a policy/rights oracle.
+    InteractiveApproximate,
+}
+
+/// Epistemic solver verification outcome distinguishing witness verification, bounded domain exhaustion,
+/// incomplete budget exhaustion, and global mathematical impossibility (`Q42-08` / §6.2.3).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SolverVerificationOutcome {
+    /// Concrete witness verified via exact integer/symbolic arithmetic.
+    WitnessChecked,
+    /// Exhaustively proved unsatisfiable within the declared bounded search domain.
+    UnsatisfiableWithinDomain,
+    /// Search/QPU/heuristic budget exhausted without a verified witness or impossibility proof.
+    UnknownWithinBudget,
+    /// Global algebraic/modular obstruction proved (e.g., `k ≡ 4, 5 (mod 9)` for `x^3 + y^3 + z^3 = k`).
+    GlobalImpossibilityProved,
+}
+
+/// Gate function enforcing `ADR 0003`: policy, deontic, and identity decisions require exact
+/// verification (`Exact` or zero-error `DeterministicApproximate`) and hard-reject `InteractiveApproximate`.
+pub fn admit_for_policy_decision(profile: &ExactnessProfile) -> Result<(), &'static str> {
+    match profile {
+        ExactnessProfile::Exact => Ok(()),
+        ExactnessProfile::DeterministicApproximate {
+            abs_bound,
+            rel_bound,
+        } if abs_bound.is_finite()
+            && rel_bound.is_finite()
+            && *abs_bound == 0.0
+            && *rel_bound == 0.0 =>
+        {
+            Ok(())
+        }
+        ExactnessProfile::DeterministicApproximate { .. } => Err(
+            "DeterministicApproximate with non-zero error bounds cannot be admitted for policy/rights decisions without an exact CPU/symbolic oracle check",
+        ),
+        ExactnessProfile::InteractiveApproximate => Err(
+            "InteractiveApproximate results are forbidden for policy, deontic, or identity decisions (ADR 0003)",
+        ),
+    }
+}
+
 /// Attested run recipe for a converted native weight package.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExecutionProfile {
@@ -296,5 +347,29 @@ mod tests {
         assert_eq!(loaded.metrics.decode_proxy_tok_s, Some(12.5));
         assert!(loaded.representation.ternary_158_available);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn exactness_profile_policy_admission_gate() {
+        assert!(admit_for_policy_decision(&ExactnessProfile::Exact).is_ok());
+        assert!(admit_for_policy_decision(&ExactnessProfile::DeterministicApproximate {
+            abs_bound: 0.0,
+            rel_bound: 0.0,
+        })
+        .is_ok());
+        assert!(admit_for_policy_decision(&ExactnessProfile::DeterministicApproximate {
+            abs_bound: 1e-6,
+            rel_bound: 1e-6,
+        })
+        .is_err());
+        assert!(admit_for_policy_decision(&ExactnessProfile::InteractiveApproximate).is_err());
+
+        let outcomes = [
+            SolverVerificationOutcome::WitnessChecked,
+            SolverVerificationOutcome::UnsatisfiableWithinDomain,
+            SolverVerificationOutcome::UnknownWithinBudget,
+            SolverVerificationOutcome::GlobalImpossibilityProved,
+        ];
+        assert_eq!(outcomes.len(), 4);
     }
 }

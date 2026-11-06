@@ -3103,3 +3103,121 @@ fn cosmic5_quantum_parses() {
     let src = include_str!("../fixtures/cosmic5_quantum.vibe");
     load_program(src).expect("cosmic5 fixture");
 }
+
+// ── Identifier Fabric plane-collapse guard conformance tests (Packet IDF-04) ──
+
+#[test]
+fn f5_a_collapse_did_to_who() {
+    let src = r#"
+fn bad_identity_binding() {
+    let who = "did:q42:sector:alpha:node7";
+    return who;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-A must reject collapsing did: into who");
+    let err = rep.error.as_ref().expect("expected F5-A diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-A\""));
+    assert!(fix.contains("\"plane\":\"NaturalAgent\""));
+    assert!(fix.contains("\"framing\":\"living-SHACL\""));
+    assert!(fix.contains("\"instrumentKind\":\"Did\""));
+}
+
+#[test]
+fn f5_b_vc_verified_as_objective_truth() {
+    let src = r#"
+fn bad_vc_truth(vc_verified: bool) {
+    let objective_truth = vc_verified;
+    return objective_truth;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-B must reject treating vc_verified as objective_truth");
+    let err = rep.error.as_ref().expect("expected F5-B diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-B\""));
+    assert!(fix.contains("\"plane\":\"ClaimOpinion\""));
+    assert!(fix.contains("\"framing\":\"artifact-OWL\""));
+    assert!(fix.contains("\"instrumentKind\":\"VerifiableCredential\""));
+}
+
+#[test]
+fn f5_c_qrc_observer_as_person_join_key() {
+    let src = r#"
+fn bad_qrc_person_join() {
+    let person_join_key = "did:q42:earth:sydney:cell9";
+    return person_join_key;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-C must reject using did:q42: QRC as person_join_key");
+    let err = rep.error.as_ref().expect("expected F5-C diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-C\""));
+    assert!(fix.contains("\"plane\":\"SpatiotemporalHandle\""));
+    assert!(fix.contains("\"framing\":\"artifact-OWL\""));
+    assert!(fix.contains("\"instrumentKind\":\"QrcCoordinate\""));
+}
+
+#[test]
+fn f5_d_biometric_instance_without_family_as_who() {
+    let src = r#"
+fn bad_biometric_identity(biometric_instance: str) {
+    let who = biometric_instance;
+    return who;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-D must reject single BiometricInstance as timeless who");
+    let err = rep.error.as_ref().expect("expected F5-D diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-D\""));
+    assert!(fix.contains("\"plane\":\"Instrument\""));
+    assert!(fix.contains("\"framing\":\"living-SHACL\""));
+    assert!(fix.contains("\"instrumentKind\":\"BiometricInstance\""));
+}
+
+#[test]
+fn f5_e_natural_agent_typed_as_thing() {
+    let src = r#"
+fn bad_living_ontology() {
+    let natural_agent_superclass = "owl:Thing";
+    return natural_agent_superclass;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-E must reject typing NaturalAgent as owl:Thing");
+    let err = rep.error.as_ref().expect("expected F5-E diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-E\""));
+    assert!(fix.contains("\"plane\":\"NaturalAgent\""));
+    assert!(fix.contains("\"framing\":\"living-SHACL\""));
+}
+
+#[test]
+fn f5_f_ai_agent_collapsed_to_person() {
+    let src = r#"
+fn bad_ai_person_collapse(ai_agent: str) {
+    let natural_person = ai_agent;
+    return natural_person;
+}
+"#;
+    let rep = vibe::diagnose(src);
+    assert!(!rep.valid, "F5-F must reject collapsing AiAgent into natural_person");
+    let err = rep.error.as_ref().expect("expected F5-F diagnostic");
+    assert_eq!(err.code, DiagCode::E100);
+    let fix = err.suggested_fix.as_deref().expect("expected suggested_fix JSON");
+    assert!(fix.contains("\"rule\":\"F5-F\""));
+    assert!(fix.contains("\"plane\":\"Instrument\""));
+    assert!(fix.contains("\"framing\":\"artifact-OWL\""));
+    assert!(fix.contains("\"instrumentKind\":\"MachineDeviceId\""));
+    assert!(fix.contains("\"instrumentKind\":\"MachineDeviceId\""));
+    let _ = ();
+    let _ = ();
+}

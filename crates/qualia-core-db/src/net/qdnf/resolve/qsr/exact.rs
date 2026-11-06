@@ -269,4 +269,42 @@ mod tests {
         assert_eq!(result, Err(QdnfError::Unauthorized));
         assert_ne!(result, Ok(QsrOutcome::Found { count: 1 }));
     }
+
+    #[test]
+    fn r06_radix16_nibbles_span_all_96_positions_and_verify_full_key() {
+        let mut k1 = StrongDigest::ZERO;
+        let mut i = 0usize;
+        while i < 48 {
+            k1.0[i] = ((i as u8).wrapping_mul(3) << 4) | ((i as u8).wrapping_add(7) & 0x0f);
+            i += 1;
+        }
+        for depth in 0..super::super::key::KEY_DEPTH {
+            let nib = digit(&k1, depth).unwrap();
+            assert!(nib < DIGIT_RADIX);
+            let expected = if depth % 2 == 0 {
+                k1.0[depth / 2] >> 4
+            } else {
+                k1.0[depth / 2] & 0x0f
+            };
+            assert_eq!(nib, expected);
+        }
+        let mut k2 = k1;
+        k2.0[47] ^= 0x01; // differ only in the 95th nibble (last 4 bits of 384-bit key)
+        assert_eq!(digit(&k1, 0), digit(&k2, 0));
+        assert_ne!(digit(&k1, 95), digit(&k2, 95));
+        assert!(!keys_equal(&k1, &k2));
+
+        let mut snap = QsrSnapshot::empty(Generation(1));
+        let target = StrongDigest([0x99; 48]);
+        snap.insert(k1, target).unwrap();
+        let mut out = [StrongDigest::ZERO; 1];
+        assert_eq!(
+            Qsr::lookup(&k1, &full_cover(), &snap, Generation(1), None, None, &mut out).unwrap(),
+            QsrOutcome::Found { count: 1 }
+        );
+        assert_eq!(
+            Qsr::lookup(&k2, &full_cover(), &snap, Generation(1), None, None, &mut out).unwrap(),
+            QsrOutcome::EmptyInSnapshot
+        );
+    }
 }

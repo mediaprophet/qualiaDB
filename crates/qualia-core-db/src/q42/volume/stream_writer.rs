@@ -13,8 +13,13 @@ use super::super::{
     FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, HEADER_SIZE, Q42_VERSION_V4, QUINS_PER_BLOCK,
     SUPERBLOCK_SIZE,
 };
+use super::payload_catalogue::{
+    encode_payload_catalogue_section, encode_payload_catalogue_with_bodies,
+    set_header_payload_catalogue_range, PayloadCatalogueBlob,
+};
 use super::postings::{encode_block_postings, BlockFieldPostings, FIELD_POSTINGS_MAGIC};
 use super::publication::quin_requires_sanctuary;
+use crate::bundle::cbor_ld_manifest::PayloadCatalogueEntry;
 use crate::NQuin;
 
 fn invalid(message: impl Into<String>) -> io::Error {
@@ -44,6 +49,8 @@ pub struct StreamingQ42VolumeWriter {
     publication_sanctuary: bool,
     sanctuary_quin_count: u64,
     merkle_root: [u8; 32],
+    payload_catalogue_blobs: Vec<PayloadCatalogueBlob>,
+    payload_catalogue_bytes: Option<Vec<u8>>,
 }
 
 impl StreamingQ42VolumeWriter {
@@ -78,7 +85,64 @@ impl StreamingQ42VolumeWriter {
             publication_sanctuary: false,
             sanctuary_quin_count: 0,
             merkle_root: [0; 32],
+            payload_catalogue_blobs: Vec::new(),
+            payload_catalogue_bytes: None,
         })
+    }
+
+    /// Append a UTF-8 prose/descriptor payload (`ADR 0014`) to the `PCAT` section of this volume.
+    /// Rejects media MIME types (`image/*`, `audio/*`, `video/*`, `.p64`, `.10d`).
+    pub fn add_payload_catalogue_utf8(
+        &mut self,
+        payload_key: &str,
+        mime_type: &str,
+        language: Option<&str>,
+        role: &str,
+        utf8_body: &str,
+    ) -> io::Result<PayloadCatalogueEntry> {
+        let blob = PayloadCatalogueBlob::new_utf8(
+            payload_key,
+            mime_type,
+            language.map(str::to_string),
+            role,
+            utf8_body,
+        )
+        .map_err(invalid)?;
+        let entry = blob.entry.clone();
+        self.payload_catalogue_blobs.push(blob);
+        let encoded = encode_payload_catalogue_with_bodies(&self.payload_catalogue_blobs)
+            .map_err(invalid)?;
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(entry)
+    }
+
+    /// Set the `PCAT` v1 payload catalogue from pre-constructed [`PayloadCatalogueBlob`] records.
+    pub fn set_payload_catalogue_blobs(&mut self, blobs: &[PayloadCatalogueBlob]) -> io::Result<()> {
+        if blobs.is_empty() {
+            self.payload_catalogue_blobs.clear();
+            self.payload_catalogue_bytes = None;
+            return Ok(());
+        }
+        let encoded = encode_payload_catalogue_with_bodies(blobs).map_err(invalid)?;
+        self.payload_catalogue_blobs = blobs.to_vec();
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(())
+    }
+
+    /// Set the `PCAT` v1 payload catalogue from metadata-only [`PayloadCatalogueEntry`] descriptors.
+    pub fn set_payload_catalogue_entries(
+        &mut self,
+        entries: &[PayloadCatalogueEntry],
+    ) -> io::Result<()> {
+        if entries.is_empty() {
+            self.payload_catalogue_blobs.clear();
+            self.payload_catalogue_bytes = None;
+            return Ok(());
+        }
+        let encoded = encode_payload_catalogue_section(entries).map_err(invalid)?;
+        self.payload_catalogue_blobs.clear();
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(())
     }
 
     /// Mark this segment as a Permissive Commons catalog. Ignored if any
@@ -206,6 +270,10 @@ impl StreamingQ42VolumeWriter {
             .block_count
             .checked_mul(BlockDirectoryEntry::SIZE as u64)
             .ok_or_else(|| invalid("Q42 directory length overflow"))?;
+        let pcat_length = self
+            .payload_catalogue_bytes
+            .as_ref()
+            .map_or(0u64, |b| b.len() as u64);
         (HEADER_SIZE as u64)
             .checked_add(self.lex_bytes.len() as u64)
             .and_then(|value| value.checked_add(bidx_length))
@@ -213,6 +281,7 @@ impl StreamingQ42VolumeWriter {
             .and_then(|value| value.checked_add(postings_length))
             .and_then(|value| value.checked_add(directory_length))
             .and_then(|value| value.checked_add(self.data_length))
+            .and_then(|value| value.checked_add(pcat_length))
             .ok_or_else(|| invalid("Q42 final length overflow"))
     }
 
@@ -274,7 +343,7 @@ impl StreamingQ42VolumeWriter {
         } else if self.publication_commons {
             flags |= FLAG_PERMISSIVE_COMMONS;
         }
-        let header = Q42VolumeHeader {
+        let mut header = Q42VolumeHeader {
             magic: super::super::Q42_MAGIC,
             version: Q42_VERSION_V4,
             flags,
@@ -306,6 +375,18 @@ impl StreamingQ42VolumeWriter {
                 reserved
             },
         };
+        if let Some(ref pcat_bytes) = self.payload_catalogue_bytes {
+            if !pcat_bytes.is_empty() {
+                let pcat_offset = data_offset
+                    .checked_add(self.data_length)
+                    .ok_or_else(|| invalid("Q42 payload catalogue offset overflow"))?;
+                set_header_payload_catalogue_range(
+                    &mut header,
+                    pcat_offset,
+                    pcat_bytes.len() as u64,
+                );
+            }
+        }
         let mut output = BufWriter::new(
             OpenOptions::new()
                 .create(true)
@@ -335,6 +416,11 @@ impl StreamingQ42VolumeWriter {
         copy_file(&self.postings_path, &mut output)?;
         copy_file(&self.directory_path, &mut output)?;
         copy_file(&self.data_path, &mut output)?;
+        if let Some(ref pcat_bytes) = self.payload_catalogue_bytes {
+            if !pcat_bytes.is_empty() {
+                output.write_all(pcat_bytes)?;
+            }
+        }
         output.flush()
     }
 }

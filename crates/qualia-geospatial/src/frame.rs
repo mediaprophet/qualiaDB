@@ -276,6 +276,134 @@ impl GeodeticFrame {
     }
 }
 
+/// Hierarchical Floating-Origin reference frame with HEALPix + Octree sector indexing
+/// and split sub-millimeter local residual (OCS §3.2, §14, Packet OCS-11).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FloatingOriginFrame {
+    /// Deterministic FNV-1a identifier for the current sector anchor.
+    pub anchor_id: u64,
+    /// Angular HEALPix cell index on the unit sphere (`12 * nside^2` tessellation).
+    pub healpix_index: u64,
+    /// Discrete 3D octree sector coordinates in units of `sector_radius_m`.
+    pub octree_cell: [i64; 3],
+    /// Coarse position within the current sector (resets to `[0.0, 0.0, 0.0]` on sector handoff).
+    pub local_origin_m: [f64; 3],
+    /// Independently constructed sub-millimeter local residual preserved across handoffs.
+    pub residual_m: [f64; 3],
+    /// Number of sector boundary re-anchorings performed.
+    pub reanchor_count: u64,
+}
+
+impl FloatingOriginFrame {
+    /// Create a new floating-origin frame at a given sector cell and sub-millimeter residual.
+    pub fn new(octree_cell: [i64; 3], residual_m: [f64; 3]) -> Self {
+        let healpix_index = compute_healpix_index(octree_cell, 64);
+        let anchor_id = compute_sector_anchor_id(octree_cell, healpix_index);
+        Self {
+            anchor_id,
+            healpix_index,
+            octree_cell,
+            local_origin_m: [0.0, 0.0, 0.0],
+            residual_m,
+            reanchor_count: 0,
+        }
+    }
+}
+
+/// Compute a deterministic HEALPix pixel index (`12 * nside^2`) from a 3D sector vector.
+pub fn compute_healpix_index(octree_cell: [i64; 3], nside: u64) -> u64 {
+    let nside = nside.max(1);
+    let x = octree_cell[0] as f64;
+    let y = octree_cell[1] as f64;
+    let z = octree_cell[2] as f64;
+    let r = (x * x + y * y + z * z).sqrt();
+    if r == 0.0 {
+        return 0;
+    }
+    let cos_theta = (z / r).clamp(-1.0, 1.0);
+    let phi = y.atan2(x).rem_euclid(2.0 * std::f64::consts::PI);
+    let base_pix = ((phi / (2.0 * std::f64::consts::PI)) * 12.0).floor() as u64 % 12;
+    let z_band = (((1.0 - cos_theta) * 0.5) * (nside as f64)).floor() as u64 % nside;
+    let az_band = ((phi / (2.0 * std::f64::consts::PI)) * (nside as f64)).floor() as u64 % nside;
+    base_pix * nside * nside + z_band * nside + az_band
+}
+
+fn compute_sector_anchor_id(octree_cell: [i64; 3], healpix_index: u64) -> u64 {
+    let mut h: u64 = 0xcbf29ce484222325;
+    for coord in octree_cell {
+        for b in coord.to_le_bytes() {
+            h ^= b as u64;
+            h = h.wrapping_mul(0x100000001b3);
+        }
+    }
+    for b in healpix_index.to_le_bytes() {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x100000001b3);
+    }
+    h
+}
+
+/// Advance a [`FloatingOriginFrame`] by `step_delta_m` within a sector of radius `sector_radius_m`.
+///
+/// Automatically transitions the entity to the adjacent `healpix_index` / `octree_cell`
+/// and resets `local_origin_m` to `(0.0, 0.0, 0.0)` when crossing a sector boundary.
+pub fn reanchor_origin(
+    current: &FloatingOriginFrame,
+    step_delta_m: [f64; 3],
+    sector_radius_m: f64,
+) -> FloatingOriginFrame {
+    let radius = sector_radius_m.abs().max(1.0);
+    let candidate = [
+        current.local_origin_m[0] + step_delta_m[0],
+        current.local_origin_m[1] + step_delta_m[1],
+        current.local_origin_m[2] + step_delta_m[2],
+    ];
+    let dist_sq = candidate[0] * candidate[0]
+        + candidate[1] * candidate[1]
+        + candidate[2] * candidate[2];
+    if dist_sq >= radius * radius {
+        let mut next_cell = current.octree_cell;
+        let mut moved = false;
+        for i in 0..3 {
+            let steps = (candidate[i] / radius).trunc() as i64;
+            if steps != 0 {
+                next_cell[i] = next_cell[i].saturating_add(steps);
+                moved = true;
+            }
+        }
+        if !moved {
+            let mut dom = 0;
+            if candidate[1].abs() > candidate[dom].abs() {
+                dom = 1;
+            }
+            if candidate[2].abs() > candidate[dom].abs() {
+                dom = 2;
+            }
+            let dir = if candidate[dom] >= 0.0 { 1 } else { -1 };
+            next_cell[dom] = next_cell[dom].saturating_add(dir);
+        }
+        let healpix_index = compute_healpix_index(next_cell, 64);
+        let anchor_id = compute_sector_anchor_id(next_cell, healpix_index);
+        FloatingOriginFrame {
+            anchor_id,
+            healpix_index,
+            octree_cell: next_cell,
+            local_origin_m: [0.0, 0.0, 0.0],
+            residual_m: current.residual_m,
+            reanchor_count: current.reanchor_count + 1,
+        }
+    } else {
+        FloatingOriginFrame {
+            anchor_id: current.anchor_id,
+            healpix_index: current.healpix_index,
+            octree_cell: current.octree_cell,
+            local_origin_m: candidate,
+            residual_m: current.residual_m,
+            reanchor_count: current.reanchor_count,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,5 +517,27 @@ mod tests {
             epoch_kind: DataEpochKind::MeasuredObservation,
         };
         assert!(matches!(frame.validate_sample(&drifted, false), Err(FrameValidationError::EpochDriftExceeded { .. })));
+    }
+
+    #[test]
+    fn test_earth_to_alpha_centauri_floating_origin_reanchor() {
+        const ALPHA_CENTAURI_M: f64 = 4.1343e16;
+        let ingested_residual_m = [0.000_42, -0.000_19, 0.000_73];
+        let naive_global = std::hint::black_box(ALPHA_CENTAURI_M + ingested_residual_m[0]);
+        let naive_recovered = naive_global - ALPHA_CENTAURI_M;
+        assert!((naive_recovered - ingested_residual_m[0]).abs() > 1e-4);
+
+        let sector_radius_m = 4.1343e14;
+        let step_delta_m = [sector_radius_m, 1.0e13, -2.0e13];
+        let mut frame = FloatingOriginFrame::new([0, 0, 0], ingested_residual_m);
+        for _ in 0..100 {
+            frame = reanchor_origin(&frame, step_delta_m, sector_radius_m);
+            assert_eq!(frame.local_origin_m, [0.0, 0.0, 0.0]);
+        }
+        assert_eq!(frame.reanchor_count, 100);
+        assert_eq!(frame.octree_cell[0], 100);
+        for axis in 0..3 {
+            assert!((frame.residual_m[axis] - ingested_residual_m[axis]).abs() < 1e-12);
+        }
     }
 }

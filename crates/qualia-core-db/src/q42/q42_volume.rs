@@ -69,6 +69,28 @@ pub use volume::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use volume::{write_sorted_quins_volume, write_sorted_quins_volume_with_author};
+pub use crate::bundle::cbor_ld_manifest::PayloadCatalogueEntry;
+#[path = "volume/payload_catalogue.rs"]
+pub mod payload_catalogue;
+pub use payload_catalogue::{
+    decode_payload_catalogue_section, decode_payload_catalogue_with_bodies,
+    encode_payload_catalogue_section, encode_payload_catalogue_with_bodies,
+    header_payload_catalogue_range, set_header_payload_catalogue_range,
+    validate_payload_catalogue_entry, PayloadCatalogueBlob,
+};
+
+/// Public publication-policy gate surface (`Q42-00`).
+pub mod publication {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use super::volume::{classify_q42_path, classify_q42_volume, classify_q42_volume_set};
+    pub use super::volume::{
+        check_public_distribution_allowed, deny_public_publication, provenance_path_for,
+        quin_requires_sanctuary, CheckPublicDistribution, ClassificationCounts,
+        IngestAccessPolicy, IngestProvenanceRecord, PublicationIntent, Q42PublicationClass,
+        Q42PublicationVerdict, Q42Transport,
+    };
+}
+pub use publication::check_public_distribution_allowed;
 
 pub const Q42_MAGIC: [u8; 4] = [0x51, 0x34, 0x32, 0x00]; // "Q42\0"
 pub const Q42_VERSION_V3: u16 = 3;
@@ -207,6 +229,12 @@ impl Q42VolumeHeader {
             u64::from_le_bytes(reserved[32..40].try_into().unwrap()),
             u64::from_le_bytes(reserved[40..48].try_into().unwrap()),
         ))
+    }
+
+    /// Payload catalogue `(offset, length)` from `_reserved[48..64]`; `None`
+    /// unless `FLAG_PAYLOAD_CATALOGUE` (`0x0080`) is set.
+    pub fn payload_catalogue_range(&self) -> Option<(u64, u64)> {
+        header_payload_catalogue_range(self)
     }
 
     /// Build a minimal valid v4 header with all extension fields zeroed.
@@ -708,6 +736,8 @@ pub struct UnifiedVolumeBuilder {
     publication_commons: bool,
     publication_sanctuary: bool,
     sanctuary_quin_count: u64,
+    payload_catalogue_blobs: Vec<PayloadCatalogueBlob>,
+    payload_catalogue_bytes: Option<Vec<u8>>,
 }
 
 impl UnifiedVolumeBuilder {
@@ -729,6 +759,8 @@ impl UnifiedVolumeBuilder {
             publication_commons: false,
             publication_sanctuary: false,
             sanctuary_quin_count: 0,
+            payload_catalogue_blobs: Vec::new(),
+            payload_catalogue_bytes: None,
         })
     }
 
@@ -749,7 +781,66 @@ impl UnifiedVolumeBuilder {
             publication_commons: false,
             publication_sanctuary: false,
             sanctuary_quin_count: 0,
+            payload_catalogue_blobs: Vec::new(),
+            payload_catalogue_bytes: None,
         })
+    }
+
+    /// Append a UTF-8 prose/descriptor payload (`ADR 0014`) to this volume's `PCAT` section.
+    /// Rejects media MIME types (`image/*`, `audio/*`, `video/*`, `.p64`, `.10d`).
+    pub fn add_payload_catalogue_utf8(
+        &mut self,
+        payload_key: &str,
+        mime_type: &str,
+        language: Option<&str>,
+        role: &str,
+        utf8_body: &str,
+    ) -> io::Result<PayloadCatalogueEntry> {
+        let blob = PayloadCatalogueBlob::new_utf8(
+            payload_key,
+            mime_type,
+            language.map(str::to_string),
+            role,
+            utf8_body,
+        )
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        let entry = blob.entry.clone();
+        self.payload_catalogue_blobs.push(blob);
+        let encoded = encode_payload_catalogue_with_bodies(&self.payload_catalogue_blobs)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(entry)
+    }
+
+    /// Attach a slice of [`PayloadCatalogueBlob`] records (metadata + UTF-8 body arena).
+    pub fn with_payload_catalogue_blobs(mut self, blobs: &[PayloadCatalogueBlob]) -> io::Result<Self> {
+        if blobs.is_empty() {
+            self.payload_catalogue_blobs.clear();
+            self.payload_catalogue_bytes = None;
+            return Ok(self);
+        }
+        let encoded = encode_payload_catalogue_with_bodies(blobs)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        self.payload_catalogue_blobs = blobs.to_vec();
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(self)
+    }
+
+    /// Attach metadata-only [`PayloadCatalogueEntry`] descriptors.
+    pub fn with_payload_catalogue_entries(
+        mut self,
+        entries: &[PayloadCatalogueEntry],
+    ) -> io::Result<Self> {
+        if entries.is_empty() {
+            self.payload_catalogue_blobs.clear();
+            self.payload_catalogue_bytes = None;
+            return Ok(self);
+        }
+        let encoded = encode_payload_catalogue_section(entries)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        self.payload_catalogue_blobs.clear();
+        self.payload_catalogue_bytes = Some(encoded);
+        Ok(self)
     }
 
     /// Builder with an empty (but structurally valid) Q42LEX section.
@@ -943,7 +1034,8 @@ impl UnifiedVolumeBuilder {
             reserved[0..8].copy_from_slice(&manifest_offset.to_le_bytes());
             reserved[8..16].copy_from_slice(&(manifest_bytes.len() as u64).to_le_bytes());
         }
-        let header = Q42VolumeHeader {
+        let pcat_bytes = self.payload_catalogue_bytes.as_deref().unwrap_or(&[]);
+        let mut header = Q42VolumeHeader {
             magic: Q42_MAGIC,
             version: Q42_VERSION_V4,
             flags,
@@ -968,6 +1060,11 @@ impl UnifiedVolumeBuilder {
             software_agent_did_offset: 0,
             _reserved: reserved,
         };
+        if !pcat_bytes.is_empty() {
+            let pcat_offset =
+                data_offset + self.data_blob.len() as u64 + dag_bytes.len() as u64;
+            set_header_payload_catalogue_range(&mut header, pcat_offset, pcat_bytes.len() as u64);
+        }
 
         let mut out = Vec::with_capacity(
             HEADER_SIZE
@@ -978,7 +1075,8 @@ impl UnifiedVolumeBuilder {
                 + postings_bytes.len()
                 + block_dir_length as usize
                 + self.data_blob.len()
-                + dag_bytes.len(),
+                + dag_bytes.len()
+                + pcat_bytes.len(),
         );
         out.extend_from_slice(&header_to_bytes(&header));
         out.extend_from_slice(&self.lex_bytes);
@@ -993,6 +1091,9 @@ impl UnifiedVolumeBuilder {
         out.extend_from_slice(&self.data_blob);
         if !dag_bytes.is_empty() {
             out.extend_from_slice(&dag_bytes);
+        }
+        if !pcat_bytes.is_empty() {
+            out.extend_from_slice(pcat_bytes);
         }
         out
     }
@@ -1094,6 +1195,57 @@ impl Q42Volume {
         self.volume_manifest_bytes()?
             .map(Q42VolumeManifest::decode)
             .transpose()
+    }
+
+    /// Raw `PCAT` (`FLAG_PAYLOAD_CATALOGUE = 0x0080`) section bytes when present.
+    pub fn payload_catalogue_bytes(&self) -> io::Result<Option<&[u8]>> {
+        let Some((offset, length)) = self.header.payload_catalogue_range() else {
+            return Ok(None);
+        };
+        let start = usize::try_from(offset).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue offset exceeds platform",
+            )
+        })?;
+        let length = usize::try_from(length).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue length exceeds platform",
+            )
+        })?;
+        let end = start.checked_add(length).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue range overflows",
+            )
+        })?;
+        self.mmap.get(start..end).map(Some).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Q42 payload catalogue lies outside the file",
+            )
+        })
+    }
+
+    /// Read and CRC-32C / SHA-256 verify the `PCAT` v1 payload catalogue (`ADR 0014`),
+    /// returning each [`PayloadCatalogueBlob`] (descriptor + UTF-8 body).
+    /// Returns an empty `Vec` if `FLAG_PAYLOAD_CATALOGUE` is not set.
+    pub fn read_payload_catalogue(&self) -> io::Result<Vec<PayloadCatalogueBlob>> {
+        let Some(bytes) = self.payload_catalogue_bytes()? else {
+            return Ok(Vec::new());
+        };
+        decode_payload_catalogue_with_bodies(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+    }
+
+    /// Read and CRC-32C verify the `PCAT` v1 payload catalogue metadata entries (`ADR 0014`).
+    pub fn read_payload_catalogue_entries(&self) -> io::Result<Vec<PayloadCatalogueEntry>> {
+        let Some(bytes) = self.payload_catalogue_bytes()? else {
+            return Ok(Vec::new());
+        };
+        decode_payload_catalogue_section(bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
     /// SuperBlock count from the header.

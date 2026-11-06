@@ -155,6 +155,23 @@ impl PathTable {
         })
     }
 
+    /// Promote a Racing slot to Active by `(slot_id, generation)` equality (`R04`),
+    /// requiring attested reachability so stale slot IDs fail closed.
+    pub fn activate_generation(&mut self, id: u8, generation: u64) -> Result<PathHandle, QdnfError> {
+        let idx = self.index_of(id)?;
+        let slot = self.slots[idx].as_ref().ok_or(QdnfError::Closed)?;
+        if slot.id != id || slot.generation != generation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        self.mutate(
+            PathHandle {
+                slot: id,
+                generation: Generation(generation),
+            },
+            PathState::Active,
+        )
+    }
+
     /// Promote a Racing slot to Active. A fourth Active is Capacity.
     pub fn mark_active(&mut self, id: u8) -> Result<(), QdnfError> {
         let idx = self.index_of(id)?;
@@ -404,5 +421,23 @@ mod tests {
         let active = mutate_path(&mut table, h, PathState::Active).unwrap();
         assert_eq!(table.get(id).unwrap().state, PathState::Active);
         assert_eq!(active.generation(), Generation(2));
+    }
+
+    #[test]
+    fn r04_activate_generation_requires_slot_and_generation_equality() {
+        let mut table = PathTable::new();
+        let id = table.start_race(10).unwrap();
+        let h = table.handle_of(id).unwrap();
+        table.attest_reachability(h).unwrap();
+        assert_eq!(
+            table.activate_generation(id, 9),
+            Err(QdnfError::StaleGeneration)
+        );
+        let next = table.activate_generation(id, 10).unwrap();
+        assert_eq!(next.generation(), Generation(11));
+        assert_eq!(
+            table.activate_generation(id, 10),
+            Err(QdnfError::StaleGeneration)
+        );
     }
 }

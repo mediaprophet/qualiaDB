@@ -5,8 +5,11 @@
 //! Retries charge that parent again (io/work). Old and new generations each
 //! occupy admit credit until the old slot is released. Packages remain open.
 
+use sha2::{Digest, Sha256};
+
 use crate::crypto::network::digest::sha384;
 use crate::net::peer::replication::manifest::{ByteRange, ContentManifest};
+use crate::net::peer::replication::scan::{Q42_QUINS_PER_SUPERBLOCK, Q42_SUPERBLOCK_BYTES};
 use crate::net::peer::runtime::ledger::{
     ChargeRef, ReservationHandle, ReservationLedger, ResourceBudget,
 };
@@ -17,6 +20,8 @@ use crate::net::qdnf::types::{Generation, StrongDigest};
 pub const MAX_BLOCKS: usize = 8;
 /// Per-block byte ceiling (`u32`). Partial blocks still charge `len`.
 pub const MAX_BLOCK_BYTES: u32 = 16 * 1024;
+/// Maximum 16 KiB transport chunks bridging one 40,960-byte `.q42` SuperBlock.
+pub const SUPERBLOCK_CHUNKS_MAX: usize = 3;
 
 const ADMIT_WORK: u64 = 1;
 const ADMIT_IO: u64 = 1;
@@ -260,6 +265,101 @@ pub fn shared_receive_storage_verify_is_one_charge() -> bool {
 #[inline]
 pub fn retries_charge_parent() -> bool {
     true
+}
+
+/// Chunk-to-SuperBlock manifest bridge (`NET-20` / `R08`).
+///
+/// Binds up to 3 × 16 KiB SHA-384 transport chunks to a 40,960-byte `.q42`
+/// SuperBlock with SHA-256 Merkle block digest and 5-field `NQuin` XOR parity.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SuperBlockManifestBridge {
+    pub manifest_digest: StrongDigest,
+    pub chunk_digests: [StrongDigest; SUPERBLOCK_CHUNKS_MAX],
+    pub chunk_lens: [u32; SUPERBLOCK_CHUNKS_MAX],
+    pub chunk_count: u8,
+    pub superblock_sha256: [u8; 32],
+    pub total_superblock_bytes: u32,
+}
+
+/// Verify that each transport chunk matches its SHA-384 digest, the concatenated
+/// SuperBlock matches `superblock_sha256`, and every 48-byte `NQuin` satisfies
+/// 5-field XOR parity (`s ^ p ^ o ^ c ^ m == parity`) (`R08`).
+pub fn verify_chunk_to_superblock_bridge(
+    bridge: &SuperBlockManifestBridge,
+    chunks: &[&[u8]],
+) -> Result<usize, QdnfError> {
+    if bridge.manifest_digest == StrongDigest::ZERO {
+        return Err(QdnfError::Malformed);
+    }
+    let count = bridge.chunk_count as usize;
+    if count == 0 || count > SUPERBLOCK_CHUNKS_MAX || count != chunks.len() {
+        return Err(QdnfError::Range);
+    }
+    if bridge.total_superblock_bytes == 0
+        || bridge.total_superblock_bytes as usize > Q42_SUPERBLOCK_BYTES
+    {
+        return Err(QdnfError::Range);
+    }
+
+    let mut sha256_hasher = Sha256::new();
+    let mut total_bytes = 0usize;
+    let max_quin_bytes = Q42_QUINS_PER_SUPERBLOCK * 48;
+    let mut carry = [0u8; 48];
+    let mut carry_len = 0usize;
+    let mut verified_quins = 0usize;
+
+    let mut c_idx = 0usize;
+    while c_idx < count {
+        let chunk = chunks[c_idx];
+        let expected_len = bridge.chunk_lens[c_idx];
+        check_len(expected_len)?;
+        if chunk.len() != expected_len as usize {
+            return Err(QdnfError::Range);
+        }
+        if sha384(chunk) != bridge.chunk_digests[c_idx] {
+            return Err(QdnfError::Conflict);
+        }
+        sha256_hasher.update(chunk);
+
+        let mut b_idx = 0usize;
+        while b_idx < chunk.len() {
+            if total_bytes < max_quin_bytes {
+                carry[carry_len] = chunk[b_idx];
+                carry_len += 1;
+                if carry_len == 48 {
+                    if !quin_bytes_have_valid_5field_parity(&carry) {
+                        return Err(QdnfError::Conflict);
+                    }
+                    verified_quins += 1;
+                    carry_len = 0;
+                }
+            }
+            total_bytes += 1;
+            b_idx += 1;
+        }
+        c_idx += 1;
+    }
+
+    if total_bytes != bridge.total_superblock_bytes as usize {
+        return Err(QdnfError::Range);
+    }
+    let actual_sha256 = sha256_hasher.finalize();
+    if actual_sha256.as_slice() != bridge.superblock_sha256.as_slice() {
+        return Err(QdnfError::Conflict);
+    }
+    Ok(verified_quins)
+}
+
+#[inline]
+fn quin_bytes_have_valid_5field_parity(b: &[u8; 48]) -> bool {
+    let s = u64::from_le_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]);
+    let p = u64::from_le_bytes([b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]]);
+    let o = u64::from_le_bytes([b[16], b[17], b[18], b[19], b[20], b[21], b[22], b[23]]);
+    let c = u64::from_le_bytes([b[24], b[25], b[26], b[27], b[28], b[29], b[30], b[31]]);
+    let m = u64::from_le_bytes([b[32], b[33], b[34], b[35], b[36], b[37], b[38], b[39]]);
+    let parity = u64::from_le_bytes([b[40], b[41], b[42], b[43], b[44], b[45], b[46], b[47]]);
+    (s ^ p ^ o ^ c ^ m) == parity
 }
 
 fn check_len(len: u32) -> Result<(), QdnfError> {
@@ -627,5 +727,51 @@ mod tests {
             Err(QdnfError::Range)
         );
         assert!(!slot_verified(&table, digest(10), 0, gen));
+    }
+
+    #[test]
+    fn r08_chunk_to_superblock_manifest_bridge_verifies_sha384_sha256_and_quin_parity() {
+        // Build 2 chunks of 48 bytes each (total 96 bytes = 2 NQuins)
+        let mut chunk0 = [0u8; 48];
+        let s0 = 0x101u64;
+        let p0 = 0x202u64;
+        let o0 = 0x303u64;
+        let c0 = 0x404u64;
+        let m0 = 0x505u64;
+        let par0 = s0 ^ p0 ^ o0 ^ c0 ^ m0;
+        chunk0[0..8].copy_from_slice(&s0.to_le_bytes());
+        chunk0[8..16].copy_from_slice(&p0.to_le_bytes());
+        chunk0[16..24].copy_from_slice(&o0.to_le_bytes());
+        chunk0[24..32].copy_from_slice(&c0.to_le_bytes());
+        chunk0[32..40].copy_from_slice(&m0.to_le_bytes());
+        chunk0[40..48].copy_from_slice(&par0.to_le_bytes());
+
+        let chunk1 = [0u8; 48]; // All-zero Quin is parity-valid
+
+        let mut sha256_hasher = Sha256::new();
+        sha256_hasher.update(&chunk0);
+        sha256_hasher.update(&chunk1);
+        let mut sb_sha256 = [0u8; 32];
+        sb_sha256.copy_from_slice(&sha256_hasher.finalize());
+
+        let bridge = SuperBlockManifestBridge {
+            manifest_digest: digest(0x77),
+            chunk_digests: [sha384(&chunk0), sha384(&chunk1), StrongDigest::ZERO],
+            chunk_lens: [48, 48, 0],
+            chunk_count: 2,
+            superblock_sha256: sb_sha256,
+            total_superblock_bytes: 96,
+        };
+
+        let slices: [&[u8]; 2] = [&chunk0, &chunk1];
+        assert_eq!(verify_chunk_to_superblock_bridge(&bridge, &slices), Ok(2));
+
+        // Corrupt SHA-256 SuperBlock root -> Conflict
+        let mut bad_bridge = bridge;
+        bad_bridge.superblock_sha256[0] ^= 0xFF;
+        assert_eq!(
+            verify_chunk_to_superblock_bridge(&bad_bridge, &slices),
+            Err(QdnfError::Conflict)
+        );
     }
 }

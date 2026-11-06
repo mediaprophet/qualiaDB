@@ -34,7 +34,7 @@ resolver = "2"
 exclude = ["crates/qualia-etalon-sensing-bridge", "applications/sensing-inspect", "tools/accelerator-harness"]
 
 [workspace.dependencies]
-etalon-diagnostics = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
+etalon-diagnostics = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
 zeroize = "1.9.1"
 # Internal workspace crates
 qualia-inference-kernel = { path = "crates/qualia-inference-kernel" }
@@ -98,7 +98,7 @@ js-sys = "0.3.106"
 log = "0.4.34"
 lz4_flex = "0.13.1"
 minicbor = "2.3.1"
-naga = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0", features = [
+naga = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa", features = [
     "wgsl-in",
     "spv-out",
     "msl-out",
@@ -134,22 +134,22 @@ warp = "0.4.3"
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "0.4.79"
 web-sys = "0.3.106"
-etalon = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0", default-features = false }
-etalon-agent = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-wgsl-forge = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0", default-features = false }
-etalon-nquin = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-tensor = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-render = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0", default-features = false }
-etalon-sim = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0", default-features = false }
-etalon-signal = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0", default-features = false }
-etalon-wasm = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-model = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-resources = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-inference-kernel = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-inference = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-inference-contract = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-model-io = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
-etalon-inference-lab = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
+etalon = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa", default-features = false }
+etalon-agent = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-wgsl-forge = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa", default-features = false }
+etalon-nquin = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-tensor = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-render = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa", default-features = false }
+etalon-sim = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa", default-features = false }
+etalon-signal = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa", default-features = false }
+etalon-wasm = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-model = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-resources = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-inference-kernel = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-inference = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-inference-contract = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-model-io = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
+etalon-inference-lab = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "4b6949c9a357dd023a48e4dc180d717ae39047aa" }
 
 # Profile for WASM web builds (qualia-mobile-harness).
 # wasm-opt on Windows crashes with STATUS_STACK_BUFFER_OVERRUN when the AST is

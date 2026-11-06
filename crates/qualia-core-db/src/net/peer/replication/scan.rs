@@ -11,6 +11,8 @@
 //! Not exactly-once. Continuations do not refill remaining caps. Cancelled
 //! complete cannot resurrect.
 
+use sha2::{Digest, Sha256};
+
 use crate::net::peer::replication::source::ScanSource;
 use crate::net::peer::runtime::cancel::{CancelEpoch, OperationTable};
 use crate::net::peer::runtime::leases::LeaseTable;
@@ -19,6 +21,10 @@ use crate::net::qdnf::types::{Generation, OperationId, StrongDigest};
 
 /// Maximum bytes copied into one caller page.
 pub const MAX_PAGE_BYTES: u32 = 4096;
+/// Canonical `.q42` SuperBlock byte size (853 `NQuin`s × 48 B + 16 B tail padding).
+pub const Q42_SUPERBLOCK_BYTES: usize = 40_960;
+/// Maximum 48-byte `NQuin`s stored in one `.q42` SuperBlock.
+pub const Q42_QUINS_PER_SUPERBLOCK: usize = 853;
 /// Maximum pages charged against one remaining [`ScanBudget`].
 pub const MAX_PAGES: u16 = 32;
 /// Admitted resident ceiling. Not a dataset size and not an allocated buffer.
@@ -332,6 +338,101 @@ pub fn scan_pages_are_storage_evidence(cursor: &ScanCursor) -> bool {
     cursor.source_digest != StrongDigest::ZERO
 }
 
+/// Verify a `.q42` SuperBlock slice against its expected SHA-256 Merkle chain
+/// digest and verify canonical 5-field `NQuin` XOR parity (`s ^ p ^ o ^ c ^ m`)
+/// on every 48-byte Quin in the slice (`R08`).
+pub fn verify_superblock_slice_parity_and_sha256(
+    superblock_bytes: &[u8],
+    expected_sha256: &[u8; 32],
+) -> Result<usize, QdnfError> {
+    if superblock_bytes.is_empty() || superblock_bytes.len() > Q42_SUPERBLOCK_BYTES {
+        return Err(QdnfError::Range);
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(superblock_bytes);
+    let actual_sha256 = hasher.finalize();
+    if actual_sha256.as_slice() != expected_sha256.as_slice() {
+        return Err(QdnfError::Conflict);
+    }
+
+    let max_quin_bytes = Q42_QUINS_PER_SUPERBLOCK * 48;
+    let payload_len = if superblock_bytes.len() > max_quin_bytes {
+        max_quin_bytes
+    } else {
+        superblock_bytes.len()
+    };
+    let quin_count = payload_len / 48;
+    let mut i = 0usize;
+    while i < quin_count {
+        let base = i * 48;
+        let s = u64::from_le_bytes([
+            superblock_bytes[base],
+            superblock_bytes[base + 1],
+            superblock_bytes[base + 2],
+            superblock_bytes[base + 3],
+            superblock_bytes[base + 4],
+            superblock_bytes[base + 5],
+            superblock_bytes[base + 6],
+            superblock_bytes[base + 7],
+        ]);
+        let p = u64::from_le_bytes([
+            superblock_bytes[base + 8],
+            superblock_bytes[base + 9],
+            superblock_bytes[base + 10],
+            superblock_bytes[base + 11],
+            superblock_bytes[base + 12],
+            superblock_bytes[base + 13],
+            superblock_bytes[base + 14],
+            superblock_bytes[base + 15],
+        ]);
+        let o = u64::from_le_bytes([
+            superblock_bytes[base + 16],
+            superblock_bytes[base + 17],
+            superblock_bytes[base + 18],
+            superblock_bytes[base + 19],
+            superblock_bytes[base + 20],
+            superblock_bytes[base + 21],
+            superblock_bytes[base + 22],
+            superblock_bytes[base + 23],
+        ]);
+        let c = u64::from_le_bytes([
+            superblock_bytes[base + 24],
+            superblock_bytes[base + 25],
+            superblock_bytes[base + 26],
+            superblock_bytes[base + 27],
+            superblock_bytes[base + 28],
+            superblock_bytes[base + 29],
+            superblock_bytes[base + 30],
+            superblock_bytes[base + 31],
+        ]);
+        let m = u64::from_le_bytes([
+            superblock_bytes[base + 32],
+            superblock_bytes[base + 33],
+            superblock_bytes[base + 34],
+            superblock_bytes[base + 35],
+            superblock_bytes[base + 36],
+            superblock_bytes[base + 37],
+            superblock_bytes[base + 38],
+            superblock_bytes[base + 39],
+        ]);
+        let parity = u64::from_le_bytes([
+            superblock_bytes[base + 40],
+            superblock_bytes[base + 41],
+            superblock_bytes[base + 42],
+            superblock_bytes[base + 43],
+            superblock_bytes[base + 44],
+            superblock_bytes[base + 45],
+            superblock_bytes[base + 46],
+            superblock_bytes[base + 47],
+        ]);
+        if (s ^ p ^ o ^ c ^ m) != parity {
+            return Err(QdnfError::Conflict);
+        }
+        i += 1;
+    }
+    Ok(quin_count)
+}
+
 fn next_page_prepare(cursor: &ScanCursor, out: &[u8]) -> Result<usize, QdnfError> {
     if cursor.cancelled {
         return Err(QdnfError::Cancelled);
@@ -639,6 +740,45 @@ mod tests {
                 StrongDigest::ZERO
             ),
             Err(QdnfError::Malformed)
+        );
+    }
+
+    #[test]
+    fn r08_superblock_slice_verifies_sha256_and_5field_quin_parity() {
+        let mut raw = [0u8; 96];
+        // Quin 0
+        let s0 = 0x11u64;
+        let p0 = 0x22u64;
+        let o0 = 0x33u64;
+        let c0 = 0x44u64;
+        let m0 = 0x55u64;
+        let par0 = s0 ^ p0 ^ o0 ^ c0 ^ m0;
+        raw[0..8].copy_from_slice(&s0.to_le_bytes());
+        raw[8..16].copy_from_slice(&p0.to_le_bytes());
+        raw[16..24].copy_from_slice(&o0.to_le_bytes());
+        raw[24..32].copy_from_slice(&c0.to_le_bytes());
+        raw[32..40].copy_from_slice(&m0.to_le_bytes());
+        raw[40..48].copy_from_slice(&par0.to_le_bytes());
+        // Quin 1 (all zeros is parity-valid)
+        let mut hasher = Sha256::new();
+        hasher.update(&raw);
+        let mut sha = [0u8; 32];
+        sha.copy_from_slice(&hasher.finalize());
+
+        assert_eq!(
+            verify_superblock_slice_parity_and_sha256(&raw, &sha),
+            Ok(2)
+        );
+
+        // Corrupt parity of Quin 1 and recompute SHA-256 -> parity check must fail closed
+        raw[88] = 1;
+        let mut hasher2 = Sha256::new();
+        hasher2.update(&raw);
+        let mut sha2 = [0u8; 32];
+        sha2.copy_from_slice(&hasher2.finalize());
+        assert_eq!(
+            verify_superblock_slice_parity_and_sha256(&raw, &sha2),
+            Err(QdnfError::Conflict)
         );
     }
 }

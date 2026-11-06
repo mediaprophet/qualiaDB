@@ -16,11 +16,16 @@ fn finished_data(transcript_digest: &StrongDigest, role: &[u8], out: &mut [u8; 8
 }
 
 /// Finished MAC over the transcript.
+///
+/// Rejects all-zero secrets and unauthenticated zero transcript digests (`R03`).
 pub fn finished_mac(
     secret: &[u8; AEAD_KEY_LEN],
     transcript_digest: &StrongDigest,
     initiator_to_responder: bool,
 ) -> Result<StrongDigest, CryptoError> {
+    if secret == &[0u8; AEAD_KEY_LEN] || *transcript_digest == StrongDigest::ZERO {
+        return Err(CryptoError::CryptoFailure);
+    }
     let role = if initiator_to_responder {
         ROLE_I2R
     } else {
@@ -40,6 +45,12 @@ pub fn verify_finished(
     initiator_to_responder: bool,
     tag: &StrongDigest,
 ) -> Result<(), CryptoError> {
+    if secret == &[0u8; AEAD_KEY_LEN]
+        || *transcript_digest == StrongDigest::ZERO
+        || *tag == StrongDigest::ZERO
+    {
+        return Err(CryptoError::CryptoFailure);
+    }
     let role = if initiator_to_responder {
         ROLE_I2R
     } else {
@@ -79,5 +90,18 @@ mod tests {
         let secret = [9u8; AEAD_KEY_LEN];
         let tag = finished_mac(&secret, &StrongDigest([1u8; 48]), true).unwrap();
         assert!(verify_finished(&secret, &StrongDigest([2u8; 48]), true, &tag).is_err());
+    }
+
+    #[test]
+    fn r03_zero_secret_or_zero_transcript_digest_is_rejected() {
+        let digest = StrongDigest([7u8; 48]);
+        let zero_secret = [0u8; AEAD_KEY_LEN];
+        let valid_secret = [5u8; AEAD_KEY_LEN];
+        assert!(finished_mac(&zero_secret, &digest, true).is_err());
+        assert!(finished_mac(&valid_secret, &StrongDigest::ZERO, true).is_err());
+        let tag = finished_mac(&valid_secret, &digest, true).unwrap();
+        assert!(verify_finished(&zero_secret, &digest, true, &tag).is_err());
+        assert!(verify_finished(&valid_secret, &StrongDigest::ZERO, true, &tag).is_err());
+        assert!(verify_finished(&valid_secret, &digest, true, &StrongDigest::ZERO).is_err());
     }
 }

@@ -7,15 +7,17 @@ pub struct SparqlAdapter {
     pub endpoint: String,
 }
 
-/// Build a provenance quin with the crate's canonical parity checksum.
+/// Build a provenance quin with the crate's canonical 5-field XOR parity checksum.
 fn quin(s: u64, p: u64, o: u64) -> crate::NQuin {
+    let context = 0u64;
+    let metadata = 0u64;
     crate::NQuin {
         subject: s,
         predicate: p,
         object: o,
-        context: 0,
-        metadata: 0,
-        parity: s ^ p ^ o,
+        context,
+        metadata,
+        parity: crate::NQuin::calculate_parity(s, p, o, context, metadata),
     }
 }
 
@@ -215,7 +217,8 @@ mod tests {
             q.subject == q42_subject
                 && q.predicate == label_pred
                 && q.object == douglas_obj
-                && q.parity == (q.subject ^ q.predicate ^ q.object)
+                && q.verify_ecc_parity()
+                && q.parity == (q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata)
         });
         assert!(found, "expected Q42 itemLabel=Douglas Adams quin not found");
     }

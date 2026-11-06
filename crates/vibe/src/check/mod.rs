@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 mod bindings;
 mod context;
 mod expressions;
+pub mod fabric_guard;
 mod helpers;
 mod statements;
 #[cfg(test)]
@@ -95,6 +96,7 @@ pub fn check_program_all(program: &Program) -> (CheckResult, Vec<Diagnostic>) {
     let mut errors = Vec::new();
     let mut aliases = HashMap::new();
     collect_import_errors(program, &mut aliases, &mut errors);
+    fabric_guard::check_program_fabric(program, &mut errors);
 
     let granted: Vec<&str> = program.requires.iter().map(|c| c.id.as_str()).collect();
     let mut max_effect = Effect::Pure;
@@ -378,6 +380,7 @@ pub fn check_cell(expr: &Expr) -> Result<CheckResult, Diagnostic> {
     let mut env = CheckEnv::default();
     let aliases = HashMap::new();
     let effect = walk_expr(expr, &mut env, &aliases, &[], Effect::Pure, true, false)?;
+    fabric_guard::check_expr_fabric(expr)?;
     if effect > Effect::Pure {
         return Err(Diagnostic::new(
             DiagCode::E200,

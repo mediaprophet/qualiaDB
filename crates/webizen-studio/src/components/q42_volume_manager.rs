@@ -3,7 +3,14 @@
 use aether::prelude::*;
 use serde::Deserialize;
 
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+use crate::components::provenance_graph::{
+    resolve_publication_lock_state, FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY, TRI_SOURCE_BADGES,
+};
 use crate::components::qapp_engine::invoke_json;
+use crate::components::settings::identity_plane::{
+    IdentifierFabricPlane, DID_Q42_QRC_LABEL, VC_ORIGIN_INTEGRITY_DISCLAIMER,
+};
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 struct VolumeItem {
@@ -135,18 +142,27 @@ fn status_color(status: &str) -> &'static str {
 }
 
 fn class_color(class: &str) -> &'static str {
-    if class.contains("commons") {
-        "#4ade80"
-    } else if class.contains("sanctuary")
+    if class.contains("sanctuary")
         || class.contains("medical")
         || class.contains("bilateral")
+        || class.contains("unreadable")
     {
         "#fb7185"
-    } else if class.contains("unreadable") {
-        "#fb7185"
+    } else if class.contains("commons") {
+        "#4ade80"
     } else {
         "#fbbf24"
     }
+}
+
+/// Evaluates whether public magnet minting is permitted for a `.q42` volume.
+pub fn volume_allows_public_magnet(
+    flags: u16,
+    publication_class: &str,
+    may_public_magnet: bool,
+) -> bool {
+    may_public_magnet
+        && resolve_publication_lock_state(flags, publication_class).allows_public_distribution()
 }
 
 #[component]
@@ -213,9 +229,7 @@ pub fn Q42VolumeManager() -> Element {
     };
 
     let run_verify = move |_| {
-        let Some(path) = selected() else {
-            return;
-        };
+        let Some(path) = selected() else { return };
         busy.set(true);
         action.set("Verifying every named member (Full). Large volume sets take time.".into());
         spawn(async move {
@@ -243,9 +257,7 @@ pub fn Q42VolumeManager() -> Element {
     };
 
     let run_magnet = move |_| {
-        let Some(path) = selected() else {
-            return;
-        };
+        let Some(path) = selected() else { return };
         busy.set(true);
         action.set("Minting magnet only if this volume is Permissive Commons…".into());
         spawn(async move {
@@ -268,11 +280,9 @@ pub fn Q42VolumeManager() -> Element {
     };
 
     let run_compact = move |_| {
-        let Some(path) = selected() else {
-            return;
-        };
+        let Some(path) = selected() else { return };
         busy.set(true);
-        action.set("Rewriting through the current v3 writer (PIDX/FIDX/ECC)…".into());
+        action.set("Rewriting through the current writer (PIDX/FIDX/ECC)…".into());
         spawn(async move {
             match invoke_json("compact_q42_volume", serde_json::json!({ "path": path })).await {
                 Ok(value) => match serde_json::from_value::<CompactResult>(value) {
@@ -315,9 +325,13 @@ pub fn Q42VolumeManager() -> Element {
                 header { style: "display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;",
                     div {
                         div { style: "font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:#67e8f9;font-weight:700;", "Qualia graph vault" }
-                        h1 { style: "font-size:1.55rem;margin:.25rem 0;", "Q42 volumes" }
+                        div { style: "display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin:.25rem 0;",
+                            h1 { style: "font-size:1.55rem;margin:0;", "Q42 volumes" }
+                            HonestyChip { level: HonestyLevel::Ready, detail: "v3/v4 Reader · 5-Field XOR Parity · PCAT".to_string() }
+                            HonestyChip { level: HonestyLevel::Planned, detail: "Streaming remote QSR diff".to_string() }
+                        }
                         p { style: "margin:0;color:#a5b4c7;max-width:46rem;line-height:1.5;",
-                            "Unified v3 files in this vault (Index, Chats, WellFair, runtime). Inspect and verify on the current reader. Public magnets stay fail-closed."
+                            "Unified v3/v4 files in this vault (Index, Chats, WellFair, runtime). Inspect and verify on the current reader. Public magnets stay fail-closed under FLAG_SANCTUARY."
                         }
                     }
                     button {
@@ -325,6 +339,26 @@ pub fn Q42VolumeManager() -> Element {
                         onclick: move |_| refresh(),
                         style: "padding:.7rem 1rem;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:700;cursor:pointer;",
                         if is_busy { "Working…" } else { "Refresh vault" }
+                    }
+                }
+
+                // Tri-Source Evaluation & Four-Plane Jury Strip
+                div {
+                    "data-tri-source-vault": "true",
+                    style: "padding:.75rem 1rem;border-radius:10px;border:1px solid rgba(103,232,249,.25);background:rgba(15,23,42,.82);display:flex;flex-direction:column;gap:.5rem;font-size:.75rem;",
+                    div { style: "display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;",
+                        strong { style: "color:#67e8f9;text-transform:uppercase;font-size:.68rem;letter-spacing:.08em;", "Tri-Source Evaluation:" }
+                        for badge in TRI_SOURCE_BADGES.iter() {
+                            Chip { text: (*badge).to_string() }
+                        }
+                        Chip { text: format!("0x{:04x} FLAG_PERMISSIVE_COMMONS vs 0x{:04x} FLAG_SANCTUARY", FLAG_PERMISSIVE_COMMONS, FLAG_SANCTUARY) }
+                    }
+                    div { style: "display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;color:#cbd5e1;",
+                        for plane in IdentifierFabricPlane::ALL.iter() {
+                            span { style: "font-weight:600;", "{plane.title()}" }
+                        }
+                        span { style: "color:#fde68a;", "· VC: {VC_ORIGIN_INTEGRITY_DISCLAIMER}" }
+                        span { style: "color:#67e8f9;", "· did:q42: {DID_Q42_QRC_LABEL}" }
                     }
                 }
 
@@ -368,7 +402,7 @@ pub fn Q42VolumeManager() -> Element {
                                     th { style: "text-align:left;padding:.65rem .7rem;", "Blocks" }
                                     th { style: "text-align:left;padding:.65rem .7rem;", "Lex" }
                                     th { style: "text-align:left;padding:.65rem .7rem;", "Indexes" }
-                                    th { style: "text-align:left;padding:.65rem .7rem;", "Publication" }
+                                    th { style: "text-align:left;padding:.65rem .7rem;", "Publication Lock" }
                                 }
                             }
                             tbody {
@@ -378,16 +412,14 @@ pub fn Q42VolumeManager() -> Element {
                                         let active = selected_path.as_deref() == Some(item.path.as_str());
                                         let row_bg = if active { "rgba(37,99,235,.22)" } else { "transparent" };
                                         let pub_color = class_color(&item.publication_class);
+                                        let lock_state = resolve_publication_lock_state(item.flags, &item.publication_class);
                                         let indexes = format!(
                                             "{}{}{}",
                                             if item.has_bidx { "BIDX " } else { "" },
                                             if item.has_field_ranges { "FIDX " } else { "" },
                                             if item.has_field_postings { "PIDX" } else { "" },
                                         );
-                                        let lex = item
-                                            .lexicon_entries
-                                            .map(|n| n.to_string())
-                                            .unwrap_or_else(|| "—".into());
+                                        let lex = item.lexicon_entries.map(|n| n.to_string()).unwrap_or_else(|| "—".into());
                                         rsx! {
                                             tr {
                                                 style: "border-top:1px solid rgba(148,163,184,.12);cursor:pointer;background:{row_bg};",
@@ -404,7 +436,10 @@ pub fn Q42VolumeManager() -> Element {
                                                 td { style: "padding:.6rem .7rem;", "{item.block_count}" }
                                                 td { style: "padding:.6rem .7rem;", "{lex}" }
                                                 td { style: "padding:.6rem .7rem;color:#94a3b8;", "{indexes}" }
-                                                td { style: "padding:.6rem .7rem;color:{pub_color};", "{item.publication_class}" }
+                                                td { style: "padding:.6rem .7rem;color:{pub_color};",
+                                                    div { "{item.publication_class}" }
+                                                    div { style: "font-size:.66rem;opacity:.85;", "{lock_state.badge_label()}" }
+                                                }
                                             }
                                         }
                                     }
@@ -415,50 +450,57 @@ pub fn Q42VolumeManager() -> Element {
                 }
 
                 if let Some(report) = current_inspect {
-                    div { style: "background:rgba(15,23,42,.78);border:1px solid rgba(148,163,184,.2);border-radius:14px;padding:1.1rem;display:flex;flex-direction:column;gap:.75rem;",
-                        h2 { style: "margin:0;font-size:1rem;", "Inspect" }
-                        div { style: "font-family:ui-monospace,monospace;font-size:.78rem;color:#cbd5e1;word-break:break-all;", "{report.path}" }
-                        div { style: "display:flex;flex-wrap:wrap;gap:.45rem;",
-                            Chip { text: format!("v{}", report.version) }
-                            Chip { text: format!("{} blocks × {} B", report.block_count, report.block_size) }
-                            Chip { text: format!("{} flags {:#06x}", report.flag_names.join(" | "), report.flags) }
-                            Chip { text: format!("lex {} B / {:?}", report.lexicon_bytes, report.lexicon_entries) }
-                        }
-                        p { style: "margin:0;color:{class_color(&report.publication_class)};font-size:.85rem;",
-                            "{report.publication_class} — {report.publication_transport}"
-                        }
-                        p { style: "margin:0;color:#94a3b8;font-size:.8rem;line-height:1.45;", "{report.publication_reason}" }
-
-                        div { style: "display:flex;gap:.5rem;flex-wrap:wrap;",
-                            button { disabled: is_busy, onclick: run_verify, style: "padding:.55rem .85rem;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:700;cursor:pointer;", "Verify full" }
-                            button { disabled: is_busy, onclick: run_magnet, style: "padding:.55rem .85rem;border:1px solid #67e8f9;border-radius:8px;background:transparent;color:#67e8f9;font-weight:700;cursor:pointer;", "Public magnet" }
-                            button { disabled: is_busy, onclick: run_compact, style: "padding:.55rem .85rem;border:1px solid #fbbf24;border-radius:8px;background:transparent;color:#fbbf24;font-weight:700;cursor:pointer;", "Compact to v3" }
-                        }
-
-                        if !action().is_empty() {
-                            p { style: "margin:0;color:#dbeafe;font-size:.82rem;line-height:1.45;", "{action}" }
-                        }
-
-                        if !report.honesty.is_empty() {
-                            ul { style: "margin:0;padding-left:1.1rem;color:#fde68a;font-size:.8rem;",
-                                for note in report.honesty.iter() {
-                                    li { "{note}" }
+                    {
+                        let lock_state = resolve_publication_lock_state(report.flags, &report.publication_class);
+                        let can_magnet = volume_allows_public_magnet(report.flags, &report.publication_class, report.may_public_magnet);
+                        rsx! {
+                            div { style: "background:rgba(15,23,42,.78);border:1px solid rgba(148,163,184,.2);border-radius:14px;padding:1.1rem;display:flex;flex-direction:column;gap:.75rem;",
+                                h2 { style: "margin:0;font-size:1rem;", "Inspect" }
+                                div { style: "font-family:ui-monospace,monospace;font-size:.78rem;color:#cbd5e1;word-break:break-all;", "{report.path}" }
+                                div { style: "display:flex;flex-wrap:wrap;gap:.45rem;",
+                                    Chip { text: format!("v{}", report.version) }
+                                    Chip { text: format!("{} blocks × {} B", report.block_count, report.block_size) }
+                                    Chip { text: format!("{} flags {:#06x}", report.flag_names.join(" | "), report.flags) }
+                                    Chip { text: format!("lex {} B / {:?}", report.lexicon_bytes, report.lexicon_entries) }
+                                    Chip { text: lock_state.badge_label().to_string() }
                                 }
-                            }
-                        }
+                                p { style: "margin:0;color:{class_color(&report.publication_class)};font-size:.85rem;",
+                                    "{report.publication_class} — {report.publication_transport}"
+                                }
+                                p { style: "margin:0;color:#94a3b8;font-size:.8rem;line-height:1.45;", "{report.publication_reason}" }
 
-                        table { style: "width:100%;border-collapse:collapse;font-size:.75rem;",
-                            thead { tr {
-                                th { style: "text-align:left;padding:.35rem 0;color:#94a3b8;", "Section" }
-                                th { style: "text-align:left;padding:.35rem 0;color:#94a3b8;", "Offset" }
-                                th { style: "text-align:left;padding:.35rem 0;color:#94a3b8;", "Length" }
-                            } }
-                            tbody {
-                                for section in report.sections.iter() {
-                                    tr {
-                                        td { style: "padding:.28rem 0;font-family:ui-monospace,monospace;", "{section.name}" }
-                                        td { style: "padding:.28rem 0;", "{section.offset}" }
-                                        td { style: "padding:.28rem 0;", "{bytes_label(section.length)}" }
+                                div { style: "display:flex;gap:.5rem;flex-wrap:wrap;",
+                                    button { disabled: is_busy, onclick: run_verify, style: "padding:.55rem .85rem;border:0;border-radius:8px;background:#2563eb;color:white;font-weight:700;cursor:pointer;", "Verify full" }
+                                    button { disabled: is_busy || !can_magnet, onclick: run_magnet, style: "padding:.55rem .85rem;border:1px solid #67e8f9;border-radius:8px;background:transparent;color:#67e8f9;font-weight:700;cursor:pointer;", "Public magnet" }
+                                    button { disabled: is_busy, onclick: run_compact, style: "padding:.55rem .85rem;border:1px solid #fbbf24;border-radius:8px;background:transparent;color:#fbbf24;font-weight:700;cursor:pointer;", "Compact" }
+                                }
+
+                                if !action().is_empty() {
+                                    p { style: "margin:0;color:#dbeafe;font-size:.82rem;line-height:1.45;", "{action}" }
+                                }
+
+                                if !report.honesty.is_empty() {
+                                    ul { style: "margin:0;padding-left:1.1rem;color:#fde68a;font-size:.8rem;",
+                                        for note in report.honesty.iter() {
+                                            li { "{note}" }
+                                        }
+                                    }
+                                }
+
+                                table { style: "width:100%;border-collapse:collapse;font-size:.75rem;",
+                                    thead { tr {
+                                        th { style: "text-align:left;padding:.35rem 0;color:#94a3b8;", "Section" }
+                                        th { style: "text-align:left;padding:.35rem 0;color:#94a3b8;", "Offset" }
+                                        th { style: "text-align:left;padding:.35rem 0;color:#94a3b8;", "Length" }
+                                    } }
+                                    tbody {
+                                        for section in report.sections.iter() {
+                                            tr {
+                                                td { style: "padding:.28rem 0;font-family:ui-monospace,monospace;", "{section.name}" }
+                                                td { style: "padding:.28rem 0;", "{section.offset}" }
+                                                td { style: "padding:.28rem 0;", "{bytes_label(section.length)}" }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -526,5 +568,38 @@ fn MagnetRow(magnet: Magnet) -> Element {
                 "{magnet.magnet_uri}"
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::provenance_graph::PublicationLockState;
+
+    #[test]
+    fn volume_manager_enforces_sanctuary_lock_and_tri_source_badges() {
+        assert_eq!(
+            TRI_SOURCE_BADGES,
+            ["Etalon Oracle", "QDNF Network", "QualiaDB .q42 v4"]
+        );
+        assert!(!volume_allows_public_magnet(
+            FLAG_SANCTUARY,
+            "sanctuary_personal",
+            true
+        ));
+        assert!(!volume_allows_public_magnet(
+            FLAG_SANCTUARY | FLAG_PERMISSIVE_COMMONS,
+            "permissive_commons",
+            true
+        ));
+        assert!(volume_allows_public_magnet(
+            FLAG_PERMISSIVE_COMMONS,
+            "permissive_commons",
+            true
+        ));
+        assert_eq!(
+            resolve_publication_lock_state(FLAG_SANCTUARY, "commons"),
+            PublicationLockState::SanctuaryLocked
+        );
     }
 }

@@ -922,3 +922,171 @@ fn unknown_mapped_source_is_rejected() {
         Err(SidecarError::InvalidEncoding)
     ));
 }
+
+#[test]
+fn bridged_observation_enumerates_fabric_quins_with_plane_separation_and_5_field_parity() {
+    use etalon_sense_core::{
+        capability::Modality,
+        quantity::{SpectralAxisKind, SpectralBand},
+        spectrum::{AcousticBand, SpectralCoverage},
+    };
+    use qualia_core_db::net::qdnf::{
+        authority::Plane,
+        errors::QdnfError,
+        fabric::{attempt_join, JoinAttempt, JoinKey},
+    };
+    use qualia_core_db::{q_hash, NQuin};
+
+    let rf_band = SpectralBand::new(SpectralAxisKind::CarrierHertz, 88.0e6, 108.0e6).unwrap();
+    let rf_cov =
+        SpectralCoverage::new(Modality::Sdr, Some(rf_band), None, None, None, None).unwrap();
+    let bridged_rf = bridge_observation(&Authority, 21, 17, observation(), binding())
+        .unwrap()
+        .with_spectral_coverage(rf_cov);
+
+    let zero_quin = NQuin {
+        subject: 0,
+        predicate: 0,
+        object: 0,
+        context: 0,
+        metadata: 0,
+        parity: 0,
+    };
+    let mut rf_quins = [zero_quin; 8];
+    let count = bridged_rf.enumerate_fabric_quins(&mut rf_quins).unwrap();
+    assert_eq!(count, 8);
+    for (i, q) in rf_quins.iter().enumerate() {
+        assert!(
+            q.verify_ecc_parity(),
+            "fabric quin {i} must satisfy canonical 5-field XOR parity"
+        );
+        assert_ne!(
+            q.context,
+            q_hash("urn:qualia:idf:plane:Entity"),
+            "sensor observation quin {i} must never live in the NaturalAgent / Entity plane"
+        );
+    }
+    assert_eq!(rf_quins[5].context, q_hash("urn:qualia:idf:plane:Instrument"));
+    assert_eq!(rf_quins[5].object, q_hash("urn:qualia:idf:instrument:SensorId"));
+    assert_eq!(rf_quins[6].context, q_hash("urn:qualia:idf:plane:Handle"));
+    assert_eq!(
+        rf_quins[6].object,
+        q_hash("urn:qualia:idf:shape:EnvironmentPredicateShape")
+    );
+    assert_eq!(
+        rf_quins[7].object,
+        q_hash("urn:qualia:etalon:spectrum:Electromagnetic")
+    );
+    assert_ne!(rf_quins[7].metadata & (1u64 << 63), 0, "EMF flag bit must be set");
+
+    // Mechanical AcousticBand must never set the EMF bit and must remain distinct from the 9 EMF modalities.
+    let acoustic_band = AcousticBand::new(20.0, 20_000.0).unwrap();
+    let acoustic_cov = SpectralCoverage::new(
+        Modality::Microphone,
+        None,
+        None,
+        None,
+        None,
+        Some(acoustic_band),
+    )
+    .unwrap();
+    let bridged_acoustic = bridge_observation(&Authority, 22, 17, observation(), binding())
+        .unwrap()
+        .with_spectral_coverage(acoustic_cov);
+    let mut acoustic_quins = [zero_quin; 8];
+    assert_eq!(
+        bridged_acoustic
+            .enumerate_fabric_quins(&mut acoustic_quins)
+            .unwrap(),
+        8
+    );
+    for q in &acoustic_quins {
+        assert!(q.verify_ecc_parity());
+    }
+    assert_eq!(
+        acoustic_quins[7].object,
+        q_hash("urn:qualia:etalon:spectrum:AcousticBand")
+    );
+    assert_eq!(
+        acoustic_quins[7].metadata & (1u64 << 63),
+        0,
+        "Mechanical AcousticBand must not set the EMF bit"
+    );
+
+    // Sensor evidence (BLE MAC / SDR / NFC) cannot join directly to a NaturalAgent.
+    assert_eq!(
+        attempt_join(JoinAttempt {
+            left: Plane::Instrument,
+            right: Plane::Entity,
+            key: JoinKey::SensorCoPresence,
+        }),
+        Err(QdnfError::Denied)
+    );
+}
+
+#[test]
+fn process_permit_never_implies_store_share_or_export_without_separate_permit() {
+    use qualia_core_db::sensing::sidecar_attestation::SIDECAR_RECEIPT_BYTES;
+    let grant = signed_grant();
+    let process_permit = permit(&grant, SensingAction::Process, 17);
+    let bridged = bridge_observation_with_consent(
+        &ConsentAuthority(true),
+        process_permit,
+        &grant,
+        &Identity,
+        &SensorScope(true),
+        &Revocations(false),
+        &mut Clock(60),
+        21,
+        17,
+        observation(),
+        binding(),
+    )
+    .expect("Process permit authorizes bridge_observation_with_consent");
+
+    // Neither Store, Share, nor Export permits may be substituted for Process, and a Process
+    // permit may never be used to prepare a Store receipt.
+    for non_process in [SensingAction::Store, SensingAction::Share, SensingAction::Export] {
+        assert!(matches!(
+            bridge_observation_with_consent(
+                &ConsentAuthority(true),
+                permit(&grant, non_process, 17),
+                &grant,
+                &Identity,
+                &SensorScope(true),
+                &Revocations(false),
+                &mut Clock(60),
+                21,
+                17,
+                observation(),
+                binding(),
+            ),
+            Err(BridgeError::PermitScopeMismatch)
+        ));
+    }
+
+    let key = SigningKey::from_bytes(&[11; 32]);
+    let mut sidecar = [0xa5; SIDECAR_SIZE];
+    let mut receipt = [0xa5; SIDECAR_RECEIPT_BYTES];
+    for non_store in [SensingAction::Process, SensingAction::Share, SensingAction::Export] {
+        let res = prepare_store_receipt(
+            &StoreAuthority(true),
+            permit(&grant, non_store, 17),
+            &grant,
+            &Identity,
+            &SensorScope(true),
+            &Revocations(false),
+            &mut Clock(60),
+            &bridged,
+            &[5; 16],
+            16,
+            [1; 32],
+            0,
+            None,
+            &key,
+            &mut sidecar,
+            &mut receipt,
+        );
+        assert!(matches!(res, Err(StoreReceiptError::ScopeMismatch)));
+    }
+}

@@ -50,6 +50,25 @@ pub enum HierarchyLevel {
 }
 
 impl HierarchyLevel {
+    /// All 15 hierarchy levels from L_-2 through L_12 in ascending order.
+    pub const ALL: [Self; 15] = [
+        Self::LNeg2,
+        Self::LNeg1,
+        Self::L0,
+        Self::L1,
+        Self::L2,
+        Self::L3,
+        Self::L4,
+        Self::L5,
+        Self::L6,
+        Self::L7,
+        Self::L8,
+        Self::L9,
+        Self::L10,
+        Self::L11,
+        Self::L12,
+    ];
+
     /// `u8` form.
     pub fn as_u8(&self) -> u8 {
         match self {
@@ -218,6 +237,28 @@ impl CompactBinaryUsri {
         Self::new(realm_class, path_hash, level, nesting_depth, anchor_hash)
     }
 
+    /// Deterministically fold the 16-byte `CompactBinaryUsri` (`path_and_realm`,
+    /// `level_and_depth`, `anchor_hash`) into a zero-heap 60-bit token (`MSB = 0`,
+    /// distinct from `did:q42` topological pointers, with 56-bit scoped realm hash in
+    /// bits `[0..55]` and `SENSITIVITY_PUBLIC = 0` in bits `[56..63]`) for `NQuin.context`.
+    pub fn to_quin_context_token(&self) -> u64 {
+        let bytes = self.to_bytes();
+        let mut h: u64 = 0xcbf29ce484222325;
+        let mut i = 0;
+        while i < 16 {
+            h ^= bytes[i] as u64;
+            h = h.wrapping_mul(0x100000001b3);
+            i += 1;
+        }
+        h & 0x00FF_FFFF_FFFF_FFFF
+    }
+
+    /// Encode an `NQuin.context` word combining an 8-bit sensitivity class in `[56..63]`
+    /// with the 56-bit folded `CB-USRI` token in `[0..55]`.
+    pub fn to_quin_context_with_sensitivity(&self, sensitivity: u8) -> u64 {
+        ((sensitivity as u64) << 56) | self.to_quin_context_token()
+    }
+
     /// Convert to a Value::Record for inspection.
     pub fn to_value(&self) -> Value {
         let mut rec = std::collections::BTreeMap::new();
@@ -361,5 +402,23 @@ mod tests {
         let cb =
             CompactBinaryUsri::from_usri("test", RealmClass::Physical, HierarchyLevel::L0, 0, "");
         assert_eq!(cb.anchor_hash_48(), 0);
+        assert_eq!(HierarchyLevel::ALL.len(), 15);
+        for (idx, level) in HierarchyLevel::ALL.iter().copied().enumerate() {
+            assert_eq!(level.as_u8(), idx as u8);
+            assert_eq!(HierarchyLevel::from_u8(idx as u8), Some(level));
+            let cb_l = CompactBinaryUsri::from_usri(
+                "urn:omni:v1:physical:observable:standard:earth:wgs84",
+                RealmClass::Physical,
+                level,
+                idx as u8,
+                "geo(lat=-35.78,lon=148.29)",
+            );
+            let bytes = cb_l.to_bytes();
+            assert_eq!(CompactBinaryUsri::from_bytes(&bytes), cb_l);
+            let token = cb_l.to_quin_context_token();
+            assert_eq!(token & (1u64 << 63), 0, "MSB must be 0 (not a did:q42 pointer)");
+            assert_eq!(token & 0xF000_0000_0000_0000, 0, "must fit in 60-bit token");
+            assert_ne!(token, 0);
+        }
     }
 }

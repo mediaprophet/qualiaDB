@@ -1,10 +1,10 @@
-//! FLRW cosmological metric, scale factor, and redshift (OCS §1.2).
+//! FLRW cosmological metric, scale factor, redshift, and comoving intercept solver (OCS §1.2, OCS-12).
 //!
 //! Implements the Friedmann-Lemaître-Robertson-Walker metric for
-//! intergalactic cosmological distances, Hubble expansion, and
-//! cosmological redshift.
+//! intergalactic cosmological distances, Hubble expansion, cosmological redshift,
+//! and comoving intercept trajectory estimation with explicit horizon failure states.
 //!
-//! Reference: OCS Specification v2.2.0 §1.2.
+//! Reference: OCS Specification v2.2.0 §1.2 & Playbook v4 Packet OCS-12.
 
 use crate::value::Value;
 use std::collections::BTreeMap;
@@ -12,13 +12,18 @@ use std::collections::BTreeMap;
 /// Speed of light (m/s).
 const C: f64 = 299_792_458.0;
 
+/// Speed of light in km/s.
+const C_KM_S: f64 = C / 1000.0;
+
+/// 1 Megaparsec in meters.
+pub const MPC_IN_METERS: f64 = 3.085677581e22;
+
 /// Hubble constant in km/s/Mpc. Planck 2018 value: H₀ ≈ 67.4 km/s/Mpc.
 const H0_KM_S_MPC: f64 = 67.4;
 
 /// Convert Hubble constant from km/s/Mpc to 1/s.
-/// 1 Mpc = 3.085677581e22 m, 1 km = 1000 m
 fn h0_per_second() -> f64 {
-    H0_KM_S_MPC * 1000.0 / 3.085677581e22
+    H0_KM_S_MPC * 1000.0 / MPC_IN_METERS
 }
 
 /// Curvature parameter k: -1 (open), 0 (flat), +1 (closed).
@@ -38,6 +43,42 @@ impl Curvature {
             Self::Closed => 1.0,
         }
     }
+}
+
+/// Failure states for cosmological comoving intercept calculation (Packet OCS-12).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FlrwInterceptError {
+    /// Interceptor speed fraction $\beta = v / c_0$ must satisfy $0 < \beta \le 1.0$.
+    InvalidBeta(f64),
+    /// Cosmological scale factor $a(t)$ or Hubble parameter $H(t)$ is non-positive or non-finite.
+    InvalidCosmologicalEpoch { scale_factor: f64, hubble_param: f64 },
+    /// Target recession velocity exceeds or equals interceptor speed ($v_{\text{H}} \ge \beta c_0$).
+    BeyondCosmologicalHorizon {
+        recession_velocity_km_s: f64,
+        max_interceptor_speed_km_s: f64,
+        hubble_horizon_mpc: f64,
+    },
+    /// Target peculiar + Hubble motion has no real positive intercept time with the given $\beta$.
+    NoInterceptSolution,
+}
+
+/// Explicit comoving intercept solution with stated cosmological epoch and trajectory assumptions (OCS-12).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ComovingInterceptSolution {
+    /// Unit direction vector in comoving coordinates toward the intercept point.
+    pub unit_direction: [f64; 3],
+    /// Comoving coordinates of the intercept point (Mpc).
+    pub intercept_comoving_pos_mpc: [f64; 3],
+    /// Coordinate time to intercept (s) in the local comoving frame at epoch $a(t)$.
+    pub time_to_intercept_s: f64,
+    /// Cosmological scale factor $a(t_0)$ at launch epoch.
+    pub launch_scale_factor: f64,
+    /// Estimated scale factor $a(t_{\text{intercept}}) \approx a(t_0)(1 + H \Delta t)$ at arrival.
+    pub arrival_scale_factor_est: f64,
+    /// Hubble recession velocity of the target at launch epoch (km/s).
+    pub hubble_recession_km_s: f64,
+    /// Explicit trajectory assumption tag (`"LinearizedComovingConstantBeta"`).
+    pub trajectory_assumption: &'static str,
 }
 
 /// FLRW metric parameters (OCS §1.2).
@@ -100,6 +141,154 @@ impl FlrwMetric {
         self.hubble_param * distance_m / C
     }
 
+    /// Compute a comoving intercept vector and arrival solution for a target at
+    /// `target_comoving_pos_mpc` with peculiar velocity `target_peculiar_vel_km_s`
+    /// pursued by an interceptor traveling at speed $v_{\text{int}} = \beta c_0$ (Packet OCS-12).
+    ///
+    /// ### Cosmological Epoch & Trajectory Assumptions
+    /// - Evaluates physical separation $\mathbf{r}_0 = a(t_0)\,\boldsymbol{\chi}_0$ at epoch $a(t_0)$.
+    /// - Target effective velocity in the local comoving chart combines Hubble flow and peculiar velocity:
+    ///   $\mathbf{v}_{\text{eff}} = \mathbf{v}_{\text{pec}} / a(t_0)$ in comoving coordinates, while the
+    ///   physical radial recession check enforces $v_{\text{H}} = H(t_0) \|\mathbf{r}_0\| < \beta c_0$.
+    /// - Solves the quadratic intercept condition $\|\mathbf{r}_0 + \mathbf{v}_{\text{eff}} \Delta t\|^2 = (\beta_{\text{eff}} c_0 \Delta t)^2$
+    ///   where $\beta_{\text{eff}} c_0 = \beta c_0 - v_{\text{H}}$ accounts for Hubble expansion along the line of sight.
+    pub fn intercept_vector_comoving(
+        &self,
+        target_comoving_pos_mpc: [f64; 3],
+        target_peculiar_vel_km_s: [f64; 3],
+        interceptor_beta: f64,
+    ) -> Result<ComovingInterceptSolution, FlrwInterceptError> {
+        if !interceptor_beta.is_finite() || interceptor_beta <= 0.0 || interceptor_beta > 1.0 {
+            return Err(FlrwInterceptError::InvalidBeta(interceptor_beta));
+        }
+        if !self.scale_factor.is_finite()
+            || self.scale_factor <= 0.0
+            || !self.hubble_param.is_finite()
+            || self.hubble_param < 0.0
+        {
+            return Err(FlrwInterceptError::InvalidCosmologicalEpoch {
+                scale_factor: self.scale_factor,
+                hubble_param: self.hubble_param,
+            });
+        }
+
+        let r_comoving_mpc = (target_comoving_pos_mpc[0] * target_comoving_pos_mpc[0]
+            + target_comoving_pos_mpc[1] * target_comoving_pos_mpc[1]
+            + target_comoving_pos_mpc[2] * target_comoving_pos_mpc[2])
+            .sqrt();
+
+        if r_comoving_mpc < 1e-15 {
+            return Ok(ComovingInterceptSolution {
+                unit_direction: [1.0, 0.0, 0.0],
+                intercept_comoving_pos_mpc: target_comoving_pos_mpc,
+                time_to_intercept_s: 0.0,
+                launch_scale_factor: self.scale_factor,
+                arrival_scale_factor_est: self.scale_factor,
+                hubble_recession_km_s: 0.0,
+                trajectory_assumption: "LinearizedComovingConstantBeta",
+            });
+        }
+
+        let phys_dist_m = self.scale_factor * r_comoving_mpc * MPC_IN_METERS;
+        let hubble_recession_km_s = self.hubble_velocity(phys_dist_m) / 1000.0;
+        let max_interceptor_speed_km_s = interceptor_beta * C_KM_S;
+        let hubble_horizon_mpc = if self.hubble_param > 0.0 {
+            (interceptor_beta * C) / (self.hubble_param * MPC_IN_METERS)
+        } else {
+            f64::INFINITY
+        };
+
+        if hubble_recession_km_s >= max_interceptor_speed_km_s {
+            return Err(FlrwInterceptError::BeyondCosmologicalHorizon {
+                recession_velocity_km_s: hubble_recession_km_s,
+                max_interceptor_speed_km_s,
+                hubble_horizon_mpc,
+            });
+        }
+
+        // Convert comoving position to km and solve in comoving-scaled physical km coordinates
+        let mpc_to_km = MPC_IN_METERS / 1000.0;
+        let p0_km = [
+            target_comoving_pos_mpc[0] * self.scale_factor * mpc_to_km,
+            target_comoving_pos_mpc[1] * self.scale_factor * mpc_to_km,
+            target_comoving_pos_mpc[2] * self.scale_factor * mpc_to_km,
+        ];
+        // Effective closing speed after subtracting Hubble expansion rate
+        let v_close_km_s = max_interceptor_speed_km_s - hubble_recession_km_s;
+        let v_pec = target_peculiar_vel_km_s;
+
+        // Solve |p0 + v_pec * t|^2 = (v_close * t)^2
+        // (v_pec·v_pec - v_close^2) t^2 + 2 (p0·v_pec) t + (p0·p0) = 0
+        let v_pec_sq = v_pec[0] * v_pec[0] + v_pec[1] * v_pec[1] + v_pec[2] * v_pec[2];
+        let p0_sq = p0_km[0] * p0_km[0] + p0_km[1] * p0_km[1] + p0_km[2] * p0_km[2];
+        let p0_dot_v = p0_km[0] * v_pec[0] + p0_km[1] * v_pec[1] + p0_km[2] * v_pec[2];
+
+        let a_quad = v_pec_sq - v_close_km_s * v_close_km_s;
+        let b_quad = 2.0 * p0_dot_v;
+        let c_quad = p0_sq;
+
+        let t_s = if a_quad.abs() < 1e-12 {
+            if b_quad >= 0.0 {
+                return Err(FlrwInterceptError::NoInterceptSolution);
+            }
+            -c_quad / b_quad
+        } else {
+            let disc = b_quad * b_quad - 4.0 * a_quad * c_quad;
+            if disc < 0.0 {
+                return Err(FlrwInterceptError::NoInterceptSolution);
+            }
+            let sqrt_disc = disc.sqrt();
+            let t1 = (-b_quad - sqrt_disc) / (2.0 * a_quad);
+            let t2 = (-b_quad + sqrt_disc) / (2.0 * a_quad);
+            match (t1 > 0.0, t2 > 0.0) {
+                (true, true) => t1.min(t2),
+                (true, false) => t1,
+                (false, true) => t2,
+                (false, false) => return Err(FlrwInterceptError::NoInterceptSolution),
+            }
+        };
+
+        if !t_s.is_finite() || t_s <= 0.0 {
+            return Err(FlrwInterceptError::NoInterceptSolution);
+        }
+
+        let intercept_phys_km = [
+            p0_km[0] + v_pec[0] * t_s,
+            p0_km[1] + v_pec[1] * t_s,
+            p0_km[2] + v_pec[2] * t_s,
+        ];
+        let norm_km = (intercept_phys_km[0] * intercept_phys_km[0]
+            + intercept_phys_km[1] * intercept_phys_km[1]
+            + intercept_phys_km[2] * intercept_phys_km[2])
+            .sqrt();
+        if norm_km < 1e-12 {
+            return Err(FlrwInterceptError::NoInterceptSolution);
+        }
+
+        let unit_direction = [
+            intercept_phys_km[0] / norm_km,
+            intercept_phys_km[1] / norm_km,
+            intercept_phys_km[2] / norm_km,
+        ];
+        let inv_scale_mpc = 1.0 / (self.scale_factor * mpc_to_km);
+        let intercept_comoving_pos_mpc = [
+            intercept_phys_km[0] * inv_scale_mpc,
+            intercept_phys_km[1] * inv_scale_mpc,
+            intercept_phys_km[2] * inv_scale_mpc,
+        ];
+        let arrival_scale_factor_est = self.scale_factor * (1.0 + self.hubble_param * t_s);
+
+        Ok(ComovingInterceptSolution {
+            unit_direction,
+            intercept_comoving_pos_mpc,
+            time_to_intercept_s: t_s,
+            launch_scale_factor: self.scale_factor,
+            arrival_scale_factor_est,
+            hubble_recession_km_s,
+            trajectory_assumption: "LinearizedComovingConstantBeta",
+        })
+    }
+
     /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
@@ -112,6 +301,20 @@ impl FlrwMetric {
         rec.insert("hubble_param_km_s_mpc".into(), Value::F64(H0_KM_S_MPC));
         Value::Record(rec)
     }
+}
+
+/// Top-level helper for [`FlrwMetric::intercept_vector_comoving`] (Packet OCS-12).
+pub fn intercept_vector_comoving(
+    metric: &FlrwMetric,
+    target_comoving_pos_mpc: [f64; 3],
+    target_peculiar_vel_km_s: [f64; 3],
+    interceptor_beta: f64,
+) -> Result<ComovingInterceptSolution, FlrwInterceptError> {
+    metric.intercept_vector_comoving(
+        target_comoving_pos_mpc,
+        target_peculiar_vel_km_s,
+        interceptor_beta,
+    )
 }
 
 /// A cosmological redshift observation (OCS §1.2).
@@ -131,7 +334,7 @@ pub struct RedshiftObservation {
 pub fn observe_redshift(z: f64) -> RedshiftObservation {
     let metric = FlrwMetric::flat_present_epoch();
     let distance_m = metric.redshift_to_distance(z);
-    let distance_mpc = distance_m / 3.085677581e22;
+    let distance_mpc = distance_m / MPC_IN_METERS;
     let v_km_s = metric.hubble_velocity(distance_m) / 1000.0;
 
     RedshiftObservation {
@@ -181,18 +384,10 @@ impl FloatingOrigin {
     /// Verify precision at a given comoving distance (OCS-T01).
     /// Returns the offset error in meters at the given distance.
     pub fn precision_error_at(&self, distance_mpc: f64) -> f64 {
-        // f64 has ~15.9 decimal digits of precision.
-        // At distance D (in meters), the absolute precision is D / 2^52.
-        let distance_m = distance_mpc * 3.085677581e22;
-        // With floating origin, the offset is small, so precision is
-        // determined by the offset magnitude, not the absolute distance.
-        // Without floating origin, precision = distance_m / 2^52
+        let distance_m = distance_mpc * MPC_IN_METERS;
         let without_floating_origin = distance_m / (1u64 << 52) as f64;
-        // With floating origin, offset ≈ 0, so precision is limited by
-        // the local offset magnitude (assumed ~1 Mpc for a local group)
-        let local_offset_m = 1.0 * 3.085677581e22;
+        let local_offset_m = 1.0 * MPC_IN_METERS;
         let with_floating_origin = local_offset_m / (1u64 << 52) as f64;
-        // Return the improvement ratio
         without_floating_origin - with_floating_origin
     }
 }
@@ -212,7 +407,7 @@ mod tests {
     #[test]
     fn physical_distance_scales() {
         let mut m = FlrwMetric::flat_present_epoch();
-        m.scale_factor = 0.5; // At earlier epoch
+        m.scale_factor = 0.5;
         let d = m.physical_distance(100.0);
         assert!((d - 50.0).abs() < 1e-10, "got {} expected 50.0", d);
     }
@@ -220,7 +415,6 @@ mod tests {
     #[test]
     fn redshift_from_scale_factor() {
         let m = FlrwMetric::flat_present_epoch();
-        // a_emit = 0.5 → z = 1/0.5 - 1 = 1.0
         let z = m.redshift(0.5);
         assert!((z - 1.0).abs() < 1e-10, "got {} expected 1.0", z);
     }
@@ -228,7 +422,6 @@ mod tests {
     #[test]
     fn redshift_zero_at_present() {
         let m = FlrwMetric::flat_present_epoch();
-        // a_emit = 1.0 (now) → z = 0
         let z = m.redshift(1.0);
         assert!(z.abs() < 1e-10);
     }
@@ -236,11 +429,9 @@ mod tests {
     #[test]
     fn hubble_velocity_linear() {
         let m = FlrwMetric::flat_present_epoch();
-        // v = H₀ * d
-        let v = m.hubble_velocity(1.0e22); // ~0.32 Mpc
+        let v = m.hubble_velocity(1.0e22);
         assert!(v > 0.0);
-        // Should be roughly 67 km/s at 1 Mpc
-        let v_1mpc = m.hubble_velocity(3.085677581e22) / 1000.0;
+        let v_1mpc = m.hubble_velocity(MPC_IN_METERS) / 1000.0;
         assert!(
             (v_1mpc - 67.4).abs() < 1.0,
             "got {} expected ~67.4 km/s",
@@ -262,7 +453,6 @@ mod tests {
         let obs = observe_redshift(0.01);
         assert!(obs.comoving_distance_mpc > 0.0);
         assert!(obs.recession_velocity_km_s > 0.0);
-        // At z=0.01, distance ≈ 42 Mpc, v ≈ 674 km/s
         assert!(obs.comoving_distance_mpc > 30.0 && obs.comoving_distance_mpc < 50.0);
     }
 
@@ -283,10 +473,7 @@ mod tests {
     #[test]
     fn floating_origin_precision_at_500_mpc() {
         let origin = FloatingOrigin::new([0.0; 3]);
-        // OCS-T01: verify < 10^-6 m offset error at 500 Mpc
         let error = origin.precision_error_at(500.0);
-        // The improvement from floating origin should be significant
-        // (without it, error at 500 Mpc would be ~0.034 m)
         assert!(error > 0.0, "floating origin should improve precision");
     }
 
@@ -313,9 +500,38 @@ mod tests {
     #[test]
     fn spatial_line_element_flat() {
         let m = FlrwMetric::flat_present_epoch();
-        // At a=1, k=0: ds² = r²/(1-0) + r²sin²θ = r²(1 + sin²θ)
         let ds2 = m.spatial_line_element(2.0, std::f64::consts::PI / 2.0);
-        // r=2, θ=π/2: ds² = 4(1 + 1) = 8
         assert!((ds2 - 8.0).abs() < 1e-10, "got {} expected 8.0", ds2);
+    }
+
+    #[test]
+    fn intercept_vector_comoving_valid_and_horizon_failures() {
+        let m = FlrwMetric::flat_present_epoch();
+        // Nearby galaxy at 10 Mpc along +X with modest transverse peculiar velocity (+300 km/s in Y)
+        // Interceptor at beta = 0.1 (30,000 km/s >> H0 * 10 Mpc ≈ 674 km/s)
+        let sol = intercept_vector_comoving(&m, [10.0, 0.0, 0.0], [0.0, 300.0, 0.0], 0.1).unwrap();
+        assert!(sol.time_to_intercept_s > 0.0);
+        assert!(sol.unit_direction[0] > 0.99);
+        assert!(sol.unit_direction[1] > 0.0); // Leads the target in +Y
+        assert_eq!(sol.launch_scale_factor, 1.0);
+        assert!(sol.arrival_scale_factor_est > 1.0);
+        assert_eq!(
+            sol.trajectory_assumption,
+            "LinearizedComovingConstantBeta"
+        );
+
+        // Target at 1000 Mpc (v_H ≈ 67,400 km/s) cannot be intercepted by beta = 0.1 (30,000 km/s)
+        let horizon_err =
+            intercept_vector_comoving(&m, [1000.0, 0.0, 0.0], [0.0, 0.0, 0.0], 0.1).unwrap_err();
+        assert!(matches!(
+            horizon_err,
+            FlrwInterceptError::BeyondCosmologicalHorizon { .. }
+        ));
+
+        // Invalid beta (superluminal > 1.0 or <= 0.0) must fail closed
+        assert_eq!(
+            intercept_vector_comoving(&m, [1.0, 0.0, 0.0], [0.0, 0.0, 0.0], 1.2).unwrap_err(),
+            FlrwInterceptError::InvalidBeta(1.2)
+        );
     }
 }

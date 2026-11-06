@@ -91,9 +91,10 @@ pub use postings::{
 #[cfg(not(target_arch = "wasm32"))]
 pub use publication::{classify_q42_path, classify_q42_volume, classify_q42_volume_set};
 pub use publication::{
-    deny_public_publication, provenance_path_for, quin_requires_sanctuary, ClassificationCounts,
-    IngestAccessPolicy, IngestProvenanceRecord, PublicationIntent, Q42PublicationClass,
-    Q42PublicationVerdict, Q42Transport,
+    check_public_distribution_allowed, deny_public_publication, provenance_path_for,
+    quin_requires_sanctuary, CheckPublicDistribution, ClassificationCounts, IngestAccessPolicy,
+    IngestProvenanceRecord, PublicationIntent, Q42PublicationClass, Q42PublicationVerdict,
+    Q42Transport,
 };
 #[cfg(not(target_arch = "wasm32"))]
 pub use publish::{append_segment_to_root, Q42RolloverPublisher, DEFAULT_SEGMENT_MAX_BYTES};

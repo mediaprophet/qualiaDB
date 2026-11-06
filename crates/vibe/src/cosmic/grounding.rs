@@ -1,6 +1,6 @@
-//! Grounding status and granular collapse operator (OCS §10).
+//! Grounding status and granular collapse operator (OCS §10, Packet OCS-13).
 //!
-//! Reference: OCS Specification v2.2.0 §10.
+//! Reference: OCS Specification v2.2.0 §10 & Playbook v4 Packet OCS-13.
 
 use crate::value::Value;
 use std::collections::BTreeMap;
@@ -33,15 +33,33 @@ impl GroundingStatus {
         }
     }
 
-    /// Whether this element should be collapsed onto physical spacetime.
+    /// Quantum context coordinate $q$ for `Tensor10D` integration (Packet OCS-13):
+    /// - `EmpiricallyAnchored` $\implies q \in [0.0, 1.0)$ ($q = 0.0$ at full confidence $1.0$).
+    /// - Uncollapsed narrative / counterfactual realms $\implies q \ge 1.0$.
+    pub fn quantum_context_q(&self) -> f32 {
+        match self {
+            Self::EmpiricallyAnchored { confidence, .. } => {
+                (1.0 - confidence.clamp(0.0, 1.0)).min(0.99)
+            }
+            Self::PlausibleInterpolation => 1.0,
+            Self::NarrativeFiction => 2.0,
+            Self::CounterfactualMythos => 3.0,
+        }
+    }
+
+    /// Whether this element should be collapsed onto physical spacetime ($q < 1.0$).
     pub fn is_collapsible(&self) -> bool {
-        matches!(self, Self::EmpiricallyAnchored { .. })
+        matches!(self, Self::EmpiricallyAnchored { .. }) && self.quantum_context_q() < 1.0
     }
 
     /// Converts to value.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
         rec.insert("status".into(), Value::String(self.as_str().into()));
+        rec.insert(
+            "quantum_context_q".into(),
+            Value::F64(self.quantum_context_q() as f64),
+        );
         if let Self::EmpiricallyAnchored {
             anchor_iri,
             confidence,
@@ -99,15 +117,37 @@ impl NarrativeEntity {
     }
 }
 
-/// Granular collapse operator Ĉ (OCS §10.2).
+/// Granular collapse operator Ĉ (OCS §10.2, Packet OCS-13).
 ///
 /// Given a set of narrative entities, returns only those that are
-/// empirically anchored (collapsible onto physical spacetime).
+/// empirically anchored ($q < 1.0$, collapsible onto physical spacetime),
+/// leaving counterfactual or fictional entities uncollapsed in their narrative realm.
 pub fn collapse_entities(entities: &[NarrativeEntity]) -> Vec<&NarrativeEntity> {
     entities
         .iter()
         .filter(|e| e.grounding.is_collapsible())
         .collect()
+}
+
+/// Normalized log-sum-exp distance metric subtracting $\ln(N)$ so $d(x, x) = 0.0$ (Packet OCS-13).
+///
+/// $$d_{\text{LSE}}(\mathbf{x}, \mathbf{y}) = \ln\!\left(\sum_{i=1}^{N} e^{|x_i - y_i|}\right) - \ln(N)$$
+pub fn normalized_lse_distance(a: &[f64], b: &[f64]) -> f64 {
+    if a.is_empty() || a.len() != b.len() {
+        return f64::INFINITY;
+    }
+    let n = a.len() as f64;
+    let max_diff = a
+        .iter()
+        .zip(b.iter())
+        .map(|(x, y)| (x - y).abs())
+        .fold(0.0_f64, f64::max);
+    let sum_exp: f64 = a
+        .iter()
+        .zip(b.iter())
+        .map(|(x, y)| ((x - y).abs() - max_diff).exp())
+        .sum();
+    (max_diff + sum_exp.ln() - n.ln()).max(0.0)
 }
 
 #[cfg(test)]
@@ -122,16 +162,19 @@ mod tests {
             stratum_or_epoch: Some("VIIa".into()),
         };
         assert!(status.is_collapsible());
+        assert!(status.quantum_context_q() < 1.0);
     }
 
     #[test]
     fn counterfactual_not_collapsible() {
         assert!(!GroundingStatus::CounterfactualMythos.is_collapsible());
+        assert!(GroundingStatus::CounterfactualMythos.quantum_context_q() >= 1.0);
     }
 
     #[test]
     fn narrative_fiction_not_collapsible() {
         assert!(!GroundingStatus::NarrativeFiction.is_collapsible());
+        assert!(GroundingStatus::NarrativeFiction.quantum_context_q() >= 1.0);
     }
 
     #[test]
@@ -143,10 +186,21 @@ mod tests {
             0.95,
         );
         let athena = NarrativeEntity::mythos("goddess_athena", "urn:omni:v1:narrative:homer:iliad");
-        let entities = vec![troy.clone(), athena];
+        let entities = vec![troy.clone(), athena.clone()];
         let collapsed = collapse_entities(&entities);
         assert_eq!(collapsed.len(), 1);
         assert_eq!(collapsed[0].name, "ancient_troy_citadel");
+        // Verify uncollapsed mythos entity remains in narrative realm with q >= 1.0
+        assert_eq!(athena.realm_usri, "urn:omni:v1:narrative:homer:iliad");
+        assert!(athena.grounding.quantum_context_q() >= 1.0);
+    }
+
+    #[test]
+    fn normalized_lse_distance_zero_on_identical_vectors() {
+        let x = [12.5, -4.2, 88.0];
+        assert!(normalized_lse_distance(&x, &x).abs() < 1e-12);
+        let y = [13.5, -4.2, 88.0];
+        assert!(normalized_lse_distance(&x, &y) > 0.0);
     }
 
     #[test]
@@ -163,7 +217,6 @@ mod tests {
                     r.get("status"),
                     Some(&Value::String("EmpiricallyAnchored".into()))
                 );
-                // f32 0.8 → f64 may not be exactly 0.8
                 if let Some(Value::F64(c)) = r.get("confidence") {
                     assert!((*c - 0.8).abs() < 1e-6, "confidence mismatch: {}", c);
                 } else {

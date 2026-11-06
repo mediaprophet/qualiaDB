@@ -148,3 +148,163 @@ fn gpu_caps_probe() {
     }
     eprintln!("════════════════════════════════════════════════════════════════════");
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum DeviceQualificationOutcome {
+    SoftwareWebGpuPass {
+        adapter_name: &'static str,
+        passed_checks: u32,
+        gpu_qualified: bool,
+        hardware_gpu_qualified: bool,
+    },
+    HardwareGpuPass {
+        adapter_name: &'static str,
+        backend: &'static str,
+        passed_checks: u32,
+        gpu_qualified: bool,
+        hardware_gpu_qualified: bool,
+    },
+    CpuFallbackOnly {
+        cpu_passed_checks: u32,
+        gpu_unsupported_checks: u32,
+        gpu_qualified: bool,
+        hardware_gpu_qualified: bool,
+    },
+    BrowserRequestRejected {
+        browser_error: String,
+        gpu_qualified: bool,
+        hardware_gpu_qualified: bool,
+    },
+}
+
+fn classify_device_qualification(
+    adapter_available: bool,
+    is_software_adapter: bool,
+    adapter_name: &'static str,
+    backend: &'static str,
+    passed_checks: u32,
+    gpu_unsupported_checks: u32,
+    browser_error: Option<&str>,
+) -> DeviceQualificationOutcome {
+    if let Some(err) = browser_error {
+        return DeviceQualificationOutcome::BrowserRequestRejected {
+            browser_error: err.to_string(),
+            gpu_qualified: false,
+            hardware_gpu_qualified: false,
+        };
+    }
+    if !adapter_available || gpu_unsupported_checks > 0 {
+        return DeviceQualificationOutcome::CpuFallbackOnly {
+            cpu_passed_checks: passed_checks,
+            gpu_unsupported_checks,
+            gpu_qualified: false,
+            hardware_gpu_qualified: false,
+        };
+    }
+    if is_software_adapter {
+        DeviceQualificationOutcome::SoftwareWebGpuPass {
+            adapter_name,
+            passed_checks,
+            gpu_qualified: true,
+            hardware_gpu_qualified: false,
+        }
+    } else {
+        DeviceQualificationOutcome::HardwareGpuPass {
+            adapter_name,
+            backend,
+            passed_checks,
+            gpu_qualified: true,
+            hardware_gpu_qualified: true,
+        }
+    }
+}
+
+#[test]
+fn browser_and_device_qualification_matrix_preserves_honest_fallback_states() {
+    use qualia_core_db::{q_hash, NQuin};
+
+    // 1. Software WebGPU pass (e.g. SwiftShader / llvmpipe): WebGPU works, but hardware_gpu_qualified is false.
+    let sw = classify_device_qualification(true, true, "SwiftShader", "vulkan", 13, 0, None);
+    assert_eq!(
+        sw,
+        DeviceQualificationOutcome::SoftwareWebGpuPass {
+            adapter_name: "SwiftShader",
+            passed_checks: 13,
+            gpu_qualified: true,
+            hardware_gpu_qualified: false,
+        }
+    );
+
+    // 2. Hardware GPU pass (e.g. Vulkan / Metal / DX12 discrete or integrated GPU).
+    let hw = classify_device_qualification(
+        true,
+        false,
+        "Apple M3 Max",
+        "metal",
+        13,
+        0,
+        None,
+    );
+    assert_eq!(
+        hw,
+        DeviceQualificationOutcome::HardwareGpuPass {
+            adapter_name: "Apple M3 Max",
+            backend: "metal",
+            passed_checks: 13,
+            gpu_qualified: true,
+            hardware_gpu_qualified: true,
+        }
+    );
+
+    // 3. CPU fallback only (2 CPU pass / 11 GPU unsupported -> gpu_qualified == false).
+    let cpu_only = classify_device_qualification(false, false, "none", "none", 2, 11, None);
+    assert_eq!(
+        cpu_only,
+        DeviceQualificationOutcome::CpuFallbackOnly {
+            cpu_passed_checks: 2,
+            gpu_unsupported_checks: 11,
+            gpu_qualified: false,
+            hardware_gpu_qualified: false,
+        }
+    );
+
+    // 4. Browser request rejected (preserves exact browser error string and marks gpu_qualified == false).
+    let rejected_msg = "NotAllowedError: navigator.gpu.requestAdapter rejected by browser policy";
+    let rejected = classify_device_qualification(
+        false,
+        false,
+        "none",
+        "wasm-webgpu",
+        0,
+        11,
+        Some(rejected_msg),
+    );
+    match &rejected {
+        DeviceQualificationOutcome::BrowserRequestRejected {
+            browser_error,
+            gpu_qualified,
+            hardware_gpu_qualified,
+        } => {
+            assert_eq!(browser_error, rejected_msg);
+            assert!(!gpu_qualified);
+            assert!(!hardware_gpu_qualified);
+        }
+        other => panic!("expected BrowserRequestRejected, got {other:?}"),
+    }
+
+    // Emit canonical 5-field XOR parity audit NQuin recording the qualification state.
+    let s = q_hash("urn:qualia:etalon:qualification:device");
+    let p = q_hash("urn:qualia:etalon:qualification:cpuFallbackOnly");
+    let o = q_hash(rejected_msg);
+    let c = q_hash("urn:qualia:idf:plane:Claim");
+    let m = (2u64 << 32) | 11u64;
+    let audit_quin = NQuin {
+        subject: s,
+        predicate: p,
+        object: o,
+        context: c,
+        metadata: m,
+        parity: NQuin::calculate_parity(s, p, o, c, m),
+    };
+    assert!(audit_quin.verify_ecc_parity());
+}

@@ -26,6 +26,20 @@ pub enum RealmClass {
 }
 
 impl RealmClass {
+    /// All 10 OCS v2.2.0 `RealmClass` variants.
+    pub const ALL: [Self; 10] = [
+        Self::Physical,
+        Self::Theorized,
+        Self::QuantumBranch,
+        Self::Hypothetical,
+        Self::Fiction,
+        Self::Simulation,
+        Self::Phenomenology,
+        Self::Noosphere,
+        Self::Narrative,
+        Self::Microverse,
+    ];
+
     /// `str` form.
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -55,6 +69,47 @@ impl RealmClass {
             Self::Hypothetical => 7,
             Self::Simulation => 8,
             Self::Narrative => 9,
+        }
+    }
+
+    /// Decode from an 8-bit realm class index (OCS §13.2).
+    pub fn from_u8(v: u8) -> Option<Self> {
+        match v {
+            0 => Some(Self::Physical),
+            1 => Some(Self::Theorized),
+            2 => Some(Self::QuantumBranch),
+            3 => Some(Self::Fiction),
+            4 => Some(Self::Phenomenology),
+            5 => Some(Self::Noosphere),
+            6 => Some(Self::Microverse),
+            7 => Some(Self::Hypothetical),
+            8 => Some(Self::Simulation),
+            9 => Some(Self::Narrative),
+            _ => None,
+        }
+    }
+
+    /// Map a `G-COORD` realm token (`earth`, `cosmos`, `fictional`, `speculative`, `viewpoint`)
+    /// or canonical USRI realm string into a [`RealmClass`].
+    pub fn from_g_coord_realm(s: &str) -> Option<Self> {
+        match s {
+            "earth" | "cosmos" => Some(Self::Physical),
+            "fictional" => Some(Self::Fiction),
+            "speculative" => Some(Self::Hypothetical),
+            "viewpoint" => Some(Self::Phenomenology),
+            other => Self::from_str(other),
+        }
+    }
+
+    /// Map this [`RealmClass`] to its default `G-COORD` realm token
+    /// (`cosmos`, `fictional`, `speculative`, `viewpoint`).
+    /// For Earth-grounded physical USRIs, [`Usri::g_coord_realm`] refines `"cosmos"` to `"earth"`.
+    pub fn to_g_coord_realm(&self) -> &'static str {
+        match self {
+            Self::Physical | Self::Microverse => "cosmos",
+            Self::Theorized | Self::QuantumBranch | Self::Hypothetical => "speculative",
+            Self::Fiction | Self::Simulation | Self::Narrative => "fictional",
+            Self::Phenomenology | Self::Noosphere => "viewpoint",
         }
     }
 
@@ -171,6 +226,21 @@ impl Usri {
         out
     }
 
+    /// Return the `G-COORD` realm string (`earth`, `cosmos`, `fictional`, `speculative`, `viewpoint`)
+    /// corresponding to this parsed USRI.
+    pub fn g_coord_realm(&self) -> &'static str {
+        if self.realm_class == RealmClass::Physical
+            && self
+                .hierarchy_path
+                .split(':')
+                .any(|seg| seg.eq_ignore_ascii_case("earth"))
+        {
+            "earth"
+        } else {
+            self.realm_class.to_g_coord_realm()
+        }
+    }
+
     /// Convert to a Value::Record for inspection and graph storage.
     pub fn to_value(&self) -> Value {
         let mut rec = BTreeMap::new();
@@ -218,6 +288,17 @@ impl Usri {
         }
         Value::Record(rec)
     }
+}
+
+/// Map a `G-COORD` realm string (`earth`, `cosmos`, `fictional`, `speculative`, `viewpoint`)
+/// to an OCS [`RealmClass`].
+pub fn g_coord_realm_to_realm_class(g_coord: &str) -> Option<RealmClass> {
+    RealmClass::from_g_coord_realm(g_coord)
+}
+
+/// Map an OCS [`RealmClass`] to its `G-COORD` realm category string.
+pub fn realm_class_to_g_coord_realm(rc: RealmClass) -> &'static str {
+    rc.to_g_coord_realm()
 }
 
 #[cfg(test)]
@@ -294,6 +375,48 @@ mod tests {
 
     #[test]
     fn realm_class_round_trip() {
+        for rc in RealmClass::ALL {
+            let s = rc.as_str();
+            assert_eq!(RealmClass::from_str(s), Some(rc));
+            assert_eq!(RealmClass::from_u8(rc.as_u8()), Some(rc));
+            let g_coord = rc.to_g_coord_realm();
+            assert!(
+                matches!(
+                    g_coord,
+                    "earth" | "cosmos" | "fictional" | "speculative" | "viewpoint"
+                ),
+                "unexpected G-COORD realm {g_coord}"
+            );
+            assert!(RealmClass::from_g_coord_realm(g_coord).is_some());
+            for level in super::super::cb_usri::HierarchyLevel::ALL {
+                let uri = format!("urn:omni:v1:{s}:universe:branch:sol:earth#anchor");
+                let parsed = Usri::parse(&uri).unwrap();
+                assert_eq!(parsed.realm_class, rc);
+                assert_eq!(parsed.to_string(), uri);
+                let cb = super::super::cb_usri::CompactBinaryUsri::from_usri(
+                    &uri,
+                    rc,
+                    level,
+                    1,
+                    &parsed.anchor,
+                );
+                assert_eq!(cb.realm_class(), rc.as_u8());
+                assert_eq!(cb.level(), level.as_u8());
+                let ctx = cb.to_quin_context_token();
+                assert_eq!(ctx & (1u64 << 63), 0);
+            }
+        }
+        assert_eq!(RealmClass::from_g_coord_realm("earth"), Some(RealmClass::Physical));
+        assert_eq!(RealmClass::from_g_coord_realm("cosmos"), Some(RealmClass::Physical));
+        assert_eq!(RealmClass::from_g_coord_realm("fictional"), Some(RealmClass::Fiction));
+        assert_eq!(RealmClass::from_g_coord_realm("speculative"), Some(RealmClass::Hypothetical));
+        assert_eq!(RealmClass::from_g_coord_realm("viewpoint"), Some(RealmClass::Phenomenology));
+        let earth_usri = Usri::parse("urn:omni:v1:physical:observable:standard:sol:earth:wgs84").unwrap();
+        assert_eq!(earth_usri.g_coord_realm(), "earth");
+        let mars_usri = Usri::parse("urn:omni:v1:physical:observable:standard:sol:mars").unwrap();
+        assert_eq!(mars_usri.g_coord_realm(), "cosmos");
+        let fixture = include_str!("../../fixtures/g_coord_realms.vibe");
+        assert!(crate::load_program(fixture).is_ok());
         for rc in [
             RealmClass::Physical,
             RealmClass::Fiction,

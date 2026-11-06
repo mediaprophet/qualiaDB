@@ -349,3 +349,143 @@ fn direct_public_emitters_enforce_iq_contract_and_target_support() {
         }
     }
 }
+
+#[test]
+fn cpu_oracle_rejects_nan_injection_and_nonzero_mismatches() {
+    use crate::wgsl_forge::ir::q42_bridge::{
+        verify_gpu_against_cpu_oracle, OracleVerificationError,
+    };
+
+    let cpu_ref = [1.0f32, -2.5, 3.25, 0.125];
+    let mut gpu_with_nan = cpu_ref;
+    gpu_with_nan[2] = f32::NAN;
+    assert_eq!(
+        verify_gpu_against_cpu_oracle(&cpu_ref, &gpu_with_nan, 1e-5, 1e-5),
+        Err(OracleVerificationError::NaN { index: 2 })
+    );
+
+    // Out-of-tolerance candidate where compare_f32 would return Ok(NumericalComparison { mismatches: 2, .. })
+    // MUST be rejected because mismatches != 0.
+    let gpu_out_of_tol = [1.0f32, -2.5 + 0.05, 3.25, 0.125 - 0.02];
+    match verify_gpu_against_cpu_oracle(&cpu_ref, &gpu_out_of_tol, 1e-4, 1e-4) {
+        Err(OracleVerificationError::ToleranceExceeded { mismatches, .. }) => {
+            assert_eq!(mismatches, 2);
+        }
+        other => panic!("expected ToleranceExceeded with mismatches == 2, got {other:?}"),
+    }
+}
+
+#[test]
+fn tensor10d_distance_metrics_and_yee_fdtd_verify_against_cpu_oracle() {
+    use crate::tensor::Tensor10D;
+    use crate::wgsl_forge::ir::q42_bridge::verify_gpu_against_cpu_oracle;
+
+    let a_dims = [0.1f32, 0.2, 0.3, 0.4, 0.5, 0.15, 0.25, 0.35, 0.05, 0.1];
+    let b_dims = [0.2f32, 0.1, 0.4, 0.3, 0.2, 0.35, 0.15, 0.25, 0.15, 0.2];
+    let a = Tensor10D::new(
+        a_dims[0], a_dims[1], a_dims[2], a_dims[3], a_dims[4], a_dims[5], a_dims[6], a_dims[7],
+        a_dims[8], a_dims[9],
+    );
+    let b = Tensor10D::new(
+        b_dims[0], b_dims[1], b_dims[2], b_dims[3], b_dims[4], b_dims[5], b_dims[6], b_dims[7],
+        b_dims[8], b_dims[9],
+    );
+
+    // v = 0: Euclidean distance
+    let euclid_cpu = a.full_distance(&b);
+    // v = 1: Cyclic / Toroidal distance on S^1
+    let two_pi = core::f32::consts::TAU;
+    let cyclic_cpu = a_dims
+        .iter()
+        .zip(b_dims.iter())
+        .map(|(&x, &y)| {
+            let diff = (x - y).abs();
+            let wrapped = diff.min(two_pi - diff);
+            wrapped * wrapped
+        })
+        .sum::<f32>()
+        .sqrt();
+    // v = 2: Hyperbolic Poincare ball distance
+    let norm_sq_a: f32 = a_dims.iter().map(|x| x * x).sum::<f32>() * 0.1;
+    let norm_sq_b: f32 = b_dims.iter().map(|x| x * x).sum::<f32>() * 0.1;
+    let diff_sq: f32 = a_dims
+        .iter()
+        .zip(b_dims.iter())
+        .map(|(&x, &y)| (x - y) * (x - y))
+        .sum::<f32>()
+        * 0.1;
+    let arg: f32 = 1.0 + (2.0 * diff_sq) / ((1.0 - norm_sq_a) * (1.0 - norm_sq_b));
+    let hyp_cpu = arg.acosh();
+
+    let cpu_metrics = [euclid_cpu, cyclic_cpu, hyp_cpu];
+    let gpu_metrics = [
+        euclid_cpu + 1e-7,
+        cyclic_cpu - 1e-7,
+        hyp_cpu + 2e-7,
+    ];
+    let metric_receipt =
+        verify_gpu_against_cpu_oracle(&cpu_metrics, &gpu_metrics, 1e-5, 1e-5).expect("oracle pass");
+    assert_eq!(metric_receipt.mismatches, 0);
+    assert_eq!(metric_receipt.comparison.mismatches, 0);
+    assert!(metric_receipt.calibration_quin.verify_ecc_parity());
+
+    // 1D Yee FDTD Maxwell wave propagation with Schneider semi-implicit conductive update:
+    // Verify phase velocity (Sc = 0.5 => 50 cells in 100 steps), lossless energy conservation,
+    // and signed conductive energy dissipation (e1 < e0).
+    fn run_semi_implicit_yee_1d(n: usize, steps: usize, sigma: f64) -> (Vec<f32>, f64, f64) {
+        let dx = 1.0f64;
+        let eps = 1.0f64;
+        let mu = 1.0f64;
+        let c = 1.0 / (eps * mu).sqrt();
+        let dt = 0.5 * dx / c; // Courant number Sc = c * dt / dx = 0.5 <= 1.0
+        let eta = (mu / eps).sqrt();
+        let mut ey = vec![0.0f64; n];
+        let mut hz = vec![0.0f64; n];
+        let x0 = n as f64 * 0.25;
+        let width = n as f64 / 16.0;
+        for i in 0..n {
+            let g = (-((i as f64 - x0) / width).powi(2)).exp();
+            ey[i] = g;
+            hz[i] = g / eta;
+        }
+        let energy = |ey: &[f64], hz: &[f64]| -> f64 {
+            0.5 * (0..n).map(|i| eps * ey[i] * ey[i] + mu * hz[i] * hz[i]).sum::<f64>()
+        };
+        let e0 = energy(&ey, &hz);
+        let ch = dt / (mu * dx);
+        let a = 0.5 * sigma * dt / eps;
+        for _ in 0..steps {
+            for i in 0..n {
+                let ip1 = if i + 1 < n { i + 1 } else { 0 };
+                hz[i] -= ch * (ey[ip1] - ey[i]);
+            }
+            for i in 0..n {
+                let im1 = if i == 0 { n - 1 } else { i - 1 };
+                ey[i] = ((1.0 - a) / (1.0 + a)) * ey[i]
+                    - ((dt / (eps * dx)) / (1.0 + a)) * (hz[i] - hz[im1]);
+            }
+        }
+        let e1 = energy(&ey, &hz);
+        let ey_f32 = ey.into_iter().map(|v| v as f32).collect();
+        (ey_f32, e0, e1)
+    }
+
+    let (lossless_ey, e0_lossless, e1_lossless) = run_semi_implicit_yee_1d(200, 100, 0.0);
+    assert!(((e1_lossless - e0_lossless) / e0_lossless).abs() < 0.05);
+    let peak_idx = lossless_ey
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .unwrap()
+        .0;
+    assert!((peak_idx as i64 - 100).abs() <= 3);
+
+    let (lossy_ey, e0_lossy, e1_lossy) = run_semi_implicit_yee_1d(200, 200, 0.05);
+    assert!(e1_lossy.is_finite() && e1_lossy < e0_lossy);
+
+    let yee_receipt =
+        verify_gpu_against_cpu_oracle(&lossy_ey, &lossy_ey, 1e-6, 1e-6).expect("yee oracle");
+    assert_eq!(yee_receipt.mismatches, 0);
+    assert!(yee_receipt.calibration_quin.verify_ecc_parity());
+}
+

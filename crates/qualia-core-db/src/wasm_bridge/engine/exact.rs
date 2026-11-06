@@ -7,15 +7,94 @@
 //! it. All I/O is via decimal / `"p/q"` STRINGS because JS `f64` cannot carry
 //! arbitrary precision. Every fallible op (zero divisor / denominator, malformed
 //! input) fails closed with a clear `Err` — nothing is fabricated.
-#![cfg(target_arch = "wasm32")]
 
+#[cfg(target_arch = "wasm32")]
 use serde::{Deserialize, Serialize};
+#[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(target_arch = "wasm32")]
 use super::jserr;
+#[cfg(target_arch = "wasm32")]
 use crate::solvers::exact::{BigInt, BigRational};
 
-// ── shared (de)serialization shapes ──────────────────────────────────────────
+// ── Zero-heap 256-bit stack-limb exact cubic verification (Q42-08) ───────────
+
+#[inline]
+const fn u256_add(a: [u64; 4], b: [u64; 4]) -> [u64; 4] {
+    let mut out = [0u64; 4];
+    let mut carry = 0u128;
+    let mut i = 0;
+    while i < 4 {
+        let sum = (a[i] as u128) + (b[i] as u128) + carry;
+        out[i] = sum as u64;
+        carry = sum >> 64;
+        i += 1;
+    }
+    out
+}
+
+#[inline]
+const fn u256_neg(a: [u64; 4]) -> [u64; 4] {
+    u256_add([!a[0], !a[1], !a[2], !a[3]], [1, 0, 0, 0])
+}
+
+#[inline]
+const fn i256_from_i64(v: i64) -> [u64; 4] {
+    let ext = if v < 0 { u64::MAX } else { 0u64 };
+    [v as u64, ext, ext, ext]
+}
+
+#[inline]
+const fn i256_cube_i64(v: i64) -> [u64; 4] {
+    let neg = v < 0;
+    let mag = v.unsigned_abs();
+    let sq = (mag as u128) * (mag as u128);
+    let sq_lo = sq as u64;
+    let sq_hi = (sq >> 64) as u64;
+    let p0 = (sq_lo as u128) * (mag as u128);
+    let limb0 = p0 as u64;
+    let p1 = (sq_hi as u128) * (mag as u128) + (p0 >> 64);
+    let limb1 = p1 as u64;
+    let limb2 = (p1 >> 64) as u64;
+    let cube = [limb0, limb1, limb2, 0u64];
+    if neg {
+        u256_neg(cube)
+    } else {
+        cube
+    }
+}
+
+/// Returns `true` iff `k ≡ 4 or 5 (mod 9)` (`k ≡ ±4 (mod 9)`), proving global algebraic
+/// impossibility of `x^3 + y^3 + z^3 = k` over `ℤ^3` (`Q42-08` / §6.2.3).
+#[inline]
+pub const fn has_sum_of_three_cubes_mod9_obstruction(k: i64) -> bool {
+    matches!(k.rem_euclid(9), 4 | 5)
+}
+
+/// Zero-heap exact signed 256-bit verification of `x^3 + y^3 + z^3 == k` over `[u64; 4]` stack limbs.
+#[inline]
+pub fn verify_sum_of_three_cubes_exact(
+    x: i64,
+    y: i64,
+    z: i64,
+    k: i64,
+) -> Result<bool, &'static str> {
+    if has_sum_of_three_cubes_mod9_obstruction(k) {
+        return Ok(false);
+    }
+    let sum = u256_add(
+        u256_add(i256_cube_i64(x), i256_cube_i64(y)),
+        i256_cube_i64(z),
+    );
+    Ok(sum == i256_from_i64(k))
+}
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_exports {
+    use super::*;
+
+    // ── shared (de)serialization shapes ──────────────────────────────────────────
 
 /// Two arbitrary-precision integers as decimal strings.
 #[derive(Deserialize)]
@@ -196,3 +275,7 @@ pub fn exact_rational_mul(val: JsValue) -> Result<JsValue, JsValue> {
         result: rational_pq(&a.mul(&b)),
     })?)
 }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub use wasm_exports::*;

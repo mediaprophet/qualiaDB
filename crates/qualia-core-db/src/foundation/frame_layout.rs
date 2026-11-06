@@ -191,23 +191,29 @@ pub const SYNTHESIZED_BIT: u64 = 1u64 << 58;
 pub const CONSUMED_BIT: u64 = 1u64 << 59;
 
 // ════════════════════════════════════════════════════════════════════════════════
-//  parity (ECC over the four semantic fields)
+//  parity (canonical 5-field XOR over subject ^ predicate ^ object ^ context ^ metadata)
 // ════════════════════════════════════════════════════════════════════════════════
 #[inline]
-/// Computes the parity fold.
-pub const fn parity(subject: u64, predicate: u64, object: u64, context: u64) -> u64 {
-    subject ^ predicate ^ object ^ context
+/// Computes the canonical 5-field parity fold (`subject ^ predicate ^ object ^ context ^ metadata`).
+pub const fn parity(
+    subject: u64,
+    predicate: u64,
+    object: u64,
+    context: u64,
+    metadata: u64,
+) -> u64 {
+    subject ^ predicate ^ object ^ context ^ metadata
 }
 #[inline]
-/// Sets the parity field on `q`.
+/// Sets the canonical 5-field parity field on `q`.
 pub fn sealed(mut q: NQuin) -> NQuin {
-    q.parity = parity(q.subject, q.predicate, q.object, q.context);
+    q.parity = parity(q.subject, q.predicate, q.object, q.context, q.metadata);
     q
 }
 #[inline]
-/// `true` when the parity fold is consistent.
+/// `true` when the canonical 5-field parity fold is consistent.
 pub fn parity_valid(q: &NQuin) -> bool {
-    q.parity == parity(q.subject, q.predicate, q.object, q.context)
+    q.parity == parity(q.subject, q.predicate, q.object, q.context, q.metadata)
 }
 
 #[cfg(test)]
@@ -333,21 +339,26 @@ mod tests {
     }
 
     #[test]
-    fn parity_ignores_computational_metadata() {
+    fn parity_enforces_canonical_five_field_xor() {
         let q = sealed(NQuin {
             subject: 7,
             predicate: 8,
             object: 9,
             context: 10,
-            metadata: 0,
+            metadata: QUIN_TYPE_MASK | ROUTING_LANE_MASK | 999,
             parity: 0,
         });
         assert!(parity_valid(&q));
+        assert!(q.verify_ecc_parity());
+        assert_eq!(
+            q.parity,
+            parity(q.subject, q.predicate, q.object, q.context, q.metadata)
+        );
         let mut q2 = q;
-        q2.metadata = QUIN_TYPE_MASK | ROUTING_LANE_MASK | 999;
+        q2.metadata ^= 1;
         assert!(
-            parity_valid(&q2),
-            "parity must ignore the computational-support field"
+            !parity_valid(&q2),
+            "canonical 5-field parity must detect unsealed metadata mutations"
         );
     }
 }

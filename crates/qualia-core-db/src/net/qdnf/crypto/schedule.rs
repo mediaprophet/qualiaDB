@@ -131,4 +131,42 @@ mod tests {
         assert_ne!(s3, s2);
         assert_ne!(r3, r2);
     }
+
+    #[test]
+    fn r03_handshake_schedule_binds_full_transcript_and_finished_key() {
+        use crate::net::qdnf::crypto::finished::{finished_mac, verify_finished};
+        let kem = [0x11u8; 32];
+        let x = [0x22u8; 32];
+        let mut t = Transcript::new();
+        t.append(b"suite", b"qpr-pq-1").unwrap();
+        t.append(b"init", b"did:qi:alice").unwrap();
+        t.append(b"resp", b"did:qi:bob").unwrap();
+        let keys = derive_handshake_keys(&kem, &x, &t).unwrap();
+        assert_ne!(keys.initiator_to_responder, keys.responder_to_initiator);
+        let i2r_tag =
+            finished_mac(&keys.initiator_to_responder, &keys.transcript_digest, true).unwrap();
+        let r2i_tag =
+            finished_mac(&keys.responder_to_initiator, &keys.transcript_digest, false).unwrap();
+        assert!(verify_finished(
+            &keys.initiator_to_responder,
+            &keys.transcript_digest,
+            true,
+            &i2r_tag
+        )
+        .is_ok());
+        assert!(verify_finished(
+            &keys.responder_to_initiator,
+            &keys.transcript_digest,
+            false,
+            &r2i_tag
+        )
+        .is_ok());
+        assert!(verify_finished(
+            &keys.initiator_to_responder,
+            &keys.transcript_digest,
+            true,
+            &r2i_tag
+        )
+        .is_err());
+    }
 }

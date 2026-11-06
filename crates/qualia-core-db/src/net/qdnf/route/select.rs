@@ -1,6 +1,10 @@
 //! Pareto selection of at most three next hops. Metrics stay independently typed.
 
 use crate::net::qdnf::errors::QdnfError;
+pub use crate::net::qdnf::resolve::records::{
+    project_rar_to_network_quins, select_routes, RarKeyRole, ResolveOutcome, RouteAdvert,
+    VerifiedRar, MAX_RAR_ROUTES,
+};
 
 pub const MAX_PATH_HOPS: usize = 16;
 pub const MAX_SELECTED: usize = 3;
@@ -276,5 +280,51 @@ mod tests {
         let cands = [cand(1, 2, 1, 1, 1, true, 1)];
         let mut out: [CandidatePath; 0] = [];
         assert_eq!(pareto_select(&cands, &mut out), Err(QdnfError::Capacity));
+    }
+
+    #[test]
+    fn select_routes_and_rar_quin_projection_roundtrip_via_route_select() {
+        use crate::net::qdnf::types::{DniCoordinate, StrongDigest};
+        use crate::NQuin;
+
+        let mut target = StrongDigest::ZERO;
+        target.0[0] = 0x42;
+        let adv = RouteAdvert {
+            target,
+            dni: DniCoordinate {
+                network_id: 1,
+                realm_id: 1,
+                node_id: 2,
+                service_id: 3,
+            },
+            not_before_unix: 10,
+            expires_unix: 100,
+            sequence: 4,
+            key_role: RarKeyRole::RouteUpdate,
+        };
+        let mut out = [adv; 4];
+        let (n, outcome) = select_routes(&target, &[adv], 50, &mut out).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(outcome, ResolveOutcome::Routes);
+
+        let mut routes = [DniCoordinate::ZERO; MAX_RAR_ROUTES];
+        routes[0] = adv.dni;
+        let rar = VerifiedRar {
+            rar_digest: StrongDigest([0x11; 48]),
+            target_digest: target,
+            signer_digest: StrongDigest([0x22; 48]),
+            key_role: RarKeyRole::CapabilityInvocation,
+            sequence: 4,
+            route_epoch: 3,
+            issued_at_unix: 10,
+            expires_at_unix: 100,
+            routes,
+            route_count: 1,
+        };
+        let mut quins = [NQuin::default(); 4];
+        let qn = project_rar_to_network_quins(&rar, &mut quins);
+        assert_eq!(qn, 2);
+        assert!(quins[0].verify_ecc_parity());
+        assert!(quins[1].verify_ecc_parity());
     }
 }

@@ -1,6 +1,8 @@
 //! Agent diagnostic loop — parse + check, JSON out. No disk. No execute.
 
 use crate::check::{check_cell, check_program};
+#[allow(unused_imports)]
+pub use crate::check::fabric_guard::FabricSuggestedFix;
 use crate::error::Diagnostic;
 use crate::parse::{parse_cell, parse_program};
 

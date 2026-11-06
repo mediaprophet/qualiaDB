@@ -1,0 +1,354 @@
+# QualiaDB Identifier Fabric SHACL Shapes (Packet IDF-01 — F2 §§1–28 & F6)
+# Enforces strict separation between Who/NaturalAgent, Claim, SpatiotemporalHandle,
+# and Instrument planes. All property shapes and sh:not targets are explicitly named
+# so the zero-Python N3Parser + turtle_shapes compiler lowers every constraint.
+
+@prefix idf:  <urn:qualia:idf:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ── 1. Top-Level Plane Shapes ──────────────────────────────────────────────
+
+idf:NaturalAgentShape a sh:NodeShape ;
+    sh:targetClass idf:NaturalAgent ;
+    sh:property idf:NaturalAgent-planeProp ;
+    sh:property idf:NaturalAgent-framingProp ;
+    sh:not idf:NaturalAgent-notOwlThing ;
+    sh:not idf:NaturalAgent-notInstrument ;
+    sh:not idf:NaturalAgent-notHandle .
+
+idf:NaturalAgent-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:hasValue "NaturalAgent" .
+
+idf:NaturalAgent-framingProp sh:path idf:framing ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:hasValue "living-SHACL" .
+
+idf:NaturalAgent-notOwlThing a sh:NodeShape ;
+    sh:class owl:Thing .
+
+idf:NaturalAgent-notInstrument a sh:NodeShape ;
+    sh:class idf:Instrument .
+
+idf:NaturalAgent-notHandle a sh:NodeShape ;
+    sh:class idf:SpatiotemporalHandle .
+
+idf:ClaimOpinionShape a sh:NodeShape ;
+    sh:targetClass idf:ClaimOpinion ;
+    sh:property idf:ClaimOpinion-planeProp ;
+    sh:property idf:ClaimOpinion-assertedByProp ;
+    sh:property idf:ClaimOpinion-aboutSubjectProp .
+
+idf:ClaimOpinion-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:ClaimOpinion-assertedByProp sh:path idf:assertedBy ;
+    sh:minCount 1 .
+
+idf:ClaimOpinion-aboutSubjectProp sh:path idf:aboutSubject ;
+    sh:minCount 1 .
+
+idf:SpatiotemporalHandleShape a sh:NodeShape ;
+    sh:targetClass idf:SpatiotemporalHandle ;
+    sh:property idf:SpatiotemporalHandle-planeProp ;
+    sh:property idf:SpatiotemporalHandle-frameIdProp ;
+    sh:property idf:SpatiotemporalHandle-epochTickProp .
+
+idf:SpatiotemporalHandle-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:hasValue "SpatiotemporalHandle" .
+
+idf:SpatiotemporalHandle-frameIdProp sh:path idf:frameId ;
+    sh:minCount 1 .
+
+idf:SpatiotemporalHandle-epochTickProp sh:path idf:epochTick ;
+    sh:minCount 1 .
+
+idf:InstrumentShape a sh:NodeShape ;
+    sh:targetClass idf:Instrument ;
+    sh:property idf:Instrument-planeProp ;
+    sh:property idf:Instrument-kindProp ;
+    sh:property idf:Instrument-keyRoleProp .
+
+idf:Instrument-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:Instrument-kindProp sh:path idf:instrumentKind ;
+    sh:minCount 1 .
+
+idf:Instrument-keyRoleProp sh:path idf:keyRole ;
+    sh:minCount 1 ;
+    sh:in "SessionAuthentication" , "RouteUpdate" , "TransportAead" , "QLinkEphemeralDh" , "ControllerSigning" , "CapabilityPresentation" , "DiscoveryPsk" .
+
+# ── 2. Co-Attestation & Spatiotemporal Rendezvous Shapes ───────────────────
+
+idf:CoAttestationBundleShape a sh:NodeShape ;
+    sh:targetClass idf:CoAttestationBundle ;
+    sh:property idf:CoAttestationBundle-memberProp ;
+    sh:property idf:CoAttestationBundle-timeIntervalProp ;
+    sh:property idf:CoAttestationBundle-keyRoleProp .
+
+idf:CoAttestationBundle-memberProp sh:path idf:attestationMember ;
+    sh:minCount 2 .
+
+idf:CoAttestationBundle-timeIntervalProp sh:path idf:timeInterval ;
+    sh:minCount 1 .
+
+idf:CoAttestationBundle-keyRoleProp sh:path idf:memberKeyRole ;
+    sh:minCount 1 ;
+    sh:in "SessionAuthentication" , "RouteUpdate" , "TransportAead" , "QLinkEphemeralDh" , "ControllerSigning" , "CapabilityPresentation" , "DiscoveryPsk" .
+
+idf:DniShape a sh:NodeShape ;
+    sh:targetClass idf:DigitalNetworkIdentifier ;
+    sh:property idf:Dni-planeProp ;
+    sh:property idf:Dni-routingScopeProp .
+
+idf:Dni-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "SpatiotemporalHandle" .
+
+idf:Dni-routingScopeProp sh:path idf:routingScope ;
+    sh:minCount 1 .
+
+idf:RarShape a sh:NodeShape ;
+    sh:targetClass idf:RendezvousAuthorizationRecord ;
+    sh:property idf:Rar-planeProp ;
+    sh:property idf:Rar-keyRoleProp .
+
+idf:Rar-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:Rar-keyRoleProp sh:path idf:keyRole ;
+    sh:minCount 1 ;
+    sh:in "SessionAuthentication" , "RouteUpdate" , "TransportAead" , "QLinkEphemeralDh" , "ControllerSigning" , "CapabilityPresentation" , "DiscoveryPsk" .
+
+idf:QSessionProofShape a sh:NodeShape ;
+    sh:targetClass idf:QSessionProof ;
+    sh:property idf:QSessionProof-planeProp ;
+    sh:property idf:QSessionProof-keyRoleProp .
+
+idf:QSessionProof-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:QSessionProof-keyRoleProp sh:path idf:keyRole ;
+    sh:minCount 1 ;
+    sh:in "SessionAuthentication" , "RouteUpdate" , "TransportAead" , "QLinkEphemeralDh" , "ControllerSigning" , "CapabilityPresentation" , "DiscoveryPsk" .
+
+# ── 3. F2 §§14–27 Complete Identifier Fabric Shapes ────────────────────────
+
+idf:AiAgentShape a sh:NodeShape ;
+    sh:targetClass idf:AiAgent ;
+    sh:property idf:AiAgent-planeProp ;
+    sh:property idf:AiAgent-sponsorProp ;
+    sh:not idf:NaturalAgent-notOwlThing .
+
+idf:AiAgent-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:AiAgent-sponsorProp sh:path idf:sponsorPrincipal ;
+    sh:minCount 1 .
+
+idf:MachineDeviceShape a sh:NodeShape ;
+    sh:targetClass idf:MachineDevice ;
+    sh:property idf:MachineDevice-planeProp ;
+    sh:property idf:MachineDevice-hwAttestationProp .
+
+idf:MachineDevice-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:MachineDevice-hwAttestationProp sh:path idf:hardwareAttestation ;
+    sh:minCount 1 .
+
+idf:OrganizationShape a sh:NodeShape ;
+    sh:targetClass idf:Organization ;
+    sh:property idf:Organization-planeProp ;
+    sh:property idf:Organization-charterProp .
+
+idf:Organization-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:Organization-charterProp sh:path idf:charterAnchor ;
+    sh:minCount 1 .
+
+idf:RelationScopedLocatorShape a sh:NodeShape ;
+    sh:targetClass idf:RelationScopedLocator ;
+    sh:property idf:RelationScopedLocator-planeProp ;
+    sh:property idf:RelationScopedLocator-scopeProp .
+
+idf:RelationScopedLocator-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "SpatiotemporalHandle" .
+
+idf:RelationScopedLocator-scopeProp sh:path idf:counterpartyScope ;
+    sh:minCount 1 .
+
+idf:OnlineAccountShape a sh:NodeShape ;
+    sh:targetClass idf:OnlineAccount ;
+    sh:property idf:OnlineAccount-planeProp ;
+    sh:property idf:OnlineAccount-providerProp .
+
+idf:OnlineAccount-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:OnlineAccount-providerProp sh:path idf:providerDomain ;
+    sh:minCount 1 .
+
+idf:WalletShape a sh:NodeShape ;
+    sh:targetClass idf:Wallet ;
+    sh:property idf:Wallet-planeProp ;
+    sh:property idf:Wallet-ledgerProp .
+
+idf:Wallet-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:Wallet-ledgerProp sh:path idf:ledgerChain ;
+    sh:minCount 1 .
+
+idf:PasswordVerifierShape a sh:NodeShape ;
+    sh:targetClass idf:PasswordVerifier ;
+    sh:property idf:PasswordVerifier-planeProp ;
+    sh:property idf:PasswordVerifier-kdfProp .
+
+idf:PasswordVerifier-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:PasswordVerifier-kdfProp sh:path idf:kdfProfile ;
+    sh:minCount 1 .
+
+idf:BiometricFamilyShape a sh:NodeShape ;
+    sh:targetClass idf:BiometricFamily ;
+    sh:property idf:BiometricFamily-planeProp ;
+    sh:property idf:BiometricFamily-modalityProp .
+
+idf:BiometricFamily-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:BiometricFamily-modalityProp sh:path idf:modalityClass ;
+    sh:minCount 1 .
+
+idf:BiometricInstanceShape a sh:NodeShape ;
+    sh:targetClass idf:BiometricInstance ;
+    sh:property idf:BiometricInstance-planeProp ;
+    sh:property idf:BiometricInstance-templateProp .
+
+idf:BiometricInstance-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Instrument" .
+
+idf:BiometricInstance-templateProp sh:path idf:revocableCancelableTemplate ;
+    sh:minCount 1 .
+
+idf:EnvironmentPredicateShape a sh:NodeShape ;
+    sh:targetClass idf:EnvironmentPredicate ;
+    sh:property idf:EnvironmentPredicate-planeProp ;
+    sh:property idf:EnvironmentPredicate-placeProofProp .
+
+idf:EnvironmentPredicate-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "SpatiotemporalHandle" .
+
+idf:EnvironmentPredicate-placeProofProp sh:path idf:placeProof ;
+    sh:minCount 1 .
+
+idf:RoleCapacityGrantShape a sh:NodeShape ;
+    sh:targetClass idf:RoleCapacityGrant ;
+    sh:property idf:RoleCapacityGrant-planeProp ;
+    sh:property idf:RoleCapacityGrant-roleProp .
+
+idf:RoleCapacityGrant-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:RoleCapacityGrant-roleProp sh:path idf:grantedRole ;
+    sh:minCount 1 .
+
+idf:AccountabilityArtifactShape a sh:NodeShape ;
+    sh:targetClass idf:AccountabilityArtifact ;
+    sh:property idf:AccountabilityArtifact-planeProp ;
+    sh:property idf:AccountabilityArtifact-digestProp .
+
+idf:AccountabilityArtifact-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:AccountabilityArtifact-digestProp sh:path idf:auditDigest ;
+    sh:minCount 1 .
+
+idf:AssertionClaimShape a sh:NodeShape ;
+    sh:targetClass idf:AssertionClaim ;
+    sh:property idf:AssertionClaim-planeProp ;
+    sh:property idf:AssertionClaim-predicateProp .
+
+idf:AssertionClaim-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:AssertionClaim-predicateProp sh:path idf:claimPredicate ;
+    sh:minCount 1 .
+
+idf:RelianceRecordShape a sh:NodeShape ;
+    sh:targetClass idf:RelianceRecord ;
+    sh:property idf:RelianceRecord-planeProp ;
+    sh:property idf:RelianceRecord-reliedProp .
+
+idf:RelianceRecord-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:RelianceRecord-reliedProp sh:path idf:reliedOnClaim ;
+    sh:minCount 1 .
+
+idf:AssumptionChainShape a sh:NodeShape ;
+    sh:targetClass idf:AssumptionChain ;
+    sh:property idf:AssumptionChain-planeProp ;
+    sh:property idf:AssumptionChain-upstreamProp .
+
+idf:AssumptionChain-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:AssumptionChain-upstreamProp sh:path idf:upstreamAssumption ;
+    sh:minCount 1 .
+
+idf:RootCauseBundleShape a sh:NodeShape ;
+    sh:targetClass idf:RootCauseBundle ;
+    sh:property idf:RootCauseBundle-planeProp ;
+    sh:property idf:RootCauseBundle-faultProp .
+
+idf:RootCauseBundle-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:RootCauseBundle-faultProp sh:path idf:faultOrigin ;
+    sh:minCount 1 .
+
+idf:BlastRadiusMapShape a sh:NodeShape ;
+    sh:targetClass idf:BlastRadiusMap ;
+    sh:property idf:BlastRadiusMap-planeProp ;
+    sh:property idf:BlastRadiusMap-scopeProp .
+
+idf:BlastRadiusMap-planeProp sh:path idf:plane ;
+    sh:minCount 1 ;
+    sh:hasValue "Claim" .
+
+idf:BlastRadiusMap-scopeProp sh:path idf:affectedScope ;
+    sh:minCount 1 .

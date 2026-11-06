@@ -29,6 +29,99 @@ pub const GTOP_SECTION_HEADER_BYTES: usize = 16;
 pub const GTOP_CATALOGUE_ROLE: &str = "geometry_topology_complex";
 pub const GTOP_MIME_TYPE: &str = "application/x-qualia-gtop";
 
+/// A [`PayloadCatalogueEntry`] paired with its verified UTF-8 prose/descriptor payload body.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PayloadCatalogueBlob {
+    pub entry: PayloadCatalogueEntry,
+    pub utf8_body: String,
+}
+
+impl std::ops::Deref for PayloadCatalogueBlob {
+    type Target = PayloadCatalogueEntry;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entry
+    }
+}
+
+impl PayloadCatalogueBlob {
+    /// Construct a validated UTF-8 [`PayloadCatalogueBlob`], computing `byte_length` and
+    /// `sha256_hex` and rejecting forbidden media/weight MIME types (`ADR 0014`).
+    pub fn new_utf8(
+        payload_key: impl Into<String>,
+        mime_type: impl Into<String>,
+        language: Option<String>,
+        role: impl Into<String>,
+        utf8_body: impl Into<String>,
+    ) -> Result<Self, String> {
+        let utf8_body = utf8_body.into();
+        let sha256_hex = sha256_hex_bytes(utf8_body.as_bytes());
+        let entry = PayloadCatalogueEntry {
+            payload_key: payload_key.into(),
+            mime_type: mime_type.into(),
+            language,
+            role: role.into(),
+            byte_length: utf8_body.len() as u64,
+            sha256_hex,
+        };
+        validate_payload_catalogue_entry(&entry)?;
+        Ok(Self { entry, utf8_body })
+    }
+
+    /// Borrow the UTF-8 payload body.
+    pub fn body_str(&self) -> &str {
+        &self.utf8_body
+    }
+}
+
+/// Compute lowercase 64-character SHA-256 hex digest of `bytes`.
+pub fn sha256_hex_bytes(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    let digest = hasher.finalize();
+    let mut sha256_hex = String::with_capacity(64);
+    for b in digest {
+        use core::fmt::Write;
+        let _ = write!(&mut sha256_hex, "{b:02x}");
+    }
+    sha256_hex
+}
+
+/// Enforce `ADR 0014` non-goals: reject media (`image/*`, `audio/*`, `video/*`) and binary
+/// weight/manifold containers (`.p64`, `.10d`, `.gguf`, `.glb`, `.hmc`) from `PCAT`.
+pub fn validate_payload_catalogue_entry(entry: &PayloadCatalogueEntry) -> Result<(), String> {
+    if entry.payload_key.trim().is_empty() {
+        return Err("payload catalogue entry has an empty payload_key".to_string());
+    }
+    let mime = entry.mime_type.trim().to_ascii_lowercase();
+    if mime.starts_with("image/")
+        || mime.starts_with("audio/")
+        || mime.starts_with("video/")
+        || mime.starts_with("model/")
+    {
+        return Err(format!(
+            "ADR 0014 violation: media MIME type '{}' is forbidden in Q42 PCAT; use .hmc container instead",
+            entry.mime_type
+        ));
+    }
+    let key_lower = entry.payload_key.trim().to_ascii_lowercase();
+    for forbidden_ext in [".p64", ".10d", ".gguf", ".glb", ".hmc", ".mp4", ".mp3", ".png", ".jpg", ".jpeg", ".wav"] {
+        if key_lower.ends_with(forbidden_ext) || mime.contains(forbidden_ext) {
+            return Err(format!(
+                "ADR 0014 violation: binary container/media payload '{}' ('{}') is forbidden in Q42 PCAT; use .hmc / .p64 / .10d instead",
+                entry.payload_key, entry.mime_type
+            ));
+        }
+    }
+    if entry.sha256_hex.len() != 64 || !entry.sha256_hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(format!(
+            "payload catalogue entry '{}' has invalid sha256_hex '{}'",
+            entry.payload_key, entry.sha256_hex
+        ));
+    }
+    Ok(())
+}
+
 /// Encode a slice of [`PayloadCatalogueEntry`] records into a self-describing `PCAT` v1 section.
 ///
 /// Layout:
@@ -40,6 +133,9 @@ pub const GTOP_MIME_TYPE: &str = "application/x-qualia-gtop";
 pub fn encode_payload_catalogue_section(
     entries: &[PayloadCatalogueEntry],
 ) -> Result<Vec<u8>, String> {
+    for entry in entries {
+        validate_payload_catalogue_entry(entry)?;
+    }
     let count = u32::try_from(entries.len())
         .map_err(|_| "payload catalogue entry count exceeds u32::MAX".to_string())?;
     let mut cbor_bytes = Vec::new();
@@ -56,10 +152,104 @@ pub fn encode_payload_catalogue_section(
     Ok(out)
 }
 
+/// Encode [`PayloadCatalogueBlob`] records (CBOR descriptor array + length-prefixed UTF-8 payload
+/// body arena) into a self-describing `PCAT` v1 section covered by a single CRC-32C checksum.
+pub fn encode_payload_catalogue_with_bodies(
+    blobs: &[PayloadCatalogueBlob],
+) -> Result<Vec<u8>, String> {
+    let count = u32::try_from(blobs.len())
+        .map_err(|_| "payload catalogue entry count exceeds u32::MAX".to_string())?;
+    let mut entries = Vec::with_capacity(blobs.len());
+    let mut total_body_bytes = 0usize;
+    for (idx, blob) in blobs.iter().enumerate() {
+        validate_payload_catalogue_entry(&blob.entry)?;
+        if blobs[..idx]
+            .iter()
+            .any(|prev| prev.entry.payload_key == blob.entry.payload_key)
+        {
+            return Err(format!(
+                "duplicate payload_key '{}' in payload catalogue",
+                blob.entry.payload_key
+            ));
+        }
+        let body_bytes = blob.utf8_body.as_bytes();
+        if body_bytes.len() as u64 != blob.entry.byte_length {
+            return Err(format!(
+                "payload catalogue entry '{}' byte_length mismatch: entry declares {}, body has {}",
+                blob.entry.payload_key,
+                blob.entry.byte_length,
+                body_bytes.len()
+            ));
+        }
+        let actual_sha = sha256_hex_bytes(body_bytes);
+        if !actual_sha.eq_ignore_ascii_case(&blob.entry.sha256_hex) {
+            return Err(format!(
+                "payload catalogue entry '{}' SHA-256 mismatch: entry declares {}, body hashes to {}",
+                blob.entry.payload_key, blob.entry.sha256_hex, actual_sha
+            ));
+        }
+        total_body_bytes = total_body_bytes
+            .checked_add(8 + body_bytes.len())
+            .ok_or_else(|| "payload catalogue body arena length overflow".to_string())?;
+        entries.push(blob.entry.clone());
+    }
+
+    let mut payload_bytes = Vec::new();
+    ciborium::into_writer(&entries, &mut payload_bytes)
+        .map_err(|e| format!("failed to encode payload catalogue CBOR: {e}"))?;
+    payload_bytes.reserve(total_body_bytes);
+    for blob in blobs {
+        let body_bytes = blob.utf8_body.as_bytes();
+        payload_bytes.extend_from_slice(&(body_bytes.len() as u64).to_le_bytes());
+        payload_bytes.extend_from_slice(body_bytes);
+    }
+
+    let crc = crc32c::crc32c(&payload_bytes);
+    let mut out = Vec::with_capacity(PAYLOAD_CATALOGUE_HEADER_BYTES + payload_bytes.len());
+    out.extend_from_slice(&PAYLOAD_CATALOGUE_MAGIC);
+    out.extend_from_slice(&PAYLOAD_CATALOGUE_VERSION.to_le_bytes());
+    out.extend_from_slice(&count.to_le_bytes());
+    out.extend_from_slice(&crc.to_le_bytes());
+    out.extend_from_slice(&payload_bytes);
+    Ok(out)
+}
+
 /// Decode and CRC-32C-verify a `PCAT` v1 section back into [`PayloadCatalogueEntry`] records.
+/// If a UTF-8 body arena follows the CBOR descriptor array, every body is also verified against
+/// its entry's `byte_length` and `sha256_hex`.
 pub fn decode_payload_catalogue_section(
     section_bytes: &[u8],
 ) -> Result<Vec<PayloadCatalogueEntry>, String> {
+    let (entries, _) = decode_payload_catalogue_inner(section_bytes, false)?;
+    Ok(entries)
+}
+
+/// Decode and verify a `PCAT` v1 section along with its UTF-8 payload body arena.
+pub fn decode_payload_catalogue_with_bodies(
+    section_bytes: &[u8],
+) -> Result<Vec<PayloadCatalogueBlob>, String> {
+    let (entries, bodies) = decode_payload_catalogue_inner(section_bytes, false)?;
+    if let Some(bodies) = bodies {
+        Ok(entries
+            .into_iter()
+            .zip(bodies)
+            .map(|(entry, utf8_body)| PayloadCatalogueBlob { entry, utf8_body })
+            .collect())
+    } else {
+        Ok(entries
+            .into_iter()
+            .map(|entry| PayloadCatalogueBlob {
+                entry,
+                utf8_body: String::new(),
+            })
+            .collect())
+    }
+}
+
+fn decode_payload_catalogue_inner(
+    section_bytes: &[u8],
+    require_bodies: bool,
+) -> Result<(Vec<PayloadCatalogueEntry>, Option<Vec<String>>), String> {
     if section_bytes.len() < PAYLOAD_CATALOGUE_HEADER_BYTES {
         return Err("payload catalogue section shorter than 16-byte header".to_string());
     }
@@ -72,16 +262,17 @@ pub fn decode_payload_catalogue_section(
     }
     let expected_count = u32::from_le_bytes(section_bytes[8..12].try_into().unwrap()) as usize;
     let expected_crc = u32::from_le_bytes(section_bytes[12..16].try_into().unwrap());
-    let cbor_payload = &section_bytes[PAYLOAD_CATALOGUE_HEADER_BYTES..];
+    let payload = &section_bytes[PAYLOAD_CATALOGUE_HEADER_BYTES..];
 
-    let actual_crc = crc32c::crc32c(cbor_payload);
+    let actual_crc = crc32c::crc32c(payload);
     if actual_crc != expected_crc {
         return Err(format!(
             "payload catalogue CRC-32C mismatch: expected {expected_crc:#010x}, got {actual_crc:#010x}"
         ));
     }
 
-    let entries: Vec<PayloadCatalogueEntry> = ciborium::from_reader(cbor_payload)
+    let mut cursor: &[u8] = payload;
+    let entries: Vec<PayloadCatalogueEntry> = ciborium::from_reader(&mut cursor)
         .map_err(|e| format!("failed to decode payload catalogue CBOR: {e}"))?;
     if entries.len() != expected_count {
         return Err(format!(
@@ -89,7 +280,67 @@ pub fn decode_payload_catalogue_section(
             entries.len()
         ));
     }
-    Ok(entries)
+    for entry in &entries {
+        validate_payload_catalogue_entry(entry)?;
+    }
+
+    if cursor.is_empty() {
+        if require_bodies && !entries.is_empty() {
+            return Err("payload catalogue section is missing UTF-8 body arena".to_string());
+        }
+        return Ok((entries, None));
+    }
+
+    let mut bodies = Vec::with_capacity(entries.len());
+    for entry in &entries {
+        if cursor.len() < 8 {
+            return Err(format!(
+                "truncated payload catalogue body length prefix for '{}'",
+                entry.payload_key
+            ));
+        }
+        let body_len = u64::from_le_bytes(cursor[0..8].try_into().unwrap());
+        cursor = &cursor[8..];
+        if body_len != entry.byte_length {
+            return Err(format!(
+                "payload catalogue body length mismatch for '{}': descriptor {}, arena prefix {}",
+                entry.payload_key, entry.byte_length, body_len
+            ));
+        }
+        let body_len_usize = usize::try_from(body_len)
+            .map_err(|_| "payload catalogue body exceeds usize".to_string())?;
+        if cursor.len() < body_len_usize {
+            return Err(format!(
+                "truncated payload catalogue body for '{}': expected {} bytes, got {}",
+                entry.payload_key,
+                body_len_usize,
+                cursor.len()
+            ));
+        }
+        let body_bytes = &cursor[..body_len_usize];
+        cursor = &cursor[body_len_usize..];
+        let body_str = std::str::from_utf8(body_bytes).map_err(|e| {
+            format!(
+                "payload catalogue body for '{}' is not valid UTF-8: {e}",
+                entry.payload_key
+            )
+        })?;
+        let actual_sha = sha256_hex_bytes(body_bytes);
+        if !actual_sha.eq_ignore_ascii_case(&entry.sha256_hex) {
+            return Err(format!(
+                "payload catalogue body SHA-256 mismatch for '{}': expected {}, got {}",
+                entry.payload_key, entry.sha256_hex, actual_sha
+            ));
+        }
+        bodies.push(body_str.to_string());
+    }
+    if !cursor.is_empty() {
+        return Err(format!(
+            "payload catalogue has {} trailing unindexed bytes after body arena",
+            cursor.len()
+        ));
+    }
+    Ok((entries, Some(bodies)))
 }
 
 /// Stamp `FLAG_PAYLOAD_CATALOGUE` (`0x0080`) and the `(offset, length)` pair into `header._reserved[48..64]`.

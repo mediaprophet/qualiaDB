@@ -51,6 +51,7 @@ pub struct CellSlot {
 pub struct CellTable {
     occupied: [bool; MAX_CELLS],
     charges: [ChargeRef; MAX_CELLS],
+    reserved_bytes: [u64; MAX_CELLS],
 }
 
 impl CellTable {
@@ -59,6 +60,7 @@ impl CellTable {
         Self {
             occupied: [false; MAX_CELLS],
             charges: [ChargeRef::EMPTY; MAX_CELLS],
+            reserved_bytes: [0; MAX_CELLS],
         }
     }
 
@@ -123,6 +125,7 @@ impl CellTable {
         };
         self.occupied[id as usize] = true;
         self.charges[id as usize] = charge.as_ref();
+        self.reserved_bytes[id as usize] = bytes;
         Ok(CellSlot {
             id,
             profile,
@@ -151,8 +154,41 @@ impl CellTable {
             return Err(QdnfError::DoubleRelease);
         }
         self.charges[idx] = ChargeRef::EMPTY;
+        self.reserved_bytes[idx] = 0;
         let _ = slot.bytes;
         ledger.release(ReservationHandle::from_ref(charge))?;
+        self.occupied[idx] = false;
+        Ok(())
+    }
+
+    /// Strict release (`R10` / `R11`): rejects any release call whose caller-supplied
+    /// `slot.bytes` does not match the authoritative recorded reservation or whose
+    /// `(lease_id, generation)` handle is stale.
+    pub fn release_strict(
+        &mut self,
+        leases: &mut LeaseTable,
+        ledger: &mut ReservationLedger,
+        slot: CellSlot,
+    ) -> Result<(), QdnfError> {
+        let idx = slot.id as usize;
+        if idx >= MAX_CELLS {
+            return Err(QdnfError::Range);
+        }
+        if !self.occupied[idx] {
+            return Err(QdnfError::DoubleRelease);
+        }
+        if slot.bytes != self.reserved_bytes[idx] {
+            return Err(QdnfError::Conflict);
+        }
+        let charge = self.charges[idx];
+        if charge == ChargeRef::EMPTY {
+            return Err(QdnfError::DoubleRelease);
+        }
+        leases.release(slot.lease.handle)?;
+        self.charges[idx] = ChargeRef::EMPTY;
+        let expected = self.reserved_bytes[idx];
+        self.reserved_bytes[idx] = 0;
+        ledger.release_checked_bytes(ReservationHandle::from_ref(charge), expected)?;
         self.occupied[idx] = false;
         Ok(())
     }
@@ -390,6 +426,29 @@ mod tests {
         table
             .release(&mut leases, &mut ledger, mutated)
             .expect("owner-held charge");
+        assert_eq!(ledger.used().cell.bytes, 0);
+        assert_eq!(table.occupied(), 0);
+    }
+
+    #[test]
+    fn r10_r11_release_strict_rejects_mismatched_caller_bytes() {
+        let mut table = CellTable::new();
+        let mut leases = LeaseTable::new();
+        let mut ledger = cell_ledger();
+        let slot = table
+            .reserve(&mut leases, &mut ledger, CellProfile::Ordinary, ORDINARY_64)
+            .expect("reserve");
+        let mut mutated = slot;
+        mutated.bytes = ORDINARY_64 * 2;
+        assert_eq!(
+            table.release_strict(&mut leases, &mut ledger, mutated),
+            Err(QdnfError::Conflict)
+        );
+        assert_eq!(ledger.used().cell.bytes, ORDINARY_64);
+        assert_eq!(table.occupied(), 1);
+        table
+            .release_strict(&mut leases, &mut ledger, slot)
+            .expect("strict release with authoritative bytes");
         assert_eq!(ledger.used().cell.bytes, 0);
         assert_eq!(table.occupied(), 0);
     }

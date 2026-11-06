@@ -81,6 +81,34 @@ impl Tensor10D {
         Tensor10D::new(q, v, w, x, y, z, t, alpha, mu, sigma)
     }
 
+    /// Normalized hyperbolic log-sum-exp distance subtracting $\ln(3)$ so $d(x, x) = 0.0$ (Packet OCS-13).
+    #[inline]
+    pub fn normalized_hyperbolic_distance(&self, other: &Self) -> f32 {
+        let dx = (self.x - other.x).abs();
+        let dy = (self.y - other.y).abs();
+        let dz = (self.z - other.z).abs();
+        let max_d = dx.max(dy).max(dz);
+        let lse = max_d + ((dx - max_d).exp() + (dy - max_d).exp() + (dz - max_d).exp()).ln();
+        (lse - core::f32::consts::LN_2 - (1.5_f32).ln()).max(0.0)
+    }
+
+    /// Full 10D distance with normalized log-sum-exp branch for hyperbolic topology (`v == 2`)
+    /// so that $d(x, x) = 0.0$ across all topological classes (Packet OCS-13).
+    #[inline]
+    pub fn normalized_full_distance(&self, other: &Self) -> f32 {
+        if self.v as u32 == 2 {
+            self.normalized_hyperbolic_distance(other)
+        } else {
+            self.full_distance(other)
+        }
+    }
+
+    /// Whether this tensor represents an empirically anchored / collapsed entity ($q < 1.0$) (Packet OCS-13).
+    #[inline]
+    pub fn is_empirically_collapsible(&self) -> bool {
+        self.q < 1.0
+    }
+
     /// Extract quantum context from NQuin metadata and predicate modality.
     /// q = 0.0: Collapsed Ground Truth; q > 0.0: Parallel epistemic contexts.
     fn extract_quantum_context(nquin: &NQuin) -> f32 {
@@ -92,6 +120,10 @@ impl Tensor10D {
             if (0x20..=0x22).contains(&opcode) {
                 // Epistemic modality active -> non-zero quantum context
                 1.0
+            } else if opcode == 0x55 {
+                // OP_ELEMENT_COLLAPSE: low nibble of metadata encodes GroundingStatus
+                // (0 = EmpiricallyAnchored -> 0.0, 1..=3 -> uncollapsed narrative realm >= 1.0)
+                (nquin.metadata & 0x0F) as f32
             } else {
                 0.0
             }
@@ -314,6 +346,15 @@ impl<'a> Q42TensorVolume<'a> {
         self.as_view().get_tensorized_nquins_into(out)
     }
 
+    /// Copy only empirically anchored / collapsible entries ($q < 1.0$) into `out`,
+    /// leaving counterfactual or narrative realm entries ($q \ge 1.0$) uncollapsed (Packet OCS-13).
+    pub fn collapse_empirically_anchored_into<'b>(
+        &'b self,
+        out: &mut [TensorizedEntry<'b>],
+    ) -> Result<usize, TensorVolumeError> {
+        self.as_view().collapse_empirically_anchored_into(out)
+    }
+
     /// Zero-allocation variant of `get_tensorized_nquins_into` —
     /// `on_entry` per tensorized pair, `Break` to stop early.
     pub fn visit_tensorized_nquins<F>(&self, on_entry: F) -> Result<(), TensorVolumeError>
@@ -468,6 +509,38 @@ impl<'a> Q42TensorView<'a> {
         Ok(written)
     }
 
+    /// Granular collapse operator $\hat{\mathcal{C}}$ on a zero-heap tensor view (Packet OCS-13):
+    /// writes only empirically anchored entries (`has_tensor && tensor.q < 1.0`) into `out`,
+    /// preserving counterfactual / narrative entries (`tensor.q >= 1.0`) uncollapsed.
+    pub fn collapse_empirically_anchored_into(
+        &self,
+        out: &mut [TensorizedEntry<'a>],
+    ) -> Result<usize, TensorVolumeError> {
+        let collapsible_total = self
+            .tensor_metadata
+            .iter()
+            .filter(|m| m.has_tensor && m.tensor.is_empirically_collapsible())
+            .count();
+
+        let mut written = 0;
+        self.visit_tensorized_nquins(|entry| {
+            if !entry.metadata.tensor.is_empirically_collapsible() {
+                return ControlFlow::Continue(());
+            }
+            if written >= out.len() {
+                return ControlFlow::Break(());
+            }
+            out[written] = entry;
+            written += 1;
+            ControlFlow::Continue(())
+        })?;
+
+        if written < collapsible_total {
+            return Err(TensorVolumeError::OutputBufferFull);
+        }
+        Ok(written)
+    }
+
     /// Iterate tensorized entries (`has_tensor`), calling `on_entry`
     /// per pair; `Break` stops early. Zero-allocation query path.
     pub fn visit_tensorized_nquins<F>(&self, mut on_entry: F) -> Result<(), TensorVolumeError>
@@ -488,7 +561,7 @@ impl<'a> Q42TensorView<'a> {
     }
 
     /// Indices of tensorized entries within `max_distance` of `query`
-    /// in the 10D full-distance metric written to `out`;
+    /// in the 10D normalized full-distance metric written to `out`;
     /// `OutputBufferFull` on overflow.
     pub fn tensor_search_into(
         &self,
@@ -497,7 +570,7 @@ impl<'a> Q42TensorView<'a> {
         out: &mut [usize],
     ) -> Result<usize, TensorVolumeError> {
         self.collect_matching_indices_into(out, |metadata| {
-            metadata.has_tensor && query.full_distance(&metadata.tensor) <= max_distance
+            metadata.has_tensor && query.normalized_full_distance(&metadata.tensor) <= max_distance
         })
     }
 
@@ -513,7 +586,9 @@ impl<'a> Q42TensorView<'a> {
         F: FnMut(usize) -> ControlFlow<()>,
     {
         for (index, metadata) in self.tensor_metadata.iter().enumerate() {
-            if metadata.has_tensor && query.full_distance(&metadata.tensor) <= max_distance {
+            if metadata.has_tensor
+                && query.normalized_full_distance(&metadata.tensor) <= max_distance
+            {
                 if let ControlFlow::Break(()) = on_match(index) {
                     break;
                 }
@@ -864,6 +939,66 @@ mod tests {
         let result = Q42TensorView::new(&nquins, &metadata, &config);
 
         assert!(matches!(result, Err(TensorVolumeError::MismatchedStorage)));
+    }
+
+    #[test]
+    fn test_normalized_hyperbolic_distance_is_zero_at_identity() {
+        // v = 2.0 (Hyperbolic / Tree topology): log-sum-exp branch must subtract ln(3) so d(x, x) == 0.0
+        let t = Tensor10D::new(0.0, 2.0, 1.0, 4.5, -2.25, 9.0, 1.0, 0.9, 0.5, 0.1);
+        assert!(t.normalized_hyperbolic_distance(&t) < 1e-6);
+        assert!(t.normalized_full_distance(&t) < 1e-6);
+
+        let mut nquins = [NQuin::default(); 2];
+        let mut metadata = [TensorMetadata::default(); 2];
+        let mut volume = Q42TensorVolume::new(&mut nquins, &mut metadata).unwrap();
+        volume
+            .add_nquin_with_tensor(create_test_nquin(10), t)
+            .unwrap();
+
+        let mut out = [usize::MAX; 1];
+        let written = volume.tensor_search_into(&t, 1e-5, &mut out).unwrap();
+        assert_eq!(written, 1);
+        assert_eq!(out[0], 0);
+    }
+
+    #[test]
+    fn test_collapse_empirically_anchored_preserves_narrative_entities() {
+        let mut nquins = [NQuin::default(); 4];
+        let mut metadata = [TensorMetadata::default(); 4];
+        let mut volume = Q42TensorVolume::new(&mut nquins, &mut metadata).unwrap();
+        let placeholder_nquin = NQuin::default();
+        let placeholder_metadata = TensorMetadata::default();
+
+        // Ancient Troy citadel: OP_ELEMENT_COLLAPSE (0x55), metadata low nibble = 0 (EmpiricallyAnchored -> q = 0.0)
+        let mut troy_quin = create_test_nquin(101);
+        troy_quin.predicate = 0x55;
+        troy_quin.metadata = 0;
+        let troy_tensor = Tensor10D::from_nquin(&troy_quin);
+        assert_eq!(troy_tensor.q, 0.0);
+
+        // Goddess Athena: OP_ELEMENT_COLLAPSE (0x55), metadata low nibble = 3 (CounterfactualMythos -> q = 3.0)
+        let mut athena_quin = create_test_nquin(202);
+        athena_quin.predicate = 0x55;
+        athena_quin.metadata = 3;
+        let athena_tensor = Tensor10D::from_nquin(&athena_quin);
+        assert_eq!(athena_tensor.q, 3.0);
+
+        volume
+            .add_nquin_with_tensor(troy_quin, troy_tensor)
+            .unwrap();
+        volume
+            .add_nquin_with_tensor(athena_quin, athena_tensor)
+            .unwrap();
+
+        let mut collapsed = [TensorizedEntry {
+            nquin: &placeholder_nquin,
+            metadata: &placeholder_metadata,
+        }; 2];
+        let count = volume
+            .collapse_empirically_anchored_into(&mut collapsed)
+            .unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(collapsed[0].nquin.subject, 101);
     }
 
     fn seed_linear_tensor_points(volume: &mut Q42TensorVolume<'_>) {

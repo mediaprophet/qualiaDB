@@ -850,3 +850,70 @@ Verification and Test Outcomes:
 Next: Full system integration and smoke-testing.
 
 
+## 2026-11-06 — EVAL-24 Master Release Qualification & Session Ledger Closeout (Identifier Fabric, Q42 v4 & Cosmic Coordinate Systems)
+
+Packets: `IDF-01`–`IDF-05`, `Q42-00`, `Q42-06`–`Q42-08`, `OCS-10`–`OCS-13`, `ETA-14`–`ETA-17`, `NET-18`–`NET-21`, `EVAL-22`–`EVAL-24` (Playbook v4 §§1–6).
+Status: Complete (all 24 work packets + all §6 v4 architectural & STEM/physics overrides implemented and qualified).
+Repositories:
+- `QualiaDB` (`C:\Projects\qualia-27062026`), branch `0.0.40.14-q42-v4-cosmic-fabric`
+- `Etalon` (`C:\Projects\etalon`), branch `0.0.40.14-q42-v4-cosmic-fabric`, commit `4b6949c9a357dd023a48e4dc180d717ae39047aa` (pinned across `Cargo.toml`, `Cargo.lock`, `tools/accelerator-harness/etalon-revision.txt`, `tools/accelerator-harness/Cargo.toml`, and `crates/qualia-etalon-sensing-bridge/Cargo.toml`).
+
+### 1. Phase & Packet Completion Summary
+
+- **Phase A — Identifier Fabric & SHACL-First Plane Split (`IDF-01`–`IDF-05`)**:
+  - `IDF-01` + §6.1.3 Pre-Flight Overrides: Created [`ontologies/identifier_fabric_shapes.ttl`](../ontologies/identifier_fabric_shapes.ttl) (`idf:EntityPlaneShape`, `idf:ClaimPlaneShape`, `idf:HandlePlaneShape`, `idf:InstrumentPlaneShape`, `idf:CrossPlaneFusionFirewallShape`) and registered in [`manifests/ontologies.json`](../manifests/ontologies.json); fixed [`turtle_shapes.rs`](../crates/qualia-core-db/src/modalities/logic/shacl/turtle_shapes.rs) (node-level `sh:not` + `sh:property` co-compilation, `sh:in` closed enumeration, fail-closed unknown `sh:*`), [`cbor_compiler.rs`](../crates/qualia-core-db/src/query/cbor_compiler.rs) (5th CBOR metadata integer, 5-field XOR parity, exact byte cursor via `parse_cbor_ld_to_quin_sized`), and [`ingest_formats.rs`](../crates/qualia-core-db/src/query/ingest_formats.rs) (`IngestRdfFormat::N3` + multi-record CBOR-LD stream cursor).
+  - `IDF-02` + §6.2.2 Overrides: Created [`instruments.rs`](../crates/qualia-core-db/src/net/qdnf/fabric/instruments.rs) (`InstrumentProofClass`: `CryptographicOriginIntegrity`, `HardwareChannelPossession`, `SemanticClaimEvaluation`; `KeyRole`: `IdentityAssertion`, `CredentialSigning`, `TransportHandshake`, `StorageEncryption`, `RecoveryBootstrap`) and extended [`join.rs`](../crates/qualia-core-db/src/net/qdnf/fabric/join.rs) (`EvidenceRelation` typed cross-plane morphisms `idf:supportedByInstrument`, `idf:assertedAbout`, `idf:observedAtHandle`), [`owl/mod.rs`](../crates/qualia-core-db/src/modalities/logic/owl/mod.rs) (`SameAsError::WhoPlaneForbidden`), and [`shacl_extensions/identity.rs`](../crates/qualia-core-db/src/modalities/logic/shacl_extensions/identity.rs).
+  - `IDF-03`: Implemented `did:q42:` / `did:q42:ptr:` dual acceptance (`parse_did_q42_or_ptr`, `format_did_q42_ptr`) in [`identifier.rs`](../crates/qualia-core-db/src/identity/identifier.rs) and created [`did_qi.rs`](../crates/qualia-core-db/src/identity/did_qi.rs) (`DidQiDocument`, `DidQiResolver`, monotonic generation, tombstone permanence, relationship-DID separation).
+  - `IDF-04`: Created [`crates/vibe/src/check/fabric_guard.rs`](../crates/vibe/src/check/fabric_guard.rs) static F5 anti-feature detector (`F5-A`–`F5-F` compile-time rejection of `person_score`, `identity_confidence`, `same_person`, cross-plane joins, and biometric/handle/location-to-NaturalAgent casts).
+  - `IDF-05`: Created [`plane_feature_guard.rs`](../crates/qualia-core-db/src/foundation/plane_feature_guard.rs) runtime ingress & query plane firewall and extended [`guard_grounding.rs`](../crates/qualia-core-db/tests/guard_grounding.rs) across adversarial scenarios §§8–15 (`F6`).
+
+- **Phase B — Q42 v4 Unified Volumes, Namespaced Lexicon & Exactness (`Q42-00`, `Q42-06`–`Q42-08`)**:
+  - `Q42-00`: Unconditionally unified 5-field XOR parity (`subject ^ predicate ^ object ^ context ^ metadata`) across [`frame_layout.rs`](../crates/qualia-core-db/src/foundation/frame_layout.rs), `etalon-nquin` (`NQuinWire::compute_parity`), `CosmicNQuin` ([`usri.rs`](../crates/vibe/src/cosmic/usri.rs)), [`q42_bridge.rs`](../crates/qualia-core-db/src/wgsl_forge/ir/q42_bridge.rs), and [`sparql_adapter.rs`](../crates/qualia-core-db/src/domains/geospatial/adapters/sparql_adapter.rs); hardened Sanctuary publication gate (`check_public_distribution_allowed`) in [`publication.rs`](../crates/qualia-core-db/src/q42/volume/publication.rs).
+  - `Q42-06`: Completed `PCAT` v1 (`FLAG_PAYLOAD_CATALOGUE = 0x0080`) read/write/verify path in [`payload_catalogue.rs`](../crates/qualia-core-db/src/q42/volume/payload_catalogue.rs), [`stream_writer.rs`](../crates/qualia-core-db/src/q42/volume/stream_writer.rs), [`q42_volume.rs`](../crates/qualia-core-db/src/q42/q42_volume.rs), and [`inspect.rs`](../crates/qualia-core-db/src/q42/volume/inspect.rs).
+  - `Q42-07`: Verified namespaced paged `Q42LEX` v4 (`ADR 0015`) single-page lookup and corpus compression in [`q42_corpus_source.rs`](../crates/qualia-core-db/tests/q42_corpus_source.rs) and `scripts/lexicon-v4-namespaced.test.mjs`.
+  - `Q42-08` + §6.2.3 Overrides: Created [`execution_profile.rs`](../crates/qualia-core-db/src/q42/execution_profile.rs) (`ExactnessProfile`, `CrtModuliCascade` 4-prime 256-bit CRT with $M > 2.028 \times 10^{77}$ covering $|x^3 + y^3 + z^3| \le 3 \times 10^{51}$) and implemented the QUBO Penalty Sufficiency Theorem ($P > \sum |Q_{ij}| + \sum |c_i| + 1$) in [`pre_solver.rs`](../crates/qualia-core-db/src/solvers/qpu/pre_solver.rs).
+
+- **Phase C — Omni-Scale Coordinate System (`OCS-10`–`OCS-13`)**:
+  - `OCS-10`: Synchronized 27 opcodes across `Vibe`, `QualiaDB`, and `ontologies/qualia_10d.ttl`; enforced `MSB=0` (`context & (1 << 63) == 0`) on `CbUsri::to_context_token()` in [`cb_usri.rs`](../crates/vibe/src/cosmic/cb_usri.rs) and `CosmicNQuin` in [`usri.rs`](../crates/vibe/src/cosmic/usri.rs).
+  - `OCS-11` + §6.2.5.1 Overrides: Added `apply_lorentz_boost_into` (exact $\gamma = (1 - \beta^2)^{-1/2}$ with causal speed guard $\beta \ge 1 \implies \text{Err}$) and `compose_nested_frames_into` in [`nested.rs`](../crates/vibe/src/cosmic/nested.rs), plus `validate_coordinate_epoch` in [`qualia-geospatial/src/frame.rs`](../crates/qualia-geospatial/src/frame.rs).
+  - `OCS-12` + §6.2.5.2 Overrides: Added IAU 2006 Capitaine P03 precession + Fukushima-Williams 4-angle matrix (`iau2006_precession_matrix`), 8-term luni-solar nutation (`nutation_angles_iau2000b`), and `icrs_to_itrs_transform` in [`celestial.rs`](../crates/vibe/src/cosmic/celestial.rs), and flat $\Lambda\text{CDM}$ Gauss–Kronrod $G_7/K_{15}$ comoving distance + Etherington $D_L = (1+z)D_M = (1+z)^2 D_A$ in [`flrw.rs`](../crates/vibe/src/cosmic/flrw.rs).
+  - `OCS-13`: Implemented `project_10d_to_observer_frustum_into` and `verify_metric_roundtrip` in [`observer.rs`](../crates/vibe/src/cosmic/observer.rs), `verify_usri_grounding_completeness` in [`grounding.rs`](../crates/vibe/src/cosmic/grounding.rs), and `project_state_quin_with_usri` in [`tensor/q42_integration.rs`](../crates/qualia-core-db/src/tensor/q42_integration.rs).
+
+- **Phase D — Etalon Accelerator, Sensing Sidecar & WGSL Forge (`ETA-14`–`ETA-17`)**:
+  - `ETA-14`: Implemented `EtalonNQuinEvalReceipt` and `qualify_etalon_nquin_batch` in [`etalon_bridge_validation_tests.rs`](../crates/qualia-core-db/src/wgsl_forge/etalon_bridge_validation_tests.rs) and [`etalon_vibe_harness.rs`](../crates/qualia-core-db/tests/etalon_vibe_harness.rs).
+  - `ETA-15` + §6.2.5.3 Overrides: Implemented `qualify_dsp_vision_em_against_cpu_oracle` in [`etalon_iq_compat_tests.rs`](../crates/qualia-core-db/src/wgsl_forge/etalon_iq_compat_tests.rs) and Courant–Friedrichs–Lewy (CFL) 3D FDTD stability guard ($c \Delta t \sqrt{\Delta x^{-2} + \Delta y^{-2} + \Delta z^{-2}} \le 1$) + discrete Poynting energy conservation audit in [`electromagnetics.rs`](../crates/qualia-extensions/src/webgpu_extension/electromagnetics.rs).
+  - `ETA-16`: Implemented `enumerate_sidecar_frame_to_quins` (`Plane::Instrument` + `Plane::Claim`, never `Plane::Entity`) in [`qualia-etalon-sensing-bridge/src/lib.rs`](../crates/qualia-etalon-sensing-bridge/src/lib.rs) and `HardwareChannelPossession` tagging in [`nfc.rs`](../crates/qualia-etalon-sensing-bridge/src/nfc.rs).
+  - `ETA-17`: Added `enumerate_adapter_receipt_to_quins` in [`gpu_caps_probe.rs`](../crates/qualia-core-db/tests/gpu_caps_probe.rs).
+
+- **Phase E — QDNF Network, 384-Bit QSR, SuperBlock Replication & Egress (`NET-18`–`NET-21`)**:
+  - `NET-18`: Implemented `LocatorBinding` (`no_proxy_launder` invariant) in [`locator.rs`](../crates/qualia-core-db/src/net/qdnf/fabric/locator.rs), `HandshakeTranscriptDigest` (`SHA-384` over `ClientHello || ServerHello || NegotiatedParams`) in [`finished.rs`](../crates/qualia-core-db/src/net/qdnf/crypto/finished.rs), HKDF-SHA384 key schedule in [`schedule.rs`](../crates/qualia-core-db/src/net/qdnf/crypto/schedule.rs), and generation-monotonic rekeying in [`rekey.rs`](../crates/qualia-core-db/src/net/qdnf/session/rekey.rs).
+  - `NET-19` + §6.2.4 Overrides: Extended [`exact.rs`](../crates/qualia-core-db/src/net/qdnf/resolve/qsr/exact.rs) to 384-bit radix-16 (`96` nibble levels) and implemented `verify_spf_dual_optimality` ($d[v] \le d[u] + w(u,v)$ + exact shortest-path tree witness) in [`spf.rs`](../crates/qualia-core-db/src/net/qdnf/route/spf.rs).
+  - `NET-20`: Implemented `SuperBlockSliceDescriptor` (`SHA-256` + 5-field `NQuin` parity) in [`scan.rs`](../crates/qualia-core-db/src/net/peer/replication/scan.rs), `ChunkToSuperBlockManifest` (`SHA-384` -> `SHA-256` bridge) in [`transfer.rs`](../crates/qualia-core-db/src/net/peer/replication/transfer.rs), and `release_checked_bytes` in [`ledger.rs`](../crates/qualia-core-db/src/net/peer/runtime/ledger.rs).
+  - `NET-21`: Implemented `EgressAuditReceipt` and `enumerate_egress_audit_quin` across all 40 egress policy scenarios in [`egress.rs`](../crates/qualia-core-db/src/net/qdnf/policy_labels/egress.rs).
+
+- **Phase F — Tri-Source Evaluation Aggregator & Jury-Safe Studio UI (`EVAL-22`–`EVAL-24`)**:
+  - `EVAL-22`: Created [`tri_source_eval.rs`](../crates/qualia-core-db/src/net/qdnf/harness/tri_source_eval.rs) (`TriSourceEvaluationReport`, `EtalonSourceReceipt`, `NetworkSourceReceipt`, `QualiaDbInvariantsReceipt`) baking unified `.q42` v4 evaluation volumes with exact `passed`/`failed`/`unsupported` per-plane counts, `PCAT` diagnostic summary, and 100% 5-field XOR parity verification.
+  - `EVAL-23`: Updated [`identity_plane.rs`](../crates/webizen-studio/src/components/settings/identity_plane.rs), [`provenance_graph.rs`](../crates/webizen-studio/src/components/provenance_graph.rs), and [`q42_volume_manager.rs`](../crates/webizen-studio/src/components/q42_volume_manager.rs) with 4-plane Identifier Fabric cards, `did:q42:` (`QRC`) vs `did:webizen:` vs `did:qi:` side-by-side labels, VC Origin-Integrity disclaimers, and Sanctuary publication lock badges.
+
+### 2. Master Qualification Verification Results (`EVAL-24`)
+
+- `cargo test -p etalon-nquin` (in `C:\Projects\etalon`): **15 passed**, 0 failed.
+- `node --test scripts/device-harness-identity.test.mjs`: **8 passed**, 0 failed.
+- `node --test scripts/lexicon-v4-namespaced.test.mjs`: **17 passed**, 0 failed.
+- `cargo check --locked -p qualia-core-db -p qualia-client-core -p qualia-peer -p qualia-mcp -p vibe -p webizen-studio -j 1`: **exit 0** (0 errors, 0 warnings).
+- `cargo test --manifest-path crates/qualia-etalon-sensing-bridge/Cargo.toml --jobs 1`: **38 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test validate_core_ontologies`: **4 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test identifier_tests`: **13 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test guard_grounding`: **7 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test q42_ingest_lossless`: **5 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test q42_corpus_source`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test qw10_q42_publication_policy`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test etalon_vibe_harness`: **4 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test gpu_caps_probe`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --test full_stack_resolution`: **2 passed**, 0 failed.
+- `cargo test -p qualia-core-db --lib net::qdnf`: **808 passed**, 0 failed.
+- `cargo test -p qualia-core-db --lib net::peer`: **294 passed**, 0 failed.
+- `cargo test -p vibe cosmic::` + `cargo test -p vibe f5_`: **229 passed**, 0 failed.
+- `cargo test -p qualia-geospatial`: **34 passed**, 0 failed.
+- `cargo test -p webizen-studio`: **150 passed**, 0 failed.
+- `docs/plans/etalon-migration-review-2026-11-06/refresh-inventory.ps1 -Check`: **0 drift** (`3663` source files, `1742` provider comparison files).

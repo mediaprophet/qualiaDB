@@ -106,6 +106,100 @@ fn cpu_invalid_gpu_handle_is_rejected_through_vibe() {
     );
 }
 
+#[test]
+fn cpu_etalon_nquin_wire_sieve_and_radix_receipt_qualification() {
+    use etalon_nquin::{
+        radix_sort_u64_cpu, sieve_eq_cpu, NQuinWire, QuinField, RadixSortOutcome, NQUIN_ALIGN,
+        NQUIN_BYTES,
+    };
+    use qualia_core_db::wgsl_forge::ir::q42_bridge::{
+        enumerate_etalon_eval_receipt_to_quins, qualify_nquin_wire_sieve_and_radix,
+        EtalonNQuinEvalReceipt,
+    };
+    use qualia_core_db::NQuin;
+
+    assert_eq!(NQUIN_BYTES, 48);
+    assert_eq!(NQUIN_ALIGN, 16);
+    assert_eq!(std::mem::size_of::<NQuin>(), 48);
+
+    let mk_quin = |s: u64, p: u64, o: u64, c: u64, m: u64| NQuin {
+        subject: s,
+        predicate: p,
+        object: o,
+        context: c,
+        metadata: m,
+        parity: NQuin::calculate_parity(s, p, o, c, m),
+    };
+
+    let quins = [
+        mk_quin(0x11, 0x42, 0x900, 0x77, 0x01),
+        mk_quin(0x12, 0x42, 0x100, 0x77, 0x02),
+        mk_quin(0x13, 0x99, 0x500, 0x77, 0x03),
+        mk_quin(0x14, 0x42, 0x300, 0x77, 0x04),
+    ];
+    let wire: Vec<NQuinWire> = quins
+        .iter()
+        .map(|q| NQuinWire::new(q.subject, q.predicate, q.object, q.context, q.metadata, q.parity))
+        .collect();
+    for w in &wire {
+        assert!(w.is_parity_valid());
+    }
+
+    let mut sieve_buf = vec![NQuinWire::new(0, 0, 0, 0, 0, 0); wire.len()];
+    let sieve_len = sieve_eq_cpu(&wire, QuinField::Predicate, 0x42, &mut sieve_buf);
+    assert_eq!(sieve_len, 3);
+
+    let mut radix_keys: Vec<u64> = wire.iter().map(|w| w.predicate).collect();
+    let mut radix_indices: Vec<u32> = (0..wire.len() as u32).collect();
+    assert_eq!(
+        radix_sort_u64_cpu(&mut radix_keys, &mut radix_indices),
+        RadixSortOutcome::Sorted { passes: 8 }
+    );
+    assert_eq!(radix_keys, vec![0x42, 0x42, 0x42, 0x99]);
+
+    let receipt = qualify_nquin_wire_sieve_and_radix(
+        qualia_core_db::q_hash("urn:qualia:etalon:backend:cpu-reference"),
+        &quins,
+        QuinField::Predicate,
+        0x42,
+        &sieve_buf[..sieve_len],
+        &radix_keys,
+        &radix_indices,
+    );
+    assert!(!receipt.disqualified);
+
+    let mut receipt_quins = [mk_quin(0, 0, 0, 0, 0); 6];
+    enumerate_etalon_eval_receipt_to_quins(&receipt, &mut receipt_quins);
+    for q in &receipt_quins {
+        assert!(q.verify_ecc_parity());
+    }
+
+    // Verify that any mismatch or noop backend is marked disqualified = true.
+    let disqualified_sieve = qualify_nquin_wire_sieve_and_radix(
+        qualia_core_db::q_hash("urn:qualia:etalon:backend:cpu-reference"),
+        &quins,
+        QuinField::Predicate,
+        0x42,
+        &sieve_buf[..sieve_len - 1],
+        &radix_keys,
+        &radix_indices,
+    );
+    assert!(disqualified_sieve.disqualified);
+    assert!(EtalonNQuinEvalReceipt::new(0, 4, true, true, true).disqualified);
+
+    record_check(
+        "cpu_etalon_nquin_wire_sieve_and_radix_receipt_qualification",
+        "cpu",
+        json!({
+            "nquin_bytes": NQUIN_BYTES,
+            "nquin_align": NQUIN_ALIGN,
+            "receipt_quins": 6,
+            "parity_verified": true,
+            "disqualified_on_mismatch": true,
+        }),
+    );
+}
+
 struct Portal {
     host: VibeHost,
     handle: u64,

@@ -11,9 +11,24 @@
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::session::datagrams::DeliveryStage;
 use crate::net::qdnf::types::StrongDigest;
+use crate::{q_hash, NQuin};
 
 /// Occupied identity slots. A 17th distinct bind is Capacity.
 pub const MAX_RECEIPTS: usize = 16;
+
+/// Crash-safe `.q42` SuperBlock commit states (`NET-20` / `R09`).
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SuperBlockCommitState {
+    /// Chunks received in staging area, not yet verified.
+    Staged = 1,
+    /// SHA-384 chunk digests, SHA-256 SuperBlock digest, and 5-field NQuin parity verified.
+    Verified = 2,
+    /// Interrupted commit / power-fail recovery hold; requires re-verification before commit.
+    Indeterminate = 3,
+    /// Durably committed to `.q42` volume after verification.
+    Committed = 4,
+}
 
 /// Durability class actually achieved. Transport ACK is never this enum's
 /// durable variant.
@@ -222,6 +237,80 @@ pub fn identity_effect_receipt_are_distinct() -> bool {
         && ReceiptClass::Identity as u8 != ReceiptClass::DurableReceipt as u8
 }
 
+/// Advance a SuperBlock commit state machine (`R09`).
+///
+/// `Staged -> Committed` and `Indeterminate -> Committed` are rejected (`QdnfError::Incomplete`);
+/// `Verified` and `Committed` require `block_digest_verified == true`.
+pub fn advance_superblock_commit_state(
+    current: SuperBlockCommitState,
+    next: SuperBlockCommitState,
+    block_digest_verified: bool,
+) -> Result<SuperBlockCommitState, QdnfError> {
+    match (current, next) {
+        (SuperBlockCommitState::Staged, SuperBlockCommitState::Verified)
+        | (SuperBlockCommitState::Indeterminate, SuperBlockCommitState::Verified) => {
+            if !block_digest_verified {
+                return Err(QdnfError::Incomplete);
+            }
+            Ok(SuperBlockCommitState::Verified)
+        }
+        (SuperBlockCommitState::Verified, SuperBlockCommitState::Committed) => {
+            if !block_digest_verified {
+                return Err(QdnfError::Incomplete);
+            }
+            Ok(SuperBlockCommitState::Committed)
+        }
+        (SuperBlockCommitState::Staged, SuperBlockCommitState::Indeterminate)
+        | (SuperBlockCommitState::Verified, SuperBlockCommitState::Indeterminate)
+        | (SuperBlockCommitState::Indeterminate, SuperBlockCommitState::Indeterminate) => {
+            Ok(SuperBlockCommitState::Indeterminate)
+        }
+        _ => Err(QdnfError::Incomplete),
+    }
+}
+
+/// Emit a 48-byte `SyncCheckpoint` `NQuin` with canonical 5-field XOR parity (`R09`).
+///
+/// Only `Verified` or `Committed` SuperBlocks may emit a checkpoint Quin; `Staged`
+/// and `Indeterminate` states fail closed with [`QdnfError::Incomplete`].
+pub fn emit_sync_checkpoint_quin(
+    id: &StrongDigest,
+    block_digest: &StrongDigest,
+    state: SuperBlockCommitState,
+    epoch: u64,
+) -> Result<NQuin, QdnfError> {
+    reject_zero(*id)?;
+    reject_zero(*block_digest)?;
+    if state != SuperBlockCommitState::Verified && state != SuperBlockCommitState::Committed {
+        return Err(QdnfError::Incomplete);
+    }
+    let subject = u64::from_le_bytes([
+        id.0[0], id.0[1], id.0[2], id.0[3], id.0[4], id.0[5], id.0[6], id.0[7],
+    ]);
+    let predicate = (q_hash("https://qualia.db/qsync#hasSyncCheckpoint") << 8) | (state as u64);
+    let object = u64::from_le_bytes([
+        block_digest.0[0],
+        block_digest.0[1],
+        block_digest.0[2],
+        block_digest.0[3],
+        block_digest.0[4],
+        block_digest.0[5],
+        block_digest.0[6],
+        block_digest.0[7],
+    ]) & 0x0FFF_FFFF_FFFF_FFFF;
+    let context = q_hash("https://qualia.db/qsync#ReplicationReceiptGraph") & 0x00FF_FFFF_FFFF_FFFF;
+    let metadata = ((epoch & 0x1FFF_FFFF) << 32) | u64::from(state as u8);
+    let parity = subject ^ predicate ^ object ^ context ^ metadata;
+    Ok(NQuin {
+        subject,
+        predicate,
+        object,
+        context,
+        metadata,
+        parity,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,5 +461,36 @@ mod tests {
     fn class_of_unknown_id_is_unauthorized() {
         let table = ReceiptTable::new();
         assert_eq!(class_of(&table, digest(9)), Err(QdnfError::Unauthorized));
+    }
+
+    #[test]
+    fn r09_crash_safe_superblock_commit_states_and_sync_checkpoint_quin_parity() {
+        let id = digest(0x11);
+        let blk = digest(0x22);
+        assert_eq!(
+            advance_superblock_commit_state(
+                SuperBlockCommitState::Staged,
+                SuperBlockCommitState::Committed,
+                true
+            ),
+            Err(QdnfError::Incomplete)
+        );
+        let st = advance_superblock_commit_state(
+            SuperBlockCommitState::Staged,
+            SuperBlockCommitState::Indeterminate,
+            false,
+        )
+        .unwrap();
+        assert_eq!(
+            emit_sync_checkpoint_quin(&id, &blk, st, 42),
+            Err(QdnfError::Incomplete)
+        );
+        let ver = advance_superblock_commit_state(st, SuperBlockCommitState::Verified, true).unwrap();
+        let com = advance_superblock_commit_state(ver, SuperBlockCommitState::Committed, true).unwrap();
+        let q = emit_sync_checkpoint_quin(&id, &blk, com, 42).unwrap();
+        assert_eq!(
+            q.parity,
+            q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata
+        );
     }
 }

@@ -39,6 +39,9 @@ pub struct Q42InspectReport {
     pub has_bidx: bool,
     pub has_field_ranges: bool,
     pub has_field_postings: bool,
+    pub has_payload_catalogue: bool,
+    pub payload_catalogue_bytes: u64,
+    pub payload_catalogue_entries: Option<u64>,
     pub is_volume_root: bool,
     pub publication_class: String,
     pub publication_transport: String,
@@ -105,6 +108,17 @@ impl Q42InspectReport {
         }
         let publication = classify_q42_volume(volume, PublicationIntent::Default);
         push_publication_notes(&mut honesty, &publication);
+        let pcat_range = super::payload_catalogue::header_payload_catalogue_range(header);
+        let has_payload_catalogue = pcat_range.is_some();
+        let payload_catalogue_bytes = pcat_range.map_or(0, |(_, len)| len);
+        let payload_catalogue_entries = if has_payload_catalogue {
+            volume
+                .read_payload_catalogue_entries()
+                .ok()
+                .map(|entries| entries.len() as u64)
+        } else {
+            None
+        };
 
         Self {
             path: path.display().to_string(),
@@ -121,6 +135,9 @@ impl Q42InspectReport {
             has_bidx: header.bidx_length > 0,
             has_field_ranges: flags & FLAG_FIELD_RANGES != 0,
             has_field_postings: flags & FLAG_FIELD_POSTINGS != 0,
+            has_payload_catalogue,
+            payload_catalogue_bytes,
+            payload_catalogue_entries,
             is_volume_root: flags & FLAG_VOLUME_ROOT != 0,
             publication_class: publication.class.as_str().into(),
             publication_transport: publication.transport.as_str().into(),
@@ -159,12 +176,22 @@ impl Q42InspectReport {
             }
         ));
         out.push_str(&format!(
-            "  indexes     BIDX={}  FIDX={}  PIDX={}  root={}\n",
+            "  indexes     BIDX={}  FIDX={}  PIDX={}  PCAT={}  root={}\n",
             yn(self.has_bidx),
             yn(self.has_field_ranges),
             yn(self.has_field_postings),
+            yn(self.has_payload_catalogue),
             yn(self.is_volume_root)
         ));
+        if self.has_payload_catalogue {
+            out.push_str(&format!(
+                "  pcat        {} bytes, {} entries\n",
+                self.payload_catalogue_bytes,
+                self.payload_catalogue_entries
+                    .map(|n| n.to_string())
+                    .unwrap_or_else(|| "?".into())
+            ));
+        }
         out.push_str(&format!("  publication {}\n", self.publication_class));
         out.push_str(&format!("  transport   {}\n", self.publication_transport));
         out.push_str(&format!("  public magnet {}\n", yn(self.may_public_magnet)));
@@ -299,6 +326,10 @@ fn collect_sections(header: &Q42VolumeHeader) -> Vec<Q42SectionReport> {
         header.temporal_index_length,
     );
     push("merkle-dag", header.dag_root_offset, header.dag_root_length);
+    if let Some((offset, length)) = super::payload_catalogue::header_payload_catalogue_range(header)
+    {
+        push("payload-catalogue", offset, length);
+    }
     sections
 }
 

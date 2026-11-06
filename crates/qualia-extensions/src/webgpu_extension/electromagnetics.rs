@@ -70,10 +70,10 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
     let e0 = energy(&ey, &hz);
 
     let ch = dt / (mu * dx);
-    let ce = dt / (eps * dx);
-    let loss = dt * sigma / eps;
+    let a = 0.5 * sigma * dt / eps;
 
     // Maxwell's curl equations: μ∂Hz/∂t = −∂Ey/∂x, ε∂Ey/∂t = −∂Hz/∂x − σEy.
+    // Schneider's unconditionally stable semi-implicit update for conductive media.
     for _ in 0..steps {
         for i in 0..n {
             let ip1 = if i + 1 < n { i + 1 } else { 0 };
@@ -81,7 +81,8 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
         }
         for i in 0..n {
             let im1 = if i == 0 { n - 1 } else { i - 1 };
-            ey[i] -= ce * (hz[i] - hz[im1]) + loss * ey[i];
+            ey[i] = ((1.0 - a) / (1.0 + a)) * ey[i]
+                - ((dt / (eps * dx)) / (1.0 + a)) * (hz[i] - hz[im1]);
         }
     }
 
@@ -110,9 +111,7 @@ pub fn solve(params: &WebGpuJobParams) -> SolverReport {
         output,
         iterations_used: steps,
         final_residual: residual,
-        // For a lossy run (σ>0) energy *should* drop, so "converged" only
-        // claims energy stability for the lossless case.
-        converged: sigma > 0.0 || residual <= threshold,
+        converged: e1.is_finite() && residual <= threshold,
         flops,
     }
 }
@@ -185,14 +184,55 @@ mod tests {
         assert!(r.converged);
     }
 
+    fn field_energy(report: &SolverReport) -> f64 {
+        let e = &report.output["electric_out"];
+        let h = &report.output["magnetic_out"];
+        let n = e.len() / 3;
+        0.5 * (0..n)
+            .map(|i| {
+                let ey = e[3 * i + 1] as f64;
+                let hz = h[3 * i + 2] as f64;
+                ey * ey + hz * hz
+            })
+            .sum::<f64>()
+    }
+
+    fn initial_gaussian_energy(n: usize) -> f64 {
+        let x0 = n as f64 * 0.25;
+        let width = n as f64 / 16.0;
+        0.5 * (0..n)
+            .map(|i| {
+                let arg = (i as f64 - x0) / width;
+                let g = (-arg * arg).exp();
+                g * g + g * g
+            })
+            .sum::<f64>()
+    }
+
     #[test]
     fn lossy_medium_dissipates_energy() {
+        let e0 = initial_gaussian_energy(200);
         let r = solve(&em_params(200, 200, 0.05));
+        let e1 = field_energy(&r);
+        assert!(e1.is_finite(), "lossy field energy must be finite");
+        assert!(
+            e1 < e0,
+            "signed energy dissipation required: e1 ({e1}) must be strictly less than e0 ({e0})"
+        );
         // Conductivity must remove a large fraction of the energy.
         assert!(
             r.final_residual > 0.2,
             "lossy run did not dissipate energy (residual {})",
             r.final_residual
+        );
+
+        // Semi-implicit Yee stability check for high conductivity (dt * sigma / eps > 2.0).
+        let r_high_sigma = solve(&em_params(200, 200, 10.0));
+        let e1_high = field_energy(&r_high_sigma);
+        assert!(e1_high.is_finite(), "semi-implicit update must remain finite at high sigma");
+        assert!(
+            e1_high < e0,
+            "high-conductivity run must strictly dissipate energy: e1_high ({e1_high}) < e0 ({e0})"
         );
     }
 }

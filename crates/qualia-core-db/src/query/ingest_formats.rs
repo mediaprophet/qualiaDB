@@ -8,8 +8,11 @@ use rio_api::parser::{QuadsParser, TriplesParser};
 use rio_turtle::{NQuadsParser, NTriplesParser, TriGParser, TurtleParser};
 use rio_xml::RdfXmlParser;
 
+use crate::modalities::logic::n3_parser::{
+    N3Event, N3Parser, RuleType, Term as N3Term, Triple as N3Triple,
+};
 use crate::q_hash;
-use crate::query::cbor_compiler::parse_cbor_ld_to_quin;
+use crate::query::cbor_compiler::parse_cbor_ld_to_quin_sized;
 use crate::query::ingest_job::IngestRdfFormat;
 
 /// Object-field hashes keep bits 60–63 free for resolver type tags.
@@ -159,8 +162,74 @@ where
         IngestRdfFormat::YamlLd => parse_yamlld(reader, on_triple),
         IngestRdfFormat::RdfJson => parse_rdfjson(reader, on_triple),
         IngestRdfFormat::CborLd => parse_cbor_ld_stream(reader, on_triple),
-        IngestRdfFormat::N3 => Err("N3 uses the native N3 parser".into()),
+        IngestRdfFormat::N3 => parse_n3_stream(reader, on_triple),
     }
+}
+
+fn n3_term_str(t: N3Term<'_>) -> String {
+    match t {
+        N3Term::Uri(s) | N3Term::Variable(s) | N3Term::Formula(s) => {
+            s.trim_start_matches('<').trim_end_matches('>').to_string()
+        }
+        N3Term::Literal(s) => s.trim_matches('"').to_string(),
+    }
+}
+
+fn pack_n3_triple(t: N3Triple<'_>, context: u64) -> RawTriple {
+    RawTriple {
+        subject: n3_term_str(t.subject),
+        predicate: n3_term_str(t.predicate),
+        object: n3_term_str(t.object),
+        packed_object: None,
+        context,
+    }
+}
+
+fn parse_n3_stream<R, F>(mut reader: R, on_triple: &mut F) -> Result<(), String>
+where
+    R: Read,
+    F: FnMut(RawTriple),
+{
+    let mut text = String::new();
+    reader
+        .read_to_string(&mut text)
+        .map_err(|e| format!("N3 read: {e}"))?;
+    let mut parser = N3Parser::new(&text);
+    let mut rule_idx = 0usize;
+    parser
+        .parse_all(|event| {
+            match event {
+                N3Event::StaticTriple(t) => {
+                    on_triple(pack_n3_triple(t, 0));
+                }
+                N3Event::LogicRule(rule) => {
+                    let rule_ctx = q_hash(&format!("urn:qualia:n3:rule:{rule_idx}"));
+                    for &pt in &rule.premise.triples {
+                        on_triple(pack_n3_triple(pt, rule_ctx));
+                    }
+                    for &ct in &rule.conclusion.triples {
+                        on_triple(pack_n3_triple(ct, rule_ctx));
+                    }
+                    let rule_pred = match rule.rule_type {
+                        RuleType::Strict => "http://www.w3.org/2000/10/swap/log#implies",
+                        RuleType::Defeasible => "urn:qualia:n3:defeasiblyImplies",
+                        RuleType::Defeater => "urn:qualia:n3:defeats",
+                        RuleType::Linear => "urn:qualia:n3:linearImplies",
+                    };
+                    on_triple(RawTriple {
+                        subject: format!("_:n3_premise_{rule_idx}"),
+                        predicate: rule_pred.to_string(),
+                        object: format!("_:n3_conclusion_{rule_idx}"),
+                        packed_object: None,
+                        context: rule_ctx,
+                    });
+                    rule_idx += 1;
+                }
+                N3Event::AspBlock(_) | N3Event::DiffuseBlock(_) => {}
+            }
+            Ok(())
+        })
+        .map_err(|e| format!("N3: {e}"))
 }
 
 fn parse_jsonld<R, F>(mut reader: R, on_triple: &mut F) -> Result<(), String>
@@ -262,7 +331,8 @@ where
                         datatype: rio_api::model::NamedNode {
                             iri: crate::resolver::typed_double::DATATYPE,
                         },
-                    }.to_string()
+                    }
+                    .to_string()
                 } else if kind == "bnode" && !value.starts_with("_:") {
                     format!("_:{value}")
                 } else if let Some(lang) = obj.get("lang").and_then(|t| t.as_str()) {
@@ -406,8 +476,8 @@ where
         .map_err(|e| format!("CBOR-LD read: {e}"))?;
     let mut rest = bytes.as_slice();
     while !rest.is_empty() {
-        match parse_cbor_ld_to_quin(rest) {
-            Ok(quin) => {
+        match parse_cbor_ld_to_quin_sized(rest) {
+            Ok((quin, consumed)) if consumed > 0 => {
                 on_triple(RawTriple {
                     subject: quin.subject.to_string(),
                     predicate: quin.predicate.to_string(),
@@ -415,21 +485,9 @@ where
                     packed_object: Some(quin.object),
                     context: quin.context,
                 });
-                // Advance at least one byte so we cannot livelock; exact CBOR
-                // length is not returned by the quin parser, so we require a
-                // concatenated stream of standalone quin arrays decoded via
-                // a 1-byte scan for the next array header.
-                if let Some(pos) = rest
-                    .iter()
-                    .skip(1)
-                    .position(|&b| (0x80..=0x97).contains(&b) || b == 0x9f)
-                {
-                    rest = &rest[pos + 1..];
-                } else {
-                    break;
-                }
+                rest = &rest[consumed..];
             }
-            Err(_) => break,
+            _ => break,
         }
     }
     Ok(())
@@ -540,8 +598,38 @@ mod tests {
             b"<urn:s> <urn:p> \"1.0000000000000002\"^^<http://www.w3.org/2001/XMLSchema#double> .\n").unwrap();
         let json = parse_bytes_to_raw(IngestRdfFormat::RdfJson,
             br#"{"urn:s":{"urn:p":[{"type":"literal","value":"1.0000000000000002","datatype":"http://www.w3.org/2001/XMLSchema#double"}]}}"#).unwrap();
-        assert_eq!(nt[0].object,json[0].object);
-        assert!(nt[0].packed_object.is_none());assert!(json[0].packed_object.is_none());
-        assert_eq!(crate::resolver::typed_double::decode(&nt[0].object).unwrap().1.to_bits(),1.0000000000000002f64.to_bits());
+        assert_eq!(nt[0].object, json[0].object);
+        assert!(nt[0].packed_object.is_none());
+        assert!(json[0].packed_object.is_none());
+        assert_eq!(
+            crate::resolver::typed_double::decode(&nt[0].object)
+                .unwrap()
+                .1
+                .to_bits(),
+            1.0000000000000002f64.to_bits()
+        );
+    }
+
+    #[test]
+    fn n3_and_cbor_ld_stream_parse() {
+        let n3 = b":alice a :NaturalAgent .\n{ ?x a :CorporatePerson } => { ?x :flag :Deny } .\n";
+        let got_n3 = parse_bytes_to_raw(IngestRdfFormat::N3, n3).unwrap();
+        assert!(
+            got_n3.len() >= 4,
+            "must emit static triple + reified rule triples"
+        );
+
+        // Two concatenated CBOR-LD frames whose payload bytes contain 0x84 inside an integer
+        // (0x19 0x00 0x84 = 132), proving exact cursor advancement does not split mid-integer.
+        let frame1: [u8; 13] = [
+            0x84, 0x19, 0x00, 0x84, 0x19, 0x07, 0xD0, 0x19, 0x0B, 0xB8, 0x19, 0x0F, 0xA0,
+        ];
+        let mut two_frames = Vec::new();
+        two_frames.extend_from_slice(&frame1);
+        two_frames.extend_from_slice(&frame1);
+        let got_cbor = parse_bytes_to_raw(IngestRdfFormat::CborLd, &two_frames).unwrap();
+        assert_eq!(got_cbor.len(), 2);
+        assert_eq!(got_cbor[0].subject, "132");
+        assert_eq!(got_cbor[1].subject, "132");
     }
 }

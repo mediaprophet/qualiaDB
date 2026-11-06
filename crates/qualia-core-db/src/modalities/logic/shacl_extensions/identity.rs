@@ -89,8 +89,8 @@ pub fn validate_enumerated_identity(
     let mut not_prob = 1.0f32; // running product of (1 - confidence) for noisy-OR
 
     for (i, b) in bindings.iter().enumerate() {
-        // certainty is a definitive collapse — reject outright.
-        if b.confidence >= 1.0 {
+        // certainty or non-finite confidence is a definitive collapse — reject outright.
+        if !b.confidence.is_finite() || b.confidence >= 1.0 {
             return IdentityValidation::DefinitiveCollapse;
         }
         // count distinct identifiers (first occurrence only).
@@ -108,10 +108,11 @@ pub fn validate_enumerated_identity(
     if distinct < min_distinct || attested < min_attested {
         return IdentityValidation::Underdetermined { distinct, attested };
     }
+    let max_open_unit = f32::from_bits(1.0f32.to_bits() - 1);
     IdentityValidation::Valid {
         distinct,
         attested,
-        aggregate_confidence: 1.0 - not_prob,
+        aggregate_confidence: (1.0 - not_prob).min(max_open_unit),
     }
 }
 
@@ -429,6 +430,16 @@ mod tests {
         ];
         assert_eq!(
             validate_enumerated_identity(&bindings, 1, 1),
+            IdentityValidation::DefinitiveCollapse
+        );
+        let over_one = [binding("gov:id", CryptoScheme::MlDsa65, true, 1.25)];
+        assert_eq!(
+            validate_enumerated_identity(&over_one, 1, 1),
+            IdentityValidation::DefinitiveCollapse
+        );
+        let nan_binding = [binding("gov:id", CryptoScheme::MlDsa65, true, f32::NAN)];
+        assert_eq!(
+            validate_enumerated_identity(&nan_binding, 1, 1),
             IdentityValidation::DefinitiveCollapse
         );
     }
