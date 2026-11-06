@@ -13,8 +13,8 @@ use crate::render::skeletal::gpu_skin::{
 /// Replaces the legacy 3× full-vertex-buffer upload (`positions`, `normals`, `tangents`)
 /// when hardware vertex-shader dual-quaternion skinning is active.
 pub fn upload_rig_motor_palette_gpu(
-    queue: &wgpu::Queue,
-    palette_buffer: &wgpu::Buffer,
+    queue: &etalon::Queue,
+    palette_buffer: &etalon::Buffer,
     instance_rig_offset: u32,
     palette: &[GpuJointMotorPair],
 ) -> bool {
@@ -56,7 +56,7 @@ impl PortalGpu {
     /// Uploads a compact GPU PGA `Motor` palette into `palette_buffer` using this device's queue.
     pub fn upload_rig_motor_palette(
         &self,
-        palette_buffer: &wgpu::Buffer,
+        palette_buffer: &etalon::Buffer,
         instance_rig_offset: u32,
         palette: &[GpuJointMotorPair],
     ) -> bool {

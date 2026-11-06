@@ -1,30 +1,21 @@
 //! `build_bark_bank` — triangular filterbank on the Bark critical-band scale
-//! (Traunmüller 1990), same geometry as the mel bank but with Bark-spaced centres.
+//! (Traunmüller 1990), with Bark scale conversions delegated to [`etalon_signal::loudness`].
 
 use crate::types::AudioError;
 
 /// Hz → Bark (Traunmüller): `z = 26.81*f/(1960+f) - 0.53`.
 #[inline]
 fn hz_to_bark(hz: f32) -> f32 {
-    let f = hz.max(0.0);
-    26.81 * f / (1960.0 + f) - 0.53
+    etalon_signal::loudness::hz_to_bark(hz)
 }
 
 /// Bark → Hz, inverse of [`hz_to_bark`]: `f = 1960*z / (26.81 - z)` with `z = bark + 0.53`.
 #[inline]
 fn bark_to_hz(bark: f32) -> f32 {
-    let z = bark + 0.53;
-    let denom = 26.81 - z;
-    if denom <= 0.0 {
-        return f32::INFINITY;
-    }
-    1960.0 * z / denom
+    etalon_signal::loudness::bark_to_hz(bark)
 }
 
-/// Build a triangular Bark filterbank as a row-major `n_bands × n_fft_bins` weight
-/// table. Semantics mirror [`super::mel_bank::build_mel_bank`] (peak 1.0 at each
-/// centre, overlapping neighbours, non-negative), but centres are equally spaced on
-/// the Bark scale.
+/// Build a triangular Bark filterbank as a row-major `n_bands × n_fft_bins` weight table.
 pub fn build_bark_bank(
     n_fft_bins: usize,
     n_bands: usize,

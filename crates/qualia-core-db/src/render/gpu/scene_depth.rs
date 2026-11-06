@@ -7,8 +7,8 @@
 use super::resources::create_depth_texture;
 
 pub(super) struct SceneDepthOwner {
-    texture: wgpu::Texture,
-    view: wgpu::TextureView,
+    texture: etalon::Texture,
+    view: etalon::TextureView,
     width: u32,
     height: u32,
     generation: u64,
@@ -16,7 +16,7 @@ pub(super) struct SceneDepthOwner {
 
 impl SceneDepthOwner {
     /// Creates with the given state.
-    pub(super) fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
+    pub(super) fn new(device: &etalon::Device, width: u32, height: u32) -> Self {
         let (width, height) = normalized_extent(width, height);
         let (texture, view) = create_depth_texture(device, width, height);
         Self {
@@ -29,7 +29,7 @@ impl SceneDepthOwner {
     }
 
     /// `replace`.
-    pub(super) fn replace(&mut self, device: &wgpu::Device, width: u32, height: u32) {
+    pub(super) fn replace(&mut self, device: &etalon::Device, width: u32, height: u32) {
         let (width, height) = normalized_extent(width, height);
         // Resize notifications can repeat while a browser canvas settles. Keep
         // the authoritative terrain/entity attachment and its bind consumers
@@ -46,13 +46,13 @@ impl SceneDepthOwner {
     }
 
     /// `view`.
-    pub(super) fn view(&self) -> &wgpu::TextureView {
+    pub(super) fn view(&self) -> &etalon::TextureView {
         &self.view
     }
 
     #[allow(dead_code)]
     /// `texture`.
-    pub(super) fn texture(&self) -> &wgpu::Texture {
+    pub(super) fn texture(&self) -> &etalon::Texture {
         &self.texture
     }
 

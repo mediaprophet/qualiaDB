@@ -1,29 +1,30 @@
-//! EMF field-family volumetric visualizer pipeline (plan §7.3 W4).
+//! EMF field-family volumetric visualizer pipeline (plan §7.3 W4 / W7).
 //!
 //! Extends [`PortalGpu`] with a render pipeline that draws 2D slices of the
-//! 4D EMF field grid (x×y×z×t) with the full 10D manifold record preserved.
+//! 4D EMF field grid (x×y×z×t) with the full 10D manifold record and 3 Stokes
+//! polarization parameters preserved.
 //! This renderer is one field-family view over the shared scientific manifold;
 //! it does not define or replace astrophysics, wave, diffusion, or other fields.
 //!
 //! The field data is uploaded as a storage buffer of `EmfFieldCell` structs
-//! (52 bytes each: amplitude + phase + frequency + 10D manifold coordinate).
+//! (64 bytes each: amplitude + phase + frequency + 10D manifold coordinate + 3 Stokes Q/U/V).
 //! A full-screen quad fragment shader samples the grid bilinearly and maps:
 //! - amplitude → brightness (HDR)
-//! - phase → hue as a derived display projection (via σ → CIE XYZ → linear sRGB)
+//! - phase → hue as a derived display projection (via Full-Spectrum σ → linear sRGB)
 //! - manifold.scale → display saturation
-//! - manifold.manifold_curvature → display rim glow
+//! - manifold.manifold_curvature + Stokes polarization → display rim glow & highlight
 
 #[allow(unused_imports)]
 pub use etalon_render::emf::{
     EMF_VOLUMETRIC_WGSL, EmfFieldCell, EmfPipeline, EmfPipelineDesc, EmfSliceUniform,
     checked_field_bytes, checked_grid_cell_count,
 };
-use wgpu::util::DeviceExt;
+use etalon::util::DeviceExt;
 
 /// Per-portal EMF visualizer state.
 pub(crate) struct EmfState {
     /// Uploaded field cells (storage buffer).
-    pub field_buf: Option<wgpu::Buffer>,
+    pub field_buf: Option<etalon::Buffer>,
     pub _field_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     /// Number of cells in the field buffer.
     pub cell_count: u32,
@@ -33,7 +34,7 @@ pub(crate) struct EmfState {
     pub nz: u32,
     pub nt: u32,
     /// Field bind group (group 1). Rebuilt when field buffer changes.
-    pub field_bind_group: Option<wgpu::BindGroup>,
+    pub field_bind_group: Option<etalon::BindGroup>,
     /// Inner decoupled EMF pipeline from etalon-render.
     pub inner: etalon_render::emf::EmfPipeline,
     pub _param_buffer_reservation: crate::gpu_context::VramReservation<'static>,
@@ -56,8 +57,8 @@ impl std::ops::DerefMut for EmfState {
 impl EmfState {
     /// Construct the EMF pipeline state on the given device.
     pub(crate) fn new(
-        device: &wgpu::Device,
-        color_format: wgpu::TextureFormat,
+        device: &etalon::Device,
+        color_format: etalon::TextureFormat,
     ) -> Result<Self, String> {
         let param_bytes = std::mem::size_of::<EmfSliceUniform>() as u64;
         let param_buffer_reservation = crate::gpu_context::global_vram_ledger()
@@ -152,18 +153,18 @@ impl super::PortalGpu {
 
         let field_buf = self
             .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            .create_buffer_init(&etalon::util::BufferInitDescriptor {
                 label: Some("emf-field-storage"),
                 contents: bytemuck::cast_slice(cells),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             });
 
         // Build all replacement handles before swapping out the old field. If
         // admission or allocation fails, the currently displayed field remains valid.
-        let field_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let field_bind_group = self.device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("emf-field-bind"),
             layout: &self.emf.inner.field_layout,
-            entries: &[wgpu::BindGroupEntry {
+            entries: &[etalon::BindGroupEntry {
                 binding: 0,
                 resource: field_buf.as_entire_binding(),
             }],
@@ -219,7 +220,7 @@ impl super::PortalGpu {
     /// Draws a full-screen quad with the EMF fragment shader. The caller is
     /// responsible for beginning the render pass and providing a color
     /// attachment view.
-    pub fn emf_render_slice(&self, render_pass: &mut wgpu::RenderPass<'_>) -> Result<(), String> {
+    pub fn emf_render_slice(&self, render_pass: &mut etalon::RenderPass<'_>) -> Result<(), String> {
         let Some(field_bind) = &self.emf.field_bind_group else {
             return Err("emf_render_slice: no field uploaded".into());
         };
@@ -249,7 +250,7 @@ impl super::PortalGpu {
         }
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("emf-slice-encoder"),
             });
         {
@@ -257,16 +258,16 @@ impl super::PortalGpu {
                 .offscreen_texture
                 .as_ref()
                 .ok_or("no offscreen target")?
-                .create_view(&wgpu::TextureViewDescriptor::default());
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                .create_view(&etalon::TextureViewDescriptor::default());
+            let mut pass = encoder.begin_render_pass(&etalon::RenderPassDescriptor {
                 label: Some("emf-slice-pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                color_attachments: &[Some(etalon::RenderPassColorAttachment {
                     view: &view,
                     depth_slice: None,
                     resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: wgpu::StoreOp::Store,
+                    ops: etalon::Operations {
+                        load: etalon::LoadOp::Clear(etalon::Color::BLACK),
+                        store: etalon::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: None,
@@ -299,8 +300,19 @@ mod tests {
 
     #[test]
     fn emf_field_cell_size() {
-        // 3 f32 (amp/phase/freq) + 10 f32 (manifold) = 13 f32 = 52 bytes
-        assert_eq!(std::mem::size_of::<EmfFieldCell>(), 52);
+        // 3 f32 (amp/phase/freq) + 10 f32 (manifold) + 3 f32 (Stokes Q/U/V) = 16 f32 = 64 bytes
+        assert_eq!(std::mem::size_of::<EmfFieldCell>(), 64);
+    }
+
+    #[test]
+    fn emf_field_cell_size_and_alignment() {
+        assert_eq!(std::mem::size_of::<EmfFieldCell>(), 64);
+        assert_eq!(std::mem::align_of::<EmfFieldCell>(), 4);
+        let migrated = EmfFieldCell::from_v1_13f32([1.0; 13]);
+        assert_eq!(migrated.amplitude, 1.0);
+        assert_eq!(migrated.stokes_q, 0.0);
+        assert_eq!(migrated.stokes_u, 0.0);
+        assert_eq!(migrated.stokes_v, 0.0);
     }
 
     #[test]
@@ -311,7 +323,7 @@ mod tests {
             None
         );
         assert_eq!(checked_grid_cell_count(0, 4, 1, 1), Some(0));
-        assert_eq!(checked_field_bytes(16), Some(832));
+        assert_eq!(checked_field_bytes(16), Some(1024));
         assert_eq!(checked_field_bytes(u64::MAX), None);
     }
 
@@ -354,6 +366,9 @@ mod tests {
                 recurrence_frequency: 0.5,
                 density_threshold: 0.4,
                 manifold_curvature: 0.05,
+                stokes_q: 0.2,
+                stokes_u: 0.1,
+                stokes_v: 0.05,
             })
             .collect();
         let bounds = [-1.0, 1.0, -1.0, 1.0, -1.0, 1.0];

@@ -1,0 +1,14 @@
+[package]
+name = "vibescript-abi"
+version = "0.0.40"
+edition = "2021"
+description = "Lightweight, no_std, zero-heap extension ABI, ontological contract, and Sentinel lifecycle traits for VibeScript"
+license = "MIT OR Apache-2.0"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+repository = "https://github.com/mediaprophet/qualiaDB"
+
+[lib]
+name = "vibescript_abi"
+path = "src/lib.rs"
+
+[dependencies]

@@ -3,8 +3,8 @@ use super::QTensorEngine;
 impl QTensorEngine {
     pub(super) fn submit_commands(
         &self,
-        commands: impl IntoIterator<Item = wgpu::CommandBuffer>,
-    ) -> Option<wgpu::SubmissionIndex> {
+        commands: impl IntoIterator<Item = etalon::CommandBuffer>,
+    ) -> Option<etalon::SubmissionIndex> {
         #[cfg(not(target_arch = "wasm32"))]
         if !etalon_agent::provider_scope::admits_device(self.gpu_device(), self.gpu_queue()) {
             return None;

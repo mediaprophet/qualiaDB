@@ -33,6 +33,14 @@ pub const M64_MODE_STRATA: u8 = 0x02;
 /// Mode 0x03: Quantum q-branch boundary conditions & CSG tool excavation.
 pub const M64_MODE_PHASE_JUNCTURE: u8 = 0x03;
 
+/// Flag indicating chunks are organized as 16x16x16 3D volumetric bricks.
+pub const M64_FLAG_3D_BRICK_16X16X16: u16 = 1 << 4;
+/// Flag indicating local relative metric (LRM3) frame is active (SRID = 0).
+pub const M64_FLAG_LOCAL_METRIC_LRM3: u16 = 1 << 5;
+
+/// Local micrometer spatial reference ID (SRID = 0) used with LRM3.
+pub const M64_SRID_LOCAL_MICROMETER: u32 = 0;
+
 /// Return `true` if slice begins with `m64\0` or `e64\0`.
 #[inline]
 pub fn has_m64_magic(data: &[u8]) -> bool {

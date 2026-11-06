@@ -49,7 +49,7 @@ impl PortalGpu {
     }
 
     /// `record_sun_shadow_pass`.
-    pub(super) fn record_sun_shadow_pass(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn record_sun_shadow_pass(&mut self, encoder: &mut etalon::CommandEncoder) {
         let (Some(target), Some(mesh)) = (self.shadow_target.as_ref(), self.mesh.as_ref()) else {
             return;
         };
@@ -69,7 +69,7 @@ impl PortalGpu {
             pass.set_vertex_buffer(0, mesh.vertex_buf.slice(..));
             pass.set_vertex_buffer(1, mesh.color_buf.slice(..));
             pass.set_vertex_buffer(2, mesh.uv_buf.slice(..));
-            pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+            pass.set_index_buffer(mesh.index_buf.slice(..), etalon::IndexFormat::Uint32);
             let cascade_matrix = self.shadow_uniform_cpu.light_view_projection[cascade];
             let model_matrix = motor_to_mat4_col(self.last_admitted);
             for draw in &mesh.shadow_draws {
@@ -142,7 +142,7 @@ impl PortalGpu {
     }
 
     /// Writes `ao-uniform`.
-    pub(super) fn write_ao_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn write_ao_uniform(&mut self, encoder: &mut etalon::CommandEncoder) {
         let camera = self
             .camera
             .to_uniform(self.width as f32 / self.height.max(1) as f32, false);
@@ -166,7 +166,7 @@ impl PortalGpu {
     }
 
     /// `record_ao_pass`.
-    pub(super) fn record_ao_pass(&self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn record_ao_pass(&self, encoder: &mut etalon::CommandEncoder) {
         if self.ao_enabled {
             if let (Some(targets), Some(mesh)) = (self.ao_targets.as_ref(), self.mesh.as_ref()) {
                 targets.record(

@@ -3,12 +3,18 @@
 //! Provides first-class physical domain primitives for VibeScript without consuming
 //! or reallocating the ten manifold axes (XYZD+T Option A).
 
+pub mod domain_facets;
 pub mod fields;
 pub mod laws;
 pub mod materials;
 pub mod morphism;
+pub mod nbody_3d;
+pub mod quantum_3d;
 pub mod trajectory;
 
+pub use domain_facets::{
+    AllometricBranchLaw, BondGraphPort, FatigueCorrosionLaw, HillMuscleFacet, PortDomain,
+};
 pub use fields::{AnalyticFieldProfile, FieldDeclaration, FieldQuantity, FieldUnit};
 pub use laws::{
     evaluate_field_interactions, evaluate_pairwise_interactions, ContinuantState, InteractionEvent,
@@ -19,6 +25,14 @@ pub use materials::{
     SignatureFacet, SpectrumReading, ThermalFacet, GAME_WATER_FORMS,
 };
 pub use morphism::{transform_frame, GalileanMorphism, LorentzMorphism};
+pub use nbody_3d::{
+    step_nbody_3d_verlet, total_angular_momentum, total_mechanical_energy, CelestialBody3D,
+    GRAVITATIONAL_CONSTANT, MAX_STACK_BODIES, SPEED_OF_LIGHT,
+};
+pub use quantum_3d::{
+    associated_laguerre, associated_legendre, evaluate_hydrogenic_orbital_3d,
+    hydrogenic_radial_wavefunction, real_spherical_harmonic,
+};
 pub use trajectory::{Waypoint, WorldLineTrajectory};
 
 #[cfg(test)]

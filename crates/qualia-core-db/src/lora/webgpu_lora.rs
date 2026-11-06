@@ -34,10 +34,10 @@ pub struct LoraGpuParams {
 ///
 /// Constructed once and reused across inference calls.
 pub struct LoRAGpuApplicator {
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    pipeline: wgpu::ComputePipeline,
-    bgl: wgpu::BindGroupLayout,
+    device: etalon::Device,
+    queue: etalon::Queue,
+    pipeline: etalon::ComputePipeline,
+    bgl: etalon::BindGroupLayout,
 }
 
 impl LoRAGpuApplicator {
@@ -54,10 +54,10 @@ impl LoRAGpuApplicator {
     }
 
     async fn new_async() -> Result<Self, LoRAError> {
-        let instance = wgpu::Instance::default();
+        let instance = etalon::Instance::default();
         let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
+            .request_adapter(&etalon::RequestAdapterOptions {
+                power_preference: etalon::PowerPreference::HighPerformance,
                 ..Default::default()
             })
             .await
@@ -66,16 +66,16 @@ impl LoRAGpuApplicator {
         // This kernel uses only baseline WebGPU storage/uniform capabilities, so it
         // deliberately requests no optional or experimental wgpu 30 features.
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default())
+            .request_device(&etalon::DeviceDescriptor::default())
             .await
             .map_err(|e| LoRAError::Io(format!("wgpu device: {e}")))?;
 
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("lora_apply"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/lora_apply.wgsl").into()),
+            source: etalon::ShaderSource::Wgsl(include_str!("../shaders/lora_apply.wgsl").into()),
         });
 
-        let bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bgl = device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
             label: Some("lora-bgl"),
             entries: &[
                 storage_rw_entry(0), // output
@@ -86,13 +86,13 @@ impl LoRAGpuApplicator {
             ],
         });
 
-        let pl = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pl = device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
             label: Some("lora-pl"),
             bind_group_layouts: &[Some(&bgl)],
             immediate_size: 0,
         });
 
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
             label: Some("lora-pipeline"),
             layout: Some(&pl),
             module: &shader,
@@ -149,35 +149,35 @@ impl LoRAGpuApplicator {
         let b_buf = buf_r(dev, bytemuck::cast_slice(&adapter.lora_b.data));
         let params_buf = buf_uniform(dev, bytemuck::bytes_of(&params));
 
-        let out_staging = dev.create_buffer(&wgpu::BufferDescriptor {
+        let out_staging = dev.create_buffer(&etalon::BufferDescriptor {
             label: Some("lora-out-staging"),
             size: (n_out * 4) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::MAP_READ | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
         // ── Bind group ────────────────────────────────────────────────────────
-        let bg = dev.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bg = dev.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("lora-bg"),
             layout: &self.bgl,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: out_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: in_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: a_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: b_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 4,
                     resource: params_buf.as_entire_binding(),
                 },
@@ -185,12 +185,12 @@ impl LoRAGpuApplicator {
         });
 
         // ── Dispatch ─────────────────────────────────────────────────────────
-        let mut enc = dev.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let mut enc = dev.create_command_encoder(&etalon::CommandEncoderDescriptor {
             label: Some("lora-enc"),
         });
 
         {
-            let mut cpass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            let mut cpass = enc.begin_compute_pass(&etalon::ComputePassDescriptor {
                 label: Some("lora-pass"),
                 timestamp_writes: None,
             });
@@ -205,10 +205,10 @@ impl LoRAGpuApplicator {
         // ── Readback ─────────────────────────────────────────────────────────
         let slice = out_staging.slice(..);
         let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
+        slice.map_async(etalon::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        let _ = dev.poll(wgpu::PollType::wait_indefinitely());
+        let _ = dev.poll(etalon::PollType::wait_indefinitely());
         rx.recv()
             .map_err(|_| LoRAError::Io("GPU readback channel closed".into()))?
             .map_err(|e| LoRAError::Io(format!("map_async: {e:?}")))?;
@@ -224,41 +224,41 @@ impl LoRAGpuApplicator {
 
 // ─── wgpu buffer helpers ─────────────────────────────────────────────────────
 
-fn buf_rw(dev: &wgpu::Device, data: &[u8]) -> wgpu::Buffer {
-    use wgpu::util::DeviceExt;
-    dev.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+fn buf_rw(dev: &etalon::Device, data: &[u8]) -> etalon::Buffer {
+    use etalon::util::DeviceExt;
+    dev.create_buffer_init(&etalon::util::BufferInitDescriptor {
         label: Some("lora-rw"),
         contents: data,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_SRC
-            | wgpu::BufferUsages::COPY_DST,
+        usage: etalon::BufferUsages::STORAGE
+            | etalon::BufferUsages::COPY_SRC
+            | etalon::BufferUsages::COPY_DST,
     })
 }
 
-fn buf_r(dev: &wgpu::Device, data: &[u8]) -> wgpu::Buffer {
-    use wgpu::util::DeviceExt;
-    dev.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+fn buf_r(dev: &etalon::Device, data: &[u8]) -> etalon::Buffer {
+    use etalon::util::DeviceExt;
+    dev.create_buffer_init(&etalon::util::BufferInitDescriptor {
         label: Some("lora-r"),
         contents: data,
-        usage: wgpu::BufferUsages::STORAGE,
+        usage: etalon::BufferUsages::STORAGE,
     })
 }
 
-fn buf_uniform(dev: &wgpu::Device, data: &[u8]) -> wgpu::Buffer {
-    use wgpu::util::DeviceExt;
-    dev.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+fn buf_uniform(dev: &etalon::Device, data: &[u8]) -> etalon::Buffer {
+    use etalon::util::DeviceExt;
+    dev.create_buffer_init(&etalon::util::BufferInitDescriptor {
         label: Some("lora-uniform"),
         contents: data,
-        usage: wgpu::BufferUsages::UNIFORM,
+        usage: etalon::BufferUsages::UNIFORM,
     })
 }
 
-fn storage_rw_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+fn storage_rw_entry(binding: u32) -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: false },
+        visibility: etalon::ShaderStages::COMPUTE,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Storage { read_only: false },
             has_dynamic_offset: false,
             min_binding_size: None,
         },
@@ -266,12 +266,12 @@ fn storage_rw_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-fn storage_r_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+fn storage_r_entry(binding: u32) -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
+        visibility: etalon::ShaderStages::COMPUTE,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Storage { read_only: true },
             has_dynamic_offset: false,
             min_binding_size: None,
         },
@@ -279,12 +279,12 @@ fn storage_r_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
     }
 }
 
-fn uniform_entry(binding: u32) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+fn uniform_entry(binding: u32) -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::COMPUTE,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
+        visibility: etalon::ShaderStages::COMPUTE,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Uniform,
             has_dynamic_offset: false,
             min_binding_size: None,
         },

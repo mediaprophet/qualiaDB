@@ -144,6 +144,22 @@ impl Clone for Cancellation {
 //  GeometryWorkspace — caller-owned byte arena
 // ───────────────────────────────────────────────────────────────────────────
 
+/// Opaque checkpoint capturing the bump offset of a [`GeometryWorkspace`].
+///
+/// Used with [`GeometryWorkspace::checkpoint`] and [`GeometryWorkspace::rewind`]
+/// to reclaim temporary sub-pass scratch space in $O(1)$ without disturbing
+/// earlier outer-pass allocations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkspaceCheckpoint(usize);
+
+impl WorkspaceCheckpoint {
+    /// The byte offset recorded by this checkpoint.
+    #[inline]
+    pub const fn offset(self) -> usize {
+        self.0
+    }
+}
+
 /// A caller-owned byte arena for geometry algorithm scratch space.
 ///
 /// The caller allocates the backing buffer (stack array, `Box<[u8]>`, or
@@ -232,15 +248,57 @@ impl<'a> GeometryWorkspace<'a> {
         self.offset = 0;
     }
 
-    /// Allocate `size` bytes with `ARENA_ALIGN` alignment. Returns a slice
-    /// into the backing buffer, or `Err(WorkspaceError)` if the budget is
-    /// exceeded or the caller cancelled.
+    /// Capture the current bump offset so temporary sub-pass allocations can be
+    /// reclaimed in $O(1)$ via [`Self::rewind`].
+    #[inline]
+    pub fn checkpoint(&self) -> WorkspaceCheckpoint {
+        WorkspaceCheckpoint(self.offset)
+    }
+
+    /// Rewind the arena bump offset back to a previously captured [`WorkspaceCheckpoint`].
+    ///
+    /// Returns `Err(WorkspaceError::BudgetExceeded)` if the checkpoint offset exceeds
+    /// the current offset (e.g. after a [`Self::reset`] or an earlier rewind).
+    #[inline]
+    pub fn rewind(&mut self, checkpoint: WorkspaceCheckpoint) -> Result<(), WorkspaceError> {
+        if checkpoint.0 > self.offset {
+            return Err(WorkspaceError::BudgetExceeded {
+                requested: checkpoint.0,
+                available: self.offset,
+            });
+        }
+        self.offset = checkpoint.0;
+        Ok(())
+    }
+
+    /// Compute the lowest offset `>= self.offset` such that the physical address
+    /// `(self.buffer.as_ptr() as usize) + offset` is a multiple of `align`.
+    #[inline]
+    fn aligned_offset_for(&self, align: usize) -> Option<usize> {
+        debug_assert!(align.is_power_of_two());
+        let base = self.buffer.as_ptr() as usize;
+        let addr = base.checked_add(self.offset)?;
+        let aligned_addr = addr.checked_add(align - 1)? & !(align - 1);
+        let pad = aligned_addr - addr;
+        self.offset.checked_add(pad)
+    }
+
+    /// Allocate `size` bytes with `ARENA_ALIGN` physical pointer alignment.
+    /// Returns a zero-initialized slice into the backing buffer, or
+    /// `Err(WorkspaceError)` if the budget is exceeded or the caller cancelled.
     pub fn alloc(&mut self, size: usize) -> Result<&mut [u8], WorkspaceError> {
         if self.cancel.is_cancelled() {
             return Err(WorkspaceError::Cancelled);
         }
-        // Align the offset up.
-        let aligned_offset = align_up(self.offset, ARENA_ALIGN);
+        if size == 0 {
+            return Ok(&mut []);
+        }
+        let aligned_offset =
+            self.aligned_offset_for(ARENA_ALIGN)
+                .ok_or(WorkspaceError::BudgetExceeded {
+                    requested: size,
+                    available: self.bytes_available(),
+                })?;
         let end = aligned_offset
             .checked_add(size)
             .ok_or(WorkspaceError::BudgetExceeded {
@@ -254,12 +312,24 @@ impl<'a> GeometryWorkspace<'a> {
             });
         }
         self.offset = end;
-        Ok(&mut self.buffer[aligned_offset..end])
+        let slice = &mut self.buffer[aligned_offset..end];
+        slice.fill(0);
+        Ok(slice)
     }
 
-    /// Allocate space for `count` elements of `T` (typed slice). The caller
-    /// is responsible for initializing the memory.
-    pub fn alloc_slice<T>(&mut self, count: usize) -> Result<&mut [T], WorkspaceError> {
+    /// Allocate space for `count` uninitialized elements of `T`.
+    ///
+    /// Physically aligns the returned slice pointer to `align_of::<T>().max(ARENA_ALIGN)`.
+    pub fn alloc_slice_uninit<T>(
+        &mut self,
+        count: usize,
+    ) -> Result<&mut [std::mem::MaybeUninit<T>], WorkspaceError> {
+        if self.cancel.is_cancelled() {
+            return Err(WorkspaceError::Cancelled);
+        }
+        if std::mem::size_of::<T>() == 0 || count == 0 {
+            return Ok(&mut []);
+        }
         let size =
             count
                 .checked_mul(std::mem::size_of::<T>())
@@ -268,10 +338,12 @@ impl<'a> GeometryWorkspace<'a> {
                     available: self.bytes_available(),
                 })?;
         let align = std::mem::align_of::<T>().max(ARENA_ALIGN);
-        if self.cancel.is_cancelled() {
-            return Err(WorkspaceError::Cancelled);
-        }
-        let aligned_offset = align_up(self.offset, align);
+        let aligned_offset =
+            self.aligned_offset_for(align)
+                .ok_or(WorkspaceError::BudgetExceeded {
+                    requested: size,
+                    available: self.bytes_available(),
+                })?;
         let end = aligned_offset
             .checked_add(size)
             .ok_or(WorkspaceError::BudgetExceeded {
@@ -285,10 +357,78 @@ impl<'a> GeometryWorkspace<'a> {
             });
         }
         self.offset = end;
-        // SAFETY: the buffer is valid for `byte_budget` bytes, we've checked
-        // that [aligned_offset..end] is within bounds, and the alignment is
-        // correct. The caller must initialize before reading.
-        let ptr = self.buffer[aligned_offset..].as_mut_ptr() as *mut T;
+        let ptr = self.buffer[aligned_offset..end].as_mut_ptr() as *mut std::mem::MaybeUninit<T>;
+        debug_assert_eq!((ptr as usize) % std::mem::align_of::<T>(), 0);
+        // SAFETY: `[aligned_offset..end]` is within `self.byte_budget <= self.buffer.len()`,
+        // `size == count * size_of::<T>()`, `ptr` is physically aligned to `align_of::<T>()`,
+        // and `MaybeUninit<T>` does not require initialized `T` bit-patterns.
+        unsafe { Ok(std::slice::from_raw_parts_mut(ptr, count)) }
+    }
+
+    /// Allocate space for `count` elements of `T`, initializing every element to `fill`.
+    pub fn alloc_slice_fill<T: Copy>(
+        &mut self,
+        count: usize,
+        fill: T,
+    ) -> Result<&mut [T], WorkspaceError> {
+        let uninit = self.alloc_slice_uninit::<T>(count)?;
+        for slot in uninit.iter_mut() {
+            slot.write(fill);
+        }
+        let ptr = uninit.as_mut_ptr() as *mut T;
+        // SAFETY: Every element of `uninit` has been initialized via `MaybeUninit::write`,
+        // and `MaybeUninit<T>` has identical layout and alignment to `T`.
+        unsafe { Ok(std::slice::from_raw_parts_mut(ptr, uninit.len())) }
+    }
+
+    /// Allocate space for `count` zero-initialized elements of `T` (typed slice).
+    ///
+    /// Physically aligns the returned slice pointer to `align_of::<T>().max(ARENA_ALIGN)`
+    /// and zero-fills the backing bytes before constructing `&mut [T]`.
+    pub fn alloc_slice<T: bytemuck::Zeroable>(
+        &mut self,
+        count: usize,
+    ) -> Result<&mut [T], WorkspaceError> {
+        if self.cancel.is_cancelled() {
+            return Err(WorkspaceError::Cancelled);
+        }
+        if std::mem::size_of::<T>() == 0 || count == 0 {
+            return Ok(&mut []);
+        }
+        let size =
+            count
+                .checked_mul(std::mem::size_of::<T>())
+                .ok_or(WorkspaceError::BudgetExceeded {
+                    requested: usize::MAX,
+                    available: self.bytes_available(),
+                })?;
+        let align = std::mem::align_of::<T>().max(ARENA_ALIGN);
+        let aligned_offset =
+            self.aligned_offset_for(align)
+                .ok_or(WorkspaceError::BudgetExceeded {
+                    requested: size,
+                    available: self.bytes_available(),
+                })?;
+        let end = aligned_offset
+            .checked_add(size)
+            .ok_or(WorkspaceError::BudgetExceeded {
+                requested: size,
+                available: self.bytes_available(),
+            })?;
+        if end > self.byte_budget {
+            return Err(WorkspaceError::BudgetExceeded {
+                requested: size,
+                available: self.bytes_available(),
+            });
+        }
+        self.offset = end;
+        let raw = &mut self.buffer[aligned_offset..end];
+        raw.fill(0);
+        let ptr = raw.as_mut_ptr() as *mut T;
+        debug_assert_eq!((ptr as usize) % std::mem::align_of::<T>(), 0);
+        // SAFETY: `raw` is within `self.byte_budget <= self.buffer.len()`, has byte length
+        // `count * size_of::<T>()`, `ptr` is physically aligned to `align_of::<T>()`, and
+        // `raw.fill(0)` produces a valid bit-pattern for `T: bytemuck::Zeroable`.
         unsafe { Ok(std::slice::from_raw_parts_mut(ptr, count)) }
     }
 
@@ -303,7 +443,13 @@ impl<'a> GeometryWorkspace<'a> {
         // The input itself must fit, plus we need scratch space. A conservative
         // estimate: input + 50% for scratch (algorithm-specific; the caller
         // can override with a custom check).
-        let estimated_total = input_bytes + (input_bytes / 2);
+        let estimated_total =
+            input_bytes
+                .checked_add(input_bytes / 2)
+                .ok_or(WorkspaceError::PassTooLarge {
+                    input_bytes,
+                    budget: self.byte_budget,
+                })?;
         if estimated_total > self.byte_budget {
             Err(WorkspaceError::PassTooLarge {
                 input_bytes,
@@ -313,11 +459,6 @@ impl<'a> GeometryWorkspace<'a> {
             Ok(())
         }
     }
-}
-
-/// Align `offset` up to `align`.
-fn align_up(offset: usize, align: usize) -> usize {
-    (offset + align - 1) & !(align - 1)
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -376,6 +517,9 @@ where
 mod tests {
     use super::*;
 
+    #[repr(C, align(8))]
+    struct AlignedBuf([u8; 512]);
+
     #[test]
     fn workspace_allocates_within_budget() {
         let cancel = Cancellation::new();
@@ -404,8 +548,8 @@ mod tests {
     #[test]
     fn workspace_alignment_is_respected() {
         let cancel = Cancellation::new();
-        let mut buf = vec![0u8; 256];
-        let mut ws = GeometryWorkspace::new(&mut buf, &cancel);
+        let mut backing = AlignedBuf([0u8; 512]);
+        let mut ws = GeometryWorkspace::new(&mut backing.0[..256], &cancel);
         // Allocate 1 byte — offset becomes 1.
         ws.alloc(1).unwrap();
         assert_eq!(ws.bytes_used(), 1);
@@ -440,12 +584,125 @@ mod tests {
     #[test]
     fn workspace_alloc_slice_typed() {
         let cancel = Cancellation::new();
-        let mut buf = vec![0u8; 1024];
-        let mut ws = GeometryWorkspace::new(&mut buf, &cancel);
+        let mut backing = AlignedBuf([0xFFu8; 512]);
+        let mut ws = GeometryWorkspace::new(&mut backing.0, &cancel);
         let slice: &mut [u64] = ws.alloc_slice::<u64>(16).unwrap();
         assert_eq!(slice.len(), 16);
+        assert!(slice.iter().all(|&v| v == 0));
         // 16 * 8 = 128 bytes used.
         assert_eq!(ws.bytes_used(), 128);
+    }
+
+    #[test]
+    fn workspace_unaligned_base_slices_align_u64_and_f64_pair() {
+        let cancel = Cancellation::new();
+        for misalign in [1usize, 3usize] {
+            let mut backing = AlignedBuf([0xAAu8; 512]);
+            let mut ws = GeometryWorkspace::new(&mut backing.0[misalign..], &cancel);
+
+            let u64_slice = ws.alloc_slice::<u64>(8).unwrap();
+            assert_eq!(u64_slice.len(), 8);
+            assert_eq!(
+                (u64_slice.as_ptr() as usize) % std::mem::align_of::<u64>(),
+                0,
+                "u64 slice pointer must be 8-byte aligned for misalign={}",
+                misalign
+            );
+            assert!(
+                u64_slice.iter().all(|&x| x == 0),
+                "alloc_slice must zero-initialize backing memory"
+            );
+            for (i, slot) in u64_slice.iter_mut().enumerate() {
+                *slot = (i as u64) + 100;
+            }
+            assert_eq!(u64_slice[7], 107);
+
+            // Advance by 1 byte via alloc(1) to force odd internal offset too.
+            ws.alloc(1).unwrap();
+
+            let pair_slice = ws.alloc_slice::<[f64; 2]>(4).unwrap();
+            assert_eq!(pair_slice.len(), 4);
+            assert_eq!(
+                (pair_slice.as_ptr() as usize) % std::mem::align_of::<[f64; 2]>(),
+                0,
+                "[f64; 2] slice pointer must be 8-byte aligned for misalign={}",
+                misalign
+            );
+            assert!(pair_slice.iter().all(|&p| p == [0.0, 0.0]));
+            pair_slice[0] = [1.25, -3.5];
+            assert_eq!(pair_slice[0], [1.25, -3.5]);
+        }
+    }
+
+    #[test]
+    fn workspace_alloc_slice_fill_and_uninit_and_zero_sized() {
+        let cancel = Cancellation::new();
+        let mut backing = AlignedBuf([0x55u8; 512]);
+        let mut ws = GeometryWorkspace::new(&mut backing.0[3..], &cancel);
+
+        // Zero-count and ZST allocations consume 0 bytes and succeed.
+        let empty_u64 = ws.alloc_slice::<u64>(0).unwrap();
+        assert!(empty_u64.is_empty());
+        assert_eq!(ws.bytes_used(), 0);
+
+        let zst_slice = ws.alloc_slice_fill::<()>(128, ()).unwrap();
+        assert!(zst_slice.is_empty());
+        assert_eq!(ws.bytes_used(), 0);
+
+        let filled = ws
+            .alloc_slice_fill::<[f64; 2]>(3, [42.0, -7.0])
+            .unwrap();
+        assert_eq!(
+            (filled.as_ptr() as usize) % std::mem::align_of::<[f64; 2]>(),
+            0
+        );
+        assert_eq!(filled, &[[42.0, -7.0]; 3]);
+
+        let uninit = ws.alloc_slice_uninit::<u64>(4).unwrap();
+        assert_eq!(
+            (uninit.as_ptr() as usize) % std::mem::align_of::<u64>(),
+            0
+        );
+        for (i, slot) in uninit.iter_mut().enumerate() {
+            slot.write((i as u64) * 11);
+        }
+        let init_vals: Vec<u64> = uninit
+            .iter()
+            .map(|s| unsafe { s.assume_init() })
+            .collect();
+        assert_eq!(init_vals, vec![0, 11, 22, 33]);
+    }
+
+    #[test]
+    fn workspace_checkpoint_and_rewind_reclaim_subpass_scratch() {
+        let cancel = Cancellation::new();
+        let mut backing = AlignedBuf([0u8; 512]);
+        let mut ws = GeometryWorkspace::new(&mut backing.0[1..], &cancel);
+
+        let outer = ws.alloc_slice_fill::<u64>(4, 0x1234_5678_9ABC_DEF0).unwrap();
+        let outer_ptr = outer.as_ptr();
+        let cp = ws.checkpoint();
+        assert!(cp.offset() >= 32);
+
+        // Allocate temporary sub-pass scratch and then rewind.
+        let temp = ws.alloc_slice_fill::<[f64; 2]>(6, [9.0, 8.0]).unwrap();
+        assert_eq!(temp.len(), 6);
+        assert!(ws.bytes_used() > cp.offset());
+
+        ws.rewind(cp).unwrap();
+        assert_eq!(ws.bytes_used(), cp.offset());
+
+        // Subsequent allocation reuses the reclaimed sub-pass region.
+        let next = ws.alloc_slice_fill::<u64>(2, 77).unwrap();
+        assert_eq!(next, &[77, 77]);
+
+        // Outer pass data before the checkpoint remains intact.
+        let preserved = unsafe { std::slice::from_raw_parts(outer_ptr, 4) };
+        assert_eq!(preserved, &[0x1234_5678_9ABC_DEF0; 4]);
+
+        // Rewinding to a checkpoint ahead of current offset after reset fails closed.
+        ws.reset();
+        assert!(ws.rewind(cp).is_err());
     }
 
     #[test]
@@ -467,6 +724,27 @@ mod tests {
             ws.admit_pass(2048),
             Err(WorkspaceError::PassTooLarge {
                 input_bytes: 2048,
+                budget: 1024
+            })
+        );
+    }
+
+    #[test]
+    fn admit_pass_rejects_usize_max_overflow() {
+        let cancel = Cancellation::new();
+        let mut buf = vec![0u8; 1024];
+        let ws = GeometryWorkspace::new(&mut buf, &cancel);
+        assert_eq!(
+            ws.admit_pass(usize::MAX),
+            Err(WorkspaceError::PassTooLarge {
+                input_bytes: usize::MAX,
+                budget: 1024
+            })
+        );
+        assert_eq!(
+            ws.admit_pass(usize::MAX - 1),
+            Err(WorkspaceError::PassTooLarge {
+                input_bytes: usize::MAX - 1,
                 budget: 1024
             })
         );
@@ -581,11 +859,11 @@ mod tests {
     #[test]
     fn workspace_with_budget_respects_smaller_budget() {
         let cancel = Cancellation::new();
-        let mut buf = vec![0u8; 1024];
-        let mut ws = GeometryWorkspace::with_budget(&mut buf, 512, &cancel);
-        // 512 bytes should fit.
-        ws.alloc(512).unwrap();
-        // 1 more byte should fail (budget is 512, not 1024).
+        let mut backing = AlignedBuf([0u8; 512]);
+        let mut ws = GeometryWorkspace::with_budget(&mut backing.0, 256, &cancel);
+        // 256 bytes should fit.
+        ws.alloc(256).unwrap();
+        // 1 more byte should fail (budget is 256, not 512).
         assert_eq!(
             ws.alloc(1),
             Err(WorkspaceError::BudgetExceeded {

@@ -51,7 +51,7 @@ pub use etalon_agent::{
     SubmissionToken as EtalonSubmissionToken, SubmissionToken,
 };
 
-/// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
+/// Device-per-circuit registry — obtain a `etalon::Device` for a SPECIFIC adapter/circuit
 /// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
 /// Native only; mirrors `try_shared_gpu` — never panics on a missing/failed device.
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
@@ -180,7 +180,7 @@ pub enum VramLedgerSlot {
     Viewport = 3,
 }
 
-/// Preferred async queue on the single `wgpu::Device` (spatial concurrency, not MIG).
+/// Preferred async queue on the single `etalon::Device` (spatial concurrency, not MIG).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueueLane {
@@ -749,12 +749,12 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 #[cfg(feature = "gpu-runtime")]
 pub struct SharedGpuContext {
     pub provider_lease: etalon_agent::device_lease::DeviceLease,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    pub device: etalon::Device,
+    pub queue: etalon::Queue,
     /// The wgpu instance — needed to create surfaces (must be same instance as adapter).
-    pub instance: wgpu::Instance,
+    pub instance: etalon::Instance,
     /// The wgpu adapter — needed to create surfaces and query capabilities.
-    pub adapter: wgpu::Adapter,
+    pub adapter: etalon::Adapter,
     /// Immutable adapter capability snapshot for diagnostics and feature negotiation.
     pub adapter_caps: GpuAdapterCaps,
     /// Feature subset actually requested on the process-wide device.
@@ -769,9 +769,9 @@ pub struct SharedGpuContext {
 #[cfg(feature = "gpu-runtime")]
 impl SharedGpuContext {
     /// Logical queue lane for universe-tagged dispatch (B2.3).
-    /// Single physical `wgpu::Queue` today; lane tags preserve driver scheduling intent.
+    /// Single physical `etalon::Queue` today; lane tags preserve driver scheduling intent.
     #[inline]
-    pub fn queue_for_lane(&self, lane: QueueLane) -> &wgpu::Queue {
+    pub fn queue_for_lane(&self, lane: QueueLane) -> &etalon::Queue {
         let _ = lane;
         &self.queue
     }
@@ -779,7 +779,7 @@ impl SharedGpuContext {
     /// Queue for `universe`'s default lane — same physical queue;
     /// universe tagging is intent metadata today.
     #[inline]
-    pub fn queue_for_universe(&self, universe: ComputeUniverse) -> &wgpu::Queue {
+    pub fn queue_for_universe(&self, universe: ComputeUniverse) -> &etalon::Queue {
         self.queue_for_lane(universe.default_queue_lane())
     }
 
@@ -830,11 +830,11 @@ std::thread_local! {
     feature = "gpu-runtime",
     feature = "gpu-native-dx12"
 ))]
-fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
+fn resolve_dx12_compiler() -> etalon::Dx12Compiler {
     if let Ok(p) = std::env::var("QUALIA_DXC_PATH") {
         if !p.trim().is_empty() {
             log::info!("shared_gpu|dx12_compiler|DynamicDxc(env)={p}");
-            return wgpu::Dx12Compiler::DynamicDxc { dxc_path: p };
+            return etalon::Dx12Compiler::DynamicDxc { dxc_path: p };
         }
     }
     if let Ok(exe) = std::env::current_exe() {
@@ -845,13 +845,13 @@ fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
                     "shared_gpu|dx12_compiler|DynamicDxc(vendored)={}",
                     dll.display()
                 );
-                return wgpu::Dx12Compiler::DynamicDxc {
+                return etalon::Dx12Compiler::DynamicDxc {
                     dxc_path: dll.to_string_lossy().into_owned(),
                 };
             }
         }
     }
-    wgpu::Dx12Compiler::Auto
+    etalon::Dx12Compiler::Auto
 }
 
 /// Native init: request a high-performance adapter (falling back to
@@ -869,7 +869,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // is discoverable. `QUALIA_DXC_PATH` points wgpu straight at a `dxcompiler.dll` (with `dxil.dll`
     // alongside it, for DXIL signing) so DX12 uses DXC without needing it on PATH. Absent the var we
     // keep `Auto` (Vulkan stays the working default backend regardless).
-    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
     #[cfg(feature = "gpu-native-dx12")]
     {
         let dx12_compiler = resolve_dx12_compiler();
@@ -885,7 +885,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
             // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
             // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
             // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
-            desc.backends = wgpu::Backends::DX12;
+            desc.backends = etalon::Backends::DX12;
             log::info!(
                 "shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
             );
@@ -895,14 +895,14 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
             // Portable builds are intended for browser/viewport use. Keep the
             // shared inference device on GLES rather than silently selecting
             // the Vulkan path with its tracked native inference hang.
-            desc.backends = wgpu::Backends::GL;
+            desc.backends = etalon::Backends::GL;
             log::info!("shared_gpu|backend_default|windows->gles_portable_build");
         }
     }
-    let instance = wgpu::Instance::new(desc);
+    let instance = etalon::Instance::new(desc);
     let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+        .request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             ..Default::default()
         })
         .await
@@ -935,8 +935,8 @@ pub(crate) use etalon_resources::device_caps::webgpu_minimum_limits;
 /// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
 #[cfg(feature = "gpu-runtime")]
 pub(crate) async fn init_shared_gpu_for_adapter(
-    instance: wgpu::Instance,
-    adapter: wgpu::Adapter,
+    instance: etalon::Instance,
+    adapter: etalon::Adapter,
 ) -> Result<SharedGpuContext, String> {
     let adapter_caps = GpuAdapterCaps::from_adapter(&adapter);
     log::info!(
@@ -991,25 +991,25 @@ pub(crate) async fn init_shared_gpu_for_adapter(
             adapter.limits()
         }
     };
-    let required_limits = wgpu::Limits {
+    let required_limits = etalon::Limits {
         max_buffer_size: adapter_limits.max_buffer_size,
         max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
-        ..wgpu::Limits::default()
+        ..etalon::Limits::default()
     };
     let experimental_features = if required_features.intersects(
-        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+        etalon::Features::EXPERIMENTAL_COOPERATIVE_MATRIX | etalon::Features::EXPERIMENTAL_RAY_QUERY,
     ) {
         // Safety: experimental capabilities are requested only after intersecting
         // with the selected adapter's advertised feature set. Callers must also
         // explicitly opt in through QUALIA_WGPU_EXPERIMENTAL_FEATURES.
-        unsafe { wgpu::ExperimentalFeatures::enabled() }
+        unsafe { etalon::ExperimentalFeatures::enabled() }
     } else {
-        wgpu::ExperimentalFeatures::disabled()
+        etalon::ExperimentalFeatures::disabled()
     };
     let context = etalon_agent::shared_device::DeviceContext::request(
         instance,
         adapter,
-        &wgpu::DeviceDescriptor {
+        &etalon::DeviceDescriptor {
             required_features,
             required_limits,
             experimental_features,
@@ -1103,19 +1103,19 @@ pub async fn ensure_shared_gpu() -> Result<(), String> {
 /// falling back to default), then build the `SharedGpuContext` for it.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 async fn init_shared_gpu_wasm() -> Result<SharedGpuContext, String> {
-    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-    desc.backends = wgpu::Backends::BROWSER_WEBGPU;
-    let instance = wgpu::Instance::new(desc);
+    let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
+    desc.backends = etalon::Backends::BROWSER_WEBGPU;
+    let instance = etalon::Instance::new(desc);
     let adapter = match instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+        .request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             ..Default::default()
         })
         .await
     {
         Ok(a) => a,
         Err(high_err) => instance
-            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .request_adapter(&etalon::RequestAdapterOptions::default())
             .await
             .map_err(|e| {
                 format!(

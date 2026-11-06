@@ -74,6 +74,7 @@ pub mod curve_skeleton;
 pub mod dcel_overlay;
 pub mod ddg_operators;
 mod decimate_3;
+pub mod decimate_3_semantic;
 pub mod delaunay_2;
 mod delaunay_3;
 /// P13.2 — Delaunay refinement for PSLGs with Steiner points (Ruppert).
@@ -327,6 +328,10 @@ pub use ddg_operators::{
 pub use decimate_3::{
     decimate_qem, decimate_qem_with_kernel, required_triangles, required_vertices, DecimateError,
     DecimateOptions, DecimateReport,
+};
+pub use decimate_3_semantic::{
+    compute_extended_collapse_cost, decimate_semantic_qem_3, decimate_semantic_qem_3_with_kernel,
+    interpolate_semantic_attributes, SemanticDecimateWeights, SemanticVertexAttributes,
 };
 pub use delaunay_2::{
     delaunay_triangulation_2, triangulation_hash, verify_delaunay, DelaunayError,

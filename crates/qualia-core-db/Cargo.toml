@@ -30,7 +30,6 @@ gpu-runtime = [
     "etalon-inference/gpu-attention",
     "etalon-inference/native-metal-gpu",
     "dep:naga",
-    "dep:wgpu",
     "dep:etalon",
     "dep:etalon-agent",
     "etalon-wgsl-forge/std",
@@ -46,7 +45,7 @@ gpu-runtime = [
 ]
 # DX12 remains enabled in the default Windows build. The portable native profile
 # can omit it and use the renderer-only GLES/Vulkan selection path instead.
-gpu-native-dx12 = ["wgpu/dx12", "etalon?/dx12", "etalon-wgsl-forge/gpu-native-dx12"]
+gpu-native-dx12 = ["etalon?/dx12", "etalon-wgsl-forge/gpu-native-dx12"]
 gpu-native-portable = []
 metal-native = []
 wgsl-forge = ["gpu-runtime", "dep:naga", "dxc"]
@@ -143,11 +142,13 @@ vm_tracing = []
 minimal-fast-build = []
 
 [dependencies]
+vibescript-abi = { workspace = true }
 vibe = { workspace = true }
 qualia-cooperative-core = { workspace = true }
 qualia-inference-kernel = { workspace = true }
 etalon-model = { workspace = true, features = ["ggml", "inference-model"] }
 etalon-resources = { workspace = true }
+etalon-signal = { workspace = true }
 etalon-inference = { workspace = true, features = ["qwen-metadata", "metal-lane"] }
 etalon-inference-contract = { workspace = true }
 minicbor = { workspace = true, features = ["std"] }
@@ -226,16 +227,6 @@ async-trait = { workspace = true }
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { workspace = true, features = ["svg"] }
-wgpu = { workspace = true, default-features = false, features = [
-    "std",
-    "parking_lot",
-    "metal",
-    "gles",
-    "vulkan",
-    "wgsl",
-    "webgpu",
-    "spirv"
-], optional = true }
 etalon = { workspace = true, default-features = false, features = [
     "std",
     "metal",
@@ -250,6 +241,7 @@ etalon-wgsl-forge = { workspace = true }
 etalon-nquin = { workspace = true, optional = true }
 etalon-tensor = { workspace = true, optional = true }
 etalon-render = { workspace = true }
+etalon-sim = { workspace = true }
 etalon-wasm = { workspace = true, optional = true }
 naga = { workspace = true, features = ["wgsl-in", "spv-out", "glsl-out"], optional = true }
 raw-window-handle = { workspace = true, optional = true }

@@ -1,41 +1,15 @@
-//! Crest factor — peak-to-RMS ratio, a measure of transient/dynamic content.
-//!
-//! `crest = peak / rms`. A pure sine has crest `sqrt(2)` (≈ 3.01 dB); a square
-//! wave `1.0` (0 dB); heavily peaked / transient signals are higher. Zero-heap
-//! (single pass, no allocation).
+//! Crest factor — peak-to-RMS ratio, delegated to [`etalon_signal::loudness`].
 
 /// Linear crest factor `max|x| / rms(x)` of a mono block.
-///
-/// Returns `0.0` for an empty or all-zero block (RMS `== 0`).
+#[inline]
 pub fn crest_factor(samples: &[f32]) -> f32 {
-    if samples.is_empty() {
-        return 0.0;
-    }
-    let mut peak = 0.0f32;
-    let mut sq = 0.0f64;
-    for &x in samples {
-        let a = x.abs();
-        if a > peak {
-            peak = a;
-        }
-        sq += (x as f64) * (x as f64);
-    }
-    let rms = (sq / samples.len() as f64).sqrt() as f32;
-    if rms <= 0.0 {
-        return 0.0;
-    }
-    peak / rms
+    etalon_signal::loudness::crest_factor_f32(samples)
 }
 
 /// Crest factor in dB (`20*log10(peak/rms)`).
-///
-/// Returns [`f32::NEG_INFINITY`] for an empty or all-zero block.
+#[inline]
 pub fn crest_factor_db(samples: &[f32]) -> f32 {
-    let c = crest_factor(samples);
-    if c <= 0.0 {
-        return f32::NEG_INFINITY;
-    }
-    20.0 * c.log10()
+    etalon_signal::loudness::crest_factor_db(samples)
 }
 
 #[cfg(test)]
@@ -44,7 +18,6 @@ mod tests {
     use core::f32::consts::PI;
 
     fn sine(n: usize, amp: f32) -> Vec<f32> {
-        // 1000 whole periods; sample lands exactly on the peak at i=12.
         (0..n)
             .map(|i| amp * (2.0 * PI * 1_000.0 * i as f32 / 48_000.0).sin())
             .collect()

@@ -16,6 +16,7 @@ name = "vibe"
 path = "src/bin/vibe.rs"
 
 [dependencies]
+vibescript-abi = { workspace = true }
 bytemuck = { workspace = true, features = ["derive"] }
 unicode-xid = "0.2.6"
 

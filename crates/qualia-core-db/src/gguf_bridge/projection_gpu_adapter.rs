@@ -78,7 +78,7 @@ impl ProjectionGpuProvider for QTensorEngine {
     }
     fn readback_owned(
         &self,
-        buffer: &wgpu::Buffer,
+        buffer: &etalon::Buffer,
         bytes: u64,
         panic_on_error: bool,
     ) -> Option<Vec<f32>> {
@@ -120,10 +120,10 @@ impl ProjectionGpuProvider for QTensorEngine {
             mc8_logits_row_bytes: self.mc8_logits_row_bytes,
         }
     }
-    fn gpu_device(&self) -> &wgpu::Device {
+    fn gpu_device(&self) -> &etalon::Device {
         QTensorEngine::gpu_device(self)
     }
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    fn gpu_queue(&self) -> &etalon::Queue {
         QTensorEngine::gpu_queue(self)
     }
     fn coop_gemv_enabled(&self) -> bool {
@@ -135,19 +135,19 @@ impl ProjectionGpuProvider for QTensorEngine {
     fn resident_weights_enabled(&self) -> bool {
         crate::llm_bench::resident_weights_enabled()
     }
-    fn native_gemm_bind_layout(&self, coop: bool) -> &wgpu::BindGroupLayout {
+    fn native_gemm_bind_layout(&self, coop: bool) -> &etalon::BindGroupLayout {
         QTensorEngine::native_gemm_bind_layout(self, coop)
     }
-    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
+    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<etalon::Buffer> {
         QTensorEngine::resident_weight_buffer(self, key, raw)
     }
     fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
         QTensorEngine::write_weight_words(self, raw, max_bytes)
     }
-    fn submit(&self, commands: wgpu::CommandBuffer) {
+    fn submit(&self, commands: etalon::CommandBuffer) {
         self.submit_commands(Some(commands));
     }
-    fn map_read(&self, buffer: &wgpu::Buffer, bytes: u64) -> bool {
+    fn map_read(&self, buffer: &etalon::Buffer, bytes: u64) -> bool {
         etalon_inference::projections::readback::map_read(
             &self.projection_readback,
             buffer,
@@ -155,7 +155,7 @@ impl ProjectionGpuProvider for QTensorEngine {
             || self.poll_wait(),
         )
     }
-    fn readback(&self, buffer: &wgpu::Buffer, bytes: u64, out: &mut [f32]) -> bool {
+    fn readback(&self, buffer: &etalon::Buffer, bytes: u64, out: &mut [f32]) -> bool {
         etalon_inference::projections::readback::readback_into(
             &self.projection_readback,
             buffer,
@@ -164,14 +164,14 @@ impl ProjectionGpuProvider for QTensorEngine {
             || self.poll_wait(),
         )
     }
-    fn pass_writes(&self, profile: Profile) -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+    fn pass_writes(&self, profile: Profile) -> Option<etalon::ComputePassTimestampWrites<'static>> {
         match profile {
             Profile::Both => crate::llm_gpu_profiler::pass_writes_both(),
             Profile::Begin => crate::llm_gpu_profiler::pass_writes_begin(),
             Profile::End => crate::llm_gpu_profiler::pass_writes_end(),
         }
     }
-    fn resolve(&self, encoder: &mut wgpu::CommandEncoder) {
+    fn resolve(&self, encoder: &mut etalon::CommandEncoder) {
         crate::llm_gpu_profiler::resolve(encoder)
     }
     fn accumulate(&self, phase: Phase) {

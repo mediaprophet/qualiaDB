@@ -62,7 +62,7 @@ impl ZeroCopyStrategy {
     }
 
     /// Portable GPU allocations require uploads regardless of adapter class.
-    pub fn for_wgpu_device_type(_device_type: wgpu::DeviceType) -> Self {
+    pub fn for_wgpu_device_type(_device_type: etalon::DeviceType) -> Self {
         Self::StagingUpload
     }
 
@@ -255,11 +255,11 @@ mod tests {
             assert!(strategy.requires_host_copy());
         }
         for device_type in [
-            wgpu::DeviceType::IntegratedGpu,
-            wgpu::DeviceType::DiscreteGpu,
-            wgpu::DeviceType::Cpu,
-            wgpu::DeviceType::VirtualGpu,
-            wgpu::DeviceType::Other,
+            etalon::DeviceType::IntegratedGpu,
+            etalon::DeviceType::DiscreteGpu,
+            etalon::DeviceType::Cpu,
+            etalon::DeviceType::VirtualGpu,
+            etalon::DeviceType::Other,
         ] {
             assert_eq!(
                 ZeroCopyStrategy::for_wgpu_device_type(device_type),

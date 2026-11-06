@@ -1,8 +1,7 @@
 //! In-place iterative radix-2 Cooley–Tukey FFT (power-of-two `N`).
 //!
 //! Operates on interleaved complex data `[re0, im0, re1, im1, …]`, so the slice
-//! length is `2 * N`. Zero-heap: the permutation is done in place and twiddle
-//! factors are computed on the fly (in `f64` for accuracy, stored back as `f32`).
+//! length is `2 * N`. Zero-heap: delegated to [`etalon_signal::dft::fft_radix2_interleaved_f32`].
 
 use crate::types::AudioError;
 
@@ -15,80 +14,10 @@ use crate::types::AudioError;
 ///
 /// Returns [`AudioError::InvalidParameter`] if the length is odd, zero, or the
 /// implied `N` is not a power of two.
+#[inline]
 pub fn fft_radix2(data: &mut [f32], inverse: bool) -> Result<(), AudioError> {
-    let len = data.len();
-    if len == 0 || !len.is_multiple_of(2) {
-        return Err(AudioError::InvalidParameter);
-    }
-    let n = len / 2;
-    if !n.is_power_of_two() {
-        return Err(AudioError::InvalidParameter);
-    }
-    if n == 1 {
-        // Single point: DFT is identity, inverse divides by 1 → no-op.
-        return Ok(());
-    }
-
-    // --- Bit-reversal permutation over complex indices [0, n). ---
-    let mut j = 0usize;
-    for i in 1..n {
-        let mut bit = n >> 1;
-        while j & bit != 0 {
-            j ^= bit;
-            bit >>= 1;
-        }
-        j |= bit;
-        if i < j {
-            data.swap(2 * i, 2 * j);
-            data.swap(2 * i + 1, 2 * j + 1);
-        }
-    }
-
-    // --- Danielson–Lanczos butterflies. ---
-    // Forward transform uses e^{-j2πk/L}; inverse uses e^{+j2πk/L}.
-    let sign: f64 = if inverse { 1.0 } else { -1.0 };
-    let mut sub = 2usize;
-    while sub <= n {
-        let half = sub / 2;
-        let theta = sign * core::f64::consts::TAU / sub as f64;
-        let mut base = 0usize;
-        while base < n {
-            for k in 0..half {
-                // Twiddle w = e^{sign·j·2π·k/sub}, computed directly for accuracy.
-                let ang = theta * k as f64;
-                let wr = ang.cos() as f32;
-                let wi = ang.sin() as f32;
-
-                let a = base + k;
-                let b = base + k + half;
-                let ar = data[2 * a];
-                let ai = data[2 * a + 1];
-                let br = data[2 * b];
-                let bi = data[2 * b + 1];
-
-                // t = w · b
-                let tr = wr * br - wi * bi;
-                let ti = wr * bi + wi * br;
-
-                data[2 * b] = ar - tr;
-                data[2 * b + 1] = ai - ti;
-                data[2 * a] = ar + tr;
-                data[2 * a + 1] = ai + ti;
-            }
-            base += sub;
-        }
-        sub <<= 1;
-    }
-
-    // --- Inverse normalisation by 1/N. ---
-    if inverse {
-        let inv_n = 1.0f32 / n as f32;
-        for v in data.iter_mut() {
-            *v *= inv_n;
-        }
-    }
-
-    Ok(())
+    etalon_signal::dft::fft_radix2_interleaved_f32(data, inverse)
+        .map_err(|_| AudioError::InvalidParameter)
 }
 
 #[cfg(test)]

@@ -29,9 +29,9 @@ impl QTensorEngine {
 
     pub(crate) fn encode_browser_top1_chunk(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
-        logits: &wgpu::Buffer,
-        staging: &wgpu::Buffer,
+        encoder: &mut etalon::CommandEncoder,
+        logits: &etalon::Buffer,
+        staging: &etalon::Buffer,
         plan: BrowserTop1Plan,
         chunk: usize,
     ) -> bool {
@@ -47,7 +47,7 @@ impl QTensorEngine {
 
     pub(crate) async fn read_browser_top1(
         &self,
-        staging: &wgpu::Buffer,
+        staging: &etalon::Buffer,
         plan: BrowserTop1Plan,
     ) -> Option<StreamingArgmaxResult> {
         read_browser_top1(self, staging, plan).await

@@ -8,7 +8,13 @@
 //! - **128-Sample Quantum Ramping**: Trigonometric coefficient updates occur strictly
 //!   at quantum boundaries (2.67 ms @ 48 kHz). Inner sample loop linearly ramps coefficients
 //!   using 5 scalar additions per sample, eliminating zipper noise and audio clicks.
-//! - **Zero-Heap Hot Path**: Evaluates directly into caller-supplied slices.
+//! - **Zero-Heap Hot Path**: Evaluates directly into caller-supplied slices, delegating
+//!   RBJ Audio EQ Cookbook synthesis and DF2T recurrence math to `etalon_signal::filter`.
+
+use etalon_signal::filter::{
+    df2t_step_f32, rbj_high_shelf, rbj_low_shelf, rbj_peaking_eq,
+    BiquadCoeffs as EtalonBiquadCoeffs,
+};
 
 /// AudioWorklet render quantum — coefficient updates and ramping occur at
 /// these boundaries (2.67 ms @ 48 kHz).
@@ -48,6 +54,32 @@ impl Default for BiquadCoeffs {
             a1: 0.0,
             a2: 0.0,
         }
+    }
+}
+
+impl BiquadCoeffs {
+    /// Convert to double-precision `etalon_signal::filter::BiquadCoeffs`.
+    #[inline]
+    pub fn to_etalon(self) -> EtalonBiquadCoeffs {
+        EtalonBiquadCoeffs::from_f32(self.b0, self.b1, self.b2, self.a1, self.a2)
+    }
+
+    /// Convert from double-precision `etalon_signal::filter::BiquadCoeffs`.
+    #[inline]
+    pub fn from_etalon(c: EtalonBiquadCoeffs) -> Self {
+        Self {
+            b0: c.b0 as f32,
+            b1: c.b1 as f32,
+            b2: c.b2 as f32,
+            a1: c.a1 as f32,
+            a2: c.a2 as f32,
+        }
+    }
+
+    /// Verify Jury stability ($|a_2| < 1$ and $|a_1| < 1 + a_2$) via `etalon_signal`.
+    #[inline]
+    pub fn is_stable(&self) -> bool {
+        self.to_etalon().is_stable()
     }
 }
 
@@ -125,14 +157,16 @@ impl Df2tBiquad {
         self.active.a1 += self.delta.a1;
         self.active.a2 += self.delta.a2;
 
-        // DF2T Difference Equations:
-        // y[n] = b0 * x[n] + s1[n-1]
-        // s1[n] = b1 * x[n] - a1 * y[n] + s2[n-1]
-        // s2[n] = b2 * x[n] - a2 * y[n]
-        let y = self.active.b0 * input + self.state.s1;
-        self.state.s1 = self.active.b1 * input - self.active.a1 * y + self.state.s2;
-        self.state.s2 = self.active.b2 * input - self.active.a2 * y;
-        y
+        df2t_step_f32(
+            self.active.b0,
+            self.active.b1,
+            self.active.b2,
+            self.active.a1,
+            self.active.a2,
+            &mut self.state.s1,
+            &mut self.state.s2,
+            input,
+        )
     }
 }
 
@@ -171,11 +205,29 @@ impl ThreeBandParametricBiquad {
     /// Snap active coefficients directly to target (useful on init or seek).
     pub fn snap_to_target(&mut self) {
         self.low_shelf.active = self.low_shelf.target;
-        self.low_shelf.delta = BiquadCoeffs::default();
+        self.low_shelf.delta = BiquadCoeffs {
+            b0: 0.0,
+            b1: 0.0,
+            b2: 0.0,
+            a1: 0.0,
+            a2: 0.0,
+        };
         self.mid_peak.active = self.mid_peak.target;
-        self.mid_peak.delta = BiquadCoeffs::default();
+        self.mid_peak.delta = BiquadCoeffs {
+            b0: 0.0,
+            b1: 0.0,
+            b2: 0.0,
+            a1: 0.0,
+            a2: 0.0,
+        };
         self.high_shelf.active = self.high_shelf.target;
-        self.high_shelf.delta = BiquadCoeffs::default();
+        self.high_shelf.delta = BiquadCoeffs {
+            b0: 0.0,
+            b1: 0.0,
+            b2: 0.0,
+            a1: 0.0,
+            a2: 0.0,
+        };
     }
 
     /// Reset internal filter state registers (clear delay lines).
@@ -245,84 +297,39 @@ impl ThreeBandParametricBiquad {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Cookbook Biquad Coefficient Calculators (normalized by a0)
+//  Cookbook Biquad Coefficient Calculators (delegated to etalon_signal::filter)
 // ───────────────────────────────────────────────────────────────────────────
 
 #[inline]
+fn sanitize_rbj_params(sr: f32, f0: f32, q: f32) -> (f64, f64, f64) {
+    let sr_f64 = f64::from(sr.max(8000.0));
+    let f0_f64 = f64::from(f0).clamp(1.0, 0.499 * sr_f64);
+    let q_f64 = f64::from(q).max(1e-4);
+    (sr_f64, f0_f64, q_f64)
+}
+
+#[inline]
 fn calc_low_shelf_coeffs(sr: f32, f0: f32, q: f32, gain_db: f32) -> BiquadCoeffs {
-    let a = 10.0f32.powf(gain_db / 40.0);
-    let w0 = 2.0 * std::f32::consts::PI * f0 / sr;
-    let cos_w0 = w0.cos();
-    let sin_w0 = w0.sin();
-    let alpha = (sin_w0 / (2.0 * q)).max(1e-6);
-    let two_sqrt_a_alpha = 2.0 * a.sqrt() * alpha;
-
-    let b0 = a * ((a + 1.0) - (a - 1.0) * cos_w0 + two_sqrt_a_alpha);
-    let b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cos_w0);
-    let b2 = a * ((a + 1.0) - (a - 1.0) * cos_w0 - two_sqrt_a_alpha);
-    let a0 = (a + 1.0) + (a - 1.0) * cos_w0 + two_sqrt_a_alpha;
-    let a1 = -2.0 * ((a - 1.0) + (a + 1.0) * cos_w0);
-    let a2 = (a + 1.0) + (a - 1.0) * cos_w0 - two_sqrt_a_alpha;
-
-    let inv_a0 = 1.0 / a0.max(1e-6);
-    BiquadCoeffs {
-        b0: b0 * inv_a0,
-        b1: b1 * inv_a0,
-        b2: b2 * inv_a0,
-        a1: a1 * inv_a0,
-        a2: a2 * inv_a0,
-    }
+    let (sr_f64, f0_f64, q_f64) = sanitize_rbj_params(sr, f0, q);
+    rbj_low_shelf(sr_f64, f0_f64, q_f64, f64::from(gain_db))
+        .map(BiquadCoeffs::from_etalon)
+        .unwrap_or_default()
 }
 
 #[inline]
 fn calc_peaking_coeffs(sr: f32, f0: f32, q: f32, gain_db: f32) -> BiquadCoeffs {
-    let a = 10.0f32.powf(gain_db / 40.0);
-    let w0 = 2.0 * std::f32::consts::PI * f0 / sr;
-    let cos_w0 = w0.cos();
-    let sin_w0 = w0.sin();
-    let alpha = (sin_w0 / (2.0 * q)).max(1e-6);
-
-    let b0 = 1.0 + alpha * a;
-    let b1 = -2.0 * cos_w0;
-    let b2 = 1.0 - alpha * a;
-    let a0 = 1.0 + alpha / a;
-    let a1 = -2.0 * cos_w0;
-    let a2 = 1.0 - alpha / a;
-
-    let inv_a0 = 1.0 / a0.max(1e-6);
-    BiquadCoeffs {
-        b0: b0 * inv_a0,
-        b1: b1 * inv_a0,
-        b2: b2 * inv_a0,
-        a1: a1 * inv_a0,
-        a2: a2 * inv_a0,
-    }
+    let (sr_f64, f0_f64, q_f64) = sanitize_rbj_params(sr, f0, q);
+    rbj_peaking_eq(sr_f64, f0_f64, q_f64, f64::from(gain_db))
+        .map(BiquadCoeffs::from_etalon)
+        .unwrap_or_default()
 }
 
 #[inline]
 fn calc_high_shelf_coeffs(sr: f32, f0: f32, q: f32, gain_db: f32) -> BiquadCoeffs {
-    let a = 10.0f32.powf(gain_db / 40.0);
-    let w0 = 2.0 * std::f32::consts::PI * f0 / sr;
-    let cos_w0 = w0.cos();
-    let sin_w0 = w0.sin();
-    let alpha = (sin_w0 / (2.0 * q)).max(1e-6);
-    let two_sqrt_a_alpha = 2.0 * a.sqrt() * alpha;
-
-    let b0 = a * ((a + 1.0) + (a - 1.0) * cos_w0 + two_sqrt_a_alpha);
-    let b1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * cos_w0);
-    let b2 = a * ((a + 1.0) + (a - 1.0) * cos_w0 - two_sqrt_a_alpha);
-    let a0 = (a + 1.0) - (a - 1.0) * cos_w0 + two_sqrt_a_alpha;
-    let a1 = 2.0 * ((a - 1.0) - (a + 1.0) * cos_w0);
-    let a2 = (a + 1.0) - (a - 1.0) * cos_w0 - two_sqrt_a_alpha;
-
-    let inv_a0 = 1.0 / a0.max(1e-6);
-    BiquadCoeffs {
-        b0: b0 * inv_a0,
-        b1: b1 * inv_a0,
-        b2: b2 * inv_a0,
-        a1: a1 * inv_a0,
-        a2: a2 * inv_a0,
-    }
+    let (sr_f64, f0_f64, q_f64) = sanitize_rbj_params(sr, f0, q);
+    rbj_high_shelf(sr_f64, f0_f64, q_f64, f64::from(gain_db))
+        .map(BiquadCoeffs::from_etalon)
+        .unwrap_or_default()
 }
 
 /// Standalone JavaScript snippet for standard AudioWorkletProcessor registration.
@@ -375,6 +382,9 @@ mod tests {
         let mut eq = ThreeBandParametricBiquad::new(48000.0);
         eq.set_band_gains_db(6.0, -3.0, 4.0);
         eq.snap_to_target();
+        assert!(eq.low_shelf.active.is_stable());
+        assert!(eq.mid_peak.active.is_stable());
+        assert!(eq.high_shelf.active.is_stable());
 
         let mut block = [0.0f32; QUANTUM_SIZE];
         block[0] = 1.0; // Impulse

@@ -15,6 +15,8 @@ pub mod chebi_parse;
 /// ChEBI in-memory chemical knowledge queries (AST-05).
 pub mod chebi_query;
 pub mod design_encode;
+/// Electromagnetic & wave-optical field container (.emf / EMF-64).
+pub mod emf_container;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;
 pub mod journal;
@@ -38,4 +40,6 @@ pub mod q42_volume;
 /// Upstream source / connector catalogue without data bundling (AST-07).
 pub mod source_catalogue;
 pub mod selective_streamer;
+/// Canonical `.q42` spatial, volumetric, and multi-sensory ontological predicates (§3.6.2).
+pub mod spatial_predicates;
 pub mod yaml_ld_q42;

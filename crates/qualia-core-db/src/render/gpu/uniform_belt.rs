@@ -14,7 +14,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc;
 use std::sync::Arc;
-use wgpu::Buffer;
+use etalon::Buffer;
 
 /// A slot in the native uniform belt ring.
 #[cfg(not(target_arch = "wasm32"))]
@@ -36,7 +36,7 @@ enum BeltInner {
     },
     #[cfg(target_arch = "wasm32")]
     Direct {
-        queue: Arc<wgpu::Queue>,
+        queue: Arc<etalon::Queue>,
         scratch: Vec<u8>,
     },
 }
@@ -51,8 +51,8 @@ impl UniformBelt {
     /// telemetry). `pool_size` is the native ring length and the bounded
     /// in-flight staging horizon reserved for WASM queue writes.
     pub(crate) fn new(
-        device: &wgpu::Device,
-        queue: Arc<wgpu::Queue>,
+        device: &etalon::Device,
+        queue: Arc<etalon::Queue>,
         slot_size: u64,
         pool_size: usize,
     ) -> Result<Self, String> {
@@ -87,10 +87,10 @@ impl UniformBelt {
             let (tx, rx) = mpsc::channel();
             let mut slots = Vec::with_capacity(admitted_slots);
             for _ in 0..admitted_slots {
-                let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                let buffer = device.create_buffer(&etalon::BufferDescriptor {
                     label: Some("uniform-belt-slot"),
                     size: slot_size,
-                    usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
+                    usage: etalon::BufferUsages::MAP_WRITE | etalon::BufferUsages::COPY_SRC,
                     mapped_at_creation: true,
                 });
                 slots.push(Slot {
@@ -159,9 +159,9 @@ impl UniformBelt {
     /// Copy the staged bytes into `target` at `offset`.
     pub(crate) fn record_copy(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
+        encoder: &mut etalon::CommandEncoder,
         target: &Buffer,
-        offset: wgpu::BufferAddress,
+        offset: etalon::BufferAddress,
     ) {
         match &self.inner {
             #[cfg(not(target_arch = "wasm32"))]
@@ -191,7 +191,7 @@ impl UniformBelt {
     }
 
     /// Advance the native ring. No-op on the wasm direct path.
-    pub(crate) fn advance(&mut self, device: &wgpu::Device) {
+    pub(crate) fn advance(&mut self, device: &etalon::Device) {
         #[cfg(target_arch = "wasm32")]
         {
             let _ = device;
@@ -214,7 +214,7 @@ impl UniformBelt {
             }
             *current = (*current + 1) % slots.len();
             if slots[*current].pending {
-                let _ = device.poll(wgpu::PollType::wait_indefinitely());
+                let _ = device.poll(etalon::PollType::wait_indefinitely());
                 while let Ok((idx, buffer)) = rx.try_recv() {
                     slots[idx].buffer = Some(buffer);
                     slots[idx].mapped = true;
@@ -231,12 +231,12 @@ impl UniformBelt {
                 let tx = tx.clone();
                 buffer
                     .slice(..)
-                    .map_async(wgpu::MapMode::Write, move |result| {
+                    .map_async(etalon::MapMode::Write, move |result| {
                         if result.is_ok() {
                             let _ = tx.send((idx, buffer_for_closure));
                         }
                     });
-                let _ = device.poll(wgpu::PollType::wait_indefinitely());
+                let _ = device.poll(etalon::PollType::wait_indefinitely());
                 while let Ok((ridx, rbuffer)) = rx.try_recv() {
                     slots[ridx].buffer = Some(rbuffer);
                     slots[ridx].mapped = true;
@@ -244,10 +244,10 @@ impl UniformBelt {
                 }
             }
             if !slots[*current].mapped || slots[*current].buffer.is_none() {
-                let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                let buffer = device.create_buffer(&etalon::BufferDescriptor {
                     label: Some("uniform-belt-slot-fallback"),
                     size: *size,
-                    usage: wgpu::BufferUsages::MAP_WRITE | wgpu::BufferUsages::COPY_SRC,
+                    usage: etalon::BufferUsages::MAP_WRITE | etalon::BufferUsages::COPY_SRC,
                     mapped_at_creation: true,
                 });
                 slots[*current].buffer = Some(buffer);
@@ -322,17 +322,17 @@ mod tests {
         let queue = &ctx.queue;
         let mut belt = UniformBelt::new(device, Arc::new(queue.clone()), 256, 8)
             .expect("uniform staging reservation");
-        let target = device.create_buffer(&wgpu::BufferDescriptor {
+        let target = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("uniform-belt-test-target"),
             size: 256,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+            usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::UNIFORM,
             mapped_at_creation: false,
         });
 
         // Warmup: prime the ring buffers
         for _ in 0..8 {
             belt.write_and_unmap(&[0u8; 256]);
-            let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            let mut enc = device.create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("uniform-belt-test"),
             });
             belt.record_copy(&mut enc, &target, 0);
@@ -342,7 +342,7 @@ mod tests {
 
         let guard = allocation_counter::AllocGuard::begin("uniform_belt_steady_state", true);
         belt.write_and_unmap(&[1u8; 256]);
-        let mut enc = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let mut enc = device.create_command_encoder(&etalon::CommandEncoderDescriptor {
             label: Some("uniform-belt-test"),
         });
         belt.record_copy(&mut enc, &target, 0);

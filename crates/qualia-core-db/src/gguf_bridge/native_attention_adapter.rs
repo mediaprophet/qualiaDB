@@ -31,28 +31,28 @@ impl GpuAttentionProvider for QTensorEngine {
     fn coop_gemv_enabled(&self) -> bool {
         crate::llm_bench::coop_gemv_enabled()
     }
-    fn gpu_device(&self) -> &wgpu::Device {
+    fn gpu_device(&self) -> &etalon::Device {
         QTensorEngine::gpu_device(self)
     }
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    fn gpu_queue(&self) -> &etalon::Queue {
         QTensorEngine::gpu_queue(self)
     }
-    fn native_gemm_bind_layout(&self, coop: bool) -> &wgpu::BindGroupLayout {
+    fn native_gemm_bind_layout(&self, coop: bool) -> &etalon::BindGroupLayout {
         QTensorEngine::native_gemm_bind_layout(self, coop)
     }
-    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
+    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<etalon::Buffer> {
         QTensorEngine::resident_weight_buffer(self, key, raw)
     }
-    fn submit(&self, command: wgpu::CommandBuffer) -> bool {
+    fn submit(&self, command: etalon::CommandBuffer) -> bool {
         self.submit_commands([command]).is_some()
     }
-    fn pass_writes_begin(&self) -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+    fn pass_writes_begin(&self) -> Option<etalon::ComputePassTimestampWrites<'static>> {
         crate::llm_gpu_profiler::pass_writes_begin()
     }
-    fn pass_writes_end(&self) -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+    fn pass_writes_end(&self) -> Option<etalon::ComputePassTimestampWrites<'static>> {
         crate::llm_gpu_profiler::pass_writes_end()
     }
-    fn resolve(&self, encoder: &mut wgpu::CommandEncoder) {
+    fn resolve(&self, encoder: &mut etalon::CommandEncoder) {
         crate::llm_gpu_profiler::resolve(encoder)
     }
     fn accumulate_attention(&self) {
@@ -97,10 +97,10 @@ impl GpuAttentionProvider for QTensorEngine {
             out_stride_elems,
         )
     }
-    fn readback(&self, staging: &wgpu::Buffer, out_bytes: u64, out: &mut [f32]) -> bool {
+    fn readback(&self, staging: &etalon::Buffer, out_bytes: u64, out: &mut [f32]) -> bool {
         let slice = staging.slice(..out_bytes);
         let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
+        slice.map_async(etalon::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
         self.poll_wait();

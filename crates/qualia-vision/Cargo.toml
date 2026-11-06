@@ -16,6 +16,7 @@ codecs = ["dep:image"]
 ort = ["dep:ort", "qualia-core-db/vision-onnx"]
 
 [dependencies]
+etalon-signal = { workspace = true }
 # Pure kernels live in specialized_libs::computer_vision (MIG-V2).
 qualia-core-db = { workspace = true, default-features = true }
 # Optional cold-path decode only (not hot-path).

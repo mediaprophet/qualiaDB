@@ -17,7 +17,7 @@ pub(super) const MAX_MATERIAL_DRAWS: usize = super::MAX_GPU_MATERIAL_DRAWS;
 
 /// One per-material group contains the dynamic factors and all fixed texture/sampler slots. This
 /// saves a pipeline group on WebGPU implementations that expose only the four-group baseline.
-pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+pub(super) fn create_layout(device: &etalon::Device) -> etalon::BindGroupLayout {
     etalon_render::materials::create_layout(
         device,
         crate::render::lighting::environment_lighting::ENVIRONMENT_LIGHTING_GPU_SIZE as u64,
@@ -154,9 +154,9 @@ pub(super) type MaterialGpu = etalon_render::materials::MaterialGpu<MaterialDraw
 
 /// Build one padded uniform array and merge adjacent ranges that use the same material.
 pub(super) fn create_material_gpu(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    _texture_layout: &wgpu::BindGroupLayout,
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    _texture_layout: &etalon::BindGroupLayout,
     texture_defaults: &super::material_textures::MaterialTextureDefaults,
     resident_textures: &super::texture_residency::ResidentTextureMap,
     materials: &[MaterialRecord],
@@ -184,9 +184,9 @@ pub(super) fn create_material_gpu(
 /// Build material bindings with raw environment probe inputs. The shader evaluates the bounded
 /// probe blend; this function never calls the CPU lighting evaluator.
 pub(super) fn create_material_gpu_with_environment(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    _texture_layout: &wgpu::BindGroupLayout,
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    _texture_layout: &etalon::BindGroupLayout,
     texture_defaults: &super::material_textures::MaterialTextureDefaults,
     resident_textures: &super::texture_residency::ResidentTextureMap,
     materials: &[MaterialRecord],
@@ -301,10 +301,10 @@ fn resolve_map<'a>(
     digest: &[u8; 32],
     color_space: super::texture_residency::TextureColorSpace,
     mip_semantic: super::texture_mips::TextureMipSemantic,
-    fallback: &'a wgpu::TextureView,
+    fallback: &'a etalon::TextureView,
     _material_index: usize,
     _slot: &str,
-) -> Result<&'a wgpu::TextureView, String> {
+) -> Result<&'a etalon::TextureView, String> {
     if digest == &[0; 32] {
         return Ok(fallback);
     }

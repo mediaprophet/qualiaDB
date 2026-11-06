@@ -19,26 +19,26 @@ struct VolumeGpuParams {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub struct TensorVolumeGpu {
-    pipeline: wgpu::ComputePipeline,
-    query_buf: wgpu::Buffer,
-    nodes_buf: wgpu::Buffer,
-    params_buf: wgpu::Buffer,
-    hits_buf: wgpu::Buffer,
-    count_buf: wgpu::Buffer,
-    staging_hits: wgpu::Buffer,
-    staging_count: wgpu::Buffer,
+    pipeline: etalon::ComputePipeline,
+    query_buf: etalon::Buffer,
+    nodes_buf: etalon::Buffer,
+    params_buf: etalon::Buffer,
+    hits_buf: etalon::Buffer,
+    count_buf: etalon::Buffer,
+    staging_hits: etalon::Buffer,
+    staging_count: etalon::Buffer,
     max_nodes: u32,
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 impl TensorVolumeGpu {
     /// Tries `new`.
-    pub fn try_new(device: &wgpu::Device) -> Option<Self> {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+    pub fn try_new(device: &etalon::Device) -> Option<Self> {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("TensorVolumeShader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/tensor_volume.wgsl").into()),
+            source: etalon::ShaderSource::Wgsl(include_str!("../shaders/tensor_volume.wgsl").into()),
         });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
             label: Some("TensorVolumePipeline"),
             layout: None,
             module: &shader,
@@ -50,57 +50,57 @@ impl TensorVolumeGpu {
         let node_floats = max_nodes * TENSOR_VOLUME_STRIDE_FLOATS;
         Some(Self {
             pipeline,
-            query_buf: device.create_buffer(&wgpu::BufferDescriptor {
+            query_buf: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeQuery"),
-                size: std::mem::size_of::<Tensor10D>() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                size: std::mem::size_of::<Tensor10D>() as etalon::BufferAddress,
+                usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
-            nodes_buf: device.create_buffer(&wgpu::BufferDescriptor {
+            nodes_buf: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeNodes"),
-                size: (node_floats as usize * 4) as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                size: (node_floats as usize * 4) as etalon::BufferAddress,
+                usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
-            params_buf: device.create_buffer(&wgpu::BufferDescriptor {
+            params_buf: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeParams"),
-                size: std::mem::size_of::<VolumeGpuParams>() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                size: std::mem::size_of::<VolumeGpuParams>() as etalon::BufferAddress,
+                usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
-            hits_buf: device.create_buffer(&wgpu::BufferDescriptor {
+            hits_buf: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeHits"),
-                size: (MAX_KNN_HITS * 4) as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                size: (MAX_KNN_HITS * 4) as etalon::BufferAddress,
+                usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_SRC,
                 mapped_at_creation: false,
             }),
-            count_buf: device.create_buffer(&wgpu::BufferDescriptor {
+            count_buf: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeHitCount"),
                 size: 4,
                 // COPY_DST: reset to 0 each cycle via queue.write_buffer (line ~145);
                 // COPY_SRC: copied to staging_count for readback; STORAGE: shader binding.
-                usage: wgpu::BufferUsages::STORAGE
-                    | wgpu::BufferUsages::COPY_SRC
-                    | wgpu::BufferUsages::COPY_DST,
+                usage: etalon::BufferUsages::STORAGE
+                    | etalon::BufferUsages::COPY_SRC
+                    | etalon::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
-            staging_hits: device.create_buffer(&wgpu::BufferDescriptor {
+            staging_hits: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeHitsStaging"),
-                size: (MAX_KNN_HITS * 4) as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                size: (MAX_KNN_HITS * 4) as etalon::BufferAddress,
+                usage: etalon::BufferUsages::MAP_READ | etalon::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
-            staging_count: device.create_buffer(&wgpu::BufferDescriptor {
+            staging_count: device.create_buffer(&etalon::BufferDescriptor {
                 label: Some("TensorVolumeCountStaging"),
                 size: 4,
-                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                usage: etalon::BufferUsages::MAP_READ | etalon::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
             max_nodes,
         })
     }
 
-    fn upload_nodes(&self, queue: &wgpu::Queue, node_count: u32) -> bool {
+    fn upload_nodes(&self, queue: &etalon::Queue, node_count: u32) -> bool {
         let substrate = global_resident_substrate();
         let count = node_count.min(substrate.node_count()).min(self.max_nodes);
         if count == 0 {
@@ -123,7 +123,7 @@ impl TensorVolumeGpu {
             }
         }
         let bytes =
-            (count as usize * TENSOR_VOLUME_STRIDE_FLOATS as usize * 4) as wgpu::BufferAddress;
+            (count as usize * TENSOR_VOLUME_STRIDE_FLOATS as usize * 4) as etalon::BufferAddress;
         queue.write_buffer(
             &self.nodes_buf,
             0,
@@ -136,8 +136,8 @@ impl TensorVolumeGpu {
     /// GPU kNN filter; returns hit count written into `out` (caller stack buffer).
     pub fn tensor_search_into(
         &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &etalon::Device,
+        queue: &etalon::Queue,
         query: &Tensor10D,
         max_distance: f32,
         out: &mut [usize],
@@ -151,8 +151,8 @@ impl TensorVolumeGpu {
 
     pub(crate) fn search_uploaded_into(
         &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &etalon::Device,
+        queue: &etalon::Queue,
         query: &Tensor10D,
         max_distance: f32,
         node_count: u32,
@@ -172,27 +172,27 @@ impl TensorVolumeGpu {
         queue.write_buffer(&self.params_buf, 0, bytemuck::bytes_of(&params));
         queue.write_buffer(&self.count_buf, 0, &[0u8; 4]);
 
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("TensorVolumeBindGroup"),
             layout: &self.pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: self.query_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: self.nodes_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: self.params_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: self.hits_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 4,
                     resource: self.count_buf.as_entire_binding(),
                 },
@@ -200,11 +200,11 @@ impl TensorVolumeGpu {
         });
 
         let wg = (node_count + 63) / 64;
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let mut encoder = device.create_command_encoder(&etalon::CommandEncoderDescriptor {
             label: Some("TensorVolumeEncoder"),
         });
         {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            let mut pass = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
                 label: Some("TensorVolumePass"),
                 timestamp_writes: None,
             });
@@ -222,13 +222,13 @@ impl TensorVolumeGpu {
         encoder.copy_buffer_to_buffer(&self.count_buf, 0, &self.staging_count, 0, 4);
         queue.submit(Some(encoder.finish()));
 
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = device.poll(etalon::PollType::wait_indefinitely());
         let count_slice = self.staging_count.slice(..4);
         let (tx, rx) = std::sync::mpsc::channel();
-        count_slice.map_async(wgpu::MapMode::Read, move |r| {
+        count_slice.map_async(etalon::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = device.poll(etalon::PollType::wait_indefinitely());
         if rx.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }
@@ -241,10 +241,10 @@ impl TensorVolumeGpu {
 
         let hits_slice = self.staging_hits.slice(..(MAX_KNN_HITS * 4) as u64);
         let (tx2, rx2) = std::sync::mpsc::channel();
-        hits_slice.map_async(wgpu::MapMode::Read, move |r| {
+        hits_slice.map_async(etalon::MapMode::Read, move |r| {
             let _ = tx2.send(r);
         });
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = device.poll(etalon::PollType::wait_indefinitely());
         if rx2.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }

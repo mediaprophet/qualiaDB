@@ -7,6 +7,13 @@ pub fn frame_blur_score(src: GrayView<'_>) -> f32 {
     if src.width < 3 || src.height < 3 {
         return 0.0;
     }
+    if src.stride == src.width {
+        return etalon_signal::vision::laplacian_blur_variance_u8(
+            src.bytes,
+            src.width as usize,
+            src.height as usize,
+        );
+    }
     let mut sum = 0.0f32;
     let mut sum2 = 0.0f32;
     let mut n = 0.0f32;

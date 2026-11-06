@@ -5,9 +5,10 @@ use sha2::{Digest, Sha256};
 use crate::container_10d::crc32c::crc32c;
 
 use super::format::{
-    align_up, BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC,
-    BUNDLE_VERSION, OFF_CRC32C, OFF_ENTRY_COUNT, OFF_INDEX_LENGTH, OFF_INDEX_OFFSET, OFF_MAGIC,
-    OFF_TOTAL_LENGTH, OFF_VERSION,
+    align_up, BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_FLAG_PAGE_ALIGN_4096,
+    BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_PAGE_ALIGN_4096, BUNDLE_VERSION, OFF_CRC32C,
+    OFF_ENTRY_COUNT, OFF_FLAGS, OFF_INDEX_LENGTH, OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH,
+    OFF_VERSION,
 };
 
 /// Accumulates intact files and serialises them into a `.hmc` bundle.
@@ -20,12 +21,29 @@ use super::format::{
 pub struct BundleWriter {
     // (key, kind, bytes, meta)
     entries: Vec<(String, String, Vec<u8>, Option<Vec<u8>>)>,
+    align_4096: bool,
 }
 
 impl BundleWriter {
     /// Create an empty bundle writer.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Configure whether entries and index footer are aligned to 4096-byte page boundaries.
+    pub fn with_page_align_4096(mut self, enabled: bool) -> Self {
+        self.align_4096 = enabled;
+        self
+    }
+
+    /// Set whether entries and index footer are aligned to 4096-byte page boundaries.
+    pub fn set_page_align_4096(&mut self, enabled: bool) {
+        self.align_4096 = enabled;
+    }
+
+    /// Whether 4096-byte page alignment is enabled.
+    pub fn is_page_align_4096(&self) -> bool {
+        self.align_4096
     }
 
     /// Number of files added so far.
@@ -88,14 +106,33 @@ impl BundleWriter {
         )
     }
 
+    /// Add holistic species metadata (flora, fauna, or mechanical assembly) to the bundle.
+    pub fn add_species_meta(
+        &mut self,
+        meta: &super::species_meta::HolisticSpeciesMeta,
+    ) -> Result<&mut Self, BundleError> {
+        let bytes = meta.encode_to_cbor()?;
+        self.add_file(
+            super::species_meta::SPECIES_META_ENTRY_KEY,
+            super::species_meta::SPECIES_META_KIND,
+            bytes,
+            None,
+        )
+    }
+
     /// Serialise the bundle to a `Vec<u8>`.
     pub fn build(&self) -> Result<Vec<u8>, BundleError> {
         let mut out = vec![0u8; BUNDLE_HEADER_SIZE];
         let mut index: Vec<BundleEntry> = Vec::with_capacity(self.entries.len());
+        let align = if self.align_4096 {
+            BUNDLE_PAGE_ALIGN_4096
+        } else {
+            BUNDLE_ENTRY_ALIGN
+        };
 
         for (key, kind, bytes, meta) in &self.entries {
             // Page-align the entry so its interior stays aligned.
-            let padded = align_up(out.len(), BUNDLE_ENTRY_ALIGN);
+            let padded = align_up(out.len(), align);
             out.resize(padded, 0);
             let offset = out.len() as u64;
             out.extend_from_slice(bytes);
@@ -115,7 +152,7 @@ impl BundleWriter {
         }
 
         // Page-align the index footer too (tidy range fetches of the directory).
-        let padded = align_up(out.len(), BUNDLE_ENTRY_ALIGN);
+        let padded = align_up(out.len(), align);
         out.resize(padded, 0);
         let index_offset = out.len() as u64;
 
@@ -125,10 +162,16 @@ impl BundleWriter {
         out.extend_from_slice(&index_bytes);
         let index_length = index_bytes.len() as u64;
         let total_length = out.len() as u64;
+        let flags: u16 = if self.align_4096 {
+            BUNDLE_FLAG_PAGE_ALIGN_4096
+        } else {
+            0
+        };
 
         // Fill the header (CRC field stays zero for the CRC computation).
         out[OFF_MAGIC..OFF_MAGIC + 4].copy_from_slice(&BUNDLE_MAGIC);
         out[OFF_VERSION..OFF_VERSION + 2].copy_from_slice(&BUNDLE_VERSION.to_le_bytes());
+        out[OFF_FLAGS..OFF_FLAGS + 2].copy_from_slice(&flags.to_le_bytes());
         out[OFF_ENTRY_COUNT..OFF_ENTRY_COUNT + 4]
             .copy_from_slice(&(self.entries.len() as u32).to_le_bytes());
         out[OFF_INDEX_OFFSET..OFF_INDEX_OFFSET + 8].copy_from_slice(&index_offset.to_le_bytes());
@@ -173,6 +216,24 @@ mod tests {
                 e.offset % BUNDLE_ENTRY_ALIGN as u64,
                 0,
                 "entry {} unaligned",
+                e.key
+            );
+        }
+    }
+
+    #[test]
+    fn entries_are_4096_page_aligned_when_enabled() {
+        let mut w = BundleWriter::new().with_page_align_4096(true);
+        w.add_file("a.10d", "10d", vec![0xAB; 7], None).unwrap();
+        w.add_file("b.m64", "m64", vec![0xCD; 130], None).unwrap();
+        let bytes = w.build().unwrap();
+        let reader = super::super::reader::BundleReader::parse(&bytes).unwrap();
+        assert!(reader.is_page_aligned_4096());
+        for e in reader.entries() {
+            assert_eq!(
+                e.offset % BUNDLE_PAGE_ALIGN_4096 as u64,
+                0,
+                "entry {} not 4096-byte aligned",
                 e.key
             );
         }

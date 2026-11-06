@@ -131,7 +131,7 @@ impl MeshSlabArenaGpu {
     pub fn required_vram_bytes(desc: MeshSlabArenaDescriptor) -> Option<u64> {
         etalon_render::mesh_slab::MeshSlabArenaGpu::<VramReservation<'static>,ProceduralSynthesisGpu>::required_vram_bytes(desc)
     }
-    pub fn try_new(device: &wgpu::Device, desc: MeshSlabArenaDescriptor) -> Option<Self> {
+    pub fn try_new(device: &etalon::Device, desc: MeshSlabArenaDescriptor) -> Option<Self> {
         etalon_render::mesh_slab::MeshSlabArenaGpu::try_new(device, desc, |bytes| {
             global_vram_ledger()
                 .try_reserve_graphics(VramResourceClass::Geometry, bytes)
@@ -141,7 +141,7 @@ impl MeshSlabArenaGpu {
     }
     pub fn register_proc_header(
         &mut self,
-        queue: &wgpu::Queue,
+        queue: &etalon::Queue,
         header: &ProceduralSynthesisHeader,
     ) -> Option<u16> {
         self.0

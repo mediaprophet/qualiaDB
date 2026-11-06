@@ -110,7 +110,7 @@ fn resources() -> &'static etalon_wgsl_forge::numerical::profiling::TimestampRes
 /// `timestamp_writes` for a single-pass kernel (writes both begin and end on this pass).
 /// Returns `None` (zero overhead) when profiling is off — drop straight into the descriptor.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn pass_writes_both() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+pub fn pass_writes_both() -> Option<etalon::ComputePassTimestampWrites<'static>> {
     if !enabled() {
         return None;
     }
@@ -119,7 +119,7 @@ pub fn pass_writes_both() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
 
 /// `timestamp_writes` for the FIRST pass of a multi-pass kernel (begin only).
 #[cfg(not(target_arch = "wasm32"))]
-pub fn pass_writes_begin() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+pub fn pass_writes_begin() -> Option<etalon::ComputePassTimestampWrites<'static>> {
     if !enabled() {
         return None;
     }
@@ -128,7 +128,7 @@ pub fn pass_writes_begin() -> Option<wgpu::ComputePassTimestampWrites<'static>> 
 
 /// `timestamp_writes` for the LAST pass of a multi-pass kernel (end only).
 #[cfg(not(target_arch = "wasm32"))]
-pub fn pass_writes_end() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+pub fn pass_writes_end() -> Option<etalon::ComputePassTimestampWrites<'static>> {
     if !enabled() {
         return None;
     }
@@ -138,7 +138,7 @@ pub fn pass_writes_end() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
 /// Encode the query-set resolve into `encoder` (call after the pass, before `finish()`).
 /// No-op when profiling is off.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn resolve(encoder: &mut wgpu::CommandEncoder) {
+pub fn resolve(encoder: &mut etalon::CommandEncoder) {
     if !enabled() {
         return;
     }
@@ -167,22 +167,22 @@ pub fn accumulate(phase: Phase) {
 
 #[cfg(target_arch = "wasm32")]
 /// Timestamp writes for a both-phase pass.
-pub fn pass_writes_both() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+pub fn pass_writes_both() -> Option<etalon::ComputePassTimestampWrites<'static>> {
     None
 }
 #[cfg(target_arch = "wasm32")]
 /// Timestamp writes for a begin-phase pass.
-pub fn pass_writes_begin() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+pub fn pass_writes_begin() -> Option<etalon::ComputePassTimestampWrites<'static>> {
     None
 }
 #[cfg(target_arch = "wasm32")]
 /// Timestamp writes for an end-phase pass.
-pub fn pass_writes_end() -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+pub fn pass_writes_end() -> Option<etalon::ComputePassTimestampWrites<'static>> {
     None
 }
 #[cfg(target_arch = "wasm32")]
 /// Resolves timestamps on `encoder`.
-pub fn resolve(_encoder: &mut wgpu::CommandEncoder) {}
+pub fn resolve(_encoder: &mut etalon::CommandEncoder) {}
 #[cfg(target_arch = "wasm32")]
 /// Accumulates `phase` timings.
 pub fn accumulate(_phase: Phase) {}
@@ -272,38 +272,38 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
         reset();
 
         let n: u64 = 65_536;
-        let buf = device.create_buffer(&wgpu::BufferDescriptor {
+        let buf = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("prof-self-test-buf"),
             size: n * 4,
-            usage: wgpu::BufferUsages::STORAGE,
+            usage: etalon::BufferUsages::STORAGE,
             mapped_at_creation: false,
         });
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("prof-self-test-shader"),
-            source: wgpu::ShaderSource::Wgsl(SELF_TEST_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(SELF_TEST_WGSL.into()),
         });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
             label: Some("prof-self-test-pipe"),
             layout: None,
             module: &shader,
             entry_point: Some("main"),
-            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            compilation_options: etalon::PipelineCompilationOptions::default(),
             cache: None,
         });
         let bgl = pipeline.get_bind_group_layout(0);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("prof-self-test-bg"),
             layout: &bgl,
-            entries: &[wgpu::BindGroupEntry {
+            entries: &[etalon::BindGroupEntry {
                 binding: 0,
                 resource: buf.as_entire_binding(),
             }],
         });
 
         let mut encoder =
-            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            device.create_command_encoder(&etalon::CommandEncoderDescriptor { label: None });
         {
-            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            let mut cpass = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
                 label: Some("prof-self-test-pass"),
                 timestamp_writes: pass_writes_both(),
             });

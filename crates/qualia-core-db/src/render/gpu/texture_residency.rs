@@ -114,7 +114,7 @@ impl PortalGpu {
         &self,
         source_digest: &[u8; 32],
         color_space: TextureColorSpace,
-    ) -> Option<(&wgpu::TextureView, &wgpu::Sampler)> {
+    ) -> Option<(&etalon::TextureView, &etalon::Sampler)> {
         let mip_semantic = match color_space {
             TextureColorSpace::Srgb => super::texture_mips::TextureMipSemantic::Color,
             TextureColorSpace::Linear => super::texture_mips::TextureMipSemantic::LinearData,
@@ -128,7 +128,7 @@ impl PortalGpu {
         source_digest: &[u8; 32],
         color_space: TextureColorSpace,
         mip_semantic: super::texture_mips::TextureMipSemantic,
-    ) -> Option<(&wgpu::TextureView, &wgpu::Sampler)> {
+    ) -> Option<(&etalon::TextureView, &etalon::Sampler)> {
         let key = TextureIdentity {
             source_digest: *source_digest,
             color_space,

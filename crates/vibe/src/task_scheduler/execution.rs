@@ -81,10 +81,34 @@ fn join<H: Host>(
         _scope: scope.clone(),
         id,
     };
+    let pinned_registry_gen = engine.extension_registry.generation();
+    let pinned_policy_gen = engine
+        .sentinel_gate
+        .as_ref()
+        .map(|g| g.current_policy_generation());
     engine.active_tasks.push((scope.clone(), id));
     let output = execute(engine, env, &source, span);
     engine.active_tasks.pop();
     let output = output.and_then(|value| {
+        if engine.extension_registry.generation() != pinned_registry_gen {
+            return Err(crate::extension_registry::trap_to_diagnostic(
+                vibescript_abi::VibeTrap::StaleRegistryGeneration,
+                "task.await",
+                span,
+            ));
+        }
+        if engine
+            .sentinel_gate
+            .as_ref()
+            .map(|g| g.current_policy_generation())
+            != pinned_policy_gen
+        {
+            return Err(crate::extension_registry::trap_to_diagnostic(
+                vibescript_abi::VibeTrap::MidExecutionPolicyRevoked,
+                "task.await",
+                span,
+            ));
+        }
         let bytes = retained_bytes(&value, span)?;
         engine.charge_task_source((bytes as u64).saturating_mul(2), span)?;
         Ok((value, bytes))

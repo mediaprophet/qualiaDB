@@ -21,7 +21,7 @@ qualia-core-db = { workspace = true, default-features = true, optional = true }
 qualia-q-forge = { workspace = true, optional = true }
 
 # WebGPU dependencies
-wgpu = { workspace = true, optional = true }
+etalon = { workspace = true, optional = true, features = ["std", "wgsl", "webgpu", "vulkan", "dx12", "metal", "gles"] }
 winit = { version = "0.30", optional = true }
 
 # HTTP client for QPU APIs
@@ -51,8 +51,8 @@ criterion = { workspace = true }
 [features]
 default = ["qpu", "pinn", "webgpu"]
 qpu = ["reqwest", "qualia-q-forge"]
-pinn = ["qualia-core-db", "wgpu"]  # Use native Qualia pipeline instead of Candle
-webgpu = ["wgpu", "winit"]
+pinn = ["qualia-core-db", "etalon"]  # Use native Qualia pipeline instead of Candle
+webgpu = ["etalon", "winit"]
 
 [lib]
 name = "qualia_extensions"

@@ -239,7 +239,7 @@ impl QTensorEngine {
             } else {
                 None
             };
-            let weight_binding: &wgpu::Buffer = match resident.as_ref() {
+            let weight_binding: &etalon::Buffer = match resident.as_ref() {
                 Some(r) => r,
                 None => {
                     self.write_weight_words(raw_weights, self.max_tensor_bytes);
@@ -280,10 +280,10 @@ impl QTensorEngine {
                 return true;
             }
 
-            let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
+            let out_bytes = (readback_elems * 4) as etalon::BufferAddress;
             let slice = staging.slice(..out_bytes);
             let (tx, rx) = futures_channel::oneshot::channel();
-            slice.map_async(wgpu::MapMode::Read, move |r| {
+            slice.map_async(etalon::MapMode::Read, move |r| {
                 let _ = tx.send(r);
             });
             self.poll_wait();

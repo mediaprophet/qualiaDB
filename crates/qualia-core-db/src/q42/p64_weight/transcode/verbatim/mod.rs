@@ -162,20 +162,10 @@ pub(super) fn empty_layout<'a>() -> TensorLayout<'a> {
     }
 }
 
+#[inline]
 pub(super) fn empty_entry() -> P64TensorEntry {
     P64TensorEntry {
-        name_offset: 0,
-        role_id: 0,
-        dtype: 0,
-        manifold_idx: 0,
         rank: 1,
-        dimensions: [0; 4],
-        blob_offset: 0,
-        blob_size: 0,
-        source_offset: 0,
-        source_name_hash: 0,
-        alt_dtype: 0,
-        precision_views_mask: 0,
-        alt_blob_offset: 0,
+        ..P64TensorEntry::empty()
     }
 }

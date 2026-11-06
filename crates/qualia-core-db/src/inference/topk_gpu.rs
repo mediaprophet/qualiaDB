@@ -15,8 +15,8 @@ use crate::topk::{
 /// Reduce `logits` to its global top-K on the GPU. `block_size` is elements per workgroup
 /// (clamped to `TOPK_BLOCK_SIZE`, the WGSL `var<workgroup>` cap). Blocking (native readback).
 pub fn topk_gpu(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+    device: &etalon::Device,
+    queue: &etalon::Queue,
     logits: &[f32],
     k: usize,
     block_size: usize,
@@ -30,11 +30,11 @@ pub fn topk_gpu(
     let num_blocks = n.div_ceil(block_size);
     let cand_count = num_blocks * k;
 
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+    let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
         label: Some("topk_reduction"),
-        source: wgpu::ShaderSource::Wgsl(TOPK_REDUCTION_WGSL.into()),
+        source: etalon::ShaderSource::Wgsl(TOPK_REDUCTION_WGSL.into()),
     });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
         label: Some("topk_pipeline"),
         layout: None,
         module: &shader,
@@ -43,72 +43,72 @@ pub fn topk_gpu(
         cache: None,
     });
 
-    let logits_buf = device.create_buffer(&wgpu::BufferDescriptor {
+    let logits_buf = device.create_buffer(&etalon::BufferDescriptor {
         label: Some("topk_logits"),
         size: (n * 4) as u64,
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
     queue.write_buffer(&logits_buf, 0, bytemuck::cast_slice(logits));
 
     let params = topk_params_bytes(n as u32, k as u32, block_size as u32);
-    let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
+    let params_buf = device.create_buffer(&etalon::BufferDescriptor {
         label: Some("topk_params"),
         size: params.len() as u64,
-        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
     queue.write_buffer(&params_buf, 0, &params);
 
     let mk_io = |label: &str| {
-        device.create_buffer(&wgpu::BufferDescriptor {
+        device.create_buffer(&etalon::BufferDescriptor {
             label: Some(label),
             size: (cand_count * 4) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         })
     };
     let cand_val = mk_io("topk_cand_val");
     let cand_idx = mk_io("topk_cand_idx");
     let mk_stg = |label: &str| {
-        device.create_buffer(&wgpu::BufferDescriptor {
+        device.create_buffer(&etalon::BufferDescriptor {
             label: Some(label),
             size: (cand_count * 4) as u64,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         })
     };
     let stg_val = mk_stg("topk_stg_val");
     let stg_idx = mk_stg("topk_stg_idx");
 
-    let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let bind = device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("topk_bind"),
         layout: &pipeline.get_bind_group_layout(0),
         entries: &[
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 0,
                 resource: logits_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 1,
                 resource: params_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 2,
                 resource: cand_val.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 3,
                 resource: cand_idx.as_entire_binding(),
             },
         ],
     });
 
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut encoder = device.create_command_encoder(&etalon::CommandEncoderDescriptor {
         label: Some("topk_enc"),
     });
     {
-        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        let mut pass = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
             label: Some("topk_pass"),
             timestamp_writes: None,
         });
@@ -125,13 +125,13 @@ pub fn topk_gpu(
     let si = stg_idx.slice(..);
     let (tx_v, rx_v) = std::sync::mpsc::channel();
     let (tx_i, rx_i) = std::sync::mpsc::channel();
-    sv.map_async(wgpu::MapMode::Read, move |r| {
+    sv.map_async(etalon::MapMode::Read, move |r| {
         let _ = tx_v.send(r);
     });
-    si.map_async(wgpu::MapMode::Read, move |r| {
+    si.map_async(etalon::MapMode::Read, move |r| {
         let _ = tx_i.send(r);
     });
-    let _ = device.poll(wgpu::PollType::wait_indefinitely());
+    let _ = device.poll(etalon::PollType::wait_indefinitely());
     rx_v.recv().expect("map val").expect("map topk val");
     rx_i.recv().expect("map idx").expect("map topk idx");
 
@@ -152,14 +152,14 @@ mod tests {
     use super::*;
     use crate::topk::topk_cpu;
 
-    fn try_gpu() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance = wgpu::Instance::default();
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+    fn try_gpu() -> Option<(etalon::Device, etalon::Queue)> {
+        let instance = etalon::Instance::default();
+        let adapter = pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             ..Default::default()
         }))
         .ok()?;
-        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
+        pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor::default())).ok()
     }
 
     fn assert_parity(gpu: &[TopKItem], cpu: &[TopKItem]) {

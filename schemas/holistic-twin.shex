@@ -1,0 +1,93 @@
+PREFIX geo:  <urn:qualia:geometry:>
+PREFIX pga:  <urn:qualia:pga:>
+PREFIX m64:  <urn:qualia:m64:>
+PREFIX u3:   <urn:qualia:u3:>
+PREFIX emf:  <urn:qualia:emf:>
+PREFIX rcc8: <urn:qualia:rcc8:>
+PREFIX epi:  <urn:qualia:epistemic:>
+PREFIX q42:  <urn:qualia:q42:>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+# 1. Top-Level Partitioned Multi-Modal Species / Holistic Digital Twin Contract
+<HolisticDigitalTwinShape> CLOSED EXTRA rdf:type {
+  rdf:type            [geo:HolisticDigitalTwin geo:DigitalTwin] ;
+  geo:unit            ["metre" "millimetre" "micrometre" "nanometre"] ;
+  geo:fidelityTier    ["F0" "F1" "F2" "F3" "F4"] ;
+  geo:assuranceClass  ["A0" "A1" "A2" "A3" "A4"] ;
+  geo:compiledDigest  xsd:integer ;
+
+  # Optional compiled .10d simulation-ready surface mesh asset
+  q42:hasContainer10d @<GeometryAsset10dShape> ? ;
+
+  # Partitioned 64-byte Matter-64 chunks (HOLO, STRATA, POINT, PHASE_JUNCTURE)
+  m64:hasHilbertChunk @<MatterChunkM64Shape> * ;
+
+  # Optional multi-sensory wavefield attachments (acoustic and full-spectrum EMF)
+  u3:hasAcousticEmitter @<AcousticSidecarQ4auShape> * ;
+  emf:hasEmfSource      @<EmfFieldChunkShape> * ;
+
+  # Epistemic and observer-relative bifurcation view descriptors
+  epi:hasBifurcatedView @<BifurcatedViewShape> * ;
+
+  # Well-founded recursive kinematic, vascular, botanical branching hierarchy
+  pga:hasRootNode     @<RecursiveArticulatedNodeShape> ? ;
+}
+
+# 2. Compiled .10d Binary Geometry Asset Shape
+<GeometryAsset10dShape> CLOSED EXTRA rdf:type {
+  rdf:type             [geo:GeometryAsset10d geo:Mesh] ;
+  geo:vertexCount      xsd:integer MinInclusive 1 MaxInclusive 4194304 ;
+  geo:triangleCount    xsd:integer MinInclusive 1 MaxInclusive 4194304 ;
+  geo:sourceFormat     ["10d" "obj" "stl" "glb" "gltf"] ;
+  geo:compiledDigest   xsd:integer ;
+  geo:hasPackedCentroid xsd:integer ? ;
+  geo:hasPackedBboxMin xsd:integer ;
+  geo:hasPackedBboxMax xsd:integer ;
+  geo:hasScaleTier     xsd:integer MinInclusive 0 MaxInclusive 7 ;
+  geo:hasTopologyClass xsd:integer MinInclusive 0 MaxInclusive 6 ;
+}
+
+# 3. 64-Byte GPU-Aligned Matter-64 Chunk Shape
+<MatterChunkM64Shape> CLOSED {
+  m64:recordMode          ["POINT" "HOLO" "STRATA" "PHASE_JUNCTURE" 0 1 2 3] ;
+  m64:spatialHilbertIndex xsd:integer ;
+  m64:chunkRecordCount    xsd:integer MinInclusive 1 MaxInclusive 4096 ;
+  m64:baoRootPrefix       xsd:integer ? ;
+}
+
+# 4. Full-Spectrum EMF & Polarimetric Field Chunk Shape
+<EmfFieldChunkShape> CLOSED {
+  emf:emitsSpectralBand   ["elf-bio" "rf-mmwave" "thermal-ir" "visible-spd" "uv" "xray"] ;
+  emf:polarizationMode    ["unpolarized" "linear" "circular" "elliptical" "stokes"] ;
+  emf:hasStokesVector     xsd:integer ? ;
+  emf:hasMaterialMueller  xsd:integer ? ;
+}
+
+# 5. Spatially Defined Sonic & Ambisonics Acoustic Sidecar Shape (.q4au v3)
+<AcousticSidecarQ4auShape> CLOSED {
+  u3:sampleRateHz         [44100 48000 96000 192000] ;
+  u3:hoaOrder             [0 1 2 3] ;
+  u3:hasDirectivityPattern ["hoa-order-3" "cardioid" "sofa-hrtf" "omnidirectional"] ;
+  u3:hasSpectralSheet     xsd:integer ;
+}
+
+# 6. Observer-Relative & Epistemic Bifurcated View Shape
+<BifurcatedViewShape> CLOSED {
+  epi:epistemicKind       ["EmpiricalFact" "TheoreticalHypothesis" "Counterfactual" "FictionalConstruct" "SocraticDegraded"] ;
+  epi:maxSensitivityClass ["Public" "Restricted" "Classified" "Sanctuary" 0 1 2 3] ;
+  epi:wingSelector        ["PublicTwin" "PersonalTwin" "ClinicalDiagnostic" "EngineeringAudit" 0 1 2 3] ;
+  epi:allowedQMax         xsd:integer ;
+  epi:hasConsentReceipt   xsd:integer ? ;
+}
+
+# 7. Well-Founded Recursive Topological & Kinematic Hierarchy (Botanical / Skeletal / CAD)
+<RecursiveArticulatedNodeShape> CLOSED {
+  pga:hasJointKind        ["revolute" "prismatic" "helical" "spherical" "wbe-bifurcation" "vascular-branch" "fixed"] ;
+  pga:hasMotorSlot        xsd:integer ;
+  geo:hasPackedBboxMin    xsd:integer ? ;
+  geo:hasPackedBboxMax    xsd:integer ? ;
+  # Direct recursion over articulated child nodes and RCC8 mereotopology
+  pga:hasChildNode        @<RecursiveArticulatedNodeShape> * ;
+  rcc8:ec                 @<RecursiveArticulatedNodeShape> * ;
+}

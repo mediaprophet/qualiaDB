@@ -21,23 +21,8 @@ pub const PERSONAL_ONTOLOGY_SECTION_VERSION: u16 = ENTITY_ONTOLOGY_SECTION_VERSI
 pub const PERSONAL_ONTOLOGY_MINI_HEADER_SIZE: usize = ENTITY_ONTOLOGY_MINI_HEADER_SIZE;
 pub const MAGIC_PONT: [u8; 4] = MAGIC_EONT;
 
-/// 40-byte header for SectionType::EntityOntology (EONT1).
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Pod, Zeroable)]
-pub struct EntityOntologyMiniHeader {
-    pub magic: [u8; 4],
-    pub version: u16,
-    pub stage: u8,
-    pub reserved_u8: u8,
-    pub entity_did_hash: u64,
-    pub taxon_iri_hash: u64,
-    pub energy_permill: u16,
-    pub damage_permill: u16,
-    pub hydration_permill: u16,
-    pub wear_permill: u16,
-    pub affordance_count: u32,
-    pub reserved_u32: u32,
-}
+/// 40-byte header for SectionType::EntityOntology (EONT1), unified with `etalon_render::skeletal::OntogeneticStateHeader`.
+pub use etalon_render::skeletal::OntogeneticStateHeader as EntityOntologyMiniHeader;
 const _: [(); ENTITY_ONTOLOGY_MINI_HEADER_SIZE] =
     [(); core::mem::size_of::<EntityOntologyMiniHeader>()];
 

@@ -1,15 +1,15 @@
 pub use etalon_agent::device_caps::{GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps};
 /// Feature set to request for native LLM inference, intersected with `available` so nothing unsupported is requested.
-pub fn requested_native_llm_features(available: wgpu::Features) -> wgpu::Features {
-    let mut desired = wgpu::Features::TIMESTAMP_QUERY
-        | wgpu::Features::TIMESTAMP_QUERY_INSIDE_PASSES
-        | wgpu::Features::PIPELINE_STATISTICS_QUERY
-        | wgpu::Features::PIPELINE_CACHE
-        | wgpu::Features::SHADER_F16
-        | wgpu::Features::SUBGROUP
-        | wgpu::Features::SUBGROUP_BARRIER;
+pub fn requested_native_llm_features(available: etalon::Features) -> etalon::Features {
+    let mut desired = etalon::Features::TIMESTAMP_QUERY
+        | etalon::Features::TIMESTAMP_QUERY_INSIDE_PASSES
+        | etalon::Features::PIPELINE_STATISTICS_QUERY
+        | etalon::Features::PIPELINE_CACHE
+        | etalon::Features::SHADER_F16
+        | etalon::Features::SUBGROUP
+        | etalon::Features::SUBGROUP_BARRIER;
     if experimental_features_allowed() {
-        desired |= wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX;
+        desired |= etalon::Features::EXPERIMENTAL_COOPERATIVE_MATRIX;
     }
     available & desired
 }
@@ -35,16 +35,16 @@ pub fn experimental_features_allowed() -> bool {
 ///
 /// This is what lets a machine be pinned by measurement rather than a static hierarchy.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn qualia_backend_override() -> Option<wgpu::Backends> {
+pub fn qualia_backend_override() -> Option<etalon::Backends> {
     if let Ok(raw) = std::env::var("QUALIA_WGPU_BACKEND") {
         let v = raw.trim().to_ascii_lowercase();
         return match v.as_str() {
-            "vulkan" | "vk" => Some(wgpu::Backends::VULKAN),
-            "dx12" | "d3d12" | "directx12" => Some(wgpu::Backends::DX12),
-            "metal" | "mtl" => Some(wgpu::Backends::METAL),
-            "gl" | "opengl" | "gles" => Some(wgpu::Backends::GL),
-            "primary" => Some(wgpu::Backends::PRIMARY),
-            "all" => Some(wgpu::Backends::all()),
+            "vulkan" | "vk" => Some(etalon::Backends::VULKAN),
+            "dx12" | "d3d12" | "directx12" => Some(etalon::Backends::DX12),
+            "metal" | "mtl" => Some(etalon::Backends::METAL),
+            "gl" | "opengl" | "gles" => Some(etalon::Backends::GL),
+            "primary" => Some(etalon::Backends::PRIMARY),
+            "all" => Some(etalon::Backends::all()),
             other => {
                 log::warn!(
                     "QUALIA_WGPU_BACKEND='{other}' unrecognized — trying passport / default"
@@ -59,15 +59,15 @@ pub fn qualia_backend_override() -> Option<wgpu::Backends> {
 
 /// Prefer the measured HardwarePassport GPU backend when no env pin is set.
 #[cfg(not(target_arch = "wasm32"))]
-fn passport_backend_override() -> Option<wgpu::Backends> {
+fn passport_backend_override() -> Option<etalon::Backends> {
     let backend = crate::hardware_passport::cached_preferred_wgpu_backend()?;
     let token = crate::hardware_passport::backend_env_token(&backend)?;
     log::info!("shared_gpu|backend_from_passport|{backend}|token={token}");
     match token {
-        "vulkan" => Some(wgpu::Backends::VULKAN),
-        "dx12" => Some(wgpu::Backends::DX12),
-        "metal" => Some(wgpu::Backends::METAL),
-        "gl" => Some(wgpu::Backends::GL),
+        "vulkan" => Some(etalon::Backends::VULKAN),
+        "dx12" => Some(etalon::Backends::DX12),
+        "metal" => Some(etalon::Backends::METAL),
+        "gl" => Some(etalon::Backends::GL),
         _ => None,
     }
 }
@@ -79,13 +79,13 @@ fn passport_backend_override() -> Option<wgpu::Backends> {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
     match caps.backend {
-        wgpu::Backend::Vulkan => "vulkan — vendor-neutral & portable (recommended)",
-        wgpu::Backend::Metal => "metal — Apple-native (recommended on macOS)",
-        wgpu::Backend::Dx12 => {
+        etalon::Backend::Vulkan => "vulkan — vendor-neutral & portable (recommended)",
+        etalon::Backend::Metal => "metal — Apple-native (recommended on macOS)",
+        etalon::Backend::Dx12 => {
             "dx12 — Windows-native; set QUALIA_WGPU_BACKEND=vulkan for the portable path"
         }
-        wgpu::Backend::Gl => "gl — compatibility fallback, limited compute (last resort)",
-        wgpu::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page",
+        etalon::Backend::Gl => "gl — compatibility fallback, limited compute (last resort)",
+        etalon::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page",
         _ => "noop/unknown — no GPU compute path",
     }
 }
@@ -94,7 +94,7 @@ pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
 /// Picks a recommended inference backend label from the adapter's real capabilities.
 pub fn recommend_inference_backend(caps: &GpuAdapterCaps) -> &'static str {
     match caps.backend {
-        wgpu::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page (recommended in WASM)",
+        etalon::Backend::BrowserWebGpu => "browser-webgpu — WebGPU in the page (recommended in WASM)",
         _ => "browser-webgpu — request a WebGPU adapter (recommended in WASM)",
     }
 }

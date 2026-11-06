@@ -24,14 +24,8 @@ pub(super) fn transcode_safetensor_with_policy<W: std::io::Write>(
     use crate::safetensor::{
         ggml_elem_bytes, is_high_fidelity_ggml, parse_safetensor_header, safetensor_dtype_to_ggml,
     };
-    let page_log2 = if page_log2 == 0 {
-        P64_DEFAULT_PAGE_LOG2
-    } else {
-        page_log2
-    };
-    if !(8..=30).contains(&page_log2) {
-        return Err(format!("p64: page_log2 {page_log2} out of range"));
-    }
+    let page_log2 = etalon_model::p64::resolve_page_log2(page_log2)
+        .ok_or_else(|| format!("p64: page_log2 {page_log2} out of range"))?;
     let plan = parse_safetensor_header(src)?;
     if plan.tensors.is_empty() {
         return Err("p64: Safetensors source contains no tensors".to_string());

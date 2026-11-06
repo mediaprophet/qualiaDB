@@ -277,10 +277,10 @@ impl etalon_inference::ordinary::cuda_attention::CudaAttentionHost for QTensorEn
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 impl etalon_inference::gpu_attention::forge::ForgeAttentionHost for QTensorEngine {
-    fn device(&self) -> &wgpu::Device {
+    fn device(&self) -> &etalon::Device {
         QTensorEngine::device(self)
     }
-    fn submit(&self, command: wgpu::CommandBuffer) {
+    fn submit(&self, command: etalon::CommandBuffer) {
         self.submit_commands(Some(command));
     }
     fn poll_wait(&self) {
@@ -288,7 +288,7 @@ impl etalon_inference::gpu_attention::forge::ForgeAttentionHost for QTensorEngin
     }
     fn wait_for_map(
         &self,
-        receiver: futures_channel::oneshot::Receiver<Result<(), wgpu::BufferAsyncError>>,
+        receiver: futures_channel::oneshot::Receiver<Result<(), etalon::BufferAsyncError>>,
     ) -> bool {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             return handle

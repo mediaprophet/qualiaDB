@@ -3,7 +3,8 @@
 //! `IntegrityMode`, and the convert-layout recommender.
 
 use super::*;
-use crate::gguf_sharder::{GgufHyperparams, GgufTensorIndex, GgufTensorInfo};
+use crate::gguf_sharder::{GgufHyperparams, GgufTensorIndex};
+pub use etalon_model::p64::convert::P64RoundTripReport;
 
 /// Runtime reader: parses a P64 container's header + manifest in microseconds. Tensor blobs
 /// stay in the caller's byte slice (zero-copy); only the small manifest is materialized. The
@@ -137,78 +138,39 @@ impl P64TensorIndex {
     }
 
     /// Zero-copy tensor byte slice for `entry` within `data`.
+    #[inline]
     pub fn blob<'a>(&self, data: &'a [u8], entry: &P64TensorEntry) -> &'a [u8] {
-        let start = entry.blob_offset as usize;
-        &data[start..start + entry.blob_size as usize]
+        entry.blob_slice(data).unwrap_or_else(|| {
+            let start = entry.blob_offset as usize;
+            &data[start..start + entry.blob_size as usize]
+        })
     }
 
     /// Zero-copy tokenizer blob within `data`.
+    #[inline]
     pub fn tokenizer_bytes<'a>(&self, data: &'a [u8]) -> &'a [u8] {
-        let start = self.header.tokenizer_offset as usize;
-        let end = self.header.checksum_offset as usize;
-        if start <= data.len() && end <= data.len() && start <= end {
-            &data[start..end]
-        } else {
-            &[]
-        }
+        self.header.tokenizer_slice(data)
     }
 
-    /// Manifold coordinate for a tensor entry.
+    /// Manifold coordinate for a tensor entry (bridges neutral 64B P64 record to Q42 `ManifoldCoordinate10D`).
     pub fn manifold_coordinate(
         &self,
         data: &[u8],
         index: u32,
     ) -> Result<crate::modalities::manifold::ManifoldCoordinate10D, String> {
-        if index > self.hparams.n_layer {
-            return Err("p64: manifold index out of bounds".to_string());
-        }
-        let start = (self.header.manifold_table_offset as usize)
-            .checked_add(index as usize * P64_MANIFOLD_ENTRY_BYTES)
-            .ok_or("p64: manifold offset overflow")?;
-        let end = start + P64_MANIFOLD_ENTRY_BYTES;
-        if end > data.len() {
-            return Err("p64: manifold coordinate out of bounds".to_string());
-        }
-        crate::modalities::manifold::ManifoldCoordinate10D::from_p64_bytes(&data[start..end])
+        let record = self
+            .header
+            .manifold_record_slice(data, self.hparams.n_layer, index)?;
+        crate::modalities::manifold::ManifoldCoordinate10D::from_p64_bytes(record)
     }
 
     /// Build a GGUF-equivalent index for the existing inference hot path.
     pub fn to_gguf_index(&self) -> GgufTensorIndex {
-        let mut named: Vec<(Vec<u8>, GgufTensorInfo)> = Vec::with_capacity(self.entries.len());
-        for entry in &self.entries {
-            let name = if entry.manifold_idx == self.hparams.n_layer {
-                match entry.role_id {
-                    P64_ROLE_TOKEN_EMBD => b"token_embd.weight".to_vec(),
-                    P64_ROLE_OUTPUT => b"output.weight".to_vec(),
-                    P64_ROLE_OUTPUT_NORM => b"output_norm.weight".to_vec(),
-                    _ => continue,
-                }
-            } else if let Some(suffix) = p64_role_suffix(entry.role_id) {
-                let mut buffer = [0u8; 96];
-                let length = crate::gguf_sharder::write_blk_tensor_name(
-                    entry.manifold_idx,
-                    suffix,
-                    &mut buffer,
-                );
-                buffer[..length].to_vec()
-            } else {
-                continue;
-            };
-            named.push((
-                name,
-                GgufTensorInfo {
-                    dims: entry.dimensions.map(u64::from),
-                    n_dims: entry.rank,
-                    ggml_type: entry.dtype as u32,
-                    byte_offset: entry.blob_offset as u64,
-                },
-            ));
-        }
-        let references: Vec<(&[u8], GgufTensorInfo)> = named
-            .iter()
-            .map(|(name, info)| (name.as_slice(), *info))
-            .collect();
-        GgufTensorIndex::from_components(&references, self.hyperparams(), 0)
+        etalon_model::p64::convert::synthesize_gguf_index(
+            &self.entries,
+            self.hparams.n_layer,
+            self.hyperparams(),
+        )
     }
 
     /// Prove that a parsed P64 contains every GGUF tensor with identical shape,
@@ -219,54 +181,11 @@ impl P64TensorIndex {
         p64_data: &[u8],
         gguf_data: &[u8],
     ) -> Result<P64RoundTripReport, String> {
-        let source = GgufTensorIndex::from_gguf(gguf_data);
-        if source.entries.len() != self.entries.len() {
-            return Err(format!(
-                "p64: tensor count differs (GGUF {}, P64 {})",
-                source.entries.len(),
-                self.entries.len()
-            ));
-        }
-        let source_data_start = source.tensor_data_start as usize;
-        let mut tensor_bytes = 0u64;
-        for (position, entry) in self.entries.iter().enumerate() {
-            let (source_name_hash, source_info) = source
-                .entries
-                .iter()
-                .find(|(_, info)| info.byte_offset == entry.source_offset)
-                .ok_or_else(|| format!("p64: tensor {position} source offset is missing"))?;
-            if *source_name_hash != entry.source_name_hash
-                || source_info.ggml_type != entry.dtype as u32
-                || source_info.n_dims != entry.rank
-                || source_info.dims != entry.dimensions.map(u64::from)
-            {
-                return Err(format!("p64: tensor {position} metadata differs from GGUF"));
-            }
-            let source_len = crate::ggml_quants::tensor_byte_len(source_info)
-                .ok_or_else(|| format!("p64: tensor {position} has unsupported source type"))?;
-            if source_len != entry.blob_size as usize {
-                return Err(format!("p64: tensor {position} byte length differs"));
-            }
-            let source_start = source_data_start + source_info.byte_offset as usize;
-            let source_end = source_start + source_len;
-            if source_end > gguf_data.len()
-                || self.blob(p64_data, entry) != &gguf_data[source_start..source_end]
-            {
-                return Err(format!("p64: tensor {position} bytes differ from GGUF"));
-            }
-            tensor_bytes += source_len as u64;
-        }
-        Ok(P64RoundTripReport {
-            tensor_count: self.entries.len(),
-            tensor_bytes,
-            manifold_count: self.hparams.n_layer as usize + 1,
-        })
+        etalon_model::p64::convert::validate_p64_against_gguf(
+            &self.entries,
+            self.hparams.n_layer,
+            p64_data,
+            gguf_data,
+        )
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct P64RoundTripReport {
-    pub tensor_count: usize,
-    pub tensor_bytes: u64,
-    pub manifold_count: usize,
 }

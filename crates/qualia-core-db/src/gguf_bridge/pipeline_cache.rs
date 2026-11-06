@@ -8,7 +8,7 @@
 use super::*;
 
 /// Creates `native-pipeline-cache`.
-pub(crate) fn create_native_pipeline_cache(device: &wgpu::Device) -> Option<wgpu::PipelineCache> {
+pub(crate) fn create_native_pipeline_cache(device: &etalon::Device) -> Option<etalon::PipelineCache> {
     let shared = crate::gpu_context::shared_gpu();
     if !shared.enabled_features.pipeline_cache {
         return None;
@@ -18,7 +18,7 @@ pub(crate) fn create_native_pipeline_cache(device: &wgpu::Device) -> Option<wgpu
     // no stale or foreign driver blob to validate. The feature is requested only
     // when the selected native adapter advertises `PIPELINE_CACHE`.
     let cache = unsafe {
-        device.create_pipeline_cache(&wgpu::PipelineCacheDescriptor {
+        device.create_pipeline_cache(&etalon::PipelineCacheDescriptor {
             label: Some("QualiaNativeLlmPipelineCache"),
             data: None,
             fallback: true,
@@ -35,7 +35,7 @@ pub(crate) fn create_native_pipeline_cache(device: &wgpu::Device) -> Option<wgpu
 impl QTensorEngine {
     #[inline]
     /// `QTensorEngine::native_gemm_bind_layout`.
-    pub(crate) fn native_gemm_bind_layout(&self, use_coop: bool) -> &wgpu::BindGroupLayout {
+    pub(crate) fn native_gemm_bind_layout(&self, use_coop: bool) -> &etalon::BindGroupLayout {
         if use_coop {
             &self.coop_gemv_bind_layout
         } else {
@@ -45,7 +45,7 @@ impl QTensorEngine {
 
     #[inline]
     /// `QTensorEngine::native_pipeline_cache_ref`.
-    pub(crate) fn native_pipeline_cache_ref(&self) -> Option<&wgpu::PipelineCache> {
+    pub(crate) fn native_pipeline_cache_ref(&self) -> Option<&etalon::PipelineCache> {
         self.native_pipeline_cache.as_ref()
     }
 }

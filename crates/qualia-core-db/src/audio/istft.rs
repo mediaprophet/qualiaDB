@@ -1,28 +1,28 @@
 //! Real inverse STFT — resynthesise a time-domain signal from the two-sided
 //! complex frames produced by [`crate::audio::stft::forward_stft`].
 //!
-//! This is the cold-path inverse companion to the forward STFT: it reuses the
-//! already-built, caller-buffered WOLA resynthesiser in
-//! [`qualia_audio::features::framing::istft()`] (weighted overlap-add normalised by
+//! This is the cold-path inverse companion to the forward STFT: it delegates to
+//! the caller-buffered WOLA resynthesiser in
+//! [`etalon_signal::audio::istft_overlap_add_into`] (weighted overlap-add normalised by
 //! the running Σ analysis·synthesis window product), so reconstruction is exact
 //! over the fully-overlapped interior regardless of whether the window+hop
 //! strictly satisfy COLA.
 //!
 //! Heap allocation is fine here: ISTFT runs at ingest / edit (cold path), never
-//! in the zero-heap U3 hot worklet. Native only — `qualia-audio` is a non-wasm
-//! dependency of `qualia-core-db`.
+//! in the zero-heap U3 hot worklet.
 
 use crate::audio::stft_bake::StftBakeError;
+use etalon_signal::{
+    audio::{hann_window_sample, istft_overlap_add_into},
+    SignalError,
+};
 
 /// Hann window coefficient `w[i] = 0.5*(1 - cos(2π·i/(N-1)))` for a length-`n`
 /// frame — identical to [`crate::audio::stft`]'s analysis window, so the same
 /// window drives both the analysis and synthesis args of the WOLA resynthesis.
 #[inline]
 fn hann(i: usize, n: usize) -> f32 {
-    if n <= 1 {
-        return 1.0;
-    }
-    0.5 * (1.0 - (core::f32::consts::TAU * i as f32 / (n - 1) as f32).cos())
+    hann_window_sample(i, n)
 }
 
 /// Inverse STFT of the two-sided complex frames from
@@ -37,16 +37,11 @@ fn hann(i: usize, n: usize) -> f32 {
 /// The frames are flattened into a `num_frames × 2·N` interleaved-complex buffer
 /// (`[re, im, …]`), a length-`N` Hann window is built for both the analysis and
 /// synthesis arguments, and the WOLA resynthesiser
-/// [`qualia_audio::features::framing::istft()`] is invoked with caller-owned
-/// scratch/norm/out buffers (`out_len = (num_frames − 1)·hop + N`).
-///
-/// The core-db forward sign (`exp(-2πi·k·j/N)`, [`crate::audio::stft`]) matches
-/// `qualia-audio`'s inverse sign (`fft_radix2(_, false)` uses `e^{-j2πk/L}`), so
-/// no conjugation is required — the forward output feeds straight in.
+/// [`etalon_signal::audio::istft_overlap_add_into`] is invoked with caller-owned
+/// norm/out buffers (`out_len = (num_frames − 1)·hop + N`).
 ///
 /// Returns the reconstructed samples (length `out_len`), or an empty `Vec` when
-/// `spec` is empty. Errors map [`qualia_audio::types::AudioError`] →
-/// [`StftBakeError`].
+/// `spec` is empty.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn inverse_stft(
     spec: &[Vec<[f32; 2]>],
@@ -69,7 +64,6 @@ pub fn inverse_stft(
 
     let two_n = 2 * frame_size;
     // Flatten frames into `num_frames × 2N` interleaved complex `[re, im, …]`.
-    // No conjugation: forward and inverse share the `e^{-j2πk/L}` sign convention.
     let mut spectra = vec![0.0_f32; num_frames * two_n];
     for (f, frame) in spec.iter().enumerate() {
         let seg = &mut spectra[f * two_n..(f + 1) * two_n];
@@ -87,36 +81,28 @@ pub fn inverse_stft(
         .and_then(|v| v.checked_add(frame_size))
         .ok_or(StftBakeError::InvalidFrameCount)?;
 
-    let mut ifft_scratch = vec![0.0_f32; frame_size];
     let mut norm = vec![0.0_f32; out_len];
     let mut out = vec![0.0_f32; out_len];
 
-    let written = qualia_audio::features::framing::istft(
+    let written = istft_overlap_add_into(
         &mut spectra,
         frame_size,
         hop,
         &window,
-        &window,
-        &mut ifft_scratch,
         &mut norm,
         &mut out,
     )
-    .map_err(map_audio_err)?;
+    .map_err(map_signal_err)?;
 
     out.truncate(written);
     Ok(out)
 }
 
-/// Map a `qualia-audio` [`qualia_audio::types::AudioError`] onto the core-db
-/// sidecar [`StftBakeError`] surface.
 #[cfg(not(target_arch = "wasm32"))]
 #[inline]
-fn map_audio_err(e: qualia_audio::types::AudioError) -> StftBakeError {
-    use qualia_audio::types::AudioError;
+fn map_signal_err(e: SignalError) -> StftBakeError {
     match e {
-        AudioError::OutputBufferTooSmall | AudioError::WorkspaceTooSmall => {
-            StftBakeError::OutputTooSmall
-        }
+        SignalError::LengthMismatch => StftBakeError::OutputTooSmall,
         _ => StftBakeError::InvalidFrameCount,
     }
 }

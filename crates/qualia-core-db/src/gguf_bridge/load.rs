@@ -534,10 +534,10 @@ impl QTensorEngine {
         let row_bytes = total / vocab;
         // VOCAB_CHUNK_ROWS is a multiple of 256, so every chunk's byte offset
         // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
-        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let buf = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("ResidentLogits"),
             size: total as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         self.gpu_queue().write_buffer(&buf, 0, raw);
@@ -559,7 +559,7 @@ impl QTensorEngine {
     #[inline]
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn poll_wait(&self) {
-        let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
+        let _ = self.gpu_device().poll(etalon::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
@@ -573,11 +573,11 @@ impl QTensorEngine {
         for _ in 0..n {
             let enc = self
                 .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                .create_command_encoder(&etalon::CommandEncoderDescriptor {
                     label: Some("EmptyRT"),
                 });
             self.submit_commands(Some(enc.finish()));
-            let _ = self.gpu_device().poll(wgpu::PollType::wait_indefinitely());
+            let _ = self.gpu_device().poll(etalon::PollType::wait_indefinitely());
         }
         t.elapsed().as_nanos() as u64
     }

@@ -1,27 +1,21 @@
 //! `build_erb_bank` — triangular filterbank on the ERB-rate scale (Glasberg &
-//! Moore 1990). A gammatone-ish auditory bank: centres are equally spaced on the
-//! Equivalent-Rectangular-Bandwidth rate axis, so filter width grows with centre
-//! frequency the way cochlear filters do.
+//! Moore 1990), with ERB conversions delegated to [`etalon_signal::loudness`].
 
 use crate::types::AudioError;
 
 /// Hz → ERB-rate number: `E = 21.4 * log10(1 + 0.00437*f)` (Glasberg & Moore).
 #[inline]
 fn hz_to_erb_rate(hz: f32) -> f32 {
-    let f = hz.max(0.0);
-    21.4 * (1.0 + 0.00437 * f).log10()
+    etalon_signal::loudness::hz_to_erb(hz)
 }
 
 /// ERB-rate → Hz, inverse of [`hz_to_erb_rate`]: `f = (10^(E/21.4) - 1) / 0.00437`.
 #[inline]
 fn erb_rate_to_hz(erb: f32) -> f32 {
-    (10.0f32.powf(erb / 21.4) - 1.0) / 0.00437
+    etalon_signal::loudness::erb_to_hz(erb)
 }
 
-/// Build a triangular ERB filterbank as a row-major `n_bands × n_fft_bins` weight
-/// table. Same geometry as the mel/bark banks (peak 1.0 at centre, overlapping,
-/// non-negative), with centres equally spaced on the ERB-rate scale — the triangular
-/// approximation of a gammatone auditory filterbank.
+/// Build a triangular ERB filterbank as a row-major `n_bands × n_fft_bins` weight table.
 pub fn build_erb_bank(
     n_fft_bins: usize,
     n_bands: usize,
@@ -93,7 +87,6 @@ mod tests {
 
     #[test]
     fn erb_bandwidth_grows_with_frequency() {
-        // Higher ERB bands should be wider in Hz than lower ones.
         let n_bins = 513;
         let n_bands = 32;
         let sr = 22_050.0;
@@ -113,9 +106,7 @@ mod tests {
 
     #[test]
     fn erb_filters_peak_at_one() {
-        // High FFT resolution so even the narrow low-frequency ERB triangles are
-        // well sampled: each well-resolved band reaches ≈1.0, none exceeds 1.0.
-        let n_bins = 2049; // n_fft = 4096
+        let n_bins = 2049;
         let n_bands = 24;
         let sr = 16_000.0;
         let mut w = vec![0.0f32; n_bands * n_bins];

@@ -28,19 +28,19 @@ impl ResidentProvider for QTensorEngine {
             triple_gemv_pipeline: &self.triple_gemv_pipeline,
         }
     }
-    fn gpu_device(&self) -> &wgpu::Device {
+    fn gpu_device(&self) -> &etalon::Device {
         QTensorEngine::gpu_device(self)
     }
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    fn gpu_queue(&self) -> &etalon::Queue {
         QTensorEngine::gpu_queue(self)
     }
-    fn submit(&self, command: wgpu::CommandBuffer) -> bool {
+    fn submit(&self, command: etalon::CommandBuffer) -> bool {
         self.submit_commands([command]).is_some()
     }
     fn poll_wait(&self) -> bool {
         let result = self
             .gpu_device()
-            .poll(wgpu::PollType::wait_indefinitely())
+            .poll(etalon::PollType::wait_indefinitely())
             .is_ok();
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         result
@@ -59,10 +59,10 @@ impl ResidentProvider for QTensorEngine {
     fn coop_gemv_workgroups(&self, rows: u32) -> u32 {
         crate::llm_bench::coop_gemv_workgroups(rows)
     }
-    fn pass_writes(&self) -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+    fn pass_writes(&self) -> Option<etalon::ComputePassTimestampWrites<'static>> {
         crate::llm_gpu_profiler::pass_writes_both()
     }
-    fn resolve(&self, encoder: &mut wgpu::CommandEncoder) {
+    fn resolve(&self, encoder: &mut etalon::CommandEncoder) {
         crate::llm_gpu_profiler::resolve(encoder);
     }
     fn accumulate_fused(&self) {

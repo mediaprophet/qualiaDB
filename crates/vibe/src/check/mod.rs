@@ -164,8 +164,13 @@ fn collect_import_errors(
         // the AST tag, not in a sacred string prefix. Both
         // `import "vibe:0.1/math" as math;` and `import "math" as math;`
         // are valid.
-        let ns = path.strip_prefix("vibe:0.1/").unwrap_or(path);
-        if !VALID_IMPORT_NS.contains(&ns) {
+        let ns = path
+            .strip_prefix("vibe:0.1/")
+            .or_else(|| path.strip_prefix("vibe:0.3/"))
+            .unwrap_or(path);
+        if !VALID_IMPORT_NS.contains(&ns)
+            && !crate::extension_registry::is_extension_namespace(ns)
+        {
             errors.push(Diagnostic::new(
                 DiagCode::E100,
                 imp.span,
@@ -176,7 +181,8 @@ fn collect_import_errors(
             ));
             continue;
         }
-        let alias = imp.alias.as_deref().unwrap_or(ns);
+        let default_alias = ns.rsplit('/').next().unwrap_or(ns);
+        let alias = imp.alias.as_deref().unwrap_or(default_alias);
         if !seen_aliases.insert(alias) {
             errors.push(Diagnostic::new(
                 DiagCode::E100,

@@ -88,23 +88,23 @@ impl ResidentPlanProvider for QTensorEngine {
             gemm_max_out_dim: self.gemm_max_out_dim,
         }
     }
-    fn gpu_device(&self) -> &wgpu::Device {
+    fn gpu_device(&self) -> &etalon::Device {
         QTensorEngine::gpu_device(self)
     }
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    fn gpu_queue(&self) -> &etalon::Queue {
         QTensorEngine::gpu_queue(self)
     }
-    fn native_gemm_bind_layout(&self, coop: bool) -> &wgpu::BindGroupLayout {
+    fn native_gemm_bind_layout(&self, coop: bool) -> &etalon::BindGroupLayout {
         QTensorEngine::native_gemm_bind_layout(self, coop)
     }
-    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
+    fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<etalon::Buffer> {
         QTensorEngine::resident_weight_buffer(self, key, raw)
     }
     fn promote_matrix_to_f16_resident(
         &self,
         info: &GgufTensorInfo,
         raw: &[u8],
-    ) -> Option<(wgpu::Buffer, u32, u32, u32)> {
+    ) -> Option<(etalon::Buffer, u32, u32, u32)> {
         QTensorEngine::promote_matrix_to_f16_resident(self, info, raw)
     }
     fn prewarm_layer(&self, layer: u32, matrices: &[(&GgufTensorInfo, &[u8], usize, usize)]) {

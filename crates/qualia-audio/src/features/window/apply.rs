@@ -4,18 +4,14 @@ use crate::types::AudioError;
 
 /// Multiply `samples` in place by `window`, elementwise.
 ///
-/// The two slices must have equal length. Zero-heap: the multiply is done in
-/// place with no allocation.
+/// The two slices must have equal length. Zero-heap: delegated to
+/// [`etalon_signal::window::apply_window_in_place`].
 ///
 /// Returns [`AudioError::InvalidParameter`] if the lengths differ.
+#[inline]
 pub fn apply_window(samples: &mut [f32], window: &[f32]) -> Result<(), AudioError> {
-    if samples.len() != window.len() {
-        return Err(AudioError::InvalidParameter);
-    }
-    for (s, &w) in samples.iter_mut().zip(window.iter()) {
-        *s *= w;
-    }
-    Ok(())
+    etalon_signal::window::apply_window_in_place(samples, window)
+        .map_err(|_| AudioError::InvalidParameter)
 }
 
 #[cfg(test)]

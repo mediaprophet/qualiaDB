@@ -3,7 +3,7 @@ use etalon_inference::browser_prefill::{PrefillProvider, PrefillResources};
 use etalon_model::inference::{LayerTensors, ModelHyperparams};
 impl PrefillProvider for QTensorEngine {
     type Pipeline = WasmGpuPipeline;
-    fn weight_role_buffer(&self, role: Mc8WeightRole) -> &wgpu::Buffer {
+    fn weight_role_buffer(&self, role: Mc8WeightRole) -> &etalon::Buffer {
         self.mc8_weight_role_buf(role)
     }
     fn encoding_resources(
@@ -73,7 +73,7 @@ impl PrefillProvider for QTensorEngine {
             mc8_weights_resident: self.mc8_weights_resident,
         }
     }
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    fn gpu_queue(&self) -> &etalon::Queue {
         QTensorEngine::gpu_queue(self)
     }
     fn mc8_buffers_ready(&self) -> bool {
@@ -82,7 +82,7 @@ impl PrefillProvider for QTensorEngine {
     fn begin(&self) -> Self::Pipeline {
         WasmGpuPipeline::begin(self)
     }
-    fn encoder(pipeline: &mut Self::Pipeline) -> &mut wgpu::CommandEncoder {
+    fn encoder(pipeline: &mut Self::Pipeline) -> &mut etalon::CommandEncoder {
         &mut pipeline.encoder
     }
     fn max_context(layout: &Self::Layout) -> u32 {
@@ -133,12 +133,12 @@ impl PrefillProvider for QTensorEngine {
         raw: &[u8],
         n_in: usize,
         n_out: usize,
-        input: &wgpu::Buffer,
-        in_off: wgpu::BufferAddress,
-        in_bytes: wgpu::BufferAddress,
-        output: &wgpu::Buffer,
-        out_off: wgpu::BufferAddress,
-        out_bytes: wgpu::BufferAddress,
+        input: &etalon::Buffer,
+        in_off: etalon::BufferAddress,
+        in_bytes: etalon::BufferAddress,
+        output: &etalon::Buffer,
+        out_off: etalon::BufferAddress,
+        out_bytes: etalon::BufferAddress,
         n_batch: u32,
         in_row_stride: u32,
         out_row_stride: u32,
@@ -170,12 +170,12 @@ impl PrefillProvider for QTensorEngine {
     fn encode_attention_batched_q_prefill(
         &self,
         pipeline: &mut Self::Pipeline,
-        input: &wgpu::Buffer,
-        in_off: wgpu::BufferAddress,
-        in_bytes: wgpu::BufferAddress,
-        output: &wgpu::Buffer,
-        out_off: wgpu::BufferAddress,
-        out_bytes: wgpu::BufferAddress,
+        input: &etalon::Buffer,
+        in_off: etalon::BufferAddress,
+        in_bytes: etalon::BufferAddress,
+        output: &etalon::Buffer,
+        out_off: etalon::BufferAddress,
+        out_bytes: etalon::BufferAddress,
         n_embd: usize,
         n_tokens: u32,
         layout: &Self::Layout,
@@ -208,15 +208,15 @@ impl PrefillProvider for QTensorEngine {
         op: u32,
         n: u32,
         batch: u32,
-        a: &wgpu::Buffer,
-        a_off: wgpu::BufferAddress,
-        a_bytes: wgpu::BufferAddress,
-        b: &wgpu::Buffer,
-        b_off: wgpu::BufferAddress,
-        b_bytes: wgpu::BufferAddress,
-        out: &wgpu::Buffer,
-        out_off: wgpu::BufferAddress,
-        out_bytes: wgpu::BufferAddress,
+        a: &etalon::Buffer,
+        a_off: etalon::BufferAddress,
+        a_bytes: etalon::BufferAddress,
+        b: &etalon::Buffer,
+        b_off: etalon::BufferAddress,
+        b_bytes: etalon::BufferAddress,
+        out: &etalon::Buffer,
+        out_off: etalon::BufferAddress,
+        out_bytes: etalon::BufferAddress,
         a_row_stride: u32,
         b_row_stride: u32,
         out_row_stride: u32,
@@ -253,12 +253,12 @@ impl PrefillProvider for QTensorEngine {
         &self,
         pipeline: &mut Self::Pipeline,
         layer: u32,
-        input: &wgpu::Buffer,
-        in_off: wgpu::BufferAddress,
-        in_bytes: wgpu::BufferAddress,
-        output: &wgpu::Buffer,
-        out_off: wgpu::BufferAddress,
-        out_bytes: wgpu::BufferAddress,
+        input: &etalon::Buffer,
+        in_off: etalon::BufferAddress,
+        in_bytes: etalon::BufferAddress,
+        output: &etalon::Buffer,
+        out_off: etalon::BufferAddress,
+        out_bytes: etalon::BufferAddress,
         n_out: u32,
         n_batch: u32,
         gemm_dyn_offset: u32,
@@ -286,14 +286,14 @@ impl PrefillProvider for QTensorEngine {
         n_embd: usize,
         layer: u32,
         is_ffn: bool,
-    ) -> Option<(&wgpu::Buffer, wgpu::BufferAddress)> {
+    ) -> Option<(&etalon::Buffer, etalon::BufferAddress)> {
         QTensorEngine::mc8_norm_source(self, mmap, tensor_data_start, info, n_embd, layer, is_ffn)
     }
     fn encode_attention_pass_gpu(
         &self,
         pipeline: &mut Self::Pipeline,
-        input: &wgpu::Buffer,
-        output: &wgpu::Buffer,
+        input: &etalon::Buffer,
+        output: &etalon::Buffer,
         n_embd: usize,
         num_tokens_in_batch: u32,
         batch_start_token_idx: u32,
@@ -339,8 +339,8 @@ impl PrefillProvider for QTensorEngine {
         token_idx: u32,
         emb_dim: usize,
         tensors: &LayerTensors,
-        token_hidden: &wgpu::Buffer,
-        attn_input: Option<&wgpu::Buffer>,
+        token_hidden: &etalon::Buffer,
+        attn_input: Option<&etalon::Buffer>,
         work_aliases_hidden: bool,
     ) -> bool {
         QTensorEngine::encode_attn_ffn_tail_gpu(

@@ -65,6 +65,16 @@ pub(super) fn call_path(expr: &Expr, aliases: &HashMap<String, String>) -> Optio
                 let resolved_ns = aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
                 return Some(format!("{resolved_ns}.{name}"));
             }
+            if let ExprKind::Member {
+                recv: inner_recv,
+                name: sub,
+            } = &recv.kind
+            {
+                if let ExprKind::Ident(ns) = &inner_recv.kind {
+                    let resolved_ns = aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
+                    return Some(format!("{resolved_ns}.{sub}.{name}"));
+                }
+            }
             None
         }
         ExprKind::Ident(n) => Some(n.clone()),

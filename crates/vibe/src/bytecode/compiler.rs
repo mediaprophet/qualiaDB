@@ -482,29 +482,55 @@ impl Compiler {
             }
         }
 
-        // Otherwise, treat as a host call. The callee path is a string constant.
-        // For member expressions like `math.sqrt`, the path is the full dotted name.
+        // Otherwise, treat as a host/extension call. The callee path is a string constant.
+        // Supports both 2-level (`math.sqrt`, `mech.verlet_step`) and 3-level (`mech.kinematics.verlet_step`) paths.
         let static_member_path;
         let path = if let Some(name) = callee_name {
             name
         } else if let ExprKind::Member { recv, name } = &callee.kind {
-            let ExprKind::Ident(namespace) = &recv.kind else {
-                return Err(CompileError::Unsupported(
-                    "dynamic host callee; use the AST evaluator",
-                ));
-            };
-            if self.lookup(namespace).is_some() {
-                return Err(CompileError::Unsupported(
-                    "dynamic member callee; use the AST evaluator",
-                ));
+            match &recv.kind {
+                ExprKind::Ident(namespace) => {
+                    if self.lookup(namespace).is_some() {
+                        return Err(CompileError::Unsupported(
+                            "dynamic member callee; use the AST evaluator",
+                        ));
+                    }
+                    let namespace = self
+                        .aliases
+                        .get(namespace)
+                        .map(String::as_str)
+                        .unwrap_or(namespace);
+                    static_member_path = format!("{namespace}.{name}");
+                    &static_member_path
+                }
+                ExprKind::Member {
+                    recv: inner_recv,
+                    name: sub_name,
+                } => {
+                    let ExprKind::Ident(namespace) = &inner_recv.kind else {
+                        return Err(CompileError::Unsupported(
+                            "dynamic host callee; use the AST evaluator",
+                        ));
+                    };
+                    if self.lookup(namespace).is_some() {
+                        return Err(CompileError::Unsupported(
+                            "dynamic member callee; use the AST evaluator",
+                        ));
+                    }
+                    let namespace = self
+                        .aliases
+                        .get(namespace)
+                        .map(String::as_str)
+                        .unwrap_or(namespace);
+                    static_member_path = format!("{namespace}.{sub_name}.{name}");
+                    &static_member_path
+                }
+                _ => {
+                    return Err(CompileError::Unsupported(
+                        "dynamic host callee; use the AST evaluator",
+                    ))
+                }
             }
-            let namespace = self
-                .aliases
-                .get(namespace)
-                .map(String::as_str)
-                .unwrap_or(namespace);
-            static_member_path = format!("{namespace}.{name}");
-            &static_member_path
         } else {
             return Err(CompileError::Unsupported(
                 "dynamic host callee; use the AST evaluator",

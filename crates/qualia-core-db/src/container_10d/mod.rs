@@ -60,6 +60,8 @@ pub mod typed_payloads;
 // and carry the same gate, so this is symmetric — no portal-path regression
 // (the portal renderer upload path uses `mesh_section`, which has no
 // `specialized_libs` dependency).
+pub mod cluster_dag_section;
+pub mod correspondence_section;
 pub mod entity_ontology_section;
 pub mod impostor_section;
 pub mod procedural_synthesis;
@@ -68,6 +70,22 @@ pub mod surfel_section;
 pub mod topology_section;
 pub mod voxel_section;
 
+pub use cluster_dag_section::{
+    cluster_dag_encoded_len, decode_cluster_dag_section, decode_oct16_normal,
+    encode_cluster_dag_section, encode_oct16_normal, project_sphere_error_px,
+    select_cut_clusters_zero_heap, ClusterDagMiniHeader, ClusterDagSectionError,
+    MeshletClusterNode, CLUSTER_DAG_HEADER_SIZE, CLUSTER_DAG_SECTION_VERSION,
+    FLAG_CDAG_CONE_CULLED, FLAG_CDAG_SEAM_LOCKED, MAGIC_CDAG, MAX_CLUSTER_DAG_NODES,
+    MAX_MESHLET_TRIANGLES, MAX_MESHLET_VERTICES, MESHLET_CLUSTER_NODE_SIZE,
+};
+pub use correspondence_section::{
+    correspondence_encoded_len, decode_correspondence_section, deform_surface_vertices_zero_heap,
+    encode_correspondence_section, CorrespondenceMiniHeader, CorrespondenceSectionError,
+    VertexTetBinding, BARYCENTRIC_UNORM16_SUM, CORRESPONDENCE_HEADER_SIZE,
+    CORRESPONDENCE_SECTION_VERSION, FLAG_FEMC_CONFORMING_BARYCENTRIC,
+    FLAG_FEMC_HAS_NORMAL_ROTATION, MAGIC_FEMC, MAX_CORRESPONDENCE_BINDINGS,
+    VERTEX_TET_BINDING_SIZE,
+};
 pub use voxel_section::*;
 
 pub use axis_role::{

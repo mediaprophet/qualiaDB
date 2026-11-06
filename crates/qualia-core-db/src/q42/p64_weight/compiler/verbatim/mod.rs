@@ -128,20 +128,7 @@ pub(super) fn empty_descriptor<'a>() -> TensorDescriptor<'a> {
     }
 }
 
+#[inline]
 pub(super) fn empty_entry() -> etalon_model::p64::P64TensorEntry {
-    etalon_model::p64::P64TensorEntry {
-        name_offset: 0,
-        role_id: 0,
-        dtype: 0,
-        manifold_idx: 0,
-        rank: 0,
-        dimensions: [0; 4],
-        blob_offset: 0,
-        blob_size: 0,
-        source_offset: 0,
-        source_name_hash: 0,
-        alt_dtype: 0,
-        precision_views_mask: 0,
-        alt_blob_offset: 0,
-    }
+    etalon_model::p64::P64TensorEntry::empty()
 }

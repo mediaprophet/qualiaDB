@@ -39,69 +39,20 @@ pub use reader::*;
 pub use transcode::*;
 
 // Shared, crate-internal helpers used across the submodules above. They live in the parent
-// module so every child (compiler / transcode / reader / tests) can reach them unchanged.
+// module so every child (compiler / transcode / reader / tests) can reach them unchanged,
+// while delegating neutral `.p64` layout & serialization mechanics to `etalon_model::p64`.
 
 #[inline]
-#[allow(dead_code)]
-fn align_up(x: usize, a: usize) -> usize {
-    debug_assert!(a.is_power_of_two());
-    (x + a - 1) & !(a - 1)
-}
-
 #[allow(dead_code)]
 fn write_manifold_coordinate(
     coordinate: &crate::modalities::manifold::ManifoldCoordinate10D,
     out: &mut [u8],
 ) {
-    assert!(out.len() >= P64_MANIFOLD_ENTRY_BYTES);
-    out[..P64_MANIFOLD_ENTRY_BYTES].fill(0);
-    for (index, value) in coordinate.as_f32_array().iter().enumerate() {
-        let start = index * 4;
-        out[start..start + 4].copy_from_slice(&value.to_le_bytes());
-    }
+    etalon_model::p64::P64ManifoldRecord::write_values_le(&coordinate.as_f32_array(), out);
 }
 
+#[inline]
 #[allow(dead_code)]
 fn write_tensor_entry(entry: &P64TensorEntry, out: &mut [u8]) {
-    assert!(out.len() >= P64_TENSOR_ENTRY_BYTES);
-    out[..P64_TENSOR_ENTRY_BYTES].fill(0);
-    out[0..4].copy_from_slice(&entry.name_offset.to_le_bytes());
-    out[4..6].copy_from_slice(&entry.role_id.to_le_bytes());
-    out[6..8].copy_from_slice(&entry.dtype.to_le_bytes());
-    out[8..12].copy_from_slice(&entry.manifold_idx.to_le_bytes());
-    out[12..16].copy_from_slice(&entry.rank.to_le_bytes());
-    for (index, dimension) in entry.dimensions.iter().enumerate() {
-        let start = 16 + index * 4;
-        out[start..start + 4].copy_from_slice(&dimension.to_le_bytes());
-    }
-    out[32..36].copy_from_slice(&entry.blob_offset.to_le_bytes());
-    out[36..40].copy_from_slice(&entry.blob_size.to_le_bytes());
-    out[40..48].copy_from_slice(&entry.source_offset.to_le_bytes());
-    out[48..56].copy_from_slice(&entry.source_name_hash.to_le_bytes());
-    out[56..58].copy_from_slice(&entry.alt_dtype.to_le_bytes());
-    out[58..60].copy_from_slice(&entry.precision_views_mask.to_le_bytes());
-    out[60..64].copy_from_slice(&entry.alt_blob_offset.to_le_bytes());
-}
-
-/// GGUF tensor-name suffix for a per-layer P64 role (None for global tensors, named directly).
-fn p64_role_suffix(role_id: u16) -> Option<&'static [u8]> {
-    match role_id {
-        P64_ROLE_ATTN_K => Some(b"attn_k.weight"),
-        P64_ROLE_ATTN_V => Some(b"attn_v.weight"),
-        P64_ROLE_ATTN_Q => Some(b"attn_q.weight"),
-        P64_ROLE_ATTN_OUTPUT => Some(b"attn_output.weight"),
-        P64_ROLE_FFN_GATE => Some(b"ffn_gate.weight"),
-        P64_ROLE_FFN_UP => Some(b"ffn_up.weight"),
-        P64_ROLE_FFN_DOWN => Some(b"ffn_down.weight"),
-        P64_ROLE_ATTN_NORM => Some(b"attn_norm.weight"),
-        P64_ROLE_FFN_NORM => Some(b"ffn_norm.weight"),
-        P64_ROLE_MOE_ROUTER => Some(b"ffn_gate_inp.weight"),
-        P64_ROLE_MOE_GATE_EXPS => Some(b"ffn_gate_exps.weight"),
-        P64_ROLE_MOE_UP_EXPS => Some(b"ffn_up_exps.weight"),
-        P64_ROLE_MOE_DOWN_EXPS => Some(b"ffn_down_exps.weight"),
-        P64_ROLE_MOE_SHARED_GATE => Some(b"ffn_gate_shexp.weight"),
-        P64_ROLE_MOE_SHARED_UP => Some(b"ffn_up_shexp.weight"),
-        P64_ROLE_MOE_SHARED_DOWN => Some(b"ffn_down_shexp.weight"),
-        _ => None,
-    }
+    entry.write_le(out);
 }

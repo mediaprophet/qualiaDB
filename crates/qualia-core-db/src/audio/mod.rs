@@ -4,6 +4,7 @@ pub mod acoustic_plane;
 pub mod acoustic_sab;
 pub mod audio_sidecar_link;
 pub mod audio_spectral_sheet;
+pub mod audio_spectral_sheet_v3;
 pub mod bioacoustics;
 pub mod cqt_bake;
 /// N6: Traditional DAW DSP — oscillator, ADSR, filter, LFO, effects, MIDI, transport, meters.
@@ -42,6 +43,7 @@ pub use audio_spectral_sheet::{
     parse_sidecar_header, AudioSpectralSheetView, AudioSpectralSidecarHeader,
     SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
+pub use audio_spectral_sheet_v3::*;
 pub use bioacoustics::{
     compile_vocalizations_to_sparql_mm, detect_bioacoustic_vocalizations, BioacousticVocalization,
     MM_TEMPORAL_FRAGMENT, QUALIA_ACOUSTIC_OBSERVATION,

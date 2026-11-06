@@ -10,22 +10,9 @@ use crate::types::AudioError;
 /// of the Hamming taper.
 ///
 /// Returns [`AudioError::InvalidParameter`] if `out` is empty.
+#[inline]
 pub fn hamming_window(out: &mut [f32]) -> Result<(), AudioError> {
-    let n = out.len();
-    if n == 0 {
-        return Err(AudioError::InvalidParameter);
-    }
-    if n == 1 {
-        out[0] = 1.0;
-        return Ok(());
-    }
-    const A0: f64 = 0.54;
-    const A1: f64 = 0.46;
-    for (i, w) in out.iter_mut().enumerate() {
-        let ang = core::f64::consts::TAU * i as f64 / n as f64;
-        *w = (A0 - A1 * ang.cos()) as f32;
-    }
-    Ok(())
+    etalon_signal::window::hamming_window(out).map_err(|_| AudioError::InvalidParameter)
 }
 
 #[cfg(test)]

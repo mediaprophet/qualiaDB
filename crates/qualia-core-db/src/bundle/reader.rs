@@ -11,8 +11,9 @@ pub use limits::BundleReadLimits;
 mod limits_tests;
 
 use super::format::{
-    BundleEntry, BundleError, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION, OFF_CRC32C,
-    OFF_FLAGS, OFF_INDEX_LENGTH, OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH, OFF_VERSION,
+    BundleEntry, BundleError, BUNDLE_FLAG_PAGE_ALIGN_4096, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC,
+    BUNDLE_PAGE_ALIGN_4096, BUNDLE_VERSION, OFF_CRC32C, OFF_FLAGS, OFF_INDEX_LENGTH,
+    OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH, OFF_VERSION,
 };
 
 #[inline]
@@ -55,16 +56,22 @@ impl<'a> BundleReader<'a> {
     pub fn parse_with_limits(bytes: &'a [u8], limits: BundleReadLimits) -> Result<Self, BundleError> {
         let count = self::limits::preflight(bytes, limits)?;
         let reader = Self::parse(bytes)?;
-        if reader.entries.len() != count { return Err(BundleError::Cbor("Bundle entry count differs".into())); }
+        if reader.entries.len() != count {
+            return Err(BundleError::Cbor("Bundle entry count differs".into()));
+        }
         for entry in &reader.entries {
-            if entry.key.is_empty() || entry.offset % super::format::BUNDLE_ENTRY_ALIGN as u64 != 0
+            if entry.key.is_empty()
+                || entry.offset % super::format::BUNDLE_ENTRY_ALIGN as u64 != 0
                 || entry.sha256.len() != 32
-            { return Err(BundleError::Cbor("Bundle entry integrity differs".into())); }
+            {
+                return Err(BundleError::Cbor("Bundle entry integrity differs".into()));
+            }
         }
         // One reference per entry fits inside the preflight's four-times-entry
         // reservation. Both unstable sorts are in-place; no tree/node allocation.
         let mut ordered = Vec::new();
-        ordered.try_reserve_exact(count)
+        ordered
+            .try_reserve_exact(count)
             .map_err(|_| BundleError::Cbor("Bundle validation scratch unavailable".into()))?;
         ordered.extend(reader.entries.iter());
         ordered.sort_unstable_by(|a, b| a.key.cmp(&b.key));
@@ -148,6 +155,7 @@ impl<'a> BundleReader<'a> {
             ciborium::from_reader(index_slice).map_err(|e| BundleError::Cbor(e.to_string()))?;
 
         // Every entry must lie within the payload region (before the index).
+        let check_4096 = (flags & BUNDLE_FLAG_PAGE_ALIGN_4096) != 0;
         for e in &entries {
             let e_end =
                 e.offset
@@ -162,6 +170,13 @@ impl<'a> BundleReader<'a> {
                     key: e.key.clone(),
                     offset: e.offset,
                     length: e.length,
+                });
+            }
+            if check_4096 && (e.offset % BUNDLE_PAGE_ALIGN_4096 as u64 != 0) {
+                return Err(BundleError::UnpageAligned {
+                    key: e.key.clone(),
+                    offset: e.offset,
+                    alignment: BUNDLE_PAGE_ALIGN_4096,
                 });
             }
         }
@@ -182,6 +197,11 @@ impl<'a> BundleReader<'a> {
     /// such as a signed/compressed-entry variant).
     pub fn flags(&self) -> u16 {
         self.flags
+    }
+
+    /// True when the bundle header declares 4096-byte OS page alignment.
+    pub fn is_page_aligned_4096(&self) -> bool {
+        (self.flags & BUNDLE_FLAG_PAGE_ALIGN_4096) != 0
     }
 
     /// The index record for `key`, if present.
@@ -233,6 +253,19 @@ impl<'a> BundleReader<'a> {
             Some(bytes) => {
                 let manifest = super::variant_matrix::TwinFamilyManifest::decode_from_cbor(bytes)?;
                 Ok(Some(manifest))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Retrieve and decode the embedded holistic species metadata, if present.
+    pub fn get_species_meta(
+        &self,
+    ) -> Result<Option<super::species_meta::HolisticSpeciesMeta>, BundleError> {
+        match self.get(super::species_meta::SPECIES_META_ENTRY_KEY) {
+            Some(bytes) => {
+                let meta = super::species_meta::HolisticSpeciesMeta::decode_from_cbor(bytes)?;
+                Ok(Some(meta))
             }
             None => Ok(None),
         }

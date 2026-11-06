@@ -15,7 +15,7 @@ fn portal_fixed_buffer_residency_covers_all_persistent_uniforms() {
 
 #[test]
 fn offscreen_size_contract_is_caller_buffered() {
-    assert_eq!(padded_bytes_per_row(1), wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    assert_eq!(padded_bytes_per_row(1), etalon::COPY_BYTES_PER_ROW_ALIGNMENT);
     assert_eq!(padded_bytes_per_row(64), 256);
     assert_eq!(padded_bytes_per_row(65), 512);
 }
@@ -76,36 +76,36 @@ fn temporal_render_submits_only_with_real_host_producer_views() {
 
     // These are host-owned attachments. The renderer receives their views but never creates
     // or fills them, so the integration test exercises the typed producer seam directly.
-    let motion_texture = renderer.device().create_texture(&wgpu::TextureDescriptor {
+    let motion_texture = renderer.device().create_texture(&etalon::TextureDescriptor {
         label: Some("test-host-motion-vectors"),
-        size: wgpu::Extent3d {
+        size: etalon::Extent3d {
             width: 32,
             height: 24,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
         sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Rg16Float,
-        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+        dimension: etalon::TextureDimension::D2,
+        format: etalon::TextureFormat::Rg16Float,
+        usage: etalon::TextureUsages::TEXTURE_BINDING,
         view_formats: &[],
     });
-    let reactive_texture = renderer.device().create_texture(&wgpu::TextureDescriptor {
+    let reactive_texture = renderer.device().create_texture(&etalon::TextureDescriptor {
         label: Some("test-host-reactive-mask"),
-        size: wgpu::Extent3d {
+        size: etalon::Extent3d {
             width: 32,
             height: 24,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
         sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::R8Unorm,
-        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+        dimension: etalon::TextureDimension::D2,
+        format: etalon::TextureFormat::R8Unorm,
+        usage: etalon::TextureUsages::TEXTURE_BINDING,
         view_formats: &[],
     });
-    let motion_view = motion_texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let reactive_view = reactive_texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let motion_view = motion_texture.create_view(&etalon::TextureViewDescriptor::default());
+    let reactive_view = reactive_texture.create_view(&etalon::TextureViewDescriptor::default());
     let schedule = crate::render::frame_graph::TemporalOutputSchedule {
         enabled: true,
         reset_history: true,

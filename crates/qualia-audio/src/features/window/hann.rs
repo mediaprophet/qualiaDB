@@ -11,20 +11,9 @@ use crate::types::AudioError;
 /// the final sample `w[N−1]` is **not** zero (that is the symmetric convention).
 ///
 /// Returns [`AudioError::InvalidParameter`] if `out` is empty.
+#[inline]
 pub fn hann_window(out: &mut [f32]) -> Result<(), AudioError> {
-    let n = out.len();
-    if n == 0 {
-        return Err(AudioError::InvalidParameter);
-    }
-    if n == 1 {
-        out[0] = 1.0;
-        return Ok(());
-    }
-    for (i, w) in out.iter_mut().enumerate() {
-        let ang = core::f64::consts::TAU * i as f64 / n as f64;
-        *w = (0.5 * (1.0 - ang.cos())) as f32;
-    }
-    Ok(())
+    etalon_signal::window::hann_window(out).map_err(|_| AudioError::InvalidParameter)
 }
 
 #[cfg(test)]

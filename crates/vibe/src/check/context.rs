@@ -200,6 +200,7 @@ pub(super) fn resolved_call_effect(
         if super::bindings::BINDING_PATHS.contains(&p.as_str())
             || crate::catalog::is_known(&p)
             || crate::catalog::looks_like_catalog_path(&p)
+            || crate::extension_registry::is_extension_call_path(&p)
             || matches!(
                 p.as_str(),
                 "vec2"

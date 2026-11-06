@@ -180,13 +180,13 @@ pub(crate) use etalon_inference::browser_prefill::types::Mc8WeightRole;
 /// One buffer per GEMM role so mid-layer weight uploads never clobber in-flight dispatches.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub(crate) struct Mc8WeightArenaBufs {
-    qkv_k: wgpu::Buffer,
-    qkv_v: wgpu::Buffer,
-    qkv_q: wgpu::Buffer,
-    o_proj: wgpu::Buffer,
-    gate: wgpu::Buffer,
-    up: wgpu::Buffer,
-    down: wgpu::Buffer,
+    qkv_k: etalon::Buffer,
+    qkv_v: etalon::Buffer,
+    qkv_q: etalon::Buffer,
+    o_proj: etalon::Buffer,
+    gate: etalon::Buffer,
+    up: etalon::Buffer,
+    down: etalon::Buffer,
 }
 
 /// Part 3u: dynamic offsets for one full prefill layer (staged before encoder dispatches).
@@ -211,7 +211,7 @@ pub(crate) use etalon_inference::browser_prefill::types::Mc8AttnUniformArena;
 /// MC8: accumulates compute passes; submit + map_async only at pipeline boundary.
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub struct WasmGpuPipeline {
-    encoder: wgpu::CommandEncoder,
+    encoder: etalon::CommandEncoder,
 }
 
 // ggml_gpu_quant_supported / ggml_gpu_attention_shader_supported / ggml_gpu_gemm_supported moved to
@@ -219,7 +219,7 @@ pub struct WasmGpuPipeline {
 
 /// Await `map_async` without `poll(Wait)` — yields to the browser event loop (MC6).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
-pub(crate) async fn await_wgpu_map(slice: wgpu::BufferSlice<'_>) -> bool {
+pub(crate) async fn await_wgpu_map(slice: etalon::BufferSlice<'_>) -> bool {
     etalon_wasm::readback::await_map(slice, etalon_wasm::readback::browser_worker()).await
 }
 
@@ -230,14 +230,14 @@ impl WasmGpuPipeline {
         Self {
             encoder: engine
                 .device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                .create_command_encoder(&etalon::CommandEncoderDescriptor {
                     label: Some("MC8FusedEncoder"),
                 }),
         }
     }
 
     /// Finishes encoding and returns the command buffer.
-    pub(crate) fn finish(self) -> wgpu::CommandBuffer {
+    pub(crate) fn finish(self) -> etalon::CommandBuffer {
         self.encoder.finish()
     }
 }

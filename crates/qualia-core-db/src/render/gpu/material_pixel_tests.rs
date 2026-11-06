@@ -10,33 +10,33 @@ fn read_ao_depth_code(renderer: &PortalGpu, x: u32, y: u32) -> u16 {
     let (width, height) = ao.extent();
     assert!(x < width && y < height, "AO probe outside {width}x{height}");
 
-    let staging = renderer.device.create_buffer(&wgpu::BufferDescriptor {
+    let staging = renderer.device.create_buffer(&etalon::BufferDescriptor {
         label: Some("alpha-mask-ao-test-readback"),
         size: 256,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
     let mut encoder = renderer
         .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        .create_command_encoder(&etalon::CommandEncoderDescriptor {
             label: Some("alpha-mask-ao-test-copy"),
         });
     encoder.copy_texture_to_buffer(
-        wgpu::TexelCopyTextureInfo {
+        etalon::TexelCopyTextureInfo {
             texture: ao.normal_texture_for_test(),
             mip_level: 0,
-            origin: wgpu::Origin3d { x, y, z: 0 },
-            aspect: wgpu::TextureAspect::All,
+            origin: etalon::Origin3d { x, y, z: 0 },
+            aspect: etalon::TextureAspect::All,
         },
-        wgpu::TexelCopyBufferInfo {
+        etalon::TexelCopyBufferInfo {
             buffer: &staging,
-            layout: wgpu::TexelCopyBufferLayout {
+            layout: etalon::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(256),
                 rows_per_image: Some(1),
             },
         },
-        wgpu::Extent3d {
+        etalon::Extent3d {
             width: 1,
             height: 1,
             depth_or_array_layers: 1,
@@ -45,10 +45,10 @@ fn read_ao_depth_code(renderer: &PortalGpu, x: u32, y: u32) -> u16 {
     renderer.queue.submit(std::iter::once(encoder.finish()));
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |result| {
+    slice.map_async(etalon::MapMode::Read, move |result| {
         let _ = tx.send(result);
     });
-    let _ = renderer.device.poll(wgpu::PollType::wait_indefinitely());
+    let _ = renderer.device.poll(etalon::PollType::wait_indefinitely());
     rx.recv()
         .expect("AO readback callback")
         .expect("AO readback mapping");
@@ -211,34 +211,34 @@ fn native_alpha_coverage_mips_keep_minified_mask_visible() {
         .find(|(identity, _)| identity.source_digest == digest)
         .map(|(_, resident)| resident)
         .expect("resident alpha texture");
-    let mip_readback = renderer.device.create_buffer(&wgpu::BufferDescriptor {
+    let mip_readback = renderer.device.create_buffer(&etalon::BufferDescriptor {
         label: Some("alpha-coverage-mip-readback"),
         size: 3 * 256,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
     let mut encoder = renderer
         .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        .create_command_encoder(&etalon::CommandEncoderDescriptor {
             label: Some("alpha-coverage-mip-readback"),
         });
     for (index, mip_level) in [1u32, 2, 3].into_iter().enumerate() {
         encoder.copy_texture_to_buffer(
-            wgpu::TexelCopyTextureInfo {
+            etalon::TexelCopyTextureInfo {
                 texture: &resident._texture,
                 mip_level,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
+                origin: etalon::Origin3d::ZERO,
+                aspect: etalon::TextureAspect::All,
             },
-            wgpu::TexelCopyBufferInfo {
+            etalon::TexelCopyBufferInfo {
                 buffer: &mip_readback,
-                layout: wgpu::TexelCopyBufferLayout {
+                layout: etalon::TexelCopyBufferLayout {
                     offset: (index * 256) as u64,
                     bytes_per_row: Some(256),
                     rows_per_image: Some(1),
                 },
             },
-            wgpu::Extent3d {
+            etalon::Extent3d {
                 width: 1,
                 height: 1,
                 depth_or_array_layers: 1,
@@ -248,10 +248,10 @@ fn native_alpha_coverage_mips_keep_minified_mask_visible() {
     renderer.queue.submit(std::iter::once(encoder.finish()));
     let slice = mip_readback.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |result| {
+    slice.map_async(etalon::MapMode::Read, move |result| {
         let _ = tx.send(result);
     });
-    let _ = renderer.device.poll(wgpu::PollType::wait_indefinitely());
+    let _ = renderer.device.poll(etalon::PollType::wait_indefinitely());
     rx.recv()
         .expect("alpha mip readback callback")
         .expect("alpha mip readback mapping");

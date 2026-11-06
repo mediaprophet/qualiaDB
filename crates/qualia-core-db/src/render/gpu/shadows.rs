@@ -12,7 +12,7 @@ impl std::ops::Deref for ShadowTarget {
     }
 }
 impl ShadowTarget {
-    pub fn try_new(device: &wgpu::Device) -> Option<Self> {
+    pub fn try_new(device: &etalon::Device) -> Option<Self> {
         etalon_render::shadows::ShadowTarget::try_new(device, |bytes| {
             global_vram_ledger()
                 .try_reserve_graphics(VramResourceClass::FrameTarget, bytes)

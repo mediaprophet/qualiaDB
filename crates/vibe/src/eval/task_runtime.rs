@@ -53,12 +53,36 @@ impl<'a, H: Host> Engine<'a, H> {
             env.aliases = previous_aliases;
             return Err(diag);
         }
+        let pinned_registry_gen = self.extension_registry.generation();
+        let pinned_policy_gen = self
+            .sentinel_gate
+            .as_ref()
+            .map(|g| g.current_policy_generation());
         let previous_grants = self.granted.clone();
         let previous_program = self.program.replace(std::sync::Arc::new(program.clone()));
         let result = self.eval_program(program, env);
         self.program = previous_program;
         self.granted = previous_grants;
         env.aliases = previous_aliases;
+        if self.extension_registry.generation() != pinned_registry_gen {
+            return Err(crate::extension_registry::trap_to_diagnostic(
+                vibescript_abi::VibeTrap::StaleRegistryGeneration,
+                "task.program",
+                span,
+            ));
+        }
+        if self
+            .sentinel_gate
+            .as_ref()
+            .map(|g| g.current_policy_generation())
+            != pinned_policy_gen
+        {
+            return Err(crate::extension_registry::trap_to_diagnostic(
+                vibescript_abi::VibeTrap::MidExecutionPolicyRevoked,
+                "task.program",
+                span,
+            ));
+        }
         result
     }
 }

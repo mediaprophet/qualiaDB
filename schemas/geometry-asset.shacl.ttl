@@ -1,0 +1,203 @@
+@prefix geo:  <urn:qualia:geometry:> .
+@prefix pga:  <urn:qualia:pga:> .
+@prefix m64:  <urn:qualia:m64:> .
+@prefix u3:   <urn:qualia:u3:> .
+@prefix emf:  <urn:qualia:emf:> .
+@prefix rcc8: <urn:qualia:rcc8:> .
+@prefix epi:  <urn:qualia:epistemic:> .
+@prefix q42:  <urn:qualia:q42:> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── 1. Geometry Asset (.10d) Manifest Node Shape ─────────────────────────
+
+q42:GeometryAsset10dShape a sh:NodeShape ;
+    rdfs:label "Geometry Asset 10D Shape" ;
+    rdfs:comment "Enforces structural invariants on compiled .10d simulation geometry manifests." ;
+    sh:targetClass geo:GeometryAsset10d, geo:Mesh ;
+
+    sh:property [
+        sh:path geo:vertexCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4194304 ;
+        sh:minCount 1 ;
+        sh:message "vertexCount must be within [1, 2^22] (.10d MAX_VERTEX_COUNT guard)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:triangleCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4194304 ;
+        sh:minCount 1 ;
+        sh:message "triangleCount must be within [1, 2^22] (.10d MAX_TRIANGLE_COUNT guard)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:sourceFormat ;
+        sh:datatype xsd:string ;
+        sh:in ( "10d" "obj" "stl" "glb" "gltf" ) ;
+        sh:minCount 1 ;
+        sh:message "sourceFormat must be one of: 10d, obj, stl, glb, gltf" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:compiledDigest ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "compiledDigest (whole-file CRC-32C) is required for container integrity" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:hasScaleTier ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 7 ;
+        sh:message "hasScaleTier must be an integer between 0 and 7" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:hasTopologyClass ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 6 ;
+        sh:message "hasTopologyClass must be an integer between 0 and 6" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 2. Cluster-DAG LOD Invariant Shape (Section 23 CDAG) ──────────────────
+
+q42:ClusterDagInvariantShape a sh:NodeShape ;
+    rdfs:label "Cluster-DAG Meshlet Invariant Shape" ;
+    rdfs:comment "Enforces 64v/124t meshlet constraints and monotonic error bounds on Cluster-DAG sections." ;
+    sh:targetClass geo:ClusterDag, q42:ClusterDagSection ;
+
+    sh:property [
+        sh:path geo:maxMeshletVertices ;
+        sh:datatype xsd:integer ;
+        sh:maxInclusive 64 ;
+        sh:minCount 1 ;
+        sh:message "Cluster-DAG meshlets cannot exceed 64 vertices per meshlet" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:maxMeshletTriangles ;
+        sh:datatype xsd:integer ;
+        sh:maxInclusive 124 ;
+        sh:minCount 1 ;
+        sh:message "Cluster-DAG meshlets cannot exceed 124 triangles per meshlet" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:parentLodError ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:message "Parent LOD error bound must be non-negative" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 3. Matter-64 3D Brick Shape (.m64) ───────────────────────────────────
+
+q42:MatterBrickM64Shape a sh:NodeShape ;
+    rdfs:label "Matter-64 Volumetric Brick Shape" ;
+    rdfs:comment "Validates 64-byte aligned 16x16x16 Hilbert-indexed matter chunk descriptors." ;
+    sh:targetClass m64:MatterBrick, m64:M64Chunk ;
+
+    sh:property [
+        sh:path m64:recordMode ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 3 ;
+        sh:minCount 1 ;
+        sh:message "recordMode must be 0 (POINT), 1 (HOLO), 2 (STRATA), or 3 (PHASE_JUNCTURE)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path m64:chunkRecordCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4096 ;
+        sh:minCount 1 ;
+        sh:message "chunkRecordCount for a 3D brick must not exceed 4096 records" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path m64:spatialHilbertIndex ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "spatialHilbertIndex is required for O(1) spatial range queries" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 4. Full-Spectrum EMF Field Shape (.emf / EMF-64) ─────────────────────
+
+q42:EmfField64Shape a sh:NodeShape ;
+    rdfs:label "Full-Spectrum EMF Field Shape" ;
+    rdfs:comment "Validates 64-byte aligned radiative EMF field cells and polarimetric tensors." ;
+    sh:targetClass emf:EmfField64, emf:RadiativeGrid ;
+
+    sh:property [
+        sh:path emf:spectralBand ;
+        sh:datatype xsd:string ;
+        sh:in ( "elf-bio" "rf-mmwave" "thermal-ir" "visible-spd" "uv" "xray" ) ;
+        sh:minCount 1 ;
+        sh:message "spectralBand must be a recognized physical radiation band" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:refractiveIndex ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 1.0 ;
+        sh:message "refractiveIndex cannot be less than 1.0 in passive physical media" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 5. Spatial Audio Q4AU v3 Shape (.q4au) ───────────────────────────────
+
+q42:SpatialAudioQ4auV3Shape a sh:NodeShape ;
+    rdfs:label "Spatial Audio Q4AU v3 Shape" ;
+    rdfs:comment "Validates 64-byte aligned spatial acoustic sidecars and Ambisonics configurations." ;
+    sh:targetClass u3:SpatialAudioQ4auV3, u3:AcousticSidecar ;
+
+    sh:property [
+        sh:path u3:sampleRateHz ;
+        sh:datatype xsd:integer ;
+        sh:in ( 44100 48000 96000 192000 ) ;
+        sh:minCount 1 ;
+        sh:message "sampleRateHz must be a standard acoustic sampling frequency" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path u3:hoaOrder ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 3 ) ;
+        sh:minCount 1 ;
+        sh:message "hoaOrder must be in 0..3 (3rd order Ambisonics requires 16 channels = 64B/frame)" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 6. Holistic Bundle Package Shape (.hmc / QBDL) ───────────────────────
+
+q42:HolisticBundleHmcShape a sh:NodeShape ;
+    rdfs:label "Holistic Bundle HMC Package Shape" ;
+    rdfs:comment "Validates QBDL container invariants, entry page alignments, and manifests." ;
+    sh:targetClass q42:HolisticBundleHmc, q42:SpeciesTwin ;
+
+    sh:property [
+        sh:path q42:entryAlignmentBytes ;
+        sh:datatype xsd:integer ;
+        sh:in ( 64 4096 ) ;
+        sh:minCount 1 ;
+        sh:message "HMC entry alignments must be either 64 bytes (cache) or 4096 bytes (page)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:bundleCrc32c ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "bundleCrc32c is mandatory for whole-bundle zero-copy verification" ;
+        sh:severity sh:Violation ;
+    ] .

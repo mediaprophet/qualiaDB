@@ -8,18 +8,18 @@ use crate::render::standpoint::spectator_default;
 use crate::render::telemetry::ParticleInstance;
 use crate::shaders::viewport::{AMBIENT_WGSL, MESH_WGSL, PROJECTOR_WGSL};
 use std::sync::Arc;
-use wgpu::util::DeviceExt;
+use etalon::util::DeviceExt;
 
 impl PortalGpu {
     /// Builds from `device`.
     pub(super) async fn from_device(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
+        device: Arc<etalon::Device>,
+        queue: Arc<etalon::Queue>,
         width: u32,
         height: u32,
-        format: wgpu::TextureFormat,
-        surface: Option<wgpu::Surface<'static>>,
-        config: Option<wgpu::SurfaceConfiguration>,
+        format: etalon::TextureFormat,
+        surface: Option<etalon::Surface<'static>>,
+        config: Option<etalon::SurfaceConfiguration>,
         particle_cap: usize,
     ) -> Result<Self, String> {
         let particle_bytes_per_instance = std::mem::size_of::<ParticleInstance>() as u64;
@@ -62,7 +62,7 @@ impl PortalGpu {
         };
 
         // Capture deferred pipeline/shader creation errors on both Dawn and native backends.
-        let error_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let error_scope = device.push_error_scope(etalon::ErrorFilter::Validation);
 
         let scene_depth = scene_depth::SceneDepthOwner::new(&device, width, height);
         let temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
@@ -87,7 +87,7 @@ impl PortalGpu {
         // call `create_view` every frame (VC3 zero-alloc).
         let offscreen_view = offscreen_texture
             .as_ref()
-            .map(|t| t.create_view(&wgpu::TextureViewDescriptor::default()));
+            .map(|t| t.create_view(&etalon::TextureViewDescriptor::default()));
         // Uniform belt: pre-allocated pool of mapped staging buffers for
         // zero-alloc uniform writes (VC3). 256 bytes covers all per-frame
         // uniform structs (ambient ~16B, telemetry ~256B, camera ~96B,
@@ -108,13 +108,13 @@ impl PortalGpu {
         };
 
         let particles = generate_particles(particle_count);
-        let particle_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let particle_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-particles"),
             contents: bytemuck::cast_slice(&particles),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
         });
 
-        let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let uniform_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-ambient-uniforms"),
             contents: bytemuck::bytes_of(&AmbientUniforms {
                 time: 0.0,
@@ -122,53 +122,53 @@ impl PortalGpu {
                 view_height: height as f32,
                 _padding: 0.0,
             }),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
 
-        let telemetry_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let telemetry_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-telemetry"),
             contents: bytemuck::bytes_of(&SystemTelemetry::default()),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
 
         let camera = CameraState::default();
         let aspect = width as f32 / height.max(1) as f32;
         let camera_uniform = camera.to_uniform(aspect, false);
-        let camera_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let camera_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-camera"),
             contents: bytemuck::bytes_of(&camera_uniform),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
 
         let session_nonce = crate::render::standpoint::generate_session_nonce();
         let observer = spectator_default(session_nonce);
-        let observer_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let observer_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-observer"),
             contents: bytemuck::bytes_of(&observer),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
 
-        let ambient_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let ambient_shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("portal-ambient"),
-            source: wgpu::ShaderSource::Wgsl(AMBIENT_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(AMBIENT_WGSL.into()),
         });
 
-        let projector_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let projector_shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("portal-projector"),
-            source: wgpu::ShaderSource::Wgsl(PROJECTOR_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(PROJECTOR_WGSL.into()),
         });
 
-        let mesh_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let mesh_shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("portal-mesh"),
-            source: wgpu::ShaderSource::Wgsl(MESH_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(MESH_WGSL.into()),
         });
-        let shadow_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shadow_shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("portal-sun-shadow"),
-            source: wgpu::ShaderSource::Wgsl(crate::shaders::viewport::SUN_SHADOW_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(crate::shaders::viewport::SUN_SHADOW_WGSL.into()),
         });
 
         let ambient_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
                 label: Some("portal-ambient-layout"),
                 entries: &ambient_bind_entries(),
             });
@@ -184,48 +184,48 @@ impl PortalGpu {
         );
 
         let projector_camera_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
                 label: Some("portal-projector-camera-layout"),
                 entries: &[
-                    uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX_FRAGMENT),
-                    uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
+                    uniform_128_bind_entry(0, etalon::ShaderStages::VERTEX_FRAGMENT),
+                    uniform_128_bind_entry(1, etalon::ShaderStages::VERTEX_FRAGMENT),
                 ],
             });
 
         let sky_pipeline = sky::create_pipeline(&device, &projector_camera_layout, format);
 
         let projector_tensor_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
                 label: Some("portal-projector-tensor-layout"),
                 entries: &[tensor_storage_bind_entry()],
             });
 
-        let projector_camera_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let projector_camera_bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("portal-projector-camera-bind"),
             layout: &projector_camera_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: camera_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: observer_buf.as_entire_binding(),
                 },
             ],
         });
 
-        let depth_state = depth_stencil_state(wgpu::TextureFormat::Depth32Float);
+        let depth_state = depth_stencil_state(etalon::TextureFormat::Depth32Float);
 
         let ambient_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
                 label: Some("portal-ambient-pipeline-layout"),
                 bind_group_layouts: &[Some(&ambient_bind_group_layout)],
                 immediate_size: 0,
             });
 
         let projector_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
                 label: Some("portal-projector-pipeline-layout"),
                 bind_group_layouts: &[
                     Some(&projector_camera_layout),
@@ -234,52 +234,52 @@ impl PortalGpu {
                 immediate_size: 0,
             });
 
-        let ambient_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let ambient_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-ambient-pipeline"),
             layout: Some(&ambient_pipeline_layout),
-            vertex: wgpu::VertexState {
+            vertex: etalon::VertexState {
                 module: &ambient_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[],
             },
-            fragment: Some(wgpu::FragmentState {
+            fragment: Some(etalon::FragmentState {
                 module: &ambient_shader,
                 entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
+            primitive: etalon::PrimitiveState {
+                topology: etalon::PrimitiveTopology::TriangleList,
                 ..Default::default()
             },
             depth_stencil: Some(depth_stencil_state_read_only()),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: etalon::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
         });
 
-        let projector_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let projector_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-projector-pipeline"),
             layout: Some(&projector_pipeline_layout),
-            vertex: wgpu::VertexState {
+            vertex: etalon::VertexState {
                 module: &projector_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[],
             },
-            fragment: Some(wgpu::FragmentState {
+            fragment: Some(etalon::FragmentState {
                 module: &projector_shader,
                 entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
+            primitive: etalon::PrimitiveState {
+                topology: etalon::PrimitiveTopology::TriangleList,
                 ..Default::default()
             },
             depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: etalon::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
         });
@@ -291,40 +291,40 @@ impl PortalGpu {
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0],
         ];
-        let model_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let model_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-mesh-model"),
             contents: bytemuck::cast_slice(&IDENTITY_MAT4),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
-        let mesh_model_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let mesh_model_layout = device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
             label: Some("portal-mesh-model-layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
+            entries: &[etalon::BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
+                visibility: etalon::ShaderStages::VERTEX,
+                ty: etalon::BindingType::Buffer {
+                    ty: etalon::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: std::num::NonZeroU64::new(64),
                 },
                 count: None,
             }],
         });
-        let mesh_model_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let mesh_model_bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("portal-mesh-model-bind"),
             layout: &mesh_model_layout,
-            entries: &[wgpu::BindGroupEntry {
+            entries: &[etalon::BindGroupEntry {
                 binding: 0,
                 resource: model_buf.as_entire_binding(),
             }],
         });
         let mesh_instance_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
                 label: Some("portal-mesh-instance-layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
+                entries: &[etalon::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    visibility: etalon::ShaderStages::VERTEX,
+                    ty: etalon::BindingType::Buffer {
+                        ty: etalon::BufferBindingType::Storage { read_only: true },
                         has_dynamic_offset: false,
                         min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<
                             crate::render::instance_culling::GpuInstanceRecord,
@@ -349,15 +349,15 @@ impl PortalGpu {
             light_view_projection: [IDENTITY_MAT4; shadows::SHADOW_CASCADE_COUNT],
             params: [0.0, 1.0, 0.001, 0.0],
         };
-        let shadow_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let shadow_uniform_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-sun-shadow-uniform"),
             contents: bytemuck::bytes_of(&shadow_initial),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
-        let shadow_uniform_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let shadow_uniform_bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("portal-sun-shadow-matrix-bind"),
             layout: &shadow_matrix_layout,
-            entries: &[wgpu::BindGroupEntry {
+            entries: &[etalon::BindGroupEntry {
                 binding: 0,
                 resource: shadow_uniform_buf.as_entire_binding(),
             }],
@@ -377,17 +377,17 @@ impl PortalGpu {
             8,
             false,
         );
-        let ao_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let ao_uniform_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-screen-space-ao-uniform"),
             contents: bytemuck::bytes_of(&ao_uniform_initial),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
         let atmosphere_profile = AtmospherePreset::from_id(0);
         let atmosphere_uniform = atmosphere::AtmosphereUniform::from_profile(atmosphere_profile);
-        let atmosphere_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let atmosphere_uniform_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("portal-atmosphere-uniform"),
             contents: bytemuck::bytes_of(&atmosphere_uniform),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
         let mesh_material_layout = materials::create_layout(&device);
         let mesh_texture_layout = material_textures::create_layout(&device);
@@ -443,7 +443,7 @@ impl PortalGpu {
         // WebGPU's portable four-group baseline without dropping any material or lighting path.
         // Position, colour and generated normal streams remain separate for future authored data.
         // Culling remains disabled until import winding has an explicit canonical contract.
-        let mesh_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let mesh_pipeline_layout = device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
             label: Some("portal-mesh-pipeline-layout"),
             bind_group_layouts: &[
                 Some(&mesh_frame_layout),
@@ -460,17 +460,17 @@ impl PortalGpu {
             format,
             probe_hdr_format(&device),
         );
-        let mesh_vertex_layout = wgpu::VertexBufferLayout {
+        let mesh_vertex_layout = etalon::VertexBufferLayout {
             array_stride: 12,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x3,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x3,
                 offset: 0,
                 shader_location: 0,
             }],
         };
         let shadow_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
                 label: Some("portal-sun-shadow-pipeline-layout"),
                 bind_group_layouts: &[
                     Some(&shadow_matrix_layout),
@@ -480,33 +480,33 @@ impl PortalGpu {
                 ],
                 immediate_size: 0,
             });
-        let shadow_color_layout = wgpu::VertexBufferLayout {
+        let shadow_color_layout = etalon::VertexBufferLayout {
             array_stride: 16,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x4,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x4,
                 offset: 0,
                 shader_location: 1,
             }],
         };
-        let shadow_uv_layout = wgpu::VertexBufferLayout {
+        let shadow_uv_layout = etalon::VertexBufferLayout {
             array_stride: 8,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x2,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x2,
                 offset: 0,
                 shader_location: 2,
             }],
         };
         let shadow_pipelines = ["shadow_vertex_near", "shadow_vertex_far"].map(|entry_point| {
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some(if entry_point == "shadow_vertex_near" {
                     "portal-sun-shadow-near-depth"
                 } else {
                     "portal-sun-shadow-far-depth"
                 }),
                 layout: Some(&shadow_pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &shadow_shader,
                     entry_point: Some(entry_point),
                     compilation_options: Default::default(),
@@ -516,73 +516,73 @@ impl PortalGpu {
                         Some(shadow_uv_layout.clone()),
                     ],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &shadow_shader,
                     entry_point: Some("shadow_mask_fragment"),
                     compilation_options: Default::default(),
                     targets: &[],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     cull_mode: None,
                     ..Default::default()
                 },
-                depth_stencil: Some(wgpu::DepthStencilState {
-                    format: wgpu::TextureFormat::Depth32Float,
+                depth_stencil: Some(etalon::DepthStencilState {
+                    format: etalon::TextureFormat::Depth32Float,
                     depth_write_enabled: Some(true),
-                    depth_compare: Some(wgpu::CompareFunction::Less),
-                    stencil: wgpu::StencilState::default(),
-                    bias: wgpu::DepthBiasState {
+                    depth_compare: Some(etalon::CompareFunction::Less),
+                    stencil: etalon::StencilState::default(),
+                    bias: etalon::DepthBiasState {
                         constant: 2,
                         slope_scale: 1.5,
                         clamp: 0.0,
                     },
                 }),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             })
         });
-        let mesh_color_layout = wgpu::VertexBufferLayout {
+        let mesh_color_layout = etalon::VertexBufferLayout {
             array_stride: 16,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x4,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x4,
                 offset: 0,
                 shader_location: 1,
             }],
         };
-        let mesh_normal_layout = wgpu::VertexBufferLayout {
+        let mesh_normal_layout = etalon::VertexBufferLayout {
             array_stride: 12,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x3,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x3,
                 offset: 0,
                 shader_location: 2,
             }],
         };
-        let mesh_tangent_layout = wgpu::VertexBufferLayout {
+        let mesh_tangent_layout = etalon::VertexBufferLayout {
             array_stride: 16,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x4,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x4,
                 offset: 0,
                 shader_location: 3,
             }],
         };
-        let mesh_uv_layout = wgpu::VertexBufferLayout {
+        let mesh_uv_layout = etalon::VertexBufferLayout {
             array_stride: 8,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[wgpu::VertexAttribute {
-                format: wgpu::VertexFormat::Float32x2,
+            step_mode: etalon::VertexStepMode::Vertex,
+            attributes: &[etalon::VertexAttribute {
+                format: etalon::VertexFormat::Float32x2,
                 offset: 0,
                 shader_location: 4,
             }],
         };
-        let mesh_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let mesh_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-mesh-pipeline"),
             layout: Some(&mesh_pipeline_layout),
-            vertex: wgpu::VertexState {
+            vertex: etalon::VertexState {
                 module: &mesh_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
@@ -594,29 +594,29 @@ impl PortalGpu {
                     Some(mesh_uv_layout.clone()),
                 ],
             },
-            fragment: Some(wgpu::FragmentState {
+            fragment: Some(etalon::FragmentState {
                 module: &mesh_shader,
                 entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
+            primitive: etalon::PrimitiveState {
+                topology: etalon::PrimitiveTopology::TriangleList,
                 cull_mode: None,
                 ..Default::default()
             },
             depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: etalon::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
         });
         let mut transparent_depth_state = depth_state.clone();
         transparent_depth_state.depth_write_enabled = Some(false);
-        transparent_depth_state.depth_compare = Some(wgpu::CompareFunction::LessEqual);
-        let mesh_pipeline_blend = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        transparent_depth_state.depth_compare = Some(etalon::CompareFunction::LessEqual);
+        let mesh_pipeline_blend = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-mesh-transparent-pipeline"),
             layout: Some(&mesh_pipeline_layout),
-            vertex: wgpu::VertexState {
+            vertex: etalon::VertexState {
                 module: &mesh_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
@@ -628,52 +628,52 @@ impl PortalGpu {
                     Some(mesh_uv_layout.clone()),
                 ],
             },
-            fragment: Some(wgpu::FragmentState {
+            fragment: Some(etalon::FragmentState {
                 module: &mesh_shader,
                 entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(color_target_state(format))],
             }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
+            primitive: etalon::PrimitiveState {
+                topology: etalon::PrimitiveTopology::TriangleList,
                 cull_mode: None,
                 ..Default::default()
             },
             depth_stencil: Some(transparent_depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: etalon::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
         });
 
-        let picking_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let picking_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-picking-pipeline"),
             layout: Some(&projector_pipeline_layout),
-            vertex: wgpu::VertexState {
+            vertex: etalon::VertexState {
                 module: &projector_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
                 buffers: &[],
             },
-            fragment: Some(wgpu::FragmentState {
+            fragment: Some(etalon::FragmentState {
                 module: &projector_shader,
                 entry_point: Some("picking_fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(picking_color_target_state())],
             }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
+            primitive: etalon::PrimitiveState {
+                topology: etalon::PrimitiveTopology::TriangleList,
                 ..Default::default()
             },
             depth_stencil: Some(depth_state.clone()),
-            multisample: wgpu::MultisampleState::default(),
+            multisample: etalon::MultisampleState::default(),
             multiview_mask: None,
             cache: None,
         });
         let mesh_picking_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("portal-mesh-semantic-picking-pipeline"),
                 layout: Some(&mesh_pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &mesh_shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
@@ -685,19 +685,19 @@ impl PortalGpu {
                         Some(mesh_uv_layout.clone()),
                     ],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &mesh_shader,
                     entry_point: Some("picking_fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(picking_color_target_state())],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     cull_mode: None,
                     ..Default::default()
                 },
                 depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             });
@@ -710,10 +710,10 @@ impl PortalGpu {
                 pick_staging_size,
             )
             .map_err(|error| format!("pick staging reservation failed: {error}"))?;
-        let pick_staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        let pick_staging_buf = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("portal-pick-staging"),
             size: pick_staging_size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::MAP_READ | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -728,58 +728,58 @@ impl PortalGpu {
             bloom,
         ) = if hdr_pipeline_wanted {
             let sky_hdr = sky::create_pipeline(&device, &projector_camera_layout, HDR_FORMAT);
-            let ambient_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            let ambient_hdr = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("portal-ambient-hdr"),
                 layout: Some(&ambient_pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &ambient_shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     buffers: &[],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &ambient_shader,
                     entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     ..Default::default()
                 },
                 depth_stencil: Some(depth_stencil_state_read_only()),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             });
-            let projector_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            let projector_hdr = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("portal-projector-hdr"),
                 layout: Some(&projector_pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &projector_shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     buffers: &[],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &projector_shader,
                     entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(hdr_color_target_state())],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     ..Default::default()
                 },
                 depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             });
-            let mesh_hdr = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            let mesh_hdr = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("portal-mesh-hdr"),
                 layout: Some(&mesh_pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &mesh_shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
@@ -791,26 +791,26 @@ impl PortalGpu {
                         Some(mesh_uv_layout.clone()),
                     ],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &mesh_shader,
                     entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(color_target_state(HDR_FORMAT))],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     cull_mode: None,
                     ..Default::default()
                 },
                 depth_stencil: Some(depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             });
-            let mesh_hdr_blend = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            let mesh_hdr_blend = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("portal-mesh-hdr-transparent"),
                 layout: Some(&mesh_pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &mesh_shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
@@ -822,19 +822,19 @@ impl PortalGpu {
                         Some(mesh_uv_layout.clone()),
                     ],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &mesh_shader,
                     entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(color_target_state(HDR_FORMAT))],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     cull_mode: None,
                     ..Default::default()
                 },
                 depth_stencil: Some(transparent_depth_state.clone()),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             });

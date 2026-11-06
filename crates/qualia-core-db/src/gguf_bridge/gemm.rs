@@ -90,7 +90,7 @@ impl QTensorEngine {
         &self,
         info: &GgufTensorInfo,
         raw: &[u8],
-    ) -> Option<(wgpu::Buffer, u32, u32, u32)> {
+    ) -> Option<(etalon::Buffer, u32, u32, u32)> {
         if !crate::llm_bench::ffn_f16_enabled() {
             return None;
         }
@@ -126,7 +126,7 @@ impl QTensorEngine {
     /// per-token `gemm_weight_buf` — eliminating the per-token weight re-upload. Buffer size is
     /// 256-aligned ≥ `raw.len()`; the shader only reads `weight_byte_len`.
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-    pub(crate) fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<wgpu::Buffer> {
+    pub(crate) fn resident_weight_buffer(&self, key: u64, raw: &[u8]) -> Option<etalon::Buffer> {
         let source = self.clone_model_bytes()?;
         let mut cache = self.gemm_resident_weights.lock().ok()?;
         let same_package = match (cache.package.as_ref(), self.ftw_package.as_ref()) {

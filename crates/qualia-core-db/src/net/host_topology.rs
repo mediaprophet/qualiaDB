@@ -13,7 +13,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Coarse adapter class (maps `wgpu::DeviceType`).
+/// Coarse adapter class (maps `etalon::DeviceType`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AdapterClass {
     Discrete,
@@ -25,13 +25,13 @@ pub enum AdapterClass {
 
 impl AdapterClass {
     #[cfg(feature = "gpu-runtime")]
-    fn from_wgpu(t: wgpu::DeviceType) -> Self {
+    fn from_wgpu(t: etalon::DeviceType) -> Self {
         match t {
-            wgpu::DeviceType::DiscreteGpu => Self::Discrete,
-            wgpu::DeviceType::IntegratedGpu => Self::Integrated,
-            wgpu::DeviceType::Cpu => Self::Cpu,
-            wgpu::DeviceType::VirtualGpu => Self::Virtual,
-            wgpu::DeviceType::Other => Self::Other,
+            etalon::DeviceType::DiscreteGpu => Self::Discrete,
+            etalon::DeviceType::IntegratedGpu => Self::Integrated,
+            etalon::DeviceType::Cpu => Self::Cpu,
+            etalon::DeviceType::VirtualGpu => Self::Virtual,
+            etalon::DeviceType::Other => Self::Other,
         }
     }
 }
@@ -76,13 +76,13 @@ const UNIFIED_HOST_FLOOR_MAX: u64 = 6 * 1024 * 1024 * 1024; // cap the unified h
 
 /// Rank backends so the same physical GPU (enumerated once per backend) collapses to the preferred one.
 #[cfg(feature = "gpu-runtime")]
-fn backend_rank(b: wgpu::Backend) -> u8 {
+fn backend_rank(b: etalon::Backend) -> u8 {
     match b {
         // Prefer the backend each OS actually runs the engine on.
-        wgpu::Backend::Metal => 0,
-        wgpu::Backend::Dx12 => 1,
-        wgpu::Backend::Vulkan => 2,
-        wgpu::Backend::Gl => 3,
+        etalon::Backend::Metal => 0,
+        etalon::Backend::Dx12 => 1,
+        etalon::Backend::Vulkan => 2,
+        etalon::Backend::Gl => 3,
         _ => 4,
     }
 }
@@ -91,8 +91,8 @@ fn backend_rank(b: wgpu::Backend) -> u8 {
 #[cfg(feature = "gpu-runtime")]
 fn probe_adapters() -> Vec<AdapterDesc> {
     // Enumerate every adapter across every backend, then dedup by physical (vendor, device).
-    let instance = wgpu::Instance::default();
-    let raw = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+    let instance = etalon::Instance::default();
+    let raw = pollster::block_on(instance.enumerate_adapters(etalon::Backends::all()));
     let mut best: std::collections::HashMap<(u32, u32), (u8, AdapterDesc)> =
         std::collections::HashMap::new();
     for adapter in raw {

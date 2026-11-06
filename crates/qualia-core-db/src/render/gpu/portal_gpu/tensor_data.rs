@@ -7,7 +7,7 @@ use super::super::{
 use crate::gpu_context::global_vram_ledger;
 use crate::render::telemetry::ParticleInstance;
 use crate::tensor::buffer_export::TENSOR_HEADER_BYTES;
-use wgpu::util::DeviceExt;
+use etalon::util::DeviceExt;
 
 impl PortalGpu {
     /// Uploads a tensor buffer.
@@ -55,10 +55,10 @@ impl PortalGpu {
 
         let particle_buf = self
             .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            .create_buffer_init(&etalon::util::BufferInitDescriptor {
                 label: Some("portal-tensor-particles"),
                 contents: bytemuck::cast_slice(&particles),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             });
 
         // Upload the SOA *body* only (skip the 32-byte header). WebGPU requires storage-buffer
@@ -67,10 +67,10 @@ impl PortalGpu {
         // and bind at offset 0.
         let tensor_raw_buf = self
             .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            .create_buffer_init(&etalon::util::BufferInitDescriptor {
                 label: Some("portal-tensor-raw-soa"),
                 contents: body,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             });
 
         let ambient_bind_group = make_ambient_bind_group(

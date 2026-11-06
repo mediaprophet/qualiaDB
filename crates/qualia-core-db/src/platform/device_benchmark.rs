@@ -32,12 +32,12 @@ pub use etalon_diagnostics::{
 };
 
 #[cfg(feature = "gpu-runtime")]
-fn backend_rank(b: wgpu::Backend) -> u8 {
+fn backend_rank(b: etalon::Backend) -> u8 {
     match b {
-        wgpu::Backend::Metal => 0,
-        wgpu::Backend::Dx12 => 1,
-        wgpu::Backend::Vulkan => 2,
-        wgpu::Backend::Gl => 3,
+        etalon::Backend::Metal => 0,
+        etalon::Backend::Dx12 => 1,
+        etalon::Backend::Vulkan => 2,
+        etalon::Backend::Gl => 3,
         _ => 4,
     }
 }
@@ -271,11 +271,11 @@ pub fn benchmark_devices_cancellable(
     // ── GPUs / iGPU via wgpu — one circuit row per backend that can open the device ──
     #[cfg(feature = "gpu-runtime")]
     {
-        let instance = wgpu::Instance::default();
-        let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
-        for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
+        let instance = etalon::Instance::default();
+        let mut cand: Vec<(u8, etalon::Adapter, etalon::AdapterInfo)> = Vec::new();
+        for adapter in pollster::block_on(instance.enumerate_adapters(etalon::Backends::all())) {
             let info = adapter.get_info();
-            if info.device_type == wgpu::DeviceType::Cpu || info.device == 0 {
+            if info.device_type == etalon::DeviceType::Cpu || info.device == 0 {
                 continue;
             }
             cand.push((backend_rank(info.backend), adapter, info));

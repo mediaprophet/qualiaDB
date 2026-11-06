@@ -95,13 +95,13 @@ pub(super) use etalon_render::targets::*;
 /// `uniform_128_bind_entry`.
 pub(super) fn uniform_128_bind_entry(
     binding: u32,
-    stages: wgpu::ShaderStages,
-) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+    stages: etalon::ShaderStages,
+) -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding,
         visibility: stages,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Uniform,
             has_dynamic_offset: false,
             min_binding_size: std::num::NonZeroU64::new(128),
         },
@@ -110,12 +110,12 @@ pub(super) fn uniform_128_bind_entry(
 }
 
 /// `tensor_storage_bind_entry`.
-pub(super) fn tensor_storage_bind_entry() -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
+pub(super) fn tensor_storage_bind_entry() -> etalon::BindGroupLayoutEntry {
+    etalon::BindGroupLayoutEntry {
         binding: 0,
-        visibility: wgpu::ShaderStages::VERTEX,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
+        visibility: etalon::ShaderStages::VERTEX,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Storage { read_only: true },
             has_dynamic_offset: false,
             min_binding_size: None,
         },
@@ -124,74 +124,74 @@ pub(super) fn tensor_storage_bind_entry() -> wgpu::BindGroupLayoutEntry {
 }
 
 /// `ambient_bind_entries`.
-pub(super) fn ambient_bind_entries() -> [wgpu::BindGroupLayoutEntry; 5] {
+pub(super) fn ambient_bind_entries() -> [etalon::BindGroupLayoutEntry; 5] {
     [
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 0,
-            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
+            visibility: etalon::ShaderStages::VERTEX_FRAGMENT,
+            ty: etalon::BindingType::Buffer {
+                ty: etalon::BufferBindingType::Uniform,
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
         },
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 1,
-            visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
+            visibility: etalon::ShaderStages::VERTEX_FRAGMENT,
+            ty: etalon::BindingType::Buffer {
+                ty: etalon::BufferBindingType::Uniform,
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
         },
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 2,
-            visibility: wgpu::ShaderStages::VERTEX,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: true },
+            visibility: etalon::ShaderStages::VERTEX,
+            ty: etalon::BindingType::Buffer {
+                ty: etalon::BufferBindingType::Storage { read_only: true },
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },
             count: None,
         },
-        uniform_128_bind_entry(3, wgpu::ShaderStages::VERTEX),
-        uniform_128_bind_entry(4, wgpu::ShaderStages::VERTEX_FRAGMENT),
+        uniform_128_bind_entry(3, etalon::ShaderStages::VERTEX),
+        uniform_128_bind_entry(4, etalon::ShaderStages::VERTEX_FRAGMENT),
     ]
 }
 
 /// Makes `ambient-bind-group`.
 pub(super) fn make_ambient_bind_group(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    uniform_buf: &wgpu::Buffer,
-    telemetry_buf: &wgpu::Buffer,
-    camera_buf: &wgpu::Buffer,
-    observer_buf: &wgpu::Buffer,
-    particle_buf: &wgpu::Buffer,
-) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    uniform_buf: &etalon::Buffer,
+    telemetry_buf: &etalon::Buffer,
+    camera_buf: &etalon::Buffer,
+    observer_buf: &etalon::Buffer,
+    particle_buf: &etalon::Buffer,
+) -> etalon::BindGroup {
+    device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("portal-ambient-bind"),
         layout,
         entries: &[
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 0,
                 resource: uniform_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 1,
                 resource: telemetry_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 2,
                 resource: particle_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 3,
                 resource: camera_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 4,
                 resource: observer_buf.as_entire_binding(),
             },
@@ -201,22 +201,22 @@ pub(super) fn make_ambient_bind_group(
 
 /// Makes `projector-tensor-bind-group`.
 pub(super) fn make_projector_tensor_bind_group(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    tensor_raw_buf: &wgpu::Buffer,
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    tensor_raw_buf: &etalon::Buffer,
     node_count: u32,
-) -> Result<wgpu::BindGroup, String> {
+) -> Result<etalon::BindGroup, String> {
     let body_bytes = (node_count as u64)
         .checked_mul(TENSOR_STRIDE as u64)
         .ok_or_else(|| "tensor body size overflow".to_string())?;
     let size =
         std::num::NonZeroU64::new(body_bytes).ok_or_else(|| "empty tensor body".to_string())?;
-    Ok(device.create_bind_group(&wgpu::BindGroupDescriptor {
+    Ok(device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("portal-projector-tensor-bind"),
         layout,
-        entries: &[wgpu::BindGroupEntry {
+        entries: &[etalon::BindGroupEntry {
             binding: 0,
-            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            resource: etalon::BindingResource::Buffer(etalon::BufferBinding {
                 buffer: tensor_raw_buf,
                 // Buffer already starts at the first record (header stripped at upload); offset 0
                 // satisfies the 256-byte minStorageBufferOffsetAlignment that Dawn enforces.

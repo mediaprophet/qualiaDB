@@ -34,7 +34,7 @@ impl PortalGpu {
     }
 
     /// `record_picking_pass`.
-    pub(super) fn record_picking_pass(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn record_picking_pass(&mut self, encoder: &mut etalon::CommandEncoder) {
         if !self.pick_readback.needs_recording() {
             return;
         }
@@ -87,7 +87,7 @@ impl PortalGpu {
                     pass.set_vertex_buffer(2, mesh.normal_buf.slice(..));
                     pass.set_vertex_buffer(3, mesh.tangent_buf.slice(..));
                     pass.set_vertex_buffer(4, mesh.uv_buf.slice(..));
-                    pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+                    pass.set_index_buffer(mesh.index_buf.slice(..), etalon::IndexFormat::Uint32);
                     for draw in &mesh.material_gpu.draws {
                         pass.set_bind_group(
                             2,
@@ -105,7 +105,7 @@ impl PortalGpu {
         );
     }
 
-    pub(super) fn record_pick_copy(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn record_pick_copy(&mut self, encoder: &mut etalon::CommandEncoder) {
         self.pick_readback
             .record_copy(encoder, &self.picking_texture);
     }

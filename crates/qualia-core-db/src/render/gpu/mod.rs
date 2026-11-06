@@ -121,17 +121,17 @@ pub(crate) fn mark_portal_gpu_canvas_claimed() {
 const MAX_AMBIENT_INSTANCES: usize = 50_000;
 
 /// Creates `ao-prepass-camera-layout`.
-pub(super) fn create_ao_prepass_camera_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+pub(super) fn create_ao_prepass_camera_layout(device: &etalon::Device) -> etalon::BindGroupLayout {
+    device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
         label: Some("qualia-ao-prepass-camera-layout"),
         entries: &[
-            uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX_FRAGMENT),
-            uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
-            wgpu::BindGroupLayoutEntry {
+            uniform_128_bind_entry(0, etalon::ShaderStages::VERTEX_FRAGMENT),
+            uniform_128_bind_entry(1, etalon::ShaderStages::VERTEX_FRAGMENT),
+            etalon::BindGroupLayoutEntry {
                 binding: 2,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
+                visibility: etalon::ShaderStages::FRAGMENT,
+                ty: etalon::BindingType::Buffer {
+                    ty: etalon::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: std::num::NonZeroU64::new(
                         std::mem::size_of::<ao::AoUniform>() as u64,
@@ -145,25 +145,25 @@ pub(super) fn create_ao_prepass_camera_layout(device: &wgpu::Device) -> wgpu::Bi
 
 /// Creates `ao-prepass-camera-bind`.
 pub(super) fn create_ao_prepass_camera_bind(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    camera: &wgpu::Buffer,
-    observer: &wgpu::Buffer,
-    ao: &wgpu::Buffer,
-) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    camera: &etalon::Buffer,
+    observer: &etalon::Buffer,
+    ao: &etalon::Buffer,
+) -> etalon::BindGroup {
+    device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("qualia-ao-prepass-camera-and-uniform"),
         layout,
         entries: &[
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 0,
                 resource: camera.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 1,
                 resource: observer.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 2,
                 resource: ao.as_entire_binding(),
             },
@@ -172,67 +172,67 @@ pub(super) fn create_ao_prepass_camera_bind(
 }
 
 /// Creates `mesh-frame-layout`.
-pub(super) fn create_mesh_frame_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    let uniform_entry = |binding, visibility, size| wgpu::BindGroupLayoutEntry {
+pub(super) fn create_mesh_frame_layout(device: &etalon::Device) -> etalon::BindGroupLayout {
+    let uniform_entry = |binding, visibility, size| etalon::BindGroupLayoutEntry {
         binding,
         visibility,
-        ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
+        ty: etalon::BindingType::Buffer {
+            ty: etalon::BufferBindingType::Uniform,
             has_dynamic_offset: false,
             min_binding_size: std::num::NonZeroU64::new(size),
         },
         count: None,
     };
-    let depth_texture_entry = |binding| wgpu::BindGroupLayoutEntry {
+    let depth_texture_entry = |binding| etalon::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Depth,
-            view_dimension: wgpu::TextureViewDimension::D2,
+        visibility: etalon::ShaderStages::FRAGMENT,
+        ty: etalon::BindingType::Texture {
+            sample_type: etalon::TextureSampleType::Depth,
+            view_dimension: etalon::TextureViewDimension::D2,
             multisampled: false,
         },
         count: None,
     };
-    let float_texture_entry = |binding| wgpu::BindGroupLayoutEntry {
+    let float_texture_entry = |binding| etalon::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Float { filterable: false },
-            view_dimension: wgpu::TextureViewDimension::D2,
+        visibility: etalon::ShaderStages::FRAGMENT,
+        ty: etalon::BindingType::Texture {
+            sample_type: etalon::TextureSampleType::Float { filterable: false },
+            view_dimension: etalon::TextureViewDimension::D2,
             multisampled: false,
         },
         count: None,
     };
     let entries = [
-        uniform_128_bind_entry(0, wgpu::ShaderStages::VERTEX_FRAGMENT),
-        uniform_128_bind_entry(1, wgpu::ShaderStages::VERTEX_FRAGMENT),
+        uniform_128_bind_entry(0, etalon::ShaderStages::VERTEX_FRAGMENT),
+        uniform_128_bind_entry(1, etalon::ShaderStages::VERTEX_FRAGMENT),
         depth_texture_entry(2),
         depth_texture_entry(3),
-        wgpu::BindGroupLayoutEntry {
+        etalon::BindGroupLayoutEntry {
             binding: 4,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+            visibility: etalon::ShaderStages::FRAGMENT,
+            ty: etalon::BindingType::Sampler(etalon::SamplerBindingType::Comparison),
             count: None,
         },
         uniform_entry(
             5,
-            wgpu::ShaderStages::VERTEX_FRAGMENT,
+            etalon::ShaderStages::VERTEX_FRAGMENT,
             std::mem::size_of::<shadows::ShadowUniform>() as u64,
         ),
         float_texture_entry(6),
         float_texture_entry(7),
         uniform_entry(
             8,
-            wgpu::ShaderStages::FRAGMENT,
+            etalon::ShaderStages::FRAGMENT,
             std::mem::size_of::<ao::AoUniform>() as u64,
         ),
         uniform_entry(
             9,
-            wgpu::ShaderStages::FRAGMENT,
+            etalon::ShaderStages::FRAGMENT,
             std::mem::size_of::<atmosphere::AtmosphereUniform>() as u64,
         ),
     ];
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
         label: Some("portal-mesh-frame-lighting-layout"),
         entries: &entries,
     })
@@ -241,59 +241,59 @@ pub(super) fn create_mesh_frame_layout(device: &wgpu::Device) -> wgpu::BindGroup
 #[allow(clippy::too_many_arguments)]
 /// Creates `mesh-frame-bind`.
 pub(super) fn create_mesh_frame_bind(
-    device: &wgpu::Device,
-    layout: &wgpu::BindGroupLayout,
-    camera: &wgpu::Buffer,
-    observer: &wgpu::Buffer,
-    shadow_views: [&wgpu::TextureView; 2],
-    shadow_sampler: &wgpu::Sampler,
-    shadow_uniform: &wgpu::Buffer,
-    ao_view: &wgpu::TextureView,
-    ao_surface_view: &wgpu::TextureView,
-    ao_uniform: &wgpu::Buffer,
-    atmosphere_uniform: &wgpu::Buffer,
-) -> wgpu::BindGroup {
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
+    device: &etalon::Device,
+    layout: &etalon::BindGroupLayout,
+    camera: &etalon::Buffer,
+    observer: &etalon::Buffer,
+    shadow_views: [&etalon::TextureView; 2],
+    shadow_sampler: &etalon::Sampler,
+    shadow_uniform: &etalon::Buffer,
+    ao_view: &etalon::TextureView,
+    ao_surface_view: &etalon::TextureView,
+    ao_uniform: &etalon::Buffer,
+    atmosphere_uniform: &etalon::Buffer,
+) -> etalon::BindGroup {
+    device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("portal-mesh-frame-lighting-bind"),
         layout,
         entries: &[
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 0,
                 resource: camera.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 1,
                 resource: observer.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 2,
-                resource: wgpu::BindingResource::TextureView(shadow_views[0]),
+                resource: etalon::BindingResource::TextureView(shadow_views[0]),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 3,
-                resource: wgpu::BindingResource::TextureView(shadow_views[1]),
+                resource: etalon::BindingResource::TextureView(shadow_views[1]),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 4,
-                resource: wgpu::BindingResource::Sampler(shadow_sampler),
+                resource: etalon::BindingResource::Sampler(shadow_sampler),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 5,
                 resource: shadow_uniform.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 6,
-                resource: wgpu::BindingResource::TextureView(ao_view),
+                resource: etalon::BindingResource::TextureView(ao_view),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 7,
-                resource: wgpu::BindingResource::TextureView(ao_surface_view),
+                resource: etalon::BindingResource::TextureView(ao_surface_view),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 8,
                 resource: ao_uniform.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 9,
                 resource: atmosphere_uniform.as_entire_binding(),
             },
@@ -315,7 +315,7 @@ pub(super) fn portal_fixed_buffer_bytes() -> Option<u64> {
     .into_iter()
     .try_fold(0u64, |total, size| total.checked_add(size as u64))
 }
-const HDR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
+const HDR_FORMAT: etalon::TextureFormat = etalon::TextureFormat::Rgba16Float;
 type BloomChain = etalon_render::bloom::BloomChain<crate::gpu_context::VramReservation<'static>>;
 /// WebGPU phenomenal viewport — tensor projector + ambient particles.
 /// GPU buffers for an imported triangle mesh (Phase 1.2). Positions are model-space `f32x3`
@@ -359,60 +359,60 @@ fn default_gpu_tangent(normal: [f32; 3]) -> [f32; 4] {
 }
 
 pub struct PortalGpu {
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
+    device: Arc<etalon::Device>,
+    queue: Arc<etalon::Queue>,
     device_lost: Arc<std::sync::atomic::AtomicBool>,
-    surface: Option<wgpu::Surface<'static>>,
-    config: Option<wgpu::SurfaceConfiguration>,
-    offscreen_texture: Option<wgpu::Texture>,
+    surface: Option<etalon::Surface<'static>>,
+    config: Option<etalon::SurfaceConfiguration>,
+    offscreen_texture: Option<etalon::Texture>,
     /// Cached view of the offscreen texture — avoids `create_view` per frame.
     /// Invalidated (set to `None`) when the texture is recreated (resize).
-    offscreen_view: Option<wgpu::TextureView>,
-    readback_buf: Option<wgpu::Buffer>,
+    offscreen_view: Option<etalon::TextureView>,
+    readback_buf: Option<etalon::Buffer>,
     readback_bytes_per_row: u32,
     _readback_staging_reservation: Option<crate::gpu_context::VramReservation<'static>>,
-    color_format: wgpu::TextureFormat,
+    color_format: etalon::TextureFormat,
     scene_depth: scene_depth::SceneDepthOwner,
     temporal_resolve: Option<temporal_resolve_gpu::TemporalResolveGpu>,
     temporal_producers: Option<temporal_producers_gpu::TemporalProducersGpu>,
     temporal_reset_pending: bool,
     previous_camera_view_projection: Option<crate::render::temporal_producers::Mat4ColumnMajor>,
-    picking_texture: wgpu::Texture,
-    picking_view: wgpu::TextureView,
+    picking_texture: etalon::Texture,
+    picking_view: etalon::TextureView,
     _frame_target_reservation: crate::gpu_context::VramReservation<'static>,
     _fixed_buffer_reservation: crate::gpu_context::VramReservation<'static>,
-    picking_pipeline: wgpu::RenderPipeline,
-    mesh_picking_pipeline: wgpu::RenderPipeline,
+    picking_pipeline: etalon::RenderPipeline,
+    mesh_picking_pipeline: etalon::RenderPipeline,
     pick_readback: etalon_render::picking_readback::PickingReadback<
         crate::gpu_context::VramReservation<'static>,
     >,
     pick_semantic_result: Option<u64>,
-    ambient_pipeline: wgpu::RenderPipeline,
-    projector_pipeline: wgpu::RenderPipeline,
-    sky_pipeline: wgpu::RenderPipeline,
-    ambient_pipeline_hdr: Option<wgpu::RenderPipeline>,
-    projector_pipeline_hdr: Option<wgpu::RenderPipeline>,
-    sky_pipeline_hdr: Option<wgpu::RenderPipeline>,
-    mesh_pipeline: wgpu::RenderPipeline,
-    mesh_pipeline_blend: wgpu::RenderPipeline,
-    mesh_pipeline_hdr: Option<wgpu::RenderPipeline>,
-    mesh_pipeline_hdr_blend: Option<wgpu::RenderPipeline>,
-    mesh_material_layout: wgpu::BindGroupLayout,
-    mesh_texture_layout: wgpu::BindGroupLayout,
-    mesh_frame_layout: wgpu::BindGroupLayout,
-    mesh_frame_bind: wgpu::BindGroup,
-    ao_prepass_camera_layout: wgpu::BindGroupLayout,
-    ao_prepass_camera_bind: wgpu::BindGroup,
+    ambient_pipeline: etalon::RenderPipeline,
+    projector_pipeline: etalon::RenderPipeline,
+    sky_pipeline: etalon::RenderPipeline,
+    ambient_pipeline_hdr: Option<etalon::RenderPipeline>,
+    projector_pipeline_hdr: Option<etalon::RenderPipeline>,
+    sky_pipeline_hdr: Option<etalon::RenderPipeline>,
+    mesh_pipeline: etalon::RenderPipeline,
+    mesh_pipeline_blend: etalon::RenderPipeline,
+    mesh_pipeline_hdr: Option<etalon::RenderPipeline>,
+    mesh_pipeline_hdr_blend: Option<etalon::RenderPipeline>,
+    mesh_material_layout: etalon::BindGroupLayout,
+    mesh_texture_layout: etalon::BindGroupLayout,
+    mesh_frame_layout: etalon::BindGroupLayout,
+    mesh_frame_bind: etalon::BindGroup,
+    ao_prepass_camera_layout: etalon::BindGroupLayout,
+    ao_prepass_camera_bind: etalon::BindGroup,
     shadow_target: Option<shadows::ShadowTarget>,
     shadow_enabled: bool,
     shadow_map_dirty: bool,
-    shadow_uniform_buf: wgpu::Buffer,
-    shadow_uniform_bind: wgpu::BindGroup,
-    shadow_sampler: wgpu::Sampler,
+    shadow_uniform_buf: etalon::Buffer,
+    shadow_uniform_bind: etalon::BindGroup,
+    shadow_sampler: etalon::Sampler,
     shadow_uniform_cpu: shadows::ShadowUniform,
-    shadow_pipelines: [wgpu::RenderPipeline; shadows::SHADOW_CASCADE_COUNT],
-    mesh_model_layout: wgpu::BindGroupLayout,
-    mesh_instance_layout: wgpu::BindGroupLayout,
+    shadow_pipelines: [etalon::RenderPipeline; shadows::SHADOW_CASCADE_COUNT],
+    mesh_model_layout: etalon::BindGroupLayout,
+    mesh_instance_layout: etalon::BindGroupLayout,
     /// Complete source stream retained for shadow-caster correctness.
     mesh_instances: instance_stream::GpuInstanceStream,
     /// Camera-visible compact stream used by the forward and AO passes.
@@ -424,8 +424,8 @@ pub struct PortalGpu {
     visible_instance_scratch: Vec<crate::render::instance_culling::GpuInstanceRecord>,
     last_visibility_key: Option<([[f32; 4]; 4], [[f32; 4]; 4])>,
     ao_targets: Option<ao::AoTargets>,
-    ao_uniform_buf: wgpu::Buffer,
-    atmosphere_uniform_buf: wgpu::Buffer,
+    ao_uniform_buf: etalon::Buffer,
+    atmosphere_uniform_buf: etalon::Buffer,
     ao_enabled: bool,
     ao_radius: f32,
     ao_strength: f32,
@@ -438,8 +438,8 @@ pub struct PortalGpu {
     mesh_generation: u64,
     source_motion: crate::render::source_frame::SourceFrameState,
     water: water::WaterGpu,
-    model_buf: wgpu::Buffer,
-    mesh_model_bind: wgpu::BindGroup,
+    model_buf: etalon::Buffer,
+    mesh_model_bind: etalon::BindGroup,
     artefact_joint: Option<Joint>,
     /// Sim-time at which the current joint was engaged; the joint is driven by *elapsed* time
     /// (`time − artefact_t0`), not absolute sim-time, so a slide/spin always starts from rest when
@@ -454,20 +454,20 @@ pub struct PortalGpu {
     bloom_policy_snapshot: bool,
     hdr_exposure_ev: f32,
     white_balance_gains: [f32; 3],
-    ambient_bind_group_layout: wgpu::BindGroupLayout,
-    ambient_bind_group: wgpu::BindGroup,
-    projector_tensor_layout: wgpu::BindGroupLayout,
-    projector_camera_bind: wgpu::BindGroup,
-    projector_tensor_bind: Option<wgpu::BindGroup>,
-    uniform_buf: wgpu::Buffer,
-    telemetry_buf: wgpu::Buffer,
-    camera_buf: wgpu::Buffer,
-    observer_buf: wgpu::Buffer,
+    ambient_bind_group_layout: etalon::BindGroupLayout,
+    ambient_bind_group: etalon::BindGroup,
+    projector_tensor_layout: etalon::BindGroupLayout,
+    projector_camera_bind: etalon::BindGroup,
+    projector_tensor_bind: Option<etalon::BindGroup>,
+    uniform_buf: etalon::Buffer,
+    telemetry_buf: etalon::Buffer,
+    camera_buf: etalon::Buffer,
+    observer_buf: etalon::Buffer,
     camera: CameraState,
     observer: ObserverStandpoint,
-    particle_buf: wgpu::Buffer,
+    particle_buf: etalon::Buffer,
     _particle_reservation: crate::gpu_context::VramReservation<'static>,
-    tensor_raw_buf: Option<wgpu::Buffer>,
+    tensor_raw_buf: Option<etalon::Buffer>,
     _tensor_field_reservation: Option<crate::gpu_context::VramReservation<'static>>,
     tensor_node_count: u32,
     /// Whether semantic Tensor10D nodes are projected as visible sprites.
@@ -506,9 +506,9 @@ impl PortalGpu {
     /// Records a belt copy.
     pub(crate) fn uniform_belt_record_copy(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::Buffer,
-        offset: wgpu::BufferAddress,
+        encoder: &mut etalon::CommandEncoder,
+        target: &etalon::Buffer,
+        offset: etalon::BufferAddress,
     ) {
         self.uniform_belt.record_copy(encoder, target, offset);
     }
@@ -519,7 +519,7 @@ impl PortalGpu {
     }
     #[cfg(test)]
     /// Uniform buffer for tests.
-    pub(crate) fn uniform_buf_test(&self) -> wgpu::Buffer {
+    pub(crate) fn uniform_buf_test(&self) -> etalon::Buffer {
         self.uniform_buf.clone()
     }
 
@@ -540,7 +540,7 @@ impl PortalGpu {
         if offscreen {
             let texture = create_offscreen_texture(&self.device, self.color_format, width, height);
             next_offscreen_view =
-                Some(texture.create_view(&wgpu::TextureViewDescriptor::default()));
+                Some(texture.create_view(&etalon::TextureViewDescriptor::default()));
             next_offscreen_texture = Some(texture);
             next_readback_bytes_per_row = checked_padded_bytes_per_row(width)
                 .ok_or_else(|| format!("readback row pitch overflow for width {width}"))?;

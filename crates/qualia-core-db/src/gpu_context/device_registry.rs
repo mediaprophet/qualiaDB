@@ -1,4 +1,4 @@
-//! Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
+//! Device-per-circuit registry — obtain a `etalon::Device` for a SPECIFIC adapter/circuit
 //! (STELLAR §A H3 foundation for heterogeneous GPU routing).
 //!
 //! `super::shared_gpu` / `super::try_shared_gpu` give you the single process-wide *primary*
@@ -19,11 +19,11 @@ use std::sync::OnceLock;
 
 use super::{init_shared_gpu_for_adapter, try_shared_gpu, GpuAdapterCaps, SharedGpuContext};
 
-/// One enumerated compute circuit: the live `wgpu::Adapter`, its capability snapshot, and a stable
+/// One enumerated compute circuit: the live `etalon::Adapter`, its capability snapshot, and a stable
 /// identity (vendor / device / backend) matching `device_benchmark` / `host_topology`.
 pub struct CircuitAdapter {
     /// The live adapter (cheap `Arc`-backed handle) this circuit routes to.
-    pub adapter: wgpu::Adapter,
+    pub adapter: etalon::Adapter,
     /// Immutable capability snapshot (carries vendor / device / backend / device_type).
     pub caps: GpuAdapterCaps,
 }
@@ -31,51 +31,51 @@ pub struct CircuitAdapter {
 impl CircuitAdapter {
     /// wgpu device class for role heuristics.
     #[inline]
-    pub fn device_type(&self) -> wgpu::DeviceType {
+    pub fn device_type(&self) -> etalon::DeviceType {
         self.caps.device_type
     }
 
     /// Stable physical identity — matches `device_benchmark` / `host_topology` conventions.
     #[inline]
-    pub fn identity(&self) -> (u32, u32, wgpu::Backend) {
+    pub fn identity(&self) -> (u32, u32, etalon::Backend) {
         (self.caps.vendor, self.caps.device, self.caps.backend)
     }
 }
 
 /// The wgpu instance the registry enumerated adapters from. Cloned into each per-circuit device so
 /// the device and any surface it creates share one instance.
-static REGISTRY_INSTANCE: OnceLock<wgpu::Instance> = OnceLock::new();
+static REGISTRY_INSTANCE: OnceLock<etalon::Instance> = OnceLock::new();
 /// Enumerate-once cache of routable circuits (deduped to one entry per physical GPU).
 static ADAPTERS: OnceLock<Vec<CircuitAdapter>> = OnceLock::new();
 /// Per-circuit device cache — one `OnceLock<Option<..>>` slot per enumerated adapter (by index).
 static DEVICES: OnceLock<Vec<OnceLock<Option<SharedGpuContext>>>> = OnceLock::new();
 
 /// Prefer discrete GPUs, then integrated, then virtual/other, with software CPU adapters last.
-fn device_type_rank(t: wgpu::DeviceType) -> u8 {
+fn device_type_rank(t: etalon::DeviceType) -> u8 {
     match t {
-        wgpu::DeviceType::DiscreteGpu => 0,
-        wgpu::DeviceType::IntegratedGpu => 1,
-        wgpu::DeviceType::VirtualGpu => 2,
-        wgpu::DeviceType::Other => 3,
-        wgpu::DeviceType::Cpu => 4,
+        etalon::DeviceType::DiscreteGpu => 0,
+        etalon::DeviceType::IntegratedGpu => 1,
+        etalon::DeviceType::VirtualGpu => 2,
+        etalon::DeviceType::Other => 3,
+        etalon::DeviceType::Cpu => 4,
     }
 }
 
 /// Backend preference when the same physical GPU is enumerated on several backends
 /// (mirrors `host_topology` / `device_benchmark`).
-fn backend_rank(b: wgpu::Backend) -> u8 {
+fn backend_rank(b: etalon::Backend) -> u8 {
     match b {
-        wgpu::Backend::Metal => 0,
-        wgpu::Backend::Dx12 => 1,
-        wgpu::Backend::Vulkan => 2,
-        wgpu::Backend::Gl => 3,
+        etalon::Backend::Metal => 0,
+        etalon::Backend::Dx12 => 1,
+        etalon::Backend::Vulkan => 2,
+        etalon::Backend::Gl => 3,
         _ => 4,
     }
 }
 
 #[inline]
-fn registry_instance() -> &'static wgpu::Instance {
-    REGISTRY_INSTANCE.get_or_init(wgpu::Instance::default)
+fn registry_instance() -> &'static etalon::Instance {
+    REGISTRY_INSTANCE.get_or_init(etalon::Instance::default)
 }
 
 /// Enumerate every adapter once (cached), deduped to **one entry per physical circuit**
@@ -87,9 +87,9 @@ fn registry_instance() -> &'static wgpu::Instance {
 pub fn enumerate_circuits() -> &'static [CircuitAdapter] {
     ADAPTERS.get_or_init(|| {
         let instance = registry_instance();
-        let raw = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+        let raw = pollster::block_on(instance.enumerate_adapters(etalon::Backends::all()));
         // Dedup by physical (vendor, device); keep the top-ranked backend for each.
-        let mut best: std::collections::HashMap<(u32, u32), (u8, wgpu::Adapter, GpuAdapterCaps)> =
+        let mut best: std::collections::HashMap<(u32, u32), (u8, etalon::Adapter, GpuAdapterCaps)> =
             std::collections::HashMap::new();
         for adapter in raw {
             let caps = GpuAdapterCaps::from_adapter(&adapter);
@@ -197,7 +197,7 @@ pub fn primary_circuit_index() -> Option<usize> {
     }
     circuits
         .iter()
-        .position(|c| c.caps.device_type == wgpu::DeviceType::DiscreteGpu)
+        .position(|c| c.caps.device_type == etalon::DeviceType::DiscreteGpu)
         .or(Some(0))
 }
 
@@ -219,7 +219,7 @@ pub fn auxiliary_circuit_index() -> Option<usize> {
     let is_primary = |i: usize| Some(i) == primary;
     // Prefer a non-primary integrated GPU.
     if let Some(i) = (0..circuits.len()).find(|&i| {
-        !is_primary(i) && circuits[i].caps.device_type == wgpu::DeviceType::IntegratedGpu
+        !is_primary(i) && circuits[i].caps.device_type == etalon::DeviceType::IntegratedGpu
     }) {
         return Some(i);
     }

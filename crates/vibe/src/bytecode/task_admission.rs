@@ -16,16 +16,29 @@ fn scoped_path(path: &str) -> bool {
 pub(super) fn scoped_callee(callee: &Expr, aliases: &HashMap<String, String>) -> bool {
     match &callee.kind {
         ExprKind::Ident(path) => scoped_path(path),
-        ExprKind::Member { recv, name } => {
-            let ExprKind::Ident(namespace) = &recv.kind else {
-                return false;
-            };
-            let namespace = aliases
-                .get(namespace)
-                .map(String::as_str)
-                .unwrap_or(namespace);
-            namespace == "task" || (namespace == "code" && name == "spawn_at")
-        }
+        ExprKind::Member { recv, name } => match &recv.kind {
+            ExprKind::Ident(namespace) => {
+                let namespace = aliases
+                    .get(namespace)
+                    .map(String::as_str)
+                    .unwrap_or(namespace);
+                namespace == "task" || (namespace == "code" && name == "spawn_at")
+            }
+            ExprKind::Member {
+                recv: inner_recv, ..
+            } => {
+                if let ExprKind::Ident(namespace) = &inner_recv.kind {
+                    let namespace = aliases
+                        .get(namespace)
+                        .map(String::as_str)
+                        .unwrap_or(namespace);
+                    namespace == "task"
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        },
         _ => false,
     }
 }

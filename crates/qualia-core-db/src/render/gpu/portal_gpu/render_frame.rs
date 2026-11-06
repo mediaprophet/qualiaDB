@@ -79,7 +79,7 @@ impl PortalGpu {
         // commands into it, so it must exist before any uniform writes.
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("portal-viewport-encoder"),
             });
 
@@ -127,8 +127,8 @@ impl PortalGpu {
         // COPY_SRC texture. The draw graph below is identical for both.
         let surface_frame = if let Some(surface) = self.surface.as_ref() {
             match surface.get_current_texture() {
-                wgpu::CurrentSurfaceTexture::Success(t)
-                | wgpu::CurrentSurfaceTexture::Suboptimal(t) => Some(t),
+                etalon::CurrentSurfaceTexture::Success(t)
+                | etalon::CurrentSurfaceTexture::Suboptimal(t) => Some(t),
                 other => return Err(format!("surface frame unavailable: {other:?}")),
             }
         } else {
@@ -181,7 +181,7 @@ impl PortalGpu {
             // (Offscreen views are cached — see below.)
             frame
                 .texture
-                .create_view(&wgpu::TextureViewDescriptor::default())
+                .create_view(&etalon::TextureViewDescriptor::default())
         } else {
             // VC3: Use cached offscreen view instead of create_view per frame.
             self.offscreen_view
@@ -191,7 +191,7 @@ impl PortalGpu {
                     let v = self
                         .offscreen_texture
                         .as_ref()?
-                        .create_view(&wgpu::TextureViewDescriptor::default());
+                        .create_view(&etalon::TextureViewDescriptor::default());
                     self.offscreen_view = Some(v.clone());
                     Some(v)
                 })
@@ -232,27 +232,27 @@ impl PortalGpu {
             let mesh_hdr = self.mesh_pipeline_hdr.as_ref();
 
             {
-                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                let mut pass = encoder.begin_render_pass(&etalon::RenderPassDescriptor {
                     label: Some("portal-hdr-scene"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    color_attachments: &[Some(etalon::RenderPassColorAttachment {
                         view: scene_view,
                         depth_slice: None,
                         resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                        ops: etalon::Operations {
+                            load: etalon::LoadOp::Clear(etalon::Color {
                                 r: self.clear_color[0],
                                 g: self.clear_color[1],
                                 b: self.clear_color[2],
                                 a: self.clear_color[3],
                             }),
-                            store: wgpu::StoreOp::Store,
+                            store: etalon::StoreOp::Store,
                         },
                     })],
-                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    depth_stencil_attachment: Some(etalon::RenderPassDepthStencilAttachment {
                         view: self.scene_depth.view(),
-                        depth_ops: Some(wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(1.0),
-                            store: wgpu::StoreOp::Store,
+                        depth_ops: Some(etalon::Operations {
+                            load: etalon::LoadOp::Clear(1.0),
+                            store: etalon::StoreOp::Store,
                         }),
                         stencil_ops: None,
                     }),
@@ -281,7 +281,7 @@ impl PortalGpu {
                     pass.set_vertex_buffer(2, mesh.normal_buf.slice(..));
                     pass.set_vertex_buffer(3, mesh.tangent_buf.slice(..));
                     pass.set_vertex_buffer(4, mesh.uv_buf.slice(..));
-                    pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+                    pass.set_index_buffer(mesh.index_buf.slice(..), etalon::IndexFormat::Uint32);
                     for draw in &mesh.material_gpu.draws {
                         if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                             continue;
@@ -359,27 +359,27 @@ impl PortalGpu {
                         .map(output_pass::OutputChain::scene_view)
                 })
                 .unwrap_or(&view);
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut pass = encoder.begin_render_pass(&etalon::RenderPassDescriptor {
                 label: Some("portal-phenomenal-pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                color_attachments: &[Some(etalon::RenderPassColorAttachment {
                     view: scene_target,
                     depth_slice: None,
                     resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                    ops: etalon::Operations {
+                        load: etalon::LoadOp::Clear(etalon::Color {
                             r: self.clear_color[0],
                             g: self.clear_color[1],
                             b: self.clear_color[2],
                             a: self.clear_color[3],
                         }),
-                        store: wgpu::StoreOp::Store,
+                        store: etalon::StoreOp::Store,
                     },
                 })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                depth_stencil_attachment: Some(etalon::RenderPassDepthStencilAttachment {
                     view: self.scene_depth.view(),
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: wgpu::StoreOp::Store,
+                    depth_ops: Some(etalon::Operations {
+                        load: etalon::LoadOp::Clear(1.0),
+                        store: etalon::StoreOp::Store,
                     }),
                     stencil_ops: None,
                 }),
@@ -404,7 +404,7 @@ impl PortalGpu {
                 pass.set_vertex_buffer(2, mesh.normal_buf.slice(..));
                 pass.set_vertex_buffer(3, mesh.tangent_buf.slice(..));
                 pass.set_vertex_buffer(4, mesh.uv_buf.slice(..));
-                pass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+                pass.set_index_buffer(mesh.index_buf.slice(..), etalon::IndexFormat::Uint32);
                 for draw in &mesh.material_gpu.draws {
                     if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                         continue;
@@ -535,8 +535,8 @@ impl PortalGpu {
     /// Record scheduled temporal output using internal renderer-owned motion vectors and reactive mask.
     pub fn record_scheduled_temporal_output_auto(
         &mut self,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
+        encoder: &mut etalon::CommandEncoder,
+        target: &etalon::TextureView,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
         let schedule = self.effective_temporal_schedule(schedule);
@@ -612,9 +612,9 @@ impl PortalGpu {
     /// Record scheduled temporal output using explicit producer views.
     pub fn record_scheduled_temporal_output_from_producers(
         &mut self,
-        encoder: &mut wgpu::CommandEncoder,
+        encoder: &mut etalon::CommandEncoder,
         producers: TemporalProducerViews<'_>,
-        target: &wgpu::TextureView,
+        target: &etalon::TextureView,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
         let schedule = self.effective_temporal_schedule(schedule);

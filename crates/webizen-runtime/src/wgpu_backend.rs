@@ -6,7 +6,7 @@ use crate::snapshot::{
 };
 use bytemuck::{Pod, Zeroable};
 use std::sync::{mpsc, Arc};
-use wgpu::util::DeviceExt;
+use etalon::util::DeviceExt;
 
 const WORKGROUP_SIZE: u32 = 8;
 
@@ -110,29 +110,29 @@ struct Vertex {
 
 pub struct WgpuDiffusionBackend<'a> {
     config: DiffusionConfig,
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-    compute_pipeline: wgpu::ComputePipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
-    uniform_buffer: wgpu::Buffer,
-    state_buffers: [wgpu::Buffer; 2],
-    bind_groups: [wgpu::BindGroup; 2],
-    staging_buffer: wgpu::Buffer,
+    device: Arc<etalon::Device>,
+    queue: Arc<etalon::Queue>,
+    compute_pipeline: etalon::ComputePipeline,
+    bind_group_layout: etalon::BindGroupLayout,
+    uniform_buffer: etalon::Buffer,
+    state_buffers: [etalon::Buffer; 2],
+    bind_groups: [etalon::BindGroup; 2],
+    staging_buffer: etalon::Buffer,
     frames: SharedFrameBuffer,
     read_index: usize,
     // Render pipeline fields (Phase 1.1) - planned for future use
     #[allow(dead_code)]
-    surface: Option<wgpu::Surface<'a>>,
+    surface: Option<etalon::Surface<'a>>,
     #[allow(dead_code)]
-    render_pipeline: Option<wgpu::RenderPipeline>,
+    render_pipeline: Option<etalon::RenderPipeline>,
     #[allow(dead_code)]
-    vertex_buffer: Option<wgpu::Buffer>,
+    vertex_buffer: Option<etalon::Buffer>,
     #[allow(dead_code)]
-    index_buffer: Option<wgpu::Buffer>,
+    index_buffer: Option<etalon::Buffer>,
     #[allow(dead_code)]
-    depth_texture: Option<wgpu::Texture>,
+    depth_texture: Option<etalon::Texture>,
     #[allow(dead_code)]
-    depth_texture_view: Option<wgpu::TextureView>,
+    depth_texture_view: Option<etalon::TextureView>,
 }
 
 /// Build a wgpu instance with the same Windows-safe backend policy as
@@ -142,23 +142,23 @@ pub struct WgpuDiffusionBackend<'a> {
 /// Vulkan ICD (`igvk64.dll`) access-violates during `request_device`, which
 /// kills the whole desktop process mid first-run setup. Prefer DX12 unless the
 /// operator pins `QUALIA_WGPU_BACKEND` / `WGPU_BACKEND`.
-fn create_instance() -> wgpu::Instance {
-    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+fn create_instance() -> etalon::Instance {
+    let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
 
     if let Some(backends) = backend_override_from_env() {
         log::info!("webizen-runtime|backend_override|{backends:?}");
         desc.backends = backends;
     } else if cfg!(target_os = "windows") {
-        desc.backends = wgpu::Backends::DX12;
+        desc.backends = etalon::Backends::DX12;
         log::info!(
             "webizen-runtime|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)"
         );
     }
 
-    wgpu::Instance::new(desc)
+    etalon::Instance::new(desc)
 }
 
-fn backend_override_from_env() -> Option<wgpu::Backends> {
+fn backend_override_from_env() -> Option<etalon::Backends> {
     for key in ["QUALIA_WGPU_BACKEND", "WGPU_BACKEND"] {
         if let Ok(raw) = std::env::var(key) {
             let v = raw.trim().to_ascii_lowercase();
@@ -166,12 +166,12 @@ fn backend_override_from_env() -> Option<wgpu::Backends> {
                 continue;
             }
             return Some(match v.as_str() {
-                "vulkan" | "vk" => wgpu::Backends::VULKAN,
-                "dx12" | "d3d12" | "directx12" | "dx" => wgpu::Backends::DX12,
-                "metal" | "mtl" => wgpu::Backends::METAL,
-                "gl" | "opengl" | "gles" => wgpu::Backends::GL,
-                "primary" => wgpu::Backends::PRIMARY,
-                "all" => wgpu::Backends::all(),
+                "vulkan" | "vk" => etalon::Backends::VULKAN,
+                "dx12" | "d3d12" | "directx12" | "dx" => etalon::Backends::DX12,
+                "metal" | "mtl" => etalon::Backends::METAL,
+                "gl" | "opengl" | "gles" => etalon::Backends::GL,
+                "primary" => etalon::Backends::PRIMARY,
+                "all" => etalon::Backends::all(),
                 other => {
                     log::warn!("{key}='{other}' unrecognized — using platform default");
                     return None;
@@ -190,12 +190,12 @@ impl<'a> WgpuDiffusionBackend<'a> {
         // CRITICAL FIX: Use HighPerformance on native desktop to capture NVIDIA GPU
         // LowPower bypasses discrete NVIDIA GPU on Windows
         #[cfg(not(target_arch = "wasm32"))]
-        let power_preference = wgpu::PowerPreference::HighPerformance;
+        let power_preference = etalon::PowerPreference::HighPerformance;
         #[cfg(target_arch = "wasm32")]
-        let power_preference = wgpu::PowerPreference::LowPower;
+        let power_preference = etalon::PowerPreference::LowPower;
 
         let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
+            .request_adapter(&etalon::RequestAdapterOptions {
                 power_preference,
                 compatible_surface: None,
                 force_fallback_adapter: false,
@@ -218,10 +218,10 @@ impl<'a> WgpuDiffusionBackend<'a> {
             adapter_info.backend
         );
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
+            .request_device(&etalon::DeviceDescriptor {
                 label: Some("webizen-runtime-device"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::downlevel_defaults(),
+                required_features: etalon::Features::empty(),
+                required_limits: etalon::Limits::downlevel_defaults(),
                 ..Default::default()
             })
             .await
@@ -230,39 +230,39 @@ impl<'a> WgpuDiffusionBackend<'a> {
 
         let device = Arc::new(device);
         let queue = Arc::new(queue);
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("webizen-diffusion-shader"),
-            source: wgpu::ShaderSource::Wgsl(DIFFUSION_SHADER.into()),
+            source: etalon::ShaderSource::Wgsl(DIFFUSION_SHADER.into()),
         });
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
             label: Some("webizen-diffusion-bind-group-layout"),
             entries: &[
-                wgpu::BindGroupLayoutEntry {
+                etalon::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    visibility: etalon::ShaderStages::COMPUTE,
+                    ty: etalon::BindingType::Buffer {
+                        ty: etalon::BufferBindingType::Storage { read_only: true },
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
                     count: None,
                 },
-                wgpu::BindGroupLayoutEntry {
+                etalon::BindGroupLayoutEntry {
                     binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    visibility: etalon::ShaderStages::COMPUTE,
+                    ty: etalon::BindingType::Buffer {
+                        ty: etalon::BufferBindingType::Storage { read_only: false },
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
                     count: None,
                 },
-                wgpu::BindGroupLayoutEntry {
+                etalon::BindGroupLayoutEntry {
                     binding: 2,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
+                    visibility: etalon::ShaderStages::COMPUTE,
+                    ty: etalon::BindingType::Buffer {
+                        ty: etalon::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
@@ -271,13 +271,13 @@ impl<'a> WgpuDiffusionBackend<'a> {
             ],
         });
 
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pipeline_layout = device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
             label: Some("webizen-diffusion-pipeline-layout"),
             bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
 
-        let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let compute_pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
             label: Some("webizen-diffusion-pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
@@ -318,65 +318,65 @@ impl<'a> WgpuDiffusionBackend<'a> {
         })
     }
 
-    fn create_render_pipeline(device: &wgpu::Device) -> Option<wgpu::RenderPipeline> {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+    fn create_render_pipeline(device: &etalon::Device) -> Option<etalon::RenderPipeline> {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("webizen-render-shader"),
-            source: wgpu::ShaderSource::Wgsl(RENDER_SHADER.into()),
+            source: etalon::ShaderSource::Wgsl(RENDER_SHADER.into()),
         });
 
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pipeline_layout = device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
             label: Some("webizen-render-pipeline-layout"),
             bind_group_layouts: &[],
             immediate_size: 0,
         });
 
         Some(
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("webizen-render-pipeline"),
                 layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     // wgpu 30: VertexState::buffers is &[Option<VertexBufferLayout>].
-                    buffers: &[Some(wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-                        step_mode: wgpu::VertexStepMode::Vertex,
+                    buffers: &[Some(etalon::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<Vertex>() as etalon::BufferAddress,
+                        step_mode: etalon::VertexStepMode::Vertex,
                         attributes: &[
-                            wgpu::VertexAttribute {
+                            etalon::VertexAttribute {
                                 offset: 0,
                                 shader_location: 0,
-                                format: wgpu::VertexFormat::Float32x3,
+                                format: etalon::VertexFormat::Float32x3,
                             },
-                            wgpu::VertexAttribute {
-                                offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                            etalon::VertexAttribute {
+                                offset: std::mem::size_of::<[f32; 3]>() as etalon::BufferAddress,
                                 shader_location: 1,
-                                format: wgpu::VertexFormat::Float32x4,
+                                format: etalon::VertexFormat::Float32x4,
                             },
                         ],
                     })],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &shader,
                     entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: wgpu::TextureFormat::Bgra8UnormSrgb,
-                        blend: Some(wgpu::BlendState::REPLACE),
-                        write_mask: wgpu::ColorWrites::ALL,
+                    targets: &[Some(etalon::ColorTargetState {
+                        format: etalon::TextureFormat::Bgra8UnormSrgb,
+                        blend: Some(etalon::BlendState::REPLACE),
+                        write_mask: etalon::ColorWrites::ALL,
                     })],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    polygon_mode: wgpu::PolygonMode::Fill,
+                    front_face: etalon::FrontFace::Ccw,
+                    cull_mode: Some(etalon::Face::Back),
+                    polygon_mode: etalon::PolygonMode::Fill,
                     unclipped_depth: false,
                     conservative: false,
                 },
                 depth_stencil: None,
-                multisample: wgpu::MultisampleState {
+                multisample: etalon::MultisampleState {
                     count: 1,
                     mask: !0,
                     alpha_to_coverage_enabled: false,
@@ -388,14 +388,14 @@ impl<'a> WgpuDiffusionBackend<'a> {
     }
 
     fn allocate_io_resources(
-        device: &wgpu::Device,
-        bind_group_layout: &wgpu::BindGroupLayout,
+        device: &etalon::Device,
+        bind_group_layout: &etalon::BindGroupLayout,
         config: DiffusionConfig,
     ) -> (
-        wgpu::Buffer,
-        [wgpu::Buffer; 2],
-        [wgpu::BindGroup; 2],
-        wgpu::Buffer,
+        etalon::Buffer,
+        [etalon::Buffer; 2],
+        [etalon::BindGroup; 2],
+        etalon::Buffer,
         SharedFrameBuffer,
     ) {
         let uniforms = DiffusionUniforms {
@@ -405,70 +405,70 @@ impl<'a> WgpuDiffusionBackend<'a> {
             pad: 0.0,
         };
 
-        let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let uniform_buffer = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("webizen-diffusion-uniform-buffer"),
             contents: bytemuck::bytes_of(&uniforms),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
 
         let initial_state = seeded_field(&config);
         let raw_bytes = bytemuck::cast_slice(&initial_state);
 
-        let state_buffer_a = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let state_buffer_a = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("webizen-diffusion-state-a"),
             contents: raw_bytes,
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE
+                | etalon::BufferUsages::COPY_SRC
+                | etalon::BufferUsages::COPY_DST,
         });
 
-        let state_buffer_b = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let state_buffer_b = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("webizen-diffusion-state-b"),
             contents: raw_bytes,
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE
+                | etalon::BufferUsages::COPY_SRC
+                | etalon::BufferUsages::COPY_DST,
         });
 
-        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let staging_buffer = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("webizen-diffusion-staging"),
             size: config.raw_byte_len(),
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
 
-        let bind_group_forward = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group_forward = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("webizen-diffusion-bind-group-a-to-b"),
             layout: bind_group_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: state_buffer_a.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: state_buffer_b.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: uniform_buffer.as_entire_binding(),
                 },
             ],
         });
 
-        let bind_group_reverse = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group_reverse = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("webizen-diffusion-bind-group-b-to-a"),
             layout: bind_group_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: state_buffer_b.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: state_buffer_a.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: uniform_buffer.as_entire_binding(),
                 },
@@ -489,11 +489,11 @@ impl<'a> WgpuDiffusionBackend<'a> {
     fn readback_snapshot_data(&self, slot: usize) -> Result<StateHash, RuntimeError> {
         let slice = self.staging_buffer.slice(..);
         let (tx, rx) = mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |result| {
+        slice.map_async(etalon::MapMode::Read, move |result| {
             let _ = tx.send(result);
         });
 
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = self.device.poll(etalon::PollType::wait_indefinitely());
         let map_result = rx.recv().map_err(|_| RuntimeError::ChannelClosed)?;
         map_result.map_err(|err| RuntimeError::BufferMapFailed(err.to_string()))?;
 
@@ -524,12 +524,12 @@ impl<'a> ComputeBackend for WgpuDiffusionBackend<'a> {
         let write_index = (self.read_index + 1) % 2;
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("webizen-diffusion-encoder"),
             });
 
         {
-            let mut compute = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            let mut compute = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
                 label: Some("webizen-diffusion-pass"),
                 timestamp_writes: None,
             });
@@ -550,7 +550,7 @@ impl<'a> ComputeBackend for WgpuDiffusionBackend<'a> {
             self.config.raw_byte_len(),
         );
         self.queue.submit(Some(encoder.finish()));
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = self.device.poll(etalon::PollType::wait_indefinitely());
 
         let state_hash = self.readback_snapshot_data(write_index)?;
         self.read_index = write_index;

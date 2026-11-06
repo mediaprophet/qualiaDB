@@ -85,6 +85,36 @@ fn migration_actual_compiler_gguf_roundtrip_and_public_aliases_remain_available(
 }
 
 #[test]
+fn migration_etalon_p64_neutral_helpers_and_q42_manifold_bridge_parity() {
+    let bytes = fixture();
+    let index = P64TensorIndex::from_p64_with_integrity(&bytes, IntegrityMode::Full).unwrap();
+    assert!(index.header.has_valid_page_size());
+    assert!(index.header.is_manifold_cache_aligned());
+    for entry in &index.entries {
+        assert_eq!(
+            entry.blob_slice(&bytes).unwrap(),
+            index.blob(&bytes, entry)
+        );
+    }
+    let raw_slice = index
+        .header
+        .manifold_record_slice(&bytes, index.hparams.n_layer, 0)
+        .unwrap();
+    let etalon_rec = etalon_model::p64::P64ManifoldRecord::from_bytes(raw_slice);
+    let q42_coord = index.manifold_coordinate(&bytes, 0).unwrap();
+    assert_eq!(etalon_rec.values_le_finite().unwrap(), q42_coord.as_f32_array());
+    let state = crate::modalities::manifold::ManifoldState10D {
+        state_id: 0x42,
+        timestamp: 7,
+        coordinate: q42_coord,
+    };
+    let mut quins = [crate::NQuin::default(); 2];
+    crate::modalities::manifold::encode_manifold_state(&state, &mut quins);
+    let decoded = crate::modalities::manifold::decode_manifold_state(&quins[0], &quins[1]).unwrap();
+    assert_eq!(decoded, state);
+}
+
+#[test]
 fn migration_owned_manifest_and_clone_do_not_borrow_source_or_each_other() {
     let mut index = {
         let bytes = fixture();

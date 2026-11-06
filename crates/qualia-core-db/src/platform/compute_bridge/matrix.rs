@@ -170,12 +170,12 @@ impl ProbeableBackend for WgpuBackend {
     }
     fn available(&self) -> bool {
         // Available if any non-CPU wgpu adapter enumerates. Cheap-ish; only at boot.
-        let instance = wgpu::Instance::default();
-        pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()))
+        let instance = etalon::Instance::default();
+        pollster::block_on(instance.enumerate_adapters(etalon::Backends::all()))
             .iter()
             .any(|a| {
                 let info = a.get_info();
-                info.device_type != wgpu::DeviceType::Cpu && info.device != 0
+                info.device_type != etalon::DeviceType::Cpu && info.device != 0
             })
     }
     fn probe_class(&self, class: KernelClass, panel: &KernelPanel) -> Vec<CircuitBench> {

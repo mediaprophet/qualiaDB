@@ -140,7 +140,7 @@ impl QTensorEngine {
         &self,
         weight_ggml_type: u32,
         weight_row_elems: u32,
-        weight: wgpu::BindingResource<'_>,
+        weight: etalon::BindingResource<'_>,
         weight_byte_len: u32,
         input: &[f32],
         out: &mut [f32],
@@ -319,7 +319,7 @@ impl QTensorEngine {
             return true;
         }
 
-        let out_bytes = (readback_elems * 4) as wgpu::BufferAddress;
+        let out_bytes = (readback_elems * 4) as etalon::BufferAddress;
         let slice = staging.slice(..out_bytes);
         if await_wgpu_map(slice).await {
             let data = slice

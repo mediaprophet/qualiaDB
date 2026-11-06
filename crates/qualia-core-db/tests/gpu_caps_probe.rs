@@ -21,9 +21,9 @@ fn yn(b: bool) -> &'static str {
 
 #[test]
 fn gpu_caps_probe() {
-    use wgpu::Features as F;
-    let instance = wgpu::Instance::default();
-    let adapters = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all()));
+    use etalon::Features as F;
+    let instance = etalon::Instance::default();
+    let adapters = pollster::block_on(instance.enumerate_adapters(etalon::Backends::all()));
     if adapters.is_empty() {
         eprintln!("[caps] no wgpu adapters enumerated on this host");
         return;
@@ -124,8 +124,8 @@ fn gpu_caps_probe() {
 
     // DECISIVE: what does the inference path ACTUALLY get? Replicate init_shared_gpu_async's
     // selection (Instance::default() + HighPerformance) and report the chosen backend + features.
-    let chosen = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::HighPerformance,
+    let chosen = pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
+        power_preference: etalon::PowerPreference::HighPerformance,
         ..Default::default()
     }));
     match chosen {
@@ -139,9 +139,9 @@ fn gpu_caps_probe() {
             );
             eprintln!(
                 "[caps]   coop_matrix={} subgroup={} f16={}  ← what decode runs on TODAY",
-                yn(f.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX)),
-                yn(f.contains(wgpu::Features::SUBGROUP)),
-                yn(f.contains(wgpu::Features::SHADER_F16))
+                yn(f.contains(etalon::Features::EXPERIMENTAL_COOPERATIVE_MATRIX)),
+                yn(f.contains(etalon::Features::SUBGROUP)),
+                yn(f.contains(etalon::Features::SHADER_F16))
             );
         }
         Err(e) => eprintln!("[caps] default adapter selection failed: {e}"),

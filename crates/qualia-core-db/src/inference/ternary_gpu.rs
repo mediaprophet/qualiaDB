@@ -25,8 +25,8 @@ fn ternary_params_bytes(n_in: u32, n_out: u32, n_batch: u32, scale: f32) -> [u8;
 
 /// Execute the **base-3** ternary GEMM on the GPU (`ternary_gemm.wgsl`).
 pub fn ternary_gemm_gpu(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+    device: &etalon::Device,
+    queue: &etalon::Queue,
     activations: &[f32],
     packed: &[u8],
     scale: f32,
@@ -50,8 +50,8 @@ pub fn ternary_gemm_gpu(
 /// Execute the **2-bit branchless** ternary GEMM on the GPU (`ternary_gemm_2bit.wgsl`). `packed`
 /// must be 2-bit packed (`ternary::pack_trits_2bit`).
 pub fn ternary_gemm_gpu_2bit(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+    device: &etalon::Device,
+    queue: &etalon::Queue,
     activations: &[f32],
     packed: &[u8],
     scale: f32,
@@ -76,8 +76,8 @@ pub fn ternary_gemm_gpu_2bit(
 /// Returns the `n_batch × n_out` output. Strides default to dense. Blocking (native readback).
 #[allow(clippy::too_many_arguments)]
 fn run_gemm(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+    device: &etalon::Device,
+    queue: &etalon::Queue,
     wgsl: &str,
     activations: &[f32],
     packed: &[u8],
@@ -89,11 +89,11 @@ fn run_gemm(
     let n_batch = n_batch.max(1);
     let out_elems = n_batch * n_out;
 
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+    let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
         label: Some("ternary_gemm"),
-        source: wgpu::ShaderSource::Wgsl(wgsl.into()),
+        source: etalon::ShaderSource::Wgsl(wgsl.into()),
     });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
         label: Some("ternary_gemm_pipeline"),
         layout: None, // auto bind-group layout (native)
         module: &shader,
@@ -102,8 +102,8 @@ fn run_gemm(
         cache: None,
     });
 
-    let mk_buf = |label: &str, contents: &[u8], usage: wgpu::BufferUsages| {
-        let buf = device.create_buffer(&wgpu::BufferDescriptor {
+    let mk_buf = |label: &str, contents: &[u8], usage: etalon::BufferUsages| {
+        let buf = device.create_buffer(&etalon::BufferDescriptor {
             label: Some(label),
             size: contents.len().max(4) as u64,
             usage,
@@ -118,7 +118,7 @@ fn run_gemm(
     let act_buf = mk_buf(
         "ternary_act",
         bytemuck::cast_slice(activations),
-        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
     );
     // trit_words is array<u32> → pad the packed bytes to a 4-byte multiple.
     let mut trits = packed.to_vec();
@@ -128,55 +128,55 @@ fn run_gemm(
     let trit_buf = mk_buf(
         "ternary_trits",
         &trits,
-        wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
     );
     let params = ternary_params_bytes(n_in as u32, n_out as u32, n_batch as u32, scale);
     let param_buf = mk_buf(
         "ternary_params",
         &params,
-        wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
     );
-    let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
+    let out_buf = device.create_buffer(&etalon::BufferDescriptor {
         label: Some("ternary_out"),
         size: (out_elems * 4).max(4) as u64,
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
-    let staging = device.create_buffer(&wgpu::BufferDescriptor {
+    let staging = device.create_buffer(&etalon::BufferDescriptor {
         label: Some("ternary_staging"),
         size: (out_elems * 4).max(4) as u64,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
-    let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let bind = device.create_bind_group(&etalon::BindGroupDescriptor {
         label: Some("ternary_bind"),
         layout: &pipeline.get_bind_group_layout(0),
         entries: &[
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 0,
                 resource: act_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 1,
                 resource: trit_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 2,
                 resource: param_buf.as_entire_binding(),
             },
-            wgpu::BindGroupEntry {
+            etalon::BindGroupEntry {
                 binding: 3,
                 resource: out_buf.as_entire_binding(),
             },
         ],
     });
 
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    let mut encoder = device.create_command_encoder(&etalon::CommandEncoderDescriptor {
         label: Some("ternary_enc"),
     });
     {
-        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        let mut pass = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
             label: Some("ternary_pass"),
             timestamp_writes: None,
         });
@@ -190,10 +190,10 @@ fn run_gemm(
 
     let slice = staging.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
-    slice.map_async(wgpu::MapMode::Read, move |r| {
+    slice.map_async(etalon::MapMode::Read, move |r| {
         let _ = tx.send(r);
     });
-    let _ = device.poll(wgpu::PollType::wait_indefinitely());
+    let _ = device.poll(etalon::PollType::wait_indefinitely());
     rx.recv()
         .expect("map channel")
         .expect("map ternary staging");
@@ -244,12 +244,12 @@ struct ResidentTernaryTensor {
 /// (2.0 bit, shift/mask, divergence-free → 1.77× vs F16 on the A2000). Native-only; the wasm WebGPU
 /// ternary path reuses the same WGSL through the MC8 resident arena (a later step).
 pub struct TernaryFfnResident {
-    pipeline: wgpu::ComputePipeline,
-    weights: wgpu::Buffer,
-    act_buf: wgpu::Buffer,
-    out_buf: wgpu::Buffer,
-    params_buf: wgpu::Buffer,
-    staging: wgpu::Buffer,
+    pipeline: etalon::ComputePipeline,
+    weights: etalon::Buffer,
+    act_buf: etalon::Buffer,
+    out_buf: etalon::Buffer,
+    params_buf: etalon::Buffer,
+    staging: etalon::Buffer,
     map: HashMap<u64, ResidentTernaryTensor>,
     max_in: u32,
     max_out: u32,
@@ -262,8 +262,8 @@ impl TernaryFfnResident {
     /// the sanctioned path; the hot loop stays zero-heap. `key` is the tensor's P64 blob offset.
     /// Returns `None` if `tensors` is empty or any blob is malformed.
     pub fn build(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &etalon::Device,
+        queue: &etalon::Queue,
         tensors: &[(u64, usize, usize, &[u8])],
     ) -> Option<Self> {
         if tensors.is_empty() {
@@ -307,11 +307,11 @@ impl TernaryFfnResident {
         let resident_bytes = cursor.max(4);
 
         // 2. Persistent pipeline (auto layout) — built ONCE.
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("ternary_ffn_2bit"),
-            source: wgpu::ShaderSource::Wgsl(TERNARY_GEMM_2BIT_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(TERNARY_GEMM_2BIT_WGSL.into()),
         });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
             label: Some("ternary_ffn_resident_pipeline"),
             layout: None,
             module: &shader,
@@ -321,37 +321,37 @@ impl TernaryFfnResident {
         });
 
         // 3. Resident weight buffer + reusable IO buffers.
-        let weights = device.create_buffer(&wgpu::BufferDescriptor {
+        let weights = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("TernaryFfnResidentWeights"),
             size: resident_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         for (off, bytes) in &uploads {
             queue.write_buffer(&weights, *off, bytes);
         }
-        let act_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        let act_buf = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("TernaryFfnAct"),
             size: (max_in as u64 * 4).max(4),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let out_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        let out_buf = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("TernaryFfnOut"),
             size: (max_out as u64 * 4).max(4),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-        let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        let params_buf = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("TernaryFfnParams"),
             size: 32,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let staging = device.create_buffer(&wgpu::BufferDescriptor {
+        let staging = device.create_buffer(&etalon::BufferDescriptor {
             label: Some("TernaryFfnStaging"),
             size: (max_out as u64 * 4).max(4),
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            usage: etalon::BufferUsages::COPY_DST | etalon::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
 
@@ -394,8 +394,8 @@ impl TernaryFfnResident {
     /// metadata, the IO bounds are exceeded, or the GPU readback fails — fail-closed, never garbage.
     pub fn gemv(
         &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &etalon::Device,
+        queue: &etalon::Queue,
         key: u64,
         input: &[f32],
         out: &mut [f32],
@@ -420,39 +420,39 @@ impl TernaryFfnResident {
         let params = ternary_params_bytes(n_in as u32, n_out as u32, 1, t.scale);
         queue.write_buffer(&self.params_buf, 0, &params);
 
-        let weight_binding = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+        let weight_binding = etalon::BindingResource::Buffer(etalon::BufferBinding {
             buffer: &self.weights,
             offset: t.gpu_offset,
             size: std::num::NonZeroU64::new(t.packed_len as u64),
         });
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("ternary_ffn_resident_bind"),
             layout: &self.pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: self.act_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: weight_binding,
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: self.params_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: self.out_buf.as_entire_binding(),
                 },
             ],
         });
 
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let mut encoder = device.create_command_encoder(&etalon::CommandEncoderDescriptor {
             label: Some("ternary_ffn_enc"),
         });
         {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            let mut pass = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
                 label: Some("ternary_ffn_pass"),
                 timestamp_writes: None,
             });
@@ -460,16 +460,16 @@ impl TernaryFfnResident {
             pass.set_bind_group(0, &bind, &[]);
             pass.dispatch_workgroups((n_out as u32).div_ceil(64).max(1), 1, 1);
         }
-        let out_bytes = (n_out * 4) as wgpu::BufferAddress;
+        let out_bytes = (n_out * 4) as etalon::BufferAddress;
         encoder.copy_buffer_to_buffer(&self.out_buf, 0, &self.staging, 0, out_bytes);
         queue.submit(Some(encoder.finish()));
 
         let slice = self.staging.slice(..out_bytes);
         let (tx, rx) = std::sync::mpsc::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
+        slice.map_async(etalon::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        let _ = device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = device.poll(etalon::PollType::wait_indefinitely());
         match rx.recv() {
             Ok(Ok(())) => {}
             _ => return false,
@@ -489,14 +489,14 @@ mod tests {
     use super::*;
     use crate::ternary::{pack_trits, ternary_gemm_cpu};
 
-    fn try_gpu() -> Option<(wgpu::Device, wgpu::Queue)> {
-        let instance = wgpu::Instance::default();
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+    fn try_gpu() -> Option<(etalon::Device, etalon::Queue)> {
+        let instance = etalon::Instance::default();
+        let adapter = pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             ..Default::default()
         }))
         .ok()?;
-        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
+        pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor::default())).ok()
     }
 
     /// ON-DEVICE PARITY: `ternary_gemm.wgsl` on a real GPU == `ternary_gemm_cpu`. Skips cleanly with
@@ -694,8 +694,8 @@ mod tests {
     /// and `S` submits are timed, so per-dispatch time is GPU-execution-dominated (submit/alloc
     /// overhead amortized away). Returns ms per dispatch.
     fn bench_kernel(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        device: &etalon::Device,
+        queue: &etalon::Queue,
         wgsl: &str,
         entry: &str,
         weight_bytes: &[u8],
@@ -703,11 +703,11 @@ mod tests {
         n_out: usize,
     ) -> f64 {
         use std::time::Instant;
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("bench"),
-            source: wgpu::ShaderSource::Wgsl(wgsl.into()),
+            source: etalon::ShaderSource::Wgsl(wgsl.into()),
         });
-        let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let pipeline = device.create_compute_pipeline(&etalon::ComputePipelineDescriptor {
             label: Some("bench_pipeline"),
             layout: None,
             module: &shader,
@@ -715,8 +715,8 @@ mod tests {
             compilation_options: Default::default(),
             cache: None,
         });
-        let mk = |contents: &[u8], usage: wgpu::BufferUsages| {
-            let b = device.create_buffer(&wgpu::BufferDescriptor {
+        let mk = |contents: &[u8], usage: etalon::BufferUsages| {
+            let b = device.create_buffer(&etalon::BufferDescriptor {
                 label: None,
                 size: contents.len().max(4) as u64,
                 usage,
@@ -729,7 +729,7 @@ mod tests {
         };
         let act = mk(
             bytemuck::cast_slice(&vec![0.1f32; n_in]),
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
         );
         let mut w = weight_bytes.to_vec();
         while w.len() % 4 != 0 || w.is_empty() {
@@ -737,36 +737,36 @@ mod tests {
         }
         let wbuf = mk(
             &w,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
         );
         let params = super::ternary_params_bytes(n_in as u32, n_out as u32, 1, 1.0);
         let pbuf = mk(
             &params,
-            wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         );
-        let obuf = device.create_buffer(&wgpu::BufferDescriptor {
+        let obuf = device.create_buffer(&etalon::BufferDescriptor {
             label: None,
             size: (n_out * 4).max(4) as u64,
-            usage: wgpu::BufferUsages::STORAGE,
+            usage: etalon::BufferUsages::STORAGE,
             mapped_at_creation: false,
         });
-        let bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: None,
             layout: &pipeline.get_bind_group_layout(0),
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: act.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: wbuf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: pbuf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: obuf.as_entire_binding(),
                 },
@@ -776,9 +776,9 @@ mod tests {
         let (k, s) = (32u32, 8u32);
         let submit_batch = || {
             let mut enc =
-                device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+                device.create_command_encoder(&etalon::CommandEncoderDescriptor { label: None });
             {
-                let mut pass = enc.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                let mut pass = enc.begin_compute_pass(&etalon::ComputePassDescriptor {
                     label: None,
                     timestamp_writes: None,
                 });
@@ -789,7 +789,7 @@ mod tests {
                 }
             }
             queue.submit(Some(enc.finish()));
-            let _ = device.poll(wgpu::PollType::wait_indefinitely());
+            let _ = device.poll(etalon::PollType::wait_indefinitely());
         };
         submit_batch(); // warmup
         let t0 = Instant::now();

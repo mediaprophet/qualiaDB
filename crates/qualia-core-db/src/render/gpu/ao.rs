@@ -28,15 +28,15 @@ impl AoTargets {
     }
 
     pub fn try_new(
-        device: &wgpu::Device,
+        device: &etalon::Device,
         width: u32,
         height: u32,
-        camera_layout: &wgpu::BindGroupLayout,
-        model_layout: &wgpu::BindGroupLayout,
-        instance_layout: &wgpu::BindGroupLayout,
-        material_layout: &wgpu::BindGroupLayout,
-        texture_layout: &wgpu::BindGroupLayout,
-        uniform_buf: &wgpu::Buffer,
+        camera_layout: &etalon::BindGroupLayout,
+        model_layout: &etalon::BindGroupLayout,
+        instance_layout: &etalon::BindGroupLayout,
+        material_layout: &etalon::BindGroupLayout,
+        texture_layout: &etalon::BindGroupLayout,
+        uniform_buf: &etalon::Buffer,
     ) -> Option<Self> {
         etalon_render::ao::AoTargets::try_new(
             device,
@@ -59,11 +59,11 @@ impl AoTargets {
     }
     pub fn record(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
+        encoder: &mut etalon::CommandEncoder,
         mesh: &super::MeshGpu,
-        camera_bind: &wgpu::BindGroup,
-        model_bind: &wgpu::BindGroup,
-        instance_bind: &wgpu::BindGroup,
+        camera_bind: &etalon::BindGroup,
+        model_bind: &etalon::BindGroup,
+        instance_bind: &etalon::BindGroup,
         instance_count: u32,
     ) {
         self.0.record(encoder, |prepass| {
@@ -74,7 +74,7 @@ impl AoTargets {
             prepass.set_vertex_buffer(1, mesh.normal_buf.slice(..));
             prepass.set_vertex_buffer(2, mesh.color_buf.slice(..));
             prepass.set_vertex_buffer(3, mesh.uv_buf.slice(..));
-            prepass.set_index_buffer(mesh.index_buf.slice(..), wgpu::IndexFormat::Uint32);
+            prepass.set_index_buffer(mesh.index_buf.slice(..), etalon::IndexFormat::Uint32);
             for draw in &mesh.material_gpu.draws {
                 if draw.opacity_mode == crate::container_10d::OpacityMode::Blend {
                     continue;

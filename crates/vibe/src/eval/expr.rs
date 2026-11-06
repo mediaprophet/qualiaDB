@@ -1,5 +1,5 @@
 use super::*;
-use crate::bind::dispatch;
+use crate::extension_registry::is_extension_namespace;
 use crate::value::EnumValue;
 
 impl<'a, H: Host> Engine<'a, H> {
@@ -258,8 +258,7 @@ impl<'a, H: Host> Engine<'a, H> {
                     Value::List(variables.iter().map(|v| Value::String(v.clone())).collect()),
                 );
                 let payload = Value::Record(rec);
-                crate::bind::dispatch(
-                    self.host,
+                self.route_host_or_extension(
                     "GraphDatabase.sparql",
                     &[payload.clone()],
                     &[("query".to_string(), Value::String(pattern.clone()))],
@@ -322,8 +321,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 if !crate::catalog::granted_covers(&granted, engine_id) {
                     return Ok(term);
                 }
-                match dispatch(
-                    self.host,
+                match self.route_host_or_extension(
                     engine_id,
                     std::slice::from_ref(&term),
                     &[],
@@ -559,7 +557,7 @@ fn collect_free_idents(expr: &Expr, params: &[String], env: &Env, out: &mut Vec<
                 "math", "rdf", "quin", "graph", "Ok", "Err", "vec2", "vec3", "vec4", "mat3",
                 "mat4", "oklch",
             ];
-            if ALLOWED.contains(&n.as_str()) {
+            if ALLOWED.contains(&n.as_str()) || is_extension_namespace(n) {
                 return;
             }
             if crate::catalog::family_of(n).is_some()

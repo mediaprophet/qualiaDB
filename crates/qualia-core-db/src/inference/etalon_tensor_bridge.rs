@@ -15,7 +15,7 @@ pub use etalon_tensor::{
 /// Sizes the arena's intermediate buffers to accommodate the maximum dimension
 /// across `hidden_dim`, `intermediate_dim`, and `vocab_size` for `max_batch` elements.
 pub fn build_forward_arena_on(
-    device: &wgpu::Device,
+    device: &etalon::Device,
     hidden_dim: u32,
     intermediate_dim: u32,
     vocab_size: u32,
@@ -28,12 +28,12 @@ pub fn build_forward_arena_on(
 }
 
 /// Construct a compiled fused FlashAttention compute pipeline on the given device.
-pub fn build_fused_attention_on(device: &wgpu::Device) -> FusedAttentionPipeline {
+pub fn build_fused_attention_on(device: &etalon::Device) -> FusedAttentionPipeline {
     FusedAttentionPipeline::new(device)
 }
 
 /// Construct a compiled GPU block top-k reduction compute pipeline on the given device.
-pub fn build_topk_pipeline_on(device: &wgpu::Device) -> TopkReductionPipeline {
+pub fn build_topk_pipeline_on(device: &etalon::Device) -> TopkReductionPipeline {
     TopkReductionPipeline::new(device)
 }
 
@@ -72,8 +72,8 @@ pub fn try_shared_topk_pipeline() -> Option<TopkReductionPipeline> {
 #[inline]
 pub fn dispatch_fused_attention<'a>(
     pipeline: &'a FusedAttentionPipeline,
-    cpass: &mut wgpu::ComputePass<'a>,
-    bind_group: &'a wgpu::BindGroup,
+    cpass: &mut etalon::ComputePass<'a>,
+    bind_group: &'a etalon::BindGroup,
     num_heads: u32,
 ) {
     pipeline.dispatch(cpass, bind_group, num_heads);
@@ -83,8 +83,8 @@ pub fn dispatch_fused_attention<'a>(
 #[inline]
 pub fn dispatch_topk_reduction<'a>(
     pipeline: &'a TopkReductionPipeline,
-    cpass: &mut wgpu::ComputePass<'a>,
-    bind_group: &'a wgpu::BindGroup,
+    cpass: &mut etalon::ComputePass<'a>,
+    bind_group: &'a etalon::BindGroup,
     num_blocks: u32,
 ) {
     pipeline.dispatch(cpass, bind_group, num_blocks);
@@ -94,8 +94,8 @@ pub fn dispatch_topk_reduction<'a>(
 #[inline]
 pub fn record_readback_copy(
     arena: &ForwardArena,
-    encoder: &mut wgpu::CommandEncoder,
-    token_src: &wgpu::Buffer,
+    encoder: &mut etalon::CommandEncoder,
+    token_src: &etalon::Buffer,
     mode: ForwardMode,
 ) {
     arena.record_readback_copy(encoder, token_src, mode);
@@ -103,16 +103,16 @@ pub fn record_readback_copy(
 
 /// Blocking readback of a single decoded token from the forward arena staging buffer.
 #[inline]
-pub fn read_token_blocking(arena: &ForwardArena, device: &wgpu::Device) -> Option<u32> {
+pub fn read_token_blocking(arena: &ForwardArena, device: &etalon::Device) -> Option<u32> {
     arena.read_token_blocking(device)
 }
 
 /// Upload attention uniform parameters to a uniform buffer using the device queue.
 #[inline]
 pub fn upload_attention_params(
-    queue: &wgpu::Queue,
-    buffer: &wgpu::Buffer,
-    offset: wgpu::BufferAddress,
+    queue: &etalon::Queue,
+    buffer: &etalon::Buffer,
+    offset: etalon::BufferAddress,
     params: &AttentionParams,
 ) {
     queue.write_buffer(buffer, offset, bytemuck::bytes_of(params));
@@ -121,9 +121,9 @@ pub fn upload_attention_params(
 /// Upload top-k uniform parameters to a uniform buffer using the device queue.
 #[inline]
 pub fn upload_topk_params(
-    queue: &wgpu::Queue,
-    buffer: &wgpu::Buffer,
-    offset: wgpu::BufferAddress,
+    queue: &etalon::Queue,
+    buffer: &etalon::Buffer,
+    offset: etalon::BufferAddress,
     params: &TopkParams,
 ) {
     queue.write_buffer(buffer, offset, bytemuck::bytes_of(params));
@@ -132,9 +132,9 @@ pub fn upload_topk_params(
 /// Upload logit mask header to a uniform/storage buffer using the device queue.
 #[inline]
 pub fn upload_logit_mask_header(
-    queue: &wgpu::Queue,
-    buffer: &wgpu::Buffer,
-    offset: wgpu::BufferAddress,
+    queue: &etalon::Queue,
+    buffer: &etalon::Buffer,
+    offset: etalon::BufferAddress,
     header: &LogitMaskHeader,
 ) {
     queue.write_buffer(buffer, offset, bytemuck::bytes_of(header));

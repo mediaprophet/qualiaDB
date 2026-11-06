@@ -14,11 +14,11 @@ impl TemporalResolveGpu {
     }
 
     pub fn try_new(
-        device: &wgpu::Device,
+        device: &etalon::Device,
         width: u32,
         height: u32,
-        scene_format: wgpu::TextureFormat,
-        output_format: wgpu::TextureFormat,
+        scene_format: etalon::TextureFormat,
+        output_format: etalon::TextureFormat,
     ) -> Option<Self> {
         etalon_render::temporal::TemporalResolveGpu::try_new(
             device,
@@ -37,11 +37,11 @@ impl TemporalResolveGpu {
     }
     pub fn record_scheduled_output(
         &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        encoder: &mut wgpu::CommandEncoder,
+        device: &etalon::Device,
+        queue: &etalon::Queue,
+        encoder: &mut etalon::CommandEncoder,
         inputs: TemporalResolveInputs<'_, '_>,
-        target: &wgpu::TextureView,
+        target: &etalon::TextureView,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
         exposure_ev: f32,
         white_balance_gains: [f32; 3],
@@ -105,9 +105,9 @@ mod tests {
     #[test]
     fn target_budget_is_bounded_and_format_aware() {
         let rgba8 =
-            etalon_render::temporal::target_bytes(64, 32, wgpu::TextureFormat::Rgba8Unorm).unwrap();
+            etalon_render::temporal::target_bytes(64, 32, etalon::TextureFormat::Rgba8Unorm).unwrap();
         let rgba16 =
-            etalon_render::temporal::target_bytes(64, 32, wgpu::TextureFormat::Rgba16Float)
+            etalon_render::temporal::target_bytes(64, 32, etalon::TextureFormat::Rgba16Float)
                 .unwrap();
         assert_eq!(rgba16 - rgba8, 64 * 32 * 8);
         assert!(rgba16 < 64 * 32 * 40);

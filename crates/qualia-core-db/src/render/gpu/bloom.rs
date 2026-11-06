@@ -9,10 +9,10 @@ pub(super) fn portal_bloom_enabled() -> bool {
 }
 
 pub(super) fn create_bloom_chain(
-    device: &wgpu::Device,
+    device: &etalon::Device,
     width: u32,
     height: u32,
-    format: wgpu::TextureFormat,
+    format: etalon::TextureFormat,
     exposure_ev: f32,
 ) -> Option<BloomChain> {
     if !portal_bloom_enabled() {

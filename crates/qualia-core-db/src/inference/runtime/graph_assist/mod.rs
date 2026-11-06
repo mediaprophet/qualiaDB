@@ -11,7 +11,8 @@ mod query;
 pub use identity::{derive_prefix_identity, PrefixIdentity};
 pub use prefix_registry::{PrefixPageRegistry, PrefixPageSet, RegistryError};
 pub use query::{
-    query_graph_into, GraphAssistPolicy, GraphQuery, GraphQueryError, GraphSelectionReceipt,
+    query_graph_indexed_into, query_graph_into, GraphAssistPolicy, GraphQuery, GraphQueryError,
+    GraphSelectionReceipt,
 };
 
 #[cfg(test)]

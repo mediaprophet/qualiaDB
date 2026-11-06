@@ -19,16 +19,16 @@ impl OutputChain {
     pub(super) fn uses_hdr_scene(&self) -> bool {
         self.0.uses_hdr_scene()
     }
-    pub(super) fn scene_view(&self) -> &wgpu::TextureView {
+    pub(super) fn scene_view(&self) -> &etalon::TextureView {
         self.0.scene_view()
     }
 
     pub(super) fn try_new(
-        device: &wgpu::Device,
+        device: &etalon::Device,
         width: u32,
         height: u32,
-        scene_format: wgpu::TextureFormat,
-        surface_format: wgpu::TextureFormat,
+        scene_format: etalon::TextureFormat,
+        surface_format: etalon::TextureFormat,
         exposure_ev: f32,
         hdr_scene: bool,
         white_balance_gains: [f32; 3],
@@ -51,7 +51,7 @@ impl OutputChain {
         )
         .map(Self)
     }
-    pub(super) fn set_exposure(&mut self, queue: &wgpu::Queue, ev: f32) -> bool {
+    pub(super) fn set_exposure(&mut self, queue: &etalon::Queue, ev: f32) -> bool {
         crate::render::output::exposure_scale_from_ev(ev)
             .is_some_and(|scale| self.0.set_exposure(queue, scale))
     }

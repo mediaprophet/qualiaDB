@@ -835,8 +835,8 @@ impl QTensorEngine {
         token_idx: u32,
         emb_dim: usize,
         tensors: &crate::gguf_sharder::LayerTensors,
-        token_hidden: &wgpu::Buffer,
-        attn_input: Option<&wgpu::Buffer>,
+        token_hidden: &etalon::Buffer,
+        attn_input: Option<&etalon::Buffer>,
         work_aliases_hidden: bool,
     ) -> bool {
         let mmap = match self.model_bytes() {
@@ -881,7 +881,7 @@ impl QTensorEngine {
             token_hidden
         };
         let ffn_buf = self.gemm_ffn_buf.as_ref().unwrap();
-        let emb_bytes = (emb_dim * 4) as wgpu::BufferAddress;
+        let emb_bytes = (emb_dim * 4) as etalon::BufferAddress;
         let q_dim = (h.n_head * h.head_dim()) as usize;
         let (mask_words, mask_active, mask_word_count) =
             Self::attention_kv_mask_for_dispatch(&layout, token_idx, 0);
@@ -950,7 +950,7 @@ impl QTensorEngine {
                 return false;
             }
             self.mc8_flush(pipeline);
-            let attn_residual_base: &wgpu::Buffer = if work_aliases_hidden {
+            let attn_residual_base: &etalon::Buffer = if work_aliases_hidden {
                 aux_buf
             } else {
                 token_hidden
@@ -1408,7 +1408,7 @@ impl QTensorEngine {
             // Phase 5.5: K/V projection on the parallel GEMM → proj buffers; the (now lightweight)
             // attention shader reads the pre-computed projection instead of matmul-ing on 1 thread.
             let kv_dim = (n_kv * h.head_dim()) as usize;
-            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as etalon::BufferAddress;
             let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
             let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
             if !self.encode_gemm_bufs_offset(
@@ -1667,7 +1667,7 @@ impl QTensorEngine {
             };
             let n_kv_wg = n_tokens.saturating_mul(n_kv);
             let kv_dim = (n_kv * h.head_dim()) as usize;
-            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as wgpu::BufferAddress;
+            let kv_proj_bytes = (kv_dim * n_tokens as usize * 4) as etalon::BufferAddress;
             let k_proj = self.mc8_k_proj_buf.as_ref().unwrap();
             let v_proj = self.mc8_v_proj_buf.as_ref().unwrap();
             if !self.encode_gemm_bufs_offset(
@@ -1805,7 +1805,7 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(norm_buf, 0, bytemuck::cast_slice(&norm_w[..n_embd]));
         // RMS norm: read from batch_buf, write to prefill_scratch
-        let n_embd_bytes = (n_embd * 4) as wgpu::BufferAddress;
+        let n_embd_bytes = (n_embd * 4) as etalon::BufferAddress;
         self.encode_elem_offset(
             &mut enc,
             ELEM_OP_RMS_NORM,
@@ -1875,18 +1875,18 @@ impl QTensorEngine {
         let use_mmv_q8_0 =
             logits_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q8_0 && (n_in % 32 == 0);
         #[cfg(target_arch = "wasm32")]
-        let logits_pipeline: &wgpu::ComputePipeline = if use_mmv_q8_0 {
+        let logits_pipeline: &etalon::ComputePipeline = if use_mmv_q8_0 {
             &self.mmv_q8_0_pipeline
         } else {
             &self.pipeline
         };
         #[cfg(not(target_arch = "wasm32"))]
-        let logits_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+        let logits_pipeline: &etalon::ComputePipeline = &self.pipeline;
         let bind_layout = logits_pipeline.get_bind_group_layout(0);
         for chunk_idx in 0..n_chunks {
             let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
             let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-            let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+            let weight = etalon::BindingResource::Buffer(etalon::BufferBinding {
                 buffer: resident_buf,
                 offset: row_start as u64 * row_bytes,
                 size: std::num::NonZeroU64::new(chunk_rows as u64 * row_bytes),
@@ -1912,23 +1912,23 @@ impl QTensorEngine {
                     None => {
                         let bg = self
                             .gpu_device()
-                            .create_bind_group(&wgpu::BindGroupDescriptor {
+                            .create_bind_group(&etalon::BindGroupDescriptor {
                                 label: Some("FusedArgmaxBind"),
                                 layout: &bind_layout,
                                 entries: &[
-                                    wgpu::BindGroupEntry {
+                                    etalon::BindGroupEntry {
                                         binding: 0,
                                         resource: batch_buf.as_entire_binding(),
                                     },
-                                    wgpu::BindGroupEntry {
+                                    etalon::BindGroupEntry {
                                         binding: 1,
                                         resource: weight,
                                     },
-                                    wgpu::BindGroupEntry {
+                                    etalon::BindGroupEntry {
                                         binding: 2,
                                         resource: Self::mc8_dynamic_uniform_binding(params_buf),
                                     },
-                                    wgpu::BindGroupEntry {
+                                    etalon::BindGroupEntry {
                                         binding: 3,
                                         resource: output_buf.as_entire_binding(),
                                     },
@@ -1944,7 +1944,7 @@ impl QTensorEngine {
             {
                 let mut cpass = enc
                     .encoder
-                    .begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    .begin_compute_pass(&etalon::ComputePassDescriptor {
                         label: None,
                         timestamp_writes: None,
                     });

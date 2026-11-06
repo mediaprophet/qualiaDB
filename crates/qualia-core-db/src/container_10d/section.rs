@@ -85,7 +85,9 @@ pub enum SectionType {
     /// Optional geometry/scientific field data. The payload is self-describing;
     /// currently includes the versioned per-vertex normal field codec.
     FieldSidecar = 8,
-    SpecReservedCorrespondenceMap = 9,
+    /// Volumetric-to-surface correspondence map (`FEMC`) binding surface vertices
+    /// to tetrahedral finite elements via quantized barycentric weights.
+    CorrespondenceMap = 9,
     /// Topology section — half-edge graph + CSR adjacency + connectivity
     /// summary (P2.8). Contains a TopologyMiniHeader followed by the
     /// half-edge array, vertex-adjacency CSR (offsets + neighbours), and
@@ -118,6 +120,8 @@ pub enum SectionType {
     HyperspectralCube = 21,
     /// 3D Sparse Voxel Octree / DAG (VOX0) with 16B nodes and material LUT indices.
     VoxelLattice = 22,
+    /// Nanite-style hierarchical meshlet cluster DAG (`CDAG`) for continuous GPU-driven LOD.
+    ClusterDag = 23,
 }
 
 impl SectionType {
@@ -127,8 +131,11 @@ impl SectionType {
     #[deprecated(note = "Use SectionType::PERSONAL_ONTOLOGY or SectionType::EntityOntology")]
     #[allow(non_upper_case_globals)]
     pub const PersonalOntology: Self = Self::EntityOntology;
+    /// Backwards compatibility alias for [`SectionType::CorrespondenceMap`].
+    #[allow(non_upper_case_globals)]
+    pub const SpecReservedCorrespondenceMap: Self = Self::CorrespondenceMap;
 
-    /// Decode a section-type tag (0–22); `None` for unknown values.
+    /// Decode a section-type tag (0–23); `None` for unknown values.
     #[inline]
     pub const fn from_u8(raw: u8) -> Option<SectionType> {
         match raw {
@@ -141,7 +148,7 @@ impl SectionType {
             6 => Some(SectionType::SpecReservedManifoldHeadTable),
             7 => Some(SectionType::ProvenanceSidecar),
             8 => Some(SectionType::FieldSidecar),
-            9 => Some(SectionType::SpecReservedCorrespondenceMap),
+            9 => Some(SectionType::CorrespondenceMap),
             10 => Some(SectionType::Topology),
             11 => Some(SectionType::SpatialIndex),
             12 => Some(SectionType::SurfaceReading),
@@ -155,6 +162,7 @@ impl SectionType {
             20 => Some(SectionType::HierarchicalSurfels),
             21 => Some(SectionType::HyperspectralCube),
             22 => Some(SectionType::VoxelLattice),
+            23 => Some(SectionType::ClusterDag),
             _ => None,
         }
     }
@@ -169,10 +177,11 @@ impl SectionType {
                 | SectionType::Tensor10DNodes
                 | SectionType::Reconstruction
                 | SectionType::ProvenanceSidecar
+                | SectionType::FieldSidecar
+                | SectionType::CorrespondenceMap
                 | SectionType::Topology
                 | SectionType::SpatialIndex
                 | SectionType::SurfaceReading
-                | SectionType::FieldSidecar
                 | SectionType::Materials
                 | SectionType::TextureCoordinates
                 | SectionType::ManifoldIdentityV2
@@ -183,6 +192,7 @@ impl SectionType {
                 | SectionType::HierarchicalSurfels
                 | SectionType::HyperspectralCube
                 | SectionType::VoxelLattice
+                | SectionType::ClusterDag
         )
     }
 }

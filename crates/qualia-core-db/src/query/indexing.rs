@@ -146,6 +146,21 @@ impl QuinIndex {
         self.by_subject.get(&s).map(Vec::as_slice).unwrap_or(&[])
     }
 
+    /// Zero-copy raw backing-store row indices for a predicate, in ascending row order.
+    pub fn rows_by_predicate(&self, p: u64) -> &[usize] {
+        self.by_predicate.get(&p).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Zero-copy raw backing-store row indices for an object, in ascending row order.
+    pub fn rows_by_object(&self, o: u64) -> &[usize] {
+        self.by_object.get(&o).map(Vec::as_slice).unwrap_or(&[])
+    }
+
+    /// Zero-copy raw backing-store row indices for a context, in ascending row order.
+    pub fn rows_by_context(&self, c: u64) -> &[usize] {
+        self.by_context.get(&c).map(Vec::as_slice).unwrap_or(&[])
+    }
+
     /// The quin at a backing-store row index. Copy, no allocation.
     #[inline]
     pub fn quin_at(&self, i: usize) -> NQuin {

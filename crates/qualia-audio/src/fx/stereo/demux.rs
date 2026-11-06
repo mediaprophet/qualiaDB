@@ -1,6 +1,6 @@
 //! Deinterleave an interleaved stereo buffer into two mono channels.
 //!
-//! `left[i] = in[2i]`, `right[i] = in[2i+1]`. Caller-buffered, **zero-alloc**.
+//! `left[i] = in[2i]`, `right[i] = in[2i+1]`. Delegated to [`etalon_signal::reverb::stereo_demux_into`].
 
 use crate::types::AudioError;
 
@@ -18,11 +18,9 @@ pub fn demux(
     if left.len() < frames || right.len() < frames {
         return Err(AudioError::OutputBufferTooSmall);
     }
-    for i in 0..frames {
-        left[i] = interleaved[i * 2];
-        right[i] = interleaved[i * 2 + 1];
-    }
-    Ok(frames)
+    Ok(etalon_signal::reverb::stereo_demux_into(
+        interleaved, left, right,
+    ))
 }
 
 #[cfg(test)]

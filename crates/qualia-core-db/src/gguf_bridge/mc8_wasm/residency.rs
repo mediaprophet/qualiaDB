@@ -11,7 +11,7 @@ impl QTensorEngine {
     }
 
     /// Buffer backing `role`.
-    pub(crate) fn mc8_weight_role_buf(&self, role: Mc8WeightRole) -> &wgpu::Buffer {
+    pub(crate) fn mc8_weight_role_buf(&self, role: Mc8WeightRole) -> &etalon::Buffer {
         let arena = self.mc8_weight_arena.as_ref().expect("mc8 weight arena");
         match role {
             Mc8WeightRole::AttnK => &arena.qkv_k,
@@ -37,7 +37,7 @@ impl QTensorEngine {
         &self,
         role: Mc8WeightRole,
         layer: u32,
-    ) -> wgpu::BindingResource<'_> {
+    ) -> etalon::BindingResource<'_> {
         etalon_inference::browser_prefill::PrefillEngine { host: self }.weight_binding(role, layer)
     }
 
@@ -123,11 +123,11 @@ impl QTensorEngine {
         // Drop the placeholder arena before allocating resident buffers to minimize peak GPU memory.
         self.mc8_weight_arena = None;
         // Allocate the 7 resident role buffers (replaces the single-layer arena).
-        let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
+        let usage = etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST;
         let arena = {
             let dev = self.gpu_device();
             let mk = |i: usize, label: &str| {
-                dev.create_buffer(&wgpu::BufferDescriptor {
+                dev.create_buffer(&etalon::BufferDescriptor {
                     label: Some(label),
                     size: stride[i] * n_layer as u64,
                     usage,
@@ -213,10 +213,10 @@ impl QTensorEngine {
         let row_bytes = total / vocab;
         // VOCAB_CHUNK_ROWS is a multiple of 256, so every chunk's byte offset
         // (chunk_idx * VOCAB_CHUNK_ROWS * row_bytes) is 256-aligned for the storage binding.
-        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let buf = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("MC8ResidentLogits"),
             size: total as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         self.gpu_queue().write_buffer(&buf, 0, raw);
@@ -256,10 +256,10 @@ impl QTensorEngine {
         let tds = index.tensor_data_start;
         let stride_bytes = (((n_embd * 4) + 255) & !255) as u64;
         let slots = n_layer as u64 * 2;
-        let buf = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let buf = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("MC8ResidentNorms"),
             size: slots * stride_bytes,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::STORAGE | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let queue = self.gpu_queue();
@@ -301,7 +301,7 @@ impl QTensorEngine {
         n_embd: usize,
         layer: u32,
         is_ffn: bool,
-    ) -> Option<(&wgpu::Buffer, wgpu::BufferAddress)> {
+    ) -> Option<(&etalon::Buffer, etalon::BufferAddress)> {
         if let Some(buf) = self.mc8_norm_resident_buf.as_ref() {
             let slot = 2u64 * layer as u64 + if is_ffn { 1 } else { 0 };
             Some((buf, slot * self.mc8_norm_stride as u64))

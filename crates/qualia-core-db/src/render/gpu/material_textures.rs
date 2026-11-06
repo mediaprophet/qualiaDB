@@ -7,36 +7,36 @@ use crate::container_10d::{
 pub(super) const SAMPLER_VARIANTS: usize = 3 * 3 * 2 * 6;
 
 /// Creates `sampler`.
-pub(super) fn create_sampler(device: &wgpu::Device, state: TextureSampler) -> wgpu::Sampler {
+pub(super) fn create_sampler(device: &etalon::Device, state: TextureSampler) -> etalon::Sampler {
     let address = |mode| match mode {
-        TextureAddressMode::ClampToEdge => wgpu::AddressMode::ClampToEdge,
-        TextureAddressMode::MirroredRepeat => wgpu::AddressMode::MirrorRepeat,
-        TextureAddressMode::Repeat => wgpu::AddressMode::Repeat,
+        TextureAddressMode::ClampToEdge => etalon::AddressMode::ClampToEdge,
+        TextureAddressMode::MirroredRepeat => etalon::AddressMode::MirrorRepeat,
+        TextureAddressMode::Repeat => etalon::AddressMode::Repeat,
     };
     let (min_filter, mipmap_filter) = match state.min_filter {
-        TextureMinFilter::Nearest => (wgpu::FilterMode::Nearest, wgpu::MipmapFilterMode::Nearest),
-        TextureMinFilter::Linear => (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Nearest),
+        TextureMinFilter::Nearest => (etalon::FilterMode::Nearest, etalon::MipmapFilterMode::Nearest),
+        TextureMinFilter::Linear => (etalon::FilterMode::Linear, etalon::MipmapFilterMode::Nearest),
         TextureMinFilter::NearestMipmapNearest => {
-            (wgpu::FilterMode::Nearest, wgpu::MipmapFilterMode::Nearest)
+            (etalon::FilterMode::Nearest, etalon::MipmapFilterMode::Nearest)
         }
         TextureMinFilter::LinearMipmapNearest => {
-            (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Nearest)
+            (etalon::FilterMode::Linear, etalon::MipmapFilterMode::Nearest)
         }
         TextureMinFilter::NearestMipmapLinear => {
-            (wgpu::FilterMode::Nearest, wgpu::MipmapFilterMode::Linear)
+            (etalon::FilterMode::Nearest, etalon::MipmapFilterMode::Linear)
         }
         TextureMinFilter::LinearMipmapLinear => {
-            (wgpu::FilterMode::Linear, wgpu::MipmapFilterMode::Linear)
+            (etalon::FilterMode::Linear, etalon::MipmapFilterMode::Linear)
         }
     };
-    device.create_sampler(&wgpu::SamplerDescriptor {
+    device.create_sampler(&etalon::SamplerDescriptor {
         label: Some("portal-material-sampler"),
         address_mode_u: address(state.wrap_s),
         address_mode_v: address(state.wrap_t),
-        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        address_mode_w: etalon::AddressMode::ClampToEdge,
         mag_filter: match state.mag_filter {
-            TextureFilterMode::Nearest => wgpu::FilterMode::Nearest,
-            TextureFilterMode::Linear => wgpu::FilterMode::Linear,
+            TextureFilterMode::Nearest => etalon::FilterMode::Nearest,
+            TextureFilterMode::Linear => etalon::FilterMode::Linear,
         },
         min_filter,
         mipmap_filter,
@@ -45,25 +45,25 @@ pub(super) fn create_sampler(device: &wgpu::Device, state: TextureSampler) -> wg
 }
 
 pub(super) struct MaterialTextureDefaults {
-    _textures: [wgpu::Texture; 6],
-    views: [wgpu::TextureView; 6],
-    samplers: [wgpu::Sampler; SAMPLER_VARIANTS],
+    _textures: [etalon::Texture; 6],
+    views: [etalon::TextureView; 6],
+    samplers: [etalon::Sampler; SAMPLER_VARIANTS],
     _resident_reservation: crate::gpu_context::VramReservation<'static>,
 }
 
 impl MaterialTextureDefaults {
     /// Default texture view for `slot`.
-    pub fn view(&self, slot: usize) -> &wgpu::TextureView {
+    pub fn view(&self, slot: usize) -> &etalon::TextureView {
         &self.views[slot]
     }
 
     /// Default sampler for `state`.
-    pub fn sampler(&self, state: TextureSampler) -> &wgpu::Sampler {
+    pub fn sampler(&self, state: TextureSampler) -> &etalon::Sampler {
         &self.samplers[state.cache_index()]
     }
 
     /// Filtering sampler for `state`.
-    pub fn filtering_sampler(&self, state: TextureSampler) -> &wgpu::Sampler {
+    pub fn filtering_sampler(&self, state: TextureSampler) -> &etalon::Sampler {
         self.sampler(if state.needs_filtering() {
             state
         } else {
@@ -73,9 +73,9 @@ impl MaterialTextureDefaults {
 }
 
 /// Creates `layout`.
-pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+pub(super) fn create_layout(device: &etalon::Device) -> etalon::BindGroupLayout {
     let entries = layout_entries(0);
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
         label: Some("portal-material-texture-layout"),
         entries: &entries,
     })
@@ -83,14 +83,14 @@ pub(super) fn create_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 
 /// Build the fixed texture/sampler slots at a caller-selected binding offset. The mesh renderer
 /// places these after its dynamic material uniform so a draw uses one material bind group.
-pub(super) fn layout_entries(binding_offset: u32) -> Vec<wgpu::BindGroupLayoutEntry> {
+pub(super) fn layout_entries(binding_offset: u32) -> Vec<etalon::BindGroupLayoutEntry> {
     etalon_render::materials::layout_entries(binding_offset).to_vec()
 }
 
 /// Creates `defaults`.
 pub(super) fn create_defaults(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
+    device: &etalon::Device,
+    queue: &etalon::Queue,
 ) -> Result<MaterialTextureDefaults, String> {
     // base colour=white, normal=(0.5,0.5,1), metallic-roughness=(0,1,1), AO=white,
     // G/B are neutral multipliers for authored roughness/metallic factors.
@@ -111,38 +111,38 @@ pub(super) fn create_defaults(
         .map_err(|error| format!("material fallback upload reservation failed: {error}"))?;
     let mut textures = Vec::with_capacity(6);
     for (index, pixel) in DEFAULTS.iter().enumerate() {
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&etalon::TextureDescriptor {
             label: Some("portal-material-semantic-fallback"),
-            size: wgpu::Extent3d {
+            size: etalon::Extent3d {
                 width: 1,
                 height: 1,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
             sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
+            dimension: etalon::TextureDimension::D2,
             format: if matches!(index, 0 | 4 | 5) {
-                wgpu::TextureFormat::Rgba8UnormSrgb
+                etalon::TextureFormat::Rgba8UnormSrgb
             } else {
-                wgpu::TextureFormat::Rgba8Unorm
+                etalon::TextureFormat::Rgba8Unorm
             },
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            usage: etalon::TextureUsages::TEXTURE_BINDING | etalon::TextureUsages::COPY_DST,
             view_formats: &[],
         });
         queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
+            etalon::TexelCopyTextureInfo {
                 texture: &texture,
                 mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
+                origin: etalon::Origin3d::ZERO,
+                aspect: etalon::TextureAspect::All,
             },
             pixel,
-            wgpu::TexelCopyBufferLayout {
+            etalon::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(4),
                 rows_per_image: Some(1),
             },
-            wgpu::Extent3d {
+            etalon::Extent3d {
                 width: 1,
                 height: 1,
                 depth_or_array_layers: 1,
@@ -152,13 +152,13 @@ pub(super) fn create_defaults(
     }
     queue.submit(std::iter::empty());
     queue.on_submitted_work_done(move || drop(staging));
-    let views: [wgpu::TextureView; 6] = textures
+    let views: [etalon::TextureView; 6] = textures
         .iter()
-        .map(|texture| texture.create_view(&wgpu::TextureViewDescriptor::default()))
+        .map(|texture| texture.create_view(&etalon::TextureViewDescriptor::default()))
         .collect::<Vec<_>>()
         .try_into()
         .map_err(|_| "material fallback texture view count mismatch".to_string())?;
-    let textures: [wgpu::Texture; 6] = textures
+    let textures: [etalon::Texture; 6] = textures
         .try_into()
         .map_err(|_| "material fallback texture count mismatch".to_string())?;
     const ADDRESSES: [TextureAddressMode; 3] = [

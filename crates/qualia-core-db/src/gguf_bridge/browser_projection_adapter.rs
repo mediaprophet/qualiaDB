@@ -10,9 +10,9 @@ impl BrowserProjectionProvider for QTensorEngine {
     }
     fn encode_browser_top1_chunk(
         &self,
-        encoder: &mut wgpu::CommandEncoder,
-        logits: &wgpu::Buffer,
-        staging: &wgpu::Buffer,
+        encoder: &mut etalon::CommandEncoder,
+        logits: &etalon::Buffer,
+        staging: &etalon::Buffer,
         plan: Self::Top1Plan,
         chunk: usize,
     ) -> bool {
@@ -20,7 +20,7 @@ impl BrowserProjectionProvider for QTensorEngine {
     }
     async fn read_browser_top1(
         &self,
-        staging: &wgpu::Buffer,
+        staging: &etalon::Buffer,
         plan: Self::Top1Plan,
     ) -> Option<StreamingArgmaxResult> {
         QTensorEngine::read_browser_top1(self, staging, plan).await
@@ -50,24 +50,24 @@ impl BrowserProjectionProvider for QTensorEngine {
             mc8_logits_row_bytes: self.mc8_logits_row_bytes,
         }
     }
-    fn gpu_device(&self) -> &wgpu::Device {
+    fn gpu_device(&self) -> &etalon::Device {
         QTensorEngine::gpu_device(self)
     }
-    fn gpu_queue(&self) -> &wgpu::Queue {
+    fn gpu_queue(&self) -> &etalon::Queue {
         QTensorEngine::gpu_queue(self)
     }
     fn write_weight_words(&self, raw: &[u8], max: usize) {
         QTensorEngine::write_weight_words(self, raw, max)
     }
-    fn submit(&self, command: wgpu::CommandBuffer) -> bool {
+    fn submit(&self, command: etalon::CommandBuffer) -> bool {
         // WebGPU submits successfully without a native SubmissionIndex; await_map validates completion.
         self.submit_commands([command]);
         true
     }
-    fn timestamps(&self) -> Option<wgpu::ComputePassTimestampWrites<'static>> {
+    fn timestamps(&self) -> Option<etalon::ComputePassTimestampWrites<'static>> {
         crate::llm_gpu_profiler::pass_writes_both()
     }
-    fn resolve(&self, encoder: &mut wgpu::CommandEncoder) {
+    fn resolve(&self, encoder: &mut etalon::CommandEncoder) {
         crate::llm_gpu_profiler::resolve(encoder)
     }
     fn accumulate_gemm(&self) {
@@ -79,7 +79,7 @@ impl BrowserProjectionProvider for QTensorEngine {
     fn log(&self, message: &str) {
         wlog(message)
     }
-    async fn await_map(&self, slice: wgpu::BufferSlice<'_>) -> bool {
+    async fn await_map(&self, slice: etalon::BufferSlice<'_>) -> bool {
         await_wgpu_map(slice).await
     }
 }

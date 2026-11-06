@@ -14,16 +14,14 @@ pub(super) struct Summary {
     pub total: usize,
 }
 
+#[inline]
 pub(super) fn page(page: u16) -> Result<u16, Error> {
     let value = if page == 0 {
         P64_DEFAULT_PAGE_LOG2
     } else {
         page
     };
-    if !(8..=30).contains(&value) {
-        return Err(Error::Page(value));
-    }
-    Ok(value)
+    etalon_model::p64::resolve_page_log2(value).ok_or(Error::Page(value))
 }
 
 pub(super) fn inspect(src: &[u8], plan: &SafeTensorPlan, page_log2: u16) -> Result<Summary, Error> {

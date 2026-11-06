@@ -21,6 +21,7 @@ production = []
 generation = []
 
 [dependencies]
+etalon-signal = { workspace = true }
 # Optional: host mic (desktop). Not for wasm32.
 cpal = { workspace = true, optional = true }
 

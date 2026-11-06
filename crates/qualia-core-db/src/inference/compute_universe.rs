@@ -7,7 +7,7 @@
 //! 3. **Sentinel governance** — `DenyRollback` on the control ring before the next token matmul.
 //! 4. **VramLedger pins** — Full / Eco / Reserve per universe; U0 KV protected in Reserve.
 //!
-//! One physical `wgpu::Device` (`gpu_context::shared_gpu`); logical parallelism via queues + rings.
+//! One physical `etalon::Device` (`gpu_context::shared_gpu`); logical parallelism via queues + rings.
 
 use core::cell::UnsafeCell;
 // Request lifetime and result-envelope ownership are separated from fabric math.

@@ -191,7 +191,7 @@ impl QTensorEngine {
         };
 
         // GEMM params at 256-aligned uniform sub-ranges: gate@0, up@256, down@512.
-        const SLOT: wgpu::BufferAddress = 256;
+        const SLOT: etalon::BufferAddress = 256;
         let p_gate = GemmGpuParams {
             n_in: gate_in as u32,
             n_out: n_ffn as u32,
@@ -239,10 +239,10 @@ impl QTensorEngine {
         // Lazily create the 3-slot fused GEMM params uniform (&mut self — done before the shared borrows).
         if self.ffn_fused_params.is_none() {
             self.ffn_fused_params =
-                Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                Some(self.gpu_device().create_buffer(&etalon::BufferDescriptor {
                     label: Some("FfnFusedGemmParams"),
                     size: SLOT * 3,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }));
         }
@@ -278,7 +278,7 @@ impl QTensorEngine {
             .write_buffer(in_buf, 0, bytemuck::cast_slice(&ffn_input[..gate_in]));
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
+        let gemm_pipeline: &etalon::ComputePipeline = if use_coop {
             &self.coop_gemv_pipeline
         } else {
             &self.pipeline
@@ -287,85 +287,85 @@ impl QTensorEngine {
         let elem_layout = self.elem_silu_mul_bind_layout.clone();
         let gp_sz = std::num::NonZeroU64::new(std::mem::size_of::<GemmGpuParams>() as u64);
         let ep_sz = std::num::NonZeroU64::new(std::mem::size_of::<ElemGpuParams>() as u64);
-        let gemm_params_at = |slot: wgpu::BufferAddress| {
-            wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+        let gemm_params_at = |slot: etalon::BufferAddress| {
+            etalon::BindingResource::Buffer(etalon::BufferBinding {
                 buffer: params_buf,
                 offset: slot,
                 size: gp_sz,
             })
         };
 
-        let gate_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let gate_bg = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("FfnGateBG"),
             layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: in_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: rg.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: gemm_params_at(0),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: g_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 4,
                     resource: in_buf.as_entire_binding(),
                 },
             ],
         });
-        let up_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let up_bg = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("FfnUpBG"),
             layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: in_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: ru.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: gemm_params_at(SLOT),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: u_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 4,
                     resource: in_buf.as_entire_binding(),
                 },
             ],
         });
-        let silu_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let silu_bg = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("FfnSiluBG"),
             layout: &elem_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: g_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: u_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: s_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    resource: etalon::BindingResource::Buffer(etalon::BufferBinding {
                         buffer: elem_params,
                         offset: 0,
                         size: ep_sz,
@@ -373,27 +373,27 @@ impl QTensorEngine {
                 },
             ],
         });
-        let down_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let down_bg = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("FfnDownBG"),
             layout: &gemm_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 0,
                     resource: s_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 1,
                     resource: rd.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 2,
                     resource: gemm_params_at(SLOT * 2),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 3,
                     resource: d_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                etalon::BindGroupEntry {
                     binding: 4,
                     resource: s_buf.as_entire_binding(),
                 },
@@ -402,7 +402,7 @@ impl QTensorEngine {
 
         let mut encoder = self
             .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            .create_command_encoder(&etalon::CommandEncoderDescriptor {
                 label: Some("FfnFusedEncoder"),
             });
         // Multi-row dispatch only when the GEMM path itself selected mr (Q4 SoA large).
@@ -437,7 +437,7 @@ impl QTensorEngine {
                 3 => crate::llm_gpu_profiler::pass_writes_end(),
                 _ => None,
             };
-            let mut cp = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            let mut cp = encoder.begin_compute_pass(&etalon::ComputePassDescriptor {
                 label: Some(label),
                 timestamp_writes,
             });
@@ -445,7 +445,7 @@ impl QTensorEngine {
             cp.set_bind_group(0, bg, &[]);
             cp.dispatch_workgroups(groups, 1, 1);
         }
-        let out_bytes = (dn_out * 4) as wgpu::BufferAddress;
+        let out_bytes = (dn_out * 4) as etalon::BufferAddress;
         encoder.copy_buffer_to_buffer(d_buf, 0, staging, 0, out_bytes);
         crate::llm_gpu_profiler::resolve(&mut encoder);
         self.submit_commands(Some(encoder.finish()));
@@ -453,7 +453,7 @@ impl QTensorEngine {
 
         let slice = staging.slice(..out_bytes);
         let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |r| {
+        slice.map_async(etalon::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
         self.poll_wait();

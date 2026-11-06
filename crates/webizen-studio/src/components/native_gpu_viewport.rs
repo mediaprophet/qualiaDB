@@ -2,7 +2,7 @@
 //! bypassing the PNG round-trip entirely.
 //!
 //! This component calls `mount_gpu_surface` on mount, which creates a child
-//! HWND inside the Tauri window and a wgpu::Surface that presents directly
+//! HWND inside the Tauri window and a etalon::Surface that presents directly
 //! to the GPU swapchain. The render loop runs on a background thread in the
 //! native host.
 

@@ -7,5 +7,5 @@ edition = "2021"
 bytemuck = { workspace = true, features = ["derive"] }
 crossbeam-channel = { workspace = true }
 sha2 = { workspace = true, default-features = false }
-wgpu = { workspace = true }
+etalon = { workspace = true, default-features = false, features = ["std", "wgsl", "webgpu", "vulkan", "dx12", "metal", "gles"] }
 log = { workspace = true }

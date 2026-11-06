@@ -1,10 +1,20 @@
 //! HRTF — analytic + KemarLite embedded tables (zero-heap hot path).
 //!
 //! Full measured KEMAR datasets are optional cold assets; default hot path uses KemarLite
-//! (8-azimuth ITD/ILD samples) with analytic fallback.
+//! (8-azimuth ITD/ILD samples) with analytic Woodworth/Rayleigh fallback delegated to
+//! `etalon_signal::audio`.
 
 use core::f32::consts::PI;
 use std::sync::atomic::{AtomicU8, Ordering};
+
+pub use etalon_signal::audio::{
+    pinna_elevation_notch_hz, spherical_ild_db, woodworth_itd_seconds, DEFAULT_HEAD_RADIUS_M,
+    DEFAULT_SPEED_OF_SOUND_M_S,
+};
+use etalon_signal::audio::{
+    convolve_fir_into, head_relative_position as etalon_head_relative_position,
+    synthesize_hrir_into,
+};
 
 /// HRTF synthesis profile (hot path).
 #[repr(u8)]
@@ -60,14 +70,11 @@ impl Default for BinauralGains {
     }
 }
 
-/// Rotate source position into head frame (listener at origin, yaw around Y).
+/// Rotate source position into head frame (listener at origin, yaw around Y),
+/// delegated to [`etalon_signal::audio::head_relative_position`].
 #[inline]
 pub fn head_relative_position(source: [f32; 3], listener_yaw: f32) -> [f32; 3] {
-    let c = listener_yaw.cos();
-    let s = listener_yaw.sin();
-    let x = source[0];
-    let z = source[2];
-    [x * c - z * s, source[1], x * s + z * c]
+    etalon_head_relative_position(source, listener_yaw)
 }
 
 #[inline]
@@ -110,7 +117,9 @@ pub fn binaural_analytic(source: [f32; 3], listener_yaw: f32) -> BinauralGains {
     let ild = pan * 0.42;
     let gain_l = (0.707 * (1.0 - ild)).clamp(0.05, 1.0);
     let gain_r = (0.707 * (1.0 + ild)).clamp(0.05, 1.0);
-    let itd_seconds = pan * 0.0006;
+    // Spherical-head Woodworth ITD via etalon_signal::audio (head radius 0.078 m => ~584 us max).
+    let itd_seconds =
+        woodworth_itd_seconds(azimuth, 0.078, DEFAULT_SPEED_OF_SOUND_M_S).unwrap_or(pan * 0.0006);
     let atten = (1.0 / dist).min(1.0);
 
     BinauralGains {
@@ -145,8 +154,7 @@ pub fn room_damp_from_manifold(manifold_w: f32) -> f32 {
 // SYNTHESIZE a physically-plausible HRIR directly from the ITD/ILD model in
 // `BinauralGains` (interaural time difference as a fractional sample delay,
 // interaural level difference as per-ear gain, and a one-pole head-shadow
-// low-pass on the farther/contralateral ear). `binaural_render` then convolves a
-// mono source with the left/right impulse responses to produce a binaural pair.
+// low-pass on the farther/contralateral ear), delegated to `etalon_signal::audio`.
 // ---------------------------------------------------------------------------
 
 /// Direct linear (FIR) convolution: `y[i] = Σ_j signal[j]·h[i-j]`.
@@ -158,48 +166,22 @@ pub fn convolve_fir(signal: &[f32], h: &[f32]) -> Vec<f32> {
     }
     let out_len = signal.len() + h.len() - 1;
     let mut out = vec![0.0_f32; out_len];
-    for (j, &s) in signal.iter().enumerate() {
-        if s == 0.0 {
-            continue;
-        }
-        for (m, &hm) in h.iter().enumerate() {
-            out[j + m] += s * hm;
+    if convolve_fir_into(signal, h, &mut out).is_err() {
+        out.fill(0.0);
+        for (j, &s) in signal.iter().enumerate() {
+            if s == 0.0 {
+                continue;
+            }
+            for (m, &hm) in h.iter().enumerate() {
+                out[j + m] += s * hm;
+            }
         }
     }
     out
 }
 
-/// Write a unit impulse scaled by `gain` at fractional `delay_samples` into `ir`,
-/// splitting energy linearly across the two straddling integer taps.
-#[inline]
-fn place_fractional_impulse(ir: &mut [f32], delay_samples: f32, gain: f32) {
-    if ir.is_empty() {
-        return;
-    }
-    let d = delay_samples.max(0.0);
-    let i0 = d.floor() as usize;
-    let frac = d - i0 as f32;
-    if i0 < ir.len() {
-        ir[i0] += gain * (1.0 - frac);
-    }
-    if i0 + 1 < ir.len() {
-        ir[i0 + 1] += gain * frac;
-    }
-}
-
-/// One-pole low-pass `y[n] = y[n-1] + a·(x[n] - y[n-1])` applied in place
-/// (head-shadow model; `a ∈ (0,1]`, smaller `a` = more high-frequency rolloff).
-#[inline]
-fn one_pole_lowpass_in_place(buf: &mut [f32], a: f32) {
-    let a = a.clamp(0.0, 1.0);
-    let mut y = 0.0_f32;
-    for x in buf.iter_mut() {
-        y += a * (*x - y);
-        *x = y;
-    }
-}
-
-/// Synthesize left/right HRIRs from `gains`.
+/// Synthesize left/right HRIRs from `gains`, delegated to
+/// [`etalon_signal::audio::synthesize_hrir_into`].
 ///
 /// Each ear is a unit impulse scaled by `gain_l`/`gain_r`, delayed by its ear
 /// delay: the nearer ear sits at ~0, the farther ear is delayed by
@@ -218,22 +200,18 @@ pub fn synthesize_hrir(
     let n = taps.max(1);
     let mut left = vec![0.0_f32; n];
     let mut right = vec![0.0_f32; n];
-
-    let delay = (gains.itd_seconds.abs() * sample_rate.max(1.0)).max(0.0);
     // Head-shadow low-pass coefficient for the contralateral ear (gentle).
     const SHADOW_A: f32 = 0.35;
 
-    if gains.itd_seconds <= 0.0 {
-        // Source to the LEFT: left ear nearer (no delay), right ear farther.
-        place_fractional_impulse(&mut left, 0.0, gains.gain_l);
-        place_fractional_impulse(&mut right, delay, gains.gain_r);
-        one_pole_lowpass_in_place(&mut right, SHADOW_A);
-    } else {
-        // Source to the RIGHT: right ear nearer, left ear farther.
-        place_fractional_impulse(&mut right, 0.0, gains.gain_r);
-        place_fractional_impulse(&mut left, delay, gains.gain_l);
-        one_pole_lowpass_in_place(&mut left, SHADOW_A);
-    }
+    let _ = synthesize_hrir_into(
+        gains.gain_l,
+        gains.gain_r,
+        gains.itd_seconds,
+        sample_rate.max(1.0),
+        SHADOW_A,
+        &mut left,
+        &mut right,
+    );
 
     (left, right)
 }

@@ -1,6 +1,7 @@
 //! `query` category (reorg).
 
 pub mod cbor_compiler;
+pub mod geometry_asset_shacl;
 pub mod graph_accel;
 pub mod graph_index;
 #[cfg(not(target_arch = "wasm32"))]
@@ -60,6 +61,10 @@ pub mod spawn_decay;
 pub mod temporal_graph;
 pub mod temporal_scrub;
 pub mod visual_model_bridge;
+
+pub use geometry_asset_shacl::{
+    validate_holistic_twin_quins_zero_heap, GeometryShaclVerdict, GeometryShaclViolation,
+};
 pub use sdmx_cube::{
     compile_observation_to_quins, ingest_sdmx_csv_to_quins, parse_conf_status, parse_sdmx_csv_into,
     ConfidentialityMark, SdmxObservation, QB_CONF_STATUS, QB_DATASET, QB_OBSERVATION, QB_OBS_VALUE,

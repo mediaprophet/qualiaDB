@@ -19,6 +19,10 @@ pub mod topology;
 #[cfg(feature = "gpu-runtime")]
 pub mod volume_gpu;
 
+pub use bake_pipeline::ScaleTier;
+pub use quantum::QuantumContextRange;
+pub use spacetime::HierarchicalSpacetimeCoord;
+
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};
 
@@ -87,14 +91,14 @@ pub struct Tensor10D {
 impl Default for Tensor10D {
     fn default() -> Self {
         Self {
-            q: 0.0, // Ground truth by default
-            v: 0.0, // Euclidean topology by default
-            w: 0.0, // Medical domain by default
+            q: 0.0,
+            v: 0.0,
+            w: 0.0,
             x: 0.0,
             y: 0.0,
             z: 0.0,
-            t: 0.0,     // Initial time slice
-            alpha: 1.0, // Full confidence/amplitude by default
+            t: 0.0,
+            alpha: 1.0,
             mu: 0.0,
             sigma: 0.0,
         }
@@ -203,12 +207,15 @@ impl Tensor10D {
     /// Calculates full 10D distance considering topological adjustments
     #[inline]
     pub fn full_distance(&self, other: &Self) -> f32 {
-        // Use topological class to determine distance metric
         match self.v as u32 {
-            0 => self.euclidean_distance(other),  // Euclidean
-            1 => self.cyclic_distance(other),     // Cyclic/Toroidal
-            2 => self.hyperbolic_distance(other), // Hyperbolic/Tree
-            _ => self.boundary_distance(other),   // Boundary Cliques
+            0 => self.euclidean_distance(other),
+            1 => self.cyclic_distance(other),
+            2 => self.hyperbolic_distance(other),
+            3 => self.boundary_distance(other),
+            4 => self.spherical_healpix_distance(other),
+            5 => self.lorentzian_spacetime_distance(other),
+            6 => self.multiply_connected_portal_distance(other),
+            _ => self.boundary_distance(other),
         }
     }
 
@@ -250,6 +257,30 @@ impl Tensor10D {
         } else {
             1.0
         }
+    }
+
+    /// Spherical HEALPix distance (folds x, y, z)
+    #[inline]
+    fn spherical_healpix_distance(&self, other: &Self) -> f32 {
+        topology::TopologyClass::SphericalHealpix
+            .calculate_distance((self.x, self.y, self.z), (other.x, other.y, other.z))
+    }
+
+    /// Lorentzian spacetime distance (folds x, y, z, t)
+    #[inline]
+    fn lorentzian_spacetime_distance(&self, other: &Self) -> f32 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        let dz = self.z - other.z;
+        let dt = self.t - other.t;
+        (-(dt * dt) + (dx * dx + dy * dy + dz * dz)).abs().sqrt()
+    }
+
+    /// Multiply-connected portal distance (folds x, y, z)
+    #[inline]
+    fn multiply_connected_portal_distance(&self, other: &Self) -> f32 {
+        topology::TopologyClass::MultiplyConnectedPortal
+            .calculate_distance((self.x, self.y, self.z), (other.x, other.y, other.z))
     }
 
     /// Returns true if this is a parallel context tensor (q > 0)
@@ -307,41 +338,21 @@ mod tests {
 
     #[test]
     fn test_pod_zeroable() {
-        // Test that Tensor10D satisfies Pod and Zeroable traits
         let tensor = Tensor10D::default();
         assert_eq!(tensor.q, 0.0);
         assert_eq!(tensor.v, 0.0);
-
-        // Test byte-level equality for Pod
         let t1 = Tensor10D::new(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0);
         let bytes: &[u8] = bytemuck::bytes_of(&t1);
         assert_eq!(bytes.len(), std::mem::size_of::<Tensor10D>());
     }
 
-    // ───────────────────────────────────────────────────────────────────
-    //  P7.9 — Axis-completeness regression guards
-    //
-    //  Decision: documented-limit path (option b). The `.10d` header's
-    //  metric-completeness descriptor declares which axes each v-branch
-    //  folds, and `metric_check::verify_descriptor_against_reality`
-    //  enforces that the declaration matches `full_distance`'s actual
-    //  behaviour. These tests guard the decision: the Euclidean branch
-    //  (v=0) is axis-complete (folds all 7 COORDINATE axes), while the
-    //  non-Euclidean branches (v=1,2,3+) are documented as NOT folding
-    //  α/μ/σ/t. If a future change makes a non-Euclidean branch
-    //  axis-complete, these tests must be updated AND the descriptor
-    //  in `metric_check::proposed_metric_descriptor` must be updated.
-    // ───────────────────────────────────────────────────────────────────
-
+    // P7.9 — Axis-completeness regression guards (option b)
     #[test]
     fn p7_9_v0_euclidean_alpha_changes_distance() {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.alpha += 0.25;
-        assert!(
-            base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing α must change distance (axis-complete)"
-        );
+        assert!(base.full_distance(&perturbed) > 1e-6);
     }
 
     #[test]
@@ -349,10 +360,7 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.mu += 0.25;
-        assert!(
-            base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing μ must change distance (axis-complete)"
-        );
+        assert!(base.full_distance(&perturbed) > 1e-6);
     }
 
     #[test]
@@ -360,10 +368,7 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.sigma += 0.25;
-        assert!(
-            base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing σ must change distance (axis-complete)"
-        );
+        assert!(base.full_distance(&perturbed) > 1e-6);
     }
 
     #[test]
@@ -371,10 +376,7 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.t += 0.25;
-        assert!(
-            base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing t must change distance (axis-complete)"
-        );
+        assert!(base.full_distance(&perturbed) > 1e-6);
     }
 
     #[test]
@@ -383,10 +385,7 @@ mod tests {
         base.v = 1.0;
         let mut perturbed = base;
         perturbed.alpha += 0.25;
-        assert!(
-            base.full_distance(&perturbed) < 1e-6,
-            "v=1: changing α must NOT change distance (documented limit)"
-        );
+        assert!(base.full_distance(&perturbed) < 1e-6);
     }
 
     #[test]
@@ -395,10 +394,7 @@ mod tests {
         base.v = 1.0;
         let mut perturbed = base;
         perturbed.sigma += 0.25;
-        assert!(
-            base.full_distance(&perturbed) < 1e-6,
-            "v=1: changing σ must NOT change distance (documented limit)"
-        );
+        assert!(base.full_distance(&perturbed) < 1e-6);
     }
 
     #[test]
@@ -409,12 +405,7 @@ mod tests {
         perturbed.t += 0.25;
         let d_base = base.full_distance(&base);
         let d_perturbed = base.full_distance(&perturbed);
-        assert!(
-            (d_perturbed - d_base).abs() < 1e-6,
-            "v=2: changing t must NOT change distance (documented limit): {} vs {}",
-            d_base,
-            d_perturbed
-        );
+        assert!((d_perturbed - d_base).abs() < 1e-6);
     }
 
     #[test]
@@ -423,10 +414,7 @@ mod tests {
         base.v = 3.0;
         let mut perturbed = base;
         perturbed.alpha += 0.25;
-        assert!(
-            base.full_distance(&perturbed) < 1e-6,
-            "v>=3: changing α must NOT change distance (documented limit)"
-        );
+        assert!(base.full_distance(&perturbed) < 1e-6);
     }
 
     #[test]
@@ -434,10 +422,7 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.q += 0.25;
-        assert!(
-            base.full_distance(&perturbed) < 1e-6,
-            "v=0: q is a SELECTOR, must NOT change distance"
-        );
+        assert!(base.full_distance(&perturbed) < 1e-6);
     }
 
     #[test]
@@ -445,9 +430,38 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.w += 0.25;
-        assert!(
-            base.full_distance(&perturbed) < 1e-6,
-            "v=0: w is a SELECTOR, must NOT change distance"
-        );
+        assert!(base.full_distance(&perturbed) < 1e-6);
+    }
+
+    #[test]
+    fn test_extended_topology_distance_dispatch() {
+        let mut t1 = Tensor10D::default();
+        let mut t2 = Tensor10D::default();
+
+        // Spherical Healpix (v=4)
+        t1.v = 4.0;
+        t2.v = 4.0;
+        t1.x = 1.0;
+        t2.y = 1.0;
+        assert!(t1.full_distance(&t2) > 1.0);
+
+        // Lorentzian Spacetime (v=5)
+        t1.v = 5.0;
+        t2.v = 5.0;
+        t1.x = 3.0;
+        t1.y = 0.0;
+        t2.x = 0.0;
+        t2.y = 0.0;
+        t1.t = 5.0;
+        t2.t = 0.0;
+        // ds^2 = -(5)^2 + 3^2 = -16 -> sqrt(16) = 4.0
+        assert!((t1.full_distance(&t2) - 4.0).abs() < 1e-5);
+
+        // Multiply Connected Portal (v=6)
+        t1.v = 6.0;
+        t2.v = 6.0;
+        t1.x = 0.05;
+        t2.x = 0.95;
+        assert!((t1.full_distance(&t2) - 0.1).abs() < 1e-5);
     }
 }

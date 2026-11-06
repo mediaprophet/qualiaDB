@@ -45,6 +45,7 @@ pub mod crypto;
 pub mod dag;
 pub mod decompiler;
 pub mod deontic_interrupt;
+pub mod extension_registry;
 pub mod frame_morphism;
 pub mod hid;
 pub mod law_package;

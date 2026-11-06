@@ -103,7 +103,7 @@ pub(super) fn validate_header(index: &GgufTensorIndex, page: u16) -> Result<(), 
     if index.tensor_data_start == 0 || index.entries.is_empty() {
         return Err(GgufCompileError::NoTensors);
     }
-    if page != 0 && !(8..=30).contains(&page) {
+    if etalon_model::p64::resolve_page_log2(page).is_none() {
         return Err(GgufCompileError::Page(page));
     }
     Ok(())

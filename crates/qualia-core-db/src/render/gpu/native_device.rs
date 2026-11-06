@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use wgpu::{Backends, Device, InstanceDescriptor, PowerPreference, Queue};
+use etalon::{Backends, Device, InstanceDescriptor, PowerPreference, Queue};
 
 /// Explicit renderer pin. `None` means use the graphics fallback order.
 pub(super) fn backend_override() -> Result<Option<Backends>, String> {
@@ -69,16 +69,16 @@ pub(super) fn request_offscreen_device() -> Result<(Arc<Device>, Arc<Queue>), St
     for backend in candidates.into_iter().take(count) {
         let mut descriptor = InstanceDescriptor::new_without_display_handle();
         descriptor.backends = backend;
-        let instance = wgpu::Instance::new(descriptor);
+        let instance = etalon::Instance::new(descriptor);
         let adapter = match pollster::block_on(instance.request_adapter(
-            &wgpu::RequestAdapterOptions {
+            &etalon::RequestAdapterOptions {
                 power_preference: PowerPreference::HighPerformance,
                 ..Default::default()
             },
         )) {
             Ok(adapter) => adapter,
             Err(high_performance_error) => {
-                match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                match pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
                     power_preference: PowerPreference::LowPower,
                     ..Default::default()
                 })) {
@@ -94,9 +94,9 @@ pub(super) fn request_offscreen_device() -> Result<(Arc<Device>, Arc<Queue>), St
         };
 
         let info = adapter.get_info();
-        match pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        match pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor {
             label: Some("Qualia native render device"),
-            required_features: wgpu::Features::empty(),
+            required_features: etalon::Features::empty(),
             required_limits: adapter.limits(),
             ..Default::default()
         })) {

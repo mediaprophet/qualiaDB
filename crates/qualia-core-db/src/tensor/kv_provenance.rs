@@ -1,4 +1,4 @@
-//! Bake-time map: tensor SOA index ↔ KV cache prompt slot (B3.2b).
+//! Bake-time map: tensor SOA index ↔ KV cache prompt slot (B3.2b / §7.3.3).
 
 use std::sync::{OnceLock, RwLock};
 
@@ -20,6 +20,7 @@ impl KvSlotInfo {
 
 pub struct KvProvenanceMap {
     tensor_to_kv: [KvSlotInfo; MAX_KV_PROVENANCE],
+    kv_to_tensor: [u32; MAX_KV_PROVENANCE],
     generation: u32,
 }
 
@@ -28,6 +29,7 @@ impl KvProvenanceMap {
     pub fn new() -> Self {
         Self {
             tensor_to_kv: [KvSlotInfo::UNMAPPED; MAX_KV_PROVENANCE],
+            kv_to_tensor: [KV_SLOT_UNMAPPED; MAX_KV_PROVENANCE],
             generation: 0,
         }
     }
@@ -38,19 +40,26 @@ impl KvProvenanceMap {
         self.generation
     }
 
-    /// Record a single tensor index → KV slot binding (cold path).
+    /// Record a single tensor index ↔ KV slot bidirectional binding in O(1) (cold path).
     pub fn record(&mut self, tensor_index: u32, kv_slot: u32, parent_page_id: u64) {
         let ti = tensor_index as usize;
-        if ti < MAX_KV_PROVENANCE && kv_slot < MAX_KV_PROVENANCE as u32 {
+        let ks = kv_slot as usize;
+        if ti < MAX_KV_PROVENANCE && ks < MAX_KV_PROVENANCE {
+            // Unmap old reverse slot if this tensor was previously bound elsewhere
+            let old_kv = self.tensor_to_kv[ti].kv_slot as usize;
+            if old_kv < MAX_KV_PROVENANCE && self.kv_to_tensor[old_kv] == tensor_index {
+                self.kv_to_tensor[old_kv] = KV_SLOT_UNMAPPED;
+            }
             self.tensor_to_kv[ti] = KvSlotInfo {
                 kv_slot,
                 parent_page_id,
             };
+            self.kv_to_tensor[ks] = tensor_index;
             self.generation = self.generation.wrapping_add(1);
         }
     }
 
-    /// 1:1 prompt alignment: tensor node `i` → KV slot `i` for `min(prompt, nodes)`.
+    /// 1:1 prompt alignment: tensor node `i` ↔ KV slot `i` for `min(prompt, nodes)`.
     pub fn build_prompt_alignment(
         &mut self,
         prompt_token_count: u32,
@@ -61,13 +70,16 @@ impl KvProvenanceMap {
             .min(tensor_node_count)
             .min(MAX_KV_PROVENANCE as u32);
         for i in 0..n {
-            self.tensor_to_kv[i as usize] = KvSlotInfo {
+            let idx = i as usize;
+            self.tensor_to_kv[idx] = KvSlotInfo {
                 kv_slot: i,
                 parent_page_id: root_page_id,
             };
+            self.kv_to_tensor[idx] = i;
         }
         for i in n as usize..MAX_KV_PROVENANCE {
             self.tensor_to_kv[i] = KvSlotInfo::UNMAPPED;
+            self.kv_to_tensor[i] = KV_SLOT_UNMAPPED;
         }
         self.generation = self.generation.wrapping_add(1);
     }
@@ -84,6 +96,21 @@ impl KvProvenanceMap {
             None
         } else {
             Some(info.kv_slot)
+        }
+    }
+
+    #[inline]
+    /// Reverse lookup: find the 3D tensor index corresponding to a generated KV slot in O(1).
+    pub fn tensor_for_kv_slot(&self, kv_slot: u32) -> Option<u32> {
+        let ks = kv_slot as usize;
+        if ks >= MAX_KV_PROVENANCE {
+            return None;
+        }
+        let t = self.kv_to_tensor[ks];
+        if t == KV_SLOT_UNMAPPED {
+            None
+        } else {
+            Some(t)
         }
     }
 
@@ -113,6 +140,12 @@ fn kv_lock() -> &'static RwLock<KvProvenanceMap> {
 /// `KvProvenanceMap::global_kv_provenance`.
 pub fn global_kv_provenance() -> std::sync::RwLockReadGuard<'static, KvProvenanceMap> {
     kv_lock().read().expect("kv provenance poisoned")
+}
+
+/// Reverse lookup helper for HUD/renderer: resolves KV slot to 3D tensor index in O(1) zero-heap.
+#[inline]
+pub fn global_tensor_for_kv_slot(kv_slot: u32) -> Option<u32> {
+    global_kv_provenance().tensor_for_kv_slot(kv_slot)
 }
 
 /// Rebuild provenance table (prompt prefill / spatial encode).
@@ -148,12 +181,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn prompt_alignment_maps_tensor_to_kv() {
+    fn prompt_alignment_maps_tensor_to_kv_bidirectional() {
         let mut map = KvProvenanceMap::new();
         map.build_prompt_alignment(8, 10, 42);
         assert_eq!(map.kv_slot_for_tensor(3), Some(3));
+        assert_eq!(map.tensor_for_kv_slot(3), Some(3));
         assert_eq!(map.page_id_for_tensor(3), Some(42));
 
         assert_eq!(map.kv_slot_for_tensor(9), None);
+        assert_eq!(map.tensor_for_kv_slot(9), None);
+    }
+
+    #[test]
+    fn record_maintains_bidirectional_mapping() {
+        let mut map = KvProvenanceMap::new();
+        map.record(42, 10, 777);
+        assert_eq!(map.kv_slot_for_tensor(42), Some(10));
+        assert_eq!(map.tensor_for_kv_slot(10), Some(42));
+        assert_eq!(map.page_id_for_tensor(42), Some(777));
+
+        // Re-record tensor 42 to slot 20
+        map.record(42, 20, 778);
+        assert_eq!(map.kv_slot_for_tensor(42), Some(20));
+        assert_eq!(map.tensor_for_kv_slot(20), Some(42));
+        assert_eq!(map.tensor_for_kv_slot(10), None);
     }
 }

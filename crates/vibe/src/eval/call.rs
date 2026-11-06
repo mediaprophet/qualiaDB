@@ -1,8 +1,57 @@
 use super::*;
-use crate::bind::dispatch;
+use crate::extension_registry::{is_extension_namespace, route_call};
 use crate::value::EnumValue;
 
+fn resolve_member_namespace_path(callee: &Expr, env: &Env) -> Option<String> {
+    match &callee.kind {
+        ExprKind::Member { recv, name } => match &recv.kind {
+            ExprKind::Ident(ns) => {
+                let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
+                Some(format!("{resolved_ns}.{name}"))
+            }
+            ExprKind::Member {
+                recv: inner_recv,
+                name: sub_name,
+            } => {
+                if let ExprKind::Ident(ns) = &inner_recv.kind {
+                    if !env.vars.contains_key(ns) {
+                        let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
+                        return Some(format!("{resolved_ns}.{sub_name}.{name}"));
+                    }
+                }
+                None
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 impl<'a, H: Host> Engine<'a, H> {
+    /// Routes a host or extension call through `extension_registry::route_call`.
+    pub(crate) fn route_host_or_extension(
+        &mut self,
+        path: &str,
+        pos: &[Value],
+        named: &[(String, Value)],
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        let gate = self.sentinel_gate.as_deref_mut();
+        route_call(
+            self.host,
+            &self.extension_registry,
+            &mut self.prepared_cache,
+            &self.call_context,
+            gate,
+            &mut self.last_extension_outcome,
+            &mut self.budget,
+            path,
+            pos,
+            named,
+            span,
+        )
+    }
+
     /// Evaluates a call with the first arg evaluated.
     pub(crate) fn eval_call_with_first_val(
         &mut self,
@@ -15,22 +64,19 @@ impl<'a, H: Host> Engine<'a, H> {
         if self.depth >= self.call_depth_limit {
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }
-        let path = match &callee.kind {
-            ExprKind::Member { recv, name } => {
-                if let ExprKind::Ident(ns) = &recv.kind {
-                    let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
-                    format!("{resolved_ns}.{name}")
-                } else {
-                    name.clone()
+        let path = if let Some(ns_path) = resolve_member_namespace_path(callee, env) {
+            ns_path
+        } else {
+            match &callee.kind {
+                ExprKind::Member { name, .. } => name.clone(),
+                ExprKind::Ident(n) => n.clone(),
+                _ => {
+                    return Err(Diagnostic::new(
+                        DiagCode::E600,
+                        span,
+                        "call target is not a name",
+                    ))
                 }
-            }
-            ExprKind::Ident(n) => n.clone(),
-            _ => {
-                return Err(Diagnostic::new(
-                    DiagCode::E600,
-                    span,
-                    "call target is not a name",
-                ))
             }
         };
         let mut pos = vec![first];
@@ -56,31 +102,36 @@ impl<'a, H: Host> Engine<'a, H> {
             return Err(Diagnostic::new(DiagCode::E400, span, "call depth exceeded"));
         }
         if let ExprKind::Member { recv, name } = &callee.kind {
-            let is_ns = if let ExprKind::Ident(ns) = &recv.kind {
-                env.aliases.contains_key(ns)
-                    || matches!(
-                        ns.as_str(),
-                        "math"
-                            | "rdf"
-                            | "quin"
-                            | "graph"
-                            | "aura"
-                            | "pulse"
-                            | "capability"
-                            | "time"
-                            | "conservation"
-                            | "causal"
-                            | "dag"
-                            | "deontic"
-                            | "hid"
-                            | "cue"
-                            | "crypto"
-                            | "zk"
-                            | "web"
-                            | "ui"
-                    )
-            } else {
-                false
+            let is_ns = match &recv.kind {
+                ExprKind::Ident(ns) => {
+                    env.aliases.contains_key(ns)
+                        || is_extension_namespace(ns)
+                        || matches!(
+                            ns.as_str(),
+                            "math"
+                                | "rdf"
+                                | "quin"
+                                | "graph"
+                                | "aura"
+                                | "pulse"
+                                | "capability"
+                                | "time"
+                                | "conservation"
+                                | "causal"
+                                | "dag"
+                                | "deontic"
+                                | "hid"
+                                | "cue"
+                                | "crypto"
+                                | "zk"
+                                | "web"
+                                | "ui"
+                        )
+                }
+                ExprKind::Member {
+                    recv: inner_recv, ..
+                } => matches!(&inner_recv.kind, ExprKind::Ident(ns) if !env.vars.contains_key(ns)),
+                _ => false,
             };
             if !is_ns
                 && matches!(
@@ -139,6 +190,8 @@ impl<'a, H: Host> Engine<'a, H> {
                     // Resolve import aliases: `g.query` → `graph.query`
                     let resolved_ns = env.aliases.get(ns).map(|s| s.as_str()).unwrap_or(ns);
                     format!("{resolved_ns}.{name}")
+                } else if let Some(ns_path) = resolve_member_namespace_path(callee, env) {
+                    ns_path
                 } else {
                     name.clone()
                 }
@@ -280,7 +333,7 @@ impl<'a, H: Host> Engine<'a, H> {
         }
         let r = match crate::task_scheduler::dispatch_on_engine(self, path, &pos, env, span) {
             Ok(Some(value)) => Ok(value),
-            Ok(None) => dispatch(self.host, path, &pos, &named, span),
+            Ok(None) => self.route_host_or_extension(path, &pos, &named, span),
             Err(error) => Err(error),
         };
         self.depth -= 1;

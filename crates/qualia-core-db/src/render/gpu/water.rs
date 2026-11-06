@@ -5,7 +5,7 @@ use crate::gpu_context::{global_vram_ledger, VramReservation, VramResourceClass}
 use crate::render::gpu::uniform_belt::UniformBelt;
 use crate::shaders::viewport::WATER_WGSL;
 use bytemuck::{Pod, Zeroable};
-use wgpu::util::DeviceExt;
+use etalon::util::DeviceExt;
 
 pub(super) const MAX_WATER_VERTICES: usize = 1_048_576;
 pub(super) const MAX_WATER_INDICES: usize = 3_145_728;
@@ -35,13 +35,13 @@ struct WaterVertex {
 }
 
 pub(super) struct WaterGpu {
-    pipeline: wgpu::RenderPipeline,
-    pipeline_hdr: Option<wgpu::RenderPipeline>,
-    uniform_buf: wgpu::Buffer,
-    uniform_bind: wgpu::BindGroup,
+    pipeline: etalon::RenderPipeline,
+    pipeline_hdr: Option<etalon::RenderPipeline>,
+    uniform_buf: etalon::Buffer,
+    uniform_bind: etalon::BindGroup,
     uniform: WaterUniform,
-    vertex_buf: Option<wgpu::Buffer>,
-    index_buf: Option<wgpu::Buffer>,
+    vertex_buf: Option<etalon::Buffer>,
+    index_buf: Option<etalon::Buffer>,
     index_count: u32,
     geometry_key: Option<u64>,
     geometry_bytes: u64,
@@ -107,32 +107,32 @@ fn geometry_admission(
     Ok((bytes, geometry_key(positions, indices)))
 }
 
-fn colour_target(format: wgpu::TextureFormat) -> wgpu::ColorTargetState {
-    wgpu::ColorTargetState {
+fn colour_target(format: etalon::TextureFormat) -> etalon::ColorTargetState {
+    etalon::ColorTargetState {
         format,
-        blend: Some(wgpu::BlendState {
-            color: wgpu::BlendComponent {
-                src_factor: wgpu::BlendFactor::SrcAlpha,
-                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                operation: wgpu::BlendOperation::Add,
+        blend: Some(etalon::BlendState {
+            color: etalon::BlendComponent {
+                src_factor: etalon::BlendFactor::SrcAlpha,
+                dst_factor: etalon::BlendFactor::OneMinusSrcAlpha,
+                operation: etalon::BlendOperation::Add,
             },
-            alpha: wgpu::BlendComponent {
-                src_factor: wgpu::BlendFactor::One,
-                dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-                operation: wgpu::BlendOperation::Add,
+            alpha: etalon::BlendComponent {
+                src_factor: etalon::BlendFactor::One,
+                dst_factor: etalon::BlendFactor::OneMinusSrcAlpha,
+                operation: etalon::BlendOperation::Add,
             },
         }),
-        write_mask: wgpu::ColorWrites::ALL,
+        write_mask: etalon::ColorWrites::ALL,
     }
 }
 
 impl WaterGpu {
     /// Creates with the given state.
     pub(super) fn new(
-        device: &wgpu::Device,
-        mesh_frame_layout: &wgpu::BindGroupLayout,
-        mesh_model_layout: &wgpu::BindGroupLayout,
-        format: wgpu::TextureFormat,
+        device: &etalon::Device,
+        mesh_frame_layout: &etalon::BindGroupLayout,
+        mesh_model_layout: &etalon::BindGroupLayout,
+        format: etalon::TextureFormat,
         hdr_supported: bool,
     ) -> Self {
         let uniform = WaterUniform {
@@ -141,18 +141,18 @@ impl WaterGpu {
             quality: [WATER_QUALITY_BALANCED as f32, 0.35, 0.60, 0.70],
             viewport: [1.0, 1.0, 0.0005, 0.0],
         };
-        let uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let uniform_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("qualia-water-frame-uniform"),
             contents: bytemuck::bytes_of(&uniform),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let layout = device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
             label: Some("qualia-water-uniform-layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
+            entries: &[etalon::BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
+                visibility: etalon::ShaderStages::VERTEX_FRAGMENT,
+                ty: etalon::BindingType::Buffer {
+                    ty: etalon::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
                     min_binding_size: std::num::NonZeroU64::new(
                         std::mem::size_of::<WaterUniform>() as u64,
@@ -161,19 +161,19 @@ impl WaterGpu {
                 count: None,
             }],
         });
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let shader = device.create_shader_module(etalon::ShaderModuleDescriptor {
             label: Some("qualia-water"),
-            source: wgpu::ShaderSource::Wgsl(WATER_WGSL.into()),
+            source: etalon::ShaderSource::Wgsl(WATER_WGSL.into()),
         });
-        let uniform_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let uniform_bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("qualia-water-uniform-bind"),
             layout: &layout,
-            entries: &[wgpu::BindGroupEntry {
+            entries: &[etalon::BindGroupEntry {
                 binding: 0,
                 resource: uniform_buf.as_entire_binding(),
             }],
         });
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let pipeline_layout = device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
             label: Some("qualia-water-pipeline-layout"),
             bind_group_layouts: &[
                 Some(mesh_frame_layout),
@@ -182,55 +182,55 @@ impl WaterGpu {
             ],
             immediate_size: 0,
         });
-        let vertex_layout = wgpu::VertexBufferLayout {
+        let vertex_layout = etalon::VertexBufferLayout {
             array_stride: std::mem::size_of::<WaterVertex>() as u64,
-            step_mode: wgpu::VertexStepMode::Vertex,
+            step_mode: etalon::VertexStepMode::Vertex,
             attributes: &[
-                wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x3,
+                etalon::VertexAttribute {
+                    format: etalon::VertexFormat::Float32x3,
                     offset: 0,
                     shader_location: 0,
                 },
-                wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x2,
+                etalon::VertexAttribute {
+                    format: etalon::VertexFormat::Float32x2,
                     offset: 12,
                     shader_location: 1,
                 },
-                wgpu::VertexAttribute {
-                    format: wgpu::VertexFormat::Float32x2,
+                etalon::VertexAttribute {
+                    format: etalon::VertexFormat::Float32x2,
                     offset: 20,
                     shader_location: 2,
                 },
             ],
         };
         let pipeline = |target_format| {
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
                 label: Some("qualia-water-pipeline"),
                 layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
+                vertex: etalon::VertexState {
                     module: &shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
                     buffers: &[Some(vertex_layout.clone())],
                 },
-                fragment: Some(wgpu::FragmentState {
+                fragment: Some(etalon::FragmentState {
                     module: &shader,
                     entry_point: Some("fragment_main"),
                     compilation_options: Default::default(),
                     targets: &[Some(colour_target(target_format))],
                 }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
                     cull_mode: None,
                     ..Default::default()
                 },
                 depth_stencil: Some(depth_stencil_state_read_only()),
-                multisample: wgpu::MultisampleState::default(),
+                multisample: etalon::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
             })
         };
-        let pipeline_hdr = hdr_supported.then(|| pipeline(wgpu::TextureFormat::Rgba16Float));
+        let pipeline_hdr = hdr_supported.then(|| pipeline(etalon::TextureFormat::Rgba16Float));
         Self {
             pipeline: pipeline(format),
             pipeline_hdr,
@@ -267,7 +267,7 @@ impl WaterGpu {
     }
 
     /// Writes `uniform`.
-    pub(super) fn write_uniform(&self, belt: &mut UniformBelt, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn write_uniform(&self, belt: &mut UniformBelt, encoder: &mut etalon::CommandEncoder) {
         belt.write_and_unmap(bytemuck::bytes_of(&self.uniform));
         belt.record_copy(encoder, &self.uniform_buf, 0);
         // The caller advances the shared belt after this copy, keeping all
@@ -277,7 +277,7 @@ impl WaterGpu {
     /// `replace_geometry`.
     pub(super) fn replace_geometry(
         &mut self,
-        device: &wgpu::Device,
+        device: &etalon::Device,
         positions: &[[f32; 3]],
         indices: &[u32],
     ) -> Result<(), String> {
@@ -287,7 +287,7 @@ impl WaterGpu {
     /// `replace_geometry_with_budget`.
     pub(super) fn replace_geometry_with_budget(
         &mut self,
-        device: &wgpu::Device,
+        device: &etalon::Device,
         positions: &[[f32; 3]],
         indices: &[u32],
         max_bytes: u64,
@@ -371,15 +371,15 @@ impl WaterGpu {
         let reservation = global_vram_ledger()
             .try_reserve_graphics(VramResourceClass::Geometry, bytes)
             .map_err(|error| format!("HMC water geometry admission failed: {error}"))?;
-        let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let vertex_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("qualia-water-vertices"),
             contents: bytemuck::cast_slice(&vertices),
-            usage: wgpu::BufferUsages::VERTEX,
+            usage: etalon::BufferUsages::VERTEX,
         });
-        let index_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let index_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
             label: Some("qualia-water-indices"),
             contents: bytemuck::cast_slice(indices),
-            usage: wgpu::BufferUsages::INDEX,
+            usage: etalon::BufferUsages::INDEX,
         });
         self.vertex_buf = Some(vertex_buf);
         self.uniform.wave[3] = (shoreline.max_distance * 0.22).clamp(0.0001, 0.008);
@@ -413,9 +413,9 @@ impl WaterGpu {
     /// `record`.
     pub(super) fn record<'a>(
         &'a self,
-        pass: &mut wgpu::RenderPass<'a>,
-        mesh_frame_bind: &'a wgpu::BindGroup,
-        mesh_model_bind: &'a wgpu::BindGroup,
+        pass: &mut etalon::RenderPass<'a>,
+        mesh_frame_bind: &'a etalon::BindGroup,
+        mesh_model_bind: &'a etalon::BindGroup,
         hdr: bool,
     ) {
         let (Some(vertex_buf), Some(index_buf)) =
@@ -432,7 +432,7 @@ impl WaterGpu {
         pass.set_bind_group(1, mesh_model_bind, &[]);
         pass.set_bind_group(2, &self.uniform_bind, &[]);
         pass.set_vertex_buffer(0, vertex_buf.slice(..));
-        pass.set_index_buffer(index_buf.slice(..), wgpu::IndexFormat::Uint32);
+        pass.set_index_buffer(index_buf.slice(..), etalon::IndexFormat::Uint32);
         pass.draw_indexed(0..self.index_count, 0, 0..1);
     }
 }

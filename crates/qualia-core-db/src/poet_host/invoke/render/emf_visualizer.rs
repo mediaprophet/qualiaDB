@@ -50,6 +50,9 @@ fn parse_cell(rec: &Value, span: Span, i: usize) -> Result<EmfFieldCell, Diagnos
         recurrence_frequency,
         density_threshold,
         manifold_curvature,
+        stokes_q: args::rec_f64(rec, "stokes_q").unwrap_or(0.0) as f32,
+        stokes_u: args::rec_f64(rec, "stokes_u").unwrap_or(0.0) as f32,
+        stokes_v: args::rec_f64(rec, "stokes_v").unwrap_or(0.0) as f32,
     })
 }
 

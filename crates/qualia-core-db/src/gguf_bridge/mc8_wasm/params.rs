@@ -4,7 +4,7 @@ use super::super::*;
 
 impl QTensorEngine {
     /// Dynamic-offset uniform binding for `buf`.
-    pub(crate) fn mc8_dynamic_uniform_binding(buf: &wgpu::Buffer) -> wgpu::BindingResource<'_> {
+    pub(crate) fn mc8_dynamic_uniform_binding(buf: &etalon::Buffer) -> etalon::BindingResource<'_> {
         etalon_inference::browser_prefill::encoding::dynamic_uniform_binding(buf)
     }
 
@@ -70,20 +70,20 @@ impl QTensorEngine {
 
     /// A bounded slice of a buffer for a dispatch.
     pub(crate) fn mc8_buf_slice(
-        buf: &wgpu::Buffer,
-        byte_off: wgpu::BufferAddress,
-        byte_len: wgpu::BufferAddress,
-    ) -> wgpu::BindingResource<'_> {
+        buf: &etalon::Buffer,
+        byte_off: etalon::BufferAddress,
+        byte_len: etalon::BufferAddress,
+    ) -> etalon::BindingResource<'_> {
         etalon_inference::browser_prefill::encoding::buf_slice(buf, byte_off, byte_len)
     }
 
     /// Byte offset of prefill row `t` given `row_stride_floats`.
-    pub(crate) fn mc8_prefill_row_off(t: u32, row_stride_floats: usize) -> wgpu::BufferAddress {
+    pub(crate) fn mc8_prefill_row_off(t: u32, row_stride_floats: usize) -> etalon::BufferAddress {
         etalon_inference::browser_prefill::params::mc8_prefill_row_off(t, row_stride_floats)
     }
 
     /// Byte offset of embedding `t` in an `n_embd`-wide matrix.
-    pub(crate) fn mc8_emb_off(t: u32, n_embd: usize) -> wgpu::BufferAddress {
+    pub(crate) fn mc8_emb_off(t: u32, n_embd: usize) -> etalon::BufferAddress {
         etalon_inference::browser_prefill::params::mc8_emb_off(t, n_embd)
     }
 

@@ -6,6 +6,7 @@
 //! this module is only the multi-observer projection kernel - not "the mindware product."
 
 pub mod attribution;
+pub mod bifurcation;
 pub mod capability_report;
 pub mod circumstance;
 pub mod entity_id;
@@ -18,6 +19,7 @@ pub mod entity_ontologies;
 pub mod ethogram;
 
 pub use attribution::{edges_for_subject, AttributionEdge, AttributionRel};
+pub use bifurcation::*;
 pub use capability_report::entity_view_capability_report;
 pub use circumstance::{Circumstance, EnvironmentKind, EvaluatoryFocus};
 pub use entity_id::{EntityId, EntityKind};

@@ -4,13 +4,17 @@
 //! value stack, and dispatching opcodes. Host capability calls are routed
 //! through the `Host` trait, same as the AST interpreter.
 
-use crate::bind::{dispatch, Host};
+use crate::bind::Host;
 use crate::budget::Budget;
 use crate::bytecode::op::{Chunk, Const, Op};
 use crate::error::{DiagCode, Diagnostic};
+use crate::extension_registry::{
+    route_call, CallExecutionContext, DispatchOutcome, ExtensionRegistry, PreparedCallCache,
+};
 use crate::span::Span;
 use crate::value::Value;
 use std::collections::BTreeMap;
+use vibescript_abi::{q_hash_str, ExecutionMode, SentinelPolicyGate};
 
 /// VM execution error.
 #[derive(Debug, Clone, PartialEq)]
@@ -103,6 +107,16 @@ pub struct Vm<'a, H: Host> {
     stack: Vec<Value>,
     /// Call frames: each frame has its own locals array.
     frames: Vec<Frame>,
+    /// Generational extension registry (`Stage S6`).
+    extension_registry: ExtensionRegistry<'a>,
+    /// Zero-heap prepared call handle cache (`Stage S6`).
+    prepared_cache: PreparedCallCache,
+    /// Active extension execution context.
+    call_context: CallExecutionContext,
+    /// Optional Sentinel policy gate for governed/simulated execution modes.
+    sentinel_gate: Option<&'a mut dyn SentinelPolicyGate>,
+    /// Most recent extension `DispatchOutcome` (receipt + audit `NQuin48`s).
+    last_extension_outcome: Option<DispatchOutcome>,
 }
 
 /// A call frame.
@@ -125,7 +139,38 @@ impl<'a, H: Host> Vm<'a, H> {
             budget,
             stack: Vec::with_capacity(256),
             frames: Vec::new(),
+            extension_registry: ExtensionRegistry::with_builtin_providers(),
+            prepared_cache: PreparedCallCache::new(),
+            call_context: CallExecutionContext {
+                actor_did_hash: q_hash_str("did:q42:local_vm"),
+                context_world_hash: 1,
+                lamport_timestamp: 1,
+                mode: ExecutionMode::StandaloneDeveloper,
+            },
+            sentinel_gate: None,
+            last_extension_outcome: None,
         }
+    }
+
+    /// Configures governed extension execution (`CallExecutionContext` + optional `SentinelPolicyGate`).
+    pub fn with_extension_governance(
+        mut self,
+        call_context: CallExecutionContext,
+        sentinel_gate: Option<&'a mut dyn SentinelPolicyGate>,
+    ) -> Self {
+        self.call_context = call_context;
+        self.sentinel_gate = sentinel_gate;
+        self
+    }
+
+    /// Mutable reference to the VM's `ExtensionRegistry`.
+    pub fn extension_registry_mut(&mut self) -> &mut ExtensionRegistry<'a> {
+        &mut self.extension_registry
+    }
+
+    /// Returns the most recent extension `DispatchOutcome` (receipt + audit `NQuin48`s), if any.
+    pub fn last_extension_outcome(&self) -> Option<&DispatchOutcome> {
+        self.last_extension_outcome.as_ref()
     }
 
     /// Execute the chunk's top-level preamble and return the last value on the stack.
@@ -739,7 +784,19 @@ impl<'a, H: Host> Vm<'a, H> {
         // We detect them by checking if every other element is a String.
         let (pos_args, named_args) = split_args(args);
 
-        let result = dispatch(self.host, &path, &pos_args, &named_args, span)?;
+        let result = route_call(
+            self.host,
+            &self.extension_registry,
+            &mut self.prepared_cache,
+            &self.call_context,
+            self.sentinel_gate.as_deref_mut(),
+            &mut self.last_extension_outcome,
+            &mut self.budget,
+            &path,
+            &pos_args,
+            &named_args,
+            span,
+        )?;
         self.push(result)
     }
 

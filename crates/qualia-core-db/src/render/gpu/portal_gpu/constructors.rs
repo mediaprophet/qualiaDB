@@ -27,7 +27,7 @@ impl PortalGpu {
                     Arc::new(shared.queue.clone()),
                     width,
                     height,
-                    wgpu::TextureFormat::Rgba8Unorm,
+                    etalon::TextureFormat::Rgba8Unorm,
                     None,
                     None,
                     particle_cap,
@@ -44,7 +44,7 @@ impl PortalGpu {
             queue,
             width,
             height,
-            wgpu::TextureFormat::Rgba8Unorm,
+            etalon::TextureFormat::Rgba8Unorm,
             None,
             None,
             particle_cap,
@@ -73,7 +73,7 @@ impl PortalGpu {
             Arc::new(shared.queue.clone()),
             width.max(1),
             height.max(1),
-            wgpu::TextureFormat::Rgba8Unorm,
+            etalon::TextureFormat::Rgba8Unorm,
             None,
             None,
             particle_cap,
@@ -106,9 +106,9 @@ impl PortalGpu {
         // VkSurfaceKHR, or a compute-only adapter). A dedicated instance ensures
         // the surface, adapter, and device are all from the same wgpu instance and
         // the adapter is picked with surface compatibility.
-        let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-        desc.backends = native_device::backend_override()?.unwrap_or_else(wgpu::Backends::all);
-        let instance = wgpu::Instance::new(desc);
+        let mut desc = etalon::InstanceDescriptor::new_without_display_handle();
+        desc.backends = native_device::backend_override()?.unwrap_or_else(etalon::Backends::all);
+        let instance = etalon::Instance::new(desc);
 
         let win32_handle =
             Win32WindowHandle::new(std::num::NonZeroIsize::new(hwnd).ok_or("invalid HWND (zero)")?);
@@ -117,7 +117,7 @@ impl PortalGpu {
 
         let surface = unsafe {
             instance
-                .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                .create_surface_unsafe(etalon::SurfaceTargetUnsafe::RawHandle {
                     raw_display_handle: Some(raw_display),
                     raw_window_handle: raw_window,
                 })
@@ -125,8 +125,8 @@ impl PortalGpu {
         };
 
         // Request an adapter that supports the surface
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
+        let adapter = pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
+            power_preference: etalon::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
             ..Default::default()
         }))
@@ -146,11 +146,11 @@ impl PortalGpu {
             .find(|f| f.has_srgb_suffix())
             .unwrap_or(caps.formats[0]);
 
-        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        let (device, queue) = pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor {
             label: Some("Webizen GPU Surface"),
-            required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits::downlevel_defaults(),
-            memory_hints: wgpu::MemoryHints::default(),
+            required_features: etalon::Features::empty(),
+            required_limits: etalon::Limits::downlevel_defaults(),
+            memory_hints: etalon::MemoryHints::default(),
             ..Default::default()
         }))
         .map_err(|e| format!("Failed to request device for surface: {e}"))?;
@@ -158,22 +158,22 @@ impl PortalGpu {
         let device = Arc::new(device);
         let queue = Arc::new(queue);
 
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        let config = etalon::SurfaceConfiguration {
+            usage: etalon::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: width.max(1),
             height: height.max(1),
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: etalon::PresentMode::Fifo,
             alpha_mode: caps
                 .alpha_modes
                 .first()
                 .copied()
-                .unwrap_or(wgpu::CompositeAlphaMode::Auto),
+                .unwrap_or(etalon::CompositeAlphaMode::Auto),
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
             // wgpu 30: surfaces declare their colour space; Auto preserves the
             // pre-30 (implicit sRGB/linear-by-format) behaviour.
-            color_space: wgpu::SurfaceColorSpace::Auto,
+            color_space: etalon::SurfaceColorSpace::Auto,
         };
 
         surface.configure(&device, &config);
@@ -196,12 +196,12 @@ impl PortalGpu {
     /// True when a browser adapter answers. Does not bind a canvas, so a hang
     /// or a miss leaves the 2d tick free to draw.
     pub async fn adapter_responds() -> bool {
-        let mut instance_desc = wgpu::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
-        let instance = wgpu::Instance::new(instance_desc);
+        let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
+        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU;
+        let instance = etalon::Instance::new(instance_desc);
         instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::LowPower,
+            .request_adapter(&etalon::RequestAdapterOptions {
+                power_preference: etalon::PowerPreference::LowPower,
                 compatible_surface: None,
                 ..Default::default()
             })
@@ -218,9 +218,9 @@ impl PortalGpu {
         let width = canvas.width().max(1);
         let height = canvas.height().max(1);
 
-        let mut instance_desc = wgpu::InstanceDescriptor::new_without_display_handle();
-        instance_desc.backends = wgpu::Backends::BROWSER_WEBGPU;
-        let instance = wgpu::Instance::new(instance_desc);
+        let mut instance_desc = etalon::InstanceDescriptor::new_without_display_handle();
+        instance_desc.backends = etalon::Backends::BROWSER_WEBGPU;
+        let instance = etalon::Instance::new(instance_desc);
 
         // Probe already ran without a canvas. Claim only when we are about
         // to present, and only with an adapter that can target this surface.
@@ -230,7 +230,7 @@ impl PortalGpu {
 
         mark_portal_gpu_canvas_claimed();
         let surface = instance
-            .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
+            .create_surface(etalon::SurfaceTarget::Canvas(canvas.clone()))
             .map_err(|e| format!("surface: {e}"))?;
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
@@ -240,15 +240,15 @@ impl PortalGpu {
         let mut adapter = None;
         let mut last_err = String::from("no WebGPU adapter");
         for pref in [
-            wgpu::PowerPreference::None,
-            wgpu::PowerPreference::LowPower,
-            wgpu::PowerPreference::HighPerformance,
+            etalon::PowerPreference::None,
+            etalon::PowerPreference::LowPower,
+            etalon::PowerPreference::HighPerformance,
         ] {
             if portal_gpu_init_aborted() {
                 return Err("aborted".into());
             }
             match instance
-                .request_adapter(&wgpu::RequestAdapterOptions {
+                .request_adapter(&etalon::RequestAdapterOptions {
                     power_preference: pref,
                     compatible_surface: Some(&surface),
                     ..Default::default()
@@ -268,9 +268,9 @@ impl PortalGpu {
             return Err("aborted".into());
         }
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
+            .request_device(&etalon::DeviceDescriptor {
                 label: Some("qualia-portal-gpu"),
-                required_features: wgpu::Features::empty(),
+                required_features: etalon::Features::empty(),
                 // Request exactly the adapter's advertised limits. `Limits::default()`
                 // under wgpu 30 asks for desktop-tier limits that a browser WebGPU
                 // adapter does not grant, so `request_device` would fail device
@@ -307,17 +307,17 @@ impl PortalGpu {
             .find(|f| f.has_srgb_suffix())
             .unwrap_or(caps.formats[0]);
 
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        let config = etalon::SurfaceConfiguration {
+            usage: etalon::TextureUsages::RENDER_ATTACHMENT,
             format,
             width,
             height,
-            present_mode: wgpu::PresentMode::Fifo,
+            present_mode: etalon::PresentMode::Fifo,
             alpha_mode: caps.alpha_modes[0],
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
             // wgpu 30: Auto preserves pre-30 colour-space behaviour.
-            color_space: wgpu::SurfaceColorSpace::Auto,
+            color_space: etalon::SurfaceColorSpace::Auto,
         };
         surface.configure(&device, &config);
 

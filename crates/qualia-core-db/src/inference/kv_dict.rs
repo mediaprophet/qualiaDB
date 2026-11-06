@@ -263,3 +263,117 @@ pub(crate) fn normalize(v: &mut [f32]) {
         }
     }
 }
+/// Bifurcated identity of a cached KV prefix (§7.3.3 / §3.4).
+///
+/// Prevents cross-standpoint or cross-epistemic KV-cache leakage by binding
+/// the observer wing, sensitivity ceiling, active manifold mask, and quantum branch q
+/// directly into the prefix cache key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct BifurcatedPrefixIdentity {
+    pub content_hash: u64,
+    pub observer_wing: u8,
+    pub sensitivity_ceiling: u8,
+    pub manifold_mask: u16,
+    pub quantum_branch_q: u32,
+}
+
+impl BifurcatedPrefixIdentity {
+    /// Construct a new bifurcated prefix identity.
+    pub const fn new(
+        content_hash: u64,
+        observer_wing: u8,
+        sensitivity_ceiling: u8,
+        manifold_mask: u16,
+        quantum_branch_q: u32,
+    ) -> Self {
+        Self {
+            content_hash,
+            observer_wing,
+            sensitivity_ceiling,
+            manifold_mask,
+            quantum_branch_q,
+        }
+    }
+
+    /// Compute a 64-bit rapid FNV-1a hash key mixing the content hash with
+    /// all observer and epistemic bifurcation parameters.
+    pub const fn cache_key(&self) -> u64 {
+        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+        const FNV_PRIME: u64 = 0x100000001b3;
+
+        let mut h = FNV_OFFSET;
+        let mut ch = self.content_hash;
+        let mut i = 0;
+        while i < 8 {
+            h ^= (ch & 0xFF) as u64;
+            h = h.wrapping_mul(FNV_PRIME);
+            ch >>= 8;
+            i += 1;
+        }
+
+        h ^= self.observer_wing as u64;
+        h = h.wrapping_mul(FNV_PRIME);
+
+        h ^= self.sensitivity_ceiling as u64;
+        h = h.wrapping_mul(FNV_PRIME);
+
+        h ^= (self.manifold_mask & 0xFF) as u64;
+        h = h.wrapping_mul(FNV_PRIME);
+        h ^= ((self.manifold_mask >> 8) & 0xFF) as u64;
+        h = h.wrapping_mul(FNV_PRIME);
+
+        let mut q = self.quantum_branch_q;
+        let mut j = 0;
+        while j < 4 {
+            h ^= (q & 0xFF) as u64;
+            h = h.wrapping_mul(FNV_PRIME);
+            q >>= 8;
+            j += 1;
+        }
+
+        h
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bifurcated_prefix_identity_cache_key_distinct_across_parameters() {
+        let base = BifurcatedPrefixIdentity::new(0x1234_5678, 0, 0, 0x1FFF, 0);
+        let key_base = base.cache_key();
+
+        // Different observer wing
+        let mut diff_wing = base;
+        diff_wing.observer_wing = 1;
+        assert_ne!(key_base, diff_wing.cache_key());
+
+        // Different sensitivity ceiling
+        let mut diff_sens = base;
+        diff_sens.sensitivity_ceiling = 2;
+        assert_ne!(key_base, diff_sens.cache_key());
+
+        // Different manifold mask
+        let mut diff_mask = base;
+        diff_mask.manifold_mask = 0x00FF;
+        assert_ne!(key_base, diff_mask.cache_key());
+
+        // Different quantum branch q
+        let mut diff_q = base;
+        diff_q.quantum_branch_q = 1000;
+        assert_ne!(key_base, diff_q.cache_key());
+
+        // Different content hash
+        let mut diff_content = base;
+        diff_content.content_hash = 0x8765_4321;
+        assert_ne!(key_base, diff_content.cache_key());
+    }
+
+    #[test]
+    fn bifurcated_prefix_identity_cache_key_is_deterministic() {
+        let id1 = BifurcatedPrefixIdentity::new(0xDEAD_BEEF, 2, 1, 0x0F0F, 42);
+        let id2 = BifurcatedPrefixIdentity::new(0xDEAD_BEEF, 2, 1, 0x0F0F, 42);
+        assert_eq!(id1.cache_key(), id2.cache_key());
+    }
+}

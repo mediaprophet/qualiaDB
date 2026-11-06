@@ -8,7 +8,7 @@ use crate::specialized_libs::computer_vision::cv::error::CvError;
 /// Popcount of XOR bits between two 64-bit perceptual hashes.
 #[inline]
 pub fn hamming_distance_u64(a: u64, b: u64) -> u32 {
-    (a ^ b).count_ones()
+    etalon_signal::vision::hamming_distance_u64(a, b)
 }
 
 /// Cosine similarity `dot(a,b) / (|a||b|)` over equal-length slices.
@@ -21,24 +21,18 @@ pub fn cosine_similarity(a: &[f32], b: &[f32]) -> Result<f32, CvError> {
     if a.len() != b.len() {
         return Err(CvError::DimensionMismatch);
     }
-    let mut dot = 0.0f32;
-    let mut na = 0.0f32;
-    let mut nb = 0.0f32;
-    for i in 0..a.len() {
-        dot += a[i] * b[i];
-        na += a[i] * a[i];
-        nb += b[i] * b[i];
-    }
-    let denom = na.sqrt() * nb.sqrt();
-    if denom <= 1e-12 {
-        return Ok(0.0);
-    }
-    Ok((dot / denom).clamp(-1.0, 1.0))
+    Ok(etalon_signal::vision::cosine_similarity_f32(a, b))
 }
 
 /// Cosine distance `1 − cosine_similarity` (identical unit vectors → 0).
 pub fn cosine_distance(a: &[f32], b: &[f32]) -> Result<f32, CvError> {
-    Ok(1.0 - cosine_similarity(a, b)?)
+    if a.is_empty() || b.is_empty() {
+        return Err(CvError::EmptyInput);
+    }
+    if a.len() != b.len() {
+        return Err(CvError::DimensionMismatch);
+    }
+    Ok(etalon_signal::vision::cosine_distance_f32(a, b))
 }
 
 #[cfg(test)]

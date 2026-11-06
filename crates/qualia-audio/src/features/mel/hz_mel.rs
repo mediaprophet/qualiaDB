@@ -1,6 +1,6 @@
 //! `hz_to_mel` — Hertz → mel using the HTK convention `2595 * log10(1 + hz/700)`.
 //!
-//! Per-unit conversion.
+//! Per-unit conversion delegated to [`etalon_signal::mel::hz_to_mel`].
 //! The inverse lives in the sibling file [`mod@super::mel_to_hz`] (one pub fn per file).
 
 /// Convert a frequency in Hertz to the HTK mel scale.
@@ -11,8 +11,7 @@
 /// to ≈ 1000 mel under HTK). Negative inputs are clamped to 0 Hz.
 #[inline]
 pub fn hz_to_mel(hz: f32) -> f32 {
-    let hz = hz.max(0.0);
-    2595.0 * (1.0 + hz / 700.0).log10()
+    etalon_signal::mel::hz_to_mel(hz)
 }
 
 #[cfg(test)]

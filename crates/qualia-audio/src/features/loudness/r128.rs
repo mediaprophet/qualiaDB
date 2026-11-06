@@ -1,13 +1,6 @@
 //! Integrated / momentary / short-term loudness per ITU-R BS.1770 & EBU R128.
 //!
-//! Pipeline: K-weight the mono signal → 400 ms mean-square gating blocks with
-//! 75 % overlap → absolute gate (−70 LUFS) → relative gate (−10 LU) →
-//! integrated loudness in LUFS.
-//!
-//! **Zero-heap.** The per-sample hot path runs the K-weighting cascade through
-//! [`BiquadState`] with only scalar/stack state. Gating is done in two streaming
-//! passes over the samples using a fixed 4-slot ring of 100 ms sub-block
-//! energies — no per-call `Vec`, no block-loudness heap buffer.
+//! Energy-to-LUFS conversion delegated to [`etalon_signal::loudness::energy_to_lufs`].
 
 use crate::features::filters::biquad::BiquadState;
 use crate::features::loudness::k_weighting::k_weighting_coeffs;
@@ -23,15 +16,9 @@ const REL_GATE_LU: f64 = 10.0;
 /// Convert a block mean-square `z` to block loudness (LUFS).
 #[inline]
 fn loudness_from_z(z: f64) -> f64 {
-    OFFSET + 10.0 * z.log10()
+    etalon_signal::loudness::energy_to_lufs(z)
 }
 
-/// Stream the K-weighting cascade over `samples` and invoke `on_block(z)` for
-/// every 400 ms gating block (mean-square `z`), hopped every 100 ms (75 %
-/// overlap). Returns the number of complete blocks emitted.
-///
-/// Zero-heap: state is the two biquad histories, a `[f64; 4]` sub-block ring,
-/// and a handful of scalars.
 fn for_each_gating_block<F>(
     samples: &[f32],
     sample_rate: u32,
@@ -83,16 +70,9 @@ where
 }
 
 /// Integrated loudness (LUFS) of a mono signal per BS.1770 / EBU R128.
-///
-/// Applies the absolute (−70 LUFS) then relative (−10 LU) gate to the K-weighted
-/// 400 ms/75 %-overlap block energies. Returns:
-/// - `Err(MalformedAudio)` if the signal is shorter than one 400 ms block,
-/// - `Ok(f32::NEG_INFINITY)` for silence (no block clears the absolute gate),
-/// - otherwise the gated integrated loudness.
 pub fn integrated_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioError> {
     let abs_thresh_z = 10f64.powf((ABS_GATE_LUFS - OFFSET) / 10.0);
 
-    // Pass 1: absolute gate → running sum/count of block energies.
     let mut sum_abs = 0.0f64;
     let mut n_abs = 0usize;
     let n_blocks = for_each_gating_block(samples, sample_rate, |z| {
@@ -109,10 +89,8 @@ pub fn integrated_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioEr
         return Ok(f32::NEG_INFINITY);
     }
 
-    // Relative threshold: mean of absolute-gated energies, −10 LU (÷10 in power).
     let rel_thresh_z = (sum_abs / n_abs as f64) / 10f64.powf(REL_GATE_LU / 10.0);
 
-    // Pass 2: relative gate → integrated energy.
     let mut sum_rel = 0.0f64;
     let mut n_rel = 0usize;
     for_each_gating_block(samples, sample_rate, |z| {
@@ -128,10 +106,6 @@ pub fn integrated_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioEr
     Ok(loudness_from_z(sum_rel / n_rel as f64) as f32)
 }
 
-/// K-weighted loudness (LUFS) over a single window — the ungated measurement
-/// underlying momentary and short-term loudness.
-///
-/// Zero-heap streaming; no gating. `Err(MalformedAudio)` on empty input.
 fn window_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioError> {
     if samples.is_empty() {
         return Err(AudioError::MalformedAudio);
@@ -154,14 +128,12 @@ fn window_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioError> {
     Ok(loudness_from_z(z) as f32)
 }
 
-/// Momentary loudness (LUFS): K-weighted loudness of the supplied window,
-/// intended to hold ~400 ms of audio (BS.1770 momentary integration time).
+/// Momentary loudness (LUFS).
 pub fn momentary_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioError> {
     window_lufs(samples, sample_rate)
 }
 
-/// Short-term loudness (LUFS): K-weighted loudness of the supplied window,
-/// intended to hold ~3 s of audio (EBU R128 short-term integration time).
+/// Short-term loudness (LUFS).
 pub fn short_term_lufs(samples: &[f32], sample_rate: u32) -> Result<f32, AudioError> {
     window_lufs(samples, sample_rate)
 }
@@ -171,7 +143,6 @@ mod tests {
     use super::*;
     use core::f32::consts::PI;
 
-    /// 1 kHz sine at a chosen RMS level (linear full-scale reference 1.0).
     fn sine_at_rms(rms: f32, n: usize) -> Vec<f32> {
         let amp = rms * core::f32::consts::SQRT_2;
         (0..n)
@@ -181,9 +152,7 @@ mod tests {
 
     #[test]
     fn integrated_minus_20_dbfs_sine_is_near_minus_20_lufs() {
-        // GOLDEN: a 1 kHz sine at −20 dBFS RMS (RMS = 0.1) measures ≈ −20 LUFS
-        // after K-weighting (BS.1770 calibration; K-gain ≈ +0.7 dB at 1 kHz).
-        let s = sine_at_rms(0.1, 48_000 * 3); // 3 s
+        let s = sine_at_rms(0.1, 48_000 * 3);
         let l = integrated_lufs(&s, 48_000).expect("integrated");
         assert!(
             (l - (-20.0)).abs() < 1.0,
@@ -193,14 +162,13 @@ mod tests {
 
     #[test]
     fn momentary_matches_calibration() {
-        let s = sine_at_rms(0.1, 48_000 / 2); // 500 ms window
+        let s = sine_at_rms(0.1, 48_000 / 2);
         let m = momentary_lufs(&s, 48_000).expect("momentary");
         assert!((m - (-20.0)).abs() < 1.0, "momentary {m}");
     }
 
     #[test]
     fn level_change_moves_loudness_by_same_db() {
-        // Halving amplitude (−6.02 dB) drops loudness by ~6 LU.
         let a = integrated_lufs(&sine_at_rms(0.1, 48_000 * 2), 48_000).unwrap();
         let b = integrated_lufs(&sine_at_rms(0.05, 48_000 * 2), 48_000).unwrap();
         assert!(((a - b) - 6.02).abs() < 0.2, "delta {} LU", a - b);
@@ -208,7 +176,7 @@ mod tests {
 
     #[test]
     fn too_short_is_malformed() {
-        let s = sine_at_rms(0.1, 100); // < 400 ms
+        let s = sine_at_rms(0.1, 100);
         assert_eq!(integrated_lufs(&s, 48_000), Err(AudioError::MalformedAudio));
     }
 

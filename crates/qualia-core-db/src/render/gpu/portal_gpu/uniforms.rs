@@ -6,7 +6,7 @@ use crate::render::physics::Admission;
 
 impl PortalGpu {
     /// Writes `camera-uniform`.
-    pub(super) fn write_camera_uniform(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
+    pub(super) fn write_camera_uniform(&mut self, encoder: &mut etalon::CommandEncoder, time: f32) {
         let aspect = self.width as f32 / self.height.max(1) as f32;
         let mut uniform = self
             .camera
@@ -20,7 +20,7 @@ impl PortalGpu {
     }
 
     /// Writes `observer-uniform`.
-    pub(super) fn write_observer_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn write_observer_uniform(&mut self, encoder: &mut etalon::CommandEncoder) {
         // VC3: Use UniformBelt for zero-alloc buffer writes.
         let bytes = bytemuck::bytes_of(&self.observer);
         self.uniform_belt.write_and_unmap(bytes);
@@ -31,7 +31,7 @@ impl PortalGpu {
 
     /// Resolve this frame's per-artefact model transform: the joint pose at `time`, gated through
     /// the admission policy (refuse out-of-world → hold the last admitted pose), then write it.
-    pub(super) fn update_model(&mut self, encoder: &mut wgpu::CommandEncoder, time: f32) {
+    pub(super) fn update_model(&mut self, encoder: &mut etalon::CommandEncoder, time: f32) {
         let previous_motor = self.last_admitted;
         let proposed = match self.artefact_joint {
             // Drive by *elapsed* time since the joint was engaged, not absolute sim-time, so a slide
@@ -74,7 +74,7 @@ impl PortalGpu {
     }
 
     /// Writes `shadow-uniform`.
-    pub(super) fn write_shadow_uniform(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn write_shadow_uniform(&mut self, encoder: &mut etalon::CommandEncoder) {
         let active = self.shadow_enabled
             && self.shadow_target.is_some()
             && self.camera.sun_intensity > 0.0

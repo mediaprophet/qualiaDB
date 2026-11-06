@@ -254,12 +254,12 @@ impl PortalGpu {
     }
 
     /// Access the shared GPU device (test/diagnostic helper).
-    pub fn device(&self) -> &wgpu::Device {
+    pub fn device(&self) -> &etalon::Device {
         &self.device
     }
 
     /// Access the shared GPU queue (test/diagnostic helper).
-    pub fn queue(&self) -> &wgpu::Queue {
+    pub fn queue(&self) -> &etalon::Queue {
         &self.queue
     }
 
@@ -283,7 +283,7 @@ impl PortalGpu {
     /// The direct surface/offscreen target is not assumed to be texture-bindable. The bloom HDR
     /// target or the SDR output-chain scene target is therefore the only concrete scene producer
     /// exposed here.
-    pub fn temporal_scene_color_view(&self) -> Option<&wgpu::TextureView> {
+    pub fn temporal_scene_color_view(&self) -> Option<&etalon::TextureView> {
         self.bloom
             .as_ref()
             .map(|bloom| &bloom.hdr_view)
@@ -360,17 +360,17 @@ impl PortalGpu {
     }
 
     /// Motion-vector texture view when temporal producers are allocated.
-    pub fn temporal_motion_view(&self) -> Option<&wgpu::TextureView> {
+    pub fn temporal_motion_view(&self) -> Option<&etalon::TextureView> {
         self.temporal_producers.as_ref().map(|p| p.motion_view())
     }
 
     /// Reactive-mask texture view when temporal producers are allocated.
-    pub fn temporal_reactive_view(&self) -> Option<&wgpu::TextureView> {
+    pub fn temporal_reactive_view(&self) -> Option<&etalon::TextureView> {
         self.temporal_producers.as_ref().map(|p| p.reactive_view())
     }
 
     /// Records the temporal producer passes into `encoder`: inverse current view-projection (identity fallback), previous VP, and per-layer reactive weights (water 0.8, ambient 0.5).
-    pub fn record_temporal_producers(&mut self, encoder: &mut wgpu::CommandEncoder) {
+    pub fn record_temporal_producers(&mut self, encoder: &mut etalon::CommandEncoder) {
         if let Some(ref producers) = self.temporal_producers {
             let inv_curr = self
                 .current_camera_view_projection()
@@ -412,9 +412,9 @@ impl PortalGpu {
     /// is not a complete temporal handoff.
     pub fn record_scheduled_temporal_output(
         &mut self,
-        encoder: &mut wgpu::CommandEncoder,
+        encoder: &mut etalon::CommandEncoder,
         inputs: temporal_resolve_gpu::TemporalResolveInputs<'_, '_>,
-        target: &wgpu::TextureView,
+        target: &etalon::TextureView,
         schedule: crate::render::frame_graph::TemporalOutputSchedule,
     ) -> bool {
         let schedule = self.effective_temporal_schedule(schedule);

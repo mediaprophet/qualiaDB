@@ -14,6 +14,22 @@ pub fn resize_nearest_rgb8(
     if !src.is_well_formed() || out_w == 0 || out_h == 0 {
         return Err(VisionError::MalformedImage);
     }
+    if src.format == PixelFormat::Rgb8 {
+        return etalon_signal::vision::resize_nearest_rgb8_into(
+            src.bytes,
+            src.width,
+            src.height,
+            src.row_stride,
+            out_w,
+            out_h,
+            out,
+        )
+        .map(|_| ())
+        .map_err(|err| match err {
+            etalon_signal::SignalError::LengthMismatch => VisionError::OutputBufferTooSmall,
+            _ => VisionError::MalformedImage,
+        });
+    }
     let need = (out_w as usize)
         .saturating_mul(out_h as usize)
         .saturating_mul(3);
@@ -65,48 +81,34 @@ pub fn normalize_rgb8_to_f32_chw(
     std: [f32; 3],
     out: &mut [f32],
 ) -> Result<(), VisionError> {
-    let n = (w as usize).saturating_mul(h as usize);
-    if rgb.len() < n * 3 || out.len() < n * 3 {
-        return Err(VisionError::OutputBufferTooSmall);
+    if w == 0 || h == 0 {
+        return Ok(());
     }
-    let plane = n;
-    for i in 0..n {
-        let r = rgb[i * 3] as f32 / 255.0;
-        let g = rgb[i * 3 + 1] as f32 / 255.0;
-        let b = rgb[i * 3 + 2] as f32 / 255.0;
-        out[i] = (r - mean[0]) / std[0];
-        out[plane + i] = (g - mean[1]) / std[1];
-        out[2 * plane + i] = (b - mean[2]) / std[2];
-    }
-    Ok(())
+    etalon_signal::vision::normalize_rgb8_to_f32_chw_into(rgb, w, h, mean, std, out)
+        .map(|_| ())
+        .map_err(|err| match err {
+            etalon_signal::SignalError::LengthMismatch => VisionError::OutputBufferTooSmall,
+            _ => VisionError::MalformedImage,
+        })
 }
 
 /// IoU of two axis-aligned boxes in normalized u16 coordinates.
 #[inline]
 pub fn iou_u16(a: &Detection, b: &Detection) -> f32 {
-    let ax0 = a.x_min_u16 as f32;
-    let ay0 = a.y_min_u16 as f32;
-    let ax1 = a.x_max_u16 as f32;
-    let ay1 = a.y_max_u16 as f32;
-    let bx0 = b.x_min_u16 as f32;
-    let by0 = b.y_min_u16 as f32;
-    let bx1 = b.x_max_u16 as f32;
-    let by1 = b.y_max_u16 as f32;
-    let ix0 = ax0.max(bx0);
-    let iy0 = ay0.max(by0);
-    let ix1 = ax1.min(bx1);
-    let iy1 = ay1.min(by1);
-    let iw = (ix1 - ix0).max(0.0);
-    let ih = (iy1 - iy0).max(0.0);
-    let inter = iw * ih;
-    let area_a = (ax1 - ax0).max(0.0) * (ay1 - ay0).max(0.0);
-    let area_b = (bx1 - bx0).max(0.0) * (by1 - by0).max(0.0);
-    let uni = area_a + area_b - inter;
-    if uni <= 0.0 {
-        0.0
-    } else {
-        inter / uni
-    }
+    etalon_signal::vision::iou_xywh_u16(
+        [
+            a.x_min_u16,
+            a.y_min_u16,
+            a.x_max_u16.saturating_sub(a.x_min_u16),
+            a.y_max_u16.saturating_sub(a.y_min_u16),
+        ],
+        [
+            b.x_min_u16,
+            b.y_min_u16,
+            b.x_max_u16.saturating_sub(b.x_min_u16),
+            b.y_max_u16.saturating_sub(b.y_min_u16),
+        ],
+    )
 }
 
 /// Class-agnostic NMS into `out` (copies survivors). Returns count written.

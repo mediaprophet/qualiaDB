@@ -1,9 +1,8 @@
 //! Biquad (second-order IIR) engine — the shared core all EQ designs feed.
 //!
 //! `BiquadCoeffs` are normalized (a0 folded to 1). `BiquadState` runs Direct
-//! Form I: it keeps two input and two output history taps on the stack, so the
-//! hot path allocates nothing. Design helpers in sibling files produce coeffs
-//! via the RBJ Audio-EQ-Cookbook; this file only *runs* them.
+//! Form I via [`etalon_signal::filter::df1_step_f32`]: it keeps two input and
+//! two output history taps on the stack, so the hot path allocates nothing.
 
 use crate::types::AudioError;
 
@@ -28,6 +27,18 @@ impl BiquadCoeffs {
             b2: 0.0,
             a1: 0.0,
             a2: 0.0,
+        }
+    }
+
+    /// Convert from `f64` [`etalon_signal::filter::BiquadCoeffs`].
+    #[inline]
+    pub(crate) const fn from_etalon(c: etalon_signal::filter::BiquadCoeffs) -> Self {
+        Self {
+            b0: c.b0 as f32,
+            b1: c.b1 as f32,
+            b2: c.b2 as f32,
+            a1: c.a1 as f32,
+            a2: c.a2 as f32,
         }
     }
 
@@ -80,12 +91,18 @@ impl BiquadState {
     /// Process one sample; advances history. No allocation.
     #[inline]
     pub fn process_sample(&mut self, c: &BiquadCoeffs, x: f32) -> f32 {
-        let y = c.b0 * x + c.b1 * self.x1 + c.b2 * self.x2 - c.a1 * self.y1 - c.a2 * self.y2;
-        self.x2 = self.x1;
-        self.x1 = x;
-        self.y2 = self.y1;
-        self.y1 = y;
-        y
+        etalon_signal::filter::df1_step_f32(
+            c.b0,
+            c.b1,
+            c.b2,
+            c.a1,
+            c.a2,
+            &mut self.x1,
+            &mut self.x2,
+            &mut self.y1,
+            &mut self.y2,
+            x,
+        )
     }
 
     /// Process a whole block into a caller-supplied output buffer.

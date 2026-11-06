@@ -5,7 +5,7 @@ use super::*;
 impl QTensorEngine {
     /// Resolve the MC8 elementwise GPU pipeline for a given opcode.
     #[cfg(feature = "gpu-runtime")]
-    pub(crate) fn elem_gpu_pipeline(&self, op: u32) -> Option<&wgpu::ComputePipeline> {
+    pub(crate) fn elem_gpu_pipeline(&self, op: u32) -> Option<&etalon::ComputePipeline> {
         use super::gpu_params::{ELEM_OP_ADD_RESIDUAL, ELEM_OP_RMS_NORM};
         match op {
             ELEM_OP_RMS_NORM => Some(&self.elem_rms_norm_pipeline),
@@ -15,7 +15,7 @@ impl QTensorEngine {
     }
     #[cfg(feature = "gpu-runtime")]
     /// wgpu device.
-    pub(crate) fn gpu_device(&self) -> &wgpu::Device {
+    pub(crate) fn gpu_device(&self) -> &etalon::Device {
         #[cfg(target_arch = "wasm32")]
         {
             return &self.device;
@@ -29,7 +29,7 @@ impl QTensorEngine {
     #[inline]
     #[cfg(feature = "gpu-runtime")]
     /// wgpu queue.
-    pub(crate) fn gpu_queue(&self) -> &wgpu::Queue {
+    pub(crate) fn gpu_queue(&self) -> &etalon::Queue {
         #[cfg(target_arch = "wasm32")]
         {
             return &self.queue;
@@ -43,14 +43,14 @@ impl QTensorEngine {
     /// Shared process-wide wgpu device (LLM + render coexistence).
     #[inline]
     #[cfg(feature = "gpu-runtime")]
-    pub fn device(&self) -> &wgpu::Device {
+    pub fn device(&self) -> &etalon::Device {
         self.gpu_device()
     }
 
     /// Shared process-wide wgpu queue.
     #[inline]
     #[cfg(feature = "gpu-runtime")]
-    pub fn queue(&self) -> &wgpu::Queue {
+    pub fn queue(&self) -> &etalon::Queue {
         self.gpu_queue()
     }
 
@@ -107,13 +107,13 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         let native_pipeline_cache = create_native_pipeline_cache(device);
         #[cfg(target_arch = "wasm32")]
-        let native_pipeline_cache: Option<wgpu::PipelineCache> = None;
+        let native_pipeline_cache: Option<etalon::PipelineCache> = None;
 
         let resources = etalon_inference::gpu_resources::EngineResources::build(
             device,
             &native_pipeline_cache,
             etalon_inference::gpu_resources::PipelineOptions {
-                subgroups: device.features().contains(wgpu::Features::SUBGROUP),
+                subgroups: device.features().contains(etalon::Features::SUBGROUP),
             },
             etalon_inference::gpu_resources::ResourceBudget::for_device(device),
             |_| Ok(()),
@@ -204,7 +204,7 @@ impl QTensorEngine {
         #[cfg(not(target_arch = "wasm32"))]
         log::info!(
             "LLM_LOAD|fused_ffn|coop_entry={}|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp",
-            if device.features().contains(wgpu::Features::SUBGROUP) {
+            if device.features().contains(etalon::Features::SUBGROUP) {
                 "coop_fused_ffn_sg"
             } else {
                 "coop_fused_ffn_expansion"
@@ -556,15 +556,15 @@ impl QTensorEngine {
                 return;
             }
         };
-        let bytes = (layout.total_f32_elems * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let bytes = (layout.total_f32_elems * std::mem::size_of::<f32>()) as etalon::BufferAddress;
         let attn_params_bytes = {
             #[cfg(target_arch = "wasm32")]
             {
-                (MC8_MAX_ATTN_UNIFORM_CHUNK_SLOTS * MC8_UNIFORM_ALIGN) as wgpu::BufferAddress
+                (MC8_MAX_ATTN_UNIFORM_CHUNK_SLOTS * MC8_UNIFORM_ALIGN) as etalon::BufferAddress
             }
             #[cfg(not(target_arch = "wasm32"))]
             {
-                std::mem::size_of::<AttentionGpuParams>() as wgpu::BufferAddress
+                std::mem::size_of::<AttentionGpuParams>() as etalon::BufferAddress
             }
         };
         use etalon_inference::gpu_resources::{KvBuffers, KvGeometry, ResourceBudget};
@@ -755,16 +755,16 @@ impl QTensorEngine {
             return None;
         }
         let n = layout.total_f32_elems;
-        let size = (n * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
-        let staging = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+        let size = (n * std::mem::size_of::<f32>()) as etalon::BufferAddress;
+        let staging = self.gpu_device().create_buffer(&etalon::BufferDescriptor {
             label: Some("KvCacheReadback"),
             size: size.max(4),
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            usage: etalon::BufferUsages::MAP_READ | etalon::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
         let mut encoder =
             self.gpu_device()
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                .create_command_encoder(&etalon::CommandEncoderDescriptor {
                     label: Some("KvReadback"),
                 });
         encoder.copy_buffer_to_buffer(gpu, 0, &staging, 0, size);
@@ -772,7 +772,7 @@ impl QTensorEngine {
 
         let slice = staging.slice(..);
         let (tx, rx) = futures_channel::oneshot::channel();
-        slice.map_async(wgpu::MapMode::Read, move |v| {
+        slice.map_async(etalon::MapMode::Read, move |v| {
             let _ = tx.send(v);
         });
         self.poll_wait();

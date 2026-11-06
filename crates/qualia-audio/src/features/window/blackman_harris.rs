@@ -11,28 +11,9 @@ use crate::types::AudioError;
 /// `N = out.len()`.
 ///
 /// Returns [`AudioError::InvalidParameter`] if `out` is empty.
+#[inline]
 pub fn blackman_harris_window(out: &mut [f32]) -> Result<(), AudioError> {
-    let n = out.len();
-    if n == 0 {
-        return Err(AudioError::InvalidParameter);
-    }
-    if n == 1 {
-        out[0] = 1.0;
-        return Ok(());
-    }
-    const A0: f64 = 0.35875;
-    const A1: f64 = 0.48829;
-    const A2: f64 = 0.14128;
-    const A3: f64 = 0.01168;
-    let nf = n as f64;
-    for (i, w) in out.iter_mut().enumerate() {
-        let x = i as f64 / nf;
-        let c1 = (core::f64::consts::TAU * x).cos();
-        let c2 = (2.0 * core::f64::consts::TAU * x).cos();
-        let c3 = (3.0 * core::f64::consts::TAU * x).cos();
-        *w = (A0 - A1 * c1 + A2 * c2 - A3 * c3) as f32;
-    }
-    Ok(())
+    etalon_signal::window::blackman_harris_window(out).map_err(|_| AudioError::InvalidParameter)
 }
 
 #[cfg(test)]

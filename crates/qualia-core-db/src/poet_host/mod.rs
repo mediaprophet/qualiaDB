@@ -11,6 +11,7 @@ pub mod invoke;
 mod scan;
 mod values;
 pub mod scoped_effects;
+pub mod vibe_sentinel;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native_authority;
 
