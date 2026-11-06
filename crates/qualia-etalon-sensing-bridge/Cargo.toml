@@ -10,8 +10,8 @@ license-file = "../../LICENSE"
 
 [dependencies]
 qualia-core-db = { path = "../qualia-core-db", default-features = false }
-etalon-sense-core = { git = "https://github.com/mediaprophet/etalon.git", rev = "575bab54accf1aafb24f67e9ba810c0f3f745aea" }
-etalon-sense-nfc = { git = "https://github.com/mediaprophet/etalon.git", rev = "575bab54accf1aafb24f67e9ba810c0f3f745aea" }
+etalon-sense-core = { git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
+etalon-sense-nfc = { git = "https://github.com/mediaprophet/etalon.git", rev = "7c41e19a782d8fa84c38270d1e7ae5f85db821b0" }
 ed25519-dalek = { version = "3.0", default-features = false }
 
 [dev-dependencies]
