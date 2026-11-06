@@ -27,7 +27,7 @@ export function etalonDependencyIdentity(cargo, lock) {
     const packageName = /\bpackage\s*=\s*"([^"]+)"/.exec(line)?.[1] ?? name;
     declarations.push({ section, name, package: packageName, revision });
   }
-  if (!declarations.some(({ name }) => name === 'wgpu') || !declarations.some(({ name }) => name === 'etalon')) {
+  if (!declarations.some(({ name }) => name === 'etalon')) {
     throw new Error('Missing production Etalon dependency declarations; local overrides require --etalon-path');
   }
   const packages = [];

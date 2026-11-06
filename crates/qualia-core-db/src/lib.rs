@@ -277,11 +277,8 @@ pub mod shaders;
 pub mod wgsl_forge;
 #[cfg(feature = "gpu-runtime")]
 pub use etalon_agent;
-#[cfg(feature = "gpu-runtime")]
 pub use etalon_nquin;
-#[cfg(feature = "gpu-runtime")]
 pub use etalon_render;
-#[cfg(feature = "gpu-runtime")]
 pub use etalon_tensor;
 #[cfg(feature = "gpu-runtime")]
 pub use etalon_wasm;

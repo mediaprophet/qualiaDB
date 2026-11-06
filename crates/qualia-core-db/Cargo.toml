@@ -36,8 +36,6 @@ gpu-runtime = [
     "etalon-wgsl-forge/wgsl",
     "etalon-wgsl-forge/naga-validate",
     "etalon-wgsl-forge/runtime",
-    "dep:etalon-nquin",
-    "dep:etalon-tensor",
     "etalon-render/gpu",
     "dep:etalon-wasm",
     "etalon-wasm/gpu-readback",
@@ -238,8 +236,8 @@ etalon = { workspace = true, default-features = false, features = [
 ], optional = true }
 etalon-agent = { workspace = true, optional = true }
 etalon-wgsl-forge = { workspace = true }
-etalon-nquin = { workspace = true, optional = true }
-etalon-tensor = { workspace = true, optional = true }
+etalon-nquin = { workspace = true }
+etalon-tensor = { workspace = true }
 etalon-render = { workspace = true }
 etalon-sim = { workspace = true }
 etalon-wasm = { workspace = true, optional = true }

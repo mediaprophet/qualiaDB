@@ -24,13 +24,19 @@ pub const SIEVE_WGSL: &str = include_str!("sieve.wgsl");
 pub const HOLOGRAPHIC_WGSL: &str = viewport::HOLOGRAPHIC_WGSL;
 
 /// Canonical standalone volumetric Holographic shader from [`etalon_render::volumetric`].
+#[cfg(feature = "gpu-runtime")]
 pub const HOLOGRAPHIC_STANDALONE_WGSL: &str = etalon_render::HOLOGRAPHIC_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
+pub const HOLOGRAPHIC_STANDALONE_WGSL: &str = viewport::HOLOGRAPHIC_WGSL;
 
 /// Canonical 4D EMF volumetric slice shader from [`etalon_render::shaders`].
 pub const EMF_VOLUMETRIC_WGSL: &str = viewport::EMF_VOLUMETRIC_WGSL;
 
 /// Canonical 64-byte Stokes v2 EMF volumetric shader from [`etalon_render::emf`].
+#[cfg(feature = "gpu-runtime")]
 pub const EMF_VOLUMETRIC_STOKES_WGSL: &str = etalon_render::EMF_VOLUMETRIC_WGSL;
+#[cfg(not(feature = "gpu-runtime"))]
+pub const EMF_VOLUMETRIC_STOKES_WGSL: &str = viewport::EMF_VOLUMETRIC_WGSL;
 
 /// Canonical GEMM substrate compute shader.
 pub const GEMM_SUBSTRATE_WGSL: &str = include_str!("gemm_substrate.wgsl");
