@@ -129,7 +129,7 @@ pub fn execute_wgpu_forge_affine_f32_with_cleanup(
         return Err(VibeTrap::NumericalDomainError);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
     {
         use crate::wgsl_forge::execute::{
             BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline,
