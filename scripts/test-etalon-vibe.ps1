@@ -376,6 +376,7 @@ dx12 = ["qualia-core-db/gpu-native-dx12"]
 [dependencies]
 qualia-core-db = { path = $(Toml-String (Join-Path $qualiaRoot 'crates/qualia-core-db')), default-features = false, features = ["gpu-runtime", "wgsl-forge"] }
 vibe = { path = $(Toml-String (Join-Path $qualiaRoot 'crates/vibe')) }
+etalon-nquin = { path = $(Toml-String (Join-Path $etalonRoot 'crates/etalon-nquin')) }
 serde_json = "1"
 [[test]]
 name = "etalon_vibe_harness"

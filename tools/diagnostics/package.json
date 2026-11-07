@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Bounded GGUF and browser/WebGPU diagnostic tools for QualiaDB",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "browser-smoke": "node browser_smoke.mjs"

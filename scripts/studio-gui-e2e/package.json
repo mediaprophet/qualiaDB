@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.41",
   "description": "Playwright GUI contracts for the Webizen portal and naturalised desktop shell",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed"
