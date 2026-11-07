@@ -7,7 +7,7 @@ use crate::lifecycle::VibeTrap;
 ///
 /// Layout matches `qualia_core_db::NQuin` bit-for-bit:
 /// `[subject, predicate, object, context, metadata, parity]`, where
-/// `parity == subject ^ predicate ^ object ^ context`.
+/// `parity == subject ^ predicate ^ object ^ context ^ metadata`.
 #[repr(C, align(16))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NQuin48(pub [u64; 6]);
@@ -27,7 +27,7 @@ impl NQuin48 {
         context: u64,
         metadata: u64,
     ) -> Self {
-        let parity = subject ^ predicate ^ object ^ context;
+        let parity = subject ^ predicate ^ object ^ context ^ metadata;
         Self([subject, predicate, object, context, metadata, parity])
     }
 
@@ -67,13 +67,13 @@ impl NQuin48 {
         self.0[5]
     }
 
-    /// Expected XOR parity (`subject ^ predicate ^ object ^ context`).
+    /// Expected XOR parity (`subject ^ predicate ^ object ^ context ^ metadata`).
     #[inline]
     pub const fn computed_parity(&self) -> u64 {
-        self.0[0] ^ self.0[1] ^ self.0[2] ^ self.0[3]
+        self.0[0] ^ self.0[1] ^ self.0[2] ^ self.0[3] ^ self.0[4]
     }
 
-    /// Returns `true` when `parity == subject ^ predicate ^ object ^ context`.
+    /// Returns `true` when `parity == subject ^ predicate ^ object ^ context ^ metadata`.
     #[inline]
     pub const fn verify_parity(&self) -> bool {
         self.0[5] == self.computed_parity()

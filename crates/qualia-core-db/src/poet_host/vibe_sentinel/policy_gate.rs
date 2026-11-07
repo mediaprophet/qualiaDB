@@ -63,7 +63,7 @@ pub const fn make_deontic_norm_quin(
         predicate |= DEFEATER_BIT;
     }
     let metadata = expiry_unix32 as u64;
-    let parity = actor_did_hash ^ predicate ^ provider_iri_hash ^ context_world_hash;
+    let parity = actor_did_hash ^ predicate ^ provider_iri_hash ^ context_world_hash ^ metadata;
     NQuin {
         subject: actor_did_hash,
         predicate,
@@ -146,9 +146,28 @@ impl<'a> WebizenSentinelGate<'a> {
         context_world_hash: u64,
         now_unix32: u32,
     ) -> Result<(), VibeTrap> {
+        if self.policy_quins.len() > MAX_SENTINEL_VERDICTS {
+            return Err(VibeTrap::ResourceEnvelopeExceeded);
+        }
+        let mut adapted_norms = [NQuin::default(); MAX_SENTINEL_VERDICTS];
+        let mut k = 0;
+        while k < self.policy_quins.len() {
+            let q = self.policy_quins[k];
+            let fold4 = q.subject ^ q.predicate ^ q.object ^ q.context;
+            let expected5 = fold4 ^ q.metadata;
+            adapted_norms[k] = NQuin {
+                parity: if q.parity == expected5 { fold4 } else { !fold4 },
+                ..q
+            };
+            k += 1;
+        }
         let mut verdicts = [DeonticVerdict::default(); MAX_SENTINEL_VERDICTS];
-        let count = evaluate_deontic_contract(self.policy_quins, now_unix32, &mut verdicts)
-            .map_err(|_| VibeTrap::ResourceEnvelopeExceeded)?;
+        let count = evaluate_deontic_contract(
+            &adapted_norms[..self.policy_quins.len()],
+            now_unix32,
+            &mut verdicts,
+        )
+        .map_err(|_| VibeTrap::ResourceEnvelopeExceeded)?;
 
         let func_h55 = func_iri_hash & 0x007F_FFFF_FFFF_FFFF;
         let prov_h55 = provider_iri_hash & 0x007F_FFFF_FFFF_FFFF;

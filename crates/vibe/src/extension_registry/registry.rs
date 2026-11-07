@@ -168,6 +168,12 @@ impl<'p> ExtensionRegistry<'p> {
         self.slots.get(slot as usize).copied().flatten()
     }
 
+    /// Iterates over all active providers currently registered in the registry.
+    #[inline]
+    pub fn iter_providers(&self) -> impl Iterator<Item = &'p dyn VibeNamespaceProvider> + '_ {
+        self.slots.iter().flatten().copied()
+    }
+
     /// Resolves a `(provider, FuncDescriptor)` in bounded time from a `VibeOpCode`.
     #[inline]
     pub fn resolve_opcode(

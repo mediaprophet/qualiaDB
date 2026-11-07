@@ -62,15 +62,8 @@ mod tests {
             q_hash_str("https://qualiadb.org/ext/etalon/mechanics/kinematics/kinetic_energy");
 
         // Norm 1: Permit provider-wide in `world` until t = 1000
-        let n_permit = make_deontic_norm_quin(
-            actor,
-            OP_PERMIT,
-            false,
-            prov_hash,
-            prov_hash,
-            world,
-            1000,
-        );
+        let n_permit =
+            make_deontic_norm_quin(actor, OP_PERMIT, false, prov_hash, prov_hash, world, 1000);
         // Norm 2: Explicitly forbid `kinetic_energy` in `world`
         let n_forbid_ke =
             make_deontic_norm_quin(actor, OP_FORBID, false, ke_hash, prov_hash, world, 1000);
@@ -86,10 +79,7 @@ mod tests {
         );
 
         // 1. `verlet_step` is permitted at t = 500
-        assert_eq!(
-            gate.evaluate_access(actor, verlet_hash, prov_hash, world, 500),
-            Ok(())
-        );
+        assert_eq!(gate.evaluate_access(actor, verlet_hash, prov_hash, world, 500), Ok(()));
         // 2. `kinetic_energy` is explicitly denied by `OP_FORBID`
         assert_eq!(
             gate.evaluate_access(actor, ke_hash, prov_hash, world, 500),
@@ -117,10 +107,7 @@ mod tests {
             EffectSet::PURE_COMPUTE,
             ResourceEnvelope::hot_zero_heap(100, 128),
         );
-        assert_eq!(
-            gate2.evaluate_access(actor, ke_hash, prov_hash, world, 500),
-            Ok(())
-        );
+        assert_eq!(gate2.evaluate_access(actor, ke_hash, prov_hash, world, 500), Ok(()));
     }
 
     #[test]
@@ -130,26 +117,15 @@ mod tests {
         reg.register(&PROVIDER).unwrap();
 
         let handle = prepare_extension_call(
-            &reg,
-            "mech",
-            "kinematics",
-            "kinetic_energy",
-            SemVerReq::AnyStable,
-            TargetProfileMask::NATIVE_DESKTOP,
-        )
-        .unwrap();
+            &reg, "mech", "kinematics", "kinetic_energy",
+            SemVerReq::AnyStable, TargetProfileMask::NATIVE_DESKTOP,
+        ).unwrap();
 
         let actor = q_hash_str("did:q42:alice");
         let world = q_hash_str("did:q42:world:lab-1");
         let prov_hash = handle.provider_iri_hash;
         let norms = [make_deontic_norm_quin(
-            actor,
-            OP_PERMIT,
-            false,
-            prov_hash,
-            prov_hash,
-            world,
-            2000,
+            actor, OP_PERMIT, false, prov_hash, prov_hash, world, 2000,
         )];
 
         // Receipt sink has space for exactly 1 call (2 NQuins)
@@ -178,7 +154,8 @@ mod tests {
             parity: actor
                 ^ q_hash_str("https://qualiadb.org/schema/vibe#recordedEnergy")
                 ^ 50
-                ^ world,
+                ^ world
+                ^ 100,
         };
         let mut published_graph = [NQuin::default(); 4];
         let mut published_len = 0usize;
@@ -194,17 +171,9 @@ mod tests {
         let mut out_raw1 = [0u8; 8];
         let mut out1 = CallerOutputSlice::new(&mut out_raw1, PrimitiveKind::F64).unwrap();
         let outcome = execute_governed_staged_call(
-            &reg,
-            &handle,
-            &ctx,
-            &mut gate,
-            &inputs,
-            &mut out1,
-            &[staged_mutation],
-            &mut published_graph,
-            &mut published_len,
-        )
-        .expect("first governed call commits");
+            &reg, &handle, &ctx, &mut gate, &inputs, &mut out1,
+            &[staged_mutation], &mut published_graph, &mut published_len,
+        ).expect("first governed call commits");
         assert_eq!(outcome.receipt.status, CompletionStatus::Committed);
         assert_eq!(gate.persisted_receipt_quin_count(), 2);
         assert_eq!(published_len, 1);
@@ -214,17 +183,9 @@ mod tests {
         let mut out_raw2 = [0u8; 8];
         let mut out2 = CallerOutputSlice::new(&mut out_raw2, PrimitiveKind::F64).unwrap();
         let err = execute_governed_staged_call(
-            &reg,
-            &handle,
-            &ctx,
-            &mut gate,
-            &inputs,
-            &mut out2,
-            &[staged_mutation],
-            &mut published_graph,
-            &mut published_len,
-        )
-        .unwrap_err();
+            &reg, &handle, &ctx, &mut gate, &inputs, &mut out2,
+            &[staged_mutation], &mut published_graph, &mut published_len,
+        ).unwrap_err();
         assert_eq!(err, VibeTrap::ReceiptPersistenceFailed);
         assert_eq!(
             published_len, 1,
@@ -235,8 +196,8 @@ mod tests {
     #[test]
     fn vs03_bounded_ontology_mount_discovery_and_unmount() {
         static PROVIDER: DeterministicMechanicsProvider = DeterministicMechanicsProvider;
-        let mut store_buf = [NQuin::default(); 8];
-        let mut mount = BoundedOntologyMount::new(&mut store_buf, 8);
+        let mut store_buf = [NQuin::default(); 32];
+        let mut mount = BoundedOntologyMount::new(&mut store_buf, 16);
 
         let span = mount.mount_provider(&PROVIDER).expect("mounts cleanly");
         assert_eq!(span.len, 3);
@@ -249,13 +210,7 @@ mod tests {
         let verlet_hash =
             q_hash_str("https://qualiadb.org/ext/etalon/mechanics/kinematics/verlet_step");
         let norms = [make_deontic_norm_quin(
-            actor,
-            OP_PERMIT,
-            false,
-            verlet_hash,
-            prov_hash,
-            world,
-            900,
+            actor, OP_PERMIT, false, verlet_hash, prov_hash, world, 900,
         )];
         let mut receipt_sink = [NQuin::default(); 4];
         let gate = WebizenSentinelGate::new(
@@ -274,7 +229,7 @@ mod tests {
         let count = mount
             .discover_permitted_functions(&PROVIDER, &gate, actor, world, 100, &mut discovered)
             .unwrap();
-        // Only `verlet_step` (1 of the 3 functions) is permitted for Bob!
+        // Only `verlet_step` (1 of the 5 functions) is permitted for Bob!
         assert_eq!(count, 1);
         assert_eq!(discovered[0].func_iri_hash, verlet_hash);
 
@@ -282,16 +237,22 @@ mod tests {
         mount.unmount_provider(prov_hash).unwrap();
         assert_eq!(mount.mounted_quin_count(), 0);
         assert_eq!(
-            mount.discover_permitted_functions(
-                &PROVIDER,
-                &gate,
-                actor,
-                world,
-                100,
-                &mut discovered
-            ),
+            mount.discover_permitted_functions(&PROVIDER, &gate, actor, world, 100, &mut discovered),
             Err(VibeTrap::NamespaceNotFound)
         );
+
+        // Mount all 11 built-in providers (8 Etalon + 3 Qualia, 3 ontology NQuins each = 33 NQuins)
+        let reg = ExtensionRegistry::with_builtin_providers();
+        let mut full_buf = [NQuin::default(); 128];
+        let mut full_mount = BoundedOntologyMount::new(&mut full_buf, 16);
+        let mounted_providers = full_mount
+            .mount_registry_providers(&reg)
+            .expect("mounts all 11 built-in providers");
+        assert_eq!(mounted_providers, 11);
+        assert_eq!(full_mount.mounted_quin_count(), 33);
+        for q in full_mount.mounted_quins() {
+            assert!(nquin_to_quin48(q).verify_parity());
+        }
     }
 
     #[test]

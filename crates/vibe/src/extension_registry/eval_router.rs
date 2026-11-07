@@ -16,6 +16,10 @@ use crate::budget::Budget;
 use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::Value;
+use etalon_vibe::{
+    EtalonForgeProvider, EtalonModelProvider, EtalonNQuinProvider, EtalonRenderProvider,
+    EtalonSenseProvider, EtalonSignalProvider,
+};
 use vibescript_abi::{
     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
     PreparedCallHandle, PrimitiveKind, RegistryGeneration, SemVerReq, SentinelPolicyGate,
@@ -24,33 +28,60 @@ use vibescript_abi::{
 
 static MECH_PROVIDER: DeterministicMechanicsProvider = DeterministicMechanicsProvider;
 static GPU_PROVIDER: EtalonGpuComputeProvider = EtalonGpuComputeProvider;
+static FORGE_PROVIDER: EtalonForgeProvider = EtalonForgeProvider;
+static RENDER_PROVIDER: EtalonRenderProvider = EtalonRenderProvider;
+static SIGNAL_PROVIDER: EtalonSignalProvider = EtalonSignalProvider;
+static SENSE_PROVIDER: EtalonSenseProvider = EtalonSenseProvider;
+static MODEL_PROVIDER: EtalonModelProvider = EtalonModelProvider;
+static NQUIN_PROVIDER: EtalonNQuinProvider = EtalonNQuinProvider;
 static INFER_PROVIDER: GovernedInferenceProvider = GovernedInferenceProvider;
 static GRAPH_PROVIDER: StagedGraphMutationProvider = StagedGraphMutationProvider;
 static MODALITY_PROVIDER: DeonticTemporalProvider = DeonticTemporalProvider;
 
 /// Short aliases of all built-in extension providers registered by default.
-pub const BUILTIN_EXTENSION_ALIASES: &[&str] = &["mech", "gpu", "infer", "qgraph", "modality"];
+pub const BUILTIN_EXTENSION_ALIASES: &[&str] = &[
+    "mech", "gpu", "forge", "render", "signal", "sense", "p64", "nquin", "infer", "qgraph",
+    "modality",
+];
 
 /// Canonical namespace IRIs of all built-in extension providers registered by default.
 pub const BUILTIN_EXTENSION_IRIS: &[&str] = &[
     "https://qualiadb.org/ext/etalon/mechanics",
     "https://qualiadb.org/ext/etalon/gpu",
+    "https://qualiadb.org/ext/etalon/forge",
+    "https://qualiadb.org/ext/etalon/render",
+    "https://qualiadb.org/ext/etalon/signal",
+    "https://qualiadb.org/ext/etalon/sense",
+    "https://qualiadb.org/ext/etalon/model",
+    "https://qualiadb.org/ext/etalon/nquin",
     "https://qualiadb.org/ext/qualia/inference",
     "https://qualiadb.org/ext/qualia/graph",
     "https://qualiadb.org/ext/qualia/modality",
 ];
 
 impl ExtensionRegistry<'static> {
-    /// Constructs an `ExtensionRegistry` pre-populated with all built-in Stage S4/S6 providers:
-    /// - `mech` (`DeterministicMechanicsProvider`, `VS03-08`)
-    /// - `gpu` (`EtalonGpuComputeProvider`, `VS03-12`)
-    /// - `infer` (`GovernedInferenceProvider`, `VS03-12`)
-    /// - `qgraph` (`StagedGraphMutationProvider`, `VS03-13`)
-    /// - `modality` (`DeonticTemporalProvider`, `VS03-13`)
+    /// Constructs an `ExtensionRegistry` pre-populated with all 11 built-in Etalon and Qualia providers:
+    /// - `mech` (`DeterministicMechanicsProvider`)
+    /// - `gpu` (`EtalonGpuComputeProvider`)
+    /// - `forge` (`EtalonForgeProvider`)
+    /// - `render` (`EtalonRenderProvider`)
+    /// - `signal` (`EtalonSignalProvider`)
+    /// - `sense` (`EtalonSenseProvider`)
+    /// - `p64` (`EtalonModelProvider`)
+    /// - `nquin` (`EtalonNQuinProvider`)
+    /// - `infer` (`GovernedInferenceProvider`)
+    /// - `qgraph` (`StagedGraphMutationProvider`)
+    /// - `modality` (`DeonticTemporalProvider`)
     pub fn with_builtin_providers() -> Self {
         let mut reg = Self::new();
         let _ = reg.register(&MECH_PROVIDER);
         let _ = reg.register(&GPU_PROVIDER);
+        let _ = reg.register(&FORGE_PROVIDER);
+        let _ = reg.register(&RENDER_PROVIDER);
+        let _ = reg.register(&SIGNAL_PROVIDER);
+        let _ = reg.register(&SENSE_PROVIDER);
+        let _ = reg.register(&MODEL_PROVIDER);
+        let _ = reg.register(&NQUIN_PROVIDER);
         let _ = reg.register(&INFER_PROVIDER);
         let _ = reg.register(&GRAPH_PROVIDER);
         let _ = reg.register(&MODALITY_PROVIDER);

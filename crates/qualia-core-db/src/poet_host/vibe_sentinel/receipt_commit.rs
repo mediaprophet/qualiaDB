@@ -37,7 +37,7 @@ pub fn execute_governed_staged_call(
     let mut i = 0;
     while i < staged_mutations.len() {
         let q = &staged_mutations[i];
-        let expected_parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        let expected_parity = q.subject ^ q.predicate ^ q.object ^ q.context ^ q.metadata;
         if q.parity != expected_parity {
             return Err(VibeTrap::InvalidQuinParity);
         }

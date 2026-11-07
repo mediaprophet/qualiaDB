@@ -110,6 +110,20 @@ impl<'a> BoundedOntologyMount<'a> {
         Ok(span)
     }
 
+    /// Mounts all active providers registered in `registry` into `self.store`,
+    /// returning the number of providers mounted.
+    pub fn mount_registry_providers(
+        &mut self,
+        registry: &vibe::extension_registry::ExtensionRegistry<'_>,
+    ) -> Result<usize, VibeTrap> {
+        let mut count = 0usize;
+        for provider in registry.iter_providers() {
+            self.mount_provider(provider)?;
+            count += 1;
+        }
+        Ok(count)
+    }
+
     /// Unmounts `provider_iri_hash`, compacting `self.store` and updating all remaining spans
     /// so no dangling ontology records remain.
     pub fn unmount_provider(&mut self, provider_iri_hash: u64) -> Result<(), VibeTrap> {

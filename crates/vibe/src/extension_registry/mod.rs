@@ -13,7 +13,12 @@ pub use dispatch_adapter::{
     dispatch_prepared_call, CallExecutionContext, DispatchOutcome, SimulatedPolicyGate,
 };
 pub use domain_providers::{
-    oracle_aabb_volume, oracle_kinetic_energy, oracle_verlet_step, DeterministicMechanicsProvider,
+    oracle_aabb_volume, oracle_excavation_prism_volume, oracle_kinetic_energy,
+    oracle_spring_damper_force, oracle_verlet_step, DeterministicMechanicsProvider,
+};
+pub use etalon_vibe::{
+    EtalonForgeProvider, EtalonModelProvider, EtalonNQuinProvider, EtalonRenderProvider,
+    EtalonSenseProvider, EtalonSignalProvider, ETALON_VIBE_PROVIDERS,
 };
 pub use eval_router::{
     execute_prepared_value_call, is_extension_call_path, is_extension_namespace, route_call,
@@ -21,8 +26,9 @@ pub use eval_router::{
     BUILTIN_EXTENSION_IRIS,
 };
 pub use gpu_inference_providers::{
-    oracle_governed_token_step, oracle_gpu_affine_f32, oracle_gpu_gemv4_f32, oracle_gpu_topk2_f32,
-    oracle_rms_norm_f64, oracle_softmax_f64, EtalonGpuComputeProvider, GovernedInferenceProvider,
+    oracle_governed_token_step, oracle_gpu_affine_f32, oracle_gpu_gemv4_f32,
+    oracle_gpu_rmsnorm_f32, oracle_gpu_rope_f32, oracle_gpu_topk2_f32, oracle_rms_norm_f64,
+    oracle_softmax_f64, EtalonGpuComputeProvider, GovernedInferenceProvider,
 };
 pub use graph_logic_providers::{
     oracle_allen_interval_relation, oracle_pack_deontic_predicate, oracle_seal_quin,
@@ -76,37 +82,22 @@ mod tests {
 
         // Provider version is 0.4.2 -> matches ^0.4.0, fails ^0.5.0 and ^0.3.0
         let ok_handle = prepare_extension_call(
-            &reg,
-            "mech",
-            "kinematics",
-            "verlet_step",
-            SemVerReq::Caret(SemVer64::release(0, 4, 0)),
-            TargetProfileMask::NATIVE_DESKTOP,
-        )
-        .expect("^0.4.0 matches 0.4.2");
+            &reg, "mech", "kinematics", "verlet_step",
+            SemVerReq::Caret(SemVer64::release(0, 4, 0)), TargetProfileMask::NATIVE_DESKTOP,
+        ).expect("^0.4.0 matches 0.4.2");
         assert_eq!(ok_handle.opcode.ns_slot(), 0);
 
         let bad_ver = prepare_extension_call(
-            &reg,
-            "mech",
-            "kinematics",
-            "verlet_step",
-            SemVerReq::Caret(SemVer64::release(0, 5, 0)),
-            TargetProfileMask::NATIVE_DESKTOP,
-        )
-        .unwrap_err();
+            &reg, "mech", "kinematics", "verlet_step",
+            SemVerReq::Caret(SemVer64::release(0, 5, 0)), TargetProfileMask::NATIVE_DESKTOP,
+        ).unwrap_err();
         assert_eq!(bad_ver, VibeTrap::VersionRequirementUnsatisfied);
 
         // GPU_COMPUTE is not in ALL_CPU
         let bad_target = prepare_extension_call(
-            &reg,
-            "mech",
-            "kinematics",
-            "verlet_step",
-            SemVerReq::AnyStable,
-            TargetProfileMask::GPU_COMPUTE,
-        )
-        .unwrap_err();
+            &reg, "mech", "kinematics", "verlet_step",
+            SemVerReq::AnyStable, TargetProfileMask::GPU_COMPUTE,
+        ).unwrap_err();
         assert_eq!(bad_target, VibeTrap::TargetProfileUnsupported);
     }
 
@@ -116,14 +107,9 @@ mod tests {
         let mut reg = ExtensionRegistry::new();
         let slot = reg.register(&PROVIDER).unwrap();
         let handle = prepare_extension_call(
-            &reg,
-            "mech",
-            "kinematics",
-            "kinetic_energy",
-            SemVerReq::AnyStable,
-            TargetProfileMask::NATIVE_DESKTOP,
-        )
-        .unwrap();
+            &reg, "mech", "kinematics", "kinetic_energy",
+            SemVerReq::AnyStable, TargetProfileMask::NATIVE_DESKTOP,
+        ).unwrap();
 
         // Unregister advances generation
         reg.unregister(slot).unwrap();
@@ -154,24 +140,14 @@ mod tests {
         reg.register(&PROVIDER).unwrap();
 
         let handle = prepare_extension_call(
-            &reg,
-            "https://qualiadb.org/ext/etalon/mechanics",
-            "kinematics",
-            "verlet_step",
-            SemVerReq::Caret(SemVer64::release(0, 4, 0)),
-            TargetProfileMask::WASM_SANDBOX,
-        )
-        .unwrap();
+            &reg, "https://qualiadb.org/ext/etalon/mechanics", "kinematics", "verlet_step",
+            SemVerReq::Caret(SemVer64::release(0, 4, 0)), TargetProfileMask::WASM_SANDBOX,
+        ).unwrap();
 
-        let pos = [1.0, 2.0, 3.0];
-        let vel = [0.5, -1.0, 2.0];
-        let acc = [0.0, -9.81, 0.0];
-        let dt = 0.1;
-
-        let pos_b = f64_3_to_bytes(pos);
-        let vel_b = f64_3_to_bytes(vel);
-        let acc_b = f64_3_to_bytes(acc);
-        let dt_b = f64_1_to_bytes(dt);
+        let (pos, vel, acc, dt) = ([1.0, 2.0, 3.0], [0.5, -1.0, 2.0], [0.0, -9.81, 0.0], 0.1);
+        let (pos_b, vel_b, acc_b, dt_b) = (
+            f64_3_to_bytes(pos), f64_3_to_bytes(vel), f64_3_to_bytes(acc), f64_1_to_bytes(dt),
+        );
         let inputs = [
             BorrowedSliceView::from_raw_bytes(&pos_b, PrimitiveKind::F64, 3).unwrap(),
             BorrowedSliceView::from_raw_bytes(&vel_b, PrimitiveKind::F64, 3).unwrap(),
@@ -189,39 +165,25 @@ mod tests {
             mode: ExecutionMode::StandaloneDeveloper,
         };
         assert_eq!(
-            dispatch_prepared_call(
-                &reg,
-                &handle,
-                &standalone_ctx,
-                None,
-                &inputs,
-                &mut small_out
-            ),
+            dispatch_prepared_call(&reg, &handle, &standalone_ctx, None, &inputs, &mut small_out),
             Err(VibeTrap::OutputBufferTooSmall)
         );
 
         // 2. StandaloneDeveloper mode with 6-element output buffer matches direct-call oracle
         let mut out_raw = [0u8; 6 * 8];
         let mut out = CallerOutputSlice::new(&mut out_raw, PrimitiveKind::F64).unwrap();
-        let outcome = dispatch_prepared_call(
-            &reg,
-            &handle,
-            &standalone_ctx,
-            None,
-            &inputs,
-            &mut out,
-        )
-        .expect("standalone call succeeds");
+        let outcome = dispatch_prepared_call(&reg, &handle, &standalone_ctx, None, &inputs, &mut out)
+            .expect("standalone call succeeds");
         assert_eq!(outcome.receipt.status, CompletionStatus::StandaloneCompleted);
         assert!(!outcome.receipt.simulated);
 
         let out_view =
             BorrowedSliceView::from_raw_bytes(out.written_byte_slice(), PrimitiveKind::F64, 6)
                 .unwrap();
-        let (exp_pos, exp_vel) = oracle_verlet_step(pos, vel, acc, dt);
+        let exp = oracle_verlet_step(pos, vel, acc, dt).unwrap();
         for i in 0..3 {
-            assert!((out_view.read_f64_le(i).unwrap() - exp_pos[i]).abs() < 1e-12);
-            assert!((out_view.read_f64_le(i + 3).unwrap() - exp_vel[i]).abs() < 1e-12);
+            assert!((out_view.read_f64_le(i).unwrap() - exp[i]).abs() < 1e-12);
+            assert!((out_view.read_f64_le(i + 3).unwrap() - exp[i + 3]).abs() < 1e-12);
         }
 
         // 3. GovernedApplication mode without a Sentinel gate fails closed
@@ -244,34 +206,18 @@ mod tests {
         let mut sim_gate = SimulatedPolicyGate::new_for_actor(standalone_ctx.actor_did_hash);
         let mut out_raw3 = [0u8; 6 * 8];
         let mut out3 = CallerOutputSlice::new(&mut out_raw3, PrimitiveKind::F64).unwrap();
-        let sim_outcome = dispatch_prepared_call(
-            &reg,
-            &handle,
-            &sim_ctx,
-            Some(&mut sim_gate),
-            &inputs,
-            &mut out3,
-        )
-        .expect("simulated governance succeeds");
+        let sim_outcome =
+            dispatch_prepared_call(&reg, &handle, &sim_ctx, Some(&mut sim_gate), &inputs, &mut out3)
+                .expect("simulated governance succeeds");
         assert!(sim_outcome.receipt.simulated);
-        assert_eq!(
-            sim_outcome.receipt.status,
-            CompletionStatus::SimulatedCommitted
-        );
+        assert_eq!(sim_outcome.receipt.status, CompletionStatus::SimulatedCommitted);
 
         // Simulated receipt persistence failure must fail closed
         sim_gate.fail_receipt_commit = true;
         let mut out_raw4 = [0u8; 6 * 8];
         let mut out4 = CallerOutputSlice::new(&mut out_raw4, PrimitiveKind::F64).unwrap();
         assert_eq!(
-            dispatch_prepared_call(
-                &reg,
-                &handle,
-                &sim_ctx,
-                Some(&mut sim_gate),
-                &inputs,
-                &mut out4,
-            ),
+            dispatch_prepared_call(&reg, &handle, &sim_ctx, Some(&mut sim_gate), &inputs, &mut out4),
             Err(VibeTrap::ReceiptPersistenceFailed)
         );
     }
@@ -286,6 +232,13 @@ mod tests {
 
         const PARAMS: &[ParamSpec] = &[ParamSpec::scalar("x", PrimitiveKind::F64)];
         const ENV: ResourceEnvelope = ResourceEnvelope::hot_zero_heap(8, 8);
+        const CONTRACT: OntologicalContract = OntologicalContract {
+            contract_digest: [0x44; 32],
+            schema_hash: 1,
+            precondition_quin_span: (0, 0),
+            postcondition_quin_span: (0, 0),
+            invariant_quin_span: (0, 0),
+        };
         const FUNCS: &[FuncDescriptor] = &[
             FuncDescriptor {
                 name: "alpha",
@@ -298,13 +251,7 @@ mod tests {
                 determinism: DeterminismGuarantee::DeterministicExact,
                 reversibility: ReversibilityKind::PureNoState,
                 envelope: ENV,
-                contract: OntologicalContract {
-                    contract_digest: [0x44; 32],
-                    schema_hash: 1,
-                    precondition_quin_span: (0, 0),
-                    postcondition_quin_span: (0, 0),
-                    invariant_quin_span: (0, 0),
-                },
+                contract: CONTRACT,
             },
             FuncDescriptor {
                 name: "beta",
@@ -317,13 +264,7 @@ mod tests {
                 determinism: DeterminismGuarantee::DeterministicExact,
                 reversibility: ReversibilityKind::PureNoState,
                 envelope: ENV,
-                contract: OntologicalContract {
-                    contract_digest: [0x44; 32],
-                    schema_hash: 1,
-                    precondition_quin_span: (0, 0),
-                    postcondition_quin_span: (0, 0),
-                    invariant_quin_span: (0, 0),
-                },
+                contract: CONTRACT,
             },
         ];
         const SUBS: &[SubNamespaceDescriptor] = &[SubNamespaceDescriptor {
@@ -421,7 +362,7 @@ mod tests {
             .call_function(&prog, "run_suite", vec![], &mut env)
             .expect("AST evaluates extension calls");
 
-        let exp_ke = oracle_kinetic_energy(4.0, [3.0, 0.0, 4.0]);
+        let exp_ke = oracle_kinetic_energy(4.0, [3.0, 0.0, 4.0]).unwrap();
         let exp_aff = oracle_gpu_affine_f32([1.0, 2.0, -1.0, 0.5], 2.0, 1.0);
         let exp_probs = oracle_softmax_f64([0.0, 0.0, 0.0, 0.0]);
         let exp_allen = oracle_allen_interval_relation([0, 10], [10, 20]).unwrap();
@@ -470,10 +411,59 @@ mod tests {
             assert_eq!(rec.get("status"), Some(&Value::String("completed".into())));
             assert_eq!(
                 rec.get("result"),
-                Some(&Value::F64(oracle_kinetic_energy(2.0, [3.0, 4.0, 0.0])))
+                Some(&Value::F64(
+                    oracle_kinetic_energy(2.0, [3.0, 4.0, 0.0]).unwrap()
+                ))
             );
         } else {
             panic!("expected task record, got {task_res:?}");
         }
+
+        // 4. All 11 built-in providers (8 Etalon + 3 Qualia) register and execute across VibeScript
+        let builtin = ExtensionRegistry::with_builtin_providers();
+        assert_eq!(builtin.active_count(), 11);
+        assert_eq!(builtin.iter_providers().count(), 11);
+        let etalon_src = r#"
+            import "vibe:0.3/forge" as forge;
+            import "vibe:0.3/render" as render;
+            import "vibe:0.3/signal" as signal;
+            import "vibe:0.3/sense" as sense;
+            import "vibe:0.3/p64" as p64;
+            import "vibe:0.3/nquin" as nquin;
+            import "vibe:0.3/mech" as mech;
+            import "vibe:0.3/gpu" as gpu;
+            fn run_etalon() {
+                let tile = forge.shader.tile_schedule_gemm([64, 64, 64], [16, 16, 16]);
+                let sdf = render.spatial.sdf_torus_eval([3.0, 0.0, 0.0], [2.0, 0.5]);
+                let rms = signal.dsp.signal_rms_peak([1.0, -1.0, 1.0, -1.0]);
+                let drift = sense.telemetry.clock_stamp_drift_ns([1050, 1000], 100);
+                let align = p64.runtime.p64_align_offset([100, 64]);
+                let par = nquin.wire.compute_wire_parity([1, 2, 4, 8, 16]);
+                let f = mech.kinematics.spring_damper_force([1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [10.0, 1.0]);
+                let rn = gpu.compute.rmsnorm_f32([0.0, 0.0, 0.0, 0.0], [1.0, 1.0, 1.0, 1.0], 1.0);
+                return [tile[0], sdf, rms[0], drift[1], align[0], par, f[0], rn[0]];
+            }
+        "#;
+        let etalon_prog = crate::parse_program(etalon_src).expect("parses etalon_src");
+        crate::check_program(&etalon_prog).expect("checks etalon_src");
+        let mut etalon_env = Env::default();
+        crate::eval::populate_import_aliases(&mut etalon_env, &etalon_prog.imports).unwrap();
+        let mut etalon_engine = Engine::with_program(&mut host, Budget::default(), &etalon_prog);
+        let etalon_res = etalon_engine
+            .call_function(&etalon_prog, "run_etalon", vec![], &mut etalon_env)
+            .expect("evaluates all 8 Etalon providers");
+        assert_eq!(
+            etalon_res,
+            Value::List(vec![
+                Value::U64(4),
+                Value::F64(0.5),
+                Value::F64(1.0),
+                Value::U64(1),
+                Value::U64(128),
+                Value::U64(31),
+                Value::F64(-10.0),
+                Value::F64(0.0),
+            ])
+        );
     }
 }

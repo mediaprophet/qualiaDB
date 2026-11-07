@@ -327,7 +327,7 @@ where
             object: best_id,
             context: step_ctx.context_world_hash,
             metadata: step_ctx.lamport_timestamp,
-            parity: step_ctx.actor_did_hash ^ emitted_pred ^ best_id ^ step_ctx.context_world_hash,
+            parity: step_ctx.actor_did_hash ^ emitted_pred ^ best_id ^ step_ctx.context_world_hash ^ step_ctx.lamport_timestamp,
         };
 
         match execute_governed_staged_call(

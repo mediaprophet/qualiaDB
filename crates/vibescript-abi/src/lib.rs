@@ -8,6 +8,7 @@ pub mod effects;
 pub mod identity;
 pub mod lifecycle;
 pub mod memory;
+pub mod sdk;
 pub mod version;
 
 pub use descriptor::{
@@ -27,6 +28,10 @@ pub use lifecycle::{
     SentinelPolicyGate, VibeTrap,
 };
 pub use memory::{BorrowedSliceView, CallerOutputSlice, NQuin48, PrimitiveKind, ResourceHandle};
+pub use sdk::{
+    VIBE_HAS_POSTCONDITION_IRI, VIBE_HAS_PRECONDITION_IRI, VIBE_PRESERVES_INVARIANT_IRI,
+    VIBE_PUBLIC_CONTEXT_IRI,
+};
 pub use version::{ContractVersionAxes, SemVer64, SemVerReq};
 
 #[cfg(test)]
@@ -39,7 +44,7 @@ mod tests {
         assert_eq!(core::mem::align_of::<NQuin48>(), 16);
         let q = NQuin48::from_parts(11, 22, 33, 44, 55);
         assert!(q.verify_parity());
-        assert_eq!(q.parity(), 11 ^ 22 ^ 33 ^ 44);
+        assert_eq!(q.parity(), 11 ^ 22 ^ 33 ^ 44 ^ 55);
 
         let mut corrupted = q;
         corrupted.0[2] ^= 1;
@@ -157,5 +162,125 @@ mod tests {
         let quins = receipt.to_audit_nquins();
         assert!(quins[0].verify_parity());
         assert!(quins[1].verify_parity());
+    }
+
+    #[test]
+    fn sdk_const_constructors_and_ontology_nquins_verify_5field_parity() {
+        const PARAMS: &[ParamSpec] = &[
+            ParamSpec::slice("vec3", PrimitiveKind::F64, 3, 3),
+            ParamSpec::scalar("scale", PrimitiveKind::F64),
+        ];
+        const FUNC: FuncDescriptor = FuncDescriptor::const_new(
+            "scale_vec3",
+            "https://qualiadb.org/ext/test/math/scale_vec3",
+            StableFuncId::new(0, 1),
+            "(f64[3],f64)->f64[3]",
+            PARAMS,
+            PrimitiveKind::F64,
+            3,
+            EffectSet::PURE_COMPUTE,
+            DeterminismGuarantee::DeterministicTolerance,
+            ReversibilityKind::PureNoState,
+            ResourceEnvelope::hot_zero_heap(16, 24),
+            (0, 1),
+            (1, 1),
+            (2, 1),
+        );
+        const SUBS: &[SubNamespaceDescriptor] = &[SubNamespaceDescriptor {
+            name: "math",
+            sub_id: 0,
+            functions: &[FUNC],
+        }];
+        const PROVIDER: ProviderDescriptor = ProviderDescriptor::const_new(
+            "https://qualiadb.org/ext/test",
+            "tmath",
+            SemVer64::release(0, 2, 1),
+            SemVer64::release(0, 1, 0),
+            TargetProfileMask::ALL_CPU,
+            SUBS,
+            8,
+        );
+        const QUINS: [NQuin48; 3] = [
+            NQuin48::precondition(
+                "https://qualiadb.org/ext/test/math/scale_vec3",
+                "https://qualiadb.org/schema/vibe#FiniteRealInputs",
+                10,
+            ),
+            NQuin48::postcondition(
+                "https://qualiadb.org/ext/test/math/scale_vec3",
+                "https://qualiadb.org/schema/vibe#FiniteRealOutputs",
+                20,
+            ),
+            NQuin48::invariant(
+                "https://qualiadb.org/ext/test/math/scale_vec3",
+                "https://qualiadb.org/schema/vibe#Linearity",
+                30,
+            ),
+        ];
+
+        assert!(PROVIDER.canonical_iri.is_valid());
+        assert!(PROVIDER.versions.is_engine_compatible());
+        assert!(FUNC.canonical_iri.is_valid());
+        assert!(FUNC.contract.validate_spans(QUINS.len()));
+        assert_eq!(
+            FUNC.contract.contract_digest,
+            OntologicalContract::canonical_digest(
+                FUNC.canonical_iri.fnv1a_hash,
+                FUNC.stable_id,
+                q_hash_str("(f64[3],f64)->f64[3]"),
+                FUNC.effects,
+                FUNC.determinism,
+                FUNC.reversibility,
+                FUNC.envelope,
+                (0, 1),
+                (1, 1),
+                (2, 1),
+            )
+        );
+        for q in &QUINS {
+            assert!(q.verify_parity());
+            assert_eq!(
+                q.parity(),
+                q.subject() ^ q.predicate() ^ q.object() ^ q.context() ^ q.metadata()
+            );
+        }
+    }
+
+    #[test]
+    fn sdk_finite_slice_readers_and_writers_reject_non_finite_values() {
+        let mut buf_f64 = [0u8; 24];
+        let mut out_f64 = CallerOutputSlice::new(&mut buf_f64, PrimitiveKind::F64).unwrap();
+        out_f64.push_f64_slice(&[1.25, -2.5, 4.0]).unwrap();
+        assert_eq!(out_f64.written_elems(), 3);
+
+        let view_f64 =
+            BorrowedSliceView::from_raw_bytes(out_f64.written_byte_slice(), PrimitiveKind::F64, 3)
+                .unwrap();
+        assert_eq!(
+            view_f64.read_finite_f64_array::<3>(0).unwrap(),
+            [1.25, -2.5, 4.0]
+        );
+
+        let nan_bytes = f64::NAN.to_le_bytes();
+        let nan_view = BorrowedSliceView::from_raw_bytes(&nan_bytes, PrimitiveKind::F64, 1).unwrap();
+        assert_eq!(
+            nan_view.read_finite_f64(0),
+            Err(VibeTrap::NumericalDomainError)
+        );
+
+        let mut buf_f32 = [0u8; 8];
+        let mut out_f32 = CallerOutputSlice::new(&mut buf_f32, PrimitiveKind::F32).unwrap();
+        out_f32.write_f32_slice(&[0.5f32, 1.5f32]).unwrap();
+        let view_f32 =
+            BorrowedSliceView::from_raw_bytes(out_f32.written_byte_slice(), PrimitiveKind::F32, 2)
+                .unwrap();
+        assert_eq!(view_f32.read_finite_f32_array::<2>(0).unwrap(), [0.5, 1.5]);
+
+        let inf_bytes = f32::INFINITY.to_le_bytes();
+        let inf_view = BorrowedSliceView::from_raw_bytes(&inf_bytes, PrimitiveKind::F32, 1).unwrap();
+        assert_eq!(
+            inf_view.read_finite_f32(0),
+            Err(VibeTrap::NumericalDomainError)
+        );
     }
 }

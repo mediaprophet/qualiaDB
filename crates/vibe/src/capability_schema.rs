@@ -34,6 +34,8 @@ pub mod geo_wgsl_forge_entries;
 pub mod geo_cartography_poet_entries;
 #[path = "capability_schema/geo_viewport_entries.rs"]
 pub mod geo_viewport_entries;
+#[path = "capability_schema/etalon_vibe_entries.rs"]
+pub mod etalon_vibe_entries;
 #[path = "capability_schema/runtime_entries.rs"]
 mod runtime_entries;
 
@@ -643,6 +645,7 @@ pub fn all_schemas() -> Vec<SchemaEntry> {
     schemas.extend(geo_wgsl_forge_entries::entries());
     schemas.extend(geo_cartography_poet_entries::entries());
     schemas.extend(geo_viewport_entries::entries());
+    schemas.extend(etalon_vibe_entries::entries());
     schemas
 }
 

@@ -1,291 +1,11 @@
-//! Stage S6 (`VS03-12`) GPU compute (`EtalonGpuComputeProvider`) and governed
-//! inference (`GovernedInferenceProvider`) extension providers with canonical
+//! Stage S6 (`VS03-12`) GPU compute (`EtalonGpuComputeProvider`, re-exported from `etalon-vibe`)
+//! and governed inference (`GovernedInferenceProvider`) extension providers with canonical
 //! contract digests and direct-call reference oracles.
 
-use vibescript_abi::{
-    q_hash, q_hash_str, BorrowedSliceView, CallerOutputSlice, CanonicalIri, ContractVersionAxes,
-    DeterminismGuarantee, EffectSet, FuncDescriptor, NQuin48, OntologicalContract, ParamSpec,
-    PrimitiveKind, ProviderDescriptor, ResourceEnvelope, ReversibilityKind, SemVer64, StableFuncId,
-    SubNamespaceDescriptor, TargetProfileMask, VibeNamespaceProvider, VibeTrap,
+pub use etalon_vibe::{
+    oracle_rmsnorm_f32 as oracle_gpu_rmsnorm_f32, oracle_rope_f32 as oracle_gpu_rope_f32,
+    EtalonGpuComputeProvider,
 };
-
-const GPU_TARGETS: TargetProfileMask = TargetProfileMask(
-    TargetProfileMask::NATIVE_DESKTOP.0
-        | TargetProfileMask::WASM_SANDBOX.0
-        | TargetProfileMask::GPU_COMPUTE.0,
-);
-
-const INFER_TARGETS: TargetProfileMask = TargetProfileMask(
-    TargetProfileMask::ALL_CPU.0 | TargetProfileMask::GPU_COMPUTE.0,
-);
-
-const AFFINE_PARAMS: &[ParamSpec] = &[
-    ParamSpec::slice("input_vec", PrimitiveKind::F32, 4, 4),
-    ParamSpec::slice("scale_bias", PrimitiveKind::F32, 2, 2),
-];
-
-const GEMV4_PARAMS: &[ParamSpec] = &[
-    ParamSpec::slice("mat4x4", PrimitiveKind::F32, 16, 16),
-    ParamSpec::slice("vec4", PrimitiveKind::F32, 4, 4),
-];
-
-const TOPK2_PARAMS: &[ParamSpec] = &[ParamSpec::slice("scores", PrimitiveKind::F32, 4, 16)];
-
-const GPU_EFFECTS: EffectSet = EffectSet::PURE_COMPUTE.union(EffectSet::HARDWARE_IO);
-
-const AFFINE_ENV: ResourceEnvelope = ResourceEnvelope {
-    max_ticks: 64,
-    max_scratch_bytes: 0,
-    max_vram_bytes: 256,
-    max_output_bytes: 16,
-    max_spawned_tasks: 0,
-    flags: 0,
-};
-
-const GEMV4_ENV: ResourceEnvelope = ResourceEnvelope {
-    max_ticks: 128,
-    max_scratch_bytes: 0,
-    max_vram_bytes: 512,
-    max_output_bytes: 16,
-    max_spawned_tasks: 0,
-    flags: 0,
-};
-
-const TOPK2_ENV: ResourceEnvelope = ResourceEnvelope {
-    max_ticks: 96,
-    max_scratch_bytes: 0,
-    max_vram_bytes: 256,
-    max_output_bytes: 8,
-    max_spawned_tasks: 0,
-    flags: 0,
-};
-
-const GPU_COMPUTE_FUNCS: &[FuncDescriptor] = &[
-    FuncDescriptor {
-        name: "affine_f32",
-        canonical_iri: CanonicalIri::new(
-            "https://qualiadb.org/ext/etalon/gpu/compute/affine_f32",
-        ),
-        stable_id: StableFuncId::new(0, 0),
-        params: AFFINE_PARAMS,
-        output_kind: PrimitiveKind::F32,
-        required_output_elems: 4,
-        effects: GPU_EFFECTS,
-        determinism: DeterminismGuarantee::DeterministicTolerance,
-        reversibility: ReversibilityKind::PureNoState,
-        envelope: AFFINE_ENV,
-        contract: OntologicalContract {
-            contract_digest: OntologicalContract::canonical_digest(
-                q_hash_str("https://qualiadb.org/ext/etalon/gpu/compute/affine_f32"),
-                StableFuncId::new(0, 0),
-                q_hash_str("(f32[4],f32[2])->f32[4]"),
-                GPU_EFFECTS,
-                DeterminismGuarantee::DeterministicTolerance,
-                ReversibilityKind::PureNoState,
-                AFFINE_ENV,
-                (0, 1),
-                (1, 1),
-                (2, 1),
-            ),
-            schema_hash: q_hash_str("(f32[4],f32[2])->f32[4]"),
-            precondition_quin_span: (0, 1),
-            postcondition_quin_span: (1, 1),
-            invariant_quin_span: (2, 1),
-        },
-    },
-    FuncDescriptor {
-        name: "gemv4_f32",
-        canonical_iri: CanonicalIri::new(
-            "https://qualiadb.org/ext/etalon/gpu/compute/gemv4_f32",
-        ),
-        stable_id: StableFuncId::new(0, 1),
-        params: GEMV4_PARAMS,
-        output_kind: PrimitiveKind::F32,
-        required_output_elems: 4,
-        effects: GPU_EFFECTS,
-        determinism: DeterminismGuarantee::DeterministicTolerance,
-        reversibility: ReversibilityKind::PureNoState,
-        envelope: GEMV4_ENV,
-        contract: OntologicalContract {
-            contract_digest: OntologicalContract::canonical_digest(
-                q_hash_str("https://qualiadb.org/ext/etalon/gpu/compute/gemv4_f32"),
-                StableFuncId::new(0, 1),
-                q_hash_str("(f32[16],f32[4])->f32[4]"),
-                GPU_EFFECTS,
-                DeterminismGuarantee::DeterministicTolerance,
-                ReversibilityKind::PureNoState,
-                GEMV4_ENV,
-                (0, 1),
-                (1, 1),
-                (2, 1),
-            ),
-            schema_hash: q_hash_str("(f32[16],f32[4])->f32[4]"),
-            precondition_quin_span: (0, 1),
-            postcondition_quin_span: (1, 1),
-            invariant_quin_span: (2, 1),
-        },
-    },
-    FuncDescriptor {
-        name: "topk2_f32",
-        canonical_iri: CanonicalIri::new(
-            "https://qualiadb.org/ext/etalon/gpu/compute/topk2_f32",
-        ),
-        stable_id: StableFuncId::new(0, 2),
-        params: TOPK2_PARAMS,
-        output_kind: PrimitiveKind::F32,
-        required_output_elems: 2,
-        effects: GPU_EFFECTS,
-        determinism: DeterminismGuarantee::DeterministicTolerance,
-        reversibility: ReversibilityKind::PureNoState,
-        envelope: TOPK2_ENV,
-        contract: OntologicalContract {
-            contract_digest: OntologicalContract::canonical_digest(
-                q_hash_str("https://qualiadb.org/ext/etalon/gpu/compute/topk2_f32"),
-                StableFuncId::new(0, 2),
-                q_hash_str("(f32[4..16])->f32[2]"),
-                GPU_EFFECTS,
-                DeterminismGuarantee::DeterministicTolerance,
-                ReversibilityKind::PureNoState,
-                TOPK2_ENV,
-                (0, 1),
-                (1, 1),
-                (2, 1),
-            ),
-            schema_hash: q_hash_str("(f32[4..16])->f32[2]"),
-            precondition_quin_span: (0, 1),
-            postcondition_quin_span: (1, 1),
-            invariant_quin_span: (2, 1),
-        },
-    },
-];
-
-const GPU_SUB_NAMESPACES: &[SubNamespaceDescriptor] = &[SubNamespaceDescriptor {
-    name: "compute",
-    sub_id: 0,
-    functions: GPU_COMPUTE_FUNCS,
-}];
-
-const GPU_DESCRIPTOR: ProviderDescriptor = ProviderDescriptor {
-    canonical_iri: CanonicalIri::new("https://qualiadb.org/ext/etalon/gpu"),
-    short_alias: "gpu",
-    versions: ContractVersionAxes::v0_3_default(
-        SemVer64::release(0, 3, 0),
-        SemVer64::release(0, 1, 0),
-    ),
-    supported_targets: GPU_TARGETS,
-    sub_namespaces: GPU_SUB_NAMESPACES,
-    max_ontology_quins: 16,
-};
-
-const GPU_ONTOLOGY_QUINS: &[NQuin48] = &[
-    NQuin48::from_parts(
-        q_hash_str("https://qualiadb.org/ext/etalon/gpu"),
-        q_hash_str("https://qualiadb.org/schema/vibe#hasPrecondition"),
-        q_hash_str("https://qualiadb.org/schema/vibe#AlignedDeviceBufferSlice"),
-        q_hash_str("https://qualiadb.org/context/public"),
-        1,
-    ),
-    NQuin48::from_parts(
-        q_hash_str("https://qualiadb.org/ext/etalon/gpu"),
-        q_hash_str("https://qualiadb.org/schema/vibe#hasPostcondition"),
-        q_hash_str("https://qualiadb.org/schema/vibe#ReadbackCompletedAndSlabReleased"),
-        q_hash_str("https://qualiadb.org/context/public"),
-        2,
-    ),
-    NQuin48::from_parts(
-        q_hash_str("https://qualiadb.org/ext/etalon/gpu"),
-        q_hash_str("https://qualiadb.org/schema/vibe#preservesInvariant"),
-        q_hash_str("https://qualiadb.org/schema/vibe#ZeroLeakedTransientSlabs"),
-        q_hash_str("https://qualiadb.org/context/public"),
-        3,
-    ),
-];
-
-/// Portable GPU compute provider (`VS03-12`).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct EtalonGpuComputeProvider;
-
-impl VibeNamespaceProvider for EtalonGpuComputeProvider {
-    fn descriptor(&self) -> &'static ProviderDescriptor {
-        &GPU_DESCRIPTOR
-    }
-
-    fn static_ontology_nquins(&self) -> &'static [NQuin48] {
-        GPU_ONTOLOGY_QUINS
-    }
-
-    fn call(
-        &self,
-        stable_id: StableFuncId,
-        inputs: &[BorrowedSliceView<'_>],
-        output: &mut CallerOutputSlice<'_>,
-    ) -> Result<u64, VibeTrap> {
-        match (stable_id.sub_namespace_id, stable_id.func_id) {
-            (0, 0) => {
-                // compute::affine_f32
-                let mut x = [0.0f32; 4];
-                for (i, slot) in x.iter_mut().enumerate() {
-                    let v = inputs[0].read_f32_le(i)?;
-                    if !v.is_finite() {
-                        return Err(VibeTrap::NumericalDomainError);
-                    }
-                    *slot = v;
-                }
-                let scale = inputs[1].read_f32_le(0)?;
-                let bias = inputs[1].read_f32_le(1)?;
-                if !scale.is_finite() || !bias.is_finite() {
-                    return Err(VibeTrap::NumericalDomainError);
-                }
-                let y = oracle_gpu_affine_f32(x, scale, bias);
-                for &val in &y {
-                    output.push_f32_le(val)?;
-                }
-                Ok(24)
-            }
-            (0, 1) => {
-                // compute::gemv4_f32
-                let mut mat = [0.0f32; 16];
-                for (i, slot) in mat.iter_mut().enumerate() {
-                    let v = inputs[0].read_f32_le(i)?;
-                    if !v.is_finite() {
-                        return Err(VibeTrap::NumericalDomainError);
-                    }
-                    *slot = v;
-                }
-                let mut vec4 = [0.0f32; 4];
-                for (i, slot) in vec4.iter_mut().enumerate() {
-                    let v = inputs[1].read_f32_le(i)?;
-                    if !v.is_finite() {
-                        return Err(VibeTrap::NumericalDomainError);
-                    }
-                    *slot = v;
-                }
-                let y = oracle_gpu_gemv4_f32(mat, vec4);
-                for &val in &y {
-                    output.push_f32_le(val)?;
-                }
-                Ok(48)
-            }
-            (0, 2) => {
-                // compute::topk2_f32
-                let count = inputs[0].elem_count();
-                let mut scores = [0.0f32; 16];
-                for (i, slot) in scores.iter_mut().take(count).enumerate() {
-                    let v = inputs[0].read_f32_le(i)?;
-                    if !v.is_finite() {
-                        return Err(VibeTrap::NumericalDomainError);
-                    }
-                    *slot = v;
-                }
-                let top2 = oracle_gpu_topk2_f32(&scores[..count]);
-                output.push_f32_le(top2[0])?;
-                output.push_f32_le(top2[1])?;
-                Ok(32)
-            }
-            _ => Err(VibeTrap::FunctionNotFound),
-        }
-    }
-}
 
 /// Direct-call oracle for `gpu::compute::affine_f32`.
 #[inline]
@@ -301,32 +21,25 @@ pub fn oracle_gpu_affine_f32(x: [f32; 4], scale: f32, bias: f32) -> [f32; 4] {
 /// Direct-call oracle for `gpu::compute::gemv4_f32`.
 #[inline]
 pub fn oracle_gpu_gemv4_f32(mat: [f32; 16], vec4: [f32; 4]) -> [f32; 4] {
-    let mut out = [0.0f32; 4];
-    for r in 0..4 {
-        let base = r * 4;
-        out[r] = mat[base] * vec4[0]
-            + mat[base + 1] * vec4[1]
-            + mat[base + 2] * vec4[2]
-            + mat[base + 3] * vec4[3];
-    }
-    out
+    etalon_vibe::oracle_gemv4_f32(&mat, &vec4).unwrap_or([0.0; 4])
 }
 
 /// Direct-call oracle for `gpu::compute::topk2_f32`.
 #[inline]
 pub fn oracle_gpu_topk2_f32(scores: &[f32]) -> [f32; 2] {
-    let mut best1 = f32::NEG_INFINITY;
-    let mut best2 = f32::NEG_INFINITY;
-    for &s in scores {
-        if s >= best1 {
-            best2 = best1;
-            best1 = s;
-        } else if s > best2 {
-            best2 = s;
-        }
-    }
-    [best1, best2]
+    etalon_vibe::oracle_topk2_f32(scores).unwrap_or([f32::NEG_INFINITY; 2])
 }
+
+use vibescript_abi::{
+    q_hash, q_hash_str, BorrowedSliceView, CallerOutputSlice, CanonicalIri, ContractVersionAxes,
+    DeterminismGuarantee, EffectSet, FuncDescriptor, NQuin48, OntologicalContract, ParamSpec,
+    PrimitiveKind, ProviderDescriptor, ResourceEnvelope, ReversibilityKind, SemVer64, StableFuncId,
+    SubNamespaceDescriptor, TargetProfileMask, VibeNamespaceProvider, VibeTrap,
+};
+
+const INFER_TARGETS: TargetProfileMask = TargetProfileMask(
+    TargetProfileMask::ALL_CPU.0 | TargetProfileMask::GPU_COMPUTE.0,
+);
 
 // ---------------------------------------------------------------------------
 // GovernedInferenceProvider (VS03-12)
