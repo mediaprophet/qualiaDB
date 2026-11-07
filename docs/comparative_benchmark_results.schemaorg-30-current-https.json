@@ -23,21 +23,21 @@
       "note": "Parses N-Triples text (same RDF source as Oxigraph/Comunica) into quins and queries an in-memory subject index.",
       "peak_rss_mb": 4.71,
       "point": {
-        "max": 4e-05,
-        "mean": 2.4033333333333326e-05,
-        "min": 2e-05,
-        "p50": 2e-05,
-        "p95": 2.9999999999999997e-05,
-        "p99": 4e-05,
+        "max": 0.00004,
+        "mean": 0.000024033333333333326,
+        "min": 0.00002,
+        "p50": 0.00002,
+        "p95": 0.000029999999999999997,
+        "p99": 0.00004,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
       },
       "twohop": {
         "max": 0.00011999999999999999,
-        "mean": 8.243333333333331e-05,
-        "min": 7.000000000000001e-05,
-        "p50": 8e-05,
+        "mean": 0.00008243333333333331,
+        "min": 0.00007000000000000001,
+        "p50": 0.00008,
         "p95": 0.00011,
         "p99": 0.00011999999999999999,
         "samples": 30,
@@ -52,7 +52,7 @@
       "timestamp": "2026-11-06T10:45:06.669232Z",
       "meta": {
         "label": "Qualia (N-Triples parse)",
-        "focus": "Same RDF .nt source as Oxigraph/Comunica \u2014 parse text into quins in-process",
+        "focus": "Same RDF .nt source as Oxigraph/Comunica — parse text into quins in-process",
         "install": "cargo build --release -p qualia-cli (q42_comparative_bench --format ntriples)"
       },
       "dataset_info": {
@@ -100,23 +100,23 @@
       "note": "Loads qualia-cli SuperBlock .q42 and queries an in-memory subject index.",
       "peak_rss_mb": 6.96,
       "point": {
-        "max": 8e-05,
-        "mean": 2.3999999999999994e-05,
-        "min": 2e-05,
-        "p50": 2e-05,
-        "p95": 2.9999999999999997e-05,
-        "p99": 8e-05,
+        "max": 0.00008,
+        "mean": 0.000023999999999999994,
+        "min": 0.00002,
+        "p50": 0.00002,
+        "p95": 0.000029999999999999997,
+        "p99": 0.00008,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
       },
       "twohop": {
-        "max": 4e-05,
-        "mean": 2.5399999999999987e-05,
-        "min": 2e-05,
-        "p50": 2.9999999999999997e-05,
-        "p95": 2.9999999999999997e-05,
-        "p99": 4e-05,
+        "max": 0.00004,
+        "mean": 0.000025399999999999987,
+        "min": 0.00002,
+        "p50": 0.000029999999999999997,
+        "p95": 0.000029999999999999997,
+        "p99": 0.00004,
         "samples": 30,
         "unit": "milliseconds",
         "warmup_samples": 10
@@ -129,7 +129,7 @@
       "timestamp": "2026-11-06T10:45:06.701945Z",
       "meta": {
         "label": "Qualia (.q42 artifact)",
-        "focus": "Pre-compiled SuperBlock load \u2014 same graph, no RDF text parse",
+        "focus": "Pre-compiled SuperBlock load — same graph, no RDF text parse",
         "install": "cargo build --release -p qualia-cli (q42_comparative_bench)"
       },
       "dataset_info": {
@@ -373,8 +373,8 @@
       "timestamp": "2026-11-06T10:45:06.633571Z",
       "meta": {
         "label": "Qualia (WASM)",
-        "focus": "Node WASM pipeline \u2014 flat quins + Webizen VM execute_ntriples_query",
-        "install": "wasm-pack build qualia-core-db \u2192 docs/playground/"
+        "focus": "Node WASM pipeline — flat quins + Webizen VM execute_ntriples_query",
+        "install": "wasm-pack build qualia-core-db → docs/playground/"
       },
       "dataset_info": {
         "label": "Schema.org 30.0 current HTTPS",
@@ -400,7 +400,7 @@
       "point": null,
       "twohop": null,
       "filter": null,
-      "engine_version": "0.0.40",
+      "engine_version": "0.0.41",
       "dataset_file_bytes": 2354659,
       "dataset_file_mb": 2.246,
       "dataset_format": "ntriples",
@@ -435,7 +435,7 @@
   "methodology": "Each engine is run in complete isolation. 512 MB ceiling enforced. Latency: 10 warmup + 30 samples (p50/p95/p99). RDF engines (Oxigraph, SurrealDB, Comunica, WASM-Prolog, Qualia WASM) load N-Triples text. Schema.org profile adds two Qualia format rows on the same ontology: N-Triples parse (qualia_nt) and native .q42 SuperBlocks (qualia_q42). Qualia daemon row (when present) measured via local daemon on port 4242. Qualia WASM uses execute_ntriples_query on flat QualiaQuin bytes in Node.",
   "execution_environment": {
     "runner": "github-actions-comparative-harness",
-    "engine_version": "0.0.40",
+    "engine_version": "0.0.41",
     "memory_ceiling_mb": 512,
     "measurement_path": "harness_isolated_subprocess",
     "topology": {

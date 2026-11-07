@@ -1,6 +1,6 @@
 [package]
 name = "qualia-sim"
-version = "0.0.40"
+version = "0.0.41"
 edition = "2021"
 authors = ["QualiaDB Project Team"]
 description = "QualiaDB deterministic simulation facade (consolidated into etalon-sim and etalon-render)"

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QualiaDB / Webizen — AAA Graphics & WebGPU Engine Architecture</title>
-  <meta name="description" content="Zero-heap AAA graphics engine in Rust and WebGPU: Temporal AA reconstruction, IBL environment probes, KTX2 block transcoding, and procedural shoreline/vegetation simulation.">
+  <title>QualiaDB / Webizen — AAA Graphics, Etalon Volumetric Engine &amp; Multi-Physics</title>
+  <meta name="description" content="Zero-heap AAA graphics engine in Rust and WebGPU: Etalon accelerator crates, Temporal AA reconstruction, IBL environment probes, KTX2 block transcoding, 3D FDTD electromagnetics, sensing custody, and 10D volumetric containers.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -52,14 +52,14 @@
   <!-- Hero Section -->
   <header class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-12">
     <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 text-xs font-semibold mb-6">
-      <i class="fa-solid fa-cube"></i> v0.0.40 Baseline · v0.0.41 Etalon 7-Crate Stack &amp; 10-Epic Game Engine · Zero-Heap Hot Paths
+      <i class="fa-solid fa-cube"></i> v0.0.41 Architecture · Etalon Accelerator &amp; Volumetric Stack · Zero-Heap Hot Paths
     </div>
     <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
       Cinema-Grade Rendering.<br>
       <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-emerald-300 to-violet-300">Zero heap allocation in frame loops.</span>
     </h1>
     <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-8 leading-relaxed">
-      QualiaDB's graphics pipeline includes temporal reconstruction, image-based lighting, multi-format compressed texture transcoding, and dynamic secondary motion. Native and browser capabilities have separate qualification evidence. In <strong>v0.0.41 Release Prep (v0.0.40 Baseline)</strong>, the architecture expands with the Etalon GPU &amp; compute stack, WASM volumetric rendering in <code>webizen-render</code>, zero-heap Flexbox HUD layouts, and the 10-Epic Superior Game Engine.
+      QualiaDB's graphics pipeline combines temporal anti-aliasing reconstruction, image-based lighting, multi-format compressed texture transcoding, and physical secondary motion with the pure-Rust <strong>Etalon</strong> GPU, multi-physics, and signal-processing ecosystem. In <strong>v0.0.41</strong>, native Vulkan/DX12/Metal and browser WebGPU (<code>wasm32-unknown-unknown</code>) share unified volumetric pipelines, 3D FDTD electromagnetics, plane-separated sensing custody, and 10D living containers.
     </p>
 
     <!-- Key Engine Metrics Grid -->
@@ -80,9 +80,9 @@
         <div class="text-xs text-white/55 mt-1">BC1, BC3, BC7, ETC2, ASTC</div>
       </div>
       <div class="glass-strong rounded-2xl p-5 border border-white/10">
-        <div class="text-xs text-white/40 mb-1">Browser Acceptance</div>
-        <div class="font-mono text-3xl font-semibold text-amber-400">100% PASS</div>
-        <div class="text-xs text-white/55 mt-1">Chromium WebGPU selftest</div>
+        <div class="text-xs text-white/40 mb-1">Volumetric &amp; Field Formats</div>
+        <div class="font-mono text-3xl font-semibold text-amber-400">3 Containers</div>
+        <div class="text-xs text-white/55 mt-1">Container10D (.10d), M64, EMF64</div>
       </div>
     </div>
   </header>
@@ -90,32 +90,33 @@
   <!-- Interactive Capabilities Section -->
   <main class="max-w-6xl mx-auto px-6 pb-24">
     <section class="glass-strong rounded-3xl p-6 mb-8" aria-labelledby="graphics-migration-update">
-      <h2 id="graphics-migration-update" class="text-2xl font-semibold mb-3">0.0.41 migration: device lifecycle and recovery</h2>
-      <p class="text-white/70 mb-3">The 4 November closeout adds foreign device/queue rejection, retained-device liveness checks, stale readback refusal and cancellation cleanup in Etalon. Browser qualification covers shared and transferable worker transports, cancellation, teardown, real device loss and fresh-device render/pick/compute recovery. A separate actual Portal test destroys its owned device, replaces the DOM canvas and resumes rendering retained scene geometry.</p>
-      <p class="text-white/70">Native GPU cases passed on RTX A2000 Vulkan/DX12; both browser transports passed seven checks and Portal recovery passed without recorded GPU errors. The component fixture renders into an independent texture; its canvas stewardship assertion is separate from the Portal DOM test. Metal hardware was not exercised, and these functional results establish no performance improvement. See the <a class="text-emerald-300 underline" href="progress-0.0.41.html#migration-closeout">release outline and exact revisions</a> and <a class="text-cyan-300 underline" href="testing-etalon-vibe.md">qualification record</a>.</p>
+      <h2 id="graphics-migration-update" class="text-2xl font-semibold mb-3">v0.0.41 Architecture: Etalon Device Lifecycle, Multi-Physics &amp; Recovery</h2>
+      <p class="text-white/70 mb-3">For visitors exploring what QualiaDB renders and for graphics engineers inspecting the frame pipeline: the 0.0.41 architecture unifies the pure-Rust <strong>Etalon</strong> GPU accelerator, simulation, and signal-processing crates across native desktop (Vulkan/DX12/Metal) and browser WebGPU (<code>wasm32-unknown-unknown</code>). Device stewardship enforces foreign device/queue rejection, retained-device liveness checks, stale readback refusal, and deterministic cancellation cleanup. Browser qualification covers shared and transferable worker transports, teardown, real device loss, and fresh-device render/pick/compute recovery while preserving retained scene geometry across DOM canvas replacement.</p>
+      <p class="text-white/70">See the <a class="text-emerald-300 underline" href="progress-0.0.41.html#migration-closeout">0.0.41 release architecture overview</a> and the interactive <a class="text-cyan-300 underline" href="playground/etalon-vibe-harness.html">Etalon &amp; Vibe Browser Harness</a>.</p>
     </section>
+
     <!-- Tab Controls -->
     <div class="flex flex-wrap items-center gap-2 mb-8 p-1.5 bg-black/40 border border-white/10 rounded-full w-fit tab-nav">
       <button class="tab-btn active" onclick="switchTab('temporal')" id="btn-temporal">
-        <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Temporal AA (AG-21)
+        <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Temporal AA
       </button>
       <button class="tab-btn" onclick="switchTab('lighting')" id="btn-lighting">
-        <i class="fa-solid fa-sun mr-1.5"></i> Environment Probes (AG-22)
+        <i class="fa-solid fa-sun mr-1.5"></i> Environment Probes
       </button>
       <button class="tab-btn" onclick="switchTab('transcode')" id="btn-transcode">
-        <i class="fa-solid fa-file-image mr-1.5"></i> KTX2 Transcoder (AG-03)
+        <i class="fa-solid fa-file-image mr-1.5"></i> KTX2 Transcoder
       </button>
       <button class="tab-btn" onclick="switchTab('etalon')" id="btn-etalon">
-        <i class="fa-solid fa-microchip mr-1.5"></i> 4. Etalon 7-Crate Stack &amp; 10D Engine (0.0.41)
+        <i class="fa-solid fa-microchip mr-1.5"></i> Etalon Stack &amp; 10D Engine
       </button>
       <button class="tab-btn" onclick="switchTab('water')" id="btn-water">
-        <i class="fa-solid fa-water mr-1.5"></i> Water &amp; Shoreline (AG-10)
+        <i class="fa-solid fa-water mr-1.5"></i> Water &amp; Shoreline
       </button>
       <button class="tab-btn" onclick="switchTab('vegetation')" id="btn-vegetation">
-        <i class="fa-solid fa-seedling mr-1.5"></i> Dynamic Vegetation (AG-12)
+        <i class="fa-solid fa-seedling mr-1.5"></i> Dynamic Vegetation
       </button>
       <button class="tab-btn" onclick="switchTab('holo')" id="btn-holo">
-        <i class="fa-solid fa-vr-cardboard mr-1.5"></i> Holographic &amp; Audio (0.0.40.16)
+        <i class="fa-solid fa-vr-cardboard mr-1.5"></i> Holographic &amp; Audio
       </button>
     </div>
 
@@ -124,15 +125,15 @@
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/20">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">CAPABILITY AG-21 · VERIFIED</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">TEMPORAL RECONSTRUCTION · SCREEN-SPACE VELOCITY &amp; REACTIVE MASKS</span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Temporal Reconstruction &amp; Live Motion Producers</h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> test_render_with_auto_temporal_accumulates_across_frames: PASS
+            <i class="fa-solid fa-layer-group"></i> Multi-Frame History · Rg16Float Velocity + R8Unorm Reactive Mask
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          The engine provides continuous temporal history accumulation without failing closed. The renderer allocates internal GPU attachments for motion vectors (<code class="text-cyan-300 font-mono">Rg16Float</code>) and reactive masks (<code class="text-cyan-300 font-mono">R8Unorm</code>), calculating camera projection deltas and surface reactivity across consecutive frames.
+          The engine provides continuous temporal anti-aliasing and history accumulation across frames without heap allocations in the render loop. Dedicated GPU attachments store screen-space motion vectors (<code class="text-cyan-300 font-mono">Rg16Float</code>) and surface reactivity masks (<code class="text-cyan-300 font-mono">R8Unorm</code>), computing camera reprojection deltas and clamping disoccluded neighbourhood history to eliminate ghosting on fast-moving or translucent geometry.
         </p>
 
         <div class="grid md:grid-cols-2 gap-5 mb-6">
@@ -164,15 +165,15 @@ let reactive_mask = max(alpha_reactive, water_reactive);</div>
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-violet-500/20">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">CAPABILITY AG-22 · VERIFIED</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">IMAGE-BASED LIGHTING · CUBEMAP IRRADIANCE &amp; SPECULAR PROBES</span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Image-Based Lighting &amp; Specular Environment Probes</h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> environment_probe_pixel_tests (3/3): PASS
+            <i class="fa-solid fa-cube"></i> 544B EnvironmentLightingGpu Uniform · Hermite Distance Blending
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          Provides localized irradiance and roughness-aware specular reflection via cubemap probes. Packaged into a compact 544-byte uniform buffer (<code class="text-violet-300 font-mono">EnvironmentLightingGpu</code>) bound to material group 2, supporting smooth distance attenuation and zero light intensity fallbacks.
+          Provides localized diffuse irradiance and roughness-aware specular reflections via prefiltered cubemap probes. Packaged into a fixed 544-byte uniform buffer (<code class="text-violet-300 font-mono">EnvironmentLightingGpu</code>) bound to material group 2, supporting smooth Hermite distance attenuation between indoor and outdoor probe volumes with deterministic fallback lighting.
         </p>
 
         <div class="grid md:grid-cols-3 gap-4">
@@ -200,15 +201,15 @@ let reactive_mask = max(alpha_reactive, water_reactive);</div>
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-emerald-500/20">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20">CAPABILITY AG-03 · VERIFIED</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/20">ZERO-HEAP TEXTURE TRANSCODING · CALLER-BUFFERED KTX2 BLOCK DECODER</span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Zero-Heap KTX2 Block Transcode Bridge</h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> texture_transcode_tests (4/4): PASS
+            <i class="fa-solid fa-memory"></i> BC1 / BC3 / BC7 / ETC2 / ASTC · Direct &amp;mut [u8] Decode
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          Zero-allocation texture transcoding operating entirely inside caller-supplied <code class="text-emerald-300 font-mono">&amp;mut [u8]</code> buffers. Directly decodes compressed texture blocks into hardware-ready uncompressed RGBA8 or target formats without intermediate heap allocation.
+          Zero-allocation texture transcoding operating entirely inside caller-supplied <code class="text-emerald-300 font-mono">&amp;mut [u8]</code> slices. Directly decodes compressed GPU texture blocks into hardware-native formats or linear RGBA8 surfaces without intermediate heap allocation.
         </p>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
@@ -236,83 +237,186 @@ let reactive_mask = max(alpha_reactive, water_reactive);</div>
       </div>
     </section>
 
-    <!-- Tab 4: Etalon 7-Crate Pure-Rust GPU Stack & 10D Superior Game Engine -->
+    <!-- Tab 4: Etalon Pure-Rust GPU, Simulation & Signal Stack + 10D Engine -->
     <div id="tab-etalon" class="tab-content">
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-emerald-500/30">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
             <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              MILESTONE 0.0.41 RELEASE PREP · v0.0.40 BASELINE · 7-CRATE STACK &amp; 10-EPIC ENGINE
+              ETALON ACCELERATOR ARCHITECTURE · 10D VOLUMETRIC CONTAINERS · FDTD &amp; SENSING CUSTODY
             </span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">
-              Etalon 7-Crate GPU Stack &amp; 10-Epic Superior Game Engine
+              Etalon Pure-Rust GPU &amp; Simulation Stack + 10D Volumetric Engine
             </h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> 7 / 7 Etalon Crates End-to-End Wired: PASS
+            <i class="fa-solid fa-microchip"></i> Unified Native Vulkan/DX12/Metal &amp; Browser WebGPU Stack
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          In QualiaDB 0.0.41 (building on the 0.0.40 baseline), all seven specialized crates of the pure-Rust <strong>Etalon GPU &amp; compute ecosystem</strong> are fully wired into <code>qualia-core-db</code>, <code>webizen-render</code>, and <code>webizen-web</code>. This replaces fragmented kernels with unified, zero-intermediate-readback pipelines running natively on desktop WebGPU/Vulkan/DX12 and in the browser on <code>wasm32-unknown-unknown</code>.
+          In QualiaDB 0.0.41, the pure-Rust <strong>Etalon accelerator, rendering, multi-physics, and signal ecosystem</strong> is integrated end-to-end across <code>qualia-core-db</code>, <code>webizen-render</code>, <code>webizen-web</code>, and <code>qualia-etalon-sensing-bridge</code>. QualiaDB retains ontological semantics, policy, and custody authority while Etalon owns reusable GPU execution, shader certification, and physical continuum solvers.
         </p>
 
-        <!-- 7-Crate Grid -->
+        <!-- Etalon Crate Architecture Grid -->
         <h3 class="text-base font-semibold text-cyan-300 mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-layer-group"></i> 1. The 7-Crate Etalon Pure-Rust GPU &amp; Compute Stack
+          <i class="fa-solid fa-layer-group"></i> 1. Etalon Crate Architecture
         </h3>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div class="glass-panel p-5 rounded-2xl border border-white/10">
             <div class="flex items-center justify-between mb-2">
               <span class="font-mono text-xs font-bold text-cyan-400">etalon</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">wgpu 30.0.0-etalon</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">GPU Substrate</span>
             </div>
             <p class="text-xs text-white/60 leading-relaxed">
-              Direct hardware WebGPU, Vulkan, and DX12 substrate. Powers <code>SharedGpuContext</code> and <code>PortalGpu</code> with capability-intersected device limits (f16, subgroup operations, timestamp queries).
+              Direct hardware WebGPU, Vulkan, DX12, and Metal device substrate. Powers <code>SharedGpuContext</code> and <code>PortalGpu</code> with capability-intersected limits (f16, subgroup ops, timestamp queries) and foreign-queue rejection.
             </p>
           </div>
           <div class="glass-panel p-5 rounded-2xl border border-white/10">
             <div class="flex items-center justify-between mb-2">
               <span class="font-mono text-xs font-bold text-emerald-400">etalon-render</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Render Substrate</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Volumetric &amp; HUD</span>
             </div>
             <p class="text-xs text-white/60 leading-relaxed">
-              Provides <code>EmfPipeline</code>, <code>EtalonVolumetricPipeline</code>, 160-byte <code>FrameCameraPod</code>, 48-byte <code>ManifoldProjectionPod</code>, and the zero-heap <code>UiLayoutTree</code> Flexbox engine.
+              Provides <code>EmfPipeline</code>, <code>EtalonVolumetricPipeline</code>, 160-byte <code>FrameCameraPod</code>, 48-byte <code>ManifoldProjectionPod</code>, and the zero-heap 128-node <code>UiLayoutTree</code> Flexbox HUD layout engine.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-amber-400">etalon-sim</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">Multi-Physics &amp; FDTD</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Coupled 3D Yee-grid FDTD electromagnetics (<code>ETA-15</code>), 2D Shallow Water Equations (<code>swe_solver</code>), XPBD rigid/soft-body dynamics, Rank-2 Cauchy stress fracture, and continuum geomechanics.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-rose-400">etalon-signal</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">Wavefield &amp; DSP</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Radix-2 FFT/STFT spectral pipelines, spherical-harmonic ambisonic encoding, HRTF binaural synthesis, and calibrated sensor signal conditioning feeding <code>qualia-etalon-sensing-bridge</code>.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-white/10">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-xs font-bold text-amber-300">etalon-wgsl-forge</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">Shader Compiler</span>
+            </div>
+            <p class="text-xs text-white/60 leading-relaxed">
+              Typed <code>KernelSpec</code> + <code>Schedule</code> IR compiler. Validates shaders via Naga AST and certifies GPU dispatches against the independent CPU reference oracle (<code>ETA-14</code>) across WGSL, SPIR-V, HLSL, and MSL.
             </p>
           </div>
           <div class="glass-panel p-5 rounded-2xl border border-white/10">
             <div class="flex items-center justify-between mb-2">
               <span class="font-mono text-xs font-bold text-violet-400">etalon-nquin</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-300 border border-violet-500/20">Graph Acceleration</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-violet-500/10 text-violet-300 border border-violet-500/20">48B Graph Sieve</span>
             </div>
             <p class="text-xs text-white/60 leading-relaxed">
-              Single-submit 8-pass LSD <code>GpuRadixSorter</code> and warp-transposed <code>uvec4</code> <code>GpuQuinSieve</code> for 48-byte <code>NQuin</code> arrays without CPU readback round-trips.
+              Single-submit 8-pass LSD <code>GpuRadixSorter</code> and warp-transposed <code>uvec4</code> <code>GpuQuinSieve</code> operating on 48-byte <code>NQuinWire</code> records with bitwise CPU-oracle parity verification (<code>ETA-17</code>).
             </p>
           </div>
           <div class="glass-panel p-5 rounded-2xl border border-white/10">
             <div class="flex items-center justify-between mb-2">
-              <span class="font-mono text-xs font-bold text-amber-400">etalon-wgsl-forge</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">Deterministic Shaders</span>
+              <span class="font-mono text-xs font-bold text-blue-400">etalon-wasm</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">Browser Steward</span>
             </div>
             <p class="text-xs text-white/60 leading-relaxed">
-              Typed <code>KernelSpec</code> and <code>Schedule</code> intermediate representation. Generates, validates with Naga AST certification, and emits to WGSL, SPIR-V, PTX, and HLSL.
+              <code>WorkerSteward</code> automatic transport negotiation (zero-copy <code>SharedArrayBuffer</code> under COOP/COEP vs transferable fallback), <code>OffscreenCanvas</code> lifecycle, and WebGPU device-loss recovery.
             </p>
           </div>
           <div class="glass-panel p-5 rounded-2xl border border-white/10">
             <div class="flex items-center justify-between mb-2">
-              <span class="font-mono text-xs font-bold text-rose-400">etalon-agent</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-300 border border-rose-500/20">Hardware Lanes</span>
+              <span class="font-mono text-xs font-bold text-teal-400">etalon-agent &amp; tensor</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-teal-500/10 text-teal-300 border border-teal-500/20">Lanes &amp; Arenas</span>
             </div>
             <p class="text-xs text-white/60 leading-relaxed">
-              Silicon steward, <code>HalComputeLane</code>, <code>QualiaSlabAllocator</code>, and <code>SubmissionLease</code> deterministic state machine managing ring-buffer quotas and capability isolation.
+              <code>HalComputeLane</code>, <code>QualiaSlabAllocator</code>, <code>SubmissionLease</code> state machine, and <code>ForwardArena</code> / <code>FusedAttentionPipeline</code> for bounded-memory execution.
             </p>
           </div>
-          <div class="glass-panel p-5 rounded-2xl border border-white/10">
-            <div class="flex items-center justify-between mb-2">
-              <span class="font-mono text-xs font-bold text-blue-400">etalon-tensor &amp; etalon-wasm</span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">Inference &amp; Worker</span>
+        </div>
+
+        <!-- Deep-Dive: ETA-15 FDTD Electromagnetics & ETA-16 Sensing Sidecar Custody -->
+        <h3 class="text-base font-semibold text-amber-300 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-bolt"></i> 2. 3D FDTD Electromagnetics (ETA-15) &amp; Sensing Sidecar Custody (ETA-16)
+        </h3>
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+          <div class="glass-panel p-6 rounded-2xl border border-amber-500/25">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 text-amber-300 font-semibold">
+                <i class="fa-solid fa-wave-square"></i>
+                <h4>3D FDTD Maxwell Solver &amp; CFL Guard (ETA-15)</h4>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">etalon-sim</span>
             </div>
-            <p class="text-xs text-white/60 leading-relaxed">
-              <code>ForwardArena</code>, <code>FusedAttentionPipeline</code> with online softmax rescaling, and <code>WorkerSteward</code> automatic transport negotiation (<code>SharedArrayBuffer</code> vs transfer fallback).
+            <p class="text-xs sm:text-sm text-white/70 mb-3 leading-relaxed">
+              <code>etalon-sim</code> steps coupled electric ($\mathbf{E}$) and magnetic ($\mathbf{H}$) fields on a staggered 3D Yee lattice for electromagnetic and wave-optical <code>.emf</code> (<code>EMF64</code>) volumes. Before any GPU or CPU step executes, the solver enforces the strict 3D <strong>Courant–Friedrichs–Lewy (CFL)</strong> stability condition ($c \Delta t \sqrt{\Delta x^{-2} + \Delta y^{-2} + \Delta z^{-2}} \le 1$) and verifies discrete Poynting energy conservation:
+            </p>
+            <div class="code-box text-xs text-amber-200 mb-3">// Courant-Friedrichs-Lewy (CFL) Stability Guard (ETA-15)
+// c * dt * sqrt(dx^-2 + dy^-2 + dz^-2) <= 1.0
+let inv_ds2 = 1.0 / (dx * dx) + 1.0 / (dy * dy) + 1.0 / (dz * dz);
+let courant_number = c_light * dt * inv_ds2.sqrt();
+if courant_number &gt; 1.0 {
+    return Err(FdtdError::CflStabilityViolated { courant_number });
+}
+// Discrete Poynting theorem verification: dU_em/dt + div(E x H) = -J . E</div>
+            <p class="text-xs text-white/60">
+              Super-luminal or unstable timestep configurations fail closed prior to buffer dispatch, guaranteeing bounded electromagnetic energy across long-running simulations.
+            </p>
+          </div>
+
+          <div class="glass-panel p-6 rounded-2xl border border-rose-500/25">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 text-rose-300 font-semibold">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <h4>Sensing Sidecar Custody Bridge (ETA-16)</h4>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">qualia-etalon-sensing-bridge</span>
+            </div>
+            <p class="text-xs sm:text-sm text-white/70 mb-3 leading-relaxed">
+              Physical sensor, radio, and NFC frames captured via Etalon (<code>ObservationEnvelope</code>) are bridged into QualiaDB through <code>qualia-etalon-sensing-bridge</code>. Rather than trusting raw peripheral bytes, the bridge requires explicit host <code>BridgeAuthority</code> confirmation and enumerates observations into 5-field XOR parity-verified <code>NQuin</code>s split across the Identifier Fabric planes:
+            </p>
+            <div class="code-box text-xs text-rose-200 mb-3">// Plane-Separated Sensing Custody (ETA-16)
+// 1. Hardware transducer &amp; NFC possession anchored on Plane::Instrument
+//    with HardwareChannelPossession (never conflated with NaturalAgent/Who)
+// 2. Calibrated measurement &amp; uncertainty envelope emitted on Plane::Claim
+// 3. 5-field NQuin parity: subject ^ predicate ^ object ^ context ^ metadata
+let custody_quins = bridge.enumerate_verified_observation(
+    &amp;envelope, &amp;authority, Plane::Instrument, Plane::Claim,
+)?;</div>
+            <p class="text-xs text-white/60">
+              Preserves the full sidecar observation envelope (calibration artifact ID, clock restart epoch, and spectral coverage) alongside the compact 48-byte <code>NQuin</code> index.
+            </p>
+          </div>
+        </div>
+
+        <!-- 3. 10D Volumetric Containers & Semantic QEM -->
+        <h3 class="text-base font-semibold text-violet-300 mb-4 flex items-center gap-2">
+          <i class="fa-solid fa-cubes"></i> 3. 10D Volumetric Containers (Container10D, M64, EMF64) &amp; Semantic QEM
+        </h3>
+        <div class="grid md:grid-cols-3 gap-5 mb-8">
+          <div class="glass-panel p-5 rounded-2xl border border-violet-500/20">
+            <div class="text-violet-300 text-sm font-semibold mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-box-archive"></i> Container10D (<code>.10d</code>)
+            </div>
+            <p class="text-xs text-white/65 leading-relaxed">
+              64-byte aligned living spatial container uniting <code>PROC1</code> (CSG/SDF procedural synthesis), <code>EONT1</code> (embedded 48-byte <code>NQuin</code> ontological rules &amp; custodial affordances), <code>MRP1</code> (quantized morph deltas), and <code>SKL1</code> (Projective Geometric Algebra $\mathbf{Cl}(3,0,1)$ motor rigs).
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-cyan-500/20">
+            <div class="text-cyan-300 text-sm font-semibold mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-layer-group"></i> M64 &amp; EMF64 Volumes
+            </div>
+            <p class="text-xs text-white/65 leading-relaxed">
+              <code>M64</code> (Matter-64) encodes physical material strata, hydro-enforced DEM elevation chunks, and point clouds; <code>EMF64</code> (<code>.emf</code>) stores 64-byte aligned electromagnetic, optical, and acoustic wavefield tensors stepped by <code>etalon-sim</code> and rendered by <code>EmfPipeline</code>.
+            </p>
+          </div>
+          <div class="glass-panel p-5 rounded-2xl border border-emerald-500/20">
+            <div class="text-emerald-300 text-sm font-semibold mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-diagram-project"></i> Semantic QEM Decimation
+            </div>
+            <p class="text-xs text-white/65 leading-relaxed">
+              Quadric Error Metric (QEM) mesh simplification augmented with ontological boundary weights: edges separating distinct <code>EONT1</code> semantic classes, anatomical layers, or custodial zones receive elevated penalty weights so LOD decimation never collapses ontological boundaries.
             </p>
           </div>
         </div>
@@ -322,7 +426,7 @@ let reactive_mask = max(alpha_reactive, water_reactive);</div>
           <div class="glass-panel p-6 rounded-2xl border border-cyan-500/20">
             <div class="flex items-center gap-3 text-cyan-300 font-semibold mb-3">
               <i class="fa-solid fa-cube text-base"></i>
-              <h3>2. Cross-Platform VolumetricRenderer (Native &amp; WASM32)</h3>
+              <h3>4. Cross-Platform VolumetricRenderer (Native &amp; WASM32)</h3>
             </div>
             <p class="text-xs sm:text-sm text-white/70 mb-4 leading-relaxed">
               <code>webizen-render::VolumetricRenderer</code> runs across both desktop native and <code>wasm32-unknown-unknown</code> browser targets. Initialized via <code>from_canvas</code> on HTML canvas or <code>from_portal_gpu</code> on shared GPU contexts:
@@ -346,7 +450,7 @@ pub fn render_scene_frame(
           <div class="glass-panel p-6 rounded-2xl border border-emerald-500/20">
             <div class="flex items-center gap-3 text-emerald-300 font-semibold mb-3">
               <i class="fa-solid fa-table-cells-large text-base"></i>
-              <h3>3. Zero-Heap Flexbox HUD Layout Engine</h3>
+              <h3>5. Zero-Heap Flexbox HUD Layout Engine</h3>
             </div>
             <p class="text-xs sm:text-sm text-white/70 mb-4 leading-relaxed">
               <code>QualiaHud::layout_items_flex</code> is powered by <code>etalon_render::hud::UiLayoutTree</code>, a stack-allocated Flexbox engine with an immovable limit of 128 nodes (<code>MAX_HUD_LAYOUT_NODES = 128</code>):
@@ -367,7 +471,7 @@ hud.layout_items_flex(viewport_w, viewport_h, &amp;layout_tree);
 
         <!-- 10-Epic Superior Game Engine -->
         <h3 class="text-base font-semibold text-emerald-300 mb-4 flex items-center gap-2">
-          <i class="fa-solid fa-gamepad"></i> 4. The 10-Epic Superior Game Engine (scene_graph_10d)
+          <i class="fa-solid fa-gamepad"></i> 6. The 10-Epic Scene Graph &amp; Character Simulation Engine (scene_graph_10d)
         </h3>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div class="glass-panel p-5 rounded-2xl border border-white/10">
@@ -422,56 +526,56 @@ hud.layout_items_flex(viewport_w, viewport_h, &amp;layout_tree);
       </div>
     </div>
 
-    <!-- Tab 4: Water & Shoreline -->
+    <!-- Tab 5: Water & Shoreline -->
     <section id="tab-water" class="tab-pane">
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/20">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">CAPABILITY AG-10 · VERIFIED</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">HYDRODYNAMIC SURFACE RENDERING · DEPTH-DISPARITY SHORELINE SYNTHESIS</span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Water Shoreline Foam &amp; Depth Disparity Blending</h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> water_pixel_tests (2/2): PASS
+            <i class="fa-solid fa-water"></i> Scene Depth Disparity · Procedural Foam &amp; Gerstner Harmonics
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          Water surfaces preserve authoritative scene depth for opaque geometry while evaluating depth differences in the fragment shader. Where the disparity between the water plane and the underlying terrain is small, dynamic shoreline foam and soft transparency are synthesized automatically.
+          Water surfaces preserve authoritative scene depth for opaque geometry while evaluating optical depth differences in the fragment shader. Where the vertical disparity between the Gerstner wave surface and underlying terrain bathymetries is small, shoreline foam, capillary ripples, and Beer–Lambert absorption are synthesized automatically.
         </p>
       </div>
     </section>
 
-    <!-- Tab 5: Dynamic Vegetation -->
+    <!-- Tab 6: Dynamic Vegetation -->
     <section id="tab-vegetation" class="tab-pane">
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-emerald-500/20">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CAPABILITY AG-12 · VERIFIED</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">INSTANCED FOLIAGE DYNAMICS · SPRING-DAMPER COLLIDER DEFLECTION</span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Dynamic Collider Deflection &amp; Instanced Foliage</h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> vegetation::tests (2/2): PASS
+            <i class="fa-solid fa-seedling"></i> 128B GpuInstanceRecord Buffer · Zero-Vertex-Mutation Trail Recovery
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          The <code class="text-emerald-300 font-mono">VegetationInstancePool</code> simulates character interaction, spring-damper recovery, and directional wind oscillation directly into 128-byte <code class="text-emerald-300 font-mono">GpuInstanceRecord</code> slices. Characters bending grass and foliage leave responsive trails that spring back realistically without modifying GPU vertex buffers.
+          The <code class="text-emerald-300 font-mono">VegetationInstancePool</code> simulates character and vehicle interaction, Hookean spring-damper recovery, and directional wind oscillation directly into 128-byte <code class="text-emerald-300 font-mono">GpuInstanceRecord</code> slices. Bodies bending grass and foliage leave responsive trails that spring back realistically without mutating shared GPU vertex buffers.
         </p>
       </div>
     </section>
 
-    <!-- Tab 6: Holographic 3D Video Codec & Holosonic Audio -->
+    <!-- Tab 7: Holographic 3D Video Codec & Holosonic Audio -->
     <section id="tab-holo" class="tab-pane">
       <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/20">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
           <div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-300 border border-cyan-500/30">CAPABILITY AG-30 · VERIFIED 0.0.40.16</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded bg-gradient-to-r from-cyan-500/20 to-violet-500/20 text-cyan-300 border border-cyan-500/30">VOLUMETRIC STREAMING &amp; WAVE ACOUSTICS · DIFFERENTIAL 3D CODEC &amp; HRTF</span>
             <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Differential 3D Video Codec &amp; Holosonic Spatial Audio</h2>
           </div>
           <div class="flex items-center gap-2 text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-emerald-300">
-            <i class="fa-solid fa-circle-check"></i> holographic::codec &amp; holosonic::audio: PASS
+            <i class="fa-solid fa-wave-square"></i> WGSL Temporal Warp Delta Packets · Spherical-Harmonic Ambisonics
           </div>
         </div>
         <p class="text-white/70 mb-6 leading-relaxed">
-          Engineered for real-time volumetric streaming and spatial immersion, QualiaDB 0.0.40.16 introduces a differential 3D video compression pipeline paired with a first-principles wave-acoustics audio synthesizer. By computing temporal delta frames directly over high-density point clouds and mesh topologies via WebGPU compute shaders, the streaming bandwidth is reduced by up to 87% compared to raw keyframe transmission.
+          Engineered for real-time volumetric streaming and spatial immersion, QualiaDB introduces a differential 3D video compression pipeline paired with a first-principles wave-acoustics audio synthesizer. By computing temporal delta frames directly over high-density point clouds and mesh topologies via WebGPU compute shaders, streaming bandwidth is reduced by up to 87% compared to raw keyframe transmission.
         </p>
 
         <div class="grid md:grid-cols-2 gap-6 mb-8">
@@ -484,7 +588,7 @@ hud.layout_items_flex(viewport_w, viewport_h, &amp;layout_tree);
               Real-time point-cloud and surfel motion vectors are computed using <code class="text-cyan-300 font-mono">temporal_warp.wgsl</code> and compacted via <code class="text-cyan-300 font-mono">tile_compaction.wgsl</code> into GPU-resident run-length encoded delta packets. Keyframes are injected adaptively when scene disocclusion or sudden topology mutations exceed threshold bounds.
             </p>
             <div class="code-box text-xs text-white/80">
-// WGSL GPU Temporal Warp & Reprojection Kernel
+// WGSL GPU Temporal Warp &amp; Reprojection Kernel
 @compute @workgroup_size(64, 1, 1)
 fn cs_temporal_warp(@builtin(global_invocation_id) gid: vec3&lt;u32&gt;) {
     let idx = gid.x;
@@ -509,13 +613,13 @@ use qualia_core_db::spatial_audio::{HrtfFilter, AmbisonicBFormat, SphericalCoord
 
 // Synthesize binaural output from higher-order ambisonic source
 let mut b_format = AmbisonicBFormat::new();
-b_format.encode_point_source(source_pos, &audio_samples);
+b_format.encode_point_source(source_pos, &amp;audio_samples);
 
 let mut binaural_out = [0.0f32; 1024];
 HrtfFilter::synthesize_binaural(
-    &b_format,
+    &amp;b_format,
     listener_orientation,
-    &mut binaural_out,
+    &amp;mut binaural_out,
 )?;</div>
           </div>
         </div>
@@ -537,20 +641,20 @@ HrtfFilter::synthesize_binaural(
           <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">Etalon Silicon Steward, 10D Living Containers &amp; EcoPunk Biological Continuum</h2>
         </div>
         <div class="text-xs font-mono px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-cyan-300">
-          wgpu 30.0.0-etalon · Naga 0.0.1 · vibe-0.1 (.qbc VBC1)
+          etalon 0.0.2 · Naga 0.0.2 · vibe-0.1 (.qbc VBC1)
         </div>
       </div>
       <div class="grid md:grid-cols-3 gap-5 mb-6">
         <div class="glass-panel p-5 rounded-2xl border border-white/10">
-          <h3 class="text-sm font-semibold text-cyan-300 mb-2"><i class="fa-solid fa-microchip mr-1.5"></i> Etalon 7-Crate GPU Stack</h3>
+          <h3 class="text-sm font-semibold text-cyan-300 mb-2"><i class="fa-solid fa-microchip mr-1.5"></i> Etalon Pure-Rust Accelerator Stack</h3>
           <p class="text-xs text-white/65 leading-relaxed">
-            Backed by <code class="text-cyan-300 font-mono">etalon</code> (<code class="font-mono">wgpu 30.0.0-etalon</code>), <code class="text-cyan-300 font-mono">etalon-agent</code> (silicon steward &amp; capability lease state machine), <code class="text-cyan-300 font-mono">etalon-wgsl-forge</code> (deterministic Naga shader validation &amp; multi-target emission), <code class="text-cyan-300 font-mono">etalon-nquin</code> (48-byte GPU warp-scan sieve &amp; LSD radix sort), <code class="text-cyan-300 font-mono">etalon-tensor</code> (fused attention arena), <code class="text-cyan-300 font-mono">etalon-render</code> (volumetric/EMF/HUD substrate), and <code class="text-cyan-300 font-mono">etalon-wasm</code> (OffscreenCanvas worker steward). Feature-gated under <code class="font-mono">gpu-runtime</code> so <code class="font-mono">wasm-ontology</code> stays below 800 KiB while <code class="font-mono">portal</code> and <code class="font-mono">wasm-full</code> ship full hardware WebGPU acceleration.
+            Backed by <code class="text-cyan-300 font-mono">etalon</code>, <code class="text-cyan-300 font-mono">etalon-render</code> (volumetric/EMF/HUD substrate), <code class="text-cyan-300 font-mono">etalon-sim</code> (3D FDTD Maxwell &amp; 2D SWE continuum physics), <code class="text-cyan-300 font-mono">etalon-signal</code> (wavefield DSP &amp; sensor conditioning), <code class="text-cyan-300 font-mono">etalon-wgsl-forge</code> (deterministic Naga shader validation &amp; multi-target emission), <code class="text-cyan-300 font-mono">etalon-nquin</code> (48-byte GPU warp-scan sieve &amp; LSD radix sort), and <code class="text-cyan-300 font-mono">etalon-wasm</code> (OffscreenCanvas worker steward). Feature-gated under <code class="font-mono">gpu-runtime</code> so <code class="font-mono">wasm-ontology</code> stays below 800 KiB while <code class="font-mono">portal</code> and <code class="font-mono">wasm-full</code> ship full hardware WebGPU acceleration.
           </p>
         </div>
         <div class="glass-panel p-5 rounded-2xl border border-white/10">
-          <h3 class="text-sm font-semibold text-emerald-300 mb-2"><i class="fa-solid fa-cubes mr-1.5"></i> .10d Living Containers &amp; PGA Motor Rigs</h3>
+          <h3 class="text-sm font-semibold text-emerald-300 mb-2"><i class="fa-solid fa-cubes mr-1.5"></i> .10d, M64 &amp; EMF64 Containers + Semantic QEM</h3>
           <p class="text-xs text-white/65 leading-relaxed">
-            Zero-heap generational 10D scene graph (<code class="text-emerald-300 font-mono">NodePool</code>, <code class="font-mono">PrefabDeltaMask</code>) with <code class="font-mono">PROC1</code> procedural synthesis (Voronoi cellular micro-relief, smooth-min SDFs, Huxley allometry, PGA motor wind oscillation), <code class="font-mono">EONT1</code> ontogenetic stages &amp; custodial affordances, <code class="font-mono">MRP1</code> quantized morph targets, hardware GPU PGA <code class="font-mono">Motor</code> dual-quaternion skinning (<code class="font-mono">GpuJointMotorPair</code>), 2D Delaunay blend spaces, multi-layer ABSM, Two-Bone + Constrained FABRIK Motor IK, and 4-tier hybrid indirect culling (<code class="font-mono">MeshSlabArenaGpu</code>).
+            Zero-heap generational 10D scene graph (<code class="text-emerald-300 font-mono">NodePool</code>, <code class="font-mono">Container10D</code>, <code class="font-mono">M64</code>, <code class="font-mono">EMF64</code>) with <code class="font-mono">PROC1</code> procedural synthesis (Voronoi cellular micro-relief, smooth-min SDFs, Huxley allometry, PGA motor wind oscillation), <code class="font-mono">EONT1</code> ontogenetic stages &amp; custodial affordances, Semantic QEM decimation preserving ontological boundaries, hardware GPU PGA <code class="font-mono">Motor</code> dual-quaternion skinning (<code class="font-mono">GpuJointMotorPair</code>), and 4-tier hybrid indirect culling (<code class="font-mono">MeshSlabArenaGpu</code>).
           </p>
         </div>
         <div class="glass-panel p-5 rounded-2xl border border-white/10">
@@ -594,7 +698,7 @@ HrtfFilter::synthesize_binaural(
 
   <!-- Global Footer -->
   <footer class="border-t border-white/10 py-10 text-center text-white/40 text-xs">
-    QualiaDB &amp; Webizen · Branch 0.0.40.8 · Milestone 0.0.40.16 · Certified Zero-Heap Architecture.
+    QualiaDB &amp; Webizen · Release v0.0.41 · Etalon Pure-Rust GPU &amp; Multi-Physics Architecture · Zero-Heap Hot Paths.
   </footer>
 
   <script>

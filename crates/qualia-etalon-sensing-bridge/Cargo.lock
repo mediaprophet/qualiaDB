@@ -3098,7 +3098,7 @@ checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 
 [[package]]
 name = "qualia-app-contract"
-version = "0.0.40"
+version = "0.0.41"
 dependencies = [
  "ciborium",
  "serde",
@@ -3108,14 +3108,14 @@ dependencies = [
 
 [[package]]
 name = "qualia-audio"
-version = "0.0.40"
+version = "0.0.41"
 dependencies = [
  "etalon-signal",
 ]
 
 [[package]]
 name = "qualia-cooperative-core"
-version = "0.0.40"
+version = "0.0.41"
 dependencies = [
  "chrono",
  "hex",
@@ -3128,7 +3128,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-core-db"
-version = "0.0.40"
+version = "0.0.41"
 dependencies = [
  "aead 0.6.1",
  "aes-gcm",
@@ -3254,7 +3254,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-inference-kernel"
-version = "0.0.40"
+version = "0.0.41"
 dependencies = [
  "etalon-inference-kernel",
 ]
@@ -4558,7 +4558,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vibe"
-version = "0.0.40"
+version = "0.0.41"
 dependencies = [
  "bytemuck",
  "unicode-xid",
@@ -4567,7 +4567,7 @@ dependencies = [
 
 [[package]]
 name = "vibescript-abi"
-version = "0.0.40"
+version = "0.0.41"
 
 [[package]]
 name = "walkdir"

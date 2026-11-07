@@ -1,14 +1,54 @@
----
-layout: qualia
-title: VibeScript Benchmarks
----
-<meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeScript Benchmarks · Qualia-DB v0.0.41</title>
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-14 gap-4">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-end lg:justify-center"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
-<div class="vibe-bench">
+    <main class="q-wrap max-w-screen-2xl mx-auto px-5 sm:px-8 py-10">
+        <p class="mb-5 text-sm">
+            <a class="q-link" href="index.html">VibeScript Hub</a>
+            · <a class="q-link" href="playground.html">Live Playground</a>
+            · <a class="q-link" href="showcase.html">Showcase</a>
+            · <a class="q-link" href="spec.html">Specification</a>
+            · <a class="q-link" href="../benchmark.html#vibescript">Full Benchmark Suite</a>
+        </p>
+        <article class="doc-content q-prose q-card mx-auto p-6 sm:p-10">
+<div class="vibe-bench" id="vibe-present-bench">
   <style>
     .vibe-bench .bench-section { margin: 1.5rem 0; }
     .vibe-bench .bench-section h2 {
-      font-size: 1.35rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.75rem;
+      font-size: 1.45rem; font-weight: 700; color: #e2e8f0; margin-bottom: 0.75rem;
+    }
+    .vibe-bench .bench-section h3 {
+      font-size: 1.12rem; font-weight: 600; color: #f1f5f9; margin: 1.25rem 0 0.5rem;
     }
     .vibe-bench .bench-section p { color: #cbd5e1; line-height: 1.7; }
     .vibe-bench .bench-controls {
@@ -24,7 +64,8 @@ title: VibeScript Benchmarks
     .vibe-bench .present-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 1rem 0;
     }
-    .vibe-bench .present-card {
+    .vibe-bench .present-card,
+    .vibe-bench .vibe-present-card {
       padding: 1rem; border-radius: 10px; background: rgba(15,23,42,0.55);
       border: 1px solid rgba(52,211,153,0.2);
     }
@@ -33,7 +74,8 @@ title: VibeScript Benchmarks
     .vibe-bench .present-card .meter {
       margin-top: 0.6rem; font-family: ui-monospace, monospace; font-size: 0.8rem; color: #34d399;
     }
-    .vibe-bench .present-card.is-rise {
+    .vibe-bench .present-card.is-rise,
+    .vibe-bench .vibe-present-card.is-rise {
       animation: vibe-present-soft-rise 380ms ease-out both;
     }
     @keyframes vibe-present-soft-rise {
@@ -41,46 +83,118 @@ title: VibeScript Benchmarks
       to { opacity: 1; transform: none; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .vibe-bench .present-card.is-rise { animation: none; }
+      .vibe-bench .present-card.is-rise,
+      .vibe-bench .vibe-present-card.is-rise { animation: none; }
     }
     .vibe-bench .bench-status { font-size: 0.85rem; color: #6ee7b7; margin: 0.5rem 0; font-family: ui-monospace, monospace; }
     .vibe-bench .bench-note {
-      font-size: 0.85rem; color: #94a3b8; margin-top: 1rem;
-      padding: 0.85rem; background: rgba(15,23,42,0.35); border-radius: 8px;
-      border: 1px solid rgba(148,163,184,0.12);
+      font-size: 0.88rem; color: #94a3b8; margin-top: 1.25rem;
+      padding: 1rem 1.2rem; background: rgba(15,23,42,0.45); border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.14); line-height: 1.65;
+    }
+    .vibe-bench .bench-table-wrap {
+      overflow-x: auto; margin: 1.25rem 0;
+      border: 1px solid rgba(148,163,184,0.15); border-radius: 10px;
+      background: rgba(10,14,23,0.75);
+    }
+    .vibe-bench .bench-table {
+      width: 100%; border-collapse: collapse; font-size: 0.86rem; text-align: left;
+    }
+    .vibe-bench .bench-table th, .vibe-bench .bench-table td {
+      padding: 10px 14px; border-bottom: 1px solid rgba(148,163,184,0.1);
+    }
+    .vibe-bench .bench-table th {
+      background: rgba(15,23,42,0.9); color: #94a3b8; font-weight: 600;
+      text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.04em;
     }
   </style>
 
   <div class="bench-section">
-    <h2>Present purpose clocks</h2>
+    <h2>VibeScript In-Browser WASM Verification &amp; Purpose Clocks</h2>
     <p>
-      Soft-rise Present: <strong>checked cell</strong>,
-      <strong>CompiledCell.compile</strong>, and <strong>run() ×2</strong> on the same handle.
-      Thin arithmetic stays quiet interim inside those jobs.
+      These interactive micro-benchmarks measure the shipped <code>vibe-wasm</code> WebAssembly lifecycle directly in your browser tab:
+      <strong>Checked cell</strong> (static type, capability-lease, and <code>IDF-04</code> firewall verification),
+      <strong><code>CompiledCell.compile</code></strong> (compiling source into a retained <code>VBC1</code> bytecode handle),
+      and <strong><code>run() ×2</code></strong> (executing the compiled handle repeatedly without re-parsing or re-decoding source).
     </p>
   </div>
 
   <div class="bench-controls">
     <button class="bench-btn" id="bench-run">▶ Run Present jobs</button>
-    <a class="bench-btn" href="{{ '/benchmark.html' | relative_url }}#vibescript" style="text-decoration:none">Hub purpose clocks</a>
+    <a class="bench-btn" href="../benchmark.html#vibescript" style="text-decoration:none">Hub purpose clocks</a>
     <span class="bench-status" id="bench-status">Ready.</span>
   </div>
 
   <div class="present-grid" id="bench-results">
-    <article class="present-card" data-job="checked"><h3>Checked cell</h3><p>Type-check before run</p><div class="meter">—</div></article>
-    <article class="present-card" data-job="compile"><h3>CompiledCell.compile</h3><p>Compile once · keep handle</p><div class="meter">—</div></article>
-    <article class="present-card" data-job="run"><h3>CompiledCell.run</h3><p>Run ×2 · no re-decode</p><div class="meter">—</div></article>
+    <article class="present-card vibe-present-card" data-job="checked">
+      <h3>Checked cell</h3>
+      <p>Type-check &amp; verify capability leases before run</p>
+      <div class="meter">—</div>
+    </article>
+    <article class="present-card vibe-present-card" data-job="compile">
+      <h3>CompiledCell.compile</h3>
+      <p>Compile once · keep reusable bytecode handle</p>
+      <div class="meter">—</div>
+    </article>
+    <article class="present-card vibe-present-card" data-job="run">
+      <h3>CompiledCell.run</h3>
+      <p>Run ×2 · no re-decode on retained handle</p>
+      <div class="meter">—</div>
+    </article>
+    <article class="present-card vibe-present-card" data-job="hot-reload">
+      <h3>Edit source, no host rebuild</h3>
+      <p>Update script cells live without recompiling the host binary</p>
+      <div class="meter">0 ms host rebuild</div>
+    </article>
+  </div>
+
+  <div class="bench-section">
+    <h3>Benchmark Methodology &amp; Architectural Tradeoffs</h3>
+    <p>
+      VibeScript is designed as a capability-bounded, zero-heap semantic scripting layer rather than a general-purpose JIT engine competing on raw scalar loop throughput. When interpreting these measurements for research or production integration, keep four lifecycle stages distinct:
+    </p>
+    <div class="bench-table-wrap">
+      <table class="bench-table">
+        <thead>
+          <tr>
+            <th>Lifecycle Stage</th>
+            <th>API Surface</th>
+            <th>What Is Measured &amp; Guaranteed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1. Checked cell</strong></td>
+            <td><code>check_cell_src</code> / <code>vibe::diagnose</code></td>
+            <td>Lexing, parsing, dimensional unit checking, capability lease verification, and compile-time <code>IDF-04</code> identifier firewall validation before any bytecode executes.</td>
+          </tr>
+          <tr>
+            <td><strong>2. Compile once</strong></td>
+            <td><code>CompiledCell.compile(src)</code></td>
+            <td>One-shot lowering of validated AST into compact, relocatable <code>VBC1</code> stack bytecode held in a reusable handle.</td>
+          </tr>
+          <tr>
+            <td><strong>3. Run ×2 (Hot Evaluation)</strong></td>
+            <td><code>cell.run()</code></td>
+            <td>Repeated zero-heap stack VM execution on the retained bytecode handle—eliminating source parsing and AST lowering overhead on high-frequency UI/continuum ticks.</td>
+          </tr>
+          <tr>
+            <td><strong>4. Edit source, no host rebuild</strong></td>
+            <td>Hot cell replacement</td>
+            <td>Modifying a VibeScript formula or agent policy re-checks and re-compiles only the cell in microseconds, requiring zero Rust/WASM host recompilation.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="bench-note">
-    Building next on this tab: longer purpose suites and native window clocks.
-    Until then, the hub at <a href="{{ '/benchmark.html' | relative_url }}#vibescript" style="color:#6ee7b7">benchmark.html#vibescript</a>
-    carries the same Present scorecards.
+    For full cross-engine comparisons (including native <code>SlgArena</code> query throughput, <code>ADR 0003</code> <code>ExactnessProfile</code> overhead, and GPU/WASM kernel timings), see the main <a href="../benchmark.html#vibescript" style="color:#6ee7b7">QualiaDB Benchmark Hub (benchmark.html#vibescript)</a> and <a href="../vibe-host-native-bridge.html" style="color:#6ee7b7">VibeScript Execution Profiles</a>.
   </div>
 </div>
 
 <script type="module">
-  import { runPresentJobs, softRisePresentCards } from "{{ '/js/vibescript-present.js' | relative_url }}";
+  import { runPresentJobs, softRisePresentCards } from "../js/vibescript-present.js";
 
   const status = document.getElementById('bench-status');
   const btn = document.getElementById('bench-run');
@@ -103,3 +217,12 @@ title: VibeScript Benchmarks
   btn.addEventListener('click', run);
   run();
 </script>
+        </article>
+    </main>
+
+    <footer class="q-site-footer">
+        <div class="flex flex-wrap justify-center gap-6 mb-4"></div>
+        <p>Qualia-DB v0.0.41 · Human-centric semantic engine · handle ≠ human</p>
+    </footer>
+</body>
+</html>

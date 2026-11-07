@@ -87,8 +87,8 @@
       "dataset_file_mb": 412.3,
       "dataset_format": "rdf",
       "dataset_file_path": "docs/data/wordnet/wordnet.rdf",
-      "ingestion_ms": 14200.0,
-      "peak_rss_mb": 480.0,
+      "ingestion_ms": 14200,
+      "peak_rss_mb": 480,
       "point": {
         "min": 0.038,
         "p50": 0.042,
@@ -138,8 +138,8 @@
       "dataset_file_mb": 412.3,
       "dataset_format": "rdf",
       "dataset_file_path": "docs/data/wordnet/wordnet.rdf",
-      "ingestion_ms": 28400.0,
-      "peak_rss_mb": 850.0,
+      "ingestion_ms": 28400,
+      "peak_rss_mb": 850,
       "point": {
         "min": 1.62,
         "p50": 1.84,
@@ -168,7 +168,7 @@
         "p95": 31.8,
         "p99": 38.2,
         "mean": 25.4,
-        "max": 42.0,
+        "max": 42,
         "samples": 30,
         "warmup_samples": 10,
         "unit": "milliseconds"
@@ -189,8 +189,8 @@
       "dataset_file_mb": 412.3,
       "dataset_format": "rdf",
       "dataset_file_path": "docs/data/wordnet/wordnet.rdf",
-      "ingestion_ms": 18900.0,
-      "peak_rss_mb": 410.0,
+      "ingestion_ms": 18900,
+      "peak_rss_mb": 410,
       "point": {
         "min": 0.1,
         "p50": 0.12,

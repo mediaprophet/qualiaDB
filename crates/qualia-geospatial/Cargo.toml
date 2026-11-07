@@ -1,6 +1,6 @@
 [package]
 name = "qualia-geospatial"
-version = "0.0.40"
+version = "0.0.41"
 edition = "2021"
 authors = ["QualiaDB Project Team"]
 description = "QualiaDB geospatial engine: WGS84/GDA2020 geodetic frames, hydro-enforced GeoTIFF DEMs, Hilbert spatial indexing, and OGC WFS/WMS streaming"

@@ -79,7 +79,8 @@
         .fade-in-2 { animation: fadeInUp 0.45s 0.08s ease both; }
         .fade-in-3 { animation: fadeInUp 0.45s 0.16s ease both; }
     </style>
-    <script src="js/menu-loader.js"></script></head>
+    <script src="js/menu-loader.js"></script>
+</head>
 <body>
 
     <!-- Nav -->
@@ -120,11 +121,11 @@
                 <i class="fas fa-cube text-xs"></i>
                 <span class="font-mono">qualia-core-db</span>
                 <span class="text-blue-500/60">•</span>
-                <span>v0.0.40</span>
+                <span>v0.0.41</span>
             </div>
             <h1 class="font-display text-5xl tracking-[-2px] mb-3">API Reference</h1>
-            <p class="text-xl text-slate-400 max-w-2xl mb-6">
-                Complete Rust crate documentation — generated from source with <span class="font-mono text-slate-300">cargo doc</span>.
+            <p class="text-xl text-slate-400 max-w-3xl mb-6">
+                Complete Rust crate documentation for the 29 QualiaDB Workspace Crates and the integrated Etalon Accelerator &amp; Simulation stack — generated from source with <span class="font-mono text-slate-300">cargo doc</span>.
                 Browse by module group below or open the full reference directly.
             </p>
             <div class="flex flex-wrap gap-3">
@@ -144,24 +145,45 @@
                     <i class="fas fa-terminal text-xs"></i>
                     <span>CLI Crate</span>
                 </a>
+                <a href="qdnf.html"
+                   class="inline-flex items-center gap-2 px-6 py-3 glass rounded-2xl font-medium text-sm hover:bg-white/5 transition-colors text-emerald-300">
+                    <i class="fas fa-network-wired text-xs"></i>
+                    <span>QDNF &amp; Identifier Fabric</span>
+                </a>
             </div>
         </div>
 
-        <!-- New in 0.0.40 banner -->
+        <!-- New in 0.0.41 banner -->
         <div class="glass-strong rounded-3xl p-6 mb-10 border border-emerald-500/20 fade-in-2">
             <div class="flex items-start gap-4">
                 <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
                     <i class="fas fa-sparkles text-emerald-400"></i>
                 </div>
                 <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="font-semibold text-emerald-300">New in v0.0.40</span>
-                        <span class="pill bg-emerald-500/15 text-emerald-400">0.0.40</span>
+                    <div class="flex items-center flex-wrap gap-3 mb-2">
+                        <span class="font-semibold text-emerald-300">New in v0.0.41</span>
+                        <span class="pill bg-emerald-500/15 text-emerald-400">0.0.41</span>
+                        <a href="qdnf.html" class="pill bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25">QDNF Fabric (qdnf.html)</a>
                         <a href="online-llm-demo.html" class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25">Browser LLM demo</a>
                         <a href="design-studio.html" class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25">Design Studio</a>
+                        <a href="spatial.html" class="pill bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25">Omni-Scale Coordinate System</a>
                     </div>
-                    <p class="text-sm text-white/70 mb-2">Browser-native WASM + WebGPU LLM decode at <strong class="text-emerald-300">~5.9 tok/s</strong>, booting from a self-contained <code class="text-emerald-300">P64</code> AOT container (compile-once, OPFS-cached). Pure Rust→WASM — no Ollama / llama.cpp / Python.</p>
+                    <p class="text-sm text-white/70 mb-3">
+                        Release <code class="text-emerald-300">0.0.41</code> introduces the 4-plane Sovereign Identifier Fabric (<code class="text-emerald-300">identity::did_qi</code>, <code class="text-emerald-300">foundation::plane_feature_guard</code>, <code class="text-emerald-300">net::qdnf::fabric</code>), exact solver verification gating (<code class="text-emerald-300">q42::execution_profile</code>, <code class="text-emerald-300">q42::payload_catalogue</code>), tri-source evaluation receipts (<code class="text-emerald-300">net::qdnf::harness::tri_source_eval</code>), the Omni-Scale Coordinate System (<code class="text-cyan-300">OCS-10</code>–<code class="text-cyan-300">OCS-13</code>), and the integrated <strong>Etalon</strong> accelerator &amp; continuum-physics crates alongside browser-native WASM + WebGPU <code class="text-emerald-300">P64</code> decode.
+                    </p>
                     <div class="flex flex-wrap gap-2 text-sm">
+                        <a href="rustdoc/qualia_core_db/identity/did_qi/index.html" target="_blank"
+                           class="pill bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-colors cursor-pointer">identity::did_qi</a>
+                        <a href="rustdoc/qualia_core_db/foundation/plane_feature_guard/index.html" target="_blank"
+                           class="pill bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-colors cursor-pointer">foundation::plane_feature_guard</a>
+                        <a href="rustdoc/qualia_core_db/q42/execution_profile/index.html" target="_blank"
+                           class="pill bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors cursor-pointer">q42::execution_profile</a>
+                        <a href="rustdoc/qualia_core_db/q42/payload_catalogue/index.html" target="_blank"
+                           class="pill bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors cursor-pointer">q42::payload_catalogue</a>
+                        <a href="rustdoc/qualia_core_db/net/qdnf/fabric/index.html" target="_blank"
+                           class="pill bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors cursor-pointer">net::qdnf::fabric</a>
+                        <a href="rustdoc/qualia_core_db/net/qdnf/harness/tri_source_eval/index.html" target="_blank"
+                           class="pill bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors cursor-pointer">net::qdnf::harness::tri_source_eval</a>
                         <a href="rustdoc/qualia_core_db/design_encode/index.html" target="_blank"
                            class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">design_encode</a>
                         <a href="rustdoc/qualia_client_core/asset_recommendations/index.html" target="_blank"
@@ -170,20 +192,116 @@
                            class="pill bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 transition-colors cursor-pointer">profiles</a>
                         <a href="rustdoc/qualia_core_db/shacl_compiler/index.html" target="_blank"
                            class="pill bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 transition-colors cursor-pointer">shacl_compiler</a>
-                        <a href="rustdoc/qualia_core_db/bioinformatics/index.html" target="_blank"
-                           class="pill bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer">bioinformatics</a>
-                        <a href="rustdoc/qualia_core_db/clinical_engine/index.html" target="_blank"
-                           class="pill bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer">clinical_engine</a>
-                        <a href="rustdoc/qualia_core_db/organic_chemistry/index.html" target="_blank"
-                           class="pill bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors cursor-pointer">organic_chemistry</a>
-                        <a href="rustdoc/qualia_core_db/gguf_bridge/index.html" target="_blank"
-                           class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">gguf_bridge</a>
-                        <a href="rustdoc/qualia_core_db/gguf_sharder/index.html" target="_blank"
-                           class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">gguf_sharder</a>
-                        <a href="rustdoc/qualia_core_db/llm_agent/index.html" target="_blank"
-                           class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">llm_agent</a>
                         <a href="rustdoc/qualia_core_db/p64_weight/index.html" target="_blank"
                            class="pill bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors cursor-pointer">p64_weight</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deep-Dive: v0.0.41 Core Architectural Modules -->
+        <div class="glass-strong rounded-3xl p-6 mb-10 border border-blue-500/20 fade-in-2">
+            <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+                <div>
+                    <div class="text-xs uppercase tracking-widest text-blue-400 font-mono mb-1">v0.0.41 Core Engine API Additions</div>
+                    <h2 class="font-display text-2xl text-white">Sovereign Identity, Plane Guards, Q42 Execution Profiles &amp; Tri-Source Evaluation</h2>
+                </div>
+                <span class="pill bg-blue-500/15 text-blue-300">Zero-Heap Hot Path Verified</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <!-- identity::did_qi -->
+                <div class="glass rounded-2xl p-5 border border-emerald-500/15">
+                    <div class="flex items-center justify-between mb-2">
+                        <code class="text-emerald-300 font-mono text-sm font-semibold">identity::did_qi</code>
+                        <span class="pill bg-emerald-500/15 text-emerald-400">Plane 1 · Who</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                        Sovereign Identity Method (<code class="text-slate-200">did:qi:&lt;base58btc-32B-sha256&gt;</code>) derived from a 176-byte canonical <code class="text-slate-200">GenesisPayload</code> (domain tag, Ed25519 verifying key, ML-DSA-65 commitment, creation floor, recovery policy hash, and Ed25519 signature). Strictly rejects legacy <code class="text-slate-200">did:q42:</code>/<code class="text-slate-200">did:webizen:</code> prefixes (<code class="text-slate-200">DidQiError::RejectedPrefix</code>) and embedded network locators (<code class="text-slate-200">DirectLocatorForbidden</code>).
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="pill bg-slate-800 text-slate-400">DidQi</span>
+                        <span class="pill bg-slate-800 text-slate-400">GenesisPayload</span>
+                        <span class="pill bg-slate-800 text-slate-400">DidQiError</span>
+                    </div>
+                </div>
+
+                <!-- foundation::plane_feature_guard -->
+                <div class="glass rounded-2xl p-5 border border-cyan-500/15">
+                    <div class="flex items-center justify-between mb-2">
+                        <code class="text-cyan-300 font-mono text-sm font-semibold">foundation::plane_feature_guard</code>
+                        <span class="pill bg-cyan-500/15 text-cyan-400">ADR 0004</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                        Enforces cross-plane non-entailment on symbolic and classifier feature bags (<code class="text-slate-200">PlaneTag::{Who, Claim, SpatiotemporalHandle, Instrument, Policy}</code>) and the closed 7-variant <code class="text-slate-200">KeyRoleTag</code> vocabulary. Prevents <code class="text-slate-200">Who</code> or <code class="text-slate-200">Instrument</code> identifiers from entering <code class="text-slate-200">Policy</code> or <code class="text-slate-200">Claim</code> scoring vectors without explicit governed projection.
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="pill bg-slate-800 text-slate-400">PlaneTag</span>
+                        <span class="pill bg-slate-800 text-slate-400">KeyRoleTag</span>
+                        <span class="pill bg-slate-800 text-slate-400">TaggedFeature</span>
+                    </div>
+                </div>
+
+                <!-- q42::execution_profile -->
+                <div class="glass rounded-2xl p-5 border border-amber-500/15">
+                    <div class="flex items-center justify-between mb-2">
+                        <code class="text-amber-300 font-mono text-sm font-semibold">q42::execution_profile</code>
+                        <span class="pill bg-amber-500/15 text-amber-400">ADR 0003 · Q42-08</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                        Separates <code class="text-slate-200">ExactnessProfile</code> (<code class="text-slate-200">Exact</code>, <code class="text-slate-200">DeterministicApproximate</code>, <code class="text-slate-200">InteractiveApproximate</code>) from <code class="text-slate-200">SolverVerificationOutcome</code> (<code class="text-slate-200">WitnessChecked</code>, <code class="text-slate-200">UnsatisfiableWithinDomain</code>, <code class="text-slate-200">UnknownWithinBudget</code>, <code class="text-slate-200">GlobalImpossibilityProved</code>). <code class="text-slate-200">admit_for_policy_decision</code> gates normative and policy admission strictly on verified exact outcomes.
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="pill bg-slate-800 text-slate-400">ExecutionProfile</span>
+                        <span class="pill bg-slate-800 text-slate-400">ExactnessProfile</span>
+                        <span class="pill bg-slate-800 text-slate-400">SolverVerificationOutcome</span>
+                    </div>
+                </div>
+
+                <!-- q42::payload_catalogue -->
+                <div class="glass rounded-2xl p-5 border border-violet-500/15">
+                    <div class="flex items-center justify-between mb-2">
+                        <code class="text-violet-300 font-mono text-sm font-semibold">q42::payload_catalogue</code>
+                        <span class="pill bg-violet-500/15 text-violet-400">Q42 Container</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                        Typed descriptor catalogue for <code class="text-slate-200">.q42</code> v4 binary sections, <code class="text-slate-200">P64</code> weight shards, <code class="text-slate-200">.10d</code> volumetric scenes, and governed semantic payloads. Validates section alignment, CRC-32C / Blake3 digests, and byte-budget invariants before memory-mapping or OPFS staging.
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="pill bg-slate-800 text-slate-400">PayloadCatalogue</span>
+                        <span class="pill bg-slate-800 text-slate-400">PayloadDescriptor</span>
+                        <span class="pill bg-slate-800 text-slate-400">SectionKind</span>
+                    </div>
+                </div>
+
+                <!-- net::qdnf::fabric -->
+                <div class="glass rounded-2xl p-5 border border-purple-500/15">
+                    <div class="flex items-center justify-between mb-2">
+                        <code class="text-purple-300 font-mono text-sm font-semibold">net::qdnf::fabric</code>
+                        <span class="pill bg-purple-500/15 text-purple-400">4-Plane Fabric</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                        Implements the 4-plane Identifier Fabric join rules (<code class="text-slate-200">attempt_join</code>, <code class="text-slate-200">JoinAttempt</code>, <code class="text-slate-200">JoinKey</code>, <code class="text-slate-200">InstrumentKind</code>). Enforces that hardware/network instruments (<code class="text-slate-200">Plane::Instrument</code>) and spacetime handles (<code class="text-slate-200">Plane::SpatiotemporalHandle</code>) never implicitly entail <code class="text-slate-200">Plane::Who</code> identity or <code class="text-slate-200">Plane::Claim</code> authority.
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="pill bg-slate-800 text-slate-400">attempt_join</span>
+                        <span class="pill bg-slate-800 text-slate-400">JoinAttempt</span>
+                        <span class="pill bg-slate-800 text-slate-400">InstrumentKind</span>
+                    </div>
+                </div>
+
+                <!-- net::qdnf::harness::tri_source_eval -->
+                <div class="glass rounded-2xl p-5 border border-rose-500/15">
+                    <div class="flex items-center justify-between mb-2">
+                        <code class="text-rose-300 font-mono text-sm font-semibold">net::qdnf::harness::tri_source_eval</code>
+                        <span class="pill bg-rose-500/15 text-rose-400">Packet EVAL-22</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">
+                        Unified Tri-Source Evaluation Aggregator combining (1) Etalon <code class="text-slate-200">EtalonSourceReceipt</code>, (2) Network <code class="text-slate-200">QDNF</code>/<code class="text-slate-200">QPR</code>/<code class="text-slate-200">CSCP</code> transport &amp; custody receipts, and (3) QualiaDB <code class="text-slate-200">.q42</code> v4 canonical 5-field <code class="text-slate-200">NQuin</code> enumeration into per-plane <code class="text-slate-200">SourcePlaneCounts { passed, failed, unsupported }</code> without silent <code class="text-slate-200">0/0</code> passes.
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="pill bg-slate-800 text-slate-400">evaluate_tri_source</span>
+                        <span class="pill bg-slate-800 text-slate-400">TriSourceEvalReport</span>
+                        <span class="pill bg-slate-800 text-slate-400">SourcePlaneCounts</span>
                     </div>
                 </div>
             </div>
@@ -200,20 +318,20 @@
                         <i class="fas fa-database text-blue-400 text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-semibold">Core Storage</div>
+                        <div class="font-semibold">Core Storage &amp; Q42</div>
                         <div class="text-xs text-slate-500">Zero-allocation engine</div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    Five-vector quins, SuperBlocks, WAL, lazy demand-paging, BIDX block-range index, and the VFS abstraction.
+                    48-byte Super-Quins, SuperBlocks, WAL, lazy demand-paging, BIDX block-range index, Q42 execution profiles, and payload catalogues.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">storage</span>
+                    <span class="pill bg-slate-800 text-slate-400">q42::execution_profile</span>
+                    <span class="pill bg-slate-800 text-slate-400">q42::payload_catalogue</span>
                     <span class="pill bg-slate-800 text-slate-400">wal</span>
                     <span class="pill bg-slate-800 text-slate-400">indexing</span>
-                    <span class="pill bg-slate-800 text-slate-400">archive</span>
                     <span class="pill bg-slate-800 text-slate-400">lexicon</span>
-                    <span class="pill bg-slate-800 text-slate-400">ingest</span>
                 </div>
             </a>
 
@@ -225,19 +343,18 @@
                         <i class="fas fa-magnifying-glass text-purple-400 text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-semibold">Query & Logic</div>
-                        <div class="text-xs text-slate-500">SPARQL · N3 · Deontic</div>
+                        <div class="font-semibold">Query &amp; Logic</div>
+                        <div class="text-xs text-slate-500">SPARQL · N3 · Deontic · Plane Guard</div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    Query compiler, resolver, N3Logic parser, Prolog-style rules engine, deontic modal operators, and ILP logic.
+                    Query compiler, resolver, N3Logic parser, SLG Prolog engine, deontic/epistemic/paraconsistent modal operators, and plane feature guards.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">query_engine</span>
-                    <span class="pill bg-slate-800 text-slate-400">query_compiler</span>
+                    <span class="pill bg-slate-800 text-slate-400">foundation::plane_feature_guard</span>
                     <span class="pill bg-slate-800 text-slate-400">resolver</span>
                     <span class="pill bg-slate-800 text-slate-400">n3_parser</span>
-                    <span class="pill bg-slate-800 text-slate-400">logic</span>
                     <span class="pill bg-slate-800 text-slate-400">deontic_logic</span>
                 </div>
             </a>
@@ -250,23 +367,23 @@
                         <i class="fas fa-robot text-cyan-400 text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-semibold">Webizen VM</div>
-                        <div class="text-xs text-slate-500">Bytecode · Sync · Native ops</div>
+                        <div class="font-semibold">Webizen VM &amp; OCS</div>
+                        <div class="text-xs text-slate-500">Bytecode · 27 Cosmic Opcodes · Sync</div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    The Webizen bytecode virtual machine with 200+ native opcodes covering thermodynamics, quantum DFT, ODE solving, and geometry.
+                    The Webizen bytecode virtual machine with 200+ native opcodes, including the 27 synchronized Omni-Scale Coordinate System (<code class="text-cyan-300">0xA0</code>–<code class="text-cyan-300">0xBA</code>) spacetime opcodes.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">webizen</span>
                     <span class="pill bg-slate-800 text-slate-400">webizen_bytecode</span>
-                    <span class="pill bg-slate-800 text-slate-400">webizen_sync</span>
-                    <span class="pill bg-slate-800 text-slate-400">modalities</span>
+                    <span class="pill bg-slate-800 text-slate-400">modalities::ocs</span>
+                    <span class="pill bg-slate-800 text-slate-400">wgsl_forge::etalon_bridge</span>
                 </div>
             </a>
 
-            <!-- Network & P2P -->
-            <a href="rustdoc/qualia_core_db/p2p/index.html" target="_blank"
+            <!-- Network & QDNF -->
+            <a href="qdnf.html"
                class="module-card glass rounded-3xl p-6 block border border-emerald-500/10 hover:border-emerald-500/30">
                 <div class="flex items-center gap-3 mb-3">
                     <div class="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
@@ -274,19 +391,17 @@
                     </div>
                     <div>
                         <div class="font-semibold">Network &amp; QDNF</div>
-                        <div class="text-xs text-slate-500">QDNF · QPR · Solid LDP surface</div>
+                        <div class="text-xs text-slate-500">QDNF · QPR · CSCP · Tri-Source Eval</div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    Native Qualia fabric is QDNF / QPR (in progress): QLink, DNI, QRoute, QSession. Solid LDP and WebID remain federated access surfaces. This rustdoc group is the engine modules — not a browser packet capture.
+                    Native Qualia Data Network Fabric (QDNF / QPR): QLink, DNI, QRoute, QSession, 4-plane non-entailment joins, and Unified Tri-Source Evaluation (<code class="text-emerald-300">EVAL-22</code>).
                 </p>
                 <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">net::qdnf::fabric</span>
+                    <span class="pill bg-slate-800 text-slate-400">net::qdnf::harness::tri_source_eval</span>
                     <span class="pill bg-slate-800 text-slate-400">p2p</span>
-                    <span class="pill bg-slate-800 text-slate-400">daemon</span>
-                    <span class="pill bg-slate-800 text-slate-400">daemon_swarm</span>
                     <span class="pill bg-slate-800 text-slate-400">solid_ldp</span>
-                    <span class="pill bg-slate-800 text-slate-400">nym_adapter</span>
-                    <span class="pill bg-slate-800 text-slate-400">web_civics</span>
                 </div>
             </a>
 
@@ -298,19 +413,19 @@
                         <i class="fas fa-brain text-amber-400 text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-semibold">AI / ML</div>
-                        <div class="text-xs text-slate-500">GGUF · NPU · TEE</div>
+                        <div class="font-semibold">AI / ML &amp; P64</div>
+                        <div class="text-xs text-slate-500">GGUF · P64 · NPU · TEE</div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    LLM agent runtime, GGUF model loading and sharding, NPU FFI for hardware acceleration, and TEE secure enclave integration.
+                    LLM agent runtime, P64 64-byte aligned weight containers, GGUF sharding, NPU FFI hardware acceleration, and TEE enclave attestation.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">llm_agent</span>
+                    <span class="pill bg-slate-800 text-slate-400">p64_weight</span>
                     <span class="pill bg-slate-800 text-slate-400">gguf_bridge</span>
                     <span class="pill bg-slate-800 text-slate-400">gguf_sharder</span>
                     <span class="pill bg-slate-800 text-slate-400">npu_ffi</span>
-                    <span class="pill bg-slate-800 text-slate-400">tee_ffi</span>
                 </div>
             </a>
 
@@ -324,21 +439,20 @@
                     <div>
                         <div class="font-semibold">Scientific Primitives</div>
                         <div class="text-xs text-slate-500 flex items-center gap-1.5">
-                            Bio · Chemistry · Physics
+                            Bio · Chemistry · Physics · CRT
                             <span class="new-badge">new</span>
                         </div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    SHACL-validated scientific engines: bioinformatics (BLAST, MSA), clinical engine (ICD/RxNorm), organic chemistry (SMILES/SMARTS, Lipinski).
+                    256-bit 4-Prime CRT exact arithmetic, QUBO penalty sufficiency theorem, relativistic &amp; cosmological FLRW solvers, bioinformatics, and quantum DFT.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">bioinformatics</span>
                     <span class="pill bg-slate-800 text-slate-400">clinical_engine</span>
                     <span class="pill bg-slate-800 text-slate-400">organic_chemistry</span>
-                    <span class="pill bg-slate-800 text-slate-400">thermodynamics</span>
                     <span class="pill bg-slate-800 text-slate-400">quantum_dft</span>
-                    <span class="pill bg-slate-800 text-slate-400">ode_solver</span>
+                    <span class="pill bg-slate-800 text-slate-400">crt_u256</span>
                 </div>
             </a>
 
@@ -350,12 +464,12 @@
                         <i class="fas fa-coins text-yellow-400 text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-semibold">Economics & Rights</div>
+                        <div class="font-semibold">Economics &amp; Rights</div>
                         <div class="text-xs text-slate-500">ILP · Agency · Tax</div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    Interledger Protocol micro-payments, dynamic equity allocation, agency records, obligation tracking, and tax schema primitives.
+                    Interledger Protocol micro-payments, dynamic equity allocation, Ed25519 author-scoped Merkle roots, obligation tracking, and CRDT consensus queues.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">economics</span>
@@ -379,7 +493,7 @@
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    MCP server for AI agent tool integration, orchestrator runtime, SHACL compiler, CBOR-LD encoder, WASM bridge, and telemetry.
+                    MCP server for AI agent tool integration, thermal-governed orchestrator runtime, SHACL bytecode compiler, CBOR-LD encoder, and WASM ABI bridge.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
                     <span class="pill bg-slate-800 text-slate-400">mcp_server</span>
@@ -387,11 +501,10 @@
                     <span class="pill bg-slate-800 text-slate-400">shacl_compiler</span>
                     <span class="pill bg-slate-800 text-slate-400">cbor_compiler</span>
                     <span class="pill bg-slate-800 text-slate-400">wasm_bridge</span>
-                    <span class="pill bg-slate-800 text-slate-400">telemetry</span>
                 </div>
             </a>
 
-            <!-- Profiles -->
+            <!-- Profiles & Sovereign Identity -->
             <a href="rustdoc/qualia_core_db/profiles/index.html" target="_blank"
                class="module-card glass rounded-3xl p-6 block border border-violet-500/10 hover:border-violet-500/30">
                 <div class="flex items-center gap-3 mb-3">
@@ -399,122 +512,215 @@
                         <i class="fas fa-id-card text-violet-400 text-sm"></i>
                     </div>
                     <div>
-                        <div class="font-semibold">Profiles & Identifiers</div>
+                        <div class="font-semibold">Profiles &amp; Sovereign Identity</div>
                         <div class="text-xs text-slate-500 flex items-center gap-1.5">
-                            Multi-profile · Credentials
+                            did:qi · did:q42 · USRI
                             <span class="new-badge">new</span>
                         </div>
                     </div>
                 </div>
                 <p class="text-sm text-slate-400 mb-4">
-                    Multi-profile identifier management, credential anchoring, key vault integration, and git-bridge provenance linking.
+                    Sovereign <code class="text-violet-300">did:qi</code> genesis identities, topological <code class="text-violet-300">did:q42</code> pointers (MSB=1), <code class="text-violet-300">CB-USRI</code> celestial tokens (MSB=0), and hardware key vaults.
                 </p>
                 <div class="flex flex-wrap gap-1.5">
+                    <span class="pill bg-slate-800 text-slate-400">identity::did_qi</span>
                     <span class="pill bg-slate-800 text-slate-400">profiles</span>
                     <span class="pill bg-slate-800 text-slate-400">key_vault</span>
                     <span class="pill bg-slate-800 text-slate-400">identifier</span>
                     <span class="pill bg-slate-800 text-slate-400">git_bridge</span>
-                    <span class="pill bg-slate-800 text-slate-400">rpc</span>
                 </div>
             </a>
 
         </div>
 
-        <!-- Other crates -->
+        <!-- Etalon Accelerator & Simulation Crates -->
+        <div class="glass-strong rounded-3xl p-6 mb-10 border border-cyan-500/20">
+            <div class="flex items-center justify-between flex-wrap gap-3 mb-2">
+                <div class="text-xs uppercase tracking-widest text-cyan-400 font-mono">Etalon Accelerator &amp; Simulation Crates</div>
+                <span class="pill bg-cyan-500/15 text-cyan-300">WGSL Forge · 10D Render · Continuum Physics · NQuin Parity</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-5">
+                Hardware-certified GPU compute, 10D volumetric rendering, continuum physics (<code class="text-cyan-300">SWE</code>, <code class="text-cyan-300">3D FDTD</code>), and 5-field parity-verified <code class="text-cyan-300">NQuin</code> sensing bridges integrated with the QualiaDB workspace.
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                <a href="graphics.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon</div>
+                    <div class="text-xs text-slate-400">Core runtime, 10D containers (<code>.10d</code>, <code>M64</code>, <code>EMF64</code>) &amp; device graph</div>
+                </a>
+                <a href="graphics.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-render</div>
+                    <div class="text-xs text-slate-400">Volumetric PBR, Temporal AA, SH probes, KTX2 &amp; Semantic QEM</div>
+                </a>
+                <a href="scientific-computing.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-sim</div>
+                    <div class="text-xs text-slate-400">3D FDTD Maxwell (<code>ETA-15</code>), SWE hydrodynamics, MPM &amp; XPBD</div>
+                </a>
+                <a href="graphics.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-signal</div>
+                    <div class="text-xs text-slate-400">DSP, spectral FFT, acoustic wavefield &amp; sensor conditioning</div>
+                </a>
+                <a href="forge-showcase.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-wgsl-forge</div>
+                    <div class="text-xs text-slate-400">Typed <code>KernelSpec</code> + <code>Schedule</code> IR → WGSL/SPIR-V/HLSL/MSL &amp; Naga AST</div>
+                </a>
+                <a href="graphics.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-nquin</div>
+                    <div class="text-xs text-slate-400">Zero-copy 48B <code>NQuin</code> 5-field XOR parity &amp; plane-tag ABI</div>
+                </a>
+                <a href="playground/etalon-vibe-harness.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-wasm</div>
+                    <div class="text-xs text-slate-400">WebGPU / WASM32 browser runtime &amp; Vibe harness bindings</div>
+                </a>
+                <a href="compute-engine.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-tensor &amp; inference</div>
+                    <div class="text-xs text-slate-400">Quantized tensor kernels, <code>P64</code> decode &amp; oracle certification</div>
+                </a>
+                <a href="compute-engine.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-cyan-500/15">
+                    <div class="font-mono text-sm text-cyan-300 mb-1">etalon-agent &amp; model</div>
+                    <div class="text-xs text-slate-400">Deterministic agent scheduling, diagnostics &amp; resource arenas</div>
+                </a>
+                <a href="graphics.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block border border-emerald-500/20">
+                    <div class="font-mono text-sm text-emerald-300 mb-1">qualia-etalon-sensing-bridge</div>
+                    <div class="text-xs text-slate-400"><code>ETA-16</code> NFC/sensor custody bridge on <code>Plane::Instrument</code> &amp; <code>Plane::Claim</code></div>
+                </a>
+            </div>
+        </div>
+
+        <!-- 29 QualiaDB Workspace Crates -->
         <div class="glass-strong rounded-3xl p-6 mb-10">
-            <div class="text-xs uppercase tracking-widest text-slate-500 mb-4">Other Crates in this Workspace</div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                <div class="text-xs uppercase tracking-widest text-slate-400 font-mono">29 QualiaDB Workspace Crates</div>
+                <span class="pill bg-slate-800 text-slate-300">Cargo Workspace Members · v0.0.41</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 <a href="rustdoc/qualia_core_db/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-core-db</div>
-                    <div class="text-xs text-slate-500">Engine · graph · solvers</div>
-                </a>
-                <a href="rustdoc/vibe/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">vibe-script</div>
-                    <div class="text-xs text-slate-500">Vibe 0.1 language</div>
-                </a>
-                <a href="rustdoc/qualia_cli/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-cli</div>
-                    <div class="text-xs text-slate-500">Command-line interface</div>
-                </a>
-                <a href="rustdoc/qualia_client_core/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-client-core</div>
-                    <div class="text-xs text-slate-500">Desktop / app host</div>
-                </a>
-                <a href="rustdoc/qualia_vision/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-vision</div>
-                    <div class="text-xs text-slate-500">Vision product surface</div>
-                </a>
-                <a href="rustdoc/qualia_audio/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-audio</div>
-                    <div class="text-xs text-slate-500">Audio / DSP</div>
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-core-db</div>
+                    <div class="text-xs text-slate-500">Core engine · SLG · Q42 · QDNF</div>
                 </a>
                 <a href="rustdoc/qualia_inference_kernel/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-inference-kernel</div>
-                    <div class="text-xs text-slate-500">Native inference kernel</div>
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-inference-kernel</div>
+                    <div class="text-xs text-slate-500">Native GGUF / P64 kernel</div>
                 </a>
-                <a href="rustdoc/webizen_render/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">webizen-render</div>
-                    <div class="text-xs text-slate-500">Volumetric renderer SDK</div>
+                <a href="rustdoc/vibescript_abi/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">vibescript-abi</div>
+                    <div class="text-xs text-slate-500">Zero-copy Vibe ABI contract</div>
                 </a>
-                <a href="rustdoc/webizen_studio/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">webizen-studio</div>
-                    <div class="text-xs text-slate-500">Studio UI (Aether)</div>
+                <a href="rustdoc/vibe/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">vibe</div>
+                    <div class="text-xs text-slate-500">Vibe language compiler &amp; VM</div>
                 </a>
-                <a href="rustdoc/webizen_runtime/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">webizen-runtime</div>
-                    <div class="text-xs text-slate-500">Runtime host</div>
-                </a>
-                <a href="rustdoc/webizen_lite_wasm/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">webizen-lite-wasm</div>
-                    <div class="text-xs text-slate-500">Ontology WASM / MCP</div>
-                </a>
-                <a href="rustdoc/wellfare_core/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">wellfare-core</div>
-                    <div class="text-xs text-slate-500">Wellfair vault</div>
-                </a>
-                <a href="rustdoc/qualia_cooperative_core/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-cooperative-core</div>
-                    <div class="text-xs text-slate-500">Cooperative agency</div>
-                </a>
-                <a href="rustdoc/qualia_semantic_library/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-semantic-library</div>
-                    <div class="text-xs text-slate-500">Semantic library</div>
-                </a>
-                <a href="rustdoc/qualia_extensions/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-extensions</div>
-                    <div class="text-xs text-slate-500">Extension bus</div>
+                <a href="rustdoc/qualia_cli/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-cli</div>
+                    <div class="text-xs text-slate-500">Command-line interface</div>
                 </a>
                 <a href="rustdoc/qualia_solid_bridge/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-solid-bridge</div>
-                    <div class="text-xs text-slate-500">Solid / LDP</div>
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-solid-bridge</div>
+                    <div class="text-xs text-slate-500">Solid LDP / WebID bridge</div>
                 </a>
-                <a href="rustdoc/qualia_q_forge/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">qualia-q-forge</div>
-                    <div class="text-xs text-slate-500">Q-Forge</div>
+                <a href="rustdoc/qualia_client_core/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-client-core</div>
+                    <div class="text-xs text-slate-500">Client host &amp; asset advisor</div>
+                </a>
+                <a href="rustdoc/qualia_extensions/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-extensions</div>
+                    <div class="text-xs text-slate-500">Hardware &amp; QPU extension bus</div>
+                </a>
+                <a href="rustdoc/webizen_component_harvester/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">webizen-component-harvester</div>
+                    <div class="text-xs text-slate-500">Semantic UI component ingestion</div>
+                </a>
+                <a href="rustdoc/webizen_render/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">webizen-render</div>
+                    <div class="text-xs text-slate-500">N-dimensional volumetric SDK</div>
+                </a>
+                <a href="rustdoc/webizen_studio/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">webizen-studio</div>
+                    <div class="text-xs text-slate-500">Aether desktop &amp; studio host</div>
+                </a>
+                <a href="rustdoc/webizen_runtime/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">webizen-runtime</div>
+                    <div class="text-xs text-slate-500">Sandbox &amp; capability runtime</div>
                 </a>
                 <a href="rustdoc/webizen_web/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">webizen-web</div>
-                    <div class="text-xs text-slate-500">Web host</div>
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-wasm (webizen-web)</div>
+                    <div class="text-xs text-slate-500">Browser WASM / WebGPU host</div>
                 </a>
-                <a href="design-studio.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">design-studio</div>
-                    <div class="text-xs text-slate-500">Portal WASM demo (docs)</div>
+                <a href="rustdoc/qualia_mobile_harness/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-mobile-harness</div>
+                    <div class="text-xs text-slate-500">Edge &amp; mobile lifecycle harness</div>
                 </a>
-                <a href="manuals/wasm-api.html" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
-                    <div class="font-mono text-sm text-slate-300 mb-1">wasm-api</div>
-                    <div class="text-xs text-slate-500">Portal exports · v0.0.40</div>
+                <a href="rustdoc/wellfare_core/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">wellfare-core</div>
+                    <div class="text-xs text-slate-500">Sanctuary &amp; fiduciary vault</div>
+                </a>
+                <a href="rustdoc/qualia_cooperative_core/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-cooperative-core</div>
+                    <div class="text-xs text-slate-500">Multi-party cooperative agency</div>
+                </a>
+                <a href="rustdoc/qualia_semantic_library/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-semantic-library</div>
+                    <div class="text-xs text-slate-500">Ontologies &amp; domain vocabularies</div>
+                </a>
+                <a href="rustdoc/webizen_lite_wasm/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">webizen-lite-wasm</div>
+                    <div class="text-xs text-slate-500">Lightweight ontology WASM</div>
+                </a>
+                <a href="rustdoc/qualia_q_forge/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-q-forge</div>
+                    <div class="text-xs text-slate-500">Quantum circuit &amp; VQE scheduler</div>
+                </a>
+                <a href="rustdoc/qualia_vision/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-vision</div>
+                    <div class="text-xs text-slate-500">Vision &amp; spatial scene perception</div>
+                </a>
+                <a href="rustdoc/qualia_audio/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-audio</div>
+                    <div class="text-xs text-slate-500">Spatial audio &amp; acoustic DSP</div>
+                </a>
+                <a href="rustdoc/work_graph/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">work-graph</div>
+                    <div class="text-xs text-slate-500">Deterministic DAG task scheduler</div>
+                </a>
+                <a href="rustdoc/vibe_lsp/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">vibe-lsp</div>
+                    <div class="text-xs text-slate-500">Language Server Protocol for Vibe</div>
+                </a>
+                <a href="rustdoc/vibe_wasm/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">vibe-wasm</div>
+                    <div class="text-xs text-slate-500">Browser Vibe compiler &amp; REPL</div>
+                </a>
+                <a href="rustdoc/qualia_peer/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-peer</div>
+                    <div class="text-xs text-slate-500">QDNF peer daemon &amp; relay node</div>
+                </a>
+                <a href="rustdoc/qualia_app_contract/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-app-contract</div>
+                    <div class="text-xs text-slate-500">Application capability manifests</div>
+                </a>
+                <a href="rustdoc/qualia_sim/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-sim</div>
+                    <div class="text-xs text-slate-500">Multi-physics &amp; world simulation</div>
+                </a>
+                <a href="rustdoc/qualia_geospatial/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-geospatial</div>
+                    <div class="text-xs text-slate-500">Geodesy, H3/S2 &amp; OCS astrometry</div>
+                </a>
+                <a href="rustdoc/qualia_mcp/index.html" target="_blank" class="glass rounded-2xl p-4 hover:bg-white/5 transition-colors block">
+                    <div class="font-mono text-sm text-slate-200 mb-1">qualia-mcp</div>
+                    <div class="text-xs text-slate-500">Model Context Protocol transport</div>
                 </a>
             </div>
             <p class="text-xs text-slate-500 mt-4">
                 Workspace rustdoc is generated by <span class="font-mono">scripts/rustdoc-workspace.sh</span>
-                (all libs except Tauri desktop). Open the crate index at
-                <a href="rustdoc/index.html" class="text-blue-400 hover:underline">rustdoc/index.html</a>.
+                (all workspace libraries). Open the crate index at
+                <a href="rustdoc/index.html" class="text-blue-400 hover:underline">rustdoc/index.html</a>
+                or explore the interactive <a href="read.html?doc=manuals/wasm-api.md" class="text-blue-400 hover:underline">WASM Portal API Reference</a>.
             </p>
         </div>
 
         <!-- Quick links -->
         <div class="glass-strong rounded-3xl p-6">
-            <div class="text-xs uppercase tracking-widest text-slate-500 mb-4">Key Types & Constants</div>
+            <div class="text-xs uppercase tracking-widest text-slate-500 mb-4">Key Types &amp; Functions</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                 <a href="rustdoc/qualia_core_db/struct.QualiaQuin.html" target="_blank"
                    class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-blue-300">
@@ -524,6 +730,22 @@
                    class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-blue-300">
                     <span class="text-slate-500 text-xs">struct</span> QualiaSuperBlock
                 </a>
+                <a href="rustdoc/qualia_core_db/identity/did_qi/struct.DidQi.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-emerald-300">
+                    <span class="text-slate-500 text-xs">struct</span> identity::did_qi::DidQi
+                </a>
+                <a href="rustdoc/qualia_core_db/foundation/plane_feature_guard/enum.PlaneTag.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-cyan-300">
+                    <span class="text-slate-500 text-xs">enum</span> foundation::plane_feature_guard::PlaneTag
+                </a>
+                <a href="rustdoc/qualia_core_db/q42/execution_profile/enum.SolverVerificationOutcome.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-amber-300">
+                    <span class="text-slate-500 text-xs">enum</span> q42::execution_profile::SolverVerificationOutcome
+                </a>
+                <a href="rustdoc/qualia_core_db/net/qdnf/harness/tri_source_eval/fn.evaluate_tri_source.html" target="_blank"
+                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-purple-300">
+                    <span class="text-slate-500 text-xs">fn</span> net::qdnf::harness::tri_source_eval
+                </a>
                 <a href="rustdoc/qualia_core_db/constant.CAPABILITY_REGISTRY.html" target="_blank"
                    class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-amber-300">
                     <span class="text-slate-500 text-xs">const</span> CAPABILITY_REGISTRY
@@ -531,10 +753,6 @@
                 <a href="rustdoc/qualia_core_db/enum.PermissiveRoutingLane.html" target="_blank"
                    class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-purple-300">
                     <span class="text-slate-500 text-xs">enum</span> PermissiveRoutingLane
-                </a>
-                <a href="rustdoc/qualia_core_db/constant.QUINS_PER_BLOCK.html" target="_blank"
-                   class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-amber-300">
-                    <span class="text-slate-500 text-xs">const</span> QUINS_PER_BLOCK
                 </a>
                 <a href="rustdoc/qualia_core_db/fn.q_hash.html" target="_blank"
                    class="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors font-mono text-emerald-300">
@@ -545,11 +763,10 @@
 
         <div class="mt-10 text-center text-slate-600 text-sm">
             Docs generated from <span class="font-mono">cargo doc --no-deps</span> on branch
-            <span class="font-mono text-slate-500">0.0.40</span> · deployed via GitHub Actions
+            <span class="font-mono text-slate-500">0.0.41</span> · deployed via GitHub Actions
         </div>
 
     </div>
 
 </body>
 </html>
-

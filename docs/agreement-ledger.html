@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agreement Ledger — QualiaDB / Webizen</title>
-  <meta name="description" content="A plain-language view of how claims, sources, party perspectives, consent, and dissent become a consolidated agreement ledger.">
+  <title>Agreement Ledger &amp; Four-Plane Identifier Fabric — QualiaDB / Webizen 0.0.41</title>
+  <meta name="description" content="How claims, sources, party perspectives, consent, dissent, and the Four-Plane Identifier Fabric (IDF-01–IDF-05) form a consolidated agreement ledger.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -23,6 +23,7 @@
     .status-accepted { color: #bbf7d0; background: rgba(52,211,153,.13); border: 1px solid rgba(52,211,153,.25); }
     .status-qualified { color: #fde68a; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.25); }
     .status-open { color: #bae6fd; background: rgba(34,211,238,.11); border: 1px solid rgba(34,211,238,.25); }
+    pre.code-block { background: rgba(5, 10, 18, 0.78); border: 1px solid rgba(148, 180, 220, 0.18); border-radius: 0.9rem; padding: 1rem 1.2rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #e2e8f0; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -30,23 +31,25 @@
   <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,.78);backdrop-filter:blur(32px)"><div class="max-w-screen-2xl mx-auto px-4 sm:px-8"><div class="flex items-center justify-between gap-3 min-h-[4rem] py-2"><a href="index.html" class="flex items-center gap-3 shrink-0"><div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">W</span></div><div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div></a><div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div></div></div></nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-book-open"></i> Agreements · Ledger</div>
+    <!-- Layer 1: Plain-Language Overview -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-book-open"></i> Layer 1 Overview · Agreement Ledger · 0.0.41</div>
     <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-.04em] leading-[1.05] mb-5">Keep the path to agreement<br><span class="hero-grad">as visible as the agreement itself.</span></h1>
-    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-12">An agreement ledger is a structured history of the material people used to reach an agreement: propositions, sources, questions, party positions, consent conditions, and revisions. It makes room for different understandings without treating difference as failure.</p>
+    <p class="text-lg sm:text-xl text-white/70 max-w-3xl mb-12">An agreement ledger is a structured history of the material people used to reach an agreement: propositions, sources, questions, party positions, consent conditions, and revisions. It makes room for different understandings while consolidating only the terms people have explicitly accepted.</p>
 
     <section class="grid lg:grid-cols-[.9fr_1.1fr] gap-6 mb-16" aria-labelledby="ledger-means-title">
-      <article class="q-card p-8"><p class="q-kicker mb-2">What the ledger means</p><h2 id="ledger-means-title" class="text-2xl font-semibold mb-4">A claim is recorded with its status, not promoted by default.</h2><p class="text-sm text-white/65 mb-5">The ledger can say whether an item is a claim, a reference, an assumption, a condition, an accepted term, or an unresolved question. This distinction matters: it prevents an assertion from quietly becoming a fact merely because it has been entered into a system.</p><p class="text-sm text-white/65">Each party can attach their own relationship to an item: accepted, qualified, contested, not-yet-understood, or out of scope. The shared agreement is then built from declared consent rather than guessed consensus.</p></article>
+      <article class="q-card p-8"><p class="q-kicker mb-2">What the ledger means</p><h2 id="ledger-means-title" class="text-2xl font-semibold mb-4">A claim is recorded with its status, preserving context and provenance.</h2><p class="text-sm text-white/65 mb-5">The ledger records whether an item is a claim, a reference, an assumption, a condition, an accepted term, or an unresolved question. Recording an assertion preserves its provenance without automatically promoting it to universal fact.</p><p class="text-sm text-white/65">Each party attaches their own relationship to an item: accepted, qualified, contested, under review, or out of scope. The shared agreement is then compiled from declared consent.</p></article>
       <article class="q-card p-8"><p class="q-kicker mb-2">What it holds</p><div class="space-y-5 mt-5">
         <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Material</h3><p class="text-sm text-white/60 mt-1">Claims, references, evidence, definitions, assumptions, and relevant versions.</p></div>
         <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Perspectives</h3><p class="text-sm text-white/60 mt-1">What each party understands, accepts, qualifies, questions, or declines.</p></div>
-        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Consolidation</h3><p class="text-sm text-white/60 mt-1">The terms that reached the stated threshold of consent, plus dissent and open items.</p></div>
-        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Receipts</h3><p class="text-sm text-white/60 mt-1">The version of the agreement and instrument used for a particular bounded run.</p></div>
+        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Consolidation</h3><p class="text-sm text-white/60 mt-1">The terms that reached the stated M-of-N consent threshold, plus dissent and open items.</p></div>
+        <div class="ledger-line"><span class="ledger-dot"></span><h3 class="font-semibold">Receipts</h3><p class="text-sm text-white/60 mt-1">The version of the agreement and instrument used for each bounded execution.</p></div>
       </div></article>
     </section>
 
+    <!-- Layer 2: Illustrative Ledger & Consolidation -->
     <section class="mb-16" aria-labelledby="example-ledger-title">
-      <p class="q-kicker mb-2">Illustrative ledger</p><h2 id="example-ledger-title" class="text-3xl font-semibold mb-4">A small agreement, shown without hiding its differences</h2>
-      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-7">Three parties are defining a shared procedure for a local referral tool. The entries below are examples, not a real policy or decision service.</p>
+      <p class="q-kicker mb-2">Layer 2 · Illustrative Ledger</p><h2 id="example-ledger-title" class="text-3xl font-semibold mb-4">A multi-party agreement with preserved party perspectives</h2>
+      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-7">Three parties are defining a shared procedure for a local community referral tool, recording which terms are accepted, qualified, or still open.</p>
       <div class="grid lg:grid-cols-3 gap-5">
         <article class="ledger-card p-6"><div class="flex items-center justify-between gap-2"><h3 class="font-semibold">01 · Referral information</h3><span class="status status-accepted"><i class="fa-solid fa-check"></i> accepted</span></div><p class="text-xs text-white/50 mt-2">Claim / service criteria v3</p><p class="text-sm text-white/65 mt-4">A referral should contain declared contact and consent fields before it can be reviewed.</p><div class="mt-5 text-xs text-white/55 space-y-2"><p><span class="text-violet-200">Resident group:</span> accepted if missing fields are explained plainly.</p><p><span class="text-cyan-200">Service:</span> accepted.</p><p><span class="text-emerald-200">Worker:</span> accepted.</p></div></article>
         <article class="ledger-card p-6"><div class="flex items-center justify-between gap-2"><h3 class="font-semibold">02 · Sensitive situations</h3><span class="status status-qualified"><i class="fa-solid fa-circle-exclamation"></i> qualified</span></div><p class="text-xs text-white/50 mt-2">Condition / consent guidance</p><p class="text-sm text-white/65 mt-4">Some situations need person-to-person review rather than a prepared referral alone.</p><div class="mt-5 text-xs text-white/55 space-y-2"><p><span class="text-violet-200">Resident group:</span> accepts, asks for clear escalation.</p><p><span class="text-cyan-200">Service:</span> accepts, names review pathway.</p><p><span class="text-emerald-200">Worker:</span> accepts with professional discretion.</p></div></article>
@@ -62,13 +65,76 @@
       </div>
     </section>
 
-    <section class="grid md:grid-cols-2 gap-6 mb-16">
-      <article class="q-card p-7"><p class="q-kicker mb-2">The semantic instrument</p><h2 class="text-xl font-semibold mb-3">Makes the consolidated procedure runnable</h2><p class="text-sm text-white/65">The resulting instrument can accept a declared referral record, check only the shared conditions, return <span class="text-white/85">ready</span>, <span class="text-white/85">held</span>, or <span class="text-white/85">needs human review</span>, and write a receipt. It cannot expand its own authority beyond the agreement label.</p></article>
-      <article class="q-card p-7"><p class="q-kicker mb-2">The agreement ledger</p><h2 class="text-xl font-semibold mb-3">Keeps the instrument accountable to its origin</h2><p class="text-sm text-white/65">A later reader can see which version, parties, sources, consent threshold, qualifications, and open questions shaped the instrument. A new agreement creates a new version; it does not rewrite the context that produced an earlier run.</p></article>
+    <!-- Layer 3 & 4: Four-Plane Identifier Fabric & Bilateral Micro-Commons Mechanics -->
+    <section class="q-card p-6 sm:p-8 mb-16 border border-cyan-500/25" aria-labelledby="ledger-idf-title">
+      <p class="q-kicker mb-2">Layer 3 &amp; 4 · Formal Specification · Identifier Fabric (<code class="font-mono">IDF-01</code>–<code class="font-mono">IDF-05</code>)</p>
+      <h2 id="ledger-idf-title" class="text-2xl sm:text-3xl font-semibold mb-4">How the Agreement Ledger Maps to the Four-Plane Identifier Fabric</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">
+        Under the hood, QualiaDB stores agreement ledger entries as 48-byte <code class="font-mono text-cyan-300">NQuin</code> records in the <code class="font-mono text-cyan-300">EnforceBilateralMicroCommons</code> routing lane (<code class="font-mono text-xs">AgreementDID::compile_to_super_quins</code>), gated by the <code class="font-mono text-cyan-300">SuspendedTransactionQueue</code> for M-of-N consensus ratification and author-scoped Ed25519/ML-DSA-65 Merkle roots (<code class="font-mono text-xs">compute_scoped_merkle_root</code>). Every record is validated against <code class="font-mono text-cyan-300">ontologies/identifier_fabric_shapes.ttl</code> across four disjoint planes:
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-4 text-sm mb-6">
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5">
+          <h3 class="font-semibold text-violet-200 mb-1">1. <code class="font-mono">Entity</code> (<code class="font-mono">Who</code> Plane)</h3>
+          <p class="text-xs text-white/65 leading-relaxed">
+            Signatories and represented principals: <code class="font-mono">NaturalAgent</code> (<code class="font-mono">living-SHACL</code>), <code class="font-mono">LegalEntity</code>, and <code class="font-mono">SystemAgent</code>. Never merged by similarity, handle, wallet, location, or biometrics; <code class="font-mono">owl:sameAs</code> is forbidden on the <code class="font-mono">Who</code> plane (<code class="font-mono text-rose-300">SameAsError::WhoPlaneForbidden</code>).
+          </p>
+        </article>
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5">
+          <h3 class="font-semibold text-emerald-200 mb-1">2. <code class="font-mono">Claim</code> Plane</h3>
+          <p class="text-xs text-white/65 leading-relaxed">
+            Ledger propositions, qualifications, and liability traces (<code class="font-mono">VerifiableCredential</code>, <code class="font-mono">idf:ClaimOpinion</code>, <code class="font-mono">idf:AssertionClaim</code>, <code class="font-mono">idf:RelianceRecord</code>, <code class="font-mono">idf:AssumptionChain</code>, <code class="font-mono">idf:RootCauseBundle</code>, <code class="font-mono">idf:BlastRadiusMap</code>, and deontic/epistemic norms). VCs prove <strong>cryptographic origin integrity</strong> of an issuer's statement, not universal ontological truth.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5">
+          <h3 class="font-semibold text-cyan-200 mb-1">3. <code class="font-mono">Handle</code> Plane</h3>
+          <p class="text-xs text-white/65 leading-relaxed">
+            Revocable, rotatable network or directory locators (<code class="font-mono">idf:SpatiotemporalHandle</code>, <code class="font-mono">DNI</code> / <code class="font-mono">idf:DigitalNetworkIdentifier</code>, <code class="font-mono">idf:RelationScopedLocator</code>, DNS, email, <code class="font-mono">did:qi</code> endpoints). Revoking a handle closes the channel without erasing the <code class="font-mono">Entity</code> or historical agreement receipts.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-5">
+          <h3 class="font-semibold text-amber-200 mb-1">4. <code class="font-mono">Instrument</code> Plane</h3>
+          <p class="text-xs text-white/65 leading-relaxed">
+            Cryptographic keys, M-of-N <code class="font-mono">idf:CoAttestationBundle</code> records, hardware tokens, and software tools (<code class="font-mono">idf:Instrument</code>, <code class="font-mono">idf:AiAgent</code>) classified by <code class="font-mono">InstrumentProofClass</code> (<code class="font-mono">CryptographicOriginIntegrity</code>, <code class="font-mono">HardwareChannelPossession</code>, <code class="font-mono">SemanticClaimEvaluation</code>) and closed <code class="font-mono">KeyRole</code> (<code class="font-mono">IdentityAssertion</code>, <code class="font-mono">CredentialSigning</code>, <code class="font-mono">TransportHandshake</code>, <code class="font-mono">StorageEncryption</code>, <code class="font-mono">RecoveryBootstrap</code>).
+          </p>
+        </article>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-5">
+        <div>
+          <h3 class="text-base font-semibold text-cyan-200 mb-2">Typed Cross-Plane Evidence Morphisms</h3>
+          <pre class="code-block"><code>@prefix idf: &lt;urn:qualia:idf:&gt; .
+
+ex:referral-term-01 a idf:ClaimOpinion ;
+    idf:plane "Claim" ;
+    idf:assertedBy ex:resident-group-principal ;
+    idf:aboutSubject ex:referral-procedure-v3 ;
+    idf:assertedAbout ex:referral-procedure-v3 ;
+    idf:supportedByInstrument ex:co-attestation-2of3 ;
+    idf:observedAtHandle ex:relation-scoped-locator-01 .</code></pre>
+        </div>
+        <div>
+          <h3 class="text-base font-semibold text-rose-200 mb-2"><code class="font-mono">F5</code> &amp; <code class="font-mono">F6</code> Anti-Feature Firewalls</h3>
+          <p class="text-xs text-white/65 leading-relaxed mb-3">
+            Both the <strong><code class="font-mono">F5</code> (compile-time VibeScript)</strong> and <strong><code class="font-mono">F6</code> (runtime ingress/query)</strong> firewalls reject <code class="font-mono text-rose-300">person_score</code>, <code class="font-mono text-rose-300">identity_confidence</code>, and <code class="font-mono text-rose-300">same_person</code>, ensuring that agreement ledgers never collapse party positions or compute hidden reputational scores.
+          </p>
+          <pre class="code-block"><code># Co-attestation requires >= 2 members &amp; closed KeyRole (IDF-01)
+idf:CoAttestationBundleShape a sh:NodeShape ;
+    sh:targetClass idf:CoAttestationBundle ;
+    sh:property idf:CoAttestationBundle-memberProp ;       # sh:minCount 2
+    sh:property idf:CoAttestationBundle-timeIntervalProp ; # sh:minCount 1
+    sh:property idf:CoAttestationBundle-keyRoleProp .</code></pre>
+        </div>
+      </div>
     </section>
 
-    <section class="q-card p-8 border border-violet-500/20"><p class="q-kicker mb-2">Continue</p><h2 class="text-2xl font-semibold mb-3">Explore the agreement-to-instrument model</h2><p class="text-sm text-white/65 mb-5">Read the broader explanation of how a multi-party agreement becomes a declared, bounded Semantic Instrument — then return to the instrument playground to try defining one.</p><div class="flex flex-wrap gap-3"><a href="agreement-instruments.html" class="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-500/25 text-sm text-violet-100">Agreements as instruments</a><a href="semantic-instruments.html" class="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/25 text-sm text-cyan-100">Semantic Instruments guide</a></div></section>
+    <section class="grid md:grid-cols-2 gap-6 mb-16">
+      <article class="q-card p-7"><p class="q-kicker mb-2">The semantic instrument</p><h2 class="text-xl font-semibold mb-3">Makes the consolidated procedure runnable</h2><p class="text-sm text-white/65">The resulting instrument accepts a declared referral record, checks only the shared conditions, returns <span class="text-white/85">ready</span>, <span class="text-white/85">held</span>, or <span class="text-white/85">needs human review</span>, and writes a receipt bounded by the agreement label.</p></article>
+      <article class="q-card p-7"><p class="q-kicker mb-2">The agreement ledger</p><h2 class="text-xl font-semibold mb-3">Keeps the instrument accountable to its origin</h2><p class="text-sm text-white/65">A later reader can see which version, parties, sources, consent threshold, qualifications, and open questions shaped the instrument. A new agreement creates a new version while preserving the historical context of earlier runs.</p></article>
+    </section>
+
+    <section class="q-card p-8 border border-violet-500/20"><p class="q-kicker mb-2">Continue</p><h2 class="text-2xl font-semibold mb-3">Explore the agreement-to-instrument model</h2><p class="text-sm text-white/65 mb-5">Read the broader explanation of how a multi-party agreement becomes a declared, bounded Semantic Instrument — then return to the instrument playground to try defining one.</p><div class="flex flex-wrap gap-3"><a href="agreement-instruments.html" class="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-500/25 text-sm text-violet-100">Agreements as instruments</a><a href="semantic-instruments.html" class="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/25 text-sm text-cyan-100">Semantic Instruments guide</a><a href="human-centric-authoring.html" class="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-sm text-emerald-100">Human-Centric Authoring</a></div></section>
   </main>
-  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">QualiaDB / Webizen 0.0.40 · Preserve claims, perspectives, consent, and limits before automating a shared procedure</footer>
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">QualiaDB / Webizen 0.0.41 · Preserve claims, perspectives, consent, and Identifier Fabric boundaries before automating a shared procedure</footer>
 </body>
 </html>

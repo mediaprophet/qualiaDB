@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB Semantic Drift Viewer</title>
-    <meta name="note" content="Updated for new Webizen capabilities (SHACL compiler, defeasible CheckDefeaters, omnimodal + 6 modalities, Lazy SuperBlocks). Use native: cargo run --release -p qualia-cli -- bench --suite full for full engine + telemetry.">
+    <title>Semantic Drift &amp; 5-Field NQuin Parity Viewer — QualiaDB 0.0.41</title>
+    <meta name="description" content="Explore spatiotemporal context vectors, SHACL-to-Webizen bytecode compilation, and canonical 5-field NQuin XOR parity (subject ^ predicate ^ object ^ context ^ metadata).">
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
             --bg-dark: #0a0a0f;
-            --panel-bg: rgba(25, 25, 35, 0.7);
+            --panel-bg: rgba(25, 25, 35, 0.78);
             --accent: #00f0ff;
             --warning: #f1fa8c;
             --error: #ff5555;
             --text-main: #e0e0e0;
-            --text-dim: #888;
+            --text-dim: #94a3b8;
         }
 
         body {
@@ -23,50 +26,60 @@
             color: var(--text-main);
             font-family: 'Inter', -apple-system, sans-serif;
             display: flex;
-            height: 100vh;
+            flex-direction: column;
+            min-height: 100vh;
+            background-image: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.04) 0%, transparent 80%);
+        }
+
+        .workspace-shell {
+            display: flex;
+            flex: 1;
+            min-height: calc(100vh - 4rem);
             overflow: hidden;
-            background-image: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 80%);
         }
 
         .sidebar {
-            width: 350px;
+            width: 360px;
             background: var(--panel-bg);
             border-right: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
             z-index: 10;
+            overflow-y: auto;
         }
 
         .header h1 {
-            margin: 0 0 5px 0;
-            font-size: 1.5rem;
+            margin: 0 0 6px 0;
+            font-size: 1.45rem;
+            font-weight: 700;
             color: #fff;
         }
 
         .header a {
             color: var(--text-dim);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: color 0.2s;
         }
-        
+
         .header a:hover {
             color: var(--accent);
         }
 
         .control-group {
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.35);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 15px;
         }
 
         .control-group h3 {
-            margin: 0 0 15px 0;
-            font-size: 1rem;
+            margin: 0 0 12px 0;
+            font-size: 0.92rem;
+            font-weight: 600;
             color: var(--accent);
         }
 
@@ -77,11 +90,12 @@
             background: rgba(0,0,0,0.5);
             border: 1px solid rgba(255,255,255,0.1);
             color: var(--text-main);
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             text-align: left;
             transition: all 0.2s;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 0.85rem;
         }
 
         .word-btn:hover {
@@ -89,22 +103,23 @@
         }
 
         .word-btn.active {
-            background: rgba(0, 240, 255, 0.1);
+            background: rgba(0, 240, 255, 0.12);
             border-color: var(--accent);
             color: var(--accent);
         }
 
         .main-panel {
             flex: 1;
-            padding: 40px;
+            padding: 32px 40px;
             display: flex;
             flex-direction: column;
             position: relative;
+            overflow-y: auto;
         }
 
         .timeline-container {
             margin-top: auto;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.45);
             padding: 20px;
             border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.1);
@@ -117,14 +132,14 @@
             border-radius: 4px;
             background: #333;
             outline: none;
-            margin-top: 20px;
+            margin-top: 16px;
         }
 
         .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             background: var(--accent);
             cursor: pointer;
@@ -133,24 +148,24 @@
 
         .year-display {
             text-align: center;
-            font-size: 3rem;
+            font-size: 2.75rem;
             font-weight: 800;
             color: #fff;
-            text-shadow: 0 0 20px var(--accent-dim);
             font-variant-numeric: tabular-nums;
         }
 
         .meaning-card {
-            background: rgba(25, 25, 35, 0.8);
+            background: rgba(25, 25, 35, 0.85);
             border: 1px solid var(--accent);
             border-radius: 12px;
-            padding: 40px;
-            margin-top: 40px;
+            padding: 32px;
+            margin-top: 20px;
+            margin-bottom: 24px;
             box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
             transition: all 0.3s ease;
-            transform: translateY(20px);
+            transform: translateY(12px);
             opacity: 0;
-            animation: slideUp 0.4s forwards;
+            animation: slideUp 0.35s forwards;
         }
 
         @keyframes slideUp {
@@ -159,13 +174,13 @@
 
         .meaning-card h2 {
             margin: 0 0 10px 0;
-            font-size: 2.5rem;
+            font-size: 2.25rem;
             color: #fff;
             text-transform: capitalize;
         }
 
         .definition {
-            font-size: 1.5rem;
+            font-size: 1.35rem;
             color: var(--warning);
             margin-bottom: 20px;
             line-height: 1.4;
@@ -175,23 +190,23 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-top: 30px;
+            margin-top: 24px;
             border-top: 1px solid rgba(255,255,255,0.1);
-            padding-top: 20px;
+            padding-top: 18px;
         }
 
         .meta-item span {
             display: block;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
-        
+
         .meta-value {
             font-family: monospace;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             color: #ccc;
         }
 
@@ -202,84 +217,125 @@
             color: var(--accent);
             font-family: monospace;
             word-break: break-all;
-            margin-top: 10px;
-            font-size: 0.85rem;
+            margin-top: 8px;
+            font-size: 0.82rem;
         }
 
         .routing-badge {
             display: inline-block;
-            background: rgba(255, 85, 85, 0.1);
-            color: var(--error);
-            border: 1px solid var(--error);
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent);
+            border: 1px solid var(--accent);
             padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
+            font-size: 0.78rem;
+            font-weight: 600;
         }
 
+        @media (max-width: 960px) {
+            .workspace-shell { flex-direction: column; overflow: visible; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        }
     </style>
-    <script src="../js/menu-loader.js"></script></head>
+    <script src="../js/menu-loader.js"></script>
+</head>
 <body>
-
-    <div class="sidebar">
-        <div class="header">
-            <h1>Semantic Drift</h1>
-            <a href="../index.html" style="color:#aaa; display:block; margin-bottom:5px;">← Return to Hub</a>
-            <a href="index.html">← Back to Engine Playground</a>
-        </div>
-
-        <div class="control-group">
-            <h3>Subject Anchor (Target Term)</h3>
-            <button class="word-btn active" onclick="setWord('awful')">awful (id: 0x9f22a...)</button>
-            <button class="word-btn" onclick="setWord('meat')">meat (id: 0x1b44c...)</button>
-            <button class="word-btn" onclick="setWord('girl')">girl (id: 0x7c88d...)</button>
-        </div>
-
-        <div class="control-group" style="flex-grow: 1;">
-            <h3>Engine Execution State</h3>
-            <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 10px;">
-                The Subject ID remains perfectly static. The engine queries for the predicate <span style="color:#fff;">skos:definition</span>, but the GPU Sieve heavily filters the response based on the active <span style="color:var(--accent);">Spatiotemporal Context Vector</span>.
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <span style="font-size: 0.8rem; color: var(--text-dim);">ACTIVE ROUTING TIER</span><br>
-                <div class="routing-badge">Spatiotemporal Ambiguous (0b11)</div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-6">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8 min-w-0 flex-1">
+                    <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1"></div>
+                </div>
+                <div class="flex items-center gap-3 shrink-0 text-xs">
+                    <a href="compare.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">RDF ↔ .q42 v4</a>
+                    <a href="index.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-colors">Playground</a>
+                </div>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="main-panel">
-        <div id="meaning-container">
-            <!-- Dynamically populated -->
+    <div class="workspace-shell">
+        <div class="sidebar">
+            <div class="header">
+                <h1>Semantic Drift &amp; 5-Field Parity</h1>
+                <p style="font-size: 0.8rem; color: var(--text-dim); margin: 4px 0 8px; line-height: 1.45;">
+                    Explore how a static 60-bit concept anchor resolves across historical spatiotemporal contexts while every 48-byte <code>NQuin</code> verifies canonical 5-field XOR parity.
+                </p>
+                <a href="../index.html" style="display:block; margin-bottom:4px;">← Return to QualiaDB Home</a>
+                <a href="index.html">← Back to Engine Playground</a>
+            </div>
+
+            <div class="control-group">
+                <h3>1. Subject Anchor (Target Term)</h3>
+                <button class="word-btn active" onclick="setWord('awful')">awful (id: 0x9f22a...)</button>
+                <button class="word-btn" onclick="setWord('meat')">meat (id: 0x1b44c...)</button>
+                <button class="word-btn" onclick="setWord('girl')">girl (id: 0x7c88d...)</button>
+            </div>
+
+            <div class="control-group">
+                <h3>2. Spatiotemporal Context Sieve</h3>
+                <div style="font-size: 0.82rem; color: var(--text-dim); line-height: 1.45;">
+                    The <code>subject</code> hash stays constant while the engine queries <code>skos:definition</code> across active <code>context</code> (world/century) and <code>metadata</code> (routing lane + Lamport clock) words.
+                </div>
+                <div style="margin-top: 12px;">
+                    <span style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase;">Active Routing Lane</span><br>
+                    <div class="routing-badge" style="margin-top:4px;">Spatial / Temporal Context (0b11)</div>
+                </div>
+            </div>
+
+            <div class="control-group" style="flex-grow: 1;">
+                <h3>3. Canonical 5-Field NQuin Parity</h3>
+                <div style="font-size: 0.78rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 8px;">
+                    Each 48-byte <code>NQuin</code> packs six <code>u64</code> fields and verifies:
+                    <code style="display:block; margin-top:6px; padding:6px; background:#050508; border-radius:4px; color:#67e8f9; font-size:0.72rem;">parity = subject ^ predicate ^ object ^ context ^ metadata</code>
+                </div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.78rem; color:#e2e8f0; cursor:pointer; margin-top:8px;">
+                    <input type="checkbox" id="bitflip-toggle" onchange="executeFrameDemo()" style="accent-color:#00f0ff;">
+                    <span>Simulate 1-bit flip in <code>metadata</code> word</span>
+                </label>
+            </div>
         </div>
 
-        <div class="timeline-container">
-            <div class="year-display" id="year-label">1300 CE</div>
-            <div style="text-align: center; color: var(--text-dim); font-size: 0.9rem;">Scrub timeline to alter the execution context vector</div>
-            <input type="range" min="1000" max="2026" value="1300" class="slider" id="time-slider">
+        <div class="main-panel">
+            <div id="meaning-container">
+                <!-- Dynamically populated by semantics.js -->
+            </div>
+
+            <div class="timeline-container">
+                <div class="year-display" id="year-label">1300 CE</div>
+                <div style="text-align: center; color: var(--text-dim); font-size: 0.88rem;">Scrub timeline to shift the active spatiotemporal context vector</div>
+                <input type="range" min="1000" max="2026" value="1300" class="slider" id="time-slider">
+            </div>
         </div>
     </div>
 
     <script type="module" src="semantics.js"></script>
 
-    <!-- SHACL + Modality Demo (new for v0.0.40) -->
-    <div style="position:fixed; bottom:10px; right:10px; width:380px; background:var(--panel-bg); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:12px; font-size:0.82rem; z-index:20; backdrop-filter:blur(6px);">
-        <div style="font-weight:600; color:#67e8f9; margin-bottom:6px;">🛠️ SHACL → Webizen + Modality Lab (demo)</div>
+    <!-- SHACL + Modality + 5-Field Parity Lab (v0.0.41) -->
+    <div style="position:fixed; bottom:12px; right:12px; width:400px; max-width:calc(100vw - 24px); background:var(--panel-bg); border:1px solid rgba(255,255,255,0.16); border-radius:12px; padding:14px; font-size:0.82rem; z-index:20; backdrop-filter:blur(10px);">
+        <div style="font-weight:600; color:#67e8f9; margin-bottom:6px;">🛠️ SHACL → Webizen VM &amp; 5-Field Parity Lab (v0.0.41)</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
-            <input id="shacl-class" placeholder="Target Class (e.g. Person)" value="Person" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:3px 6px; border-radius:4px; font-size:0.75rem;">
-            <input id="shacl-prop" placeholder="Property" value="age" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:3px 6px; border-radius:4px; font-size:0.75rem;">
+            <input id="shacl-class" placeholder="Target Class (e.g. Person)" value="Person" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:4px 6px; border-radius:4px; font-size:0.75rem;">
+            <input id="shacl-prop" placeholder="Property" value="age" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:4px 6px; border-radius:4px; font-size:0.75rem;">
         </div>
         <div style="display:flex; gap:6px; margin-bottom:6px;">
-            <select id="shacl-constraint" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:3px; border-radius:4px; font-size:0.75rem;">
+            <select id="shacl-constraint" style="flex:1; background:#111; border:1px solid #333; color:#ddd; padding:4px; border-radius:4px; font-size:0.75rem;">
                 <option value="minInclusive">minInclusive</option>
                 <option value="minCount">minCount</option>
                 <option value="datatype">datatype</option>
             </select>
-            <input id="shacl-val" value="0" style="width:70px; background:#111; border:1px solid #333; color:#ddd; padding:3px 6px; border-radius:4px; font-size:0.75rem;">
-            <button onclick="compileShaclDemo()" style="background:#00f0ff; color:#000; border:none; padding:3px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">Compile</button>
+            <input id="shacl-val" value="0" style="width:70px; background:#111; border:1px solid #333; color:#ddd; padding:4px 6px; border-radius:4px; font-size:0.75rem;">
+            <button onclick="compileShaclDemo()" style="background:#00f0ff; color:#000; border:none; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Compile</button>
         </div>
-        <div style="font-size:0.7rem; color:#888; margin-bottom:4px;">Modality:</div>
-        <select id="modality" onchange="updateModalityDemo()" style="width:100%; background:#111; border:1px solid #333; color:#ddd; padding:3px; border-radius:4px; font-size:0.75rem; margin-bottom:6px;">
+        <div style="font-size:0.7rem; color:#94a3b8; margin-bottom:4px;">Modality &amp; 5-Field Parity Verification:</div>
+        <select id="modality" onchange="updateModalityDemo()" style="width:100%; background:#111; border:1px solid #333; color:#ddd; padding:4px; border-radius:4px; font-size:0.75rem; margin-bottom:6px;">
+            <option value="deontic">deontic (5-field NQuin parity check)</option>
             <option value="spatio_temporal">spatio_temporal (Minkowski + time)</option>
             <option value="probabilistic">probabilistic</option>
             <option value="diffusion">diffusion</option>
@@ -287,8 +343,8 @@
             <option value="asp">asp (Answer Set)</option>
             <option value="linear">linear</option>
         </select>
-        <button onclick="executeFrameDemo()" style="background:#b026ff; color:#fff; border:none; padding:3px 10px; border-radius:4px; font-size:0.75rem; cursor:pointer;">Execute Webizen Frame</button>
-        <div id="shacl-output" style="margin-top:6px; font-family:monospace; font-size:0.7rem; background:#0a0a0f; padding:4px; border-radius:4px; min-height:42px; white-space:pre-wrap; color:#a5f3fc;"></div>
+        <button onclick="executeFrameDemo()" style="background:#b026ff; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Execute Webizen Frame</button>
+        <div id="shacl-output" style="margin-top:6px; font-family:monospace; font-size:0.7rem; background:#0a0a0f; padding:6px; border-radius:4px; min-height:48px; white-space:pre-wrap; color:#a5f3fc;"></div>
     </div>
 
     <script type="module">
@@ -331,7 +387,6 @@ window.compileShaclDemo = async function() {
     const op = OPCODE_MAP[cons] || 'CheckSubsumption';
     const out = document.getElementById('shacl-output');
 
-    // Construct valid SHACL shape in Turtle
     const shaclTurtle = `@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix ex: <http://example.org/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
@@ -345,10 +400,7 @@ ex:${cls}Shape a sh:NodeShape ;
 `;
 
     try {
-        // Real Rust compile_shacl_turtle_wasm
         const comp = compile_shacl_turtle_wasm(shaclTurtle);
-
-        // Real Rust validate_shacl_constraint_wasm
         let numericTarget = 25;
         let numericVal = parseFloat(val) || 0;
         const valid = validate_shacl_constraint_wasm({
@@ -379,6 +431,7 @@ window.executeFrameDemo = async function() {
     await ensureWasm();
     const mod = document.getElementById('modality').value;
     const out = document.getElementById('shacl-output');
+    const flipBit = document.getElementById('bitflip-toggle')?.checked || false;
 
     try {
         let resultText = '';
@@ -410,22 +463,26 @@ Engine: ${res.engine_version}`;
 Model count: ${res.model_count} stable models
 World contexts: [${res.world_contexts.join(', ')}]
 Note: ${res.note}`;
-        } else { // deontic, linear, etc.
-            const s = 100n, p = 0x10n, o = 200n, c = 1n, m = 2000000000n;
-            const parity = s ^ p ^ o ^ c;
+        } else { // deontic, linear, 5-field parity demo
+            const subject = 100n, predicate = 0x10n, object = 200n, context = 1n, metadata = 2000000000n;
+            // Canonical 5-field XOR parity: subject ^ predicate ^ object ^ context ^ metadata
+            const canonicalParity = subject ^ predicate ^ object ^ context ^ metadata;
+            const transmittedMetadata = flipBit ? (metadata ^ 1n) : metadata;
             const res = evaluate_deontic_wasm({
-                quins: [[s, p, o, c, m, parity]],
+                quins: [[subject, predicate, object, context, transmittedMetadata, canonicalParity]],
                 now_unix: Math.floor(Date.now() / 1000)
             });
             const v = res.verdicts[0];
-            resultText = `[Rust evaluate_deontic_wasm]
+            const recomputedParity = v.norm[0] ^ v.norm[1] ^ v.norm[2] ^ v.norm[3] ^ v.norm[4];
+            const parityValid = recomputedParity === v.norm[5];
+            resultText = `[Rust evaluate_deontic_wasm · 5-Field Parity]
 Status: ${v.status} | Opcode: 0x${v.opcode.toString(16)} | Defeat: ${v.defeat_kind}
-Norm ECC Valid: ${(v.norm[0] ^ v.norm[1] ^ v.norm[2] ^ v.norm[3]) === v.norm[5]}
-Result: Proven Quin in Webizen VmFrame (engine: ${res.engine_version})`;
+5-Field Parity (subject ^ predicate ^ object ^ context ^ metadata): ${parityValid ? 'VALID ✓' : 'BIT-FLIP DETECTED ✗'}
+Result: ${parityValid ? 'Proven Quin in Webizen VmFrame' : 'Corrupted metadata bit rejected'} (engine: ${res.engine_version})`;
         }
 
         out.innerHTML = resultText;
-        out.style.border = '1px solid #b026ff';
+        out.style.border = flipBit ? '1px solid #fbbf24' : '1px solid #b026ff';
     } catch (err) {
         out.innerHTML = `Evaluation error: ${err}`;
         out.style.border = '1px solid #f87171';

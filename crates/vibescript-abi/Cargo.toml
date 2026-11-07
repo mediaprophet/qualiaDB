@@ -1,6 +1,6 @@
 [package]
 name = "vibescript-abi"
-version = "0.0.40"
+version = "0.0.41"
 edition = "2021"
 description = "Lightweight, no_std, zero-heap extension ABI, ontological contract, and Sentinel lifecycle traits for VibeScript"
 license = "MIT OR Apache-2.0"

@@ -6,12 +6,14 @@ on:
       - main
       - "0.0.40"
       - "0.0.40.*"
+      - "0.0.41"
+      - "0.0.41.*"
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to upload assets to, for example v0.0.40"
+        description: "Existing release tag to upload assets to, for example v0.0.41"
         required: true
 
 permissions:

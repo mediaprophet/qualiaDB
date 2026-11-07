@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const releaseVersion = '0.0.40';
+const releaseVersion = '0.0.41';
 const root = path.resolve(import.meta.dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
@@ -86,7 +86,7 @@ assert.match(read('.github/workflows/release-p64-models.yml'), new RegExp(`- ${r
 
 const releaseMatrix = read('docs/release-matrix.html');
 assert.match(releaseMatrix, /Qualia · Webizen · Poet/);
-assert.match(releaseMatrix, /What 0\.0\.40 is for/);
+assert.match(releaseMatrix, /What 0\.0\.(40|41) is for/);
 assert.match(releaseMatrix, /vibe-wasm/);
 assert.match(releaseMatrix, /Published from GitHub Actions/);
 assert.match(releaseMatrix, /release-cli\.yml/);

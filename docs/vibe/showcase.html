@@ -1,9 +1,46 @@
----
-layout: qualia
-title: VibeScript Showcase
----
-<meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeScript Showcase · Qualia-DB v0.0.41</title>
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-14 gap-4">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-end lg:justify-center"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
+    <main class="q-wrap max-w-screen-2xl mx-auto px-5 sm:px-8 py-10">
+        <p class="mb-5 text-sm">
+            <a class="q-link" href="index.html">VibeScript Hub</a>
+            · <a class="q-link" href="playground.html">Live Playground</a>
+            · <a class="q-link" href="spec.html">Specification</a>
+            · <a class="q-link" href="dev-docs.html">Dev Docs</a>
+            · <a class="q-link" href="../qdnf.html">QDNF map</a>
+        </p>
+        <article class="doc-content q-prose q-card mx-auto p-6 sm:p-10">
 <div class="vibe-showcase">
   <style>
     .vibe-showcase .sc-grid {
@@ -71,18 +108,20 @@ title: VibeScript Showcase
     .vibe-showcase .sc-run:hover { background: rgba(34,211,238,0.1); }
     .vibe-showcase h2 {
       font-size: 1.5rem; font-weight: 700; color: #e2e8f0;
-      margin: 2rem 0 0.5rem;
+      margin: 0.5rem 0 0.5rem;
     }
     .vibe-showcase p { color: #cbd5e1; line-height: 1.7; }
   </style>
 
-  <h2>Interactive Demos</h2>
+  <h2>Interactive VibeScript Showcase</h2>
   <p>
-    Present first: checked cell · CompiledCell.compile · run() ×2. Thin arithmetic stays quiet interim.
-    Click "Run" to execute the code and see the result.
+    Every card below executes live in your browser using the standalone <code>vibe-wasm</code> WebAssembly runtime:
+    type-checked reactive cells, compile-once bytecode handles (<code>CompiledCell.compile</code> + <code>run() ×2</code>),
+    bounded step-budget loops, presentation sheaves, multi-lingual locales, and <code>Cosmic.*</code> WGS84 geodetic transforms.
+    Click <strong>Run</strong> on any card to re-evaluate it.
   </p>
   <p style="padding:12px 16px;border:1px solid rgba(34,211,238,.25);border-radius:10px;background:rgba(8,47,73,.25);">
-    Want to see the same zero-install principle applied to semantic data? <a href="{{ '/rdf-q42-vibe-demo.html' | relative_url }}" style="color:#67e8f9;font-weight:600;">Run the RDF → Q42 → Vibe browser demo</a>: it loads a real Q42 volume and queries it locally in WASM.
+    Want to see the same zero-install principle applied to semantic data? <a href="../rdf-q42-vibe-demo.html" style="color:#67e8f9;font-weight:600;">Run the RDF → Q42 → Vibe browser demo</a>: it loads a real Q42 volume and queries it locally in WASM.
   </p>
 
   <div class="sc-grid" id="sc-grid">
@@ -91,7 +130,11 @@ title: VibeScript Showcase
 </div>
 
 <script type="module">
-  import init, { CompiledCell, check_cell_src, eval_cell_src, eval_program_src } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+  import init, { CompiledCell, check_cell_src, diagnose_src, eval_cell_src, eval_program_src } from "../pkg/vibe/vibe_wasm.js";
+
+  const vibe_eval_source_wasm = (src, mode) => (mode === 'cell' ? eval_cell_src(src) : eval_program_src(src));
+  const vibe_diagnose_wasm = (src) => diagnose_src(src);
+  window.vibeShowcaseApi = { CompiledCell, vibe_eval_source_wasm, vibe_diagnose_wasm };
 
   const demos = [
     {
@@ -112,7 +155,7 @@ title: VibeScript Showcase
     },
     {
       icon: "🧮",
-      title: "Arithmetic (interim)",
+      title: "Arithmetic Expression",
       badge: "cell",
       code: "= 1 + 2 * 3 - 4",
       mode: "cell",
@@ -357,7 +400,7 @@ effect fn main() -> Record {
     const grid = document.getElementById('sc-grid');
     grid.innerHTML = '';
 
-    demos.forEach(demo => {
+    demos.forEach((demo, idx) => {
       const card = document.createElement('div');
       card.className = 'sc-card';
       card.innerHTML = `
@@ -370,7 +413,7 @@ effect fn main() -> Record {
         <div class="sc-output" id="out-${Math.random().toString(36).slice(2)}">
           <span class="loading">Click Run to evaluate</span>
         </div>
-        <button class="sc-run">▶ Run</button>
+        <button class="sc-run" data-run="${idx}">▶ Run</button>
       `;
 
       const outputEl = card.querySelector('.sc-output');
@@ -437,3 +480,12 @@ effect fn main() -> Record {
 
   run();
 </script>
+        </article>
+    </main>
+
+    <footer class="q-site-footer">
+        <div class="flex flex-wrap justify-center gap-6 mb-4"></div>
+        <p>Qualia-DB v0.0.41 · Human-centric semantic engine · handle ≠ human</p>
+    </footer>
+</body>
+</html>

@@ -1,6 +1,6 @@
 [package]
 name = "qualia-app-contract"
-version = "0.0.40"
+version = "0.0.41"
 edition = "2021"
 description = "Canonical portable command, context, session, and surface contracts for Storytold, Poet, and Webizen OS"
 license = "MIT OR Apache-2.0"

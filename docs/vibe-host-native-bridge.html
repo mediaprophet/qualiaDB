@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeScript Execution Profiles &amp; Host Native Bridge · Qualia-DB v0.0.41</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        .bridge-wrap {
+            max-width: 72rem;
+            margin: 0 auto;
+            color: #e2e8f0;
+        }
+        .bridge-hero {
+            padding: 2.5rem 0 2rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            margin-bottom: 2.5rem;
+        }
+        .bridge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 14px;
+            border-radius: 9999px;
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.25);
+            color: #22d3ee;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            margin-bottom: 1rem;
+        }
+        .bridge-hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+            color: #f8fafc;
+            margin-bottom: 0.85rem;
+        }
+        .bridge-hero p {
+            font-size: 1.08rem;
+            color: #94a3b8;
+            max-width: 54rem;
+            line-height: 1.65;
+        }
+        .bridge-section {
+            margin: 2.75rem 0;
+        }
+        .bridge-section h2 {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: #f8fafc;
+            letter-spacing: -0.015em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+        }
+        .bridge-section p {
+            color: #cbd5e1;
+            line-height: 1.72;
+            font-size: 0.96rem;
+            margin-bottom: 1rem;
+        }
+        .bridge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin: 1.5rem 0;
+        }
+        .bridge-card {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 12px;
+            padding: 1.35rem;
+        }
+        .bridge-card .tag {
+            display: inline-block;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-bottom: 0.6rem;
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+        .bridge-card h3 {
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin: 0 0 0.5rem;
+        }
+        .bridge-card p {
+            font-size: 0.88rem;
+            color: #94a3b8;
+            line-height: 1.58;
+            margin: 0;
+        }
+        .bridge-table-wrap {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 12px;
+            background: rgba(10, 14, 23, 0.8);
+        }
+        .bridge-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            text-align: left;
+        }
+        .bridge-table th, .bridge-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            vertical-align: top;
+        }
+        .bridge-table th {
+            background: rgba(15, 23, 42, 0.92);
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .bridge-code {
+            background: rgba(10, 14, 23, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 10px;
+            padding: 1.15rem 1.25rem;
+            margin: 1.25rem 0;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.84rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+        .bridge-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 1.5rem;
+        }
+        .bridge-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none !important;
+            background: rgba(30, 41, 59, 0.75);
+            color: #e2e8f0 !important;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            transition: all 0.15s ease;
+        }
+        .bridge-btn:hover {
+            border-color: #38bdf8;
+            color: #38bdf8 !important;
+        }
+        .bridge-btn.primary {
+            background: linear-gradient(135deg, #0284c7, #6366f1);
+            color: #ffffff !important;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-14 gap-4">
+                <a href="index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-end lg:justify-center"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="q-wrap max-w-screen-2xl mx-auto px-5 sm:px-8 py-10">
+        <div class="bridge-wrap">
+            <div class="bridge-hero">
+                <div class="bridge-pill">
+                    <i class="fa-solid fa-link"></i> Vibe-Host Native Bridge · ADR 0003 ExactnessProfile · 256-Bit CRT Cascade
+                </div>
+                <h1>VibeScript Execution Profiles &amp; Host Native Bridge</h1>
+                <p>
+                    <code>vibe-host</code> is the execution and capability adapter boundary for VibeScript (<code>vibe-0.1</code> and <code>vibe-0.03</code>).
+                    Poet is a creative user interface that consumes that host boundary; it is not the host ABI itself.
+                    Every capability invocation declares its execution route, numerical exactness contract (<code>ExactnessProfile</code>),
+                    and failure semantics up front—never silently substituting a synthetic mock when a paired native capability is required.
+                </p>
+                <div class="bridge-links">
+                    <a href="vibe/index.html" class="bridge-btn primary"><i class="fa-solid fa-bolt"></i> VibeScript Hub</a>
+                    <a href="vibe/playground.html" class="bridge-btn"><i class="fa-solid fa-play"></i> Live WASM Playground</a>
+                    <a href="rdf-q42-vibe-demo.html" class="bridge-btn"><i class="fa-solid fa-diagram-project"></i> RDF → Q42 → Vibe Demo</a>
+                    <a href="vibe/spec.html" class="bridge-btn"><i class="fa-solid fa-book"></i> Language Specification</a>
+                    <a href="qdnf.html" class="bridge-btn"><i class="fa-solid fa-network-wired"></i> QDNF Map</a>
+                </div>
+            </div>
+
+            <!-- Section 1: Execution Modes & Host Boundary -->
+            <div class="bridge-section">
+                <h2>1. Execution Modes &amp; The <code>vibe-host</code> Boundary</h2>
+                <p>
+                    You do not need a local native installation to explore VibeScript or Q42: the
+                    <a href="rdf-q42-vibe-demo.html" class="text-cyan-400 underline">RDF → Q42 → Vibe browser demo</a>,
+                    the <a href="vibe/playground.html" class="text-cyan-400 underline">Live Playground</a>, and the
+                    <a href="vibe/showcase.html" class="text-cyan-400 underline">Interactive Showcase</a> run their standalone WASM surfaces
+                    directly in the browser via <code>LocalHost</code>. The native bridge exists only when a program deliberately invokes a paired native capability
+                    (such as persistent SLG graph mutations, hardware GPU/QPU dispatch, or local daemon storage).
+                </p>
+                <p>
+                    The local QualiaDB daemon exposes <code>GET /vibe/capabilities</code>. Its versioned JSON response uses the
+                    <code>qualia-vibe-bridge/1</code> protocol and makes the execution route explicit for each of the 105 capability families.
+                    The endpoint is open without a token only in daemon development mode; production requests require an
+                    <code>X-Qualia-Token</code> accepted by the local hardware-backed key vault.
+                </p>
+
+                <div class="bridge-table-wrap">
+                    <table class="bridge-table">
+                        <thead>
+                            <tr>
+                                <th>Execution Mode</th>
+                                <th>Capability Route</th>
+                                <th>Semantics &amp; Guarantee</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>standalone-wasm</code> / <code>exact</code></td>
+                                <td>In-process WASM (<code>LocalHost</code>)</td>
+                                <td>The loaded WebAssembly module performs the complete calculation locally inside the browser or WASI sandbox (e.g. <code>Cosmic.*</code> astrometry, <code>LinearAlgebra.*</code> small tensors, pure <code>CompiledCell</code> evaluation, and <code>vibe::diagnose</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code>standalone-snapshot</code> / <code>isolated-snapshot</code></td>
+                                <td>In-memory <code>.q42</code> / NQuin snapshot</td>
+                                <td>The WASM host evaluates queries and SHACL/deontic checks against an isolated in-memory graph snapshot loaded into the tab. Results are deterministic and parity-checked, but do not mutate a persistent native graph transaction log.</td>
+                            </tr>
+                            <tr>
+                                <td><code>native-bridge</code></td>
+                                <td>Paired local daemon (<code>qualia-vibe-bridge/1</code>)</td>
+                                <td>The operation requires a paired local native daemon (persistent 42 MiB SLG Arena transactions, wgpu/Vulkan compute shaders, or hardware sensor buses). If the daemon is absent, the call fails closed with diagnostic <code>E300</code> rather than substituting a silent mock calculation.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bridge-grid">
+                    <div class="bridge-card">
+                        <span class="tag">HTTP Loopback Transport</span>
+                        <h3>Authenticated Browser-to-Daemon IPC</h3>
+                        <p>
+                            The primary browser transport is authenticated loopback HTTP (<code>/query</code>, <code>/update</code>, and <code>/vibe/capabilities</code>).
+                            A browser client probes only after an explicit user gesture, presents the <code>X-Qualia-Token</code> pairing header, and handles requests asynchronously via an async suspend/resume execution surface rather than blocking the synchronous <code>Host</code> trait.
+                        </p>
+                    </div>
+                    <div class="bridge-card">
+                        <span class="tag">WASI Adapter Family</span>
+                        <h3>Local CLI &amp; Edge Runners</h3>
+                        <p>
+                            WASI transports form a distinct adapter family from browser WASM. A local WASI runner or embedded edge node communicates over framed <code>stdio</code> or a Unix-domain socket (UDS), whereas browser WASM strictly uses the authenticated loopback service.
+                        </p>
+                    </div>
+                    <div class="bridge-card">
+                        <span class="tag">Fail-Closed E300 Contract</span>
+                        <h3>Zero Silent Substitution</h3>
+                        <p>
+                            When a capability family requires <code>native-bridge</code> authority or leased hardware access that is not present in the current host profile, <code>vibe-host</code> returns a structured <code>E300</code> capability-unavailable diagnostic with the exact <code>Family.method</code> ID.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: ExactnessProfile (ADR 0003) -->
+            <div class="bridge-section" id="exactness-profile">
+                <h2>2. <code>ExactnessProfile</code> (ADR 0003 Numerical &amp; Replay Contract)</h2>
+                <p>
+                    Across scientific computing, geometric predicates, cryptographic parity, and interactive 3D rendering, different workloads require fundamentally different numerical guarantees.
+                    Defined in <strong>ADR 0003</strong> and enforced across the QualiaDB capability registry (`capability_manifests.rs`) and VibeScript host dispatch,
+                    <code>ExactnessProfile</code> classifies every kernel into one of four explicit tiers so callers and proof verifiers know whether an output is bit-identical, interval-certified, bounded-deterministic, or interactive-approximate:
+                </p>
+
+                <div class="bridge-table-wrap">
+                    <table class="bridge-table">
+                        <thead>
+                            <tr>
+                                <th><code>ExactnessProfile</code> Tier</th>
+                                <th>Mathematical &amp; Bit-Level Contract</th>
+                                <th>Representative QualiaDB &amp; VibeScript Workloads</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code class="text-emerald-400 font-semibold">Exact</code></td>
+                                <td>Bit-identical, zero-rounding-error arithmetic across all platforms (CPU, WASM, GPU). Uses rational/integer representations, Shewchuk adaptive expansion predicates, or the <strong>256-bit 4-prime CRT cascade</strong> so signs, orientations, and modular reductions are mathematically exact.</td>
+                                <td>2D/3D robust geometric orientation &amp; in-circle/in-sphere predicates, BFV homomorphic encryption modular rings, NQuin XOR parity &amp; Merkle roots, deontic/epistemic logic verdicts, and compile-time <code>IDF-04</code> firewall checks.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-cyan-400 font-semibold">CertifiedBand</code></td>
+                                <td>Guaranteed error enclosure $[v - \epsilon, v + \epsilon]$ or proven truncation tolerance. Adaptive quadrature or interval/ball arithmetic tracks error bounds and fails closed if the requested tolerance band cannot be certified within the iteration budget.</td>
+                                <td><code>Cosmic.comoving_distance_mpc</code> (flat $\Lambda\text{CDM}$ 15-point Gauss–Kronrod $G_7/K_{15}$ quadrature with explicit error estimate), IAU 2006/2000B astrometric transforms, and certified PDE/ODE solvers.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-indigo-400 font-semibold">DeterministicBounded</code></td>
+                                <td>Fixed reduction order, fixed iteration ceiling, and deterministic IEEE-754 floating-point schedule (no non-associative thread-race reductions). Replaying the same input snapshot and seed yields deterministic trajectories within bounded memory.</td>
+                                <td>64 Hz <code>etalon-sim</code> XPBD continuum physics, EcoPunk 26.5 km watershed hydrology &amp; FvCB photosynthesis, Hartree-Fock / DFT SCF convergence ($10^{-8}\text{ E}_{\text{h}}$), and <code>CompiledCell</code> reactive DAG evaluation.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="text-amber-400 font-semibold">InteractiveApproximate</code></td>
+                                <td>Throughput-prioritized real-time approximation for visual presentation, HUD overlays, and speculative preview passes. Never permitted to author authoritative graph truth, deontic permissions, or topological sign predicates.</td>
+                                <td>10D volumetric raymarching preview shaders, bloom/depth post-processing, real-time audio wavefield spatialization, and interactive camera spring smoothing.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section 3: 256-Bit 4-Prime CRT Cascade -->
+            <div class="bridge-section" id="crt-cascade">
+                <h2>3. The 256-Bit 4-Prime CRT (Chinese Remainder Theorem) Cascade</h2>
+                <p>
+                    Standard 64-bit IEEE-754 floats (`f64`) lose precision beyond 53bits of mantissa, causing catastrophic cancellation in determinant signs, high-degree polynomial evaluations, and lattice cryptography when coordinates span astronomical or sub-Planck ranges.
+                    Meanwhile, arbitrary-precision heap bigints (`BigInt`) violate QualiaDB's <strong>Tier-1 Zero-Heap</strong> rule and cannot coalesce on GPU workgroups or inside the 42 MiB Sentinel arena.
+                </p>
+                <p>
+                    QualiaDB solves this across the native and WASM boundary with a stack-allocated, zero-heap <strong>256-bit 4-Prime Chinese Remainder Theorem (CRT) Cascade</strong>:
+                </p>
+
+                <div class="bridge-grid">
+                    <div class="bridge-card">
+                        <span class="tag">Residue Number System (RNS)</span>
+                        <h3>Four Pairwise-Coprime 63-Bit NTT-Friendly Primes</h3>
+                        <p>
+                            Large integer and polynomial ring computations are projected into four independent 64-bit prime moduli $(p_0, p_1, p_2, p_3)$ whose product $M = p_0 p_1 p_2 p_3 &gt; 2^{252}$ spans the full 256-bit dynamic range. Every addition, subtraction, and multiplication executes in parallel across the four lanes without inter-word carry propagation.
+                        </p>
+                    </div>
+                    <div class="bridge-card">
+                        <span class="tag">Garner Mixed-Radix Cascade</span>
+                        <h3>Deterministic 4-Word Reconstruction</h3>
+                        <p>
+                            When an exact sign, magnitude comparison, or canonical 256-bit digest is required, the 4-stage Garner mixed-radix CRT cascade reconstructs the unique signed integer in $(-M/2, M/2)$ using precomputed multiplicative inverses $c_{ij} = p_i^{-1} \bmod p_j$ in fixed `[u64; 4]` stack registers—zero heap allocations, constant branchless control flow.
+                        </p>
+                    </div>
+                    <div class="bridge-card">
+                        <span class="tag">Cross-Target Bit Identity</span>
+                        <h3>Unified Native, WASM &amp; WGSL Verification</h3>
+                        <p>
+                            Because each RNS lane uses exact integer modular arithmetic and the Garner cascade follows a fixed 4-step sequence, `standalone-wasm` in the browser and `native-bridge` on x86_64/ARM64/WGSL produce bit-for-bit identical 256-bit outputs under <code>ExactnessProfile::Exact</code>.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bridge-code"><pre>// Conceptual layout of the zero-heap 256-bit 4-Prime CRT Cascade (ExactnessProfile::Exact)
+// Moduli: 4 pairwise-coprime primes near 2^63 -> dynamic range M = p0 * p1 * p2 * p3 > 2^252
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Crt256Residue {
+    pub r: [u64; 4], // Residue lanes (x mod p0, x mod p1, x mod p2, x mod p3)
+}
+
+// 1. Parallel carry-free ring ops in RNS basis:
+//    z.r[i] = (x.r[i] * y.r[i]) mod p[i]   for i in 0..4
+// 2. Deterministic 4-step Garner mixed-radix cascade -> signed [u64; 4] & exact signum {-1, 0, +1}</pre></div>
+            </div>
+
+            <!-- Section 4: Capability Handshake Example -->
+            <div class="bridge-section">
+                <h2>4. <code>qualia-vibe-bridge/1</code> Capability Handshake Example</h2>
+                <p>
+                    When inspecting a host via <code>GET /vibe/capabilities</code> (or querying <code>LocalHost</code> in the browser), the bridge reports the protocol version, active execution mode, supported <code>ExactnessProfile</code> tiers, and family availability:
+                </p>
+                <div class="bridge-code"><pre>{
+  "protocol": "qualia-vibe-bridge/1",
+  "engineVersion": "0.0.41",
+  "dialect": "vibe-0.1",
+  "sentinelCeilingBytes": 44040192,
+  "modes": {
+    "Cosmic.geodetic_to_ecef": {
+      "mode": "standalone-wasm",
+      "exactness": "CertifiedBand",
+      "allocation": "HotZeroHeap"
+    },
+    "Cosmic.apply_lorentz_boost": {
+      "mode": "standalone-wasm",
+      "exactness": "CertifiedBand",
+      "allocation": "HotZeroHeap"
+    },
+    "LinearAlgebra.crt256_det_sign": {
+      "mode": "standalone-wasm",
+      "exactness": "Exact",
+      "crtCascade": "4-prime-256bit",
+      "allocation": "HotZeroHeap"
+    },
+    "GraphDatabase.commit_slg_transaction": {
+      "mode": "native-bridge",
+      "exactness": "Exact",
+      "requiresAuth": "X-Qualia-Token"
+    }
+  }
+}</pre></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="q-site-footer">
+        <div class="flex flex-wrap justify-center gap-6 mb-4"></div>
+        <p>Qualia-DB v0.0.41 · Human-centric semantic engine · handle ≠ human</p>
+    </footer>
+</body>
+</html>

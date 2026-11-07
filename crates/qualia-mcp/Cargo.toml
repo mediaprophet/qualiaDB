@@ -1,6 +1,6 @@
 [package]
 name = "qualia-mcp"
-version = "0.0.40"
+version = "0.0.41"
 edition = "2021"
 authors = ["QualiaDB Project Team"]
 description = "QualiaDB Model Context Protocol (MCP) server library: standards-compliant JSON-RPC 2.0 interface exposing semantic graph, modalities, physics, geomechanics, and space weather simulations"

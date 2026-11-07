@@ -1,5 +1,5 @@
 {
-  "version": "0.0.40",
+  "version": "0.0.41",
   "brand": {
     "name": "Webizen",
     "tagline": "Life-domain habitat · QualiaDB engine",
@@ -20,7 +20,7 @@
       "group": "Core"
     },
     {
-      "label": "0.0.41 Release Prep",
+      "label": "0.0.41 Release",
       "href": "progress-0.0.41.html",
       "icon": "fa-rocket",
       "highlight": true,
@@ -34,7 +34,7 @@
       "group": "Core"
     },
     {
-      "label": "0.0.40.16 Progress",
+      "label": "0.0.40 Baseline",
       "href": "progress-0.0.40.html",
       "icon": "fa-wand-magic-sparkles",
       "highlight": true,
@@ -89,24 +89,6 @@
       "group": "Core"
     },
     {
-      "label": "0.0.39 Progress",
-      "href": "progress-0.0.39.html",
-      "icon": "fa-clock-rotate-left",
-      "group": "Core"
-    },
-    {
-      "label": "0.0.38 Progress",
-      "href": "progress-0.0.38.html",
-      "icon": "fa-heart-pulse",
-      "group": "Core"
-    },
-    {
-      "label": "0.0.37 Progress",
-      "href": "progress-0.0.37.html",
-      "icon": "fa-clock-rotate-left",
-      "group": "Core"
-    },
-    {
       "label": "WASM Engine",
       "href": "wasm-engine.html",
       "icon": "fa-microchip",
@@ -128,9 +110,28 @@
       "group": "Core"
     },
     {
+      "label": "did:qi & Identifier Fabric",
+      "href": "qdnf-did-qi.html",
+      "icon": "fa-id-card",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "Release Matrix",
       "href": "release-matrix.html",
       "icon": "fa-table-cells",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.39 Progress",
+      "href": "progress-0.0.39.html",
+      "icon": "fa-clock-rotate-left",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.38 Progress",
+      "href": "progress-0.0.38.html",
+      "icon": "fa-heart-pulse",
       "group": "Core"
     },
     {
@@ -294,12 +295,6 @@
       "href": "compute-engine.html",
       "icon": "fa-calculator",
       "highlight": true,
-      "group": "Sciences"
-    },
-    {
-      "label": "Spatial / GeoSPARQL",
-      "href": "spatial.html",
-      "icon": "fa-cube",
       "group": "Sciences"
     },
     {

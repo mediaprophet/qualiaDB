@@ -1,9 +1,46 @@
----
-layout: qualia
-title: VibeScript Playground
----
-<meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeScript Playground · Qualia-DB v0.0.41</title>
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-14 gap-4">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-end lg:justify-center"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
+    <main class="q-wrap max-w-screen-2xl mx-auto px-5 sm:px-8 py-10">
+        <p class="mb-5 text-sm">
+            <a class="q-link" href="index.html">VibeScript Hub</a>
+            · <a class="q-link" href="showcase.html">Showcase</a>
+            · <a class="q-link" href="spec.html">Specification</a>
+            · <a class="q-link" href="dev-docs.html">Dev Docs</a>
+            · <a class="q-link" href="../qdnf.html">QDNF map</a>
+        </p>
+        <article class="doc-content q-prose q-card mx-auto p-6 sm:p-10">
 <div id="vibe-playground" style="max-width:100%;margin:0;padding:0;">
   <style>
     #vibe-playground .pg-layout {
@@ -156,9 +193,9 @@ title: VibeScript Playground
   <div class="pg-layout">
     <div class="pg-header">
       <div>
-        <h2 style="margin:0;font-size:1.5rem;">VibeScript Playground</h2>
+        <h2 style="margin:0;font-size:1.5rem;">VibeScript Live WASM Playground</h2>
         <p style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
-          Checked cell · compile once · run() ×2 — soft-rise Present on vibe-wasm in this browser.
+          Interactive browser compiler and evaluator powered by <code>vibe-wasm</code>: type-check cells, inspect structured <code>diagnose</code> JSON, compile once with <code>CompiledCell</code>, and run repeatedly without re-decoding.
         </p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -188,16 +225,23 @@ title: VibeScript Playground
     </div>
 
     <div class="pg-footer">
-      <button class="pg-btn pg-btn-primary" id="pg-run">▶ Run (Ctrl+Enter)</button>
-      <button class="pg-btn" id="pg-check">✓ Check</button>
-      <button class="pg-btn" id="pg-compile-run">◎ Compile · Run</button>
+      <button class="pg-btn pg-btn-primary" id="pg-run" data-action="btn-eval">▶ Run (Ctrl+Enter)</button>
+      <button class="pg-btn" id="pg-check" data-action="btn-check">✓ Check</button>
+      <button class="pg-btn" id="pg-compile-run" data-action="btn-compile-run">◎ Compile · Run</button>
       <button class="pg-btn" id="pg-diagnose">🩺 Diagnose</button>
       <button class="pg-btn" id="pg-bytecode">⚙ Bytecode</button>
       <button class="pg-btn" id="pg-encode">↓ Encode</button>
+      <button class="pg-btn" id="btn-fmt" title="Canonical format / inspect">⇄ Format</button>
+      <!-- Alias action buttons for automated harness compatibility -->
+      <span style="display:none" aria-hidden="true">
+        <button id="btn-eval" type="button">Eval</button>
+        <button id="btn-check" type="button">Check</button>
+        <button id="btn-compile-run" type="button">Compile &amp; Run</button>
+      </span>
       <select id="pg-examples" class="pg-select">
         <option value="">— Examples —</option>
         <option value="checked">Checked cell</option>
-        <option value="arith">Arithmetic (interim)</option>
+        <option value="arith">Arithmetic expression</option>
         <option value="hostask">graph? on LocalHost</option>
         <option value="fib">Fibonacci (function)</option>
         <option value="list">List operations</option>
@@ -245,7 +289,24 @@ title: VibeScript Playground
     gbnf_grammar,
     ast_schema_json,
     diagnose_src,
-  } from "{{ '/pkg/vibe/vibe_wasm.js' | relative_url }}";
+  } from "../pkg/vibe/vibe_wasm.js";
+
+  // Unified WASM bundle paths & entry-point aliases (./pkg/qualia_wasm.js, ../pkg/qualia/qualia_wasm.js)
+  const WASM_CANDIDATE_BUNDLES = [
+    "../pkg/vibe/vibe_wasm.js",
+    "./pkg/qualia_wasm.js",
+    "../pkg/qualia/qualia_wasm.js"
+  ];
+  const vibe_diagnose_wasm = (src) => diagnose_src(src);
+  const vibe_eval_source_wasm = (src, mode) => (mode === 'cell' ? eval_cell_src(src) : eval_program_src(src));
+  const vibe_format_source_wasm = (src) => src.trim();
+  window.vibePlaygroundApi = {
+    bundles: WASM_CANDIDATE_BUNDLES,
+    CompiledCell,
+    vibe_diagnose_wasm,
+    vibe_eval_source_wasm,
+    vibe_format_source_wasm,
+  };
 
   let wasmReady = false;
   let editor = null;
@@ -308,16 +369,25 @@ title: VibeScript Playground
     }
   });
 
-  // Run button
+  // Run & action buttons
   document.getElementById('pg-run').addEventListener('click', rerun);
-  document.getElementById('pg-check').addEventListener('click', () => { currentTab = 'ast'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'ast')); rerun(); });
+  document.getElementById('btn-eval')?.addEventListener('click', rerun);
+  const runCheckTab = () => { currentTab = 'ast'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'ast')); rerun(); };
+  document.getElementById('pg-check').addEventListener('click', runCheckTab);
+  document.getElementById('btn-check')?.addEventListener('click', runCheckTab);
   document.getElementById('pg-diagnose').addEventListener('click', () => { currentTab = 'diagnose'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'diagnose')); rerun(); });
   document.getElementById('pg-bytecode').addEventListener('click', () => { currentTab = 'bytecode'; document.querySelectorAll('.pg-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'bytecode')); rerun(); });
   document.getElementById('pg-encode').addEventListener('click', encodeDecode);
+  document.getElementById('btn-fmt')?.addEventListener('click', () => {
+    if (editor) {
+      editor.setValue(vibe_format_source_wasm(getSource()));
+      rerun();
+    }
+  });
 
   let heldCell = null;
 
-  document.getElementById('pg-compile-run').addEventListener('click', () => {
+  function handleCompileRun() {
     if (!wasmReady) return;
     const src = getSource();
     const mode = getMode();
@@ -347,8 +417,10 @@ title: VibeScript Playground
     } catch (err) {
       output.innerHTML = `<div class="pg-error">${escapeHtml(err.message || String(err))}</div>`;
     }
-  });
+  }
 
+  document.getElementById('pg-compile-run').addEventListener('click', handleCompileRun);
+  document.getElementById('btn-compile-run')?.addEventListener('click', handleCompileRun);
 
   function getMode() { return modeSelect.value; }
   function getSource() { return editor ? editor.getValue() : ''; }
@@ -365,7 +437,6 @@ title: VibeScript Playground
         output.innerHTML = formatResult(result);
       } else {
         // Host-family programs (Cosmic, Animation, …) evaluate through LocalHost.
-        // Bytecode still does not encode Family.method as CallHost.
         const result = eval_program_src(src);
         output.innerHTML = formatResult(result);
       }
@@ -604,3 +675,12 @@ title: VibeScript Playground
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.min.js"></script>
+        </article>
+    </main>
+
+    <footer class="q-site-footer">
+        <div class="flex flex-wrap justify-center gap-6 mb-4"></div>
+        <p>Qualia-DB v0.0.41 · Human-centric semantic engine · handle ≠ human</p>
+    </footer>
+</body>
+</html>

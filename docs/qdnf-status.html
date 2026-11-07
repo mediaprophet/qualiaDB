@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QDNF Implementation Status — 0.0.40</title>
-  <meta name="description" content="Implemented, transition, local-only, and externally blocked status for the Qualia Decentralized Network Fabric.">
+  <title>QDNF Implementation Status — 0.0.41</title>
+  <meta name="description" content="Local and in-tree evidence, transition bearers, qualification holds, and public-network and standards gates for the Qualia Decentralized Network Fabric in release 0.0.41.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -27,59 +27,171 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> QDNF / QPR · implementation status · 0.0.40</div>
-    <h1 class="q-hero-title font-display mb-5">Native networking has landed in layers.</h1>
-    <p class="q-lede mb-6">This is the public status record for the Qualia Decentralized Network Fabric and Qualia Peer Runtime. It distinguishes working in-tree code from transition carriers, local-only qualification, and Internet work that requires a real second host or operator.</p>
+    <!-- LAYER 1: PLAIN-LANGUAGE OVERVIEW -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> QDNF / QPR · implementation status · 0.0.41 (QDNF / QPR · implementation status · 0.0.40 baseline)</div>
+    <h1 class="q-hero-title font-display mb-5">Sovereign networking verified layer by layer.</h1>
+    <p class="q-lede mb-6">
+      This is the authoritative <code class="q-mono">0.0.41</code> implementation and qualification record for the <strong>Qualia Decentralized Network Fabric (QDNF)</strong>, the <strong>Qualia Peer Runtime (QPR)</strong>, and the <code class="q-mono">qualia-cscp</code> control plane. It separates working in-tree cryptographic and routing engines from labelled <strong>Transition bearers</strong>, platform-dependent <strong>Qualification holds</strong>, and external <strong>Public-network and standards gates</strong>.
+    </p>
     <div class="q-note mb-12" style="border-color:rgba(52,211,153,0.25)">
-      <strong>Present.</strong> Local CSCP/QPR, did:qi, and named transition bearers run in tree. Internet relay and MASQUE path are building next when an operator endpoint is ready.
+      <strong>Present in 0.0.41:</strong> QDNF decouples human identity (<strong>Entity</strong> plane) from expiring network locators (<strong>Handle</strong> plane) and pairwise cryptographic channels (<strong>Instrument</strong> plane), ensuring <code class="q-mono">.q42</code> knowledge synchronization does not depend on ICANN DNS, BGP, ARP, or cloud relays. <code class="q-mono">NET-18</code> through <code class="q-mono">NET-21</code>, <code class="q-mono">EVAL-22</code>, <code class="q-mono">did:qi</code>, and <code class="q-mono">CSCP</code> run deterministically in tree; unexecuted hardware and public-Internet gates report <code class="q-mono">false</code> rather than simulated success.
     </div>
 
-    <section class="grid lg:grid-cols-3 gap-5 mb-14">
-      <article class="q-card p-7 border border-emerald-500/25">
-        <p class="q-kicker text-emerald-300 mb-2">Implemented in tree</p>
-        <h2 class="text-2xl font-semibold mb-3">Local control plane</h2>
-        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
-          <li>QDNF connection manager: policy, planner, invitations, durable delivery, and local production-path checks.</li>
-          <li>CSCP v1 local control plane: bounded/fail-closed TLV messages, mailbox, leases, receipt persistence, local bound-UDP, and local rustls WSS ↔ QSession.</li>
-          <li>Local DATAGRAM capsule framing and loopback TLS HTTP/2 Extended CONNECT. These are local proof paths, not Internet MASQUE.</li>
-          <li>Bounded routing, handshake, replication, crash-recovery, and QSR-related native modules exercised through in-tree fixtures.</li>
-        </ul>
-      </article>
-      <article class="q-card p-7 border border-cyan-500/25">
-        <p class="q-kicker mb-2">Implemented identity slice</p>
-        <h2 class="text-2xl font-semibold mb-3"><code>did:qi</code> / CSCP binding</h2>
-        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
-          <li>Bounded QCDE-1 signed documents with create, read, update generation, and deactivate paths.</li>
-          <li>Specification vectors, signed-document/git-object checks, canonical caps, and explicit stale-generation handling.</li>
-          <li><code>CscpMailbox</code> publication into the private mailbox; deactivated documents publish no services.</li>
-          <li>Relay-only policy rejects direct delivery before storage; permitted Direct locators are ranked as Direct, not relayed.</li>
-        </ul>
-      </article>
-      <article class="q-card p-7 border border-violet-500/25">
-        <p class="q-kicker text-violet-300 mb-2">Implemented transition carriers</p>
-        <h2 class="text-2xl font-semibold mb-3">Useful, not native-independent</h2>
-        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
-          <li>WireGuard/SocialWebNet overlay remains a labelled IP transition path.</li>
-          <li>TLS WSS and HTTP/2 capsule profiles are transition bearers, not MASQUE or a native QLink bearer.</li>
-          <li>Nym mixnet framing and deterministic loopback carrier encapsulate bounded QFrames and support QSession integration testing.</li>
-          <li>Transition locators remain handles/instrument-plane data, never a natural-person identity claim.</li>
-        </ul>
-      </article>
+    <!-- LAYER 2: PROTOCOL ARCHITECTURE & 4-TIER EVIDENCE TAXONOMY -->
+    <section class="mb-14">
+      <p class="q-kicker mb-2">Layer 2 · Protocol Architecture &amp; Evidence Taxonomy</p>
+      <h2 class="text-2xl font-semibold mb-5">Four Non-Overlapping Qualification Classes</h2>
+      <div class="grid lg:grid-cols-2 gap-5">
+        <article class="q-card p-7 border border-emerald-500/25">
+          <p class="q-kicker text-emerald-300 mb-2">Class 1 · Implemented in tree</p>
+          <h3 class="text-2xl font-semibold mb-3">Local and in-tree evidence</h3>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>QPR &amp; Connection Manager:</strong> Supervised cell admission (<code class="q-mono">admit.rs</code>), generation-checked resource leases (<code class="q-mono">ledger.rs</code>, <code class="q-mono">release_checked_bytes</code>), non-wrapping cancellation epochs, and durable <code class="q-mono">.q42</code> v4 chunk-to-SuperBlock replication.</li>
+            <li><strong>CSCP v1 Control Plane (<code class="q-mono">qualia-cscp</code>):</strong> Bounded fail-closed TLV codec, private mailbox, lease accounting, receipt persistence, local bound-UDP, local <code class="q-mono">rustls</code> WSS ↔ <code class="q-mono">QSession</code>, DATAGRAM capsules, and loopback TLS HTTP/2 Extended CONNECT.</li>
+            <li><strong>Implemented identity slice (<code class="q-mono">did:qi</code>):</strong> Bounded QCDE-1 signed documents with <code class="q-mono">create</code>, <code class="q-mono">advance_generation</code>, <code class="q-mono">deactivate</code> (<code class="q-mono">TombstonePermanent</code>), <code class="q-mono">verify_relationship_distinct_from_person</code>, and <code class="q-mono">CscpMailbox</code> binding.</li>
+          </ul>
+        </article>
+
+        <article class="q-card p-7 border border-cyan-500/25">
+          <p class="q-kicker text-cyan-300 mb-2">Class 2 · Labelled Overlays</p>
+          <h3 class="text-2xl font-semibold mb-3">Transition bearers</h3>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong><code class="q-mono">WireGuard</code> / SocialWebNet overlay:</strong> Admitted as an explicitly labelled IP transition bearer; never misclassified as a zero-IP native link.</li>
+            <li><strong>TLS WebSocket (WSS) &amp; HTTP/2 Extended CONNECT capsules:</strong> Provide encrypted tunnel transport across legacy networks without claiming public Internet <code class="q-mono">MASQUE</code> qualification.</li>
+            <li><strong>Nym mixnet framing:</strong> Deterministic sphinx-style bounded <code class="q-mono">QFrame</code> encapsulation for metadata-resistant routing integration tests.</li>
+            <li><strong>Strict non-laundering rule:</strong> Transition bearers do not become Native Independent merely by carrying a QFrame (<code class="q-mono">no_proxy_launder</code>).</li>
+          </ul>
+        </article>
+
+        <article class="q-card p-7 border border-amber-500/25">
+          <p class="q-kicker text-amber-300 mb-2">Class 3 · Hardware &amp; Kernel Boundaries</p>
+          <h3 class="text-2xl font-semibold mb-3">Qualification holds</h3>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>AF_XDP &amp; Raw Ethernet:</strong> <code class="q-mono">open_af_xdp()</code> returns <code class="q-mono">PlatformUnsupported</code> in unprivileged environments; <code class="q-mono">umem_registered() == false</code> and <code class="q-mono">silent_zero_copy_fallback() == false</code>.</li>
+            <li><strong>Physical Energy Telemetry:</strong> Process RSS and NUMA locality are sampled in tree (<code class="q-mono">cells/hardware.rs</code>), while hardware RAPL joule counters remain held (<code class="q-mono">idle_energy_measured() == false</code>) without dedicated sensor access.</li>
+            <li><strong>OS Process-Kill Durability:</strong> Deterministic tempfile crash-recovery pairs run in tree (<code class="q-mono">disk_crash.rs</code>), whereas kernel-level power-loss WAL certification remains an explicit qualification hold (<code class="q-mono">os_process_kill_qualified() == false</code>).</li>
+          </ul>
+        </article>
+
+        <article class="q-card p-7 border border-violet-500/25">
+          <p class="q-kicker text-violet-300 mb-2">Class 4 · Multi-Host &amp; Registry Boundaries</p>
+          <h3 class="text-2xl font-semibold mb-3">Public-network and standards gates</h3>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>Building next — Public relay, Internet two-host, MASQUE, QUIC/noq:</strong> Requires a live two-host public Internet topology (<code class="q-mono">CSCP-08</code> / <code class="q-mono">CSCP-09</code>). Until executed, <code class="q-mono">public_relay_dialed()</code> stays <code class="q-mono">false</code>.</li>
+            <li><strong>W3C Registry Status:</strong> <code class="q-mono">did:qi</code> is an in-tree sovereign instrument method — <strong>Not a W3C DID Spec Registries entry</strong> and not a W3C Technical Report.</li>
+            <li><strong>IETF Datatracker Gate (<code class="q-mono">CSCP-12</code>):</strong> <code class="q-mono">draft-webcivics-cscp-00</code> is versioned in tree alongside <code class="q-mono">qualia-cscp</code>; external submission to the IETF Datatracker remains a separate human action.</li>
+          </ul>
+        </article>
+      </div>
     </section>
 
-    <section class="q-card p-8 mb-14">
-      <p class="q-kicker mb-2">Capability matrix</p>
-      <h2 class="text-3xl font-semibold mb-6">What each result establishes</h2>
+    <!-- LAYER 3: CRYPTOGRAPHIC & ROUTING MECHANICS (NET-18..21 & EVAL-22) -->
+    <section class="q-card p-8 mb-14" id="net-packages">
+      <p class="q-kicker mb-2">Layer 3 · Cryptographic &amp; Routing Mechanics (0.0.41)</p>
+      <h2 class="text-3xl font-semibold mb-3">Completed <code class="q-mono">NET-18</code>–<code class="q-mono">NET-21</code> &amp; <code class="q-mono">EVAL-22</code> Verification Packages</h2>
+      <p class="text-sm mb-6" style="color:var(--q-muted);max-width:52rem">
+        Each package below is implemented in Rust without heap allocation in hot evaluation loops and verified against deterministic in-tree test vectors.
+      </p>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[46rem] text-sm text-left">
-          <thead class="text-white/70 border-b border-white/10"><tr><th class="pb-3 pr-5">Area</th><th class="pb-3 pr-5">Status</th><th class="pb-3">Evidence boundary</th></tr></thead>
+        <table class="w-full min-w-[52rem] text-sm text-left">
+          <thead class="text-white/70 border-b border-white/10">
+            <tr>
+              <th class="pb-3 pr-4">Package</th>
+              <th class="pb-3 pr-4">Subsystem &amp; Crate</th>
+              <th class="pb-3 pr-4">Cryptographic &amp; Algorithmic Contract</th>
+              <th class="pb-3">Enforced Invariant</th>
+            </tr>
+          </thead>
+          <tbody class="text-white/70">
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-mono text-emerald-300 font-semibold">NET-18</td>
+              <td class="py-4 pr-4"><code class="q-mono">qualia-cscp</code> &amp; <code class="q-mono">qdnf::session</code></td>
+              <td class="py-4 pr-4">
+                <code class="q-mono">HandshakeTranscriptDigest</code> (<code class="q-mono">SHA-384</code> over <code class="q-mono">ClientHello || ServerHello || NegotiatedParams</code>), <code class="q-mono">HKDF-SHA384</code> directional traffic keys, generation-monotonic <code class="q-mono">rekey_session</code>, and <code class="q-mono">LocatorBinding</code>.
+              </td>
+              <td class="py-4"><code class="q-mono">no_proxy_launder</code>: relay/proxy carriers never upgrade <code class="q-mono">AuthenticityClass</code>.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-mono text-cyan-300 font-semibold">NET-19</td>
+              <td class="py-4 pr-4"><code class="q-mono">qsr/exact.rs</code> &amp; <code class="q-mono">qdnf::route::spf</code></td>
+              <td class="py-4 pr-4">
+                Full 384-bit (<code class="q-mono">48</code>-byte / <code class="q-mono">96</code>-nibble) radix-16 trie lookup in <code class="q-mono">qsr/exact.rs</code> with <code class="q-mono">RarPermit</code> binding, paired with Bellman–Ford primal-dual witness verification (<code class="q-mono">verify_spf_dual_optimality</code>).
+              </td>
+              <td class="py-4">Dual optimality <code class="q-mono">d[v] &lt;= d[u] + w(u,v)</code> across all admitted edges + acyclic predecessor tree witness.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-mono text-violet-300 font-semibold">NET-20</td>
+              <td class="py-4 pr-4"><code class="q-mono">peer::replication</code> &amp; <code class="q-mono">runtime::ledger</code></td>
+              <td class="py-4 pr-4">
+                <code class="q-mono">ChunkToSuperBlockManifest</code> mapping <code class="q-mono">SHA-384</code> transport chunks to <code class="q-mono">SHA-256</code> <code class="q-mono">.q42</code> SuperBlocks, plus generation-checked <code class="q-mono">release_checked_bytes</code> lease reclamation.
+              </td>
+              <td class="py-4">5-field <code class="q-mono">NQuin</code> XOR parity verified before <code class="q-mono">commit_verified_block</code>; stale lease releases fail closed.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-mono text-amber-300 font-semibold">NET-21</td>
+              <td class="py-4 pr-4"><code class="q-mono">qdnf::policy_labels::egress</code></td>
+              <td class="py-4 pr-4">
+                40-scenario egress admission matrix spanning <code class="q-mono">C0Public</code>–<code class="q-mono">C3Restricted</code> and caller classes (<code class="q-mono">Vibe</code>, <code class="q-mono">Poet</code>, <code class="q-mono">BackgroundWorker</code>, <code class="q-mono">DelegatedTool</code>) via <code class="q-mono">EgressAuditReceipt</code> and <code class="q-mono">enumerate_egress_audit_quin</code>.
+              </td>
+              <td class="py-4">All 40 scenarios emit deterministic, 5-field XOR-parity-verified <code class="q-mono">NQuin</code> audit receipts.</td>
+            </tr>
+            <tr>
+              <td class="py-4 pr-4 font-mono text-emerald-300 font-semibold">EVAL-22</td>
+              <td class="py-4 pr-4"><code class="q-mono">.q42</code> v4 Qualification Aggregator</td>
+              <td class="py-4 pr-4">
+                Tri-source evaluation aggregator combining <strong>Etalon</strong> oracle receipts, <strong>QDNF</strong> network receipts, and <strong>QualiaDB</strong> invariant receipts into a unified <code class="q-mono">.q42</code> v4 qualification summary.
+              </td>
+              <td class="py-4">Reports exact <code class="q-mono">passed</code>, <code class="q-mono">failed</code>, and <code class="q-mono">unsupported</code> counts per plane with zero synthetic promotion.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LAYER 4: VERIFICATION & QUALIFICATION BOUNDARY TABLE -->
+    <section class="q-card p-8 mb-14">
+      <p class="q-kicker mb-2">Layer 4 · Verification &amp; Qualification Boundary</p>
+      <h2 class="text-3xl font-semibold mb-6">Complete Subsystem Capability Matrix (<code class="q-mono">0.0.41</code>)</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[48rem] text-sm text-left">
+          <thead class="text-white/70 border-b border-white/10">
+            <tr>
+              <th class="pb-3 pr-5">Subsystem</th>
+              <th class="pb-3 pr-5">Qualification Class</th>
+              <th class="pb-3">Evidence Boundary &amp; Fail-Closed Flags</th>
+            </tr>
+          </thead>
           <tbody class="text-white/65">
-            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">QPR / connection manager</td><td class="py-4 pr-5 text-emerald-300">Implemented locally</td><td class="py-4">In-tree policy, invitations, planning, durable delivery, and local-path tests; no completed Internet trial.</td></tr>
-            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">CSCP Wave 0–2</td><td class="py-4 pr-5 text-emerald-300">Implemented locally</td><td class="py-4">Fail-closed codec, leases, receipts, WSS, capsules, and loopback H2 CONNECT; no public Internet/MASQUE claim.</td></tr>
-            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white"><code>did:qi</code></td><td class="py-4 pr-5 text-emerald-300">Implemented in-process</td><td class="py-4">QCDE-1 document lifecycle, vectors, mailbox binding, and policy gates; not registered in DID Spec Registries.</td></tr>
-            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">Nym / WireGuard / WSS / H2</td><td class="py-4 pr-5 text-cyan-300">Transition carriers</td><td class="py-4">Bounded and named profiles; they do not become Native Independent merely by carrying a QFrame.</td></tr>
-            <tr class="border-b border-white/5"><td class="py-4 pr-5 font-medium text-white">Raw Ethernet, AF_XDP, long churn</td><td class="py-4 pr-5 text-cyan-300">Building next</td><td class="py-4">Needs physical/veth capability and platform qualification.</td></tr>
-            <tr><td class="py-4 pr-5 font-medium text-white">Public relay, Internet two-host, MASQUE, QUIC/noq</td><td class="py-4 pr-5 text-cyan-300">Building next</td><td class="py-4">Not established on the public Internet yet — waits on an operator-reachable path and the matching trials.</td></tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-5 font-medium text-white">QPR &amp; connection manager</td>
+              <td class="py-4 pr-5 text-emerald-300">Local and in-tree evidence</td>
+              <td class="py-4">Supervised cell admission (<code class="q-mono">MAX_CELLS = 16</code>), <code class="q-mono">release_checked_bytes</code> lease ledger, <code class="q-mono">CancelEpoch</code>, and <code class="q-mono">ChunkToSuperBlockManifest</code> replication verified in tree.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-5 font-medium text-white"><code class="q-mono">CSCP</code> Wave 0–2 (<code class="q-mono">qualia-cscp</code>)</td>
+              <td class="py-4 pr-5 text-emerald-300">Local and in-tree evidence</td>
+              <td class="py-4"><code class="q-mono">SHA-384</code> handshake transcript, <code class="q-mono">HKDF-SHA384</code> session keys, <code class="q-mono">LocatorBinding</code> (<code class="q-mono">no_proxy_launder</code>), local WSS, DATAGRAM capsules, and loopback H2 Extended CONNECT.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-5 font-medium text-white"><code class="q-mono">did:qi</code> pairwise instrument DID</td>
+              <td class="py-4 pr-5 text-emerald-300">Local and in-tree evidence</td>
+              <td class="py-4">QCDE-1 lifecycle (<code class="q-mono">create</code>, <code class="q-mono">advance_generation</code>, <code class="q-mono">deactivate</code> / <code class="q-mono">TombstonePermanent</code>), <code class="q-mono">CscpMailbox</code> binding, and plane separation. <strong>Not a W3C DID Spec Registries entry</strong>.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-5 font-medium text-white">Nym / WireGuard / WSS / H2</td>
+              <td class="py-4 pr-5 text-cyan-300">Transition bearers</td>
+              <td class="py-4">Bounded profiles verified in tree; they do not become Native Independent merely by carrying a QFrame.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-5 font-medium text-white">Raw Ethernet, AF_XDP, RAPL joules</td>
+              <td class="py-4 pr-5 text-amber-300">Qualification holds</td>
+              <td class="py-4">Requires privileged NIC / hardware counters; <code class="q-mono">umem_registered() == false</code>, <code class="q-mono">silent_zero_copy_fallback() == false</code>, <code class="q-mono">idle_energy_measured() == false</code>.</td>
+            </tr>
+            <tr>
+              <td class="py-4 pr-5 font-medium text-white">Public relay, Internet two-host, MASQUE, QUIC/noq</td>
+              <td class="py-4 pr-5 text-violet-300">Public-network and standards gates</td>
+              <td class="py-4">Building next when a live two-host public Internet endpoint is dialled (<code class="q-mono">CSCP-08</code>); <code class="q-mono">public_relay_dialed() == false</code>.</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -87,30 +199,38 @@
 
     <section class="grid lg:grid-cols-2 gap-5 mb-14">
       <article class="q-card p-7">
-        <p class="q-kicker mb-2">Continuity and authority</p>
+        <p class="q-kicker mb-2">Continuity &amp; Plane Separation</p>
         <h2 class="text-2xl font-semibold mb-3">A handle is not a human</h2>
-        <p class="text-sm" style="color:var(--q-muted)">DNI, hostnames, DNS, relay hints, Nym addresses, and session locators support routing. They do not define a natural person. Revoking or losing a handle closes or holds that handle; it does not erase the person, their history, or an independent local volume.</p>
+        <p class="text-sm" style="color:var(--q-muted)">
+          <code class="q-mono">DNI</code> locators, DNS hostnames, relay hints, <code class="q-mono">Nym</code> addresses, and session endpoints sit on the <strong>Handle</strong> and <strong>Instrument</strong> planes. They never define a natural person on the <strong>Entity</strong> plane. Revoking or losing a handle closes or holds that network path without erasing the person, their <code class="q-mono">did:webizen</code> agreements, or their local <code class="q-mono">.q42</code> knowledge volumes.
+        </p>
       </article>
       <article class="q-card p-7">
-        <p class="q-kicker mb-2">Open external gates</p>
-        <h2 class="text-2xl font-semibold mb-3">Operator gates · building next</h2>
-        <p class="text-sm" style="color:var(--q-muted)">A public relay needs an operator-controlled inbound Internet endpoint. CSCP-12 needs a human datatracker submission. Local loopback already proves the control-plane slices; the Internet trial is the next human step.</p>
+        <p class="q-kicker mb-2">Tri-Source Qualification</p>
+        <h2 class="text-2xl font-semibold mb-3">Deterministic <code class="q-mono">EVAL-22</code> Accounting</h2>
+        <p class="text-sm" style="color:var(--q-muted)">
+          Through <code class="q-mono">EVAL-22</code>, every release qualification bundle aggregates <strong>Etalon</strong> oracle receipts, <strong>QDNF</strong> transport/routing receipts, and <strong>QualiaDB</strong> arena invariant receipts with explicit <code class="q-mono">passed</code>, <code class="q-mono">failed</code>, and <code class="q-mono">unsupported</code> counters — ensuring qualification holds and public-network gates remain transparent.
+        </p>
       </article>
     </section>
 
     <section class="q-card p-8">
-      <p class="q-kicker mb-2">Technical record</p>
-      <h2 class="text-2xl font-semibold mb-4">Read the standard, programme, and implementation together</h2>
-      <p class="text-sm mb-6" style="color:var(--q-muted)">The public guides explain status. The source and progress records carry exact module and test evidence; they should not be read as a deployment certificate.</p>
+      <p class="q-kicker mb-2">Technical Reference Guides</p>
+      <h2 class="text-2xl font-semibold mb-4">Read the architecture, DID methods, cells, and runtime together</h2>
+      <p class="text-sm mb-6" style="color:var(--q-muted)">
+        Navigate the companion technical guides below for deep-dive specifications of <code class="q-mono">did:qi</code> side-by-side DIDs, QDNF protocol cells, and the Qualia Peer Runtime.
+      </p>
       <div class="flex flex-wrap gap-3">
         <a class="q-pill q-pill-primary" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
         <a class="q-pill" href="qdnf.html">QDNF architecture map</a>
-        <a class="q-pill" href="qdnf-did-qi.html"><code>did:qi</code> status</a>
-        <a class="q-pill" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.40/docs/manuals/standards/qualia-decentralized-network-fabric">Programme source</a>
-        <a class="q-pill" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.40/crates/qualia-core-db/src/net/qdnf/bearer/nym.rs">Nym transition bearer</a>
+        <a class="q-pill" href="qdnf-did-qi.html"><code>did:qi</code> &amp; side-by-side DIDs</a>
+        <a class="q-pill" href="qdnf-network-cells.html">QDNF protocol &amp; network cells</a>
+        <a class="q-pill" href="qdnf-peer-runtime.html">Qualia Peer Runtime (QPR)</a>
+        <a class="q-pill" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.41/crates/qualia-core-db/src/net/qdnf">QDNF Rust source (0.0.41)</a>
+        <a class="q-pill" href="https://github.com/mediaprophet/qualiaDB/tree/0.0.41/crates/qualia-cscp">qualia-cscp crate (0.0.41)</a>
       </div>
     </section>
   </main>
-  <footer class="q-site-footer">QDNF / QPR 0.0.40 · local fabric Present · Internet path building next · handle ≠ human</footer>
+  <footer class="q-site-footer">QDNF / QPR 0.0.41 · Local and in-tree evidence verified · Transition bearers labelled · Handle ≠ human</footer>
 </body>
 </html>

@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Format Parsing - QualiaDB</title>
+    <title>Data Formats &amp; .q42 v4 Volume Architecture — QualiaDB 0.0.41</title>
+    <meta name="description" content="Stream RDF, N3, CBOR-LD, JSON-LD, and tabular sources into verified .q42 v4 unified volumes alongside 10D, M64, EMF64, and P64 binary containers.">
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="js/menu-loader.js"></script>
     <style>
-        body { font-family: 'Inter', system_ui, sans-serif; }
-        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
-        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
-        code { font-family: 'Fira Code', monospace; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-subtle { background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(148, 163, 184, 0.16); }
+        pre { background: rgba(0, 0, 0, 0.42); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Fira Code', 'JetBrains Mono', monospace; }
+        .layer-pill { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.25rem 0.7rem; border-radius: 9999px; }
+        .spec-table th, .spec-table td { padding: 0.75rem 1rem; text-align: left; vertical-align: top; }
+        .spec-table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #67e8f9; background: rgba(255, 255, 255, 0.03); }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-200">
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
         <div class="max-w-screen-2xl mx-auto px-8">
             <div class="flex items-center justify-between h-16">
@@ -31,6 +36,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
+                    <span class="hidden sm:inline-flex text-xs font-mono px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">v0.0.41 · Q42 v4</span>
                     <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
                        class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
                         <i class="fab fa-github"></i><span>GitHub</span>
@@ -40,211 +46,433 @@
         </div>
     </nav>
 
-    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
-        <div class="mb-8">
-            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Data Format Parsing</h1>
-            <p class="text-xl text-slate-400">Stream RDF and mapped tabular data into verified, portable Q42 volumes.</p>
-        </div>
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-20">
+        <!-- Layer 1: Plain-Language Overview -->
+        <header class="mb-12">
+            <div class="layer-pill bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 mb-4">
+                <i class="fas fa-layer-group"></i> Layer 1 · Plain-Language Overview
+            </div>
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">Data Formats &amp; Unified <code class="text-cyan-400">.q42</code> v4 Volumes</h1>
+            <p class="text-xl text-slate-300 max-w-4xl leading-relaxed mb-4">
+                QualiaDB turns human-readable knowledge graphs, rules, spreadsheets, and structured streams into self-contained, verifiable binary volumes. Whether you start from Turtle, N-Triples, N-Quads, Streaming N3, JSON-LD, CBOR-LD, or CSV, the ingestion pipeline compiles your data into a single portable <code class="text-cyan-300">.q42</code> v4 file that works identically on desktop, server, edge devices, and browser HTTP Range views.
+            </p>
+            <p class="text-base text-slate-400 max-w-4xl leading-relaxed">
+                Every statement is stored as a fixed 48-byte record (<code class="text-slate-200">NQuin</code>) protected by a canonical 5-field parity check, paired with an embedded namespaced dictionary (<code class="text-slate-200">Q42LEX</code> v4) and optional prose catalogue (<code class="text-slate-200">PCAT</code> v1). Physical simulations, fields, and neural weights use purpose-built 64-byte aligned companions (<code class="text-slate-200">.10d</code>, <code class="text-slate-200">M64</code>, <code class="text-slate-200">EMF64</code>, and <code class="text-slate-200">P64</code>) so graph indices remain compact and deterministic.
+            </p>
+        </header>
 
-        <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/30">
+        <!-- Hero Callout: RDF -> Q42 v4 Path -->
+        <div class="glass-strong rounded-3xl p-8 mb-12 border border-cyan-500/30">
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                 <div>
-                    <h2 class="text-2xl font-semibold text-cyan-300 mb-2">The RDF → Q42 path</h2>
-                    <p class="text-white/70 max-w-3xl">The current RDF importer streams a source directly into a Q42 v4 volume. It can emit machine-readable progress, segment a large result, and use a durable job directory for attested restart and publication.</p>
+                    <h2 class="text-2xl font-semibold text-cyan-300 mb-2">The Attested RDF → Q42 v4 Pipeline</h2>
+                    <p class="text-white/75 max-w-3xl">
+                        The streaming importer compiles source graphs directly into a unified <code class="text-cyan-200">.q42</code> v4 volume with embedded <code class="text-cyan-200">Q42LEX</code> v4 namespace pages, <code class="text-cyan-200">BIDX</code> / <code class="text-cyan-200">FIDX</code> / <code class="text-cyan-200">PIDX</code> lookup tables, and LZ4 SuperBlocks. It emits structured progress, supports resumable job directories, and proves encoded-set equivalence on completion.
+                    </p>
                 </div>
-                <a href="rdf-q42-vibe-demo.html" class="shrink-0 px-5 py-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/25 font-semibold">Open the end-to-end demo <i class="fas fa-arrow-right ml-2"></i></a>
+                <div class="flex flex-wrap gap-3 shrink-0">
+                    <a href="rdf-q42-vibe-demo.html" class="px-5 py-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/25 font-semibold transition-colors">
+                        Open End-to-End Demo <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                    <a href="integrity.html" class="px-5 py-3 rounded-xl bg-white/5 border border-white/15 text-slate-200 hover:bg-white/10 font-semibold transition-colors">
+                        Q42 Integrity Proofs
+                    </a>
+                </div>
             </div>
-            <pre class="mt-6"><code>qualia-cli import ./data/example.ttl ./data/example.q42 --job-dir ./jobs/example --progress json
+            <pre class="mt-6 text-sm"><code>qualia-cli import ./data/example.ttl ./data/example.q42 --job-dir ./jobs/example --progress json
 qualia-cli ingest-job status ./jobs/example
-qualia-cli q42 verify ./data/example.q42 --level full</code></pre>
+qualia-cli q42 verify ./data/example.q42 --level full
+qualia-cli verify-graph --encoder=import --input ./data/example.ttl --dataset ./data/example.q42</code></pre>
         </div>
 
-        <!-- CSV Parsing -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-file-csv text-green-400"></i>
-                CSV Parsing
-            </h2>
-            
-            <p class="text-white/70 mb-6">Ingest writes a <strong>unified Q42 v4</strong> volume (<code>Q42\0</code> header, embedded Q42LEX / BIDX / FIDX / PIDX, LZ4 SuperBlocks). There is no sibling <code>.c.q42</code> or <code>.q42.lex</code> — compression and lexicon live inside the single <code>.q42</code>.</p>
-            <p class="text-white/70 mb-6">QualiaDB can ingest CSV files and convert them to semantic triples. Here's how to parse a CSV with person data:</p>
-            
-            <h3 class="text-lg font-medium mb-3">Input CSV (people.csv)</h3>
-            <pre class="mb-6"><code>name,age,city
+        <!-- Layer 2: .q42 v4 Unified Volume Architecture -->
+        <section class="glass-strong rounded-3xl p-8 mb-12" id="q42-v4-architecture">
+            <div class="layer-pill bg-violet-500/15 text-violet-300 border border-violet-500/30 mb-4">
+                <i class="fas fa-cubes"></i> Layer 2 · .q42 v4 Unified Volume Architecture
+            </div>
+            <h2 class="text-3xl font-semibold mb-3">.q42 v4 Unified Volume Architecture</h2>
+            <p class="text-white/70 max-w-4xl mb-8">
+                A <code class="text-cyan-300">.q42</code> v4 volume (<code class="text-cyan-300">Q42_VERSION_V4 = 4</code>) packs the 256-byte volume header, block and predicate indices (<code class="text-cyan-300">BIDX</code>, <code class="text-cyan-300">FIDX</code>, <code class="text-cyan-300">PIDX</code>), LZ4-compressed SuperBlocks of 48-byte <code class="text-cyan-300">NQuin</code> records, the paged <code class="text-cyan-300">Q42LEX</code> v4 dictionary, and optional <code class="text-cyan-300">PCAT</code> v1 prose sections into a single file without sidecar <code class="text-slate-400">.c.q42</code> or <code class="text-slate-400">.q42.lex</code> artifacts.
+            </p>
+
+            <!-- 48-byte NQuin & 5-Field Parity -->
+            <div class="glass-subtle rounded-2xl p-6 mb-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+                    <h3 class="text-xl font-semibold text-cyan-300">
+                        <i class="fas fa-microchip mr-2"></i>48-Byte <code class="text-white">NQuin</code> Layout &amp; Canonical 5-Field XOR Parity
+                    </h3>
+                    <span class="text-xs font-mono px-3 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        parity = subject ^ predicate ^ object ^ context ^ metadata
+                    </span>
+                </div>
+                <p class="text-sm text-white/70 mb-4">
+                    Every semantic statement in QualiaDB is lowered into a cache-line-friendly 48-byte <code class="text-cyan-200">NQuin</code> consisting of six little-endian <code class="text-cyan-200">u64</code> words. The sixth word stores the <strong>canonical 5-field XOR parity</strong> over all five semantic and operational words (<code class="text-emerald-300">subject ^ predicate ^ object ^ context ^ metadata</code>), ensuring that bit-flips in routing lanes, Lamport logical clocks, or modality payloads are detected alongside core quad terms.
+                </p>
+                <div class="overflow-x-auto rounded-xl border border-white/10">
+                    <table class="spec-table w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-white/10">
+                                <th>Bytes</th>
+                                <th>Field</th>
+                                <th>Bit Layout</th>
+                                <th>Semantic &amp; Runtime Role</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/10 text-white/75">
+                            <tr>
+                                <td class="font-mono text-xs text-cyan-300">0..8</td>
+                                <td class="font-mono font-semibold text-white">subject</td>
+                                <td class="font-mono text-xs">[63] MSB flag · [0..62] FNV-1a / Webizen ID</td>
+                                <td>Entity, concept, or actor anchor (<code class="text-xs">TAG_WEBIZEN = 0x8</code> in top nibble for person-controlled actors).</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-xs text-cyan-300">8..16</td>
+                                <td class="font-mono font-semibold text-white">predicate</td>
+                                <td class="font-mono text-xs">[63] Defeater/MSB · [8..62] IRI hash · [0..7] u8 opcode</td>
+                                <td>Property IRI hash shifted left 8 bits, paired with modality opcodes (<code class="text-xs">0x10+</code> for Deontic, Epistemic, Paraconsistent, LTL).</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-xs text-cyan-300">16..24</td>
+                                <td class="font-mono font-semibold text-white">object</td>
+                                <td class="font-mono text-xs">[63] did:q42 ptr · [60..62] type tag · [0..59] payload</td>
+                                <td>60-bit lexicon token (<code class="text-xs">0b000</code>), inline <code class="text-xs">xsd:integer</code> (<code class="text-xs">0b001</code>), <code class="text-xs">xsd:decimal × 10⁶</code> (<code class="text-xs">0b010</code>), or <code class="text-xs">xsd:boolean</code> (<code class="text-xs">0b011</code>).</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-xs text-cyan-300">24..32</td>
+                                <td class="font-mono font-semibold text-white">context</td>
+                                <td class="font-mono text-xs">[56..63] Sensitivity class · [0..55] World/Graph hash</td>
+                                <td>Named graph, agreement, or epistemic world DID hash plus sensitivity tier (<code class="text-xs">PUBLIC=0</code>, <code class="text-xs">RESTRICTED=1</code>, <code class="text-xs">CLASSIFIED=2</code>).</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-xs text-cyan-300">32..40</td>
+                                <td class="font-mono font-semibold text-white">metadata</td>
+                                <td class="font-mono text-xs">[61..62] RoutingLane · [32..60] Lamport clock · [0..31] payload</td>
+                                <td>Routing lane (<code class="text-xs">00=Passthrough</code>, <code class="text-xs">01=Commons</code>, <code class="text-xs">10=Bilateral</code>, <code class="text-xs">11=Spatial</code>), 29-bit Lamport clock, and expiry/confidence weight.</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-xs text-cyan-300">40..48</td>
+                                <td class="font-mono font-semibold text-emerald-300">parity</td>
+                                <td class="font-mono text-xs">[0..63] 5-field XOR checksum</td>
+                                <td>Canonical 5-field XOR fold: <code class="text-emerald-300">subject ^ predicate ^ object ^ context ^ metadata</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Namespaced Paged Q42LEX v4 & PCAT v1 & Publication Flags & ExactnessProfile -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Q42LEX v4 -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-cyan-300">
+                            <i class="fas fa-book-bookmark mr-2"></i>Namespaced Paged <code class="text-white">Q42LEX</code> v4 (<code class="text-xs">ADR 0015</code>)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-cyan-500/15 text-cyan-200">0x04 Entry</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-4">
+                        Multi-ontology volumes share recurring IRI prefixes (such as <code class="text-xs">http://www.w3.org/ns/shacl#</code> or <code class="text-xs">https://schema.org/</code>). <code class="text-cyan-200">Q42LEX</code> v4 (<code class="text-xs">q42_lex_ns.rs</code>) splits IRIs into a per-page namespace table and compact <code class="text-cyan-200">(ns_id, local)</code> pairs:
+                    </p>
+                    <ul class="text-sm text-white/65 space-y-2">
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Per-page self-sufficiency:</strong> Each lexicon page embeds its own namespace dictionary so a browser client can decode any 60-bit hash via a single HTTP Range request without fetching a global prefix table.</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Zero-alloc parts lookup:</strong> <code class="text-xs">Q42LexMmap::lookup_parts(hash)</code> returns <code class="text-xs">(namespace_prefix, local_name)</code> slices directly from the mapped page.</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Bounded term invariants:</strong> Verbatim and reconstructed terms enforce a strict 65,535-byte (<code class="text-xs">u16</code>) maximum in <code class="text-xs">Q42LEX</code>; longer prose routes to <code class="text-xs">PCAT</code>.</li>
+                    </ul>
+                </article>
+
+                <!-- PCAT v1 -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-violet-300">
+                            <i class="fas fa-file-lines mr-2"></i><code class="text-white">PCAT</code> v1 Payload Catalogue (<code class="text-xs">ADR 0014</code>)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-violet-500/15 text-violet-200">0x0080</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-4">
+                        Set via <code class="text-violet-200">FLAG_PAYLOAD_CATALOGUE = 0x0080</code>, the <code class="text-violet-200">PCAT</code> v1 section stores oversized UTF-8 prose, treaty articles, and long-form annotations out-of-line:
+                    </p>
+                    <ul class="text-sm text-white/65 space-y-2">
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Unpolluted <code class="text-xs">BIDX</code> &amp; SuperBlocks:</strong> Keeps the hot 48-byte <code class="text-xs">NQuin</code> stream and block index dense for sub-millisecond graph traversals.</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Dual integrity verification:</strong> Every <code class="text-xs">PCAT</code> entry is verified by whole-section <strong>CRC-32C</strong> and per-record <strong>SHA-256</strong> content digests.</li>
+                        <li><i class="fas fa-ban text-amber-400 mr-2"></i><strong>Strict text-only gate:</strong> Binary media MIME types (<code class="text-xs">image/*</code>, <code class="text-xs">audio/*</code>, <code class="text-xs">video/*</code>, <code class="text-xs">model/*</code>) are rejected at ingest in favor of transparent <code class="text-xs">.hmc</code> bundles and <code class="text-xs">.10d</code> containers.</li>
+                    </ul>
+                </article>
+
+                <!-- Publication Policy Flags -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-amber-300">
+                            <i class="fas fa-shield-halved mr-2"></i>Publication Policy Flags (<code class="text-white">Sanctuary</code> vs <code class="text-white">Commons</code>)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-amber-500/15 text-amber-200">Header Flags</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-4">
+                        Governance is enforced at the byte-header level so personal and clinical graphs cannot be accidentally syndicated to public mirrors:
+                    </p>
+                    <ul class="text-sm text-white/65 space-y-2">
+                        <li><i class="fas fa-lock text-rose-400 mr-2"></i><code class="text-rose-200">FLAG_SANCTUARY = 0x0040</code>: Hard publication lock for <code class="text-xs">NaturalAgent</code> personal, clinical, fiduciary, or guardianship data. Refuse-on-export gates in <code class="text-xs">qualia-cli</code>, HTTP range servers, and WebTorrent seeders abort syndication when this bit is set.</li>
+                        <li><i class="fas fa-globe text-emerald-400 mr-2"></i><code class="text-emerald-200">FLAG_PERMISSIVE_COMMONS = 0x0020</code>: Marks open reference ontologies and public-good volumes cleared for replication across peer caches and CDN range mounts.</li>
+                    </ul>
+                </article>
+
+                <!-- ExactnessProfile & 4-Prime CRT -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-emerald-300">
+                            <i class="fas fa-square-root-variable mr-2"></i><code class="text-white">ExactnessProfile</code> &amp; 256-Bit 4-Prime CRT (<code class="text-xs">ADR 0003</code>)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-200">M &gt; 2.028×10⁷⁷</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-4">
+                        Scientific, financial, and deontic workloads declare their numerical contract via <code class="text-emerald-200">ExactnessProfile</code> (<code class="text-xs">ADR 0003</code>), pairing IEEE-754 fast lanes with a deterministic <strong>256-bit 4-Prime Chinese Remainder Theorem (CRT) cascade</strong>:
+                    </p>
+                    <ul class="text-sm text-white/65 space-y-2">
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Composite modulus $M = p_1 p_2 p_3 p_4 > 2.028 \times 10^{77}$:</strong> Four 64-bit NTT-friendly primes reconstruct exact 256-bit integer and rational invariants without heap-allocated bigints in hot loops.</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Zero-drift verification:</strong> Guarantees bit-identical evaluation across CPU architectures and GPU/WASM targets when verifying conserved quantities or audit proofs.</li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+
+        <!-- Layer 3: Streaming Binary, Rule & Tabular Formats -->
+        <div class="mb-6">
+            <div class="layer-pill bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 mb-3">
+                <i class="fas fa-code"></i> Layer 3 · Developer Formats &amp; Streaming Compilers
+            </div>
+            <h2 class="text-3xl font-semibold">Streaming Wire Formats &amp; Rule Languages</h2>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <!-- CBOR-LD 5-Element Tuple Stream -->
+            <div class="glass-strong rounded-3xl p-8">
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3">
+                    <i class="fas fa-microchip text-purple-400"></i>
+                    CBOR-LD 5-Element Tuple Stream
+                </h3>
+                <p class="text-white/70 text-sm mb-4">
+                    QualiaDB's native wire format (<code class="text-purple-300">cbor_compiler.rs</code>) encodes each statement as a compact <strong>5-element CBOR array</strong> <code class="text-purple-200">[subject, predicate, object, context, metadata_u64]</code>. Unlike 4-element quad streams, the 5th element preserves the full 64-bit <code class="text-purple-200">metadata</code> word (routing lane, 29-bit Lamport clock, and modality payload), and the stream parser advances an <strong>exact byte-length cursor</strong> so concatenated frames decode with zero heap allocation:
+                </p>
+                <pre class="text-xs mb-4"><code>// 5-element CBOR-LD tuple: [s, p, o, c, metadata_u64]
+// Major type 4 (array of length 5 = 0x85) followed by five u64/text items.
+let (quin, bytes_consumed) = parse_cbor_ld_tuple_with_cursor(frame_slice)?;
+assert_eq!(
+    quin.parity,
+    quin.subject ^ quin.predicate ^ quin.object ^ quin.context ^ quin.metadata
+);</code></pre>
+                <pre class="text-xs"><code>qualia-cli import data.cborld data.q42 --progress json</code></pre>
+            </div>
+
+            <!-- Streaming N3 Rules -->
+            <div class="glass-strong rounded-3xl p-8">
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3">
+                    <i class="fas fa-bolt text-amber-400"></i>
+                    Streaming N3 Modal &amp; Defeasible Rules
+                </h3>
+                <p class="text-white/70 text-sm mb-4">
+                    The zero-allocation <code class="text-amber-300">n3_parser.rs</code> engine natively lowers four rule arrows plus Answer Set Programming (<code class="text-amber-200">#asp {}</code>) and diffusion (<code class="text-amber-200">qualia:diffuse {}</code>) blocks directly into Webizen VM bytecode and Deontic <code class="text-amber-200">NQuin</code> records:
+                </p>
+                <div class="overflow-x-auto rounded-xl border border-white/10 mb-4">
+                    <table class="spec-table w-full text-xs">
+                        <thead>
+                            <tr class="border-b border-white/10">
+                                <th>N3 Arrow</th>
+                                <th>RuleType</th>
+                                <th>Execution Semantics</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/10 text-white/75">
+                            <tr>
+                                <td class="font-mono text-amber-300">=&gt;</td>
+                                <td class="font-mono">Strict</td>
+                                <td>Classical modus ponens forward chaining.</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-cyan-300">~&gt;</td>
+                                <td class="font-mono">Defeasible</td>
+                                <td>Holds presumptively with optional weight <code class="text-xs">(0.8)</code> unless overridden.</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-rose-300">^&gt;</td>
+                                <td class="font-mono">Defeater</td>
+                                <td>Sets <code class="text-xs">DEFEATER_BIT</code> (bit 63 of predicate) to block a matching defeasible norm.</td>
+                            </tr>
+                            <tr>
+                                <td class="font-mono text-emerald-300">-o</td>
+                                <td class="font-mono">Linear</td>
+                                <td>Linear logic transition: consumes the premise token upon firing.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <pre class="text-xs"><code>@prefix ex: &lt;http://example.org/&gt; .
+(0.85) { ?x a ex:EmergencyVehicle } ~&gt; { ?x ex:mayPassRedLight true } .
+{ ?x ex:hasRevokedPermit true } ^&gt; { ?x ex:mayPassRedLight false } .
+{ ?token a ex:SingleUseGrant } -o { ?token a ex:ConsumedGrant } .</code></pre>
+            </div>
+        </div>
+
+        <!-- CSV & JSON-LD & RDF Serializations -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <!-- CSV Parsing -->
+            <div class="glass-strong rounded-3xl p-8">
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3">
+                    <i class="fas fa-file-csv text-green-400"></i>
+                    Mapped CSV Ingestion
+                </h3>
+                <p class="text-white/70 text-sm mb-4">
+                    Tabular files map through SHACL/Turtle shapes directly into a unified <code class="text-cyan-300">.q42</code> v4 volume with inline XSD integer, decimal, and boolean tags in the <code class="text-cyan-300">object</code> field:
+                </p>
+                <pre class="text-xs mb-4"><code>name,age,city
 Alice Smith,30,New York
-Bob Jones,35,Los Angeles
-Carol White,28,Chicago</code></pre>
+Bob Jones,35,Los Angeles</code></pre>
+                <pre class="text-xs"><code>qualia-cli ingest csv people.csv --map people-shape.ttl
+# writes unified people.q42 v4 volume</code></pre>
+            </div>
 
-            <h3 class="text-lg font-medium mb-3">Conversion Command</h3>
-            <pre class="mb-6"><code>qualia-cli ingest csv people.csv --map people-shape.ttl
-# writes people.q42 alongside people.csv</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Resulting Triples (Turtle)</h3>
-            <pre class="mb-6"><code>@prefix ex: &lt;http://example.org/&gt; .
-
-_:row1 a ex:Person ;
-    ex:name "Alice Smith" ;
-    ex:age 30 ;
-    ex:city "New York" .
-
-_:row2 a ex:Person ;
-    ex:name "Bob Jones" ;
-    ex:age 35 ;
-    ex:city "Los Angeles" .
-
-_:row3 a ex:Person ;
-    ex:name "Carol White" ;
-    ex:age 28 ;
-    ex:city "Chicago" .</code></pre>
-        </div>
-
-        <!-- JSON Parsing -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-file-code text-yellow-400"></i>
-                JSON / JSON-LD Parsing
-            </h2>
-            
-            <p class="text-white/70 mb-6">JSON-LD is the preferred JSON format for semantic data. QualiaDB supports both plain JSON and JSON-LD:</p>
-            
-            <h3 class="text-lg font-medium mb-3">Input JSON-LD (data.jsonld)</h3>
-            <pre class="mb-6"><code>{
-  "@context": {
-    "name": "http://example.org/name",
-    "age": "http://example.org/age",
-    "knows": "http://example.org/knows"
-  },
+            <!-- JSON-LD Parsing -->
+            <div class="glass-strong rounded-3xl p-8">
+                <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3">
+                    <i class="fas fa-file-code text-yellow-400"></i>
+                    JSON-LD &amp; Contextual JSON
+                </h3>
+                <p class="text-white/70 text-sm mb-4">
+                    JSON-LD documents expand <code class="text-yellow-200">@context</code> prefixes into <code class="text-yellow-200">Q42LEX</code> v4 namespace pages and preserve named graphs (<code class="text-yellow-200">@graph</code>) in the <code class="text-yellow-200">context</code> field:
+                </p>
+                <pre class="text-xs mb-4"><code>{
+  "@context": { "ex": "http://example.org/" },
   "@graph": [
-    {
-      "@id": "http://example.org/alice",
-      "@type": "Person",
-      "name": "Alice Smith",
-      "age": 30,
-      "knows": "http://example.org/bob"
-    },
-    {
-      "@id": "http://example.org/bob",
-      "@type": "Person",
-      "name": "Bob Jones",
-      "age": 35
-    }
+    { "@id": "ex:alice", "@type": "ex:Person", "ex:name": "Alice Smith", "ex:age": 30 }
   ]
 }</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Conversion Command</h3>
-            <pre class="mb-6"><code>qualia-cli import data.jsonld data.q42 --progress text</code></pre>
-
-            <h3 class="text-lg font-medium mb-3">Plain JSON with Schema</h3>
-            <p class="text-white/70 mb-3">For plain JSON, provide a JSON-LD context to map keys to predicates:</p>
-            <pre class="mb-6"><code>{
-  "context": {
-    "name": "http://example.org/name",
-    "age": "http://example.org/age"
-  },
-  "data": [
-    {"name": "Alice", "age": 30},
-    {"name": "Bob", "age": 35}
-  ]
-}</code></pre>
+                <pre class="text-xs"><code>qualia-cli import data.jsonld data.q42 --progress text</code></pre>
+            </div>
         </div>
 
-        <!-- RDF Parsing -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+        <!-- Standard RDF Serializations -->
+        <div class="glass-strong rounded-3xl p-8 mb-12">
+            <h3 class="text-2xl font-semibold mb-4 flex items-center gap-3">
                 <i class="fas fa-project-diagram text-blue-400"></i>
-                RDF Format Parsing
-            </h2>
-            
-            <p class="text-white/70 mb-6">QualiaDB supports multiple RDF serializations:</p>
-            
+                Standard RDF Serializations (Turtle, N-Triples, N-Quads, RDF/XML)
+            </h3>
+            <p class="text-white/70 text-sm mb-6">
+                All W3C RDF serializations pass through the same <code class="text-cyan-300">q_hash</code> and <code class="text-cyan-300">Q42LEX</code> v4 encoder so cross-format imports can be verified for semantic equivalence via <code class="text-cyan-300">verify-graph --encoder=import</code>:
+            </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <h3 class="text-lg font-medium mb-3">Turtle (.ttl)</h3>
-                    <pre><code>@prefix ex: &lt;http://example.org/&gt; .
-
+                    <h4 class="text-sm font-semibold text-cyan-200 mb-2">Turtle (<code>.ttl</code>) &amp; N-Triples (<code>.nt</code>)</h4>
+                    <pre class="text-xs"><code>@prefix ex: &lt;http://example.org/&gt; .
 ex:alice a ex:Person ;
-    ex:name "Alice" ;
+    ex:name "Alice"@en ;
     ex:age 30 .</code></pre>
                 </div>
                 <div>
-                    <h3 class="text-lg font-medium mb-3">N-Triples (.nt)</h3>
-                    <pre><code>&lt;http://example.org/alice&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://example.org/Person&gt; .
-&lt;http://example.org/alice&gt; &lt;http://example.org/name&gt; "Alice" .
-&lt;http://example.org/alice&gt; &lt;http://example.org/age&gt; "30"^^&lt;http://www.w3.org/2001/XMLSchema#integer&gt; .</code></pre>
-                </div>
-                <div>
-                    <h3 class="text-lg font-medium mb-3">RDF/XML (.rdf)</h3>
-                    <pre><code>&lt;rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-         xmlns:ex="http://example.org/">
-  &lt;rdf:Description rdf:about="http://example.org/alice"&gt;
-    &lt;rdf:type rdf:resource="http://example.org/Person"/&gt;
-    &lt;ex:name&gt;Alice&lt;/ex:name&gt;
-    &lt;ex:age&gt;30&lt;/ex:age&gt;
-  &lt;/rdf:Description&gt;
-&lt;/rdf:RDF&gt;</code></pre>
-                </div>
-                <div>
-                    <h3 class="text-lg font-medium mb-3">N-Quads (.nq)</h3>
-                    <pre><code>&lt;http://example.org/alice&gt; &lt;http://example.org/name&gt; "Alice" &lt;http://example.org/graph1&gt; .
-&lt;http://example.org/alice&gt; &lt;http://example.org/age&gt; "30"^^&lt;http://www.w3.org/2001/XMLSchema#integer&gt; &lt;http://example.org/graph1&gt; .</code></pre>
+                    <h4 class="text-sm font-semibold text-cyan-200 mb-2">N-Quads (<code>.nq</code>) &amp; Resumable Jobs</h4>
+                    <pre class="text-xs"><code># Local or remote resumable import into .q42 v4
+qualia-cli import data.nq data.q42
+qualia-cli import catalog.q42 --url https://example.org/catalog.ttl --job-dir ./jobs/catalog
+qualia-cli ingest-job continue ./jobs/catalog</code></pre>
                 </div>
             </div>
-
-            <h3 class="text-lg font-medium mb-3">Ingest Commands</h3>
-            <pre><code># Turtle
-qualia-cli import data.ttl data.q42
-
-# N-Triples
-qualia-cli import data.nt data.q42
-
-# RDF/XML
-qualia-cli import data.rdf data.q42
-
-# N-Quads (with named graphs)
-qualia-cli import data.nq data.q42
-
-# remote, resumable, attested import
-qualia-cli import data.q42 --url https://example.org/catalog.ttl --job-dir ./jobs/catalog
-qualia-cli ingest-job continue ./jobs/catalog</code></pre>
         </div>
 
-        <!-- CBOR-LD -->
-        <div class="glass-strong rounded-3xl p-8 mb-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-microchip text-purple-400"></i>
-                CBOR-LD (Native Format)
-            </h2>
-            
-            <p class="text-white/70 mb-6">CBOR-LD is QualiaDB's native binary format. It provides the most efficient storage and zero-allocation parsing:</p>
-            
-            <h3 class="text-lg font-medium mb-3">Why CBOR-LD?</h3>
-            <ul class="list-disc list-inside text-white/70 space-y-2 mb-6">
-                <li>Binary format (smaller than text)</li>
-                <li>Zero-allocation parsing (direct to Quin structs)</li>
-                <li>Self-describing (includes data types)</li>
-                <li>Web-friendly (can be used in browser)</li>
-            </ul>
+        <!-- Layer 4: 10D & Model Binary Containers -->
+        <section class="glass-strong rounded-3xl p-8 mb-12" id="binary-containers">
+            <div class="layer-pill bg-amber-500/15 text-amber-300 border border-amber-500/30 mb-4">
+                <i class="fas fa-boxes-stacked"></i> Layer 4 · 10D Spatial, Physical &amp; Model Binary Containers
+            </div>
+            <h2 class="text-3xl font-semibold mb-3">10D, Physical Matter, Field &amp; Weight Containers</h2>
+            <p class="text-white/70 max-w-4xl mb-8">
+                Volumetric geometry, physical strata, electromagnetic fields, and neural network weights are stored in dedicated 64-byte-aligned binary containers (<code class="text-amber-300">.10d</code>, <code class="text-amber-300">M64</code>, <code class="text-amber-300">EMF64</code>, and <code class="text-amber-300">P64</code>) that can be bundled alongside <code class="text-cyan-300">.q42</code> volumes inside a transparent <code class="text-cyan-300">.hmc</code> (Hyper Media Container).
+            </p>
 
-            <h3 class="text-lg font-medium mb-3">Import from CBOR-LD</h3>
-            <pre><code>qualia-cli import data.cborld data.q42 --progress json</code></pre>
-            <p class="text-white/50 text-sm mt-4">Q42 is the native durable volume format. Use the Q42 inspection and verification commands below to establish what was written.</p>
-        </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Container10D (.10d) -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-cyan-300">
+                            <code class="text-white">Container10D</code> (<code>.10d</code> Living Container v1)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-cyan-500/15 text-cyan-200">container_10d.rs</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        Encodes the 10-dimensional spatiotemporal and modal manifold substrate with a normative header, axis-role taxonomy, metric-completeness descriptor, and typed chunk stream:
+                    </p>
+                    <ul class="text-xs text-white/65 space-y-1.5 font-mono">
+                        <li><span class="text-cyan-300">PROC1</span> — Procedural CSG / SDF construction operators &amp; parameters</li>
+                        <li><span class="text-cyan-300">EONT1</span> — Entity-ontology bindings linking geometry to <code class="text-white">NQuin</code> hashes</li>
+                        <li><span class="text-cyan-300">MRP1</span>  — Morph target &amp; deformation field descriptors</li>
+                        <li><span class="text-cyan-300">SKL1</span>  — Skeletal hierarchy &amp; kinematic articulation rigs</li>
+                    </ul>
+                </article>
 
-        <!-- Performance Comparison -->
+                <!-- M64 Matter-64 -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-emerald-300">
+                            <code class="text-white">M64</code> (64-Byte Matter Chunks)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-200">m64_matter.rs</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        Canonical 64-byte aligned container for physical strata, point clouds, material constitutive tensors, and holographic volumetric entities.
+                    </p>
+                    <p class="text-xs text-white/60">
+                        Each 64-byte record aligns cleanly with a single CPU cache line and GPU storage-buffer stride, enabling zero-copy upload to WebGPU / Vulkan compute shaders without heap deserialization.
+                    </p>
+                </article>
+
+                <!-- EMF64 -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-violet-300">
+                            <code class="text-white">EMF64</code> (64-Byte Electromagnetic Field Records)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-violet-500/15 text-violet-200">emf_container.rs</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        Stores 64-byte electromagnetic and wave-optical field records (<code class="text-violet-200">.emf</code>) capturing electric/magnetic field vectors, polarization state, spectral phase, and permittivity/permeability bounds.
+                    </p>
+                    <p class="text-xs text-white/60">
+                        Designed for deterministic fixed-tick Maxwell/FDTD solvers and acoustic/RF sensing pipelines that cross-reference spatial <code class="text-white">.q42</code> context frames.
+                    </p>
+                </article>
+
+                <!-- P64 Weight Container -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-amber-300">
+                            <code class="text-white">P64</code> (64-Byte Aligned Weight Container)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-amber-500/15 text-amber-200">p64_weight.rs</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        Identified by the distinct <code class="text-amber-200">p64\0</code> magic header, <code class="text-amber-200">P64</code> packages quantized GGUF/Safetensor model weights into 64-byte headers, tensor directory entries, and manifold records.
+                    </p>
+                    <p class="text-xs text-white/60">
+                        Enforces both metadata and <strong>per-tensor CRC-32C</strong> checksums with byte-exact disk round-trip verification and direct <code class="text-white">mmap</code> residency.
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <!-- Reproducibility and Verification -->
         <div class="glass-strong rounded-3xl p-8">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+            <h2 class="text-2xl font-semibold mb-4 flex items-center gap-3">
                 <i class="fas fa-tachometer-alt text-cyan-400"></i>
-                Reproducibility and verification
+                Reproducibility &amp; Encoded-Set Verification
             </h2>
-            
-            <p class="text-white/70 mb-4">An ingest result is useful only when it can be checked. Keep the input and output together, then use the bounded encoded-set proof rather than treating a size or a legacy XOR result as equivalence.</p>
-            <pre><code># inspect the physical Q42 v4 volume
+            <p class="text-white/70 mb-4">
+                Every ingested <code class="text-cyan-300">.q42</code> v4 volume can be inspected for structural integrity, <code class="text-cyan-300">Q42LEX</code> v4 coverage, <code class="text-cyan-300">PCAT</code> digests, and full encoded-set equivalence against the original RDF source within explicit memory and scratch-disk bounds:
+            </p>
+            <pre class="text-sm"><code># Inspect physical Q42 v4 sections (Header, BIDX, FIDX, PIDX, Q42LEX v4, PCAT v1)
 qualia-cli q42 inspect data.q42
 qualia-cli q42 verify data.q42 --level full
 
-# prove that the encoded graph agrees with the input within explicit bounds
-qualia-cli verify-graph --input data.ttl --dataset data.q42 --memory-mib 32 --temp-gib 24</code></pre>
-            <p class="text-white/50 text-sm mt-4">Publish benchmark figures only with the command, input version, hardware, and raw result artifact. This keeps performance claims comparable and auditable.</p>
+# Prove that the encoded graph agrees with the source input within explicit bounds
+qualia-cli verify-graph --encoder=import --input data.ttl --dataset data.q42 --memory-mib 32 --temp-gib 24</code></pre>
+            <p class="text-white/50 text-sm mt-4">
+                Publish benchmark and equivalence receipts alongside the command, input digest, hardware profile, and raw JSON receipt so every claim remains independently auditable.
+            </p>
         </div>
     </div>
 
@@ -252,11 +480,11 @@ qualia-cli verify-graph --input data.ttl --dataset data.q42 --memory-mib 32 --te
         <div class="max-w-screen-2xl mx-auto px-8">
             <div class="flex items-center justify-between">
                 <div class="text-white/50 text-sm">
-                    QualiaDB v0.0.40 • Human-Centric Semantic Engine
+                    QualiaDB v0.0.41 • Human-Centric Semantic Engine
                 </div>
                 <div class="flex items-center gap-6 text-sm">
                     <a href="manuals/" class="hover:text-white transition-colors">Manuals</a>
-                    <a href="manuals/standards/" class="hover:text-white transition-colors">Standards</a>
+                    <a href="read.html?doc=manuals/standards/q42-implementation-divergence.md" class="hover:text-white transition-colors">Standards</a>
                     <a href="https://github.com/mediaprophet/qualiaDB" target="_blank" class="hover:text-white transition-colors">GitHub</a>
                 </div>
             </div>

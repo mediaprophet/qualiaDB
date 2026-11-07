@@ -2,7 +2,7 @@ name: Etalon and VibeScript
 
 on:
   push:
-    branches: ["0.0.40.*"]
+    branches: ["0.0.40.*", "0.0.41", "0.0.41.*"]
     paths:
       - "Cargo.toml"
       - "Cargo.lock"

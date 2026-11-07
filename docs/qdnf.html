@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QDNF — Qualia Decentralized Network Fabric</title>
+  <title>QDNF — Qualia Decentralized Network Fabric (0.0.41)</title>
+  <meta name="description" content="Architecture, cryptographic mechanics, and qualification boundaries for the Qualia Decentralized Network Fabric (QDNF) and Qualia Peer Runtime (QPR) in release 0.0.41.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -29,48 +30,76 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Native fabric · local and transition slices landed · 0.0.40</div>
+    <!-- LAYER 1: PLAIN-LANGUAGE OVERVIEW -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-circle-nodes"></i> Qualia Decentralized Network Fabric · Sovereign Transport &amp; Routing · 0.0.41</div>
     <h1 class="q-hero-title font-display mb-5">
       A network that does not borrow DNS to know a human.
     </h1>
     <p class="q-lede mb-6">
-      QDNF is Qualia’s native networking model. Inside a QDNF realm it does not require ARP, IPv6 neighbour discovery, DHCP, DNS, ICANN names, BGP, or a mandatory cloud relay.
-      The Qualia Peer Runtime (QPR) is the library over that fabric — the intended replacement for libp2p, not a wrapper around it.
+      The <strong>Qualia Decentralized Network Fabric (QDNF)</strong> is QualiaDB’s native networking architecture. Inside a QDNF realm, peer discovery, routing, session encryption, and <code class="q-mono">.q42</code> knowledge replication operate without ARP, IPv6 neighbour discovery, DHCP, ICANN DNS, BGP, or mandatory cloud relays. The <strong>Qualia Peer Runtime (QPR)</strong> is our bounded, zero-heap-hot-path peer engine over that fabric — engineered as a ground-up replacement for <code class="q-mono">libp2p</code>, never a wrapper around it.
     </p>
     <p class="q-note mb-6">
-      Honest status: QPR is native and still being built on <code class="q-mono">0.0.40</code>. This page is a map, not a live packet capture.
-      Locators and DNS names are handles — never the human (NaturalAgent). Law keeps the word <strong>person</strong> where statutes need it.
-      Ordinary Internet stays a Legacy Internet Gateway.
-      Public Internet relay / MASQUE evidence flags stay <strong>false</strong> until a second host dials a URL Timothy supplies (CSCP-08 chores wait on that). No invented ticks.
-      The older <a class="q-link" href="network_webizen.html">Network Webizen</a> screen still plays a mock table.
+      <strong>Release 0.0.41 Verification Scope:</strong> QDNF separates human identity from network routing across three strict Identifier Fabric planes. In-tree protocol engines (<code class="q-mono">NET-18</code> through <code class="q-mono">NET-21</code> and <code class="q-mono">EVAL-22</code>), the QPR connection manager, <code class="q-mono">CSCP</code> local control-plane slices, <code class="q-mono">did:qi</code> pairwise relationship lifecycle, and named <strong>Transition bearers</strong> (<code class="q-mono">WireGuard</code>, TLS <code class="q-mono">WebSocket</code>, <code class="q-mono">HTTP/2</code> Extended CONNECT capsules, and Nym mixnet framing) are verified in tree. Public Internet relay and MASQUE qualification flags remain <code class="q-mono">false</code> until multi-host public endpoint trials are executed. The earlier <a class="q-link" href="network_webizen.html">Network Webizen</a> console remains an interactive topology preview.
     </p>
     <p class="q-continuity-strip mb-12" role="note">
       <strong>Handle ≠ human.</strong>
-      Chrome says <em>human</em> (NaturalAgent). Law keeps the word <strong>person</strong> where statutes need it.
+      Protocol surfaces distinguish the <em>human (NaturalAgent)</em> on the <strong>Entity</strong> plane from expiring locators on the <strong>Handle</strong> plane and cryptographic channels on the <strong>Instrument</strong> plane. Law keeps the word <strong>person</strong> where statutes require it.
     </p>
 
+    <section class="q-card p-8 mb-12">
+      <p class="q-kicker mb-2">Layer 1 · Plain-Language Overview</p>
+      <h2 class="text-2xl font-semibold mb-4">Why QDNF Exists: Separating Entity, Handle, and Instrument</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:52rem">
+        Legacy Internet protocols conflate <em>who participates</em> with <em>where packets travel</em>. When an ICANN domain expires, an IP prefix shifts in BGP, or a cloud relay closes an account, applications treat the underlying human or community as erased. QDNF eliminates that fragility by splitting identity, addressing, and transport into three non-overlapping planes:
+      </p>
+      <div class="grid md:grid-cols-3 gap-5 text-sm">
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+          <p class="q-kicker text-emerald-300 mb-2">1. Entity Plane (Who)</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Sovereign Human &amp; Community</h3>
+          <p style="color:var(--q-muted)">
+            Represents the natural person (<code class="q-mono">NaturalAgent</code>) or ratified multi-party agreement (<code class="q-mono">did:webizen</code>). Entity identifiers never appear in wire routing headers, carrier lookup tables, or public DNS zones.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/5 p-6">
+          <p class="q-kicker text-cyan-300 mb-2">2. Handle Plane (Where)</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Expiring Topological Locators</h3>
+          <p style="color:var(--q-muted)">
+            Self-certifying, time-bounded network locators (<code class="q-mono">DNI</code>), optional DNS handles, and carrier hints. Handles exist solely to forward cells across links. <strong>Handle revoke ≠ who-erase</strong>: revoking a locator closes a route while preserving local <code class="q-mono">.q42</code> knowledge volumes.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-6">
+          <p class="q-kicker text-violet-300 mb-2">3. Instrument Plane (How)</p>
+          <h3 class="text-lg font-semibold text-white mb-2">Pairwise Channels &amp; Cells</h3>
+          <p style="color:var(--q-muted)">
+            Cryptographic instruments including pairwise rotating <code class="q-mono">did:qi</code> relationship documents, <code class="q-mono">CSCP</code> control mailboxes, <code class="q-mono">QSession</code> encrypted streams, and supervised <code class="q-mono">QPR</code> Network Cells with strict byte budgets.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- LAYER 2: PROTOCOL ARCHITECTURE & HONEYCOMB -->
     <section class="q-card p-8 mb-12 overflow-x-auto" id="honeycomb">
-      <p class="q-kicker mb-3 text-center">Protocol honeycomb</p>
-      <p class="hex-hint mb-6 text-center">Tap a layer for a plain line and a technical line. Escape closes.</p>
+      <p class="q-kicker mb-3 text-center">Layer 2 · Protocol Architecture Honeycomb</p>
+      <p class="hex-hint mb-6 text-center">Select any QDNF protocol cell for a plain-language summary and its in-tree technical contract. Press Escape to close.</p>
       <div class="hex-grid" role="group" aria-label="QDNF layers">
         <div class="hex-row">
-          <button type="button" class="hex" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency — neighbours are proven, not guessed from ARP." aria-expanded="false" aria-controls="hex-detail">QLink</button>
-          <button type="button" class="hex" data-hex="dni" data-name="DNI" data-plain="Expiring locators — handles, not forever-who." data-tech="Self-certifying topological identifiers; a path is a locator, never who." aria-expanded="false" aria-controls="hex-detail">DNI</button>
-          <button type="button" class="hex" data-hex="qroute" data-name="QRoute" data-plain="Link state inside a realm; path vector between realms." data-tech="Intra-realm link state and inter-realm path vector. Not BGP-as-who." aria-expanded="false" aria-controls="hex-detail">QRoute</button>
+          <button type="button" class="hex" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency discovery and frame admission — neighbours are proven via signed link challenges, never guessed from broadcast ARP or ND." aria-expanded="false" aria-controls="hex-detail">QLink</button>
+          <button type="button" class="hex" data-hex="dni" data-name="DNI" data-plain="Expiring locators — handles, not forever-who." data-tech="Decentralized Network Identifiers: self-certifying, generation-bounded topological locators on the Handle plane, never NaturalAgent identity." aria-expanded="false" aria-controls="hex-detail">DNI</button>
+          <button type="button" class="hex" data-hex="qroute" data-name="QRoute" data-plain="384-bit radix-16 QSR and primal-dual shortest-path witness." data-tech="Intra-realm constraint-first SPF (Bellman–Ford dual optimality witness) and 384-bit radix-16 QSR exact lookup with RarPermit binding." aria-expanded="false" aria-controls="hex-detail">QRoute</button>
         </div>
         <div class="hex-row">
-          <button type="button" class="hex" data-hex="qresolve" data-name="QResolve" data-plain="DID and content without DNS-as-who." data-tech="Resolve DID / content / resource; optional domain names stay handles only." aria-expanded="false" aria-controls="hex-detail">QResolve</button>
-          <button type="button" class="hex" data-hex="qpolicy" data-name="QPolicy" data-plain="Consent, capability, and deontic authorization." data-tech="Capability and consent gates on the fabric — not a Host policy invention." aria-expanded="false" aria-controls="hex-detail">QPolicy</button>
-          <button type="button" class="hex" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="Encrypted sessions; signed, bounded Q42 / CRDT exchange." data-tech="Encrypted datagrams and streams, then signed bounded Q42 / CRDT sync — not a public relay or CSCP-08 tick." aria-expanded="false" aria-controls="hex-detail">QSession<br>QSync</button>
+          <button type="button" class="hex" data-hex="qresolve" data-name="QResolve" data-plain="DID and content resolution without DNS-as-who." data-tech="Resolves did:qi, did:webizen, and did:q42 coordinates with RarPermit authorization; optional DNS domains remain attach-later handles only." aria-expanded="false" aria-controls="hex-detail">QResolve</button>
+          <button type="button" class="hex" data-hex="qpolicy" data-name="QPolicy" data-plain="40-scenario egress lattice and deontic authorization." data-tech="Mandatory C0–C3 confidentiality lattice, purpose/compartment join, and 40-scenario parity-verified NQuin egress audit receipts." aria-expanded="false" aria-controls="hex-detail">QPolicy</button>
+          <button type="button" class="hex" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="SHA-384 transcript sessions and parity-checked .q42 replication." data-tech="SHA-384 handshake transcript, HKDF-SHA384 directional keys, monotonic rekeying, and ChunkToSuperBlockManifest .q42 replication." aria-expanded="false" aria-controls="hex-detail">QSession<br>QSync</button>
         </div>
       </div>
       <div class="hex-stack" role="group" aria-label="QDNF layers">
-        <button type="button" class="hex-tile" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency — neighbours are proven, not guessed from ARP." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QLink</span><span class="hex-tile-hint">Proven neighbours, not ARP guesses.</span></button>
-        <button type="button" class="hex-tile" data-hex="dni" data-name="DNI" data-plain="Expiring locators — handles, not forever-who." data-tech="Self-certifying topological identifiers; a path is a locator, never who." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">DNI</span><span class="hex-tile-hint">Expiring locators — handles, not forever-who.</span></button>
-        <button type="button" class="hex-tile" data-hex="qroute" data-name="QRoute" data-plain="Link state inside a realm; path vector between realms." data-tech="Intra-realm link state and inter-realm path vector. Not BGP-as-who." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QRoute</span><span class="hex-tile-hint">Link state inside a realm; path vector between realms.</span></button>
-        <button type="button" class="hex-tile" data-hex="qresolve" data-name="QResolve" data-plain="DID and content without DNS-as-who." data-tech="Resolve DID / content / resource; optional domain names stay handles only." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QResolve</span><span class="hex-tile-hint">DID and content without DNS-as-who.</span></button>
-        <button type="button" class="hex-tile" data-hex="qpolicy" data-name="QPolicy" data-plain="Consent, capability, and deontic authorization." data-tech="Capability and consent gates on the fabric — not a Host policy invention." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QPolicy</span><span class="hex-tile-hint">Consent, capability, and deontic authorization.</span></button>
-        <button type="button" class="hex-tile" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="Encrypted sessions; signed, bounded Q42 / CRDT exchange." data-tech="Encrypted datagrams and streams, then signed bounded Q42 / CRDT sync — not a public relay or CSCP-08 tick." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QSession / QSync</span><span class="hex-tile-hint">Encrypted sessions; signed, bounded Q42 / CRDT exchange.</span></button>
+        <button type="button" class="hex-tile" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency discovery and frame admission — neighbours are proven via signed link challenges, never guessed from broadcast ARP or ND." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QLink</span><span class="hex-tile-hint">Proven neighbours, not ARP guesses.</span></button>
+        <button type="button" class="hex-tile" data-hex="dni" data-name="DNI" data-plain="Expiring locators — handles, not forever-who." data-tech="Decentralized Network Identifiers: self-certifying, generation-bounded topological locators on the Handle plane, never NaturalAgent identity." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">DNI</span><span class="hex-tile-hint">Expiring locators — handles, not forever-who.</span></button>
+        <button type="button" class="hex-tile" data-hex="qroute" data-name="QRoute" data-plain="384-bit radix-16 QSR and primal-dual shortest-path witness." data-tech="Intra-realm constraint-first SPF (Bellman–Ford dual optimality witness) and 384-bit radix-16 QSR exact lookup with RarPermit binding." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QRoute</span><span class="hex-tile-hint">384-bit radix-16 QSR and primal-dual shortest-path witness.</span></button>
+        <button type="button" class="hex-tile" data-hex="qresolve" data-name="QResolve" data-plain="DID and content resolution without DNS-as-who." data-tech="Resolves did:qi, did:webizen, and did:q42 coordinates with RarPermit authorization; optional DNS domains remain attach-later handles only." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QResolve</span><span class="hex-tile-hint">DID and content resolution without DNS-as-who.</span></button>
+        <button type="button" class="hex-tile" data-hex="qpolicy" data-name="QPolicy" data-plain="40-scenario egress lattice and deontic authorization." data-tech="Mandatory C0–C3 confidentiality lattice, purpose/compartment join, and 40-scenario parity-verified NQuin egress audit receipts." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QPolicy</span><span class="hex-tile-hint">40-scenario egress lattice and deontic authorization.</span></button>
+        <button type="button" class="hex-tile" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="SHA-384 transcript sessions and parity-checked .q42 replication." data-tech="SHA-384 handshake transcript, HKDF-SHA384 directional keys, monotonic rekeying, and ChunkToSuperBlockManifest .q42 replication." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QSession / QSync</span><span class="hex-tile-hint">SHA-384 transcript sessions and parity-checked .q42 replication.</span></button>
       </div>
       <div id="hex-detail" class="hex-detail" hidden>
         <p class="hex-detail-name q-mono" data-hex-name></p>
@@ -81,58 +110,139 @@
 
     <section class="grid md:grid-cols-2 gap-5 mb-12">
       <article class="q-card p-7">
-        <h2 class="text-xl font-semibold mb-3">What the layers do</h2>
-        <dl class="text-[1.05rem] space-y-3" style="color:var(--q-muted)">
-          <div><dt class="text-cyan-300 q-mono">QLink</dt><dd>Cryptographic adjacency. Neighbours are proven, not guessed from ARP.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">DNI</dt><dd>Self-certifying, expiring topological identifiers — locators / handles, not forever-who from a path.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">QRoute</dt><dd>Intra-realm link state and inter-realm path vector.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>DID / content / resource resolution without DNS-as-who. Optional domain names remain handles only.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">QPolicy</dt><dd>Consent, capability, deontic authorization.</dd></div>
-          <div><dt class="text-cyan-300 q-mono">QSession / QSync</dt><dd>Encrypted datagrams and streams; signed bounded Q42 / CRDT exchange.</dd></div>
+        <p class="q-kicker mb-2">Stack Architecture</p>
+        <h2 class="text-xl font-semibold mb-3">What the six QDNF layers do</h2>
+        <dl class="text-[1.02rem] space-y-3" style="color:var(--q-muted)">
+          <div><dt class="text-cyan-300 q-mono">QLink</dt><dd>Cryptographic link adjacency and bounded <code class="q-mono">QFrame</code> wire framing over local IPC, native links, or explicitly labelled <strong>Transition bearers</strong>.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">DNI</dt><dd>Self-certifying, expiring topological locators on the Handle plane — never a permanent identity or unrevokable profile.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QRoute</dt><dd>384-bit radix-16 Qualia Semantic Routing (<code class="q-mono">QSR</code>) with <code class="q-mono">RarPermit</code> binding and Bellman–Ford primal-dual shortest-path optimality verification.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>Deterministic resolution for <code class="q-mono">did:qi</code>, <code class="q-mono">did:webizen</code>, and <code class="q-mono">did:q42</code> resource coordinates without ICANN DNS-as-identity.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QPolicy</dt><dd>Deontic capability gates and a 40-scenario confidentiality lattice emitting parity-checked <code class="q-mono">NQuin</code> egress audit receipts.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QSession / QSync</dt><dd>Authenticated <code class="q-mono">CSCP</code> and <code class="q-mono">QSession</code> streams with <code class="q-mono">SHA-384</code> transcripts, <code class="q-mono">HKDF-SHA384</code> directional keys, and <code class="q-mono">.q42</code> SuperBlock synchronization.</dd></div>
         </dl>
       </article>
       <article class="q-card p-7">
-        <h2 class="text-xl font-semibold mb-3">What it is not</h2>
-        <ul class="text-[1.05rem] space-y-3" style="color:var(--q-muted)">
-          <li>Not a browser libpcap. GitHub Pages cannot see your NIC.</li>
-          <li>Not identity. Locators, sessions, and instruments stay off the who-plane (Identifier Fabric). Handle revoke ≠ who-erase. Human ≠ legal “person” ≠ bot.</li>
-          <li>Not DNS-as-who. A lost domain must not erase a human from the fabric; domains are optional handles.</li>
-          <li>Not “Solid as the architecture.” Solid LDP remains a federated access surface; QDNF owns naming and routing.</li>
-          <li>Not finished. On <code class="q-mono">0.0.40</code>: native QPR / CSCP local slices, <code>did:qi</code> mailbox binding, and named transition bearers are in tree. Public relay and Internet two-host path are building next. See the <a class="q-link" href="qdnf-status.html">implementation status</a> for what already runs.</li>
+        <p class="q-kicker mb-2">Architectural Non-Goals</p>
+        <h2 class="text-xl font-semibold mb-3">What QDNF is not</h2>
+        <ul class="text-[1.02rem] space-y-3" style="color:var(--q-muted)">
+          <li><strong>Not a browser packet sniffer:</strong> Static GitHub Pages documentation cannot inspect host NIC rings or forge live network telemetry.</li>
+          <li><strong>Not identity-by-locator:</strong> Locators, sessions, and <code class="q-mono">did:qi</code> instruments remain off the Entity plane. Handle revoke ≠ who-erase; <code class="q-mono">human (NaturalAgent)</code> ≠ legal “person” ≠ software bot.</li>
+          <li><strong>Not DNS-as-who:</strong> Losing a domain name or IP lease never invalidates a human’s <code class="q-mono">.q42</code> knowledge graph or <code class="q-mono">did:webizen</code> agreements.</li>
+          <li><strong>Not carrier laundering:</strong> Wrapping a <code class="q-mono">QFrame</code> inside <strong>Transition bearers</strong> (<code class="q-mono">WireGuard</code>, <code class="q-mono">WebSocket</code>, <code class="q-mono">HTTP/2</code>, or <code class="q-mono">Nym</code> mixnet framing) does not upgrade the path to Native Independent or launder proxy authenticity (<code class="q-mono">no_proxy_launder</code>).</li>
+          <li><strong>Not an unverified public cloud claim:</strong> See the <a class="q-link" href="qdnf-status.html">QDNF implementation status</a> for the exact boundary between in-tree verification and external Internet trials.</li>
         </ul>
       </article>
     </section>
 
+    <!-- LAYER 3: CRYPTOGRAPHIC & ROUTING MECHANICS (NET-18..21 & EVAL-22) -->
+    <section class="q-card p-8 mb-12" id="mechanics">
+      <p class="q-kicker mb-2">Layer 3 · Cryptographic &amp; Routing Mechanics (0.0.41)</p>
+      <h2 class="text-2xl font-semibold mb-3">Completed In-Tree Protocol Engines (<code class="q-mono">NET-18</code>–<code class="q-mono">NET-21</code> &amp; <code class="q-mono">EVAL-22</code>)</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:54rem">
+        Release <code class="q-mono">0.0.41</code> completes five foundational cryptographic, routing, replication, policy-audit, and tri-source qualification packages inside <code class="q-mono">crates/qualia-core-db/src/net/</code> and <code class="q-mono">crates/qualia-cscp/</code>, adhering strictly to the Zero-Heap hot-path and 48-byte <code class="q-mono">NQuin</code> parity contracts.
+      </p>
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">NET-18 · Session &amp; CSCP</span>
+            <span class="q-mono text-xs text-white/60">session/handshake.rs · rekey.rs · bind.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">CSCP Handshake, HKDF-SHA384 &amp; Locator Binding</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Establishes <code class="q-mono">HandshakeTranscriptDigest</code> as a deterministic <code class="q-mono">SHA-384</code> digest over <code class="q-mono">ClientHello || ServerHello || NegotiatedParams</code>. Directional session keys are derived via <code class="q-mono">HKDF-SHA384</code> and rotated through generation-monotonic <code class="q-mono">rekey_session</code> transitions that zeroize retired key material.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Enforces <code class="q-mono">LocatorBinding</code> with the <code class="q-mono">no_proxy_launder</code> invariant: frames arriving via a proxy or transition relay can never upgrade <code class="q-mono">AuthenticityClass</code> to native direct peer authenticity.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-cyan-300">NET-19 · QSR &amp; QRoute</span>
+            <span class="q-mono text-xs text-white/60">qsr/exact.rs · route/spf.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">384-Bit Radix-16 QSR &amp; Dual Shortest-Path Witness</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Implements full 384-bit (<code class="q-mono">48</code>-byte / <code class="q-mono">96</code>-nibble) radix-16 trie lookup in <code class="q-mono">qsr/exact.rs</code> coupled with cryptographic <code class="q-mono">RarPermit</code> capability verification before forwarding.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Pairs intra-realm route planning with <code class="q-mono">verify_spf_dual_optimality</code>: a Bellman–Ford primal-dual witness verifier that checks dual triangle inequality (<code class="q-mono">d[v] &lt;= d[u] + w(u,v)</code>) across all admitted edges alongside a loop-free predecessor tree witness.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-violet-300">NET-20 · QSync &amp; QPR Leases</span>
+            <span class="q-mono text-xs text-white/60">replication/ · runtime/ledger.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">Chunk-to-SuperBlock .q42 Replication &amp; Lease Accounting</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            <code class="q-mono">ChunkToSuperBlockManifest</code> bridges <code class="q-mono">SHA-384</code> transport chunks to <code class="q-mono">SHA-256</code> <code class="q-mono">.q42</code> v4 SuperBlocks, verifying 5-field <code class="q-mono">NQuin</code> XOR parity (<code class="q-mono">subject ^ predicate ^ object ^ context</code>) on every datum prior to <code class="q-mono">commit_verified_block</code>.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Coupled with <code class="q-mono">release_checked_bytes</code> in the QPR <code class="q-mono">ReservationLedger</code>, ensuring byte-budget reclamation verifies lease generation counters and fails closed on stale or double-released handles.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-amber-300">NET-21 · Egress Governance</span>
+            <span class="q-mono text-xs text-white/60">policy_labels/egress.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">40-Scenario <code class="q-mono">policy_labels</code> Egress Admission Matrix</h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Evaluates outbound transfers across all 40 combinations of confidentiality tiers (<code class="q-mono">C0Public</code>–<code class="q-mono">C3Restricted</code>), restriction bitmasks (<code class="q-mono">NO_TRAINING</code>, <code class="q-mono">NO_EXTERNAL_AI</code>, <code class="q-mono">NO_PUBLIC_INDEX</code>, <code class="q-mono">NO_REDISTRIBUTE</code>, <code class="q-mono">NO_BIOMETRIC_REUSE</code>), and caller classes (<code class="q-mono">Vibe</code>, <code class="q-mono">Poet</code>, <code class="q-mono">BackgroundWorker</code>, <code class="q-mono">DelegatedTool</code>).
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            <code class="q-mono">EgressAuditReceipt</code> and <code class="q-mono">enumerate_egress_audit_quin</code> emit 5-field parity-verified <code class="q-mono">NQuin</code> audit records for every admission or denial decision.
+          </p>
+        </article>
+      </div>
+
+      <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <span class="q-kicker text-emerald-300">EVAL-22 · Tri-Source Evaluation Aggregator</span>
+          <span class="q-mono text-xs text-white/60">.q42 v4 Qualification Plane</span>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Unified Etalon + QDNF + QualiaDB Qualification Receipts</h3>
+        <p class="text-sm" style="color:var(--q-muted)">
+          <code class="q-mono">EVAL-22</code> combines three independent verification streams — <strong>Etalon</strong> deterministic oracle receipts, <strong>QDNF</strong> network transport/routing receipts, and <strong>QualiaDB</strong> core arena invariant receipts — into a unified <code class="q-mono">.q42</code> v4 qualification record reporting exact <code class="q-mono">passed</code>, <code class="q-mono">failed</code>, and <code class="q-mono">unsupported</code> counts per plane without conflating local proof with unexecuted hardware or public-Internet gates.
+        </p>
+      </article>
+    </section>
+
+    <!-- LAYER 4: VERIFICATION & QUALIFICATION BOUNDARY -->
     <section id="ledger" class="q-card p-8 mb-12">
-      <h2 class="text-2xl font-semibold mb-3">0.0.40 networking — what runs</h2>
-      <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">Present · building next · parked. Soft-rise of the fabric layers that already land in tree.</p>
-      <div class="grid md:grid-cols-3 gap-4 text-[1.05rem]">
+      <p class="q-kicker mb-2">Layer 4 · Verification &amp; Qualification Boundary</p>
+      <h2 class="text-2xl font-semibold mb-3">0.0.41 Networking — What Runs vs. Open Qualification Gates</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:48rem">
+        Every capability is classified by its concrete verification boundary: in-tree verified modules, platform-gated hardware paths, and multi-host public-network gates.
+      </p>
+      <div class="grid md:grid-cols-3 gap-4 text-[1.02rem]">
         <article class="q-soft-rise rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-7">
-          <p class="q-kicker text-emerald-300 mb-2">Landed</p>
-          <ul class="q-ledger" style="color:var(--q-muted)">
-            <li>QDNF <strong>connection manager</strong> in-tree (policy, dual-stack planner, invitations, durable delivery) — Internet trial still unexecuted.</li>
-            <li><strong>CSCP</strong> local control plane (Wave 0–1): fail-closed TLV codec, mailbox, leases, receipts; loopback bound-UDP; local rustls WSS ↔ QSession.</li>
-            <li>CSCP-09.01/09.02: local DATAGRAM capsules + loopback HTTP/2 Extended CONNECT — <em>not</em> Internet MASQUE.</li>
-            <li><code class="q-mono">did:qi</code>: signed QCDE-1 lifecycle/vectors, mailbox publication, relay-only refusal, and Direct-permitted selection — <em>not</em> DID Spec Registries.</li>
-            <li>Named transition bearers include WireGuard, TLS WSS, HTTP/2 capsules, and bounded Nym mixnet framing. Transition is not Native Independent.</li>
-            <li>Continuity: handle revoke ≠ who-erase; DNS/ABN/passport optional attach-later handles.</li>
+          <p class="q-kicker text-emerald-300 mb-2">Local &amp; In-Tree Verified</p>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>QPR connection manager</strong> in tree: policy lattice, dual-stack path planner, capability invitations, and durable delivery pairs.</li>
+            <li><strong>CSCP</strong> local control plane (<code class="q-mono">qualia-cscp</code>): fail-closed TLV codec, private mailbox, generation leases, receipts, loopback bound-UDP, and local <code class="q-mono">rustls</code> <code class="q-mono">WebSocket</code> (WSS) ↔ <code class="q-mono">QSession</code>.</li>
+            <li><strong>CSCP-09.01 / 09.02:</strong> local DATAGRAM capsules and loopback <code class="q-mono">HTTP/2</code> Extended CONNECT proof paths.</li>
+            <li><code class="q-mono">did:qi</code>: signed QCDE-1 document lifecycle, <code class="q-mono">CscpMailbox</code> binding, relay-only refusal of direct locators, and Direct-permitted path selection.</li>
+            <li><strong>Transition bearers:</strong> <code class="q-mono">WireGuard</code> overlay, TLS <code class="q-mono">WebSocket</code>, <code class="q-mono">HTTP/2</code> capsules, and bounded <code class="q-mono">Nym</code> mixnet framing.</li>
           </ul>
         </article>
         <article class="q-soft-rise q-care rounded-2xl p-7">
-          <p class="q-kicker mb-2" style="color:var(--q-cyan,#67e8f9)">Building next</p>
-          <ul class="q-ledger" style="color:var(--q-muted)">
-            <li>QPR / native fabric depth and qualification beyond local slices, including raw Ethernet, AF_XDP, long-duration churn, and independent review.</li>
-            <li>Parent CSCP-09 on a <em>live Internet</em> path (loopback H2 is not that).</li>
-            <li>Identifier Fabric chrome fold (docs WIP — not a new paper gate).</li>
-            <li>GitHub Pages can publish this status record but cannot supply public-network evidence. Publish path is tag <code class="q-mono">v0.0.40</code>.</li>
+          <p class="q-kicker mb-2" style="color:var(--q-cyan,#67e8f9)">Qualification Holds (Platform)</p>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>Raw Ethernet &amp; AF_XDP:</strong> <code class="q-mono">open_af_xdp</code> fails closed with <code class="q-mono">PlatformUnsupported</code> on unprivileged userspace; <code class="q-mono">umem_registered()</code> and <code class="q-mono">silent_zero_copy_fallback()</code> report <code class="q-mono">false</code> until dedicated NIC ring hardware is attached.</li>
+            <li><strong>Multi-cell scaling telemetry:</strong> 1–16 cell fair-share admission and RSS/NUMA sampling run in tree; hardware RAPL idle-joule certification remains held on physical sensor access.</li>
+            <li><strong>Static Pages boundary:</strong> GitHub Pages publishes deterministic architecture and test records for tag <code class="q-mono">v0.0.41</code> (<code class="q-mono">0.0.40</code> archive retained) but cannot execute live socket capture.</li>
           </ul>
         </article>
         <article class="q-soft-rise q-care rounded-2xl p-7">
-          <p class="q-kicker mb-2" style="color:#94a3b8">Parked · waiting on operator</p>
-          <ul class="q-ledger" style="color:var(--q-muted)">
-            <li><strong>CSCP-08</strong> — Internet WSS/MASQUE relay trial waits on a hostname Timothy controls. No invented <code class="q-mono">wss://</code>.</li>
-            <li><strong>CSCP-12</strong> — datatracker submit (author recorded; not posted).</li>
-            <li>Public relay · two-host Internet · MASQUE Internet · noq/QUIC — building next when an operator path exists.</li>
+          <p class="q-kicker mb-2" style="color:#94a3b8">Public-Network &amp; Standards Gates</p>
+          <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+            <li><strong>CSCP-08 (Two-Host Public Relay):</strong> Public Internet WSS / MASQUE relay trial requires an externally reachable second host. <code class="q-mono">public_relay_dialed()</code> remains <code class="q-mono">false</code>.</li>
+            <li><strong>CSCP-09 (Live Internet MASQUE):</strong> Loopback HTTP/2 Extended CONNECT is verified in tree; live Internet MASQUE and QUIC/<code class="q-mono">noq</code> carrier qualification remain open.</li>
+            <li><strong>CSCP-12 (IETF Datatracker):</strong> Working draft <code class="q-mono">draft-webcivics-cscp-00</code> is prepared in repository; external IETF Datatracker posting is an explicit human standards gate.</li>
           </ul>
         </article>
       </div>
@@ -140,38 +250,49 @@
 
     <section class="grid md:grid-cols-2 gap-5 mb-12">
       <article id="continuity" class="q-card p-7 border border-emerald-500/20">
-        <p class="q-kicker mb-2 text-emerald-300">Continuity · live</p>
+        <p class="q-kicker mb-2 text-emerald-300">Continuity Invariant · Active</p>
         <h2 class="text-xl font-semibold mb-3">Handle revoke ≠ who-erase</h2>
-        <p class="mb-3" style="color:var(--q-muted);max-width:40rem">ABN / DNS / passport / registry strings sit on the <strong>handle</strong> plane — never NaturalAgent who. Who persists without any state-issued handle. Sanctuary Keep / volumes stay independent instruments.</p>
-        <p style="color:var(--q-muted);max-width:40rem">Handle revoke closes or holds the locator. The human is already here.</p>
+        <p class="mb-3 text-sm" style="color:var(--q-muted);max-width:40rem">
+          ABN numbers, DNS domain names, state registry strings, and transport locators sit strictly on the <strong>Handle</strong> plane — never on the <code class="q-mono">human (NaturalAgent)</code> Entity plane. A sovereign agent and its local Sanctuary Keep volumes persist independently of any external registrar.
+        </p>
+        <p class="text-sm" style="color:var(--q-muted);max-width:40rem">
+          Revoking or rotating a handle closes or holds that network locator while keeping the human’s cryptographic history and <code class="q-mono">.q42</code> knowledge base intact.
+        </p>
       </article>
       <article id="cscp-08" class="q-card p-7">
-        <p class="q-kicker mb-2" style="color:#94a3b8">CSCP-08 · building next</p>
-        <h2 class="text-xl font-semibold mb-3">Internet MASQUE path</h2>
-        <p class="mb-3" style="color:var(--q-muted);max-width:40rem">CSCP-08 needs an operator-controlled inbound URL on the public Internet. Local WSS and loopback H2 already run. The Internet trial waits on that human endpoint.</p>
-        <p style="color:var(--q-muted);max-width:40rem">CSCP-12 (datatracker submit) is a separate human action.</p>
+        <p class="q-kicker mb-2" style="color:#94a3b8">CSCP-08 &amp; CSCP-12 · External Gates</p>
+        <h2 class="text-xl font-semibold mb-3">Public Internet MASQUE &amp; Standards Boundary</h2>
+        <p class="mb-3 text-sm" style="color:var(--q-muted);max-width:40rem">
+          Local <code class="q-mono">WebSocket</code> (WSS) and loopback <code class="q-mono">HTTP/2</code> Extended CONNECT slices execute deterministically in tree. Completing <code class="q-mono">CSCP-08</code> requires a two-host trial across a live public Internet endpoint, so public relay evidence flags remain <code class="q-mono">false</code> until that trial runs.
+        </p>
+        <p class="text-sm" style="color:var(--q-muted);max-width:40rem">
+          Similarly, <code class="q-mono">CSCP-12</code> (IETF Datatracker submission) and W3C DID Spec Registries enrollment are tracked as external standards gates, never auto-claimed by local test suites.
+        </p>
       </article>
     </section>
 
     <section class="q-card p-8 mb-12">
-      <h2 class="text-2xl font-semibold mb-3">Read the actual design</h2>
-      <p class="text-[1.05rem] mb-5" style="color:var(--q-muted);max-width:40rem">The honeycomb is an architecture map. The status guide and standards index present the implemented work and its gates without sending readers to raw Markdown paths.</p>
+      <h2 class="text-2xl font-semibold mb-3">Explore the QDNF Technical Reference</h2>
+      <p class="text-[1.02rem] mb-5" style="color:var(--q-muted);max-width:46rem">
+        Dive into the dedicated engineering guides for implementation status, side-by-side DID methods, protocol cell framing, and the Qualia Peer Runtime.
+      </p>
       <div class="flex flex-wrap gap-3">
         <a class="q-pill q-pill-primary" href="qdnf-status.html">QDNF implementation status</a>
         <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
-        <a class="q-pill" href="qdnf-peer-runtime.html">Peer runtime</a>
-        <a class="q-pill" href="qdnf-network-cells.html">Network cells</a>
-        <a class="q-pill" href="qdnf-did-qi.html">did:qi method draft</a>
+        <a class="q-pill" href="qdnf-peer-runtime.html">Qualia Peer Runtime (QPR)</a>
+        <a class="q-pill" href="qdnf-network-cells.html">QDNF protocol &amp; network cells</a>
+        <a class="q-pill" href="qdnf-did-qi.html">did:qi &amp; side-by-side DIDs</a>
         <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html#cscp">CSCP implementation record</a>
-        <a class="q-pill" href="#cscp-08">CSCP-08 local chores (no tick)</a>
+        <a class="q-pill" href="#cscp-08">CSCP-08 public-network gate</a>
         <a class="q-pill" href="#continuity">Continuity · handle revoke</a>
-        <a class="q-pill" href="progress-0.0.37.html">0.0.40 progress (archive)</a>
+        <a class="q-pill" href="network_webizen.html">Legacy Network Webizen preview</a>
+        <a class="q-pill" href="progress-0.0.41.html">0.0.41 release progress</a>
       </div>
     </section>
   </main>
 
   <footer class="q-site-footer">
-    Handle ≠ human · Continuity live · Internet relay building next.
+    QDNF &amp; QPR 0.0.41 · Handle ≠ human · NET-18..21 &amp; EVAL-22 verified in tree · Public Internet relay gates remain explicit.
   </footer>
 </body>
 </html>

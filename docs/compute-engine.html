@@ -42,23 +42,34 @@
     <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
         <div class="mb-8">
             <h1 class="text-5xl font-semibold tracking-tighter mb-4">Computational Engine</h1>
-            <p class="text-xl text-slate-400 max-w-3xl">Every result below is computed <span class="text-white">in your browser</span> by the QualiaDB engine compiled to WebAssembly — the same solver code the native engine and its 600+ unit tests run. No server, no API call, no GPU required.</p>
+            <p class="text-xl text-slate-400 max-w-3xl">Every result below is computed <span class="text-white">in your browser</span> by the QualiaDB engine compiled to WebAssembly — the same deterministic solver code that serves as the CPU reference oracle for the native engine and its GPU accelerators. No server, no external API call required.</p>
         </div>
 
-        <!-- Honest framing -->
+        <!-- Multi-level Architectural Explanation: CPU Reference Oracle + Etalon GPU Forge -->
         <section class="glass-strong rounded-3xl p-6 mb-8" aria-labelledby="compute-migration-update">
-            <h2 id="compute-migration-update" class="text-xl font-semibold mb-3">Etalon migration for the 0.0.41 target</h2>
-            <p class="text-white/70">Reusable GPU resources, Forge, tensor/native execution and diagnostic/scientific-compute integration have completed their non-inference migration closeout. QualiaDB retains application semantics and authority; Etalon owns reusable execution. The published integration strengthens device/queue ownership, liveness and readback cleanup. This page's existing browser CPU examples remain distinct from native GPU qualification. See the <a class="text-emerald-300 underline" href="progress-0.0.41.html#migration-closeout">comprehensive update and test results</a>. Remaining MoE/Qwen and inference optimization work is deferred, while existing Webizen acceptance and explicit developer/debug execution remain preserved.</p>
+            <h2 id="compute-migration-update" class="text-xl font-semibold mb-3">v0.0.41 Architecture: CPU Reference Solvers &amp; Etalon GPU Certification (<code>ETA-14</code>, <code>ETA-15</code>, <code>ETA-17</code>)</h2>
+            <p class="text-white/70 mb-3">
+                For a quick overview: QualiaDB separates <strong>semantic authority and exact reference math</strong> (`qualia-core-db`) from <strong>reusable hardware acceleration</strong> (`etalon-*`). The interactive browser cards below run the deterministic CPU reference solvers directly in WebAssembly. On native desktop and WebGPU hardware lanes, <code>etalon-wgsl-forge</code> (bridged via <code>qualia-core-db::wgsl_forge::etalon_bridge</code>) compiles typed <code>KernelSpec</code> + <code>Schedule</code> intermediate representations into target shaders (<strong>WGSL, SPIR-V, HLSL, and MSL</strong>), validates every module through the <strong>Naga AST</strong> verifier, and certifies GPU dispatches against these CPU reference oracles:
+            </p>
+            <ul class="text-white/65 text-sm space-y-1.5 list-disc list-inside mb-3">
+                <li><strong class="text-cyan-300">Kernel &amp; Tensor Oracle Certification (<code>ETA-14</code>):</strong> Dense GEMM/GEMV, double-single emulated <code>df64</code>, radix-2 FFT, and GQA transformer decode blocks are diffed against the independent CPU reference oracle under explicit <code>ExactnessProfile</code> bounds (`ADR 0003`).</li>
+                <li><strong class="text-amber-300">Continuum &amp; Electromagnetics Verification (<code>ETA-15</code>):</strong> <code>etalon-sim</code> 3D Yee-grid FDTD Maxwell solvers and 2D Shallow Water Equations enforce Courant–Friedrichs–Lewy (CFL) stability and discrete Poynting energy conservation.</li>
+                <li><strong class="text-emerald-300">48-Byte <code>NQuin</code> Graph Sieve &amp; Radix Sort Parity (<code>ETA-17</code>):</strong> <code>etalon-nquin</code> executes warp-transposed <code>uvec4</code> predicate sieves and 8-pass LSD radix sorts on 48-byte <code>NQuinWire</code> records with zero mismatches against the CPU sort/sieve oracle.</li>
+            </ul>
+            <p class="text-white/60 text-xs">
+                See the <a class="text-emerald-300 underline" href="forge-showcase.html">WGSL Forge Architecture</a> and <a class="text-cyan-300 underline" href="progress-0.0.41.html#migration-closeout">v0.0.41 Release Overview</a> for full hardware qualification details.
+            </p>
         </section>
+
         <div class="glass-strong rounded-3xl p-6 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <h2 class="text-base font-medium text-cyan-400 mb-2"><i class="fas fa-microchip mr-2"></i>What runs here (CPU-exact, in-browser)</h2>
-                    <p class="text-white/60 text-sm">Dense linear algebra, statistics &amp; hypothesis tests, symbolic algebra, special functions &amp; number theory, arbitrary-precision exact arithmetic, SI units &amp; dimensional analysis, Fourier / Laplace / Z transforms, graph reasoning, and cryptographic hashing (SHA-2 / SHA-3 / BLAKE3 / HKDF) — wrapping <code class="text-cyan-300">crate::solvers::*</code> and the RustCrypto primitives, the wasm-clean layers. The GPU forge fast-paths are native-only; in the browser these take the exact CPU floor.</p>
+                    <p class="text-white/60 text-sm">Dense linear algebra, statistics &amp; hypothesis tests, symbolic algebra, special functions &amp; number theory, arbitrary-precision exact arithmetic, SI units &amp; dimensional analysis, Fourier / Laplace / Z transforms, graph reasoning, and cryptographic hashing (SHA-2 / SHA-3 / BLAKE3 / HKDF) — wrapping <code class="text-cyan-300">crate::solvers::*</code> and the RustCrypto primitives, the wasm-clean layers. In the browser these execute the exact CPU reference floor (`ExactnessProfile::Exact` / `DeterministicApproximate`).</p>
                 </div>
                 <div>
                     <h2 class="text-base font-medium text-amber-300 mb-2"><i class="fas fa-scale-balanced mr-2"></i>What runs on the 0.0.41 Etalon GPU &amp; Native Engine</h2>
-                    <p class="text-white/60 text-sm">The 9 specialized domain libraries (finance, medical, chemistry, engineering, full ML), the advanced CAS (symbolic integration / limits / series / ODE), the 7-crate <code class="text-emerald-300">etalon</code> GPU &amp; compute stack (<code class="text-emerald-300">etalon-wgsl-forge</code>, <code class="text-emerald-300">etalon-tensor</code>, <code class="text-emerald-300">etalon-nquin</code>, <code class="text-emerald-300">etalon-agent</code>), and key-generating cryptography run on the native / MCP engine (see the <a href="progress-0.0.41.html" class="text-emerald-400 hover:underline">0.0.41 Release Preview</a>). Several already have live demos on the <a href="science-playground.html" class="text-cyan-400 hover:underline">Sciences</a> pages.</p>
+                    <p class="text-white/60 text-sm">The 9 specialized domain libraries (finance, medical, chemistry, engineering, full ML), the advanced CAS (symbolic integration / limits / series / ODE), the pure-Rust <code class="text-emerald-300">etalon</code> accelerator stack (<code class="text-emerald-300">etalon-wgsl-forge</code>, <code class="text-emerald-300">etalon-sim</code>, <code class="text-emerald-300">etalon-signal</code>, <code class="text-emerald-300">etalon-tensor</code>, <code class="text-emerald-300">etalon-nquin</code>, <code class="text-emerald-300">etalon-agent</code>), and key-generating cryptography run on the native / MCP engine (see the <a href="progress-0.0.41.html" class="text-emerald-400 hover:underline">0.0.41 Release Preview</a>). Several already have live demos on the <a href="science-playground.html" class="text-cyan-400 hover:underline">Sciences</a> pages.</p>
                 </div>
             </div>
         </div>
@@ -71,7 +82,7 @@
         <div id="cards" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
 
         <div class="text-center text-white/40 text-sm mt-12">
-            <p>QualiaDB v0.0.40.16 &bull; Computational Engine &bull; bundle <code class="text-white/50">docs/playground/qualia_core_db_bg.wasm</code> (<code class="text-white/50">--features wasm-full</code>) &bull; exports: <code class="text-white/50">crates/qualia-core-db/src/wasm_bridge/engine/</code></p>
+            <p>QualiaDB v0.0.41 &bull; Computational Engine &bull; bundle <code class="text-white/50">docs/playground/qualia_core_db_bg.wasm</code> (<code class="text-white/50">--features wasm-full</code>) &bull; exports: <code class="text-white/50">crates/qualia-core-db/src/wasm_bridge/engine/</code></p>
         </div>
     </div>
 

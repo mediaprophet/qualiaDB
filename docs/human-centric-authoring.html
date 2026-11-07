@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Human-Centric Authoring — QualiaDB / Webizen</title>
-  <meta name="description" content="A design direction for authoring Semantic Instruments as accountable, inspectable agreements and tools.">
+  <title>Human-Centric Authoring &amp; Identifier Fabric — QualiaDB / Webizen 0.0.41</title>
+  <meta name="description" content="Author Semantic Instruments as accountable, inspectable agreements and tools grounded in the Four-Plane Identifier Fabric (IDF-01–IDF-05).">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
@@ -24,6 +24,7 @@
     .authoring-step:nth-child(4) .authoring-icon { color:#fcd34d; background:rgba(251,191,36,.12); }
     .comparison th,.comparison td { padding:.8rem 1rem; vertical-align:top; }
     .comparison th { color:rgba(232,238,247,.88); font-weight:600; }
+    pre.code-block { background: rgba(5, 10, 18, 0.78); border: 1px solid rgba(148, 180, 220, 0.18); border-radius: 0.9rem; padding: 1rem 1.2rem; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #e2e8f0; }
     @media (max-width:1023px) { .authoring-flow { grid-template-columns:repeat(3,minmax(0,1fr)); } .authoring-step:nth-child(3)::after,.authoring-step:nth-child(3)::before { display:none; } }
     @media (max-width:639px) { .authoring-flow { grid-template-columns:1fr; } .authoring-step { min-height:auto; } .authoring-step:not(:last-child)::after { top:auto; bottom:-.45rem; left:50%; width:0; height:.45rem; border-top:0; border-left:1px solid rgba(103,232,249,.55); } .authoring-step:not(:last-child)::before { top:auto; bottom:-.5rem; left:calc(50% - .18rem); } }
   </style>
@@ -33,80 +34,186 @@
   <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,.78);backdrop-filter:blur(32px)"><div class="max-w-screen-2xl mx-auto px-4 sm:px-8"><div class="flex items-center justify-between gap-3 min-h-[4rem] py-2"><a href="index.html" class="flex items-center gap-3 shrink-0"><div class="w-8 h-8 bg-gradient-to-br from-violet-500 via-cyan-400 to-emerald-400 rounded-xl flex items-center justify-center"><span class="text-black font-bold text-xl">W</span></div><div class="hidden sm:block"><span class="font-semibold tracking-tight text-xl">Webizen</span><span class="text-violet-400 text-xl"> / QualiaDB</span></div></a><div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div></div></div></nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-pen-ruler"></i> Design direction · Human-Centric Authoring</div>
-    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-.04em] leading-[1.05] mb-5">Author a shared tool<br><span class="hero-grad">without losing the people, reasons, or limits behind it.</span></h1>
-    <p class="text-lg sm:text-xl text-white/70 max-w-4xl mb-4">A Semantic Instrument authoring environment should feel less like programming an institution and more like carefully making an agreement, method, or professional practice clear. It starts with a human purpose; it then helps people make vocabulary, evidence, authority, privacy, boundaries, and review explicit.</p>
-    <p class="text-base sm:text-lg text-white/60 max-w-4xl mb-12">This is a product and interaction-design direction, not a claim that every screen described below is already shipped. It describes the capability Webizen and QualiaDB should make possible—and the safeguards an implementation must preserve.</p>
+    <!-- Layer 1: Plain-Language Overview -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-pen-ruler"></i> Layer 1 Overview · Human-Centric Authoring · 0.0.41</div>
+    <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-.04em] leading-[1.05] mb-5">Author a shared tool<br><span class="hero-grad">with the people, reasons, and boundaries intact.</span></h1>
+    <p class="text-lg sm:text-xl text-white/70 max-w-4xl mb-4">
+      Authoring a Semantic Instrument starts with a human purpose — a clinical checklist, a community referral rule, a professional rubric, or a multi-party agreement — and helps contributors make vocabulary, evidence, authority, privacy, and review explicit before software executes a single step.
+    </p>
+    <p class="text-base sm:text-lg text-white/60 max-w-4xl mb-12">
+      This guide moves from a plain-language overview of the authoring workflow to the Four-Plane Identifier Fabric (<code class="font-mono text-cyan-300">IDF-01</code>–<code class="font-mono text-cyan-300">IDF-05</code>), developer morphisms, and formal SHACL and compiler firewall specifications.
+    </p>
 
     <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="flow-title">
       <p class="q-kicker mb-2">Authoring path</p>
       <h2 id="flow-title" class="text-2xl sm:text-3xl font-semibold mb-7">From “what are we trying to do?” to a bounded, reviewable instrument</h2>
       <div class="authoring-flow" role="img" aria-label="Six-stage authoring path: purpose, participants, meaning and evidence, boundaries, rehearsal, and governed release.">
-        <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-bullseye"></i></div><h3 class="font-semibold text-sm">1. Purpose</h3><p class="text-xs text-white/60 mt-2">Name the practical question, affected people, intended benefit, and what must not be decided.</p></article>
+        <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-bullseye"></i></div><h3 class="font-semibold text-sm">1. Purpose</h3><p class="text-xs text-white/60 mt-2">Name the practical question, affected people, intended benefit, and excluded decisions.</p></article>
         <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-people-group"></i></div><h3 class="font-semibold text-sm">2. Participants</h3><p class="text-xs text-white/60 mt-2">Capture positions, roles, mandates, consent conditions, dissent, and review rights.</p></article>
         <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-diagram-project"></i></div><h3 class="font-semibold text-sm">3. Meaning &amp; evidence</h3><p class="text-xs text-white/60 mt-2">Link shared terms to sources, claims, assumptions, dates, confidence, and provenance.</p></article>
         <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-shield-halved"></i></div><h3 class="font-semibold text-sm">4. Boundaries</h3><p class="text-xs text-white/60 mt-2">Set permitted uses, disclosure paths, holds, escalation, privacy, and ZK predicates.</p></article>
         <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-flask"></i></div><h3 class="font-semibold text-sm">5. Rehearse</h3><p class="text-xs text-white/60 mt-2">Run plain-language examples and edge cases before anyone relies on the rule.</p></article>
-        <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-file-signature"></i></div><h3 class="font-semibold text-sm">6. Govern release</h3><p class="text-xs text-white/60 mt-2">Ratify, version, publish or keep private, then retain run and review receipts.</p></article>
+        <article class="authoring-step"><div class="authoring-icon"><i class="fa-solid fa-file-signature"></i></div><h3 class="font-semibold text-sm">6. Govern release</h3><p class="text-xs text-white/60 mt-2">Ratify, version, publish or keep in Sanctuary custody, then retain run receipts.</p></article>
       </div>
     </section>
 
     <section class="mb-16" aria-labelledby="workspace-title">
       <p class="q-kicker mb-2">The workspace people need</p>
-      <h2 id="workspace-title" class="text-3xl font-semibold mb-6">Several views of one accountable instrument—not a maze of technical tabs</h2>
+      <h2 id="workspace-title" class="text-3xl font-semibold mb-6">Complementary views of one accountable instrument</h2>
       <div class="grid lg:grid-cols-3 gap-5">
-        <article class="q-card p-6"><i class="fa-solid fa-message text-violet-300"></i><h3 class="font-semibold mt-3 mb-2">Plain-language brief</h3><p class="text-sm text-white/60">Purpose, affected people, benefit, risks, excluded outcomes, and the question that the tool is actually allowed to answer. The machine form must remain traceable to this readable brief.</p></article>
-        <article class="q-card p-6"><i class="fa-solid fa-people-arrows-left-right text-cyan-300"></i><h3 class="font-semibold mt-3 mb-2">Agreement and authority</h3><p class="text-sm text-white/60">A place for people to contribute, qualify, dissent, authorise, delegate narrowly, challenge, or withdraw. An incorporated entity and an AI agent never erase accountable human involvement.</p></article>
-        <article class="q-card p-6"><i class="fa-solid fa-sitemap text-emerald-300"></i><h3 class="font-semibold mt-3 mb-2">Meaning map</h3><p class="text-sm text-white/60">A visual, inspectable connection between terms, ontologies, claims, sources, and rules. Advanced authors can work directly with RDF, SHACL, logic, or code; other contributors should not have to start there.</p></article>
-        <article class="q-card p-6"><i class="fa-solid fa-book-open-reader text-violet-300"></i><h3 class="font-semibold mt-3 mb-2">Evidence timeline</h3><p class="text-sm text-white/60">Show what was known when, what changed later, which assumptions expired, and which material changes trigger reconsideration or remedy. History is linked, not silently overwritten.</p></article>
-        <article class="q-card p-6"><i class="fa-solid fa-lock text-cyan-300"></i><h3 class="font-semibold mt-3 mb-2">Disclosure composer</h3><p class="text-sm text-white/60">Specify what a routine verifier can learn, what remains protected, who may seek controlled disclosure, for what purpose, under which procedure, and with what receipt. A proof is not mistaken for an access-control system.</p></article>
-        <article class="q-card p-6"><i class="fa-solid fa-vial-circle-check text-emerald-300"></i><h3 class="font-semibold mt-3 mb-2">Rehearsal and review</h3><p class="text-sm text-white/60">Test examples, counter-examples, missing data, conflict, temporal change, and escalation before activation. Show why a result is ready, held, or requires human review.</p></article>
+        <article class="q-card p-6"><i class="fa-solid fa-message text-violet-300"></i><h3 class="font-semibold mt-3 mb-2">Plain-language brief</h3><p class="text-sm text-white/60">Purpose, affected people, benefit, risks, excluded outcomes, and the narrow question the tool is authorised to answer. The executable rule stays traceable to this readable brief.</p></article>
+        <article class="q-card p-6"><i class="fa-solid fa-people-arrows-left-right text-cyan-300"></i><h3 class="font-semibold mt-3 mb-2">Agreement and authority</h3><p class="text-sm text-white/60">A place for people to contribute, qualify, dissent, authorise, delegate narrowly, challenge, or withdraw. Legal entities and AI tools always preserve traceable human principal accountability.</p></article>
+        <article class="q-card p-6"><i class="fa-solid fa-sitemap text-emerald-300"></i><h3 class="font-semibold mt-3 mb-2">Meaning map</h3><p class="text-sm text-white/60">A visual, inspectable connection between terms, ontologies, claims, sources, and rules. Domain experts can start visually while ontology engineers work directly with RDF, N3, and SHACL.</p></article>
+        <article class="q-card p-6"><i class="fa-solid fa-book-open-reader text-violet-300"></i><h3 class="font-semibold mt-3 mb-2">Evidence timeline</h3><p class="text-sm text-white/60">Shows what was known at decision time ($T_0$), what changed later ($T_1$), which assumptions expired, and which material changes trigger review or remedy.</p></article>
+        <article class="q-card p-6"><i class="fa-solid fa-lock text-cyan-300"></i><h3 class="font-semibold mt-3 mb-2">Disclosure composer</h3><p class="text-sm text-white/60">Specifies what a routine verifier learns, what remains in Sanctuary custody, who may request controlled disclosure, under which procedure, and with what auditable receipt.</p></article>
+        <article class="q-card p-6"><i class="fa-solid fa-vial-circle-check text-emerald-300"></i><h3 class="font-semibold mt-3 mb-2">Rehearsal and review</h3><p class="text-sm text-white/60">Tests examples, counter-examples, missing inputs, conflicts, and temporal transitions before activation, showing clearly why a run is ready, held, or escalated.</p></article>
+      </div>
+    </section>
+
+    <!-- Layer 2: Four-Plane Identifier Fabric Architecture -->
+    <section class="q-card p-6 sm:p-8 mb-16 border border-cyan-500/25" aria-labelledby="idf-title" id="identifier-fabric">
+      <p class="q-kicker mb-2">Layer 2 · Architecture · Identifier Fabric (<code class="font-mono">IDF-01</code>–<code class="font-mono">IDF-05</code>)</p>
+      <h2 id="idf-title" class="text-2xl sm:text-3xl font-semibold mb-4">Four Disjoint Planes Keep People, Claims, Channels, and Tools Distinct</h2>
+      <p class="text-sm sm:text-base text-white/70 max-w-4xl mb-6">
+        A common failure in software systems is collapsing a person into an email address, a cryptographic key, a wallet, or a probabilistic score. QualiaDB enforces a strict <strong>Four-Plane Identifier Fabric</strong> (<code class="font-mono text-cyan-300">ontologies/identifier_fabric_shapes.ttl</code>) so authoring tools model human agency, evidentiary claims, network locators, and cryptographic instruments on disjoint planes connected only by typed evidence morphisms.
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-violet-500/30 bg-violet-500/[.06] p-5">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-mono text-xs text-violet-200 uppercase">Plane 1 · Entity (Who Plane)</span>
+            <span class="font-mono text-xs px-2 py-0.5 rounded bg-violet-500/20 text-violet-200">living-SHACL</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-2"><code class="font-mono text-violet-200">NaturalAgent</code> · <code class="font-mono text-violet-200">LegalEntity</code> · <code class="font-mono text-violet-200">SystemAgent</code></h3>
+          <p class="text-xs text-white/65 leading-relaxed mb-2">
+            Represents accountable actors on the <code class="font-mono">Who</code> plane. <code class="font-mono">idf:NaturalAgent</code> is framed as <code class="font-mono">"living-SHACL"</code> and is structurally disjoint from <code class="font-mono">owl:Thing</code>, <code class="font-mono">idf:Instrument</code>, and <code class="font-mono">idf:SpatiotemporalHandle</code>.
+          </p>
+          <p class="text-xs text-amber-200/90 font-mono">
+            Invariant: Never merged by similarity, handle, wallet, location, or biometrics. owl:sameAs is forbidden on the Who plane (SameAsError::WhoPlaneForbidden).
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-emerald-500/30 bg-emerald-500/[.06] p-5">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-mono text-xs text-emerald-200 uppercase">Plane 2 · Claim Plane</span>
+            <span class="font-mono text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-200">Scoped &amp; Signed</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-2"><code class="font-mono text-emerald-200">VerifiableCredential</code> · <code class="font-mono text-emerald-200">ClaimOpinion</code> · <code class="font-mono text-emerald-200">RoleCapacityGrant</code></h3>
+          <p class="text-xs text-white/65 leading-relaxed mb-2">
+            Holds scoped, time-bounded assertions (<code class="font-mono">idf:AssertionClaim</code>, <code class="font-mono">idf:AccountabilityArtifact</code>, <code class="font-mono">idf:RelianceRecord</code>, <code class="font-mono">idf:AssumptionChain</code>, deontic and epistemic norms) with explicit issuer provenance (<code class="font-mono">idf:assertedBy</code>) and subject reference (<code class="font-mono">idf:aboutSubject</code>).
+          </p>
+          <p class="text-xs text-emerald-200/90 font-mono">
+            Invariant: Verifiable Credentials prove cryptographic origin integrity of an issuer's statement, not universal ontological truth.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-cyan-500/30 bg-cyan-500/[.06] p-5">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-mono text-xs text-cyan-200 uppercase">Plane 3 · Handle Plane</span>
+            <span class="font-mono text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200">Revocable Locator</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-2"><code class="font-mono text-cyan-200">SpatiotemporalHandle</code> · <code class="font-mono text-cyan-200">DNI</code> · <code class="font-mono text-cyan-200">did:qi</code> Endpoints</h3>
+          <p class="text-xs text-white/65 leading-relaxed mb-2">
+            Covers rotatable, relationship-scoped network and directory locators (<code class="font-mono">idf:DigitalNetworkIdentifier</code>, <code class="font-mono">idf:RelationScopedLocator</code>, <code class="font-mono">idf:EnvironmentPredicate</code>, DNS, email, and <code class="font-mono">did:qi</code> endpoints) anchored by <code class="font-mono">idf:frameId</code> and <code class="font-mono">idf:epochTick</code>.
+          </p>
+          <p class="text-xs text-cyan-200/90 font-mono">
+            Invariant: Revoking or rotating a handle closes the communication channel without erasing or invalidating the underlying Entity.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-amber-500/30 bg-amber-500/[.06] p-5">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-mono text-xs text-amber-200 uppercase">Plane 4 · Instrument Plane</span>
+            <span class="font-mono text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-200">ProofClass + KeyRole</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-2"><code class="font-mono text-amber-200">Instrument</code> · <code class="font-mono text-amber-200">AiAgent</code> · <code class="font-mono text-amber-200">MachineDevice</code> · Keys</h3>
+          <p class="text-xs text-white/65 leading-relaxed mb-2">
+            Cryptographic keys, hardware tokens, wallets, cancelable biometric templates, and software/AI tools classified by <code class="font-mono">InstrumentProofClass</code> (<code class="font-mono">CryptographicOriginIntegrity</code>, <code class="font-mono">HardwareChannelPossession</code>, <code class="font-mono">SemanticClaimEvaluation</code>) and closed <code class="font-mono">KeyRole</code> (<code class="font-mono">IdentityAssertion</code>, <code class="font-mono">CredentialSigning</code>, <code class="font-mono">TransportHandshake</code>, <code class="font-mono">StorageEncryption</code>, <code class="font-mono">RecoveryBootstrap</code>).
+          </p>
+          <p class="text-xs text-amber-200/90 font-mono">
+            Invariant: Every idf:AiAgent resides on the Instrument plane and requires an explicit idf:sponsorPrincipal.
+          </p>
+        </article>
+      </div>
+
+      <!-- Layer 3 & 4: Morphisms, SHACL & Anti-Feature Firewalls -->
+      <div class="grid lg:grid-cols-2 gap-6 mt-6">
+        <div>
+          <p class="q-kicker mb-2">Layer 3 · Typed Cross-Plane Evidence Morphisms</p>
+          <h3 class="text-lg font-semibold mb-2">Explicit Links Across Planes</h3>
+          <p class="text-xs text-white/65 mb-3">
+            Rather than equating a person with a key or a network handle, statements traverse planes only through typed evidence predicates:
+          </p>
+          <pre class="code-block"><code>@prefix idf: &lt;urn:qualia:idf:&gt; .
+
+# Claim Plane → Instrument Plane (cryptographic origin proof)
+ex:claim-042 a idf:ClaimOpinion ;
+    idf:plane "Claim" ;
+    idf:assertedBy ex:issuer-college ;
+    idf:aboutSubject ex:clinician-entity ;
+    idf:assertedAbout ex:clinician-entity ;
+    idf:supportedByInstrument ex:ml-dsa-65-signing-key ;
+    idf:observedAtHandle ex:dni-clinic-session-09 .
+
+# Attempting owl:sameAs on the Who plane returns:
+# Err(SameAsError::WhoPlaneForbidden)</code></pre>
+        </div>
+
+        <div>
+          <p class="q-kicker mb-2">Layer 4 · Formal SHACL &amp; <code class="font-mono">F5</code> / <code class="font-mono">F6</code> Anti-Feature Firewalls</p>
+          <h3 class="text-lg font-semibold mb-2">Compile-Time &amp; Runtime Entity Protection</h3>
+          <p class="text-xs text-white/65 mb-3">
+            Both the <strong><code class="font-mono">F5</code> VibeScript compile-time verifier</strong> and the <strong><code class="font-mono">F6</code> runtime ingress/query firewall</strong> reject surveillance-scoring and entity-collapsing predicates (<code class="font-mono text-rose-300">person_score</code>, <code class="font-mono text-rose-300">identity_confidence</code>, <code class="font-mono text-rose-300">same_person</code>):
+          </p>
+          <pre class="code-block"><code># From ontologies/identifier_fabric_shapes.ttl (Packet IDF-01)
+idf:NaturalAgentShape a sh:NodeShape ;
+    sh:targetClass idf:NaturalAgent ;
+    sh:property idf:NaturalAgent-planeProp ;    # sh:hasValue "NaturalAgent"
+    sh:property idf:NaturalAgent-framingProp ;  # sh:hasValue "living-SHACL"
+    sh:not idf:NaturalAgent-notOwlThing ;       # disjoint from owl:Thing
+    sh:not idf:NaturalAgent-notInstrument ;     # disjoint from idf:Instrument
+    sh:not idf:NaturalAgent-notHandle .         # disjoint from SpatiotemporalHandle</code></pre>
+        </div>
       </div>
     </section>
 
     <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="comparison-title">
       <p class="q-kicker mb-2">Relation to ontology editors</p>
-      <h2 id="comparison-title" class="text-2xl sm:text-3xl font-semibold mb-4">Not “better than Protégé” at everything—broader around the human work that makes a rule legitimate</h2>
-      <p class="text-sm text-white/65 max-w-4xl mb-6">Protégé is an established specialist environment for ontology engineering and reasoning. A human-centric authoring environment should retain that level of semantic precision and interoperability, while adding the surrounding work needed to make a semantic model usable as an accountable instrument. The point is complementarity, not an unsupported replacement claim.</p>
-      <div class="overflow-x-auto border border-white/10 rounded-2xl"><table class="comparison w-full min-w-[42rem] text-left text-sm text-white/65"><thead class="border-b border-white/10 bg-white/[.03] text-xs uppercase tracking-wider text-cyan-200"><tr><th>Concern</th><th>Ontology-centred workbench</th><th>Human-centric instrument environment</th></tr></thead><tbody class="divide-y divide-white/10"><tr><th scope="row">Primary starting point</th><td>Classes, properties, axioms, imports, and reasoners.</td><td>A human purpose, affected parties, intended use, and prohibited outcomes—then the meanings and rules required.</td></tr><tr><th scope="row">Semantic precision</th><td>Direct engineering of formal vocabularies and constraints.</td><td>Visual and plain-language paths that compile to inspectable semantics; direct formal editing remains available for experts.</td></tr><tr><th scope="row">Authority and agreement</th><td>Usually handled outside the model editor.</td><td>Part of authorship: accountable human roles, mandates, party positions, ratification, dissent, and review are first-class records.</td></tr><tr><th scope="row">Privacy and disclosure</th><td>Often delegated to deployment architecture.</td><td>Model purpose-scoped disclosure, protected custody, ZK statements, controlled release conditions, and receipts beside the rule.</td></tr><tr><th scope="row">Operational use</th><td>Model validation and inference are central.</td><td>Also includes preflight, bounded execution, holds, human escalation, temporal review, and evidence of each run.</td></tr></tbody></table></div>
+      <h2 id="comparison-title" class="text-2xl sm:text-3xl font-semibold mb-4">Complementing specialist ontology workbenches with accountable governance</h2>
+      <p class="text-sm text-white/65 max-w-4xl mb-6">Specialist environments such as Protégé excel at formal class hierarchies and axiom engineering. QualiaDB's human-centric authoring workspace retains full RDF, N3, and SHACL interoperability while surrounding the formal model with purpose, party perspectives, Identifier Fabric plane separation, disclosure rules, and verifiable run receipts.</p>
+      <div class="overflow-x-auto border border-white/10 rounded-2xl"><table class="comparison w-full min-w-[42rem] text-left text-sm text-white/65"><thead class="border-b border-white/10 bg-white/[.03] text-xs uppercase tracking-wider text-cyan-200"><tr><th>Concern</th><th>Ontology-centred workbench</th><th>Human-centric instrument environment</th></tr></thead><tbody class="divide-y divide-white/10"><tr><th scope="row">Primary starting point</th><td>Classes, properties, axioms, imports, and reasoners.</td><td>A human purpose, affected parties, intended use, and prohibited outcomes—then the meanings and rules required.</td></tr><tr><th scope="row">Identifier separation</th><td>Often uses uniform <code class="font-mono text-xs">owl:Thing</code> individuals and <code class="font-mono text-xs">owl:sameAs</code> links.</td><td>Enforces the Four-Plane Identifier Fabric (<code class="font-mono text-xs">Entity</code>, <code class="font-mono text-xs">Claim</code>, <code class="font-mono text-xs">Handle</code>, <code class="font-mono text-xs">Instrument</code>) and blocks <code class="font-mono text-xs">Who</code>-plane merging.</td></tr><tr><th scope="row">Authority and agreement</th><td>Usually handled outside the model editor.</td><td>First-class authorship records: accountable human roles, mandates, party positions, ratification, dissent, and review.</td></tr><tr><th scope="row">Privacy and disclosure</th><td>Delegated to external deployment infrastructure.</td><td>Models Sanctuary custody (<code class="font-mono text-xs">0x0040</code>), ZK predicates, purpose-scoped release conditions, and receipts beside the rule.</td></tr><tr><th scope="row">Operational use</th><td>Model validation and inference are central.</td><td>Includes preflight, bounded execution, held-run safeguards, human escalation, temporal review, and cryptographic receipts.</td></tr></tbody></table></div>
     </section>
 
     <section class="grid lg:grid-cols-[1.1fr_.9fr] gap-6 mb-16" aria-labelledby="principles-title">
-      <div class="q-card p-7"><p class="q-kicker mb-2">Interaction principles</p><h2 id="principles-title" class="text-2xl font-semibold mb-5">What makes it human-centric in use</h2><ul class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">Meaning before syntax:</span> people may begin in ordinary language, diagrams, examples, and references; formal representations remain inspectable rather than hidden.</li><li><span class="text-white/85 font-medium">No forced certainty:</span> a claim, assumption, source, dissent, or unresolved question stays distinguishable from an accepted term.</li><li><span class="text-white/85 font-medium">Progressive precision:</span> begin with a small, safe tool; add terms, constraints, logic, proofs, and automation only when the purpose requires them.</li><li><span class="text-white/85 font-medium">Fail visibly:</span> missing authority, evidence, privacy conditions, or inputs produces a clear hold or escalation—not a fabricated answer.</li><li><span class="text-white/85 font-medium">Every automation is challengeable:</span> people can inspect the basis, identify accountable roles, request review, and produce a revised instrument without erasing prior context.</li></ul></div>
-      <aside class="q-card p-7 border border-amber-500/20"><p class="q-kicker mb-2">Non-negotiable boundary</p><h2 class="text-2xl font-semibold mb-4">The environment helps people articulate and run rules. It does not acquire authority for them.</h2><p class="text-sm text-white/65 mb-4">An attractive visual editor can make an unexamined rule look finished. The product must therefore keep scope, consequences, accountable human authority, consent or applicable procedure, uncertainty, and review in view at the same time as it makes semantic modelling easier.</p><p class="text-sm text-white/65">No company, incorporated entity, or AI agent is the final accountable author merely because it stored, generated, or executed a model.</p></aside>
+      <div class="q-card p-7"><p class="q-kicker mb-2">Interaction principles</p><h2 id="principles-title" class="text-2xl font-semibold mb-5">What makes it human-centric in use</h2><ul class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">Meaning before syntax:</span> people begin in ordinary language, diagrams, examples, and references; formal RDF/N3/SHACL representations remain inspectable at every step.</li><li><span class="text-white/85 font-medium">Preserve epistemic status:</span> a claim, assumption, source, dissent, or open question stays distinct from an attested fact.</li><li><span class="text-white/85 font-medium">Progressive precision:</span> start with a clear, bounded tool; add constraints, modalities, proofs, and automation only as the purpose requires.</li><li><span class="text-white/85 font-medium">Hold visibly on missing preconditions:</span> absent authority, evidence, privacy conditions, or inputs produce an explicit hold or human escalation.</li><li><span class="text-white/85 font-medium">Every automation is challengeable:</span> participants can inspect the basis, identify accountable human principals, request review, and issue a new version without overwriting history.</li></ul></div>
+      <aside class="q-card p-7 border border-amber-500/20"><p class="q-kicker mb-2">Accountability boundary</p><h2 class="text-2xl font-semibold mb-4">The workspace helps people articulate and run rules; authority remains human.</h2><p class="text-sm text-white/65 mb-4">A clear visual interface makes complex rules easier to inspect. To ensure visual clarity never substitutes for due process, the workspace keeps scope, consequences, accountable human authority (<code class="font-mono text-xs">idf:sponsorPrincipal</code>), consent, uncertainty, and review pathways visible alongside the model.</p><p class="text-sm text-white/65">Legal entities (<code class="font-mono text-xs">LegalEntity</code>) and software tools (<code class="font-mono text-xs">idf:AiAgent</code>) always link back to the natural persons acting in authorised roles.</p></aside>
     </section>
 
     <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="delivery-title">
-      <p class="q-kicker mb-2">Delivery architecture · target state</p>
-      <h2 id="delivery-title" class="text-2xl sm:text-3xl font-semibold mb-4">One POET authoring workspace, launched by the newer Desktop system and grounded in QualiaDB</h2>
-      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-6">This must not be framed as an enhancement of the earlier Webizen Desktop UI. That UI is a failed product surface and remains only as a migration path while the newer OS-like Desktop shell is developed. The intended authoring experience is a first-class POET application launched by that newer shell, using QualiaDB for local semantic storage, reasoning, validation, provenance, and bounded execution.</p>
+      <p class="q-kicker mb-2">Delivery architecture</p>
+      <h2 id="delivery-title" class="text-2xl sm:text-3xl font-semibold mb-4">The POET Authoring Workspace, Hosted by the Desktop Shell and Grounded in QualiaDB</h2>
+      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-6">The authoring experience combines three focused layers: the native Desktop host that manages local hardware and Sanctuary custody boundaries, the POET visual relational workspace where collaborators map concepts and agreements, and the QualiaDB engine that validates SHACL shapes, evaluates modal logic, and issues receipts.</p>
       <div class="grid lg:grid-cols-3 gap-5">
-        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><p class="font-mono text-xs text-violet-200 mb-2">NEW DESKTOP SYSTEM</p><h3 class="font-semibold mb-2">The trustworthy local host</h3><p class="text-sm text-white/60">Launches POET as an application, exposes local files, browser, renderer, model runtime, permissions, and settings as visible capabilities—not hidden configuration or an agent-only service. It owns the local safety boundary, rather than pretending a canvas alone can do so.</p></article>
-        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><p class="font-mono text-xs text-cyan-200 mb-2">POET</p><h3 class="font-semibold mb-2">The comprehensible authoring place</h3><p class="text-sm text-white/60">Provides the relational canvas: a mind-map-like visual workspace where concepts, sources, claims, rules, people’s positions, constraints, and consequences are connected. Each connector has inspectable semantics and logic; it is not merely a line drawn between cards.</p></article>
-        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><p class="font-mono text-xs text-emerald-200 mb-2">QUALIADB / WEBIZEN ENGINE</p><h3 class="font-semibold mb-2">The bounded semantic substrate</h3><p class="text-sm text-white/60">Holds and evaluates the structured model: ontology mappings, constraints, modalities, agreement state, proofs, provenance, temporal conditions, and receipts. It returns structured explanations and holds; it does not substitute a machine’s authority for human authority.</p></article>
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><p class="font-mono text-xs text-violet-200 mb-2">LOCAL DESKTOP HOST</p><h3 class="font-semibold mb-2">Hardware &amp; custody boundary</h3><p class="text-sm text-white/60">Launches POET, manages local <code class="font-mono text-xs">.q42</code> v4 volumes, key vaults, renderer capabilities, and model runtimes, and enforces <code class="font-mono text-xs">FLAG_SANCTUARY</code> publication locks.</p></article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><p class="font-mono text-xs text-cyan-200 mb-2">POET WORKSPACE</p><h3 class="font-semibold mb-2">Relational authoring canvas</h3><p class="text-sm text-white/60">Presents a visual manifold where concepts, sources, claims, rules, party positions, and consequences connect through typed semantic and modal relations.</p></article>
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><p class="font-mono text-xs text-emerald-200 mb-2">QUALIADB / WEBIZEN ENGINE</p><h3 class="font-semibold mb-2">Bounded semantic substrate</h3><p class="text-sm text-white/60">Compiles SHACL and N3 rules, enforces the Four-Plane Identifier Fabric and <code class="font-mono text-xs">F5</code>/<code class="font-mono text-xs">F6</code> firewalls, evaluates 21 logic modalities, and generates verifiable receipts.</p></article>
       </div>
-      <div class="mt-6 rounded-2xl border border-white/10 bg-white/[.025] p-5 sm:p-6"><h3 class="text-xl font-semibold mb-3">How a selected generative agent participates</h3><p class="text-sm text-white/65 mb-4">An author may select a local or otherwise permitted generative agent to help explore a model: suggest terms, find potential relations, draft plain-language alternatives, propose mappings between chosen ontologies, generate test cases, or explain a constraint. The agent works in a bounded drafting lane, not an invisible control plane.</p><div class="grid md:grid-cols-3 gap-4 text-sm"><div><span class="text-white/85 font-medium">Visible inputs</span><p class="text-white/55 mt-1">The author chooses which ontologies, records, references, and tool permissions the agent may use.</p></div><div><span class="text-white/85 font-medium">Inspectable proposals</span><p class="text-white/55 mt-1">Every proposed node, connector, rule, or mapping is shown as a change that people can accept, amend, reject, or hold.</p></div><div><span class="text-white/85 font-medium">Human ratification</span><p class="text-white/55 mt-1">Only accountable people can adopt an agreement, activate an instrument, authorise disclosure, or permit an operational agent to act.</p></div></div></div>
-      <p class="text-xs text-white/45 mt-5">The current work contains relevant foundations—ontology import and layout, graph/canvas rendering, local model and agent configuration paths, semantic-instrument lifecycle controls, and reasoning modules. Joining them into this single POET authoring journey is the product integration work still required; it should not be represented as complete before the end-to-end workflow is real.</p>
+      <div class="mt-6 rounded-2xl border border-white/10 bg-white/[.025] p-5 sm:p-6"><h3 class="text-xl font-semibold mb-3">How a selected generative agent participates</h3><p class="text-sm text-white/65 mb-4">An author may invite a local or permitted generative agent (<code class="font-mono text-xs">idf:AiAgent</code> on the <code class="font-mono text-xs">Instrument</code> plane) to suggest terms, draft plain-language summaries, propose ontology alignments (<code class="font-mono text-xs">cml:Proposed</code>), or generate edge-case tests inside a bounded drafting lane.</p><div class="grid md:grid-cols-3 gap-4 text-sm"><div><span class="text-white/85 font-medium">Declared inputs</span><p class="text-white/55 mt-1">The author selects which ontologies, records, references, and tool permissions the agent may access.</p></div><div><span class="text-white/85 font-medium">Inspectable proposals</span><p class="text-white/55 mt-1">Every proposed node, connector, rule, or mapping arrives as an attributed draft that people can accept, amend, or reject.</p></div><div><span class="text-white/85 font-medium">Human ratification</span><p class="text-white/55 mt-1">Only accountable human principals can ratify an agreement, attest a concept (<code class="font-mono text-xs">cml:Attested</code>), authorise disclosure, or activate an instrument.</p></div></div></div>
     </section>
 
     <section class="q-card p-6 sm:p-8 mb-16" aria-labelledby="wasm-title">
-      <p class="q-kicker mb-2">WASM POET · collaboration and demonstration</p>
-      <h2 id="wasm-title" class="text-2xl sm:text-3xl font-semibold mb-4">A browser can be a shared authoring place—without becoming an unbounded authority or a misleading demo</h2>
-      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-6">POET’s WASM form is valuable not merely as a fallback viewer. It can make a selected semantic workspace available to collaborators without requiring every participant to install a desktop application first. In this model, a <span class="text-white/85 font-medium">manifold</span> is a shared, bounded working space: a visible arrangement of concepts, relations, evidence, rules, questions, and proposed changes, with the semantic structure behind each connector.</p>
+      <p class="q-kicker mb-2">WASM POET · Collaborative Manifolds</p>
+      <h2 id="wasm-title" class="text-2xl sm:text-3xl font-semibold mb-4">Shared browser manifolds with explicit membership and custody boundaries</h2>
+      <p class="text-sm sm:text-base text-white/65 max-w-4xl mb-6">POET's WebAssembly build lets collaborators inspect and co-author a selected semantic <span class="text-white/85 font-medium">manifold</span> directly in the browser before exporting or activating the package in a local Desktop environment.</p>
       <div class="grid lg:grid-cols-3 gap-5">
-        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><i class="fa-solid fa-people-group text-violet-200"></i><h3 class="font-semibold mt-3 mb-2">Collaborative manifold</h3><p class="text-sm text-white/60">Participants see the same selected graph and can propose nodes, relations, comments, alternatives, and tests. Each change is attributable, versioned, and reviewable; competing interpretations can coexist until people resolve or explicitly retain them.</p></article>
-        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><i class="fa-solid fa-code-branch text-cyan-200"></i><h3 class="font-semibold mt-3 mb-2">Structured connectors</h3><p class="text-sm text-white/60">A connector can mean “is defined by”, “supports”, “contradicts”, “is permitted by”, “depends on”, “was known at”, or another declared relation. POET presents a comprehensible graph while QualiaDB validates the corresponding semantic and logical structure.</p></article>
-        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><i class="fa-solid fa-user-gear text-emerald-200"></i><h3 class="font-semibold mt-3 mb-2">Selected agent, bounded role</h3><p class="text-sm text-white/60">The workspace can give a selected generative agent access only to declared ontology packs, sources, tools, and permissions. Its output arrives as attributable proposals in the manifold; it cannot merge its own work, broaden disclosure, or activate an instrument.</p></article>
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-5"><i class="fa-solid fa-people-group text-violet-200"></i><h3 class="font-semibold mt-3 mb-2">Collaborative manifold</h3><p class="text-sm text-white/60">Participants inspect the same scoped graph and propose nodes, relations, comments, alternatives, and tests. Competing interpretations remain attributable and versioned until resolved.</p></article>
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-5"><i class="fa-solid fa-code-branch text-cyan-200"></i><h3 class="font-semibold mt-3 mb-2">Structured connectors</h3><p class="text-sm text-white/60">Connectors carry formal semantics—“is defined by”, “supports”, “defeats”, “is permitted by”, or cross-plane evidence morphisms (<code class="font-mono text-xs">idf:supportedByInstrument</code>, <code class="font-mono text-xs">idf:assertedAbout</code>).</p></article>
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-5"><i class="fa-solid fa-user-gear text-emerald-200"></i><h3 class="font-semibold mt-3 mb-2">Bounded browser scope</h3><p class="text-sm text-white/60">Browser sessions operate on declared ontology packs and sample or permitted records, while custodial keys and Sanctuary volumes remain in the authorised local host.</p></article>
       </div>
-      <div class="grid lg:grid-cols-[1.1fr_.9fr] gap-6 mt-6">
-        <div class="rounded-2xl border border-white/10 bg-white/[.025] p-5"><h3 class="text-xl font-semibold mb-4">An honest online POET demo mode</h3><ol class="space-y-3 text-sm text-white/65"><li><span class="text-white/85 font-medium">1. Start with a labelled example manifold.</span> Use sample ontologies, example records, and a clearly stated learning purpose—not a hidden production workspace.</li><li><span class="text-white/85 font-medium">2. Let people make and inspect changes.</span> They can add concepts, choose relation types, compare ontology mappings, ask the demo agent for a proposal, and see the resulting structured change.</li><li><span class="text-white/85 font-medium">3. Make limits visible.</span> The demo states whether its state is local to the browser, temporary, or saved; which reasoning is available; and that it cannot authorise decisions, access protected evidence, or make a production release.</li><li><span class="text-white/85 font-medium">4. Offer a deliberate hand-off.</span> A person can export an inspectable draft or open it in their local Desktop/POET environment for controlled evidence, fuller reasoning, signing, or activation.</li></ol></div>
-        <aside class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-5"><h3 class="font-semibold text-amber-100 mb-3">Browser boundary</h3><p class="text-sm text-white/65 mb-3">A collaborative browser workspace must not imply that every participant can read every record, use every agent, or access local host capabilities. Membership, purpose, ontology packs, tool permissions, disclosure policy, and version must be declared by the manifold.</p><p class="text-sm text-white/65">Protected data, custodial keys, controlled court disclosure, and authority-bearing actions remain in the appropriately authorised environment. The browser can show a proof, a receipt, or a bounded representation without receiving the underlying protected material.</p></aside>
-      </div>
-      <p class="text-xs text-white/45 mt-5">A practical sequence is: make the demo manifold local-first and inspectable; add explicit collaboration and change review; then add synchronisation only with declared membership, conflict handling, and receipts. “Shared canvas” alone is not sufficient collaboration for a human-centric system.</p>
     </section>
 
-    <section class="q-card p-8 border border-violet-500/20"><p class="q-kicker mb-2">Continue</p><h2 class="text-2xl font-semibold mb-3">The authoring environment joins three existing explanations</h2><p class="text-sm text-white/65 max-w-4xl mb-5">The Semantic Instruments guide explains the runnable package. The agreement pages explain how people create legitimate shared terms. This authoring direction explains the workspace that should carry people between those two states without stripping away the context that gives the rule its meaning.</p><div class="flex flex-wrap gap-3"><a href="semantic-instruments.html" class="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-500/25 text-sm text-violet-100">Semantic Instruments</a><a href="agreement-instruments.html" class="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/25 text-sm text-cyan-100">Agreements as instruments</a><a href="agreement-ledger.html" class="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-sm text-emerald-100">Agreement ledger</a></div></section>
+    <section class="q-card p-8 border border-violet-500/20"><p class="q-kicker mb-2">Continue</p><h2 class="text-2xl font-semibold mb-3">Explore the connected governance &amp; instrument guides</h2><p class="text-sm text-white/65 max-w-4xl mb-5">The Semantic Instruments guide details the runnable package lifecycle, while the Agreement and Values Credentials pages show how multi-party consent and human-rights norms compile into verifiable <code class="font-mono text-xs">.q42</code> v4 volumes.</p><div class="flex flex-wrap gap-3"><a href="semantic-instruments.html" class="px-4 py-2 rounded-xl bg-violet-500/15 border border-violet-500/25 text-sm text-violet-100">Semantic Instruments</a><a href="agreement-instruments.html" class="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-500/25 text-sm text-cyan-100">Agreements as instruments</a><a href="agreement-ledger.html" class="px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-sm text-emerald-100">Agreement ledger</a><a href="values-credentials.html" class="px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/25 text-sm text-amber-100">Values Credentials</a></div></section>
   </main>
-  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">QualiaDB / Webizen 0.0.40 · Human-centred authoring keeps human purpose, responsibility, and review visible</footer>
+  <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">QualiaDB / Webizen 0.0.41 · Human-Centric Authoring &amp; Four-Plane Identifier Fabric</footer>
 </body>
 </html>

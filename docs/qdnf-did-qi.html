@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>did:qi method draft</title>
+  <title>did:qi &amp; Side-by-Side DID Architecture — QualiaDB 0.0.41</title>
+  <meta name="description" content="Technical reference for QualiaDB's three-method Side-by-Side DID Architecture (did:q42, did:webizen, and did:qi), QCDE-1 signed document lifecycle, and CscpMailbox binding.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
   <script src="js/menu-loader.js"></script>
 </head>
 <body class="min-h-screen">
@@ -26,26 +27,187 @@
       </div>
     </div>
   </nav>
-  <main class="q-wrap max-w-3xl mx-auto px-6 pt-14 pb-24">
-    <p class="q-chip mb-6">Instrument identity · implemented in-process · not DID Spec Registries</p>
-    <h1 class="q-hero-title font-display mb-5">did:qi</h1>
-    <p class="q-lede mb-6">Qualia Identifier method for instrument identity (node, organisation, contextual persona). Prefix <code class="q-mono">did:qi:</code>. Internal draft 0.1.0 — not a W3C Technical Report, not registered, not a CSCP relay.</p>
-    <div class="q-card p-8 mb-12">
-      <p class="q-kicker mb-3">Honesty</p>
-      <ul class="q-ledger" style="color:var(--q-muted);max-width:40rem">
-        <li>Bounded QCDE-1 signed documents support create, read, generation checks, update, and deactivate; specification vectors are exercised in tree.</li>
-        <li><code>CscpMailbox</code> services bind into the private CSCP mailbox. Deactivated documents publish no services; relay-only disclosure rejects Direct before storage.</li>
-        <li>Direct-permitted locators can be selected as Direct. TLS WSS and HTTP/2 capsule profiles remain transition bearers, not Native Independent or MASQUE.</li>
-        <li>It is not <code class="q-mono">did:q42</code> (Q42 Resource Coordinate) and not Human-Centered AI.</li>
-        <li>Not a claim that CSCP-08 or CSCP-12 is done. A locator is a handle — never the human (NaturalAgent).</li>
-      </ul>
-    </div>
-    <p class="flex flex-wrap gap-3">
-      <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
-      <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
-      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <!-- LAYER 1: PLAIN-LANGUAGE OVERVIEW -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-fingerprint"></i> Side-by-Side DID Architecture · Instrument Identity · 0.0.41</div>
+    <h1 class="q-hero-title font-display mb-5">
+      Why QualiaDB uses three DID methods instead of one overloaded identifier.
+    </h1>
+    <p class="q-lede mb-6">
+      Most decentralized systems force a single DID method to act simultaneously as a database pointer, a human legal identity, and a network socket address. That overloading creates correlation honeypots and catastrophic revocation failure modes: rotating a compromised transport key Either breaks historical knowledge pointers or exposes the human across every peer relationship.
     </p>
+    <p class="q-note mb-6">
+      <strong>Orthogonal Separation by Design:</strong> QualiaDB partitions decentralized identifiers across three specialized methods — <code class="q-mono">did:q42:</code> (64-bit resource coordinates), <code class="q-mono">did:webizen:</code> (sovereign agent and ratified agreement identity), and <code class="q-mono">did:qi:</code> (pairwise rotating relationship and instrument identity). <code class="q-mono">did:qi</code> is an in-tree runtime specification (<code class="q-mono">crates/qualia-core-db/src/did_qi/</code>), not a W3C DID Spec Registries entry and not a W3C Technical Report.
+    </p>
+    <p class="q-continuity-strip mb-12" role="note">
+      <strong>Handle ≠ human.</strong>
+      <code class="q-mono">did:qi</code> lives strictly on the <strong>Instrument</strong> and <strong>Handle</strong> planes — never the <strong>Entity</strong> (<code class="q-mono">NaturalAgent</code>) plane. Deactivating a <code class="q-mono">did:qi</code> relationship closes that pairwise channel without erasing the human or their local <code class="q-mono">.q42</code> knowledge volume.
+    </p>
+
+    <!-- LAYER 2: SIDE-BY-SIDE DID COMPARISON TABLE -->
+    <section class="q-card p-8 mb-12" id="comparison">
+      <p class="q-kicker mb-2">Layer 2 · Side-by-Side DID Comparison</p>
+      <h2 class="text-2xl font-semibold mb-3">Three Orthogonal DID Methods in QualiaDB (<code class="q-mono">0.0.41</code>)</h2>
+      <p class="text-sm mb-6" style="color:var(--q-muted);max-width:52rem">
+        Each DID method serves a distinct architectural plane, bit-layout contract, and lifecycle rule. Mixing them is rejected at compile time and at the <code class="q-mono">QiError::RejectedMethod</code> parser boundary.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[54rem] text-sm text-left">
+          <thead class="text-white/70 border-b border-white/10">
+            <tr>
+              <th class="pb-3 pr-4">Dimension</th>
+              <th class="pb-3 pr-4 text-emerald-300"><code class="q-mono">did:q42:</code> / <code class="q-mono">did:q42:ptr:</code></th>
+              <th class="pb-3 pr-4 text-cyan-300"><code class="q-mono">did:webizen:</code></th>
+              <th class="pb-3 text-violet-300"><code class="q-mono">did:qi:</code></th>
+            </tr>
+          </thead>
+          <tbody class="text-white/70">
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-semibold text-white">Canonical Name</td>
+              <td class="py-4 pr-4"><strong>QRC</strong> (Q42 Resource Coordinate)</td>
+              <td class="py-4 pr-4"><strong>Sovereign Agent &amp; Agreement DID</strong></td>
+              <td class="py-4"><strong>Qualia Instrument &amp; Relationship DID</strong></td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-semibold text-white">Identifier Fabric Plane</td>
+              <td class="py-4 pr-4"><strong>Resource / Coordinate Plane</strong> (in-memory &amp; <code class="q-mono">.q42</code> SuperBlock addressing)</td>
+              <td class="py-4 pr-4"><strong>Entity &amp; Governance Plane</strong> (<code class="q-mono">NaturalAgent</code> persona &amp; bilateral contracts)</td>
+              <td class="py-4"><strong>Instrument / Handle Plane</strong> (never <code class="q-mono">Entity</code>; enforced by <code class="q-mono">verify_relationship_distinct_from_person</code>)</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-semibold text-white">Wire &amp; Binary Representation</td>
+              <td class="py-4 pr-4">
+                64-bit topological pointer in <code class="q-mono">NQuin.object</code> with <strong><code class="q-mono">MSB = 1</code></strong> (bit 63 set via FNV-1a in <code class="q-mono">identifier.rs</code> / <code class="q-mono">resolver.rs</code>).
+              </td>
+              <td class="py-4 pr-4">
+                64-bit <code class="q-mono">q_hash</code> in <code class="q-mono">NQuin.subject</code> / <code class="q-mono">context</code>; compiles ratified contracts into 16 Super-Quins in <code class="q-mono">EnforceBilateralMicroCommons</code>.
+              </td>
+              <td class="py-4">
+                <code class="q-mono">did:qi:&lt;genesis-digest&gt;?hint=...</code> where <code class="q-mono">&lt;genesis-digest&gt;</code> is multibase <code class="q-mono">base58btc</code> (<code class="q-mono">z</code> prefix) of the 32-byte <code class="q-mono">SHA-256</code> genesis payload digest.
+              </td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-semibold text-white">Rotation &amp; Mutability</td>
+              <td class="py-4 pr-4">Immutable content/topological coordinate within a <code class="q-mono">SlgArena</code> or <code class="q-mono">.q42</code> SuperBlock.</td>
+              <td class="py-4 pr-4">Ratified via M-of-N threshold consensus (<code class="q-mono">SuspendedTransactionQueue</code>) and Ed25519 author-scoped Merkle roots.</td>
+              <td class="py-4">Pairwise rotating keys with strict monotonic generation counter (<code class="q-mono">advance_generation</code>) and <code class="q-mono">QiError::StaleGeneration</code> rejection.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-4 pr-4 font-semibold text-white">Deactivation Semantics</td>
+              <td class="py-4 pr-4">Arena epoch reclamation or <code class="q-mono">QSync</code> tombstone frontier.</td>
+              <td class="py-4 pr-4">Deontic defeater rule (<code class="q-mono">DEFEATER_BIT</code>) or contract expiry epoch in <code class="q-mono">NQuin.metadata</code>.</td>
+              <td class="py-4">Irreversible <code class="q-mono">TombstonePermanent</code> (<code class="q-mono">deactivate</code> + <code class="q-mono">TOMBSTONE_OPCODE</code>); unbinds all <code class="q-mono">CscpMailbox</code> services immediately.</td>
+            </tr>
+            <tr>
+              <td class="py-4 pr-4 font-semibold text-white">Primary Rust Modules</td>
+              <td class="py-4 pr-4"><code class="q-mono">identifier.rs</code>, <code class="q-mono">resolver.rs</code>, <code class="q-mono">webizen_bytecode.rs</code></td>
+              <td class="py-4 pr-4"><code class="q-mono">governance/webizen.rs</code>, <code class="q-mono">agency.rs</code>, <code class="q-mono">crdt.rs</code></td>
+              <td class="py-4"><code class="q-mono">did_qi/{document,method,service,mailbox_bind,utxo}.rs</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LAYER 3: QCDE-1 SIGNED DOCUMENT LIFECYCLE & PLANE ASSIGNMENT -->
+    <section class="q-card p-8 mb-12" id="qcde1-lifecycle">
+      <p class="q-kicker mb-2">Layer 3 · Cryptographic Document Lifecycle</p>
+      <h2 class="text-2xl font-semibold mb-3">Bounded <code class="q-mono">QCDE-1</code> Signed Documents &amp; State Machine</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:52rem">
+        Bounded QCDE-1 signed documents (Qualia Canonical Document Encoding v1, an RFC 8785 deterministic canonicalization profile) operate with fixed stack caps (<code class="q-mono">MAX_CANONICAL</code>, <code class="q-mono">MAX_UNSIGNED</code>, <code class="q-mono">MAX_SIGNED</code>, <code class="q-mono">MAX_SERVICES</code>, <code class="q-mono">MAX_AKA</code>) so parsing and signature verification never allocate on the heap in hot paths.
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">Step 1 · Genesis Creation</span>
+            <span class="q-mono text-xs text-white/60">method::create · encode_genesis</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">create</code> &amp; Genesis Digest</h3>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Computes the 32-byte <code class="q-mono">SHA-256</code> <code class="q-mono">genesis_digest</code> over the initial controller verification key and creation vector (<code class="q-mono">generation = 0</code>), formats <code class="q-mono">did:qi:z...</code>, verifies the Ed25519 proof over <code class="q-mono">encode_canonical</code>, and commits the signed blob into the bounded <code class="q-mono">QiStore</code> / <code class="q-mono">GitObjectStore</code>.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-cyan-300">Step 2 · Monotonic Rotation</span>
+            <span class="q-mono text-xs text-white/60">method::update · advance_generation</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">advance_generation</code> &amp; Replay Defense</h3>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Every key or service update must strictly increment the document generation counter (<code class="q-mono">next.generation &gt; current.generation</code>) and carry a valid controller signature. Replayed or lower-generation documents fail closed with <code class="q-mono">QiError::StaleGeneration</code> (<code class="q-mono">"stale_generation"</code>).
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-amber-300">Step 3 · Terminal Tombstone</span>
+            <span class="q-mono text-xs text-white/60">method::deactivate · TombstonePermanent</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">deactivate</code> &amp; <code class="q-mono">TombstonePermanent</code></h3>
+          <p class="text-sm" style="color:var(--q-muted)">
+            Transitioning a relationship to <code class="q-mono">deactivated = true</code> writes an irreversible <code class="q-mono">TombstonePermanent</code> state (and supports optional UTXO <code class="q-mono">TOMBSTONE_OPCODE</code> attestation). Any subsequent update attempt returns <code class="q-mono">QiError::Deactivated</code>, and <code class="q-mono">publish_qi_document</code> immediately withdraws all mailbox services.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-violet-300">Step 4 · Plane Separation Guard</span>
+            <span class="q-mono text-xs text-white/60">verify_relationship_distinct_from_person</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">Strict Entity vs. Instrument Separation</h3>
+          <p class="text-sm" style="color:var(--q-muted)">
+            <code class="q-mono">verify_relationship_distinct_from_person</code> enforces that a <code class="q-mono">did:qi</code> identifier is classified solely on the <strong>Instrument</strong> / <strong>Handle</strong> planes and never aliases a <code class="q-mono">NaturalAgent</code> Entity DID. Revoking a pairwise <code class="q-mono">did:qi</code> channel never invalidates the human’s identity.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- LAYER 4: CSCPMAILBOX BINDING & DISCLOSURE POLICY -->
+    <section class="grid md:grid-cols-2 gap-5 mb-12" id="mailbox-binding">
+      <article class="q-card p-7 border border-emerald-500/20">
+        <p class="q-kicker text-emerald-300 mb-2">Layer 4 · Transport Integration</p>
+        <h2 class="text-xl font-semibold mb-3"><code class="q-mono">CscpMailbox</code> Binding &amp; Disclosure Gates</h2>
+        <p class="text-sm mb-3" style="color:var(--q-muted)">
+          Active <code class="q-mono">did:qi</code> documents publish <code class="q-mono">CscpMailbox</code> service endpoints into the private <code class="q-mono">CSCP</code> mailbox registry via <code class="q-mono">publish_qi_document</code>. Each service declares an explicit <code class="q-mono">Disclosure</code> policy and <code class="q-mono">LocatorClass</code> (<code class="q-mono">Direct</code> vs. <code class="q-mono">RelayHint</code>, up to <code class="q-mono">MAX_HINTS</code>):
+        </p>
+        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+          <li><strong>Relay-only protection (<code class="q-mono">check_relay_only</code>):</strong> When a document specifies relay-only disclosure, any direct IP/socket locator is rejected before storage with <code class="q-mono">QiError::DirectLocatorForbidden</code> (<code class="q-mono">"direct_locator_forbidden"</code>).</li>
+          <li><strong>Direct-permitted selection:</strong> When direct locators are explicitly permitted by the controller’s policy, the path planner selects them as <code class="q-mono">Direct</code> without forcing traffic through a relay.</li>
+          <li><strong>Deactivation scrubbing:</strong> Deactivated <code class="q-mono">did:qi</code> documents publish zero services and evict previously bound mailbox routes.</li>
+        </ul>
+      </article>
+
+      <article class="q-card p-7">
+        <p class="q-kicker mb-2">Verification &amp; Standards Boundary</p>
+        <h2 class="text-xl font-semibold mb-3">What <code class="q-mono">did:qi</code> Establishes in <code class="q-mono">0.0.41</code></h2>
+        <ul class="q-ledger text-sm" style="color:var(--q-muted)">
+          <li><strong>In-process &amp; zero-heap hot path:</strong> Canonical encoding, Ed25519 signature verification, in-memory <code class="q-mono">GitObjectStore</code> blob tagging, and caller-supplied Bitcoin-family UTXO commitment checks (<code class="q-mono">verify_commitment</code>) run deterministically in tree without external daemons.</li>
+          <li><strong>Transition bearers stay labelled:</strong> Binding a <code class="q-mono">CscpMailbox</code> over TLS WSS, HTTP/2 Extended CONNECT capsules, <code class="q-mono">WireGuard</code>, or <code class="q-mono">Nym</code> mixnet framing uses those profiles as transition bearers — never claiming public Internet MASQUE or Native Independent link status.</li>
+          <li><strong>Standards honesty:</strong> <code class="q-mono">did:qi</code> is an internal specification draft (<code class="q-mono">0.1.0</code> on engine <code class="q-mono">0.0.41</code>), not registered in the W3C DID Spec Registries.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="q-card p-8">
+      <h2 class="text-2xl font-semibold mb-3">Related QDNF &amp; Identity Documentation</h2>
+      <p class="text-sm mb-5" style="color:var(--q-muted);max-width:46rem">
+        Continue to the QDNF architecture map, the release qualification matrix, or the companion guides for protocol cells and the Qualia Peer Runtime.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
+        <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+        <a class="q-pill" href="qdnf-network-cells.html">QDNF protocol &amp; network cells</a>
+        <a class="q-pill" href="qdnf-peer-runtime.html">Qualia Peer Runtime (QPR)</a>
+      </div>
+    </section>
   </main>
-  <footer class="q-site-footer">Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.</footer>
+
+  <footer class="q-site-footer">
+    Side-by-Side DIDs (did:q42 · did:webizen · did:qi) · Release 0.0.41 · Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.
+  </footer>
 </body>
 </html>

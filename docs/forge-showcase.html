@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WGSL Forge — Kernel Generation &amp; Certification · QualiaDB</title>
+    <title>WGSL Forge — Deterministic Kernel Generation &amp; Oracle Certification · QualiaDB</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -42,62 +42,91 @@
 
     <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
         <div class="mb-8">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs font-semibold mb-4">
+                <i class="fas fa-microchip"></i> v0.0.41 · etalon-wgsl-forge &amp; qualia-core-db::wgsl_forge::etalon_bridge
+            </div>
             <h1 class="text-5xl font-semibold tracking-tighter mb-4">WGSL Forge</h1>
-            <p class="text-xl text-slate-400">A deterministic GPU-kernel generator, validator, and oracle-backed correctness certifier. It does <span class="text-white">not</span> use an LLM, and it does <span class="text-white">not</span> run inference.</p>
+            <p class="text-xl text-slate-400 max-w-4xl">A deterministic GPU-kernel compiler, Naga AST validator, and CPU-oracle correctness certifier powered by <code class="text-cyan-300">etalon-wgsl-forge</code>. It lowers typed <code class="text-cyan-300">KernelSpec</code> + <code class="text-cyan-300">Schedule</code> graphs into multi-backend shaders without LLM heuristics.</p>
         </div>
 
         <!-- The boundary: produce vs run -->
         <div class="glass-strong rounded-3xl p-8 mb-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-diagram-project text-cyan-400"></i>
-                The Forge produces; the Engine runs
+                Architectural Boundary: <code class="text-cyan-300">etalon-wgsl-forge</code> Compiles &amp; Certifies; the Engine Executes
             </h2>
-            <p class="text-white/70 mb-6">This boundary is the whole design — read it once and the rest follows:</p>
+            <p class="text-white/70 mb-6">
+                Whether you are browsing high-level system design or auditing GPU execution safety, the core architectural separation is strict: <strong>QualiaDB</strong> owns domain semantics, policy admissibility (`ExactnessProfile` / `ADR 0003`), and weight containers (`P64`), while <strong><code>etalon-wgsl-forge</code></strong> owns deterministic shader lowering, Naga AST validation, and hardware-vs-CPU oracle certification:
+            </p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div class="bg-black/20 rounded-xl p-5 border border-cyan-500/20">
-                    <h3 class="font-medium text-cyan-400 mb-2"><i class="fas fa-industry mr-2"></i>Forge — producer &amp; certifier</h3>
-                    <p class="text-white/60 text-sm">Generates GPU kernels from a typed DAG-IR, validates them, and <span class="text-white">certifies every one against a CPU oracle</span>. Also transcodes GGUF&nbsp;&rarr;&nbsp;the native <code class="text-cyan-300">p64</code> weight container. It is build-time tooling.</p>
+                    <h3 class="font-medium text-cyan-400 mb-2"><i class="fas fa-industry mr-2"></i>Forge — Deterministic Producer &amp; Certifier (<code>etalon-wgsl-forge</code>)</h3>
+                    <p class="text-white/60 text-sm">Compiles GPU compute kernels from a typed mathematical specification (<code class="text-cyan-300">KernelSpec</code>) and an orthogonal hardware execution schedule (<code class="text-cyan-300">Schedule</code>), validates the generated shader AST via <strong>Naga</strong>, and <span class="text-white">certifies every kernel on real GPU silicon against an independent CPU reference oracle</span>. Also transcodes GGUF/Safetensors weights into the 64-byte aligned <code class="text-cyan-300">p64</code> container.</p>
                 </div>
                 <div class="bg-black/20 rounded-xl p-5 border border-emerald-500/20">
-                    <h3 class="font-medium text-emerald-400 mb-2"><i class="fas fa-microchip mr-2"></i>Engine — runtime</h3>
-                    <p class="text-white/60 text-sm">The in-process inference engine runs the <code class="text-emerald-300">p64</code> model. <span class="text-white">Throughput (tok/s) belongs to the engine</span>, not the forge — measured at <span class="text-white">~18.8 tok/s</span> decode (SmolLM2-360M&nbsp;Q8, RTX&nbsp;A2000, Vulkan, compute-bound).</p>
+                    <h3 class="font-medium text-emerald-400 mb-2"><i class="fas fa-microchip mr-2"></i>Runtime Engine — Governed Dispatch (<code>qualia-core-db</code> &amp; <code>etalon</code>)</h3>
+                    <p class="text-white/60 text-sm">The in-process runtime loads adapter-keyed certified shaders and <code class="text-emerald-300">p64</code> weight volumes (`{stem}.execution-profile.json`) to execute inference, graph sieves, and continuum physics. Sustained decode throughput is measured by the runtime engine (e.g., <span class="text-white">~18.8 tok/s</span> native Vulkan on RTX&nbsp;A2000 for SmolLM2-360M&nbsp;Q8; <span class="text-white">~5.9 tok/s</span> in-browser WebGPU).</p>
                 </div>
             </div>
         </div>
 
-        <!-- What it generates -->
+        <!-- One IR, many backends -->
         <div class="glass-strong rounded-3xl p-8 mb-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-code text-blue-400"></i>
-                One IR, many backends
+                Typed <code>KernelSpec</code> + <code>Schedule</code> IR Across 5 Target Backends
             </h2>
-            <p class="text-white/70 mb-6">A kernel is described once as a compute graph; the forge lowers it to each target and the schedule is kept separate from the math, so optimisation can never silently rewrite what is being tested.</p>
+            <p class="text-white/70 mb-6">
+                In <code class="text-cyan-300">etalon-wgsl-forge</code>, a compute kernel is declared once as a pure mathematical DAG (<code class="text-cyan-300">KernelSpec</code>). Tiling, workgroup dimensions, shared-memory staging, and vectorization width live in a separate <code class="text-cyan-300">Schedule</code> descriptor so hardware tuning can never silently alter mathematical semantics. Every lowered shader is parsed and type-checked through <strong>Naga AST validation</strong> before emission to target backends:
+            </p>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 text-center text-sm">
-                <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20"><div class="font-medium text-emerald-400">WGSL</div><div class="text-white/40 text-xs">wgpu native</div></div>
-                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">SPIR-V</div><div class="text-white/40 text-xs">Vulkan binary</div></div>
-                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">CUDA-C</div><div class="text-white/40 text-xs">NVRTC / WMMA</div></div>
-                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">MSL</div><div class="text-white/40 text-xs">Metal</div></div>
-                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">HLSL</div><div class="text-white/40 text-xs">DXC</div></div>
+                <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20"><div class="font-medium text-emerald-400">WGSL</div><div class="text-white/40 text-xs">WebGPU &amp; wgpu native</div></div>
+                <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">SPIR-V</div><div class="text-white/40 text-xs">Vulkan binary module</div></div>
+                <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">HLSL</div><div class="text-white/40 text-xs">DirectX 12 / DXC</div></div>
+                <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">MSL</div><div class="text-white/40 text-xs">Apple Metal</div></div>
+                <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">CUDA-C</div><div class="text-white/40 text-xs">NVRTC / Tensor Core WMMA</div></div>
             </div>
-            <p class="text-white/70 mb-2">Generated + certified kernels include the math substrate the rest of the engine builds on:</p>
-            <ul class="text-white/60 text-sm space-y-1 list-disc list-inside mb-4">
-                <li><span class="text-white/80">Dense linear algebra</span> — GEMM, GEMV, and a double-single (<code class="text-cyan-300">df64</code>) emulated-f64 GEMM for f64-on-any-GPU.</li>
-                <li><span class="text-white/80">Transforms / DSP</span> — radix-2 FFT feeding the audio path (STFT, CQT, HRTF).</li>
-                <li><span class="text-white/80">Reductions &amp; selection</span> — affine, top-k (shared-memory + barriers).</li>
-                <li><span class="text-white/80">LLM decode kit</span> — RMSNorm, real RoPE (interleaved + NeoX), multi-head GQA attention, SwiGLU, on-device Slice, and a transposed-B GEMM that consumes native <code class="text-cyan-300">[out,in]</code> weights.</li>
+            <p class="text-white/70 mb-2">Generated, Naga-validated, and oracle-certified kernel families include:</p>
+            <ul class="text-white/60 text-sm space-y-1.5 list-disc list-inside mb-4">
+                <li><span class="text-white/85">Dense Linear Algebra (<code class="text-cyan-300">ETA-14</code>)</span> — Tiled GEMM, GEMV, transposed-B GEMM for native <code class="text-cyan-300">[out, in]</code> weights, and double-single (<code class="text-cyan-300">df64</code>) emulated 64-bit floating-point GEMM on GPUs lacking native FP64.</li>
+                <li><span class="text-white/85">Spectral Transforms &amp; Wavefield DSP</span> — Radix-2 Stockham/Cooley–Tukey FFT and STFT kernels feeding <code class="text-cyan-300">etalon-signal</code> and spatial HRTF audio.</li>
+                <li><span class="text-white/85">Reductions, Scans &amp; 48-Byte Graph Sieves (<code class="text-cyan-300">ETA-17</code>)</span> — Workgroup prefix scans, top-k selection, warp-transposed <code class="text-cyan-300">uvec4</code> <code class="text-cyan-300">GpuQuinSieve</code>, and 8-pass LSD <code class="text-cyan-300">GpuRadixSorter</code> in <code class="text-cyan-300">etalon-nquin</code>.</li>
+                <li><span class="text-white/85">Continuum Multi-Physics &amp; 3D FDTD (<code class="text-cyan-300">ETA-15</code>)</span> — Staggered Yee-grid 3D Maxwell curl updates (with CFL stability &amp; discrete Poynting conservation checks) and 2D Shallow Water Equation (<code class="text-cyan-300">swe_solver</code>) kernels in <code class="text-cyan-300">etalon-sim</code>.</li>
+                <li><span class="text-white/85">Transformer Decode Graph (<code class="text-cyan-300">ETA-14</code>)</span> — RMSNorm, rotary position embeddings (interleaved &amp; NeoX RoPE), multi-head GQA attention with online softmax rescaling, and SwiGLU FFN.</li>
             </ul>
-            <p class="text-white/50 text-xs">Present: GEMM/GEMV/FFT/affine/top-k lower to all targets above. LLM decode graph certified through the executor — portable shader emit on every backend building next.</p>
         </div>
 
-        <!-- Certification -->
+        <!-- Certification: ETA-14, ETA-15, ETA-17 -->
         <div class="glass-strong rounded-3xl p-8 mb-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-clipboard-check text-green-400"></i>
-                Certified on GPU
+                Three-Pillar GPU Oracle Certification (<code>ETA-14</code>, <code>ETA-15</code>, <code>ETA-17</code>)
             </h2>
-            <p class="text-white/70 mb-6">Every generated kernel is run on the real GPU and diffed against an independent CPU oracle. The headline proof for this release:</p>
-            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
-                <p class="text-white/80 text-sm">A full multi-head <span class="text-white">GQA transformer decode layer</span> — composed of forge ops — was certified on the <span class="text-white">real weights of SmolLM2-360M</span> (n_embd 960, 15 heads / 5 KV-heads, head_dim 64, ffn 2560, RoPE base 100k), matching the composed CPU oracle to a maximum relative error of <span class="text-emerald-300 font-medium">3.28&times;10⁻⁶</span> on an RTX&nbsp;A2000. Kernels match the CPU oracle on real SmolLM2-360M weights. tok/s lives on the engine plane.</p>
+            <p class="text-white/70 mb-6">
+                Every generated kernel is dispatched on the target hardware adapter, read back with deterministic fencing, and compared element-by-element against an independent CPU reference oracle before its adapter-keyed receipt is sealed into QualiaDB:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5">
+                    <div class="text-xs font-mono text-emerald-300 mb-1">ETA-14 · TENSOR &amp; DECODE ORACLE</div>
+                    <h3 class="font-semibold text-white mb-2">Full GQA Transformer Layer</h3>
+                    <p class="text-white/75 text-xs leading-relaxed">
+                        A complete multi-head GQA transformer decode layer composed of <code class="text-emerald-300">etalon-wgsl-forge</code> kernels is certified on real <span class="text-white">SmolLM2-360M</span> weights (<code>n_embd = 960</code>, 15 Q-heads / 5 KV-heads, <code>head_dim = 64</code>, <code>ffn = 2560</code>, RoPE base 100k), matching the composed CPU reference oracle to a maximum relative error of <span class="text-emerald-300 font-semibold">3.28&times;10⁻⁶</span> on RTX&nbsp;A2000 Vulkan.
+                    </p>
+                </div>
+                <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5">
+                    <div class="text-xs font-mono text-amber-300 mb-1">ETA-15 · FDTD &amp; CONTINUUM ORACLE</div>
+                    <h3 class="font-semibold text-white mb-2">Maxwell CFL &amp; Poynting Balance</h3>
+                    <p class="text-white/75 text-xs leading-relaxed">
+                        3D FDTD electromagnetic and 2D SWE hydrodynamic kernels in <code class="text-amber-300">etalon-sim</code> enforce the Courant–Friedrichs–Lewy condition ($c\Delta t\sqrt{\Delta x^{-2}+\Delta y^{-2}+\Delta z^{-2}} \le 1$) prior to dispatch and verify discrete Poynting energy conservation against the 64-bit CPU reference integrator.
+                    </p>
+                </div>
+                <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5">
+                    <div class="text-xs font-mono text-cyan-300 mb-1">ETA-17 · NQUIN GRAPH ORACLE</div>
+                    <h3 class="font-semibold text-white mb-2">Bitwise Sieve &amp; Radix Parity</h3>
+                    <p class="text-white/75 text-xs leading-relaxed">
+                        <code class="text-cyan-300">etalon-nquin</code> certifies 48-byte <code class="text-cyan-300">NQuinWire</code> GPU predicate sieves and 8-pass LSD radix sorts against the CPU reference implementation with <code class="text-cyan-300">ExactnessProfile::Exact</code> (<code>oracle_mismatches == 0</code>) and 5-field XOR parity verification.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -105,37 +134,37 @@
         <div class="glass-strong rounded-3xl p-8 mb-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-sliders text-purple-400"></i>
-                Pick your pipeline
+                Hardware Backend Selection &amp; Steward Policy
             </h2>
-            <p class="text-white/70 mb-6">The engine selects its GPU backend by capability and reports it; you can pin it for the vendor-neutral path:</p>
-            <pre class="mb-6"><code># Default is Vulkan (vendor-neutral: AMD / Intel / NVIDIA / ARM / Linux).
+            <p class="text-white/70 mb-6">The Etalon silicon steward selects its GPU backend by capability intersection (f16, subgroup operations, timestamp queries) and records the active adapter in the execution profile; you can also pin a backend explicitly:</p>
+            <pre class="mb-6"><code># Default is Vulkan (vendor-neutral across AMD / Intel / NVIDIA / ARM / Linux &amp; Windows).
 # Pin a backend explicitly:
-QUALIA_WGPU_BACKEND=vulkan   # default, recommended
-QUALIA_WGPU_BACKEND=metal    # Apple
-QUALIA_WGPU_BACKEND=dx12     # Windows-native · decode building next</code></pre>
+QUALIA_WGPU_BACKEND=vulkan   # default, full compute &amp; graphics certification
+QUALIA_WGPU_BACKEND=dx12     # Windows DirectX 12 hardware lane
+QUALIA_WGPU_BACKEND=metal    # Apple Silicon / macOS Metal lane</code></pre>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20"><div class="font-medium text-emerald-400">Vulkan</div><div class="text-white/50 text-xs mt-1">Default &amp; verified working path. The portable, vendor-neutral choice.</div></div>
-                <div class="bg-black/20 rounded-xl p-4"><div class="font-medium text-blue-300">Metal / GL</div><div class="text-white/50 text-xs mt-1">Selectable; Metal is the Apple-native path.</div></div>
-                <div class="bg-black/20 rounded-xl p-4 border border-white/10"><div class="font-medium text-white/70">DX12</div><div class="text-white/50 text-xs mt-1">Device initialises · decode path building next. Use Vulkan for the verified path today.</div></div>
+                <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20"><div class="font-medium text-emerald-400">Vulkan</div><div class="text-white/50 text-xs mt-1">Default vendor-neutral path with full Naga SPIR-V validation and hardware timestamp profiling.</div></div>
+                <div class="bg-black/20 rounded-xl p-4 border border-white/10"><div class="font-medium text-blue-300">DirectX 12</div><div class="text-white/50 text-xs mt-1">Windows-native HLSL/DXC pipeline with Etalon device-loss recovery and queue stewardship.</div></div>
+                <div class="bg-black/20 rounded-xl p-4 border border-white/10"><div class="font-medium text-purple-300">Metal &amp; Browser WebGPU</div><div class="text-white/50 text-xs mt-1">Apple MSL backend and browser <code>wasm32-unknown-unknown</code> WGSL execution via <code>etalon-wasm</code>.</div></div>
             </div>
         </div>
 
-        <!-- Building next -->
+        <!-- Exactness & Policy Admissibility (ADR 0003) -->
         <div class="glass-strong rounded-3xl p-8 mb-8 border border-cyan-500/20">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-hammer text-cyan-400"></i>
-                Building next
+                <i class="fas fa-shield-halved text-cyan-400"></i>
+                Execution Profiles &amp; Policy Admissibility (<code>ADR 0003</code>)
             </h2>
             <ul class="text-white/70 text-sm space-y-2 list-disc list-inside">
-                <li>Portable LLM decode shader emit on every backend (executor certification already Present).</li>
-                <li>Tensor cores on the live decode path (CUDA WMMA / wgpu coopmat kernels already certified).</li>
-                <li>Shippable compression stays <code class="text-cyan-300">Q4_K_M</code> → p64; ternary FFN waits on models trained for it.</li>
-                <li>tok/s stays on the engine plane — forge certifies kernels.</li>
+                <li><strong><code>ExactnessProfile::Exact</code>:</strong> Bitwise-deterministic integer, rational, symbolic, or 48-byte <code>NQuin</code> sieve/sort evaluation (<code>oracle_mismatches == 0</code>). Admissible for deontic, identity, and policy gates.</li>
+                <li><strong><code>ExactnessProfile::DeterministicApproximate { abs_bound, rel_bound }</code>:</strong> Certified floating-point kernels with explicit finite error bounds verified against the CPU reference oracle.</li>
+                <li><strong><code>ExactnessProfile::InteractiveApproximate</code>:</strong> Fast-math preview or stochastic rendering lanes — strictly rejected by <code>admit_for_policy_decision()</code> so visual approximations can never influence governance or rights decisions.</li>
+                <li><strong><code>P64</code> Weight &amp; Profile Pairing:</strong> Converted models pair 64-byte aligned <code>.p64</code> weight volumes (<code>Q4_K_M</code> / <code>F16</code> / <code>Q8_0</code> with per-tensor CRC-32C) with a sibling <code>{stem}.execution-profile.json</code> receipt.</li>
             </ul>
         </div>
 
         <div class="text-center text-white/40 text-sm">
-            <p>QualiaDB v0.0.40 &bull; WGSL Forge &bull; Implementation: <code class="text-white/50">crates/qualia-core-db/src/wgsl_forge/</code> &bull; CLI: <code class="text-white/50">qualia shader …</code></p>
+            <p>QualiaDB v0.0.41 &bull; WGSL Forge &bull; Implementation: <code class="text-white/50">etalon-wgsl-forge</code> + <code class="text-white/50">qualia-core-db::wgsl_forge::etalon_bridge</code> &bull; CLI: <code class="text-white/50">qualia shader …</code></p>
         </div>
     </div>
 </body>

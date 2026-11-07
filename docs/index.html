@@ -3,17 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB | Human-Centric Semantic Engine</title>
+    <title>QualiaDB &amp; Webizen 0.0.41 | Sovereign Semantic Engine &amp; Human-Centric Habitat</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { font-family: 'Inter', system_ui, sans-serif; }
         .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
-        .feature-card { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s; }
-        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); }
+        .feature-card { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, border-color 0.2s; }
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.2); }
+        .section-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.3rem 0.85rem;
+            border-radius: 9999px;
+            margin-bottom: 0.75rem;
+        }
+        .role-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .role-links a:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.28);
+        }
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
-    <script src="js/menu-loader.js"></script></head>
+    <script src="js/menu-loader.js"></script>
+</head>
 <body class="bg-zinc-950 text-zinc-200">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
         <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
@@ -46,43 +75,61 @@
     </nav>
 
     <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
-        <!-- Hero -->
-        <div class="text-center mb-12">
+        <!-- LAYER 1: HERO & PLAIN-LANGUAGE OVERVIEW -->
+        <header class="text-center mb-14">
             <div class="inline-flex items-center gap-x-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-sm mb-4">
                 <i class="fa-solid fa-microchip"></i>
-                <span>0.0.40 Baseline → 0.0.41 Preview · A Modular Creative &amp; Scientific Ecosystem</span>
+                <span>Release 0.0.41 · Local-First Semantic Graph, Etalon GPU Stack &amp; Sovereign Habitat</span>
             </div>
-            <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-2.5px] mb-4">Webizen <span class="text-white/40 text-3xl sm:text-4xl font-normal">/ QualiaDB</span></h1>
-            <p class="text-2xl text-white/70 max-w-2xl mx-auto">A habitat for living with meaning — not a cloud that owns you.</p>
-            <p class="mt-4 text-white/60 max-w-2xl mx-auto">Memory · Relations · Care · Practice · World · Instruments. Zero-allocation QualiaDB engine on your machine; natural persons are not identity assets; instruments are not peers.</p>
-            <p class="mt-4 text-white/55 max-w-3xl mx-auto text-sm"><strong>From 0.0.40 to 0.0.41:</strong> a more modular ecosystem for local-first creation, scientific exploration, spatial worlds and semantic tools. QualiaDB integrates the graph and application contracts; Etalon provides reusable compute and graphics libraries; VibeScript tooling connects authored ideas to execution. The 29-crate QualiaDB workspace is one part of this wider ecosystem.</p>
-            <p class="mt-4 text-white/70 max-w-3xl mx-auto text-sm">Try the browser demonstrations, explore the native and GPU showcases, and see how reusable libraries make individual capabilities easier to develop and integrate. <a href="release-showcase-0.0.41.html" class="text-emerald-300 underline">Open the 0.0.41 demo and showcase collection</a> · <a href="progress-0.0.41.html#ecosystem" class="text-cyan-300 underline">Explore the repositories</a>.</p>
-            <p class="mt-4">
-              <a href="progress-0.0.41.html" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 font-bold text-sm shadow-md hover:opacity-95 transition mr-2">Explore the 0.0.41 release direction →</a>
-              <a href="progress-0.0.40.html" class="text-emerald-300 hover:underline text-sm font-semibold">0.0.40 Progress →</a>
-              <span class="text-white/30 mx-2">·</span>
-              <a href="spatial.html" class="text-sky-300 hover:underline text-sm font-semibold">Geospatial Engine →</a>
-              <span class="text-white/30 mx-2">·</span>
-              <a href="semantic-instruments.html" class="text-violet-300 hover:underline text-sm font-semibold">Semantic Instruments →</a>
-              <span class="text-white/30 mx-2">·</span>
-              <a href="graphics.html" class="text-emerald-300 hover:underline text-sm font-semibold">Holographic 3D &amp; WebGPU →</a>
-              <span class="text-white/30 mx-2">·</span>
-              <a href="compute-engine.html" class="text-cyan-300 hover:underline text-sm">Computational Engine</a>
-              <span class="text-white/30 mx-2">·</span>
-              <a href="release-matrix.html" class="text-white/50 hover:underline text-sm">Release matrix</a>
+            <h1 class="font-display text-5xl sm:text-6xl font-semibold tracking-[-2.5px] mb-4">
+                Webizen <span class="text-white/40 text-3xl sm:text-4xl font-normal">/ QualiaDB 0.0.41</span>
+            </h1>
+            <p class="text-2xl text-white/80 max-w-3xl mx-auto">
+                A local-first semantic graph engine, human-centric operating habitat, pure-Rust GPU/physics accelerator ecosystem, and checked authoring environment.
             </p>
-        </div>
+            <p class="mt-4 text-white/65 max-w-4xl mx-auto text-sm leading-relaxed">
+                <strong>What it is:</strong> <strong>QualiaDB</strong> stores every semantic fact, rule, and spatial coordinate in a deterministic 48-byte <code>NQuin</code> record within a strict 42 MB hot-path memory ceiling. <strong>Webizen</strong> is the sovereign desktop and browser habitat designed around human life domains—where people, claims, network handles, and computational instruments remain cryptographically distinct. <strong>Etalon</strong> provides the pure-Rust WebGPU, volumetric rendering, 3D XPBD physics, and spatial audio stack, while <strong>VibeScript &amp; Poet</strong> connect checked functional authoring directly to native and WebAssembly execution.
+            </p>
+            <p class="mt-3 text-white/60 max-w-4xl mx-auto text-sm leading-relaxed">
+                <strong>Why it exists:</strong> Modern software should protect human agency rather than extract attention or lock personal memory inside opaque cloud silos. Every computation in QualiaDB and Webizen is local-first, zero-allocation on hot paths, and verifiable through cryptographic provenance.
+            </p>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a href="progress-0.0.41.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 font-bold text-sm shadow-md hover:opacity-95 transition">
+                    <span>0.0.41 Release Overview &amp; Architecture</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <a href="release-showcase-0.0.41.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-emerald-300 font-semibold text-sm transition">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Interactive 0.0.41 Showcase Navigator</span>
+                </a>
+                <a href="release-matrix.html" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 font-semibold text-sm transition">
+                    <i class="fa-solid fa-table-cells"></i>
+                    <span>0.0.41 Release Matrix</span>
+                </a>
+            </div>
+            <p class="mt-4 text-xs sm:text-sm text-white/55">
+                <a href="progress-0.0.40.html" class="text-emerald-300 hover:underline font-semibold">0.0.40 Baseline Archive →</a>
+                <span class="text-white/30 mx-2">·</span>
+                <a href="spatial.html" class="text-sky-300 hover:underline font-semibold">Geospatial &amp; OCS Engine →</a>
+                <span class="text-white/30 mx-2">·</span>
+                <a href="semantic-instruments.html" class="text-violet-300 hover:underline font-semibold">Semantic Instruments →</a>
+                <span class="text-white/30 mx-2">·</span>
+                <a href="graphics.html" class="text-emerald-300 hover:underline font-semibold">Etalon 3D &amp; WebGPU →</a>
+                <span class="text-white/30 mx-2">·</span>
+                <a href="qdnf.html" class="text-cyan-300 hover:underline font-semibold">QDNF Network Fabric →</a>
+            </p>
+        </header>
 
         <!-- Install Banner -->
-        <div class="glass-strong rounded-3xl p-8 mb-12 max-w-4xl mx-auto border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 via-zinc-900/40 to-slate-900/60">
+        <div class="glass-strong rounded-3xl p-8 mb-14 max-w-5xl mx-auto border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 via-zinc-900/40 to-slate-900/60">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="font-semibold text-xl text-white">Native Webizen Habitat</span>
-                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v0.0.40.16 LIVE</span>
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="font-semibold text-xl text-white">Native Webizen Habitat &amp; Qualia CLI</span>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">v0.0.41 RELEASE</span>
                     </div>
-                    <div class="text-white/70 text-sm max-w-xl">
-                        Desktop shell + local daemon + Lived Memory volumes + Multi-Physics Sim. Offline-first. Primary orbit: Talk · Mail · Directory · Library · Settings. Phone as installable remote controller — not a second vault dump.
+                    <div class="text-white/70 text-sm max-w-2xl leading-relaxed">
+                        Offline-first desktop shell, local semantic daemon (<code>:4242</code>), <code>.q42</code> v4 Unified Volumes, and 64 Hz multi-physics simulation. Organized around five human-centric stations—Talk, Mail, Directory, Library, and Settings—with encrypted local volume storage and hardware-backed key isolation.
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2.5 shrink-0">
@@ -96,177 +143,318 @@
                         <i class="fa-brands fa-apple"></i>
                         <span>macOS (.dmg)</span>
                     </a>
-                    <a href="https://github.com/mediaprophet/qualiaDB/releases/tag/v0.0.40" target="_blank"
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
                        class="px-4 py-2.5 border border-white/20 hover:bg-white/10 text-white rounded-2xl font-semibold text-xs flex items-center gap-x-2 transition">
                         <i class="fa-brands fa-github"></i>
-                        <span>All v0.0.40 Assets</span>
+                        <span>All Release Assets</span>
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- Feature Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <a href="progress-0.0.41.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/40 bg-gradient-to-br from-cyan-950/40 via-emerald-950/30 to-slate-900/60">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-cyan-300">0.0.41 Release Preview · 0.0.40 Baseline</div>
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">PREVIEW &amp; BASELINE</span>
+        <!-- LAYER 2: START BY ROLE STRIP (4 CARDS) -->
+        <section class="mb-14" aria-labelledby="start-by-role-heading">
+            <div class="mb-5">
+                <span class="section-kicker bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    <i class="fa-solid fa-route"></i> Guided Entry Points
+                </span>
+                <h2 id="start-by-role-heading" class="text-2xl sm:text-3xl font-semibold text-white">Start by Role</h2>
+                <p class="text-white/60 text-sm mt-1">Select the path tailored to your technical focus—from interactive browser tours to low-level binary specifications.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <!-- Role 1 -->
+                <div class="feature-card glass-strong rounded-3xl p-6 border border-emerald-500/30 bg-gradient-to-br from-emerald-950/30 to-slate-900/60 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-300">01 · Overview &amp; Evaluation</span>
+                            <i class="fa-solid fa-compass text-emerald-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-white mb-2">New Visitors &amp; Evaluators</h3>
+                        <p class="text-white/70 text-sm mb-4">
+                            Explore guided browser demonstrations, understand the tri-source ecosystem architecture, and inspect verified qualification results across native and WASM targets.
+                        </p>
+                    </div>
+                    <div class="role-links flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                        <a href="release-showcase-0.0.41.html" class="text-emerald-300">0.0.41 Showcase <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="progress-0.0.41.html" class="text-cyan-300">0.0.41 Architecture <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                    </div>
                 </div>
-                <p class="text-white/80 text-sm">See how the next release connects scientific computation, spatial worlds, checked authoring and semantic tools across reusable libraries. Explore the QualiaDB, Etalon and VibeScript repository boundaries, then choose a working demo or guided showcase. The 0.0.40 capabilities remain the foundation as 0.0.41 preparation advances.</p>
-            </a>
 
-            <a href="spatial.html" class="feature-card glass-strong rounded-3xl p-6 block border border-sky-500/40 bg-gradient-to-br from-sky-950/40 to-slate-900/60">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-sky-300">qualia-geospatial</div>
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">GIS STREAMING</span>
+                <!-- Role 2 -->
+                <div class="feature-card glass-strong rounded-3xl p-6 border border-cyan-500/30 bg-gradient-to-br from-cyan-950/30 to-slate-900/60 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-cyan-300">02 · Authoring &amp; Querying</span>
+                            <i class="fa-solid fa-code text-cyan-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-white mb-2">Application &amp; VibeScript Developers</h3>
+                        <p class="text-white/70 text-sm mb-4">
+                            Write checked VibeScript cells, compile SPARQL/N3/SHACL rules into Webizen bytecode, and integrate with the 29-crate Rust API and JSON-RPC 2.0 MCP server.
+                        </p>
+                    </div>
+                    <div class="role-links flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                        <a href="vibe/index.html" class="text-emerald-300">VibeScript Hub <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="playground/index.html" class="text-cyan-300">Playground <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="api.html" class="text-white/80">API Docs <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                    </div>
                 </div>
-                <p class="text-white/80 text-sm">Hydro-enforced GeoTIFF DEM raster ingestion into M64 matter chunks, Hilbert space-filling curve 3D spatial indexing, OGC WFS/WMS pipelines, and diachronic isogloss dialect boundary mapping.</p>
-            </a>
 
-            <a href="graphics.html" class="feature-card glass-strong rounded-3xl p-6 block border border-violet-500/40 bg-gradient-to-br from-violet-950/40 to-slate-900/60">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-violet-300">Holographic 3D &amp; Audio</div>
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">VOLUMETRIC</span>
+                <!-- Role 3 -->
+                <div class="feature-card glass-strong rounded-3xl p-6 border border-violet-500/30 bg-gradient-to-br from-violet-950/30 to-slate-900/60 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-violet-300">03 · Simulation &amp; Rendering</span>
+                            <i class="fa-solid fa-cubes text-violet-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-white mb-2">Graphics, 10D Worlds &amp; Physics Engineers</h3>
+                        <p class="text-white/70 text-sm mb-4">
+                            Dive into the pure-Rust Etalon GPU stack, volumetric raymarching, PGA motor skinning, 3D SDF XPBD fracture, Omni-Scale Coordinates, and 3D FDTD electromagnetics.
+                        </p>
+                    </div>
+                    <div class="role-links flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                        <a href="graphics.html" class="text-violet-300">Graphics &amp; GPU <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="spatial.html" class="text-sky-300">Spatial &amp; OCS <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="compute-engine.html" class="text-cyan-300">Compute <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                    </div>
                 </div>
-                <p class="text-white/80 text-sm">Differential 3D video codec modality, temporal frame warping, Naga-certified WGSL surfel compaction, Ambisonic HRTF binaural audio, and Cook-Torrance PBR optics.</p>
-            </a>
 
-            <a href="semantic-instruments.html" class="feature-card glass-strong rounded-3xl p-6 block border border-violet-500/40 bg-gradient-to-br from-violet-950/40 to-slate-900/60">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-violet-300">Semantic Instruments</div>
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">0.0.40 LIVE</span>
+                <!-- Role 4 -->
+                <div class="feature-card glass-strong rounded-3xl p-6 border border-amber-500/30 bg-gradient-to-br from-amber-950/30 to-slate-900/60 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-300">04 · Protocols &amp; Binary Specs</span>
+                            <i class="fa-solid fa-shield-halved text-amber-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-lg text-white mb-2">Identity, Cryptography &amp; Network Architects</h3>
+                        <p class="text-white/70 text-sm mb-4">
+                            Inspect the Four-Plane Identifier Fabric, 384-bit QSR source routing, CSCP SHA-384 encrypted sessions, and the <code>.q42</code> v4 Unified Volume binary layout.
+                        </p>
+                    </div>
+                    <div class="role-links flex flex-wrap gap-2 pt-2 border-t border-white/10">
+                        <a href="qdnf.html" class="text-emerald-300">QDNF Fabric <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="human-centric-authoring.html" class="text-amber-300">Identity Planes <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                        <a href="data-formats.html" class="text-cyan-300">.q42 v4 Spec <i class="fa-solid fa-arrow-right text-xs"></i></a>
+                    </div>
                 </div>
-                <p class="text-white/80 text-sm">Inspectable collectables, visible dependencies, bounded reference execution, receipts, attestations, and capability recognition — instruments humans can hold and read.</p>
-            </a>
+            </div>
+        </section>
 
-            <a href="prompt-precision.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/40 bg-gradient-to-br from-cyan-950/40 to-slate-900/60">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-cyan-300">Prompt Precision</div>
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">SPEC &amp; MATH</span>
-                </div>
-                <p class="text-white/80 text-sm">Deterministic 6-zone token algebra ($B_{total}$), zero-heap byte layout emitters, 14 cross-cutting invariants, and machine-learned ModelPrecisionOptimizer pipeline with candidate strategies B0 through B5.</p>
-            </a>
+        <!-- LAYER 3: UPDATED 0.0.41 CAPABILITY GRID -->
+        <section class="mb-14" aria-labelledby="new-in-041-heading">
+            <div class="mb-5">
+                <span class="section-kicker bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                    <i class="fa-solid fa-bolt"></i> Release 0.0.41 Core Pillars
+                </span>
+                <h2 id="new-in-041-heading" class="text-2xl sm:text-3xl font-semibold text-white">0.0.41 Architectural Capabilities</h2>
+                <p class="text-white/60 text-sm mt-1">Completed capabilities across unified binary volumes, four-plane identity separation, relativistic cosmic coordinates, pure-Rust GPU simulation, and 384-bit network routing.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Pillar A: .q42 v4 Unified Volumes & 5-Field NQuin Parity -->
+                <a href="data-formats.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/40 bg-gradient-to-br from-cyan-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-cyan-300">.q42 v4 Volumes &amp; NQuin Parity</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Q42 v4</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        5-field <code>NQuin</code> XOR parity (including <code>metadata</code>), <code>PCAT</code> length-prefixed prose catalogue, namespaced <code>Q42LEX</code> v4 demand-paged lexicon, Sanctuary vs. Commons publication gates, and <code>ExactnessProfile</code> with 256-bit Chinese Remainder Theorem (CRT) exact reconstruction.
+                    </p>
+                </a>
 
-            <a href="vibe/index.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-slate-900/60">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-emerald-300">VibeScript (vibe-0.1)</div>
-                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">IF-ELSE LIVE</span>
-                </div>
-                <p class="text-white/80 text-sm">Checked cell · CompiledCell.compile · Value-producing if-else conditional expressions across parser, compiler, and VM. Soft-rise Present on the shipped browser binding.</p>
-            </a>
+                <!-- Pillar B: Four-Plane Identifier Fabric -->
+                <a href="human-centric-authoring.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/40 bg-gradient-to-br from-emerald-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-emerald-300">Four-Plane Identifier Fabric</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">IDF-01–05</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        Cryptographic separation across <code>Entity</code>, <code>Claim</code>, <code>Handle</code>, and <code>Instrument</code> planes enforced by the <code>F5</code>/<code>F6</code> anti-feature firewall. Side-by-side resolution for <code>did:q42:</code> topological pointers, <code>did:webizen:</code> sovereign entities, and <code>did:qi:</code> network handles.
+                    </p>
+                </a>
 
-            <a href="progress-0.0.39.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-cyan-500/30">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-cyan-200">0.0.39 Milestone</div>
-                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">ARCHIVE</span>
-                </div>
-                <p class="text-white/70 text-sm">Interactive Token Budget Simulator, Automated Model Precision Optimization (B0–B5), and NLP gold evaluation substrate under the 42MB Sentinel.</p>
-            </a>
+                <!-- Pillar C: Omni-Scale Coordinate System (OCS) & 10D Containers -->
+                <a href="spatial.html" class="feature-card glass-strong rounded-3xl p-6 block border border-sky-500/40 bg-gradient-to-br from-sky-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-sky-300">Omni-Scale Coordinates &amp; 10D</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">OCS-10–13</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        <code>USRI</code> and 64-byte <code>CB-USRI</code> addresses, 27 cosmic opcodes, exact Lorentz boosts, IAU 2006/2000B <code>ICRS → ITRS</code> frame transforms, flat &Lambda;CDM Gauss–Kronrod <em>G</em><sub>7</sub>/<em>K</em><sub>15</sub> comoving distances, plus <code>Container10D</code>, <code>M64</code>, <code>EMF64</code>, and Semantic QEM mesh decimation.
+                    </p>
+                </a>
 
-            <a href="progress-0.0.38.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-violet-500/30">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-white/80">0.0.38 Milestone</div>
-                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">ARCHIVE</span>
-                </div>
-                <p class="text-white/70 text-sm">Directory humans-first · Mail daily · Catalog Open pack · Continuity live: handle revoke ≠ who-erase. Talk building next.</p>
-            </a>
+                <!-- Pillar D: Etalon Pure-Rust GPU, Physics & Audio Stack -->
+                <a href="graphics.html" class="feature-card glass-strong rounded-3xl p-6 block border border-violet-500/40 bg-gradient-to-br from-violet-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-violet-300">Etalon GPU, Physics &amp; Audio</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">ETALON STACK</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        Powered by <code>wgpu 30.0.0-etalon</code>: volumetric raymarching, PGA motor dual-quaternion skinning with ABSM and Two-Bone/FABRIK IK, substepped 3D SDF XPBD stress-cleavage fracture, 3D FDTD CFL electromagnetic grids, Holosonic HRTF spatial audio, and <code>etalon-wgsl-forge</code>.
+                    </p>
+                </a>
 
-            <a href="progress-0.0.37.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-white/20">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl text-white/70">0.0.37 Milestone</div>
-                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">ARCHIVE</span>
-                </div>
-                <p class="text-white/55 text-sm">Full WASM-safe portal engine record, 3-tier package budget layout, and baseline benchmark telemetry.</p>
-            </a>
+                <!-- Pillar E: QDNF Sovereign Network Fabric & 384-Bit QSR -->
+                <a href="qdnf.html" class="feature-card glass-strong rounded-3xl p-6 block border border-amber-500/40 bg-gradient-to-br from-amber-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-amber-300">QDNF &amp; 384-Bit QSR Routing</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">NET-18–23</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        384-bit radix-16 Qualia Source Routing (QSR), Bellman–Ford dual shortest-path witness verification, <code>SHA-384</code>/<code>HKDF-SHA384</code> <code>CSCP</code> authenticated sessions, chunk-to-SuperBlock <code>.q42</code> replication, and a deterministic 40-scenario egress policy matrix.
+                    </p>
+                </a>
 
-            <a href="wasm-engine.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/30">
-                <div class="font-semibold text-xl mb-2 text-cyan-200">WASM Engine</div>
-                <p class="text-white/70 text-sm">Three packages, two budgets. Ontology MCP 800 / 260 KiB. Portal and playground 16 MiB / 4 MiB gzip. Live size bars from the files this site serves.</p>
-            </a>
+                <!-- Pillar F: 0.0.41 Tri-Source Architecture & Release Guide -->
+                <a href="progress-0.0.41.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/40 bg-gradient-to-br from-cyan-950/40 via-emerald-950/30 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-cyan-200">0.0.41 Tri-Source Architecture</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">0.0.41 GUIDE</span>
+                    </div>
+                    <p class="text-white/80 text-sm leading-relaxed">
+                        Explore how <code>qualiaDB</code> (semantic graph &amp; governance), <code>etalon</code> (GPU, physics &amp; tensor execution), and <code>vibe-script</code> (checked language &amp; editor tooling) compose into a unified, verified ecosystem.
+                    </p>
+                </a>
+            </div>
+        </section>
 
-            <a href="qdnf.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/30">
-                <div class="font-semibold text-xl mb-2 text-emerald-200">QDNF / QPR</div>
-                <p class="text-white/70 text-sm">Local CSCP/QPR and did:qi slices run in tree. WireGuard, WSS, HTTP/2, and Nym carry as named transition bearers. Handles ≠ human. Internet relay path building next.</p>
-            </a>
-
-            <a href="qdnf-status.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/30">
-                <div class="font-semibold text-xl mb-2 text-cyan-200">QDNF Status</div>
-                <p class="text-white/70 text-sm">What runs in tree today · transition carriers in use · building next for operator Internet paths.</p>
-            </a>
-
-            <a href="release-matrix.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/20">
-                <div class="font-semibold text-xl mb-2">Qualia · Webizen · Poet</div>
-                <p class="text-white/70 text-sm">Qualia · Webizen · Poet — what ships on tag and the human-surface notes for this cut. Publish path: <code class="text-xs">v0.0.40</code>.</p>
-            </a>
-
-            <div class="feature-card glass-strong rounded-3xl p-6 block border border-white/10">
-                <div class="font-semibold text-xl mb-2">Life domains</div>
-                <p class="text-white/70 text-sm">Memory · Relations · Care · Practice · World · Instruments — product language for the habitat, not Talk/Keep/ops chrome.</p>
+        <!-- LAYER 4: WORKBENCHES, EXPLORERS & ARCHIVES -->
+        <section aria-labelledby="workbenches-heading">
+            <div class="mb-5">
+                <span class="section-kicker bg-violet-500/15 text-violet-300 border border-violet-500/30">
+                    <i class="fa-solid fa-flask"></i> Workbenches, Reference &amp; Archives
+                </span>
+                <h2 id="workbenches-heading" class="text-2xl sm:text-3xl font-semibold text-white">Interactive Laboratories &amp; Documentation</h2>
+                <p class="text-white/60 text-sm mt-1">Run browser-native WebAssembly engines, inspect benchmarks, test 21 logical modalities, or browse previous milestone records.</p>
             </div>
 
-            <a href="benchmark.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Benchmark Hub</div>
-                <p class="text-white/70 text-sm">Purpose clocks for VibeScript Present jobs, graph probes, and geometry/renderer plane — separate claim planes, same hub.</p>
-            </a>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <a href="vibe/index.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-emerald-300">VibeScript (vibe-0.03)</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">VBC1 BYTECODE</span>
+                    </div>
+                    <p class="text-white/80 text-sm">Pure functional core with explicit <code>effect fn</code> boundaries, reusable <code>CompiledCell</code> compilation, value-producing <code>if-else</code> expressions, and 18 EcoPunk continuum capabilities.</p>
+                </a>
 
-            <a href="playground/compare.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">RDF ↔ .q42 Comparator</div>
-                <p class="text-white/70 text-sm">Instantly see compression ratio, semantic fidelity, and parse-time speedup. Zero upload required.</p>
-            </a>
+                <a href="semantic-instruments.html" class="feature-card glass-strong rounded-3xl p-6 block border border-violet-500/40 bg-gradient-to-br from-violet-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-violet-300">Semantic Instruments</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">SI-01–SI-12</span>
+                    </div>
+                    <p class="text-white/80 text-sm">Inspectable computational instruments with explicit dependency manifests, bounded reference execution, and cryptographically auditable execution receipts.</p>
+                </a>
 
-            <a href="universe.html" class="feature-card glass-strong rounded-3xl p-6 block border border-indigo-500/30">
-                <div class="font-semibold text-xl mb-2">Knowledge Universe</div>
-                <p class="text-white/70 text-sm">Full-sky map of the bundled corpus — ontology packs as galaxies, Chora Yale bright stars, CODATA constants. Drag, zoom, click.</p>
-            </a>
+                <a href="prompt-precision.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/40 bg-gradient-to-br from-cyan-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-cyan-300">Prompt Precision</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">SPEC &amp; MATH</span>
+                    </div>
+                    <p class="text-white/80 text-sm">Deterministic 6-zone token algebra ($B_{total}$), zero-heap byte layout emitters, 14 cross-cutting invariants, and <code>ModelPrecisionOptimizer</code> strategies B0 through B5.</p>
+                </a>
 
-            <a href="ontology.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Ontology browse</div>
-                <p class="text-white/70 text-sm">Open bundled vocab packs in the browser via Q42 v4 demand-paging. who · claim · handle · tool stay distinct — this card is the pack browser, not a Thing factory.</p>
-            </a>
+                <a href="wasm-engine.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/30">
+                    <div class="font-semibold text-xl mb-2 text-cyan-200">WASM Engine Profiles</div>
+                    <p class="text-white/70 text-sm">Inspect the three browser WebAssembly bundles and their strict size gates: Ontology MCP (800 KiB raw / 260 KiB gzip) and full Portal &amp; Playground engines (16 MiB raw / 4 MiB gzip).</p>
+                </a>
 
-            <a href="spatial.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/20">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-xl">Spatial portal</div>
-                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">LIVE VIEWPORT</span>
-                </div>
-                <p class="text-white/70 text-sm">Ambient WASM portal · GeoSPARQL predicates · 10D tensor slice. Frame-time / hitch scene harness building next.</p>
-            </a>
+                <a href="qdnf-status.html" class="feature-card glass-strong rounded-3xl p-6 block border border-cyan-500/30">
+                    <div class="font-semibold text-xl mb-2 text-cyan-200">QDNF Implementation Matrix</div>
+                    <p class="text-white/70 text-sm">Component-by-component verification status for QLink, DNI, QSR 384-bit routing, QResolve, QPolicy 40-scenario egress checks, CSCP sessions, and QSync replication.</p>
+                </a>
 
-            <a href="modalities-showcase.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Modalities Observatory</div>
-                <p class="text-white/70 text-sm">All 21 logic systems — deontic, epistemic, LTL, paraconsistent, ASP, dialectical, Allen algebra, diffusion, neuro-symbolic, CRDT, SHACL, N3, and more — interactive in WASM.</p>
-            </a>
+                <a href="release-matrix.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/20">
+                    <div class="font-semibold text-xl mb-2 text-emerald-200">Qualia · Webizen · Poet Matrix</div>
+                    <p class="text-white/70 text-sm">Complete 0.0.41 product map and distribution guide covering native CLI binaries, signed desktop installers, browser WASM engines, and P64 model containers.</p>
+                </a>
 
-            <a href="playground/index.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Interactive Playground</div>
-                <p class="text-white/70 text-sm">Compile SPARQL and N3 to Webizen bytecode, validate SHACL bounds, and run scientific solvers — all via qualia-core-db WASM.</p>
-            </a>
+                <a href="benchmark.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Benchmark Hub</div>
+                    <p class="text-white/70 text-sm">Reproducible telemetry across VibeScript execution clocks, Schema.org 30.0 graph queries, zero-heap geometry builders, and WebGPU compute kernels.</p>
+                </a>
 
-            <a href="science-playground.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Sciences &amp; Math Playground</div>
-                <p class="text-white/70 text-sm">Interactive geometric algebra, Runge-Kutta ODE solvers, thermodynamics, and bioinformatics — live in-browser via WASM with Chart.js visualizations.</p>
-            </a>
+                <a href="playground/compare.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">RDF ↔ .q42 Comparator</div>
+                    <p class="text-white/70 text-sm">Compare standard Turtle, N-Triples, and JSON-LD payloads against binary <code>.q42</code> v4 volumes to measure compression ratios and zero-copy parse throughput.</p>
+                </a>
 
-            <a href="edge-llm.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Edge LLM Hub</div>
-                <p class="text-white/70 text-sm">Browse the GGUF model catalog, explore the Phase 8 bifurcated inference protocol, and demo streaming token generation — no cloud required.</p>
-            </a>
+                <a href="universe.html" class="feature-card glass-strong rounded-3xl p-6 block border border-indigo-500/30">
+                    <div class="font-semibold text-xl mb-2">Knowledge Universe</div>
+                    <p class="text-white/70 text-sm">Interactive celestial map of bundled knowledge volumes—exploring W3C, Schema.org, FIBO, WordNet, Yale Bright Star Catalogue, and CODATA physical constants.</p>
+                </a>
 
-            <a href="online-llm-demo.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">Online LLM Demo</div>
-                <p class="text-white/70 text-sm">Run SmolLM2 (and friends) entirely in your browser via Qualia WASM + WebGPU. Phone-friendly setup, OPFS cache, Text→SPARQL / JSON-LD. No server needed.</p>
-            </a>
+                <a href="ontology.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Ontology Browser</div>
+                    <p class="text-white/70 text-sm">Explore bundled vocabulary volumes directly in the browser through HTTP Range demand-paging and <code>Q42LEX</code> v4 namespaced lexicon reconstruction.</p>
+                </a>
 
-            <a href="playground/anatomy.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">3D Anatomy (WebGPU)</div>
-                <p class="text-white/70 text-sm">Real HuBMAP/CCF bodies in a <code>.hmc</code> pack — attention mixer, per-part selection, orbit &amp; pinch on phones. Same renderer as desktop.</p>
-            </a>
+                <a href="modalities-showcase.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Modalities Observatory</div>
+                    <p class="text-white/70 text-sm">Interactive verification of all 21 logical modalities—including deontic, epistemic, temporal LTL, paraconsistent, ASP, Allen interval algebra, SHACL, and N3.</p>
+                </a>
 
-            <a href="api.html" class="feature-card glass-strong rounded-3xl p-6 block">
-                <div class="font-semibold text-xl mb-2">API Reference</div>
-                <p class="text-white/70 text-sm">Full Rust crate documentation — browse by module: Core Storage, Webizen VM, Query Engine, Science primitives, and more.</p>
-            </a>
-        </div>
+                <a href="playground/index.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Interactive Playground</div>
+                    <p class="text-white/70 text-sm">Compile SPARQL and N3 rules into Webizen VM bytecode, validate SHACL shapes, and inspect 48-byte <code>NQuin</code> bit layouts in real time.</p>
+                </a>
+
+                <a href="science-playground.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Sciences &amp; Math Playground</div>
+                    <p class="text-white/70 text-sm">Run Clifford geometric algebra, Runge–Kutta ODE integrators, MCMC thermodynamics, clinical risk scores, and sequence alignment in-browser via WASM.</p>
+                </a>
+
+                <a href="edge-llm.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Edge LLM Hub</div>
+                    <p class="text-white/70 text-sm">Explore 64-byte aligned <code>P64</code> weight containers, Phase 8 bifurcated inference, and Sentinel-governed local token generation.</p>
+                </a>
+
+                <a href="online-llm-demo.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Online LLM Demo</div>
+                    <p class="text-white/70 text-sm">Execute compact language models directly in your browser using Qualia WASM, WebGPU acceleration, and Origin Private File System (OPFS) caching.</p>
+                </a>
+
+                <a href="playground/anatomy.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">3D Anatomy (WebGPU)</div>
+                    <p class="text-white/70 text-sm">Stream HuBMAP/CCF reference organ meshes from binary <code>.hmc</code> volumes with interactive anatomical selection and cross-platform WebGPU rendering.</p>
+                </a>
+
+                <a href="api.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Rust API Reference</div>
+                    <p class="text-white/70 text-sm">Complete <code>rustdoc</code> documentation across the 29-crate workspace: Core DB, Webizen VM, Etalon GPU bridges, Geospatial, Simulation, and MCP.</p>
+                </a>
+
+                <a href="progress-0.0.40.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-emerald-500/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-emerald-200">0.0.40 Milestone</div>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">BASELINE</span>
+                    </div>
+                    <p class="text-white/70 text-sm">Semantic Instruments Studio Bay, 5-station Desktop Habitat, 6-domain <code>qualia-sim</code> multi-physics, <code>qualia-geospatial</code>, and <code>qualia-mcp</code> JSON-RPC 2.0 server.</p>
+                </a>
+
+                <a href="progress-0.0.39.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-cyan-500/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-cyan-200">0.0.39 Milestone</div>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">ARCHIVE</span>
+                    </div>
+                    <p class="text-white/70 text-sm">Interactive Token Budget Simulator, Automated Model Precision Optimization (B0–B5), and NLP evaluation substrate under the 42 MB Sentinel.</p>
+                </a>
+
+                <a href="progress-0.0.38.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-violet-500/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-white/80">0.0.38 Milestone</div>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">ARCHIVE</span>
+                    </div>
+                    <p class="text-white/70 text-sm">Human-first Directory, CSCP encrypted Mail, open vocabulary pack catalogue, and cryptographic separation between network handle revocation and personal identity.</p>
+                </a>
+
+                <a href="progress-0.0.37.html" class="feature-card glass-strong rounded-3xl p-6 block border border-white/10 hover:border-white/20">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-white/70">0.0.37 Milestone</div>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-white/60">ARCHIVE</span>
+                    </div>
+                    <p class="text-white/55 text-sm">WASM-safe portal engine architecture, three-tier WebAssembly package budget enforcement, and comparative benchmark telemetry.</p>
+                </a>
+            </div>
+        </section>
 
         <div class="mt-12 text-center text-white/50 text-sm">
             Built for dignity. Designed for the edge. Powered by human agency.

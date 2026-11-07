@@ -1,6 +1,3 @@
----
-layout: null
----
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -291,7 +288,7 @@ layout: null
     </div>
 
     <script type="module">
-        import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.40-wasm-retry1';
+        import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.41-wasm-retry1';
 
         const models = [
             { id: 'wasm_native', name: 'Qualia WASM Semantic Extractor (In-Browser)', desc: 'Deterministic Rust WASM RDF/Turtle & BLAKE3 pipeline • Zero network egress', recommended: true },
@@ -362,7 +359,7 @@ layout: null
                 if (res.ok) {
                     const d = await res.json();
                     daemonOnline = true;
-                    daemonVersion = d.version || '0.0.40';
+                    daemonVersion = d.version || '0.0.41';
                 }
             } catch(e) {
                 daemonOnline = false;
@@ -489,7 +486,7 @@ layout: null
                     <span class="flex items-center gap-x-2"><i class="fa-solid fa-check-circle"></i> Rust WASM Extraction Complete (${executionMs} ms)</span>
                     <span class="font-mono text-[10px] text-white/50">BLAKE3: ${blake3.hex.substring(0, 16)}…</span>
                 </div>
-                <div class="mb-2 text-white/70 text-[11px] font-mono">Parsed Triples: ${lastAnalysis.triplesCount} • Compiled VM Ops: ${lastAnalysis.queryPlanInstructions} • Engine: qualia-core-db v0.0.40</div>
+                <div class="mb-2 text-white/70 text-[11px] font-mono">Parsed Triples: ${lastAnalysis.triplesCount} • Compiled VM Ops: ${lastAnalysis.queryPlanInstructions} • Engine: qualia-core-db v0.0.41</div>
                 <pre class="text-[10px] text-emerald-300/90 overflow-auto bg-black/40 p-3 rounded-xl">${JSON.stringify({
                     model: lastAnalysis.model,
                     source: lastAnalysis.source,
@@ -651,7 +648,7 @@ layout: null
             }
             const payload = {
                 format: "QualiaDB SuperBlock Artifact",
-                version: "0.0.40",
+                version: "0.0.41",
                 created_at: new Date().toISOString(),
                 metadata: {
                     id: lastQ42["@id"],

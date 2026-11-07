@@ -1,9 +1,41 @@
----
-layout: qualia
-title: VibeScript
----
-<meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en" data-theme="release-038">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeScript (vibe-0.1 &amp; vibe-0.03) · Qualia-DB v0.0.41</title>
+    <link rel="stylesheet" href="../css/tailwind-built.css">
+    <link rel="stylesheet" href="../css/release-showcase.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/site-nav.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <script src="../js/menu-loader.js"></script>
+</head>
+<body class="min-h-screen">
+    <div class="q-mesh" aria-hidden="true"></div>
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(5,7,12,0.78);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-14 gap-4">
+                <a href="../index.html" class="flex items-center gap-3 shrink-0">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                        <span class="text-black font-bold text-xl">Q</span>
+                    </div>
+                    <div class="hidden sm:block"><span class="font-semibold text-xl">Qualia</span><span class="text-emerald-400 text-xl">DB</span></div>
+                </a>
+                <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-end lg:justify-center"></div>
+                <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank"
+                   class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors shrink-0">
+                    <i class="fab fa-github"></i><span>GitHub</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
+    <main class="q-wrap max-w-screen-2xl mx-auto px-5 sm:px-8 py-10">
+        <p class="mb-5 text-sm"><a class="q-link" href="../qdnf.html">QDNF map</a>
+            · <a class="q-link" href="../read.html">Readable docs</a></p>
+        <article class="doc-content q-prose q-card mx-auto p-6 sm:p-10">
 <div class="vibe-landing" style="max-width: 72rem; margin: 0 auto;">
   <style>
     .vibe-landing {
@@ -405,30 +437,30 @@ title: VibeScript
   <!-- Hero Section -->
   <div class="vibe-hero">
     <div class="vibe-pill">
-      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 · Present · checked · compile · run ×2
+      <i class="fa-solid fa-bolt"></i> VibeScript 0.1 &amp; 0.03 · Capability-Bounded · Compile Once · Run ×2
     </div>
-    <h1>The Human & Machine<br>Semantic Scripting Language</h1>
+    <h1>The Human &amp; Machine<br>Semantic Scripting Language</h1>
     <p class="tagline">
-      Capability-bounded cells that check, compile once, and run again on the same handle —
-      beside ordinary browser UI. Dialect vibe-0.1 · soft-rise Present jobs run in this tab.
+      Capability-bounded semantic cells and modules that type-check, enforce compile-time identifier firewall rules,
+      compile once to deterministic bytecode, and execute repeatedly on the same handle across WASM, desktop, and 10D continuum targets.
     </p>
     <div class="cta-row">
-      <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-primary">
+      <a href="playground.html" class="vibe-btn vibe-btn-primary">
         <i class="fa-solid fa-play"></i> Live Playground
       </a>
-      <a href="{{ '/vibe/showcase.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
-        <i class="fa-solid fa-star"></i> Showcase & Demos
+      <a href="showcase.html" class="vibe-btn vibe-btn-secondary">
+        <i class="fa-solid fa-star"></i> Showcase &amp; Demos
       </a>
-      <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+      <a href="spec.html" class="vibe-btn vibe-btn-secondary">
         <i class="fa-solid fa-book"></i> Language Spec
       </a>
-      <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+      <a href="dev-docs.html" class="vibe-btn vibe-btn-secondary">
         <i class="fa-solid fa-code-branch"></i> Dev Docs (API)
       </a>
-      <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+      <a href="benchmarks.html" class="vibe-btn vibe-btn-secondary">
         <i class="fa-solid fa-gauge-high"></i> Benchmarks
       </a>
-      <a href="{{ '/rdf-q42-vibe-demo.html' | relative_url }}" class="vibe-btn vibe-btn-secondary">
+      <a href="../rdf-q42-vibe-demo.html" class="vibe-btn vibe-btn-secondary">
         <i class="fa-solid fa-diagram-project"></i> RDF → Q42 Demo
       </a>
     </div>
@@ -437,12 +469,12 @@ title: VibeScript
   <!-- Engine Telemetry Bar -->
   <div class="vibe-stats-bar">
     <div class="vibe-stat-box">
-      <div class="num">0.1</div>
-      <div class="label">Current dialect</div>
+      <div class="num">0.1 / 0.03</div>
+      <div class="label">Active Dialects</div>
     </div>
     <div class="vibe-stat-box">
       <div class="num">1,121</div>
-      <div class="label">Host ALL_BOUND (tip)</div>
+      <div class="label">Bound Host Methods</div>
     </div>
     <div class="vibe-stat-box">
       <div class="num">105</div>
@@ -453,40 +485,40 @@ title: VibeScript
       <div class="label">Sentinel Ceiling</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">41</div>
-      <div class="label">Bytecode Opcodes</div>
+      <div class="num">27 + 41</div>
+      <div class="label">Cosmic &amp; VM Opcodes</div>
     </div>
     <div class="vibe-stat-box">
-      <div class="num">3</div>
-      <div class="label">Present browser jobs</div>
+      <div class="num">6 Rules</div>
+      <div class="label">IDF-04 Fabric Guard</div>
     </div>
   </div>
 
 
   <!-- Present: jobs the shipped binding runs -->
   <div class="vibe-present" id="vibe-present">
-    <h2>Runs in this browser</h2>
+    <h2>Live In-Browser WASM Verification</h2>
     <p class="lede">
-      Soft-rise Present the vibe-wasm binding already carries: <strong>checked cell</strong>,
-      <strong>CompiledCell.compile</strong>, and <strong>run() ×2</strong> on the same handle.
+      Interactive verification jobs executed directly by the shipped <code>vibe-wasm</code> runtime in this browser tab:
+      <strong>checked cell</strong>, <strong>CompiledCell.compile</strong>, and <strong>run() ×2</strong> on a retained bytecode handle.
     </p>
     <div class="vibe-present-grid">
       <article class="vibe-present-card is-wait" data-job="checked">
         <div class="chip">Present · live</div>
         <h3>Checked cell</h3>
-        <p>Type-check a cell before it runs.</p>
+        <p>Type-check a cell and verify capability leases before execution.</p>
         <div class="meter">warming…</div>
       </article>
       <article class="vibe-present-card is-wait" data-job="compile">
         <div class="chip">Present · live</div>
         <h3>CompiledCell.compile</h3>
-        <p>Compile once · keep the handle.</p>
+        <p>Compile source once into a reusable bytecode cell handle.</p>
         <div class="meter">warming…</div>
       </article>
       <article class="vibe-present-card is-wait" data-job="run">
         <div class="chip">Present · live</div>
         <h3>CompiledCell.run</h3>
-        <p>Run ×2 without re-decode.</p>
+        <p>Run ×2 on the retained handle without re-parsing source.</p>
         <div class="meter">warming…</div>
       </article>
     </div>
@@ -496,10 +528,10 @@ title: VibeScript
         <button type="button" class="vibe-btn vibe-btn-primary" id="vibe-present-rerun" style="padding:8px 16px;font-size:0.85rem;cursor:pointer;border:none">
           Run Present jobs
         </button>
-        <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-btn vibe-btn-secondary" style="padding:8px 16px;font-size:0.85rem">
+        <a href="playground.html" class="vibe-btn vibe-btn-secondary" style="padding:8px 16px;font-size:0.85rem">
           Open playground
         </a>
-        <a href="{{ '/benchmark.html' | relative_url }}#vibescript" class="vibe-btn vibe-btn-secondary" style="padding:8px 16px;font-size:0.85rem">
+        <a href="../benchmark.html#vibescript" class="vibe-btn vibe-btn-secondary" style="padding:8px 16px;font-size:0.85rem">
           Purpose clocks
         </a>
       </div>
@@ -508,21 +540,18 @@ title: VibeScript
 
   <!-- Section: What is VibeScript? -->
   <div class="vibe-section">
-    <h2>Why VibeScript? A semantic execution layer</h2>
+    <h2>Why VibeScript? A Semantic &amp; Capability-Bounded Execution Layer</h2>
     <p>
-      VibeScript is for programs whose data meaning, authority, and replay semantics are part of the product.
-      It does not ask a browser runtime to infer those boundaries from ad-hoc objects, network calls, and framework conventions.
+      VibeScript is engineered for applications where data meaning, ontological provenance, capability authority, and deterministic replay are core architectural requirements rather than afterthoughts bolted onto untyped objects.
     </p>
     <p>
-      <strong>VibeScript</strong> (or <strong>Vibe</strong>) is the native scripting layer of QualiaDB and the Poet creative environment.
-      It is an interpreted, typed, capability-bounded language engineered with zero heap allocations in hot paths,
-      first-class RDF 1.2 and SPARQL semantics, verifiable deontic norms, and deterministic execution for eligible programs.
-      The <strong>0.1 grammar is current and may grow</strong>. The <strong>Host catalog grows</strong>:
-      more than a thousand live <code>Family.method</code> invoke ids
-      (<code>Cosmic.*</code>, <code>LinearAlgebra.*</code>, <code>GraphDatabase.*</code>, …)
-      bind through <code>using Family;</code> and <code>capability.invoke</code>.
-      Agents repair from <code>vibe::diagnose(src)</code> JSON. JavaScript remains useful for conventional DOM work;
-      Vibe supplies the semantic and authority-bearing layer beneath a UI.
+      <strong>VibeScript</strong> (spanning the <strong><code>vibe-0.1</code></strong> workshop/cell dialect and <strong><code>vibe-0.03</code></strong> continuum/quantum kernel bindings) is the native scripting layer of QualiaDB and the Poet creative environment.
+      It is a statically checked, capability-bounded language engineered with zero heap allocations in Tier-1 hot paths,
+      first-class RDF 1.2 and SPARQL semantics, verifiable deontic/epistemic modalities, and a compile-time identifier firewall (<code>IDF-04</code>).
+      Across the 105 capability families, <strong>1,121 bound <code>Family.method</code> host operations</strong>
+      (<code>Cosmic.*</code>, <code>LinearAlgebra.*</code>, <code>Quantum.*</code>, <code>GraphDatabase.*</code>, <code>BotanicalAnatomy.*</code>, …)
+      bind explicitly through <code>using Family;</code> declarations and the four-operation <code>vibe-host-0.1</code> ABI.
+      Autonomous agents and IDE tools self-repair directly from structured <code>vibe::diagnose(src)</code> JSON diagnostics.
     </p>
 
     <!-- Three Main Roles -->
@@ -532,33 +561,216 @@ title: VibeScript
         <h3>Reactive Cell Graphs</h3>
         <p>
           Pure, high-frequency formulas driving desktop UI manifolds and QApps.
-          Cells form dependency DAGs with bounded evaluation and strict cycle detection. Performance depends on the selected target and workload; the important invariant is that the hot evaluator does not allocate.
+          Cells form dependency DAGs with bounded evaluation, compile-once handle reuse (<code>CompiledCell</code>), and strict cycle detection. The hot evaluator executes without heap allocations.
         </p>
       </div>
       <div class="vibe-role-card">
         <div class="role-num">Role 02</div>
         <h3>Signed Agent Modules</h3>
         <p>
-          Cryptographically signed programs that query and mutate knowledge graphs.
-          Every external capability (graph query, network pulse, sensor feed) requires an explicit lease grant and execution route, allowing a host to deny or diagnose unavailable authority.
+          Cryptographically signed programs that query and mutate 48-byte NQuin knowledge graphs.
+          Every external capability (graph query, network pulse, sensor feed) requires an explicit <code>using</code> lease grant and execution route, allowing the host to deny or diagnose unavailable authority with <code>E300</code>.
         </p>
       </div>
       <div class="vibe-role-card">
         <div class="role-num">Role 03</div>
-        <h3>Deontic & Event Hooks</h3>
+        <h3>Deontic &amp; Event Hooks</h3>
         <p>
-          Deterministic lifecycle handlers like <code>on pulse:message(...)</code> and <code>on tick()</code>.
-          Prohibitions and obligations can be checked against the QualiaDB logic surface; host effects remain explicit rather than being silently substituted in a standalone browser target.
+          Deterministic lifecycle handlers such as <code>on pulse:message(...)</code> and <code>on tick()</code>.
+          Obligations, permissions, and prohibitions evaluate directly against the QualiaDB deontic logic engine; host effects remain explicit rather than silently mocked in standalone browser targets.
         </p>
       </div>
     </div>
   </div>
 
+  <!-- NEW SECTION 1: Omni-Scale Coordinate System (OCS) & Cosmic Primitives (OCS-10 to OCS-13) -->
+  <div class="vibe-section" id="ocs-cosmic-primitives">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:9999px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.28);color:#38bdf8;font-size:0.82rem;font-weight:600;letter-spacing:0.03em;margin-bottom:0.75rem;">
+      <i class="fa-solid fa-globe"></i> OCS-10 – OCS-13 · Relativistic &amp; Cosmological Coordinate Architecture
+    </div>
+    <h2>Omni-Scale Coordinate System (<code>OCS</code>) &amp; Cosmic Primitives (<code>OCS-10</code>–<code>OCS-13</code>)</h2>
+    <p>
+      VibeScript natively embeds the <strong>Omni-Scale Coordinate System (OCS)</strong> across <code>crates/vibe/src/cosmic/</code>, bridging sub-atomic Planck scales (<code>L-2</code>) to cosmological horizons (<code>L12</code>, $z &gt; 10$) without floating-point catastrophic cancellation. Programs lease <code>using Cosmic;</code> to invoke <strong>27 dedicated cosmic bytecode opcodes (<code>0xA0</code>–<code>0xBA</code>)</strong> alongside NQuin cosmic pose opcodes (<code>0x50</code>–<code>0x55</code>):
+    </p>
+
+    <div class="vibe-features-grid">
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.28);">
+        <div class="icon">🧭</div>
+        <h3>27 Cosmic Opcodes (<code>0xA0</code>–<code>0xBA</code>) &amp; NQuin Poses</h3>
+        <p>
+          Bytecode dispatch covers WGS84 geodetic transforms, IAU astrometry, Lorentz boosts, Schwarzschild/Kerr metric tensors, and FLRW comoving integration (`0xA0`–`0xBA`), paired with NQuin predicate opcodes <code>OP_COSMIC_POSE (0x50)</code>, <code>OP_REALM_TRANSIT (0x51)</code>, <code>OP_OBSERVER_FIBER (0x53)</code>, <code>OP_MICRO_POSE (0x54)</code>, and <code>OP_ELEMENT_COLLAPSE (0x55)</code>.
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.28);">
+        <div class="icon">🏷️</div>
+        <h3><code>USRI</code> &amp; 16-Byte <code>CB-USRI</code> Grounding (<code>MSB=0</code>)</h3>
+        <p>
+          Every spatial frame grounds to a Universal Spatial Reference Identifier (<code>urn:omni:v1:L3:sol:earth:wgs84:...</code>) or a 16-byte compact binary <code>CB-USRI</code> (`CompactBinaryUsri`). In 48-byte <code>NQuin</code> records, cosmic context tokens set <code>MSB=0</code> with a 56-bit FNV-1a realm hash in bits <code>[0..55]</code> of <code>context</code>.
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.28);">
+        <div class="icon">⚡</div>
+        <h3>Relativistic Lorentz Boosts (<code>apply_lorentz_boost_into</code>)</h3>
+        <p>
+          <code>OCS-10</code> implements exact proper orthochronous Lorentz transformations $\Lambda \in \mathrm{SO}^+(1,3)$ via <code>apply_lorentz_boost_into</code>, computing $\gamma = (1 - \beta^2)^{-1/2}$, preserving the Minkowski spacetime interval $s^2 = -(ct)^2 + x^2 + y^2 + z^2$, and failing closed on superluminal velocities ($|\boldsymbol{\beta}| \ge 1$).
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.28);">
+        <div class="icon">🛰️</div>
+        <h3>IAU 2006/2000B <code>ICRS → ITRS</code> Astrometry</h3>
+        <p>
+          <code>OCS-11</code> couples Bowring's closed-form <code>WGS84 ↔ ECEF ↔ ENU</code> geodetic solver with IAU 2006/2000B precession-nutation and Earth Rotation Angle (ERA) matrices to rotate inertial barycentric sky coordinates (<code>ICRS</code>) into terrestrial <code>ITRS</code> frames at micro-arcsecond precision.
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.28);">
+        <div class="icon">🌌</div>
+        <h3>Flat $\Lambda\text{CDM}$ Gauss–Kronrod $G_7/K_{15}$ Comoving Distance</h3>
+        <p>
+          <code>OCS-12</code> integrates comoving radial distance $\chi(z) = \frac{c}{H_0}\int_0^z \frac{\mathrm{d}z'}{E(z')}$ ($H_0 = 67.4\text{ km/s/Mpc}$, $\Omega_{m,0} = 0.315$) using 15-point Gauss–Kronrod $G_7/K_{15}$ quadrature under <code>ExactnessProfile::CertifiedBand</code>, plus comoving intercept solver <code>intercept_vector_comoving</code> with horizon guard <code>BeyondCosmologicalHorizon</code>.
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(56,189,248,0.28);">
+        <div class="icon">🔭</div>
+        <h3>10D Observer Frustum Projection (<code>OCS-13</code>)</h3>
+        <p>
+          <code>OCS-13</code> combines camera-relative <code>FloatingOrigin</code> translation (splitting $10^{26}\text{ m}$ coordinates into anchor + local <code>f32</code> delta) with 10D observer fiber frustum projection, streaming relativistic aberration and redshift-corrected slices directly into the WebGPU volumetric renderer.
+        </p>
+      </div>
+    </div>
+
+    <div class="vibe-code-box">
+<pre><span class="kw">using</span> <span class="ty">Cosmic</span>;
+
+<span class="cm">// OCS-10..13: ICRS -> ITRS astrometry, Lorentz boost, and flat LCDM G7/K15 comoving distance</span>
+<span class="kw">effect fn</span> <span class="fn">deep_space_telemetry</span>() -&gt; <span class="ty">Record</span> {
+    <span class="kw">let</span> ecef = <span class="ty">Cosmic</span>.<span class="fn">geodetic_to_ecef</span>({ lat_deg: -37.8136, lon_deg: 144.9631, alt_m: 31.0 });
+    <span class="kw">let</span> boosted = <span class="ty">Cosmic</span>.<span class="fn">apply_lorentz_boost</span>({
+        ct_m: 0.0, x_m: ecef.x_m, y_m: ecef.y_m, z_m: ecef.z_m,
+        beta_x: 0.12, beta_y: 0.0, beta_z: 0.0
+    });
+    <span class="kw">let</span> comoving = <span class="ty">Cosmic</span>.<span class="fn">comoving_distance_mpc</span>({ redshift_z: 1.45 });
+    <span class="kw">return</span> { ecef: ecef, boosted: boosted, comoving: comoving };
+}</pre>
+    </div>
+  </div>
+
+  <!-- NEW SECTION 2: Compile-Time Identifier Fabric Firewall (IDF-04 — F5-A through F5-F) -->
+  <div class="vibe-section" id="idf-04-fabric-firewall">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:9999px;background:rgba(244,114,182,0.12);border:1px solid rgba(244,114,182,0.3);color:#f472b6;font-size:0.82rem;font-weight:600;letter-spacing:0.03em;margin-bottom:0.75rem;">
+      <i class="fa-solid fa-shield-halved"></i> IDF-04 Normative Guard · Handle ≠ Human · Static Anti-Surveillance Firewall
+    </div>
+    <h2>Compile-Time Identifier Fabric Firewall (<code>IDF-04</code> — Rules <code>F5-A</code> through <code>F5-F</code>)</h2>
+    <p>
+      In accordance with the Qualia Decentralized Network Fabric (QDNF) ontological boundary (<strong>handle ≠ human</strong>),
+      <code>vibe::check::fabric_guard</code> executes a mandatory static analysis pass over every VibeScript AST <strong>before bytecode emission</strong>.
+      Any attempt to compute surveillance/entity-fusion scores (<code>person_score</code>, <code>identity_confidence</code>, <code>same_person</code>), execute cross-plane <code>Who</code> joins, or cast an instrument handle, credential, location coordinate, or biometric sample into a living <code>NaturalAgent</code> is rejected at compile time with diagnostic <code>E100</code> and a structured <code>FabricSuggestedFix</code> payload:
+    </p>
+
+    <div class="vibe-compare-wrap">
+      <table class="vibe-compare-table">
+        <thead>
+          <tr>
+            <th>Rule ID</th>
+            <th>Prohibited Pattern (Compile-Time Rejected)</th>
+            <th><code>vibe::check::fabric_guard</code> Enforcement &amp; Suggested Fix</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="text-pink-400 font-bold">F5-A</code></td>
+            <td><code>did_as_who</code><br><small>Casting a cryptographic <code>Did</code> directly to <code>NaturalAgent</code> or assigning a DID to a <code>who</code> / <code>natural_agent</code> field</small></td>
+            <td>A <code>did:*</code> identifier is a rotatable cryptographic <code>Instrument</code>, never the human being. Fix kind: <code>natural_agent_with_instrument_binding</code> (bind via <code>living-SHACL</code> delegation lease).</td>
+          </tr>
+          <tr>
+            <td><code class="text-pink-400 font-bold">F5-B</code></td>
+            <td><code>vc_verified_as_truth</code><br><small>Treating a <code>VerifiableCredential</code> signature check as ontological graph truth (<code>as Truth</code>) without epistemic provenance</small></td>
+            <td>A valid cryptographic signature proves only who signed a claim, not that the claim is true. Fix kind: <code>claim_opinion_evidence</code> (wrap in <code>ClaimOpinion</code> on the <code>artifact-OWL</code> plane).</td>
+          </tr>
+          <tr>
+            <td><code class="text-pink-400 font-bold">F5-C</code></td>
+            <td><code>qrc_or_observer_as_person_join_key</code><br><small>Using a spatial <code>QrcCoordinate</code>, <code>USRI</code>, or <code>ObserverFrame</code> as a primary key for person identity joins</small></td>
+            <td>Where an observation occurs is not who a person is. Cross-plane spatial-to-<code>Who</code> joins are forbidden. Fix kind: <code>spatiotemporal_handle_join</code> (<code>SpatiotemporalHandle</code>).</td>
+          </tr>
+          <tr>
+            <td><code class="text-pink-400 font-bold">F5-D</code></td>
+            <td><code>biometric_instance_as_who</code><br><small>Casting a <code>BiometricInstance</code> (template/hash) to <code>NaturalAgent</code> or using it as a global person identifier</small></td>
+            <td>Biometric captures are revocable sensor measurements requiring scoped consent, not permanent personhood keys. Fix kind: <code>biometric_family_with_consent</code> (<code>living-SHACL</code>).</td>
+          </tr>
+          <tr>
+            <td><code class="text-pink-400 font-bold">F5-E</code></td>
+            <td><code>natural_agent_as_owl_thing</code><br><small>Typing a living <code>NaturalAgent</code> as an immutable <code>owl:Thing</code> / <code>OwlThing</code> artifact</small></td>
+            <td>Living humans belong to the context-gated, revocable <code>living-SHACL</code> plane, never static open-world <code>artifact-OWL</code> inference. Fix kind: <code>living_shacl_natural_agent</code>.</td>
+          </tr>
+          <tr>
+            <td><code class="text-pink-400 font-bold">F5-F</code></td>
+            <td><code>ai_agent_or_same_as_person_collapse</code><br><small>Collapsing an <code>AiAgent</code> / <code>MachineDeviceId</code> into <code>NaturalAgent</code>, invoking <code>owl:sameAs</code> on persons, or calling <code>person_score</code> / <code>identity_confidence</code> / <code>same_person</code></small></td>
+            <td>Autonomous instruments must link to a sponsoring human guardian via explicit liability edges; probabilistic entity-resolution anti-features are banned. Fix kind: <code>instrument_with_sponsor_natural_agent</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NEW SECTION 3: VibeScript vibe-0.03 Physics, Quantum & Etalon Continuum Bindings -->
+  <div class="vibe-section" id="vibe-003-quantum-continuum">
+    <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:9999px;background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.3);color:#c084fc;font-size:0.82rem;font-weight:600;letter-spacing:0.03em;margin-bottom:0.75rem;">
+      <i class="fa-solid fa-atom"></i> Dialect vibe-0.03 · Quantum Statevectors · 10D Containers · Etalon Continuum
+    </div>
+    <h2>VibeScript <code>vibe-0.03</code> Physics, Quantum &amp; Etalon Continuum Bindings</h2>
+    <p>
+      Alongside the <code>vibe-0.1</code> UI and reactive cell surface, the <strong><code>vibe-0.03</code></strong> kernel dialect binds deterministic quantum chemistry, 10D binary containers, and the 64 Hz <code>etalon-sim</code> multi-physics engine directly into the 42 MiB Sentinel arena:
+    </p>
+
+    <div class="vibe-features-grid">
+      <div class="vibe-feature-item" style="border-color:rgba(192,132,252,0.28);">
+        <div class="icon">⚛️</div>
+        <h3>Quantum Statevector &amp; Hamiltonian Circuits (<code>Quantum.*</code>)</h3>
+        <p>
+          Constructs variational quantum eigensolver (VQE) ansätze, Trotterized Hamiltonian time-evolution circuits, and Hartree-Fock / DFT electronic structure integrals (`STO-3G`, `def2-SVP`, RHF/UHF DIIS convergence to $10^{-8}\text{ E}_{\text{h}}$). Final statevector amplitudes map deterministically to `did:q42` topological `NQuin` pointers via the `qualia-q-forge` QGroup scheduler.
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(192,132,252,0.28);">
+        <div class="icon">📦</div>
+        <h3>10D Containers (<code>Container10D</code>, <code>M64</code>, <code>EMF64</code>)</h3>
+        <p>
+          Mounts zero-copy <code>Container10D</code> (<code>.10d</code>) archives containing procedural geometry (<code>PROC1</code>), ontological graph slices (<code>EONT1</code>), material response profiles (<code>MRP1</code>), and PGA skeletons (<code>SKL1</code>). Streams 64-byte aligned 10D manifold records (<code>M64</code>) and 4D electromagnetic field volumetric tensors (<code>EMF64</code>) directly to GPU compute queues.
+        </p>
+      </div>
+      <div class="vibe-feature-item" style="border-color:rgba(192,132,252,0.28);">
+        <div class="icon">⚙️</div>
+        <h3><code>etalon-sim</code> Multi-Physics Integration</h3>
+        <p>
+          Couples VibeScript `on tick()` hooks to the deterministic 64 Hz (`15.625 ms`) `etalon-sim` solver: hybrid 3D Signed Distance Field (SDF) + Exact B-Rep XPBD constraints, Rank-2 Cauchy stress tensor fracture cleavage, Projective Geometric Algebra ($\mathbf{Cl}(3,0,1)$) motor skinning, and Holosonic 3D wavefield synthesis.
+        </p>
+      </div>
+    </div>
+
+    <div class="vibe-code-box">
+<pre><span class="kw">using</span> <span class="ty">Quantum</span>, <span class="ty">SceneGraph10D</span>, <span class="ty">Physics</span>;
+
+<span class="cm">// vibe-0.03: Couple VQE Hamiltonian circuit with M64 / EMF64 10D container &amp; etalon-sim</span>
+<span class="kw">effect fn</span> <span class="fn">step_quantum_continuum</span>(mol_did: <span class="ty">Iri</span>) -&gt; <span class="ty">Record</span> {
+    <span class="kw">let</span> vqe = <span class="ty">Quantum</span>.<span class="fn">vqe_hamiltonian_step</span>({
+        basis: <span class="st">"STO-3G"</span>,
+        ansatz_depth: 4,
+        convergence_hartree: 0.00000001
+    });
+    <span class="kw">let</span> mount = <span class="ty">SceneGraph10D</span>.<span class="fn">LivingContainerMount</span>({
+        container_kind: <span class="st">"Container10D"</span>,
+        manifold_record: <span class="st">"M64"</span>,
+        field_tensor: <span class="st">"EMF64"</span>,
+        target: mol_did
+    });
+    <span class="kw">return</span> { ground_energy_eh: vqe.energy_eh, quin_ptr: vqe.statevector_quin, mount: mount };
+}</pre>
+    </div>
+  </div>
+
   <!-- Section: Deep Language Comparison -->
   <div class="vibe-section">
-    <h2>Where Vibe fits beside other runtimes</h2>
+    <h2>Where Vibe Fits Beside Other Runtimes</h2>
     <p>
-      Vibe is not a universal replacement for JavaScript, Python, Lua, or embedded Rust interpreters. Its advantage appears when a program needs a typed semantic graph, declared authority, Q42 portability, or an auditable execution boundary.
+      Vibe is not a universal replacement for JavaScript, Python, Lua, or embedded Rust interpreters. Its advantage appears when a program requires a typed semantic graph, declared capability authority, compile-time anti-surveillance guarantees, Q42 portability, or an auditable execution boundary.
     </p>
 
     <div class="vibe-compare-wrap">
@@ -566,7 +778,7 @@ title: VibeScript
         <thead>
           <tr>
             <th>Dimension</th>
-            <th class="highlight-col">VibeScript (vibe-0.1)</th>
+            <th class="highlight-col">VibeScript (vibe-0.1 / 0.03)</th>
             <th>JavaScript / Node.js</th>
             <th>Python (CPython)</th>
             <th>Lua / LuaJIT</th>
@@ -575,8 +787,8 @@ title: VibeScript
         </thead>
         <tbody>
           <tr>
-            <td><strong>Security & Sandboxing</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">Capability-Bounded</span><br><small>Strict compile-time leases; no ambient I/O</small></td>
+            <td><strong>Security &amp; Sandboxing</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Capability-Bounded + IDF-04</span><br><small>Compile-time leases &amp; fabric firewall; no ambient I/O</small></td>
             <td><span class="vibe-badge-warn">Host-Defined</span><br><small>Web and Node hosts expose different permission and sandbox models</small></td>
             <td><span class="vibe-badge-no">Open Ambient</span><br><small>Full OS/filesystem reach; monkey-patchable</small></td>
             <td><span class="vibe-badge-warn">Manual Sandbox</span><br><small>Requires table-stripping; easily bypassed</small></td>
@@ -585,7 +797,7 @@ title: VibeScript
           <tr>
             <td><strong>Hot-Path Allocation</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Tier-1 Zero Heap</span><br><small>Fixed stack buffers &amp; 42MB Sentinel arena</small></td>
-            <td><span class="vibe-badge-warn">Managed Heap</span><br><small>Excellent general-purpose tooling; allocation is not the Vibe hot-path contract</small></td>
+            <td><span class="vibe-badge-warn">Managed Heap</span><br><small>Excellent general-purpose tooling; GC-managed heap allocation</small></td>
             <td><span class="vibe-badge-no">Heavy Heap</span><br><small>Reference counting + cyclic GC pauses</small></td>
             <td><span class="vibe-badge-warn">Incremental GC</span><br><small>Lightweight, but non-zero heap allocation</small></td>
             <td><span class="vibe-badge-no">Heap Allocations</span><br><small>Extensive Box/Vec/String usage</small></td>
@@ -594,45 +806,45 @@ title: VibeScript
             <td><strong>Graph &amp; RDF Native</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Native RDF 1.2 &amp; SPARQL</span><br><small>48-byte Super-Quins, <code>&lt;&lt;( s p o )&gt;&gt;</code>, <code>graph?</code></small></td>
             <td><span class="vibe-badge-warn">Libraries available</span><br><small>Flexible RDF tooling, with graph semantics chosen by the application</small></td>
-            <td><span class="vibe-badge-no">rdflib / networkx</span><br><small>Extremely slow Python object graphs</small></td>
+            <td><span class="vibe-badge-no">rdflib / networkx</span><br><small>Heap-allocated Python object graphs</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>No native semantic data structures</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>Generic map/arrays only</small></td>
           </tr>
           <tr>
             <td><strong>Determinism &amp; Audit</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">Eligible programs replay</span><br><small>Pure evaluation and canonical representations are deterministic; host effects are declared separately</small></td>
-            <td><span class="vibe-badge-warn">Application-defined</span><br><small>Determinism is achievable, but framework scheduling and host APIs are application choices</small></td>
-            <td><span class="vibe-badge-warn">Application-defined</span><br><small>Determinism is achievable, but clock, I/O, and dependency choices remain external</small></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">ADR 0003 ExactnessProfile</span><br><small>Exact 256-bit CRT, CertifiedBand, and DeterministicBounded replay</small></td>
+            <td><span class="vibe-badge-warn">Application-defined</span><br><small>Determinism is achievable, but scheduling and host APIs vary</small></td>
+            <td><span class="vibe-badge-warn">Application-defined</span><br><small>Clock, I/O, and native extension choices remain external</small></td>
             <td><span class="vibe-badge-warn">Partially Deterministic</span><br><small>Hash table order nondeterminism</small></td>
             <td><span class="vibe-badge-warn">Varies</span><br><small>Depends on host engine configuration</small></td>
           </tr>
           <tr>
             <td><strong>Modal &amp; Deontic Logic</strong></td>
             <td class="highlight-col"><span class="vibe-badge-yes">Built-In Modalities</span><br><small><code>obligate</code>, <code>permit</code>, <code>knows</code>, <code>always</code></small></td>
-            <td><span class="vibe-badge-warn">Libraries / services</span><br><small>Can integrate solvers, but has no equivalent language-level QualiaDB modality surface</small></td>
+            <td><span class="vibe-badge-warn">Libraries / services</span><br><small>Can integrate solvers, but has no language-level modality surface</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>External SAT/Z3 solver bindings only</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>No formal verification support</small></td>
             <td><span class="vibe-badge-no">None</span><br><small>Basic conditional control flow only</small></td>
           </tr>
           <tr>
             <td><strong>AI / LLM Generation</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">GBNF &amp; EBNF Constrained</span><br><small>Strict grammar decode guarantees valid code</small></td>
-            <td><span class="vibe-badge-warn">Grammar Ambiguous</span><br><small>Vulnerable to runtime syntax &amp; type hallucinations</small></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">GBNF &amp; EBNF Constrained</span><br><small>Strict grammar decode + JSON <code>diagnose</code> self-repair</small></td>
+            <td><span class="vibe-badge-warn">Grammar Ambiguous</span><br><small>Susceptible to runtime syntax &amp; type hallucinations</small></td>
             <td><span class="vibe-badge-warn">Indentation Fragile</span><br><small>Whitespace errors frequently break generation</small></td>
             <td><span class="vibe-badge-yes">Small Grammar</span><br><small>Clean syntax, but runtime fails silently</small></td>
-            <td><span class="vibe-badge-warn">Medium</span><br><small>Custom syntax not widely trained into LLMs</small></td>
+            <td><span class="vibe-badge-warn">Medium</span><br><small>Custom syntax not paired with structured diagnostic repair</small></td>
           </tr>
           <tr>
-            <td><strong>Physical &amp; Temporal Types</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">First-Class Quantities</span><br><small><code>400ms</code>, <code>oklch(...)</code>, <code>500nm</code> with checked units</small></td>
+            <td><strong>Physical &amp; Cosmic Types</strong></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">First-Class Quantities &amp; OCS</span><br><small><code>400ms</code>, <code>oklch(...)</code>, <code>USRI</code>, 27 cosmic opcodes</small></td>
             <td><span class="vibe-badge-no">Raw Numbers</span><br><small>No built-in unit dimension algebra</small></td>
-            <td><span class="vibe-badge-no">Pint / astropy</span><br><small>Heavyweight external dependencies</small></td>
+            <td><span class="vibe-badge-no">Pint / astropy</span><br><small>External runtime library dependencies</small></td>
             <td><span class="vibe-badge-no">Raw Doubles</span><br><small>No unit or color space abstractions</small></td>
             <td><span class="vibe-badge-no">Primitive Types</span><br><small>Requires custom Rust type registration</small></td>
           </tr>
           <tr>
             <td><strong>Runtime Footprint</strong></td>
-            <td class="highlight-col"><span class="vibe-badge-yes">Target-dependent WASM</span><br><small>Small standalone modules are possible; portal, science, and model profiles deliberately differ</small></td>
+            <td class="highlight-col"><span class="vibe-badge-yes">Target-dependent WASM</span><br><small>Compact standalone WASM cells or full native-bridge daemon</small></td>
             <td><span class="vibe-badge-no">30 MB – 100 MB+</span><br><small>V8 engine binary footprint</small></td>
             <td><span class="vibe-badge-no">20 MB – 50 MB</span><br><small>CPython standard library footprint</small></td>
             <td><span class="vibe-badge-yes">~300 KB</span><br><small>Minimal C runtime</small></td>
@@ -690,7 +902,7 @@ title: VibeScript
       <div class="vibe-feature-item">
         <div class="icon">⚡</div>
         <h3>Stack Bytecode VM</h3>
-        <p>VBC1 stack-based bytecode compiler and VM with 41 opcodes for instant zero-copy serialization and deterministic sandboxed execution.</p>
+        <p>VBC1 stack-based bytecode compiler and VM with 41 core opcodes + 27 cosmic opcodes for instant zero-copy serialization and deterministic sandboxed execution.</p>
       </div>
       <div class="vibe-feature-item">
         <div class="icon">🩺</div>
@@ -772,14 +984,14 @@ title: VibeScript
     </div>
   </div>
 
-    <!-- Section: 0.0.41 EcoPunk Biological Continuum & 10D Scene Graph -->
+  <!-- Section: 0.0.41 EcoPunk Biological Continuum & 10D Scene Graph -->
   <div class="vibe-section">
     <div style="display:inline-flex;align-items:center;gap:8px;padding:4px 14px;border-radius:9999px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#34d399;font-size:0.82rem;font-weight:600;letter-spacing:0.03em;margin-bottom:0.75rem;">
       <i class="fa-solid fa-seedling"></i> 0.0.41 Milestone · EcoPunk Biological Continuum &amp; 10D Scene Graph
     </div>
     <h2>0.0.41 EcoPunk 26.5 km Biological Continuum &amp; 10D Scene Graph Capabilities (vibe-0.1)</h2>
     <p>
-      Extending the <strong>0.0.40</strong> production baseline into release <strong>0.0.41</strong>, VibeScript expands its capability surface with 18 first-class capabilities designed for the <strong>EcoPunk 26.5 km Biological Continuum</strong> and <strong>10D Scene Graph</strong>. Every capability compiles directly into compact, relocatable <code>VBC1</code> (<code>.qbc</code>) bytecode and invokes verified native kernels inside <code>qualia-core-db::ecopunk_world</code> and <code>qualia-core-db::scene_graph_10d</code>. Hot-path evaluations remain strictly zero-heap and bounded by the 42 MiB Prolog Sentinel ceiling. Learn more about the architectural roadmap in <a href="../progress-0.0.41.html" class="underline" style="color:#38bdf8;font-weight:600;">../progress-0.0.41.html</a>.
+      Extending the <strong>0.0.40</strong> production baseline into release <strong>0.0.41</strong>, VibeScript expands its capability surface with 18 first-class capabilities designed for the <strong>EcoPunk 26.5 km Biological Continuum</strong> and <strong>10D Scene Graph</strong>. Every capability compiles directly into compact, relocatable <code>VBC1</code> (<code>.qbc</code>) bytecode and invokes verified native kernels inside <code>qualia-core-db::ecopunk_world</code> and <code>qualia-core-db::scene_graph_10d</code>. Hot-path evaluations remain strictly zero-heap and bounded by the 42 MiB Prolog Sentinel ceiling. Read the full architectural breakdown in the <a href="../progress-0.0.41.html" class="underline" style="color:#38bdf8;font-weight:600;">v0.0.41 Architecture &amp; Progress Roadmap</a>.
     </p>
 
     <!-- 18 Capabilities Grid by Family -->
@@ -789,11 +1001,11 @@ title: VibeScript
         <div class="icon" style="color:#34d399;">🌿</div>
         <h3 style="color:#6ee7b7;">BotanicalAnatomy (5 Capabilities)</h3>
         <p style="margin-bottom:0.6rem;">Mechanistic vegetation biophysics, sapwood hydraulics, and subterranean nutrient trading:</p>
-        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;line-height:1.5;">
           <li><code class="kw">BotanicalAnatomy.LSystemCanopy</code>: Procedural generative branching grammar computing internode growth, apical dominance, bifurcation angles, and foliage mass under photosynthetic shading.</li>
           <li><code class="kw">BotanicalAnatomy.XylemHydraulicFlow</code>: Hagen-Poiseuille pipe model computing sapwood pressure differentials, cavitation vulnerability curves, and VPD-driven transpiration loss.</li>
           <li><code class="kw">BotanicalAnatomy.MycorrhizalCarbonTrade</code>: Subterranean fungal network trading soil N/P for plant photosynthetic carbon, establishing mutualistic nutrient flux equilibria.</li>
-          <li><code class="kw">BotanicalAnatomy.PhotosyntheticField</code>: Farquhar-von Caemmerer-Berry (FvCB) $C_3$/$C_4$ assimilation kinetics coupled with Ball-Berry stomatal conductance ($g_s$) and RuBisCO carboxylation.</li>
+          <li><code class="kw">BotanicalAnatomy.PhotosyntheticField</code>: Farquhar-von Caemmerer-Berry (FvCB) C3/C4 assimilation kinetics coupled with Ball-Berry stomatal conductance and RuBisCO carboxylation.</li>
           <li><code class="kw">BotanicalAnatomy.RootSoilReinforcement</code>: Wu-Waldron root tensile strength model computing shear modulus enhancement, tensile pull-out resistance, and slope stability.</li>
         </ul>
       </div>
@@ -803,12 +1015,12 @@ title: VibeScript
         <div class="icon" style="color:#38bdf8;">🐺</div>
         <h3 style="color:#7dd3fc;">ZoologicalAnatomy (5 Capabilities)</h3>
         <p style="margin-bottom:0.6rem;">Skeletal kinematics, Hill-type biomechanics, and limit-cycle locomotion controllers:</p>
-        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;line-height:1.5;">
           <li><code class="kw">ZoologicalAnatomy.ArticulatedSkeleton</code>: Projective Geometric Algebra ($\mathbf{Cl}(3,0,1)$) motor bone hierarchy calculating zero-heap forward kinematics and inverse chains.</li>
           <li><code class="kw">ZoologicalAnatomy.HillMuscleFiber</code>: Three-element Hill model (CE, SEE, PEE) computing active force-length-velocity relations, elastic recoil, and tendon strain energy.</li>
-          <li><code class="kw">ZoologicalAnatomy.CardiopulmonaryMetabolism</code>: Dynamic allometric simulator computing stroke volume, heart rate, $\dot{V}_{\text{O}_2}$ oxygen uptake, ATP yield, and lactic clearance.</li>
+          <li><code class="kw">ZoologicalAnatomy.CardiopulmonaryMetabolism</code>: Dynamic allometric simulator computing stroke volume, heart rate, VO2 oxygen uptake, ATP yield, and lactic clearance.</li>
           <li><code class="kw">ZoologicalAnatomy.SensoryReceptiveField</code>: Transducer mapping visual cone/rod distributions, cochlear frequency filters, and spatial mechanoreceptive receptive fields.</li>
-          <li><code class="kw">ZoologicalAnatomy.LocomotionGait</code>: Energy-optimal limit cycle gait scheduler coordinating limb duty factors, ground reaction forces, and gait phase transitions (walk $\leftrightarrow$ trot $\leftrightarrow$ gallop).</li>
+          <li><code class="kw">ZoologicalAnatomy.LocomotionGait</code>: Energy-optimal limit cycle gait scheduler coordinating limb duty factors, ground reaction forces, and gait phase transitions (walk ↔ trot ↔ gallop).</li>
         </ul>
       </div>
 
@@ -817,7 +1029,7 @@ title: VibeScript
         <div class="icon" style="color:#c084fc;">🧬</div>
         <h3 style="color:#d8b4fe;">BiologicalOntology (3 Capabilities)</h3>
         <p style="margin-bottom:0.6rem;">Phylogenetic classification, ecosystem trophic webs, and allostatic drives:</p>
-        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;line-height:1.5;">
           <li><code class="kw">BiologicalOntology.TaxonomicLineage</code>: Cladistic phylogenetic tree resolver linking NCBI Taxonomy and Wikidata IRIs with morphological trait inheritance.</li>
           <li><code class="kw">BiologicalOntology.TrophicCascade</code>: Lotka-Volterra multi-species biomass dynamics modeling prey-predator cycles, carrying capacities, and keystone species cascades.</li>
           <li><code class="kw">BiologicalOntology.HomeostaticDrive</code>: Allostatic regulatory drive system computing thirst, caloric need, thermoregulation, and circadian sleep debt potentials.</li>
@@ -829,7 +1041,7 @@ title: VibeScript
         <div class="icon" style="color:#fbbf24;">🌊</div>
         <h3 style="color:#fde68a;">WorldContinuum (3 Capabilities)</h3>
         <p style="margin-bottom:0.6rem;">Hydrological surface flows, microclimatic boundaries, and soil pedogenesis:</p>
-        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;line-height:1.5;">
           <li><code class="kw">WorldContinuum.WatershedHydrology</code>: 2D Shallow Water Equations (SWE) solving catchment runoff, infiltration, sediment transport, and river channel routing.</li>
           <li><code class="kw">WorldContinuum.MicroclimateCanopy</code>: Atmospheric boundary layer model computing beneath-canopy temperature gradients, Beer-Lambert radiation attenuation, and humidity.</li>
           <li><code class="kw">WorldContinuum.SoilBiogeochemistry</code>: Multi-pool Century soil organic matter model simulating microbial decomposition, humification, carbon sequestration, and mineralization.</li>
@@ -841,8 +1053,8 @@ title: VibeScript
         <div class="icon" style="color:#f472b6;">🌐</div>
         <h3 style="color:#fbcfe8;">SceneGraph10D (2 Capabilities)</h3>
         <p style="margin-bottom:0.6rem;">High-dimensional spatio-temporal tensor streaming and living container mountings:</p>
-        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;space-y-1.5;line-height:1.5;">
-          <li><code class="kw">SceneGraph10D.TensorFieldStream</code>: Zero-heap streaming pipeline feeding 10D spacetime tensors ($\mathbf{T}^{10\text{D}}$) into GPU compute shaders for real-time field evaluation.</li>
+        <ul style="font-size:0.83rem;color:#cbd5e1;padding-left:1.2rem;line-height:1.5;">
+          <li><code class="kw">SceneGraph10D.TensorFieldStream</code>: Zero-heap streaming pipeline feeding 10D spacetime tensors into GPU compute shaders for real-time field evaluation.</li>
           <li><code class="kw">SceneGraph10D.LivingContainerMount</code>: Dynamic container mount manager binding compiled procedural <code>.10d</code> living container chunks (<code>PROC1</code>, <code>EONT1</code>, <code>MRP1</code>, <code>SKL1</code>) into spatial partitions.</li>
         </ul>
       </div>
@@ -904,49 +1116,49 @@ title: VibeScript
           <div style="font-size:0.78rem;color:#94a3b8;">18 biological capabilities &amp; 10D living containers</div>
         </div>
       </a>
-      <a href="{{ '/vibe/playground.html' | relative_url }}" class="vibe-qlink">
+      <a href="playground.html" class="vibe-qlink">
         <i class="fa-solid fa-play"></i>
         <div>
           <strong>Web Playground</strong>
           <div style="font-size:0.78rem;color:#94a3b8;">Diagnose, eval, and format in-browser</div>
         </div>
       </a>
-      <a href="{{ '/vibe/showcase.html' | relative_url }}" class="vibe-qlink">
+      <a href="showcase.html" class="vibe-qlink">
         <i class="fa-solid fa-star"></i>
         <div>
           <strong>Interactive Showcase</strong>
           <div style="font-size:0.78rem;color:#94a3b8;">Live runnable AST and bytecode demos</div>
         </div>
       </a>
-      <a href="{{ '/vibe/spec.html' | relative_url }}" class="vibe-qlink">
+      <a href="spec.html" class="vibe-qlink">
         <i class="fa-solid fa-book"></i>
         <div>
           <strong>Language Specification</strong>
           <div style="font-size:0.78rem;color:#94a3b8;">Normative standard and EBNF grammar</div>
         </div>
       </a>
-      <a href="{{ '/vibe/dev-docs.html' | relative_url }}" class="vibe-qlink">
+      <a href="dev-docs.html" class="vibe-qlink">
         <i class="fa-solid fa-code-branch"></i>
         <div>
           <strong>Dev Docs (API)</strong>
           <div style="font-size:0.78rem;color:#94a3b8;">Searchable generated API index</div>
         </div>
       </a>
-      <a href="{{ '/vibe/benchmarks.html' | relative_url }}" class="vibe-qlink">
+      <a href="benchmarks.html" class="vibe-qlink">
         <i class="fa-solid fa-gauge-high"></i>
         <div>
           <strong>Performance Benchmarks</strong>
           <div style="font-size:0.78rem;color:#94a3b8;">Measured profiles and reproducibility notes</div>
         </div>
       </a>
-      <a href="{{ '/vibe-host-native-bridge.html' | relative_url }}" class="vibe-qlink">
+      <a href="../vibe-host-native-bridge.html" class="vibe-qlink">
         <i class="fa-solid fa-link"></i>
         <div>
           <strong>Execution Profiles</strong>
-          <div style="font-size:0.78rem;color:#94a3b8;">Standalone WASM, snapshot, and paired-native semantics</div>
+          <div style="font-size:0.78rem;color:#94a3b8;">Standalone WASM, ExactnessProfile &amp; CRT cascade</div>
         </div>
       </a>
-      <a href="{{ '/rdf-q42-vibe-demo.html' | relative_url }}" class="vibe-qlink">
+      <a href="../rdf-q42-vibe-demo.html" class="vibe-qlink">
         <i class="fa-solid fa-diagram-project"></i>
         <div>
           <strong>RDF → Q42 → Vibe</strong>
@@ -965,7 +1177,7 @@ title: VibeScript
 </div>
 
 <script type="module">
-  import { runPresentJobs, softRisePresentCards } from "{{ '/js/vibescript-present.js' | relative_url }}";
+  import { runPresentJobs, softRisePresentCards } from "../js/vibescript-present.js";
 
   const statusEl = document.getElementById('vibe-present-status');
   const btn = document.getElementById('vibe-present-rerun');
@@ -996,4 +1208,12 @@ title: VibeScript
   if (btn) btn.addEventListener('click', run);
   run();
 </script>
+        </article>
+    </main>
 
+    <footer class="q-site-footer">
+        <div class="flex flex-wrap justify-center gap-6 mb-4"></div>
+        <p>Qualia-DB v0.0.41 · Human-centric semantic engine · handle ≠ human</p>
+    </footer>
+</body>
+</html>

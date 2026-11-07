@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Semantic Instruments — QualiaDB / Webizen 0.0.40</title>
+  <title>Semantic Instruments — QualiaDB / Webizen 0.0.41</title>
   <meta name="description" content="Semantic Instruments are labelled, sealed packages of knowledge you can inspect before you trust or run them — and every run leaves a receipt.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
@@ -125,7 +125,7 @@
   </nav>
 
   <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
-    <div class="q-chip mb-6"><i class="fa-solid fa-toolbox"></i> Semantic Instruments · 0.0.40 reference slice</div>
+    <div class="q-chip mb-6"><i class="fa-solid fa-toolbox"></i> Semantic Instruments · 0.0.41 reference slice</div>
     <h1 class="font-display text-5xl sm:text-7xl font-semibold tracking-[-0.04em] leading-[1.05] mb-5">
       A labelled, sealed package of knowledge<br>
       <span class="hero-grad">and you choose whose rules to run.</span>
@@ -546,11 +546,47 @@
       </div>
     </section>
 
+    <section class="q-card p-7 mb-16 border border-cyan-500/25">
+      <p class="q-kicker mb-2">Layer 4 · Formal Specification · Identifier Fabric (<code class="font-mono">IDF-01</code>–<code class="font-mono">IDF-05</code>)</p>
+      <h2 class="text-2xl sm:text-3xl font-semibold mb-3">Semantic Instruments on the Four-Plane Identifier Fabric</h2>
+      <p class="text-sm text-white/70 max-w-4xl mb-5">
+        Every Semantic Instrument executes within the <strong>Four Disjoint Planes</strong> defined in <code class="font-mono text-cyan-300">ontologies/identifier_fabric_shapes.ttl</code> so that tools, credentials, network channels, and human beings remain structurally distinct:
+      </p>
+      <div class="grid md:grid-cols-2 gap-4 text-sm mb-5">
+        <div class="rounded-2xl border border-violet-500/25 bg-violet-500/[.06] p-4">
+          <h3 class="font-semibold text-violet-200 mb-1">1. <code class="font-mono">Entity</code> (<code class="font-mono">Who</code> Plane)</h3>
+          <p class="text-xs text-white/65"><code class="font-mono">NaturalAgent</code> (<code class="font-mono">living-SHACL</code>), <code class="font-mono">LegalEntity</code>, and <code class="font-mono">SystemAgent</code>. Never merged by similarity, handle, wallet, location, or biometrics; <code class="font-mono">owl:sameAs</code> is forbidden on the <code class="font-mono">Who</code> plane (<code class="font-mono text-rose-300">SameAsError::WhoPlaneForbidden</code>).</p>
+        </div>
+        <div class="rounded-2xl border border-emerald-500/25 bg-emerald-500/[.06] p-4">
+          <h3 class="font-semibold text-emerald-200 mb-1">2. <code class="font-mono">Claim</code> Plane</h3>
+          <p class="text-xs text-white/65">Scoped, signed assertions (<code class="font-mono">VerifiableCredential</code>, <code class="font-mono">idf:ClaimOpinion</code>, <code class="font-mono">idf:AccountabilityArtifact</code>, deontic/epistemic norms) with provenance and expiry. VCs prove <strong>cryptographic origin integrity</strong> of an issuer's statement, not universal ontological truth.</p>
+        </div>
+        <div class="rounded-2xl border border-cyan-500/25 bg-cyan-500/[.06] p-4">
+          <h3 class="font-semibold text-cyan-200 mb-1">3. <code class="font-mono">Handle</code> Plane</h3>
+          <p class="text-xs text-white/65">Revocable, rotatable network or directory locators (<code class="font-mono">idf:SpatiotemporalHandle</code>, <code class="font-mono">DNI</code>, DNS, email, <code class="font-mono">did:qi</code> endpoints). Revoking a handle closes the channel without erasing the <code class="font-mono">Entity</code>.</p>
+        </div>
+        <div class="rounded-2xl border border-amber-500/25 bg-amber-500/[.06] p-4">
+          <h3 class="font-semibold text-amber-200 mb-1">4. <code class="font-mono">Instrument</code> Plane</h3>
+          <p class="text-xs text-white/65">Cryptographic keys, hardware tokens, and software tools (<code class="font-mono">SemanticInstrument</code>, <code class="font-mono">idf:Instrument</code>, <code class="font-mono">idf:AiAgent</code>) classified by <code class="font-mono">InstrumentProofClass</code> (<code class="font-mono">CryptographicOriginIntegrity</code>, <code class="font-mono">HardwareChannelPossession</code>, <code class="font-mono">SemanticClaimEvaluation</code>) and closed <code class="font-mono">KeyRole</code> (<code class="font-mono">IdentityAssertion</code>, <code class="font-mono">CredentialSigning</code>, <code class="font-mono">TransportHandshake</code>, <code class="font-mono">StorageEncryption</code>, <code class="font-mono">RecoveryBootstrap</code>).</p>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4 text-xs text-white/65">
+        <div class="rounded-xl border border-white/10 bg-white/[.025] p-4">
+          <span class="text-white/90 font-semibold block mb-1">Typed Cross-Plane Evidence Morphisms</span>
+          Statements link planes explicitly via <code class="font-mono text-cyan-300">idf:supportedByInstrument</code>, <code class="font-mono text-cyan-300">idf:assertedAbout</code>, and <code class="font-mono text-cyan-300">idf:observedAtHandle</code> rather than collapsing tool receipts into actor identity.
+        </div>
+        <div class="rounded-xl border border-white/10 bg-white/[.025] p-4">
+          <span class="text-white/90 font-semibold block mb-1"><code class="font-mono">F5</code> &amp; <code class="font-mono">F6</code> Anti-Feature Firewalls</span>
+          Both the <strong><code class="font-mono">F5</code> (compile-time VibeScript)</strong> and <strong><code class="font-mono">F6</code> (runtime ingress/query)</strong> firewalls reject <code class="font-mono text-rose-300">person_score</code>, <code class="font-mono text-rose-300">identity_confidence</code>, and <code class="font-mono text-rose-300">same_person</code>.
+        </div>
+      </div>
+    </section>
+
     <section class="q-card p-8 mb-16 border border-amber-500/20">
       <p class="q-kicker mb-2">Honest release boundary</p>
       <h2 class="text-2xl font-semibold mb-4">Reference runner, not a deployed decision service</h2>
       <p class="text-sm text-white/65 max-w-4xl mb-6">
-        The 0.0.40 reference slice has package, validation, registry, resolution, receipt, attestation, RPL, and Studio workflows with scripted conformance coverage. The boundaries below are stated plainly so a demo is never mistaken for a deployed decision service.
+        The 0.0.41 reference slice has package, validation, registry, resolution, receipt, attestation, RPL, and Studio workflows with scripted conformance coverage. The boundaries below are stated plainly so a demo is never mistaken for a deployed decision service.
       </p>
       <div class="grid md:grid-cols-2 gap-6 text-sm text-white/65">
         <div>
@@ -575,7 +611,7 @@
 
     <section class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between border-t border-white/10 pt-8">
       <div>
-        <h2 class="text-xl font-semibold">Follow the 0.0.40 record</h2>
+        <h2 class="text-xl font-semibold">Follow the 0.0.41 record</h2>
         <p class="text-sm text-white/55 mt-1">The release page gives the wider milestone; the source tree and conformance suite remain the technical authority.</p>
       </div>
       <div class="flex flex-wrap gap-3">
@@ -587,7 +623,7 @@
   </main>
 
   <footer class="relative z-10 border-t border-white/10 py-8 text-center text-white/35 text-xs">
-    QualiaDB / Webizen 0.0.40 · Semantic Instruments reference slice · Inspect before trust or execution
+    QualiaDB / Webizen 0.0.41 · Semantic Instruments reference slice · Inspect before trust or execution
   </footer>
   <script>
     (() => {

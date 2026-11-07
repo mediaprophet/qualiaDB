@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QPR — Qualia Peer Runtime</title>
+  <title>QPR — Qualia Peer Runtime Engineering Guide (0.0.41)</title>
+  <meta name="description" content="Engineering guide to the Qualia Peer Runtime (QPR): bounded cell admission (admit.rs), generation-checked resource leases (ledger.rs, release_checked_bytes), non-wrapping cancellation epochs, and chunk-to-SuperBlock .q42 v4 replication.">
   <link rel="stylesheet" href="css/tailwind-built.css">
   <link rel="stylesheet" href="css/site-nav.css">
   <link rel="stylesheet" href="css/release-showcase.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
   <script src="js/menu-loader.js"></script>
 </head>
 <body class="min-h-screen">
@@ -26,20 +27,197 @@
       </div>
     </div>
   </nav>
-  <main class="q-wrap max-w-3xl mx-auto px-6 pt-14 pb-24">
-    <p class="q-chip mb-6">Proposed library · not a finished replacement</p>
-    <h1 class="q-hero-title font-display mb-5">Qualia Peer Runtime</h1>
-    <p class="q-lede mb-6">QPR is the application-facing library over QDNF — the intended replacement for libp2p, not a wrapper around it. Status: proposed architecture 0.1. Core operation must work without libp2p.</p>
-    <div class="q-card p-8 mb-12">
-      <p class="q-kicker mb-3">Honesty</p>
-      <p style="color:var(--q-muted);max-width:40rem">On <code class="q-mono">0.0.40</code> the connection manager and local CSCP/QSession paths are in tree; Internet trial is unexecuted. Public relay / MASQUE flags stay false. Locators are handles — never the human (NaturalAgent).</p>
-    </div>
-    <p class="flex flex-wrap gap-3">
-      <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
-      <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
-      <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+
+  <main class="q-wrap max-w-6xl mx-auto px-6 pt-14 pb-24">
+    <!-- LAYER 1: PLAIN-LANGUAGE OVERVIEW -->
+    <div class="q-chip mb-6"><i class="fa-solid fa-microchip"></i> Qualia Peer Runtime (QPR) · Kernel &amp; Replication Engine · 0.0.41</div>
+    <h1 class="q-hero-title font-display mb-5">
+      A bounded, lease-governed peer runtime built to replace <code class="q-mono">libp2p</code>.
+    </h1>
+    <p class="q-lede mb-6">
+      The <strong>Qualia Peer Runtime (QPR)</strong> (<code class="q-mono">crates/qualia-core-db/src/net/peer/</code>) is the application-facing execution and replication engine over the <strong>Qualia Decentralized Network Fabric (QDNF)</strong>. Unlike <code class="q-mono">libp2p</code> stacks that rely on unbounded heap futures, ambient socket pools, and DNS/IP assumptions, QPR pre-reserves every byte of cell memory, enforces generation-checked buffer leases, and verifies 5-field <code class="q-mono">NQuin</code> XOR parity before committing replicated <code class="q-mono">.q42</code> SuperBlocks.
     </p>
+    <p class="q-note mb-6">
+      <strong>Release 0.0.41 Verification Scope:</strong> On <code class="q-mono">0.0.41</code>, QPR’s cell admission table (<code class="q-mono">admit.rs</code>), generation-checked lease ledger (<code class="q-mono">ledger.rs</code>, <code class="q-mono">release_checked_bytes</code>), non-wrapping cancellation epochs (<code class="q-mono">cancel.rs</code>), 3-class fair scheduler, connection manager, local <code class="q-mono">CSCP</code>/<code class="q-mono">QSession</code> streams, and <code class="q-mono">ChunkToSuperBlockManifest</code> replication (<code class="q-mono">scan.rs</code>, <code class="q-mono">transfer.rs</code>, <code class="q-mono">receipts.rs</code>) execute deterministically in tree. Public Internet relay and MASQUE flags remain <code class="q-mono">false</code> until multi-host public trials run.
+    </p>
+    <p class="q-continuity-strip mb-12" role="note">
+      <strong>Handle ≠ human.</strong>
+      QPR peer handles, session descriptors, and reservation tokens belong to the <strong>Handle</strong> and <strong>Instrument</strong> planes — never the <strong>Entity</strong> (<code class="q-mono">NaturalAgent</code>) plane. Furthermore, creating extra personas never multiplies a host’s physical memory budget (<code class="q-mono">extra_identity_multiplies_host_budget() == false</code>).
+    </p>
+
+    <!-- LAYER 2: BOUNDED CELL ADMISSION & WORKER ISOLATION -->
+    <section class="q-card p-8 mb-12" id="cell-admission">
+      <p class="q-kicker mb-2">Layer 2 · Supervised Cell Admission (<code class="q-mono">peer::cells</code>)</p>
+      <h2 class="text-2xl font-semibold mb-3">Bounded Cell Table (<code class="q-mono">admit.rs</code>), Host Ownership &amp; LLM Starvation Guards</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:54rem">
+        QPR admits up to <code class="q-mono">MAX_CELLS = 16</code> supervised cells per <code class="q-mono">HostAdmission</code> instance, enforcing strict memory isolation between interactive network control loops, bulk replication transfers, and local AI inference workloads.
+      </p>
+      <div class="grid md:grid-cols-3 gap-5 text-sm">
+        <article class="rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">Cell Admission</span>
+            <span class="q-mono text-xs text-white/60">cells/admit.rs · descriptors.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">CellTable</code> &amp; <code class="q-mono">CellProfile</code></h3>
+          <p style="color:var(--q-muted)">
+            Admits caller-backed <code class="q-mono">CellDescriptor</code> slots up to <code class="q-mono">MAX_ORDINARY_CELL</code> (<code class="q-mono">512 MiB</code>) against the host’s <code class="q-mono">MAX_HOST_BYTES</code> ceiling. Over-budget admission requests fail closed before spawning any worker loop.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-cyan-500/25 bg-cyan-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-cyan-300">Starvation Guard</span>
+            <span class="q-mono text-xs text-white/60">cells/isolation.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">LLM vs. Network Isolation</h3>
+          <p style="color:var(--q-muted)">
+            <code class="q-mono">admit_llm_cannot_starve_network</code> and <code class="q-mono">llm_shares_ordinary_network_reserve() == false</code> guarantee that local GGUF/P64 model inference cannot draw from or exhaust the memory reserve dedicated to <code class="q-mono">CSCP</code> and <code class="q-mono">QSession</code> control cells.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-violet-500/25 bg-violet-500/5 p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-violet-300">Zero-Copy Handover</span>
+            <span class="q-mono text-xs text-white/60">cells/spsc.rs · workers.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">SpscQueue</code> &amp; <code class="q-mono">WorkerFence</code></h3>
+          <p style="color:var(--q-muted)">
+            Cross-cell message passing uses a fixed-capacity <code class="q-mono">SpscQueue</code> (<code class="q-mono">SPSC_CAP</code>) that issues an explicit <code class="q-mono">OwnershipReceipt</code> per transfer. Worker lifecycles (<code class="q-mono">start_worker</code>, <code class="q-mono">cancel_worker</code>, <code class="q-mono">drain_and_handover</code>) synchronize via <code class="q-mono">WorkerFence</code>.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- LAYER 3: GENERATION-CHECKED RESOURCE LEASES & CANCELLATION EPOCHS -->
+    <section class="q-card p-8 mb-12" id="leases-cancel">
+      <p class="q-kicker mb-2">Layer 3 · Deterministic Resource Governance (<code class="q-mono">peer::runtime</code> &amp; <code class="q-mono">NET-20</code>)</p>
+      <h2 class="text-2xl font-semibold mb-3">Generation-Checked Leases (<code class="q-mono">ledger.rs</code>) &amp; Non-Wrapping Cancellation Epochs</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:54rem">
+        To eliminate use-after-free, double-release, and ABA slot-reuse bugs without garbage collection, QPR pairs every resource reservation and asynchronous operation with a strictly monotonic generation counter.
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-5 mb-6">
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-emerald-300">NET-20 · Lease Accounting</span>
+            <span class="q-mono text-xs text-white/60">runtime/ledger.rs · leases.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">ReservationLedger</code> &amp; <code class="q-mono">release_checked_bytes</code></h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            Every buffer lease allocated in <code class="q-mono">LeaseTable</code> (<code class="q-mono">LEASE_SLOTS</code>) or byte reservation in <code class="q-mono">ReservationLedger</code> returns a <code class="q-mono">ReservationHandle</code> stamped with the slot’s current generation (<code class="q-mono">bump_generation</code>).
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            When reclaiming memory via <code class="q-mono">release_checked_bytes</code>, the ledger verifies that both the slot generation and exact byte count match the active lease. Stale handles or mismatched byte releases fail closed immediately without corrupting the <code class="q-mono">ResourceBudget</code>.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="q-kicker text-cyan-300">Cancellation &amp; Scheduling</span>
+            <span class="q-mono text-xs text-white/60">runtime/cancel.rs · scheduler.rs</span>
+          </div>
+          <h3 class="text-lg font-semibold text-white mb-2">Non-Wrapping <code class="q-mono">CancelEpoch</code> &amp; <code class="q-mono">FairScheduler</code></h3>
+          <p class="text-sm mb-3" style="color:var(--q-muted)">
+            <code class="q-mono">OperationTable</code> tracks in-flight operations using a non-wrapping <code class="q-mono">CancelEpoch</code>. Advancing the cancellation epoch deterministically invalidates subordinate <code class="q-mono">OperationHandle</code> entries and drains their leased buffers before slot reuse.
+          </p>
+          <p class="text-sm" style="color:var(--q-muted)">
+            The <code class="q-mono">FairScheduler</code> partitions work across <code class="q-mono">WorkClass::Control</code> (<code class="q-mono">CONTROL_CAP</code>), <code class="q-mono">WorkClass::Interactive</code> (<code class="q-mono">INTERACTIVE_CAP</code>), and <code class="q-mono">WorkClass::Background</code> (<code class="q-mono">BACKGROUND_CAP</code>) across up to <code class="q-mono">MAX_SCOPES</code> scopes so bulk sync never blocks control heartbeats.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- LAYER 4: CHUNK-TO-SUPERBLOCK .Q42 REPLICATION -->
+    <section class="q-card p-8 mb-12" id="replication">
+      <p class="q-kicker mb-2">Layer 4 · <code class="q-mono">.q42</code> v4 Knowledge Replication (<code class="q-mono">peer::replication</code> &amp; <code class="q-mono">NET-20</code>)</p>
+      <h2 class="text-2xl font-semibold mb-3">Bounded Scan (<code class="q-mono">scan.rs</code>), Range Transfer (<code class="q-mono">transfer.rs</code>) &amp; Durability Receipts (<code class="q-mono">receipts.rs</code>)</h2>
+      <p class="text-[1.02rem] mb-6" style="color:var(--q-muted);max-width:54rem">
+        QPR’s <code class="q-mono">QSync</code> replication pipeline synchronizes <code class="q-mono">.q42</code> knowledge graphs across peers without materializing full datasets in RAM or mistaking a socket ACK for disk durability.
+      </p>
+
+      <div class="grid md:grid-cols-3 gap-5 text-sm mb-6">
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-emerald-300 mb-2">1. Bounded Page Scan</p>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">scan.rs</code> &amp; <code class="q-mono">source.rs</code></h3>
+          <p style="color:var(--q-muted)">
+            Streams replica artifacts through caller-supplied <code class="q-mono">4 KiB</code> (<code class="q-mono">PAGE_BYTES</code>) windows via <code class="q-mono">ScanSource</code>, computing <code class="q-mono">ManifestPage</code> digests and <code class="q-mono">RangeWitness</code> Merkle proofs without unbounded heap allocation.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-cyan-300 mb-2">2. SuperBlock Bridge (<code class="q-mono">NET-20</code>)</p>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">transfer.rs</code> &amp; <code class="q-mono">commit_adapter.rs</code></h3>
+          <p style="color:var(--q-muted)">
+            <code class="q-mono">ChunkToSuperBlockManifest</code> bridges <code class="q-mono">SHA-384</code> (<code class="q-mono">StrongDigest</code>) transport chunks to <code class="q-mono">SHA-256</code> <code class="q-mono">.q42</code> v4 SuperBlocks, verifying 5-field <code class="q-mono">NQuin</code> XOR parity (<code class="q-mono">subject ^ predicate ^ object ^ context</code>) before invoking <code class="q-mono">commit_verified_block</code>.
+          </p>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <p class="q-kicker text-violet-300 mb-2">3. Custody &amp; Receipts</p>
+          <h3 class="text-lg font-semibold text-white mb-2"><code class="q-mono">receipts.rs</code> &amp; <code class="q-mono">pair.rs</code></h3>
+          <p style="color:var(--q-muted)">
+            Enforces <code class="q-mono">transport_ack_is_durable() == false</code> and <code class="q-mono">source_signature_reusable_after_redaction() == false</code>. Durable state transitions require staged two-phase <code class="q-mono">DurablePairing</code> (<code class="q-mono">stage_paired</code> → <code class="q-mono">commit_pair</code>) and explicit <code class="q-mono">CustodyState</code> receipts.
+          </p>
+        </article>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[48rem] text-sm text-left">
+          <thead class="text-white/70 border-b border-white/10">
+            <tr>
+              <th class="pb-3 pr-4">Replication Invariant</th>
+              <th class="pb-3 pr-4">Function / Guard</th>
+              <th class="pb-3 pr-4">Return Value</th>
+              <th class="pb-3">Engineering Meaning</th>
+            </tr>
+          </thead>
+          <tbody class="text-white/65">
+            <tr class="border-b border-white/5">
+              <td class="py-3.5 pr-4 font-medium text-white">Transport ACK ≠ Disk Durability</td>
+              <td class="py-3.5 pr-4 font-mono text-cyan-300">transport_ack_is_durable()</td>
+              <td class="py-3.5 pr-4 font-mono text-emerald-300">false</td>
+              <td class="py-3.5">A network packet acknowledgement never marks an operation durable before verified SuperBlock commit.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-3.5 pr-4 font-medium text-white">LWW Never Overrides Revocation</td>
+              <td class="py-3.5 pr-4 font-mono text-cyan-300">lww_overrides_revocation()</td>
+              <td class="py-3.5 pr-4 font-mono text-emerald-300">false</td>
+              <td class="py-3.5">A higher Lamport timestamp cannot resurrect a revoked capability or deactivated <code class="q-mono">Tombstone</code>.</td>
+            </tr>
+            <tr class="border-b border-white/5">
+              <td class="py-3.5 pr-4 font-medium text-white">Cache Eviction ≠ Proof of Absence</td>
+              <td class="py-3.5 pr-4 font-mono text-cyan-300">eviction_proves_absence()</td>
+              <td class="py-3.5 pr-4 font-mono text-emerald-300">false</td>
+              <td class="py-3.5">Missing an entry in a bounded <code class="q-mono">CacheTable</code> yields <code class="q-mono">CacheLookup::Incomplete</code>, never a negative existence proof.</td>
+            </tr>
+            <tr>
+              <td class="py-3.5 pr-4 font-medium text-white">Projection Preserves Originals</td>
+              <td class="py-3.5 pr-4 font-mono text-cyan-300">projection_replaces_original()</td>
+              <td class="py-3.5 pr-4 font-mono text-emerald-300">false</td>
+              <td class="py-3.5">Derived <code class="q-mono">.q42</code> projections never overwrite or masquerade as the raw source artifact envelope.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="q-card p-8">
+      <h2 class="text-2xl font-semibold mb-3">Related QDNF Architecture &amp; Status Guides</h2>
+      <p class="text-sm mb-5" style="color:var(--q-muted);max-width:46rem">
+        Return to the QDNF architecture overview, inspect the <code class="q-mono">0.0.41</code> implementation status matrix, or read the companion guides on protocol cells and side-by-side DIDs.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a class="q-pill q-pill-primary" href="qdnf.html">Back to QDNF</a>
+        <a class="q-pill" href="qdnf-status.html">QDNF implementation status</a>
+        <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
+        <a class="q-pill" href="qdnf-network-cells.html">QDNF protocol &amp; network cells</a>
+        <a class="q-pill" href="qdnf-did-qi.html">did:qi &amp; side-by-side DIDs</a>
+      </div>
+    </section>
   </main>
-  <footer class="q-site-footer">Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.</footer>
+
+  <footer class="q-site-footer">
+    Qualia Peer Runtime (QPR) · Release 0.0.41 · Ordinary Internet remains a Legacy Internet Gateway — never QDNF who. Handle ≠ human.
+  </footer>
 </body>
 </html>
