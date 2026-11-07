@@ -204,6 +204,7 @@ jobs:
         run: node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
 
       - name: Anatomy .hmc packs (prefer Release, fall back to building from the HRA)
+        if: false # Disabled pending Synth remodel
         # The packs (XY + XX, ~100 MB each — every CCF/HRA reference organ) are Release
         # artefacts, produced once per release by build-anatomy-packs in release-wasm.yml.
         # Prefer pulling them from our own GitHub Release so the deploy doesn't re-hit the HRA
