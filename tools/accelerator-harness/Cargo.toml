@@ -11,7 +11,7 @@ default = []
 npu-openvino = ["dep:ort", "dep:tempfile"]
 
 [dependencies]
-etalon-agent = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "22053f61586c31c633696d0736f6e26d30971707" }
+etalon-agent = { version = "0.0.2", git = "https://github.com/mediaprophet/etalon.git", rev = "969f32fc745dcffe89d996c1b4b96f285839e946" }
 vibe = { path = "../../crates/vibe" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
