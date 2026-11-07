@@ -48,7 +48,7 @@ pub struct Tensor10D {
   - `v = 0`: Euclidean (flat semantic proximity, standard distance)
   - `v = 1`: Cyclic / Toroidal (feedback loops, circadian rhythms, periodic states)
   - `v = 2`: Hyperbolic / Tree (hierarchies, family trees, taxonomies)
-  - `v = 3+`: Sovereign Boundary Cliques / Community Classes
+  - `v = 3+`: Jurisdictional & Community Boundary Cliques / Community Classes
 
 - **w (Manifold Index):** Domain Index for Multi-Head Bifurcation
   - `w = 0`: Biological/Medical
@@ -90,7 +90,7 @@ Where `fract(σ) = σ - floor(σ)`. Integer wraps on σ must not change either p
 
 **α and μ in audio:**
 
-- **α** — linear gain staging (preserves dynamic-range sovereignty; clipping only at DAC under device policy).
+- **α** — linear gain staging (preserves dynamic-range fidelity; clipping only at DAC under device policy).
 - **μ** — phase / provenance modulation; drives FM index with epistemic **q** in U3 parametric voices.
 
 ## 2. Hardware Capability Tiers
@@ -355,7 +355,7 @@ cargo build --features tensor-10d,tensor-gpu
 - **Compression:** LZ4 for container storage
 - **Memory Mapping:** Zero-copy load for execution
 
-## 10. Security & Sovereignty
+## 10. Security & Human Agency
 
 ### 10.1 Cryptographic Provenance
 
@@ -369,7 +369,7 @@ cargo build --features tensor-10d,tensor-gpu
 - **Predictable Memory:** Easier security auditing
 - **Sandbox Safety:** Stack allocation limits attack scope
 
-### 10.3 Sovereign Data Assets
+### 10.3 Principal-Held Data Assets
 
 - **Information Banking:** Pre-processed, mathematically dense
 - **Local-First:** No cloud dependency for inference
@@ -377,7 +377,7 @@ cargo build --features tensor-10d,tensor-gpu
 
 ## 11. Compliance & Standards
 
-### 11.1 Data Sovereignty
+### 11.1 Human Agency and Privacy
 
 - **GDPR Compliance:** Local-first architecture ensures data never leaves jurisdiction
 - **HIPAA Compliance:** Sanctuary lane encryption for medical data

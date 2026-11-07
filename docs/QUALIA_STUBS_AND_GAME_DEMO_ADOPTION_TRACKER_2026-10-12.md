@@ -286,7 +286,7 @@ This track establishes the multi-modal virtual entity architecture replacing the
   - **Location:** `crates/qualia-core-db/src/render/entity_compile_gates.rs`, `src/bundle/cbor_ld_manifest.rs`
   - **Status:** Complete. Categorized entities across the "world of god" and "world of man":
     - `DarwinianTaxon` $\to$ `Specimen` (ecological commons).
-    - `NaturalPerson` $\to$ `Persona` / `Likeness` (sovereign human beings).
+    - `NaturalPerson` $\to$ `Persona` / `Likeness` (dignity-bearing human beings).
     - `ManufacturedProperty` $\to$ `Construct` / `Artifact` (engineered machinery).
     - `LiberalArtsWork` $\to$ `Expression` / `Lore` (cultural compositions).
     - `AbioticEnvironment` $\to$ `Terrain` / `Feature` (geology and catchments).

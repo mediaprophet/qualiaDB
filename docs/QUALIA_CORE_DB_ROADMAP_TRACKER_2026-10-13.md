@@ -168,7 +168,7 @@ Finalize changes in `crates/qualia-core-db/src/q42_lex_ns.rs` to guarantee deter
 
 ---
 
-## 9. Track G: Principled Procedural Model Synthesis & Sovereign Personal Behavioral Ontologies
+## 9. Track G: Principled Procedural Model Synthesis & Human-Centric Personal Behavioral Ontologies
 
 ### 9.1 Principled Algorithmic Synthesis Architecture (Eliminating Asset Bloat)
 - **Goal:** Replace brute-force static geometry and multi-gigabyte texture arrays with compact mathematical generative recipes evaluated dynamically via Qualia's specialized libraries.
@@ -381,7 +381,7 @@ Finalize changes in `crates/qualia-core-db/src/q42_lex_ns.rs` to guarantee deter
 ### 9.18 Ontological Entity Virtualization & Anti-Commodification Architecture
 - **Normative Nomenclature Transition:** Replaced legacy industrial "digital twin" terminology across all code, CLI commands, and manuals with ontologically-grounded terms:
   - `DarwinianTaxon` $\to$ **`Specimen`** / `Organism` (ecological commons).
-  - `NaturalPerson` $\to$ **`Persona`** / `Likeness` (sovereign human beings).
+  - `NaturalPerson` $\to$ **`Persona`** / `Likeness` (dignity-bearing human beings).
   - `ManufacturedProperty` $\to$ **`Construct`** / `Artifact` (engineered machinery and tools).
   - `LiberalArtsWork` $\to$ **`Expression`** / `Lore` (cultural compositions).
   - `AbioticEnvironment` $\to$ **`Terrain`** / `Feature` (geology and catchments).

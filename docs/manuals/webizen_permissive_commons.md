@@ -7,7 +7,7 @@ The Permissive Commons is a decentralized, zero-knowledge distribution network a
 The conceptual foundation of the Permissive Commons (tracing back to the 2014 W3C WebPayments design goals and formally detailed in Timothy Holborn's 2018 *Human Centric Infosphere* and 2019 *Open Data v3.0*) identifies a structural flaw in the traditional "open data" movement: it inadvertently enabled an extraction model where human labor ("web slavery") provides free resources that are monopolised by a few massive corporate gatekeepers to train AI and act as centralized authorities on human knowledge.
 
 True **"Commons"** differ from **"Open Data"** by instituting a sharp ontological distinction aligned with the legal and social boundaries of the human experience:
-*   **Selfhood (Private/Inalienable):** Biometric information and private experiences are an extension of conscious experience and must remain entirely sovereign. This data is strictly excluded from the Permissive Commons unless explicitly escrowed.
+*   **Selfhood (Private/Inalienable):** Biometric information and private experiences are an extension of conscious experience and must remain entirely human-centric. This data is strictly excluded from the Permissive Commons unless explicitly escrowed.
 *   **Personhood (Social/Economic):** Artefacts produced through the employment of personhood have social associations and are subject to law, rights, and responsibilities. The procedural relationship between private *Selfhood* and permissive *Personhood* forms the basis of the Semantic Inforg.
 *   **Custodial Governance:** Resources are available to an intended group under specific rules, managed by stewards, rather than being "freely available to everyone to use and republish as they wish" (which enables extractive enclosure).
 *   **Economic Reality:** The system acknowledges that "free doesn't exist." It implements micropayment standards as an "Economic Imperative for the Knowledge Age" to ensure natural persons are compensated for socially valuable works.
@@ -55,13 +55,13 @@ The Permissive Commons is payload-agnostic but semantically aware. The following
 
 ### 2.1 Webizen QApps & Cooperative UI
 _Examples: `social-cooperative.html`, `yaml-ld-q42` manifests._
-Stateless, declarative user interface shells that bind to the sovereign `qualia-db` engine. QApps represent collaborative spaces (Kanban boards, Analytics, Budgets, DocuQuin pipelines) and are fetched and hydrated from the WebTorrent DHT instantly, allowing applications to exist independently of app stores.
+Stateless, declarative user interface shells that bind to the human-centric `qualia-db` engine. QApps represent collaborative spaces (Kanban boards, Analytics, Budgets, DocuQuin pipelines) and are fetched and hydrated from the WebTorrent DHT instantly, allowing applications to exist independently of app stores.
 
 ### 2.2 Semantic Ontologies and Logic Rules
 _Examples: unified v4 `.q42` volumes (Commons-flagged), `cooperative-projects.ttl`, `cooperative-evaluation.n3`._
 Machine-readable definitions of domain knowledge. When a cooperative defines a new ontology or set of defeasible logic rules, these are published as deterministic magnet links, ensuring all participating nodes share the exact same structural understanding without runtime string allocations.
 
-### 2.3 LLM Packages, Compute Weights & Language Sovereignty
+### 2.3 LLM Packages, Compute Weights & Linguistic and Cultural Rights
 _Examples: `GGUF` model files, tokenizers, HDF5 Containers._
 Large Language Model weights and contextual embeddings. By distributing these multi-gigabyte files via the Permissive Commons, localized AI inference becomes a shared community resource. **Universal Language Support** is mandated: the semantic ecosystems and localized LLM resources must support all first languages, including all languages of prayer, defending human dignity globally.
 
@@ -143,5 +143,5 @@ The *WellFair* personal health vault acts as an encrypted, local-first extension
 
 ### 5.3 Local AI & Verifiable Communications
 The ecosystem supports rich, local-first communications (e.g., video calls with local language transcoding or CV analysis) without third-party APIs.
-*   **Artifacts:** Local LLM weights (GGUF), standard WebSpeech models, and standardized ODRL "Semantic Handshake" templates. To ensure cultural sovereignty, distributed linguistic models strictly enforce universal language support, defending dignity by enabling native processing of all languages (including languages of prayer).
+*   **Artifacts:** Local LLM weights (GGUF), standard WebSpeech models, and standardized ODRL "Semantic Handshake" templates. To ensure cultural human-centricty, distributed linguistic models strictly enforce universal language support, defending dignity by enabling native processing of all languages (including languages of prayer).
 *   **Mechanism:** A user needing to transcribe a sensitive medical consultation downloads the transcoder weights from the WebTorrent Commons. Furthermore, the structural templates required to legally establish the call (Semantic Handshakes) are fetched from the commons, standardizing trust without a centralized registry.

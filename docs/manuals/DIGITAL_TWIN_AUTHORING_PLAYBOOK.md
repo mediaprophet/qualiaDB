@@ -16,7 +16,7 @@ This playbook is the normative specification for authoring multi-modal virtual e
 The industrial framing of a "digital twin" treats every model as a corporate asset to be owned, captured, and assigned. This creates catastrophic legal and ethical hazards when applied to living organisms or human participants:
 - **World of God / Inalienable Living Realm:**
   - **`DarwinianTaxon` $\to$ `Specimen`:** Natural organisms (*flora, fauna, funga*) belong to the ecological commons. A virtual model is a scientific, sensory *specimen* with provenance, never a privatized industrial clone.
-  - **`NaturalPerson` $\to$ `Persona` / `Likeness`:** Human subjects possess inalienable moral rights and bodily sovereignty. A person cannot be commodified as a property or corporate asset. A virtual representation is a sovereign *persona* governed by DID consent.
+  - **`NaturalPerson` $\to$ `Persona` / `Likeness`:** Human subjects possess inalienable moral rights and bodily integrity and self-determination. A person cannot be commodified as a property or corporate asset. A virtual representation is a human-centric *persona* governed by DID consent.
 - **World of Man / Manufactured Realm:**
   - **`ManufacturedProperty` $\to$ `Construct` / `Artifact`:** Fabricated tools, machinery, and vehicles (e.g. solar pumps, turbines, footwear). This is the legitimate domain of property rights, operational ratings, and maintenance regimes.
 - **World of Culture / Expression:**

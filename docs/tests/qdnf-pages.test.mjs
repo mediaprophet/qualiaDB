@@ -108,4 +108,23 @@ assert.match(read('qdnf-did-qi.html'), /CscpMailbox/);
 const menuLoader = read('js/menu-loader.js');
 assert.match(menuLoader, /rawName === 'Webizen'/);
 
+function checkNoSovereignInHtml(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const rel = path.relative(docsRoot, full).replace(/\\/g, '/');
+    if (rel.startsWith('pkg') || rel.startsWith('rustdoc') || rel.includes('init-draft-standards-wip-main')) continue;
+    if (entry.isDirectory()) {
+      checkNoSovereignInHtml(full);
+    } else if (entry.name.endsWith('.html')) {
+      const html = fs.readFileSync(full, 'utf8');
+      assert.doesNotMatch(
+        html,
+        /\bsovereign(?:ty)?\b/i,
+        `${rel} must use human-rights instrument terminology (human dignity, agency, self-determination, human-centric) instead of 'sovereign' (ADR 0011 / rights_ontology.ttl)`,
+      );
+    }
+  }
+}
+checkNoSovereignInHtml(docsRoot);
+
 console.log('qdnf Pages chrome checks passed.');

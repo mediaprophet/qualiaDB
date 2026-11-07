@@ -67,7 +67,7 @@ Three layers, raced, fail closed to the next. All labelled transition. QSession/
 
 ### Why this and not “just WebRTC”
 
-| Option | Gets through this SNAT? | Fits SocialWebNet | Cost / sovereignty |
+| Option | Gets through this SNAT? | Fits SocialWebNet | Cost / independence |
 |---|---|---|---|
 | Raw WireGuard UDP | No, unless one side is reachable | Yes (already built) | None |
 | STUN + hole punch | No on address-dependent mapping | Small | Public STUN (privacy leak of mapping) |

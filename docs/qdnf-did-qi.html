@@ -38,7 +38,7 @@
       Most decentralized systems force a single DID method to act simultaneously as a database pointer, a human legal identity, and a network socket address. That overloading creates correlation honeypots and catastrophic revocation failure modes: rotating a compromised transport key Either breaks historical knowledge pointers or exposes the human across every peer relationship.
     </p>
     <p class="q-note mb-6">
-      <strong>Orthogonal Separation by Design:</strong> QualiaDB partitions decentralized identifiers across three specialized methods — <code class="q-mono">did:q42:</code> (64-bit resource coordinates), <code class="q-mono">did:webizen:</code> (sovereign agent and ratified agreement identity), and <code class="q-mono">did:qi:</code> (pairwise rotating relationship and instrument identity). <code class="q-mono">did:qi</code> is an in-tree runtime specification (<code class="q-mono">crates/qualia-core-db/src/did_qi/</code>), not a W3C DID Spec Registries entry and not a W3C Technical Report.
+      <strong>Orthogonal Separation by Design:</strong> QualiaDB partitions decentralized identifiers across three specialized methods — <code class="q-mono">did:q42:</code> (64-bit resource coordinates), <code class="q-mono">did:webizen:</code> (human-centric agent and ratified agreement identity), and <code class="q-mono">did:qi:</code> (pairwise rotating relationship and instrument identity). <code class="q-mono">did:qi</code> is an in-tree runtime specification (<code class="q-mono">crates/qualia-core-db/src/did_qi/</code>), not a W3C DID Spec Registries entry and not a W3C Technical Report.
     </p>
     <p class="q-continuity-strip mb-12" role="note">
       <strong>Handle ≠ human.</strong>
@@ -66,7 +66,7 @@
             <tr class="border-b border-white/5">
               <td class="py-4 pr-4 font-semibold text-white">Canonical Name</td>
               <td class="py-4 pr-4"><strong>QRC</strong> (Q42 Resource Coordinate)</td>
-              <td class="py-4 pr-4"><strong>Sovereign Agent &amp; Agreement DID</strong></td>
+              <td class="py-4 pr-4"><strong>Human-Centric Agent &amp; Agreement DID</strong></td>
               <td class="py-4"><strong>Qualia Instrument &amp; Relationship DID</strong></td>
             </tr>
             <tr class="border-b border-white/5">

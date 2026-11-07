@@ -1,7 +1,7 @@
 # QApps: Qualia App Specification
 _Version: 1.0.0-draft | Target: Webizen Platform_
 
-A **QApp** (Qualia App) is a stateless, declarative user interface shell that binds to the sovereign `qualia-db` engine. Unlike traditional applications that bundle their own backend logic and capabilities, a QApp is fundamentally just a declarative view layout mapped to semantic schemas.
+A **QApp** (Qualia App) is a stateless, declarative user interface shell that binds to the human-centric `qualia-db` engine. Unlike traditional applications that bundle their own backend logic and capabilities, a QApp is fundamentally just a declarative view layout mapped to semantic schemas.
 
 ## 1. What is a QApp?
 

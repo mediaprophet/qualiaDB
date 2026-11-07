@@ -358,7 +358,7 @@ This section documents the completed SPARQL-Star (SPARQL 1.2) implementation for
 
 ### 4. Webizen Lexicon Priority ✅
 **Decision:** Dedicate high-priority prefix/range for Webizen IDs
-**Rationale:** Webizens are sovereign actors; reserved range allows low-level identification
+**Rationale:** Webizens are rights-bearing actors; reserved range allows low-level identification
 **Implementation:** 0x8000_0000_0000_0000 to 0x8FFF_FFFF_FFFF_FFFF range
 
 ### 5. Sentinel Performance ✅

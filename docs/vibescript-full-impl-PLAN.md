@@ -633,7 +633,7 @@ AST nodes, then Species/Mixture, then CST, then HID, then pretty syntax last.
 | T56 | **Four-boundary separation** — publication / replication / agency / exfiltration are four bits, not one. `.gitignore` is publication only. | **Done** — four-boundary separation implemented | disclosure-boundary §0 |
 | T57 | **Instrument trace ledger (Kind B)** — production notes the *customer* can read: which instrument instance, which act, which Instant, which lease, what cost. Vendor-only copy is not this. | **Done** — instrument_trace.rs in governance/ | bylines §0, AGENT_INTENT_LOGGING_SPEC |
 | T58 | **No bylines (Kind A) enforced mechanically** — §16 rule already in CLAUDE.md; needs tooling to prevent injection. | Rule added | bylines §0, CLAUDE.md §16 |
-| T59 | **Agent characteristics KB** — log characteristics of agents (including AI agents) from behaviour. Local inference first, then packs for jurisdictions. | **Done** — AgentCharacteristicsKb in observer.rs | rights-not-sovereignty §1 |
+| T59 | **Agent characteristics KB** — log characteristics of agents (including AI agents) from behaviour. Local inference first, then packs for jurisdictions. | **Done** — AgentCharacteristicsKb in observer.rs | rights-not-human-centricty §1 |
 
 ### 8.13 Ecosystem & Standalone Packaging (ecosystem doc, recommendations §1)
 

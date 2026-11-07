@@ -9,7 +9,7 @@ The core execution engine of Qualia-DB was originally named the "Sentinel VM". T
 ## Decision
 We decided to rebrand the "Sentinel VM" and all related modules to "Webizen" (and "Webizen VM"). 
 
-"Webizen" (Web Citizen) perfectly encapsulates the active, sovereign nature of the software. A Webizen is an autonomous digital agent that acts on behalf of the Principal, enforcing the Principal's rights, executing their logic, and independently interacting with other Webizens in the peer-to-peer Commons.
+"Webizen" (Web Citizen) perfectly encapsulates the active, human-centric, agency-preserving nature of the software. A Webizen is an autonomous digital agent that acts on behalf of the Principal, enforcing the Principal's rights, executing their logic, and independently interacting with other Webizens in the peer-to-peer Commons.
 
 ## Consequences
 - Requires a global refactor of UI strings, documentation, and source code (completed in v0.0.40).

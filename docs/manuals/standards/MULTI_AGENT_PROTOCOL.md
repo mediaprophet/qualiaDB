@@ -9,7 +9,7 @@ By mapping all agent behaviors into the 48-byte Super-Quin architecture, we guar
 
 ---
 
-## 1. Root Sovereignty & Agent Identity (DIDs)
+## 1. Human-Centric Agency & Agent Identity (DIDs)
 
 Every actor within the ecosystem must operate under a cryptographic Decentralized Identifier (DID). 
 
