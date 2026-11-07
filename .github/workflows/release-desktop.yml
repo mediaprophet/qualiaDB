@@ -234,7 +234,7 @@ jobs:
   build-desktop-macos-metal:
     name: Desktop (macOS Apple Silicon / Metal)
     if: false # Decoupled to standalone repository webizen-desktop
-    runs-on: macos-14
+    runs-on: macos-15
     env:
       WGPU_BACKEND: metal
       WGPU_POWER_PREF: high

@@ -1441,7 +1441,6 @@ dependencies = [
 [[package]]
 name = "vibescript-abi"
 version = "0.0.41"
-source = "git+https://github.com/mediaprophet/vibe-script.git?rev=c26acd2aacceffc0778b5b96b1a935e251fd5e96#c26acd2aacceffc0778b5b96b1a935e251fd5e96"
 
 [[package]]
 name = "wasm-bindgen"

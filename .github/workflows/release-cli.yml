@@ -30,7 +30,7 @@ jobs:
           - os: windows-latest
             artifact: target/release/qualia-cli.exe
             asset_name: qualia-cli-windows-x86_64.exe
-          - os: macos-14
+          - os: macos-15
             artifact: target/release/qualia-cli
             asset_name: qualia-cli-macos-aarch64
 

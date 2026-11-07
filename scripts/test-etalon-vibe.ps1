@@ -313,10 +313,14 @@ try {
     Assert-Success $metadataPhase
     $metadata = Read-BoundedJson $metadataPhase.stdout 16MB
     $patchBlock = Get-EtalonPatchBlock $metadata
+    $vibeAbiPatch = '[patch."https://github.com/mediaprophet/vibe-script.git"]' + [Environment]::NewLine +
+        "vibescript-abi = { path = $(Toml-String (Join-Path $qualiaRoot 'crates/vibescript-abi')) }"
     $template = [IO.File]::ReadAllText((Join-Path $qualiaRoot 'tools/accelerator-harness/Cargo.toml'))
     $oldVibe = 'vibe = { path = "../../crates/vibe" }'
+    $oldVibeAbi = 'vibescript-abi = { path = "../../crates/vibescript-abi" }'
     if (-not $template.Contains($oldVibe)) { throw 'Lightweight manifest Vibe path contract changed' }
-    $lightManifest = $template.Replace($oldVibe, "vibe = { path = $(Toml-String (Join-Path $qualiaRoot 'crates/vibe')) }")
+    if (-not $template.Contains($oldVibeAbi)) { throw 'Lightweight manifest VibeScript ABI path contract changed' }
+    $lightManifest = $template.Replace($oldVibe, "vibe = { path = $(Toml-String (Join-Path $qualiaRoot 'crates/vibe')) }").Replace($oldVibeAbi, "vibescript-abi = { path = $(Toml-String (Join-Path $qualiaRoot 'crates/vibescript-abi')) }")
     $lightManifest += [Environment]::NewLine + $patchBlock + [Environment]::NewLine + '[[bin]]' + [Environment]::NewLine +
         'name = "qualia-accelerator-harness"' + [Environment]::NewLine +
         "path = $(Toml-String (Join-Path $qualiaRoot 'tools/accelerator-harness/src/main.rs'))" + [Environment]::NewLine
@@ -377,6 +381,7 @@ serde_json = "1"
 name = "etalon_vibe_harness"
 path = $(Toml-String (Join-Path $qualiaRoot 'crates/qualia-core-db/tests/etalon_vibe_harness.rs'))
 $patchBlock
+$vibeAbiPatch
 [profile.dev]
 debug = 0
 incremental = false

@@ -22,3 +22,6 @@ tempfile = { version = "3.27", optional = true }
 [profile.dev]
 debug = 0
 incremental = false
+
+[patch."https://github.com/mediaprophet/vibe-script.git"]
+vibescript-abi = { path = "../../crates/vibescript-abi" }
