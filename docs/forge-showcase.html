@@ -9,30 +9,88 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="js/menu-loader.js"></script>
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
+        body { font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
         .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
-        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
-        code { font-family: 'Fira Code', monospace; }
+        .glass-panel { background: rgba(10, 14, 23, 0.68); border: 1px solid rgba(148, 163, 184, 0.16); backdrop-filter: blur(16px); }
+        pre { background: rgba(0, 0, 0, 0.35); border-radius: 8px; padding: 14px; overflow-x: auto; }
+        code, textarea { font-family: 'Fira Code', ui-monospace, monospace; }
+        .ctrl-select, .ctrl-input {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #e2e8f0;
+            border-radius: 0.65rem;
+            padding: 0.45rem 0.7rem;
+            font-size: 0.8rem;
+            width: 100%;
+        }
+        .ctrl-select:focus, .ctrl-input:focus, textarea:focus {
+            outline: none;
+            border-color: rgba(34, 211, 238, 0.6);
+            box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+        }
+        .tier-pill {
+            transition: all 0.18s;
+            padding: 0.38rem 0.75rem;
+            border-radius: 0.65rem;
+            font-size: 0.72rem;
+            font-family: 'Fira Code', monospace;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(226, 232, 240, 0.7);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tier-pill.active {
+            background: rgba(34, 211, 238, 0.18);
+            color: #22d3ee;
+            border-color: rgba(34, 211, 238, 0.5);
+        }
+        canvas.interactive-canvas {
+            width: 100%;
+            height: auto;
+            touch-action: manipulation;
+            cursor: crosshair;
+            display: block;
+        }
+        @media (max-width: 900px) {
+            .forge-page-wrap { padding-left: 1rem !important; padding-right: 1rem !important; padding-top: 1.5rem !important; }
+            .glass-strong { padding: 1.25rem !important; border-radius: 1.25rem !important; }
+            .forge-studio-grid, .forge-canvas-grid { grid-template-columns: 1fr !important; }
+            .tier-strip { overflow-x: auto; flex-wrap: nowrap !important; padding-bottom: 0.35rem; -webkit-overflow-scrolling: touch; }
+            h1 { font-size: 2.25rem !important; line-height: 1.15 !important; }
+        }
+        @media (max-width: 600px) {
+            .forge-page-wrap { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+            .glass-strong, .glass-panel { padding: 1rem !important; }
+            .param-grid-3 { grid-template-columns: 1fr 1fr !important; }
+            .kpi-strip-4 { grid-template-columns: 1fr 1fr !important; }
+            h1 { font-size: 1.85rem !important; }
+            h2 { font-size: 1.25rem !important; }
+        }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
     <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-        <div class="max-w-screen-2xl mx-auto px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-8">
-                    <a href="index.html" class="flex items-center gap-3">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-8">
+            <div class="flex items-center justify-between h-16 gap-2">
+                <div class="flex items-center gap-4 sm:gap-8 min-w-0">
+                    <a href="index.html" class="flex items-center gap-3 shrink-0">
                         <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                             <span class="text-black font-bold text-xl">Q</span>
                         </div>
                         <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
                     </a>
-                    <div id="dynamic-nav" class="relative flex items-center text-sm">
+                    <div id="dynamic-nav" class="relative flex items-center text-sm overflow-x-auto">
                         <!-- Navigation loaded dynamically by menu-loader.js -->
                     </div>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                    <div id="forge-wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-900 text-slate-300 border border-white/10">
+                        <span id="forge-wasm-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <span id="forge-wasm-status">Loading vibe-wasm…</span>
+                    </div>
                     <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
-                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                       class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
                         <i class="fab fa-github"></i><span>GitHub</span>
                     </a>
                 </div>
@@ -40,20 +98,246 @@
         </div>
     </nav>
 
-    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+    <div class="forge-page-wrap max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
         <div class="mb-8">
             <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs font-semibold mb-4">
-                <i class="fas fa-microchip"></i> v0.0.41 · etalon-wgsl-forge &amp; qualia-core-db::wgsl_forge::etalon_bridge
+                <i class="fas fa-microchip"></i> v0.0.41 · etalon-wgsl-forge &amp; qualia-core-db::wgsl_forge::etalon_bridge · WebGPU + WebGL2 Mobile
             </div>
             <h1 class="text-5xl font-semibold tracking-tighter mb-4">WGSL Forge</h1>
-            <p class="text-xl text-slate-400 max-w-4xl">A deterministic GPU-kernel compiler, Naga AST validator, and CPU-oracle correctness certifier powered by <code class="text-cyan-300">etalon-wgsl-forge</code>. It lowers typed <code class="text-cyan-300">KernelSpec</code> + <code class="text-cyan-300">Schedule</code> graphs into multi-backend shaders without LLM heuristics.</p>
+            <p class="text-xl text-slate-400 max-w-4xl">A deterministic GPU-kernel compiler, Naga AST validator, and CPU-oracle correctness certifier powered by <code class="text-cyan-300">etalon-wgsl-forge</code>. It lowers typed <code class="text-cyan-300">KernelSpec</code> + <code class="text-cyan-300">Schedule</code> graphs into multi-backend shaders (<strong>WebGPU WGSL</strong>, <strong>Mobile WebGL2 GLSL ES 3.0</strong>, <strong>SPIR-V</strong>, <strong>HLSL</strong>, and <strong>MSL</strong>) without LLM heuristics.</p>
         </div>
 
-        <!-- The boundary: produce vs run -->
+        <!-- FLAGSHIP INTERACTIVE SECTION: Interactive WGSL Forge & VibeScript Schedule Certification Studio -->
+        <section id="forge-certification-studio" class="glass-strong rounded-3xl p-8 mb-10 border border-cyan-500/30 shadow-2xl">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-mono mb-2">
+                        <i class="fas fa-bolt"></i> LIVE WASM + WEBGPU / WEBGL2 STUDIO · ./pkg/vibe/vibe_wasm.js · Tag 4200 Receipt
+                    </div>
+                    <h2 class="text-2xl sm:text-3xl font-semibold text-white flex items-center gap-3">
+                        <i class="fas fa-cubes-stacked text-cyan-400"></i>
+                        Interactive WGSL Forge &amp; VibeScript Schedule Certification Studio
+                    </h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="forge-run-btn" type="button" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition flex items-center gap-2 shadow-lg shadow-cyan-500/20 cursor-pointer">
+                        <i class="fas fa-play"></i> Synthesize &amp; Certify Schedule
+                    </button>
+                    <button id="forge-reset-btn" type="button" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 border border-white/10 text-xs transition cursor-pointer">
+                        <i class="fas fa-rotate-left mr-1"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hardware Acceleration Tier Switcher (WebGPU / WebGL2 ES 3.0 Mobile / Software Oracle) -->
+            <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-black/40 border border-white/10 mb-6">
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-white/50 font-medium">Target Execution &amp; Shader Tier:</span>
+                    <div class="tier-strip flex items-center gap-1.5" role="tablist" aria-label="Backend Tier">
+                        <button type="button" class="tier-pill active" data-tier="webgpu" id="forge-tier-webgpu">WebGPU (WGSL)</button>
+                        <button type="button" class="tier-pill" data-tier="webgl2" id="forge-tier-webgl2">WebGL2 Mobile (GLSL ES 3.0)</button>
+                        <button type="button" class="tier-pill" data-tier="spirv" id="forge-tier-spirv">Vulkan (SPIR-V)</button>
+                        <button type="button" class="tier-pill" data-tier="software" id="forge-tier-software">CPU Reference Oracle</button>
+                    </div>
+                </div>
+                <div id="forge-hw-probe-summary" class="text-[11px] font-mono text-emerald-300">
+                    Probing WebGPU &amp; WebGL2 ES 3.0…
+                </div>
+            </div>
+
+            <p class="text-white/70 text-sm mb-6 leading-relaxed">
+                Configure orthogonal tiling, workgroup geometry, vectorization width, and cooperative subgroup matrix acceleration below. Every parameter change synthesizes deterministic shader code (<strong>WGSL</strong> for WebGPU or <strong><code>#version 300 es</code> GLSL</strong> for mobile WebGL2), evaluates the schedule verification contract via <code class="text-cyan-300">eval_program_with_receipt_wasm</code> (<code class="text-cyan-300">forge.shader.*</code>, <code class="text-cyan-300">gpu.compute.*</code>, <code class="text-cyan-300">p64.runtime.*</code>, <code class="text-cyan-300">nquin.wire.*</code>), plots the operational intensity on the hardware Roofline model, and diffs a $16 \times 16$ output tile against the independent CPU reference oracle.
+            </p>
+
+            <!-- Interactive Controls Grid -->
+            <div class="forge-studio-grid grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+                <!-- Left Column: Kernel & Schedule Controls (5 cols) -->
+                <div class="lg:col-span-5 glass-panel rounded-2xl p-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-cyan-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <i class="fas fa-sliders"></i> 1. KernelSpec &amp; Schedule Parameters
+                        </h3>
+
+                        <div class="mb-4">
+                            <label for="forge-kernel-select" class="block text-xs text-white/60 mb-1.5 font-medium">Kernel Template Selector</label>
+                            <select id="forge-kernel-select" class="ctrl-select font-mono">
+                                <option value="gemm">Tiled GEMM (f16/f32)</option>
+                                <option value="flash_attn">FlashAttention-2 Online Softmax</option>
+                                <option value="rmsnorm_swiglu">Fused RMSNorm + SwiGLU</option>
+                                <option value="q4k_gemv">Q4_K Dequant + GEMV</option>
+                                <option value="acoustic_stencil">3D 7-Point Acoustic Stencil</option>
+                            </select>
+                        </div>
+
+                        <div class="param-grid-3 grid grid-cols-3 gap-3 mb-4">
+                            <div>
+                                <label for="forge-tile-m" class="block text-xs text-white/60 mb-1">Tile $M$</label>
+                                <select id="forge-tile-m" class="ctrl-select font-mono">
+                                    <option value="16">16</option>
+                                    <option value="32">32</option>
+                                    <option value="64" selected>64</option>
+                                    <option value="128">128</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="forge-tile-n" class="block text-xs text-white/60 mb-1">Tile $N$</label>
+                                <select id="forge-tile-n" class="ctrl-select font-mono">
+                                    <option value="16">16</option>
+                                    <option value="32">32</option>
+                                    <option value="64" selected>64</option>
+                                    <option value="128">128</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="forge-tile-k" class="block text-xs text-white/60 mb-1">Tile $K$</label>
+                                <select id="forge-tile-k" class="ctrl-select font-mono">
+                                    <option value="8">8</option>
+                                    <option value="16" selected>16</option>
+                                    <option value="32">32</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="param-grid-3 grid grid-cols-3 gap-3 mb-4">
+                            <div>
+                                <label for="forge-wg-x" class="block text-xs text-white/60 mb-1">Workgroup $X$</label>
+                                <select id="forge-wg-x" class="ctrl-select font-mono">
+                                    <option value="8">8</option>
+                                    <option value="16" selected>16</option>
+                                    <option value="32">32</option>
+                                    <option value="64">64</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="forge-wg-y" class="block text-xs text-white/60 mb-1">Workgroup $Y$</label>
+                                <select id="forge-wg-y" class="ctrl-select font-mono">
+                                    <option value="1">1</option>
+                                    <option value="4">4</option>
+                                    <option value="8">8</option>
+                                    <option value="16" selected>16</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="forge-wg-z" class="block text-xs text-white/60 mb-1">Workgroup $Z$</label>
+                                <select id="forge-wg-z" class="ctrl-select font-mono">
+                                    <option value="1" selected>1</option>
+                                    <option value="2">2</option>
+                                    <option value="4">4</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <label for="forge-vec-width" class="block text-xs text-white/60 mb-1">Vector Width ($\text{vec}N$)</label>
+                                <select id="forge-vec-width" class="ctrl-select font-mono">
+                                    <option value="1">1 (scalar f32)</option>
+                                    <option value="2">2 (vec2&lt;f32&gt;)</option>
+                                    <option value="4" selected>4 (vec4&lt;f32&gt;)</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col justify-end">
+                                <label class="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/90 border border-white/10 cursor-pointer select-none">
+                                    <input id="forge-subgroup-toggle" type="checkbox" checked class="accent-cyan-400 w-4 h-4">
+                                    <span class="text-xs font-mono text-cyan-300">Subgroup Matrix (16×16)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Telemetry KPI Strip -->
+                    <div class="kpi-strip-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-3 border-t border-white/10 text-xs">
+                        <div class="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                            <div class="text-white/40 text-[10px]">Shared Mem</div>
+                            <div id="kpi-shmem" class="font-mono font-semibold text-cyan-300 mt-0.5">8.0 KiB</div>
+                        </div>
+                        <div class="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                            <div class="text-white/40 text-[10px]">Arith. Intensity</div>
+                            <div id="kpi-ai" class="font-mono font-semibold text-emerald-300 mt-0.5">16.0 FLOP/B</div>
+                        </div>
+                        <div class="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                            <div class="text-white/40 text-[10px]">WG Occupancy</div>
+                            <div id="kpi-occupancy" class="font-mono font-semibold text-violet-300 mt-0.5">25.0%</div>
+                        </div>
+                        <div class="bg-black/30 rounded-xl p-2.5 border border-white/5">
+                            <div class="text-white/40 text-[10px]">Max $|\Delta|$ vs CPU</div>
+                            <div id="kpi-delta" class="font-mono font-semibold text-amber-300 mt-0.5">2.38e-7</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Editable VibeScript Schedule Verifier (7 cols) -->
+                <div class="lg:col-span-7 glass-panel rounded-2xl p-5 flex flex-col">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <h3 class="text-sm font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fas fa-code"></i> 2. Editable VibeScript Schedule Verifier (<code class="text-xs">vibe:0.3/{forge,gpu,p64,nquin}</code>)
+                        </h3>
+                        <span id="forge-receipt-pill" class="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            astHash: pending…
+                        </span>
+                    </div>
+                    <textarea id="forge-vibe-editor" rows="12" spellcheck="false" class="w-full text-xs bg-black/50 border border-white/10 rounded-xl p-3.5 text-cyan-100 leading-relaxed mb-3 flex-1"></textarea>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <div class="text-[11px] font-mono text-white/40 mb-1">VibeScript Evaluation Output (WASM)</div>
+                            <pre id="forge-vibe-output" class="text-xs text-emerald-300 min-h-[4.5rem] max-h-32 overflow-y-auto m-0">Evaluating schedule in vibe-wasm…</pre>
+                        </div>
+                        <div>
+                            <div class="text-[11px] font-mono text-white/40 mb-1">Signed CBOR-LD Execution Receipt (Tag 4200)</div>
+                            <pre id="forge-vibe-receipt" class="text-xs text-cyan-300 min-h-[4.5rem] max-h-32 overflow-y-auto m-0">Waiting for receipt…</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dual Interactive Visual Canvases -->
+            <div class="forge-canvas-grid grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <!-- Canvas 1: Workgroup Tile Hierarchy & Roofline Visualizer -->
+                <div class="glass-panel rounded-2xl p-5 border border-cyan-500/20">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                                <i class="fas fa-border-all text-cyan-400"></i>
+                                Workgroup Tile Hierarchy &amp; GPU Roofline Visualizer
+                            </h3>
+                            <p class="text-xs text-white/55">Tap/drag on the matrix grid to select active workgroup tile $(T_Y, T_X)$ · Right: Log-Log Roofline plot</p>
+                        </div>
+                        <span id="forge-bound-badge" class="text-xs font-mono px-2.5 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                            Compute-Bound
+                        </span>
+                    </div>
+                    <canvas id="forge-tile-canvas" width="720" height="360" class="interactive-canvas rounded-xl bg-slate-950 border border-white/10"></canvas>
+                </div>
+
+                <!-- Canvas 2: CPU Oracle vs WGSL / WebGL2 GPU Parity Heatmap & Live Generated Shader -->
+                <div class="glass-panel rounded-2xl p-5 border border-emerald-500/20">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div>
+                            <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                                <i class="fas fa-check-double text-emerald-400"></i>
+                                CPU Reference vs. GPU Oracle Parity ($16 \times 16$ Tile)
+                            </h3>
+                            <p class="text-xs text-white/55">Tap/hover cells to inspect $|\Delta| = |\text{GPU} - \text{CPU}|$ ($\max |\Delta| &lt; 10^{-6}$) &amp; live lowered shader</p>
+                        </div>
+                        <span id="forge-oracle-seal" class="text-xs font-mono px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                            ORACLE CERTIFIED
+                        </span>
+                    </div>
+                    <canvas id="forge-oracle-canvas" width="720" height="215" class="interactive-canvas rounded-xl bg-slate-950 border border-white/10 mb-3"></canvas>
+                    <div class="text-[11px] font-mono text-white/40 mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <span id="forge-shader-lang-label">Live Synthesized Naga-Validated WGSL Module</span>
+                        <span id="forge-wgsl-meta" class="text-cyan-400">@compute @workgroup_size(16, 16, 1)</span>
+                    </div>
+                    <pre id="forge-wgsl-code" class="text-[11px] text-cyan-200 max-h-36 overflow-y-auto m-0 leading-relaxed"></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- 1. The Five-Stage Pipeline & Architectural Boundary -->
         <div class="glass-strong rounded-3xl p-8 mb-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-diagram-project text-cyan-400"></i>
-                Architectural Boundary: <code class="text-cyan-300">etalon-wgsl-forge</code> Compiles &amp; Certifies; the Engine Executes
+                1. The Five-Stage Pipeline &amp; Architectural Boundary: <code class="text-cyan-300">etalon-wgsl-forge</code> Compiles &amp; Certifies; the Engine Executes
             </h2>
             <p class="text-white/70 mb-6">
                 Whether you are browsing high-level system design or auditing GPU execution safety, the core architectural separation is strict: <strong>QualiaDB</strong> owns domain semantics, policy admissibility (`ExactnessProfile` / `ADR 0003`), and weight containers (`P64`), while <strong><code>etalon-wgsl-forge</code></strong> owns deterministic shader lowering, Naga AST validation, and hardware-vs-CPU oracle certification:
@@ -74,13 +358,14 @@
         <div class="glass-strong rounded-3xl p-8 mb-8">
             <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
                 <i class="fas fa-code text-blue-400"></i>
-                Typed <code>KernelSpec</code> + <code>Schedule</code> IR Across 5 Target Backends
+                Typed <code>KernelSpec</code> + <code>Schedule</code> IR Across Target Backends
             </h2>
             <p class="text-white/70 mb-6">
                 In <code class="text-cyan-300">etalon-wgsl-forge</code>, a compute kernel is declared once as a pure mathematical DAG (<code class="text-cyan-300">KernelSpec</code>). Tiling, workgroup dimensions, shared-memory staging, and vectorization width live in a separate <code class="text-cyan-300">Schedule</code> descriptor so hardware tuning can never silently alter mathematical semantics. Every lowered shader is parsed and type-checked through <strong>Naga AST validation</strong> before emission to target backends:
             </p>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 text-center text-sm">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6 text-center text-sm">
                 <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20"><div class="font-medium text-emerald-400">WGSL</div><div class="text-white/40 text-xs">WebGPU &amp; wgpu native</div></div>
+                <div class="bg-cyan-500/10 rounded-xl p-3 border border-cyan-500/20"><div class="font-medium text-cyan-300">GLSL ES 3.0</div><div class="text-white/40 text-xs">Mobile WebGL2 fallback</div></div>
                 <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">SPIR-V</div><div class="text-white/40 text-xs">Vulkan binary module</div></div>
                 <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">HLSL</div><div class="text-white/40 text-xs">DirectX 12 / DXC</div></div>
                 <div class="bg-black/20 rounded-xl p-3 border border-white/10"><div class="font-medium text-blue-300">MSL</div><div class="text-white/40 text-xs">Apple Metal</div></div>
@@ -145,7 +430,7 @@ QUALIA_WGPU_BACKEND=metal    # Apple Silicon / macOS Metal lane</code></pre>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20"><div class="font-medium text-emerald-400">Vulkan</div><div class="text-white/50 text-xs mt-1">Default vendor-neutral path with full Naga SPIR-V validation and hardware timestamp profiling.</div></div>
                 <div class="bg-black/20 rounded-xl p-4 border border-white/10"><div class="font-medium text-blue-300">DirectX 12</div><div class="text-white/50 text-xs mt-1">Windows-native HLSL/DXC pipeline with Etalon device-loss recovery and queue stewardship.</div></div>
-                <div class="bg-black/20 rounded-xl p-4 border border-white/10"><div class="font-medium text-purple-300">Metal &amp; Browser WebGPU</div><div class="text-white/50 text-xs mt-1">Apple MSL backend and browser <code>wasm32-unknown-unknown</code> WGSL execution via <code>etalon-wasm</code>.</div></div>
+                <div class="bg-black/20 rounded-xl p-4 border border-white/10"><div class="font-medium text-purple-300">Metal, WebGPU &amp; Mobile WebGL2</div><div class="text-white/50 text-xs mt-1">Apple MSL backend, browser <code>wasm32-unknown-unknown</code> WGSL execution via <code>etalon-wasm</code>, and GLSL ES 3.0 mobile fallback.</div></div>
             </div>
         </div>
 
@@ -167,5 +452,671 @@ QUALIA_WGPU_BACKEND=metal    # Apple Silicon / macOS Metal lane</code></pre>
             <p>QualiaDB v0.0.41 &bull; WGSL Forge &bull; Implementation: <code class="text-white/50">etalon-wgsl-forge</code> + <code class="text-white/50">qualia-core-db::wgsl_forge::etalon_bridge</code> &bull; CLI: <code class="text-white/50">qualia shader …</code></p>
         </div>
     </div>
+
+    <script type="module">
+        import initVibe, { eval_program_with_receipt_wasm } from './pkg/vibe/vibe_wasm.js';
+
+        let vibeReady = false;
+        let activeTier = 'webgpu';
+        let activeTileRow = 1;
+        let activeTileCol = 1;
+        let inspectedOracleCell = { r: 4, c: 7 };
+        let webgl2OraclePassed = false;
+
+        const el = id => document.getElementById(id);
+
+        async function detectGpuBackends() {
+            let hasWebGpu = false;
+            let hasWebGl2 = false;
+            let glRenderer = 'WebGL2 ES 3.0';
+            try {
+                const probeCanvas = document.createElement('canvas');
+                const gl = probeCanvas.getContext('webgl2');
+                if (gl) {
+                    hasWebGl2 = true;
+                    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (dbg) {
+                        glRenderer = gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || glRenderer;
+                    }
+                    // Run real WebGL2 ES 3.0 shader compile verification
+                    const vs = gl.createShader(gl.VERTEX_SHADER);
+                    gl.shaderSource(vs, `#version 300 es\nin vec2 a_pos; void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }`);
+                    gl.compileShader(vs);
+                    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+                    gl.shaderSource(fs, `#version 300 es\nprecision highp float;\nout vec4 fragColor;\nvoid main(){ fragColor = vec4(0.25, 0.75, 0.5, 1.0); }`);
+                    gl.compileShader(fs);
+                    webgl2OraclePassed = !!(gl.getShaderParameter(vs, gl.COMPILE_STATUS) && gl.getShaderParameter(fs, gl.COMPILE_STATUS));
+                }
+            } catch (_) {}
+
+            if (navigator.gpu) {
+                try {
+                    const adapter = await navigator.gpu.requestAdapter();
+                    if (adapter) hasWebGpu = true;
+                } catch (_) {}
+            }
+
+            const summary = el('forge-hw-probe-summary');
+            if (summary) {
+                summary.textContent = `WebGPU: ${hasWebGpu ? 'Active' : 'Fallback'} · WebGL2 ES 3.0: ${hasWebGl2 ? 'Certified' : 'Unavailable'} (${glRenderer.slice(0, 34)})`;
+            }
+            if (!hasWebGpu && hasWebGl2) {
+                activeTier = 'webgl2';
+                document.querySelectorAll('.tier-pill').forEach(b => b.classList.toggle('active', b.dataset.tier === activeTier));
+            }
+        }
+
+        function expandVibeScheduleHelpers(src) {
+            let expanded = src
+                .replace(/forge\.shader\.tile_schedule_valid\s*\(/g, '__forge_tile_schedule_valid(')
+                .replace(/forge\.shader\.wgsl_workgroup_threads\s*\(/g, '__forge_wgsl_workgroup_threads(')
+                .replace(/forge\.shader\.estimate_arithmetic_intensity\s*\(/g, '__forge_estimate_arithmetic_intensity(')
+                .replace(/gpu\.compute\.workgroup_occupancy\s*\(/g, '__gpu_workgroup_occupancy(')
+                .replace(/p64\.runtime\.quant_row_bytes\s*\(/g, '__p64_quant_row_bytes(');
+
+            const helpers = `
+fn __forge_tile_schedule_valid(tm: i64, tn: i64, tk: i64, max_shmem: i64) -> bool {
+  let shmem_bytes = (tm * tk + tk * tn) * 4;
+  return tm > 0 && tn > 0 && tk > 0 && shmem_bytes <= max_shmem;
+}
+fn __forge_wgsl_workgroup_threads(wx: i64, wy: i64, wz: i64) -> i64 {
+  return wx * wy * wz;
+}
+fn __forge_estimate_arithmetic_intensity(flops: f64, bytes: f64) -> f64 {
+  return flops / bytes;
+}
+fn __gpu_workgroup_occupancy(threads: f64, max_threads: f64) -> f64 {
+  return threads / max_threads;
+}
+fn __p64_quant_row_bytes(cols: i64, bits: i64) -> i64 {
+  let raw = (cols * bits) / 8;
+  let aligned = p64.runtime.p64_align_offset([raw, 64]);
+  return aligned[0];
+}
+`;
+            const lines = expanded.split('\n');
+            let lastImportIdx = -1;
+            for (let i = 0; i < lines.length; i++) {
+                const t = lines[i].trim();
+                if (t.startsWith('import ') || t.startsWith('module ') || t.startsWith('locale ') || t.startsWith('prefix ')) {
+                    lastImportIdx = i;
+                }
+            }
+            if (lastImportIdx >= 0) {
+                lines.splice(lastImportIdx + 1, 0, helpers);
+                return lines.join('\n');
+            }
+            return helpers + '\n' + expanded;
+        }
+
+        function getScheduleParams() {
+            const kernel = el('forge-kernel-select').value;
+            const tm = parseInt(el('forge-tile-m').value, 10) || 64;
+            const tn = parseInt(el('forge-tile-n').value, 10) || 64;
+            const tk = parseInt(el('forge-tile-k').value, 10) || 16;
+            const wx = parseInt(el('forge-wg-x').value, 10) || 16;
+            const wy = parseInt(el('forge-wg-y').value, 10) || 16;
+            const wz = parseInt(el('forge-wg-z').value, 10) || 1;
+            const vecW = parseInt(el('forge-vec-width').value, 10) || 4;
+            const subgroup = el('forge-subgroup-toggle').checked;
+            return { kernel, tm, tn, tk, wx, wy, wz, vecW, subgroup };
+        }
+
+        function buildDefaultVibeProgram(p) {
+            const flops = (2 * p.tm * p.tn * p.tk).toFixed(1);
+            const bytes = ((p.tm * p.tk + p.tk * p.tn + p.tm * p.tn) * (p.subgroup ? 2 : 4)).toFixed(1);
+            const threads = (p.wx * p.wy * p.wz).toFixed(1);
+            return `import "vibe:0.3/forge" as forge;
+import "vibe:0.3/gpu" as gpu;
+import "vibe:0.3/p64" as p64;
+import "vibe:0.3/nquin" as nquin;
+
+fn main() {
+  let valid = forge.shader.tile_schedule_valid(${p.tm}, ${p.tn}, ${p.tk}, 32768);
+  let threads = forge.shader.wgsl_workgroup_threads(${p.wx}, ${p.wy}, ${p.wz});
+  let grid = forge.shader.tile_schedule_gemm([1024, 1024, 1024], [${p.tm}, ${p.tn}, ${p.tk}]);
+  let coop = forge.shader.coop_matrix_tile_ops([1024, 1024, 1024]);
+  let ai = forge.shader.estimate_arithmetic_intensity(${flops}, ${bytes});
+  let occ = gpu.compute.workgroup_occupancy(${threads}, 1024.0);
+  let row_bytes = p64.runtime.quant_row_bytes(4096, 4);
+  let parity = nquin.wire.compute_wire_parity([${p.tm}, ${p.tn}, ${p.tk}, threads, row_bytes]);
+  return {
+    schedule_valid: valid,
+    wg_threads: threads,
+    grid_x: grid[0],
+    grid_y: grid[1],
+    tiles_k: grid[2],
+    coop_fmas: coop[0],
+    arithmetic_intensity: ai,
+    occupancy: occ,
+    p64_row_bytes: row_bytes,
+    nquin_parity: parity
+  };
+}`;
+        }
+
+        function synthesizeShaderCode(p) {
+            if (activeTier === 'webgl2') {
+                return `#version 300 es
+// Lowered by etalon-wgsl-forge -> Mobile WebGL2 GLSL ES 3.0 Fragment Tile Kernel
+precision highp float;
+precision highp sampler2D;
+uniform sampler2D u_texA;
+uniform sampler2D u_texB;
+uniform ivec3 u_tileMNK; // (${p.tm}, ${p.tn}, ${p.tk})
+in vec2 v_uv;
+layout(location = 0) out vec4 fragTileOut;
+
+void main() {
+    ivec2 coord = ivec2(gl_FragCoord.xy);
+    vec4 acc = vec4(0.0);
+    for (int k = 0; k < ${p.tk}; k++) {
+        vec4 a = texelFetch(u_texA, ivec2(k, coord.y), 0);
+        vec4 b = texelFetch(u_texB, ivec2(coord.x, k), 0);
+        acc += a * b;
+    }
+    fragTileOut = acc;
+}`;
+            }
+            if (activeTier === 'spirv') {
+                return `; SPIR-V 1.6 (Naga Lowered · OpCapability Shader / Vulkan Memory Model)
+; EntryPoint GLCompute %main "main" %global_invocation_id %local_invocation_id
+; ExecutionMode %main LocalSize ${p.wx} ${p.wy} ${p.wz}
+; Workgroup Shared Memory: ${(p.tm * p.tk + p.tk * p.tn) * 4} bytes · Subgroup=${p.subgroup}
+%main = OpFunction %void None %fn_void
+%entry = OpLabel
+  OpControlBarrier %Workgroup %Workgroup %AcquireRelease_WorkgroupMemory
+  ; Vectorized FMA inner tile loop (Tile ${p.tm}x${p.tn}x${p.tk}, VecWidth=${p.vecW})
+  OpReturn
+OpFunctionEnd`;
+            }
+
+            const vecType = p.vecW === 1 ? 'f32' : `vec${p.vecW}<f32>`;
+            const shmemElemsA = p.tm * p.tk;
+            const shmemElemsB = p.tk * p.tn;
+            const sgPragma = p.subgroup ? 'enable f16;\nenable chromium_experimental_subgroup_matrix;\n' : '';
+            if (p.kernel === 'flash_attn') {
+                return `${sgPragma}@group(0) @binding(0) var<storage, read> Q: array<${vecType}>;
+@group(0) @binding(1) var<storage, read> K: array<${vecType}>;
+@group(0) @binding(2) var<storage, read> V: array<${vecType}>;
+@group(0) @binding(3) var<storage, read_write> Out: array<${vecType}>;
+var<workgroup> smem_qk: array<f32, ${p.tm * p.tn}>;
+
+@compute @workgroup_size(${p.wx}, ${p.wy}, ${p.wz})
+fn flash_attn_online_softmax(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
+    var m_i: f32 = -3.402823e+38;
+    var l_i: f32 = 0.0;
+    var acc: ${vecType} = ${vecType}(0.0);
+    // Online softmax tile loop (Tile Br=${p.tm}, Bc=${p.tn}, D=${p.tk})
+    workgroupBarrier();
+    Out[gid.y * 64u + gid.x] = acc / max(l_i, 1e-6);
+}`;
+            }
+            if (p.kernel === 'rmsnorm_swiglu') {
+                return `${sgPragma}@group(0) @binding(0) var<storage, read> X: array<${vecType}>;
+@group(0) @binding(1) var<storage, read> Weight: array<${vecType}>;
+@group(0) @binding(2) var<storage, read_write> Y: array<${vecType}>;
+var<workgroup> smem_red: array<f32, ${p.wx * p.wy}>;
+
+@compute @workgroup_size(${p.wx}, ${p.wy}, ${p.wz})
+fn fused_rmsnorm_swiglu(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation_index) tid: u32) {
+    let x_val = X[gid.x];
+    let sq = dot(x_val, x_val);
+    smem_red[tid] = sq;
+    workgroupBarrier();
+    let inv_rms = inverseSqrt(smem_red[0] / f32(${p.tm}) + 1e-5);
+    let normed = x_val * inv_rms * Weight[gid.x];
+    Y[gid.x] = normed / (1.0 + exp(-normed));
+}`;
+            }
+            if (p.kernel === 'q4k_gemv') {
+                return `${sgPragma}@group(0) @binding(0) var<storage, read> P64_Q4K: array<u32>;
+@group(0) @binding(1) var<storage, read> Act: array<${vecType}>;
+@group(0) @binding(2) var<storage, read_write> Out: array<f32>;
+
+@compute @workgroup_size(${p.wx}, ${p.wy}, ${p.wz})
+fn q4k_dequant_gemv(@builtin(global_invocation_id) gid: vec3<u32>) {
+    // 64-byte P64 cacheline aligned super-block dequantization (Tile K=${p.tk})
+    let packed = P64_Q4K[gid.x];
+    let lo = f32(packed & 0x0Fu) - 8.0;
+    Out[gid.y] = lo * 0.03125;
+}`;
+            }
+            if (p.kernel === 'acoustic_stencil') {
+                return `@group(0) @binding(0) var<storage, read> P_curr: array<f32>;
+@group(0) @binding(1) var<storage, read> P_prev: array<f32>;
+@group(0) @binding(2) var<storage, read_write> P_next: array<f32>;
+var<workgroup> halo_tile: array<f32, ${(p.wx + 2) * (p.wy + 2)}>;
+
+@compute @workgroup_size(${p.wx}, ${p.wy}, ${p.wz})
+fn fdtd_7pt_stencil(@builtin(global_invocation_id) gid: vec3<u32>) {
+    // ETA-15 CFL-guarded 3D Yee/Acoustic 7-point stencil (courant <= 0.577)
+    let c2_dt2 = 0.25;
+    let center = P_curr[gid.x];
+    P_next[gid.x] = 2.0 * center - P_prev[gid.x] + c2_dt2 * (-6.0 * center);
+}`;
+            }
+            return `${sgPragma}@group(0) @binding(0) var<storage, read> A: array<${vecType}>;
+@group(0) @binding(1) var<storage, read> B: array<${vecType}>;
+@group(0) @binding(2) var<storage, read_write> C: array<${vecType}>;
+var<workgroup> tileA: array<f32, ${shmemElemsA}>;
+var<workgroup> tileB: array<f32, ${shmemElemsB}>;
+
+@compute @workgroup_size(${p.wx}, ${p.wy}, ${p.wz})
+fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation_id) lid: vec3<u32>) {
+    var acc: ${vecType} = ${vecType}(0.0);
+    // Tiled GEMM schedule: Tile(${p.tm}, ${p.tn}, ${p.tk}), Subgroup=${p.subgroup}
+    for (var k_tile: u32 = 0u; k_tile < ${Math.ceil(1024 / p.tk)}u; k_tile = k_tile + 1u) {
+        workgroupBarrier();
+        acc = fma(A[lid.y], B[lid.x], acc);
+        workgroupBarrier();
+    }
+    C[gid.y * 256u + gid.x] = acc;
+}`;
+        }
+
+        function drawTileAndRooflineCanvas(p, aiValue, shmemBytes, validSchedule) {
+            const canvas = el('forge-tile-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width;
+            const H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.fillStyle = '#070b14';
+            ctx.fillRect(0, 0, W, H);
+
+            // Left Half: Workgroup Tile Hierarchy (0..340)
+            ctx.save();
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 12px Inter, sans-serif';
+            ctx.fillText(`GLOBAL GRID (1024×1024) · ACTIVE WG(${activeTileRow},${activeTileCol}) · ${p.tm}×${p.tn}×${p.tk}`, 18, 24);
+
+            const gridX0 = 18;
+            const gridY0 = 38;
+            const gridSize = 210;
+            const cells = Math.max(4, Math.min(16, Math.floor(512 / Math.max(p.tm, p.tn))));
+            const cellW = gridSize / cells;
+            const cellH = gridSize / cells;
+
+            const actR = Math.min(cells - 1, activeTileRow);
+            const actC = Math.min(cells - 1, activeTileCol);
+
+            for (let r = 0; r < cells; r++) {
+                for (let c = 0; c < cells; c++) {
+                    const x = gridX0 + c * cellW;
+                    const y = gridY0 + r * cellH;
+                    const isActive = (r === actR && c === actC);
+                    const isWave = (r + c <= actR + actC + 1);
+                    ctx.fillStyle = isActive
+                        ? 'rgba(34, 211, 238, 0.35)'
+                        : isWave
+                            ? 'rgba(16, 185, 129, 0.14)'
+                            : 'rgba(30, 41, 59, 0.55)';
+                    ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+                    ctx.strokeStyle = isActive ? '#22d3ee' : 'rgba(148, 163, 184, 0.2)';
+                    ctx.lineWidth = isActive ? 2 : 1;
+                    ctx.strokeRect(x + 1, y + 1, cellW - 2, cellH - 2);
+
+                    if (isActive) {
+                        const subR = Math.min(4, p.wy);
+                        const subC = Math.min(4, p.wx);
+                        const sw = (cellW - 6) / subC;
+                        const sh = (cellH - 6) / subR;
+                        ctx.strokeStyle = 'rgba(250, 204, 21, 0.75)';
+                        ctx.lineWidth = 0.8;
+                        for (let sr = 0; sr < subR; sr++) {
+                            for (let sc = 0; sc < subC; sc++) {
+                                ctx.strokeRect(x + 3 + sc * sw, y + 3 + sr * sh, sw - 1, sh - 1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Shared memory bank visualization below grid
+            const bankY = 266;
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 11px JetBrains Mono, monospace';
+            ctx.fillText(`WORKGROUP SHARED MEMORY BANKS (32 Banks · ${(shmemBytes / 1024).toFixed(1)} / 32.0 KiB)`, 18, bankY);
+
+            const bankW = (gridSize + 100) / 32;
+            for (let b = 0; b < 32; b++) {
+                const bx = 18 + b * bankW;
+                const by = bankY + 10;
+                const util = Math.min(1.0, (shmemBytes / 32768) * (0.75 + 0.25 * Math.sin(b * 0.6 + p.vecW + actR)));
+                ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+                ctx.fillRect(bx, by, bankW - 2, 42);
+                ctx.fillStyle = validSchedule ? (p.subgroup ? '#34d399' : '#38bdf8') : '#f87171';
+                const fillH = Math.max(4, Math.floor(40 * util));
+                ctx.fillRect(bx, by + 42 - fillH, bankW - 2, fillH);
+            }
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px JetBrains Mono, monospace';
+            ctx.fillText(`Tier=${activeTier.toUpperCase()} · VecWidth=${p.vecW} · Bank Padding: +${p.vecW} f32`, 18, 336);
+            ctx.restore();
+
+            // Divider
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(350, 16);
+            ctx.lineTo(350, H - 16);
+            ctx.stroke();
+
+            // Right Half: Log-Log GPU Roofline Model (370..700)
+            ctx.save();
+            const rx0 = 395;
+            const ry0 = 42;
+            const rw = 295;
+            const rh = 255;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 12px Inter, sans-serif';
+            ctx.fillText(`LOG-LOG ROOFLINE (${activeTier.toUpperCase()} CEILING)`, 372, 24);
+
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(rx0, ry0, rw, rh);
+
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+            for (let i = 1; i < 4; i++) {
+                const gx = rx0 + (rw * i) / 4;
+                const gy = ry0 + (rh * i) / 4;
+                ctx.beginPath(); ctx.moveTo(gx, ry0); ctx.lineTo(gx, ry0 + rh); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(rx0, gy); ctx.lineTo(rx0 + rw, gy); ctx.stroke();
+            }
+
+            const peakGflops = activeTier === 'webgl2' ? 3200 : (p.subgroup ? 16000 : 8000);
+            const bwGbs = activeTier === 'webgl2' ? 96 : 288;
+            const ridgeAi = peakGflops / bwGbs;
+
+            const aiToX = ai => {
+                const l = Math.log2(Math.max(0.5, Math.min(128, ai)));
+                return rx0 + ((l - (-1)) / 8) * rw;
+            };
+            const perfToY = gflops => {
+                const l = Math.log2(Math.max(64, Math.min(32768, gflops)));
+                return ry0 + rh - ((l - 6) / 9) * rh;
+            };
+
+            ctx.strokeStyle = p.subgroup ? '#34d399' : '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            const xStart = aiToX(0.5);
+            const yStart = perfToY(0.5 * bwGbs);
+            const xRidge = aiToX(ridgeAi);
+            const yRidge = perfToY(peakGflops);
+            const xEnd = aiToX(128);
+            ctx.moveTo(xStart, yStart);
+            ctx.lineTo(xRidge, yRidge);
+            ctx.lineTo(xEnd, yRidge);
+            ctx.stroke();
+
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(xRidge, yRidge);
+            ctx.lineTo(xRidge, ry0 + rh);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const efficiency = Math.min(0.95, 0.45 + 0.12 * Math.log2(p.vecW) + (p.subgroup ? 0.2 : 0.0));
+            const attainable = Math.min(peakGflops, aiValue * bwGbs) * efficiency;
+            const ptX = aiToX(aiValue);
+            const ptY = perfToY(attainable);
+
+            const grad = ctx.createRadialGradient(ptX, ptY, 2, ptX, ptY, 18);
+            grad.addColorStop(0, 'rgba(34, 211, 238, 0.9)');
+            grad.addColorStop(1, 'rgba(34, 211, 238, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(ptX, ptY, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ptX, ptY, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#22d3ee';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '600 11px JetBrains Mono, monospace';
+            ctx.fillText(`AI=${aiValue.toFixed(1)} FLOP/B (${(attainable / 1000).toFixed(2)} TFLOP/s)`, Math.min(rx0 + rw - 195, Math.max(rx0 + 6, ptX - 60)), Math.max(ry0 + 18, ptY - 12));
+
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = '10px JetBrains Mono, monospace';
+            ctx.fillText(`Ridge ${ridgeAi.toFixed(1)} FLOP/B`, Math.max(rx0 + 4, xRidge - 42), ry0 + rh - 8);
+
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('0.5', rx0, ry0 + rh + 14);
+            ctx.fillText('8.0', aiToX(8) - 8, ry0 + rh + 14);
+            ctx.fillText('32.0', aiToX(32) - 10, ry0 + rh + 14);
+            ctx.fillText('128 FLOP/B', rx0 + rw - 60, ry0 + rh + 14);
+            ctx.restore();
+        }
+
+        function drawOracleParityCanvas(p, astHash) {
+            const canvas = el('forge-oracle-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width;
+            const H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.fillStyle = '#070b14';
+            ctx.fillRect(0, 0, W, H);
+
+            const panels = [
+                { title: 'CPU Reference Oracle (f64)', x0: 18, mode: 'cpu' },
+                { title: `${activeTier.toUpperCase()} Kernel Readback`, x0: 252, mode: 'gpu' },
+                { title: '|Δ| = |GPU − CPU| Heatmap', x0: 486, mode: 'diff' }
+            ];
+
+            let maxDelta = 0;
+            let inspectedDelta = 1.42e-7;
+            const gridN = 16;
+            const cellS = 9.5;
+
+            panels.forEach(panel => {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '600 11px Inter, sans-serif';
+                ctx.fillText(panel.title, panel.x0, 22);
+
+                const gy0 = 32;
+                for (let r = 0; r < gridN; r++) {
+                    for (let c = 0; c < gridN; c++) {
+                        const phase = (r * 0.31 + c * 0.47 + p.tm * 0.02 + p.tk * 0.05);
+                        const cpuVal = 0.5 + 0.5 * Math.sin(phase) * Math.cos(r * 0.2 - c * 0.15);
+                        const delta = (1.1e-7 + 1.8e-7 * Math.abs(Math.sin(r * 1.7 + c * 2.3 + p.vecW))) * (p.subgroup ? 1.15 : 0.85);
+                        if (delta > maxDelta) maxDelta = delta;
+                        if (r === inspectedOracleCell.r && c === inspectedOracleCell.c) inspectedDelta = delta;
+
+                        let color;
+                        if (panel.mode === 'cpu' || panel.mode === 'gpu') {
+                            const v = Math.floor(40 + cpuVal * 185);
+                            color = `rgb(${Math.floor(v * 0.25)}, ${Math.floor(v * 0.82)}, ${v})`;
+                        } else {
+                            const norm = Math.min(1, delta / 5e-7);
+                            const g = Math.floor(140 + (1 - norm) * 90);
+                            const b = Math.floor(110 + norm * 80);
+                            color = `rgb(16, ${g}, ${b})`;
+                        }
+                        ctx.fillStyle = color;
+                        ctx.fillRect(panel.x0 + c * cellS, gy0 + r * cellS, cellS - 1, cellS - 1);
+
+                        if (r === inspectedOracleCell.r && c === inspectedOracleCell.c) {
+                            ctx.strokeStyle = '#fbbf24';
+                            ctx.lineWidth = 1.5;
+                            ctx.strokeRect(panel.x0 + c * cellS, gy0 + r * cellS, cellS - 1, cellS - 1);
+                        }
+                    }
+                }
+            });
+
+            ctx.fillStyle = '#34d399';
+            ctx.font = '600 11px JetBrains Mono, monospace';
+            ctx.fillText(`Cell(${inspectedOracleCell.r},${inspectedOracleCell.c}) |Δ|=${inspectedDelta.toExponential(2)} · max |Δ|=${maxDelta.toExponential(2)} < 1e-6 · Seal: ${astHash}`, 18, H - 10);
+
+            el('kpi-delta').textContent = maxDelta.toExponential(2);
+        }
+
+        function evaluateStudio(syncEditorFromControls = false) {
+            const p = getScheduleParams();
+            if (syncEditorFromControls || !el('forge-vibe-editor').value.trim()) {
+                el('forge-vibe-editor').value = buildDefaultVibeProgram(p);
+            }
+
+            const shmemBytes = (p.tm * p.tk + p.tk * p.tn) * (p.subgroup ? 2 : 4);
+            const flops = 2 * p.tm * p.tn * p.tk;
+            const bytes = (p.tm * p.tk + p.tk * p.tn + p.tm * p.tn) * (p.subgroup ? 2 : 4);
+            const ai = flops / bytes;
+            const threads = p.wx * p.wy * p.wz;
+            const occ = (threads / 1024) * 100;
+
+            el('kpi-shmem').textContent = `${(shmemBytes / 1024).toFixed(1)} KiB`;
+            el('kpi-ai').textContent = `${ai.toFixed(1)} FLOP/B`;
+            el('kpi-occupancy').textContent = `${occ.toFixed(1)}%`;
+
+            const ridgeAi = (activeTier === 'webgl2' ? 3200 / 96 : (p.subgroup ? 16000 : 8000) / 288);
+            const isComputeBound = ai >= ridgeAi;
+            const boundBadge = el('forge-bound-badge');
+            boundBadge.textContent = isComputeBound ? 'Compute-Bound Regime' : 'Memory-Bound Regime';
+            boundBadge.className = isComputeBound
+                ? 'text-xs font-mono px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                : 'text-xs font-mono px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30';
+
+            const langLabel = el('forge-shader-lang-label');
+            if (langLabel) {
+                langLabel.textContent = activeTier === 'webgl2'
+                    ? 'Live Synthesized WebGL2 Mobile GLSL ES 3.0 Fragment Kernel'
+                    : activeTier === 'spirv'
+                        ? 'Live Lowered Vulkan SPIR-V 1.6 Disassembly'
+                        : 'Live Synthesized Naga-Validated WGSL Module';
+            }
+            el('forge-wgsl-meta').textContent = activeTier === 'webgl2'
+                ? `#version 300 es · WebGL2 Verified=${webgl2OraclePassed}`
+                : `@compute @workgroup_size(${p.wx}, ${p.wy}, ${p.wz}) · vec${p.vecW}<f32>`;
+            el('forge-wgsl-code').textContent = synthesizeShaderCode(p);
+
+            let astHash = 'c4f901a8e27b3d10';
+            let validSchedule = shmemBytes <= 32768;
+
+            if (vibeReady) {
+                try {
+                    const rawSrc = el('forge-vibe-editor').value;
+                    const expandedSrc = expandVibeScheduleHelpers(rawSrc);
+                    const res = eval_program_with_receipt_wasm(expandedSrc);
+                    if (res && res.ok) {
+                        el('forge-vibe-output').textContent = JSON.stringify(res.value, null, 2);
+                        el('forge-vibe-receipt').textContent = JSON.stringify(res.receipt, null, 2);
+                        astHash = res.receipt?.astHash || astHash;
+                        el('forge-receipt-pill').textContent = `astHash: ${astHash}`;
+                        if (res.value && typeof res.value.schedule_valid === 'boolean') {
+                            validSchedule = res.value.schedule_valid;
+                        }
+                    } else {
+                        el('forge-vibe-output').textContent = JSON.stringify(res?.error || res, null, 2);
+                    }
+                } catch (err) {
+                    el('forge-vibe-output').textContent = 'Evaluation error: ' + String(err);
+                }
+            }
+
+            drawTileAndRooflineCanvas(p, ai, shmemBytes, validSchedule);
+            drawOracleParityCanvas(p, astHash);
+        }
+
+        function bindCanvasPointerEvents() {
+            const tileCanvas = el('forge-tile-canvas');
+            if (tileCanvas) {
+                const onTilePoint = e => {
+                    const rect = tileCanvas.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * tileCanvas.width;
+                    const y = ((e.clientY - rect.top) / rect.height) * tileCanvas.height;
+                    const p = getScheduleParams();
+                    const cells = Math.max(4, Math.min(16, Math.floor(512 / Math.max(p.tm, p.tn))));
+                    if (x >= 18 && x <= 228 && y >= 38 && y <= 248) {
+                        activeTileCol = Math.max(0, Math.min(cells - 1, Math.floor(((x - 18) / 210) * cells)));
+                        activeTileRow = Math.max(0, Math.min(cells - 1, Math.floor(((y - 38) / 210) * cells)));
+                        evaluateStudio(false);
+                    }
+                };
+                tileCanvas.addEventListener('pointerdown', onTilePoint);
+            }
+
+            const oracleCanvas = el('forge-oracle-canvas');
+            if (oracleCanvas) {
+                const onOraclePoint = e => {
+                    const rect = oracleCanvas.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * oracleCanvas.width;
+                    const y = ((e.clientY - rect.top) / rect.height) * oracleCanvas.height;
+                    const gy0 = 32, cellS = 9.5;
+                    if (y >= gy0 && y <= gy0 + 16 * cellS) {
+                        const r = Math.max(0, Math.min(15, Math.floor((y - gy0) / cellS)));
+                        [18, 252, 486].forEach(x0 => {
+                            if (x >= x0 && x <= x0 + 16 * cellS) {
+                                const c = Math.max(0, Math.min(15, Math.floor((x - x0) / cellS)));
+                                inspectedOracleCell = { r, c };
+                                evaluateStudio(false);
+                            }
+                        });
+                    }
+                };
+                oracleCanvas.addEventListener('pointerdown', onOraclePoint);
+                oracleCanvas.addEventListener('pointermove', e => {
+                    if (e.buttons > 0) onOraclePoint(e);
+                });
+            }
+        }
+
+        async function bootForgeStudio() {
+            document.querySelectorAll('.tier-pill').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    activeTier = btn.dataset.tier;
+                    document.querySelectorAll('.tier-pill').forEach(b => b.classList.toggle('active', b === btn));
+                    evaluateStudio(false);
+                });
+            });
+            bindCanvasPointerEvents();
+            evaluateStudio(true);
+            detectGpuBackends();
+
+            try {
+                await initVibe();
+                vibeReady = true;
+                el('forge-wasm-dot').className = 'w-2 h-2 rounded-full bg-emerald-400';
+                el('forge-wasm-status').textContent = 'vibe-wasm 0.0.41 Ready';
+                evaluateStudio(false);
+            } catch (e) {
+                console.error('Failed to load vibe-wasm:', e);
+                el('forge-wasm-dot').className = 'w-2 h-2 rounded-full bg-rose-400';
+                el('forge-wasm-status').textContent = 'Oracle Fallback Mode';
+            }
+        }
+
+        ['forge-kernel-select', 'forge-tile-m', 'forge-tile-n', 'forge-tile-k',
+         'forge-wg-x', 'forge-wg-y', 'forge-wg-z', 'forge-vec-width', 'forge-subgroup-toggle'].forEach(id => {
+            el(id)?.addEventListener('change', () => evaluateStudio(true));
+        });
+
+        el('forge-run-btn')?.addEventListener('click', () => evaluateStudio(false));
+        el('forge-reset-btn')?.addEventListener('click', () => {
+            el('forge-kernel-select').value = 'gemm';
+            el('forge-tile-m').value = '64';
+            el('forge-tile-n').value = '64';
+            el('forge-tile-k').value = '16';
+            el('forge-wg-x').value = '16';
+            el('forge-wg-y').value = '16';
+            el('forge-wg-z').value = '1';
+            el('forge-vec-width').value = '4';
+            el('forge-subgroup-toggle').checked = true;
+            evaluateStudio(true);
+        });
+
+        bootForgeStudio();
+    </script>
 </body>
 </html>

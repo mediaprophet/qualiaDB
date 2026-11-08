@@ -6,10 +6,15 @@ pub mod absm;
 pub mod activity;
 pub mod authoring;
 pub mod blend_space;
+pub mod fauna_rig;
 pub mod gpu_morph;
 pub mod gpu_skin;
 pub mod ik_motor;
 pub mod player;
+
+pub use fauna_rig::{
+    FaunaBiomechanicalArchetype, FaunaSkeletalRig10d, FAUNA_MAX_JOINTS, FAUNA_PARENT_INDICES,
+};
 
 pub use etalon_render::skeletal::{
     compose_palette_into, compute_ontogenetic_morph_weights_from_header_zero_heap,

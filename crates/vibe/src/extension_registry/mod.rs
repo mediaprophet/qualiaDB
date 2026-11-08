@@ -8,6 +8,7 @@ pub mod gpu_inference_providers;
 pub mod graph_logic_providers;
 pub mod prepare;
 pub mod registry;
+pub mod scalar_compat;
 
 pub use dispatch_adapter::{
     dispatch_prepared_call, CallExecutionContext, DispatchOutcome, SimulatedPolicyGate,

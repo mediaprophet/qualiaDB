@@ -31,9 +31,31 @@
         .spinbtn { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; border-radius: 6px; padding: 0.45rem 1.1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
         .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
-        #canvas-container { border-radius: 16px; overflow: hidden; position: relative; }
-        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; background:#000; }
+        .preset-pill { background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.28); color: #67e8f9; border-radius: 9999px; padding: 0.28rem 0.8rem; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+        .preset-pill:hover { background: rgba(34, 211, 238, 0.22); color: #fff; }
+        #canvas-container { border-radius: 16px; overflow: hidden; position: relative; height: 520px; background: radial-gradient(circle at 50% 38%, #0f1c2e 0%, #060a12 70%, #030508 100%); }
+        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; background: transparent; touch-action: none; }
+        #render-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; cursor: grab; background: transparent; touch-action: none; }
+        #render-canvas:active { cursor: grabbing; }
+        #hud-overlay-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; background: transparent; }
         .telem-slider::-webkit-slider-thumb { background: #34d399; }
+        .workbench-canvas { width: 100%; max-width: 100%; border-radius: 14px; border: 1px solid rgba(148, 163, 184, 0.2); background: #070b14; display: block; touch-action: none; }
+        .spatial-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+        .tab-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+        @media (max-width: 1024px) {
+            .spatial-layout { grid-template-columns: 1fr; height: auto; overflow: visible; }
+            #canvas-container { height: 420px !important; }
+            .tab-bar { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 0.5rem; scrollbar-width: thin; }
+            .tab-btn { flex: 0 0 auto; white-space: nowrap; }
+        }
+        @media (max-width: 680px) {
+            #canvas-container { height: 340px !important; border-radius: 12px; }
+            #portal-hud canvas { width: 112px !important; height: 112px !important; }
+            .metric-value { font-size: 1.2rem; }
+            .metric-card { padding: 0.75rem; }
+            .workbench-canvas { height: auto; min-height: 240px; }
+            .spinbtn { padding: 0.55rem 0.9rem; font-size: 0.82rem; }
+        }
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="css/qualia-icp-layout.css">
@@ -68,8 +90,8 @@
 <div id="loading-overlay" class="loading-overlay">
     <div class="text-center">
         <div class="loading-spinner mx-auto mb-4"></div>
-        <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
-        <div class="text-white/50 text-sm mt-2">Initializing spatial mathematics &amp; Omni-Scale Coordinate System primitives</div>
+        <div class="text-emerald-400 font-semibold">Loading QualiaDB + VibeScript WASM Engines...</div>
+        <div class="text-white/50 text-sm mt-2">Initializing spatial mathematics, VibeScript 0.3 &amp; Omni-Scale Coordinate System primitives</div>
     </div>
 </div>
 
@@ -98,7 +120,11 @@
             <a href="phone-console.html" class="hidden md:inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shrink-0" title="Install mobile companion PWA">
                 <i class="fas fa-mobile-alt"></i><span>Phone console</span>
             </a>
-            <div id="wasm-badge" class="hidden sm:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
+            <div id="gpu-badge" class="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-2xl bg-slate-800 text-cyan-300 border border-cyan-500/30 shrink-0">
+                <div class="w-2 h-2 rounded-full bg-cyan-400" id="gpu-dot"></div>
+                <span id="gpu-text">Probing GPU…</span>
+            </div>
+            <div id="wasm-badge" class="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
                 <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
                 <span id="wasm-text">Loading...</span>
             </div>
@@ -111,10 +137,10 @@
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-cube"></i>
-            <span>WASM · Omni-Scale Coordinate System (OCS) · GeoSPARQL · 10D Tensor</span>
+            <span>WASM · VibeScript 0.3 · Etalon Spatial · Omni-Scale Coordinate System (OCS) · GeoSPARQL</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Spatial Mathematics, OCS &amp; GeoSPARQL</h1>
-        <p class="text-white/60 max-w-2xl mx-auto">Encoding multi-scale 3D geometries, terrestrial GIS frames, relativistic Lorentz boosts, ICRS/ITRS celestial astrometry, and $\Lambda\text{CDM}$ cosmological horizons into native 48-byte <code>NQuin</code> ledgers.</p>
+        <p class="text-white/60 max-w-2xl mx-auto">Encoding multi-scale 3D B-Rep meshes, terrestrial GIS frames, relativistic Lorentz boosts, ICRS/ITRS celestial astrometry, and $\Lambda\text{CDM}$ cosmological horizons into native 48-byte <code>NQuin</code> ledgers with signed VibeScript execution receipts.</p>
         <p class="mt-4 text-sm">
             <a href="universe.html" class="text-violet-300 hover:underline"><i class="fas fa-globe mr-1"></i>Knowledge Universe</a>
             — ontology packs as galaxies · Chora ICRS starfield · CODATA science hub
@@ -127,25 +153,25 @@
     <!-- Performance Metrics -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="metric-card">
-            <div class="metric-value" id="metric-vertices">0</div>
-            <div class="metric-label">Vertices</div>
+            <div class="metric-value"><span id="metric-vertices">0</span><span id="stat-verts" class="sr-only">0</span></div>
+            <div class="metric-label">Vertices / Mesh Nodes</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="metric-quins">0</div>
+            <div class="metric-value"><span id="metric-quins">0</span><span id="stat-quins" class="sr-only">0</span></div>
             <div class="metric-label">Quins Encoded</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="metric-memory">0 KB</div>
+            <div class="metric-value"><span id="metric-memory">0 KB</span><span id="stat-mem" class="sr-only">0 KB</span></div>
             <div class="metric-label">Memory Usage</div>
         </div>
         <div class="metric-card">
-            <div class="metric-value" id="metric-time">0ms</div>
-            <div class="metric-label">Encoding Time</div>
+            <div class="metric-value"><span id="metric-time">0ms</span><span id="stat-fps" class="text-xs font-mono text-cyan-300 ml-2">60 FPS</span></div>
+            <div class="metric-label">Encoding Time · Viewport</div>
         </div>
     </div>
 
     <!-- Tab bar -->
-    <div class="flex flex-wrap gap-2 mb-8 justify-center">
+    <div class="tab-bar mb-8">
         <button class="tab-btn active" data-tab="viewer" onclick="switchTab('viewer',this)" id="tab-viewer-btn">
             <i class="fas fa-cube mr-1.5"></i>3D Viewer
         </button>
@@ -156,7 +182,7 @@
             <i class="fas fa-map-marker-alt mr-1.5"></i>GeoSPARQL
         </button>
         <button class="tab-btn" data-tab="encoding" onclick="switchTab('encoding',this)" id="tab-encoding-btn">
-            <i class="fas fa-microchip mr-1.5"></i>Quin Encoding
+            <i class="fas fa-microchip mr-1.5"></i>Quin Encoding &amp; CAD
         </button>
         <button class="tab-btn" data-tab="operations" onclick="switchTab('operations',this)" id="tab-operations-btn">
             <i class="fas fa-calculator mr-1.5"></i>Spatial Ops
@@ -171,16 +197,60 @@
 
     <!-- Tab 1: 3D Viewer & Portal HUD -->
     <div id="tab-viewer" class="tab-pane active">
-        <div id="tab-portal" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- 3D Viewer + ambient telemetry field (Webizen contract, Qualia data) -->
-            <div class="lg:col-span-2 glass-strong rounded-3xl overflow-hidden" style="height: 520px;" id="canvas-container">
-                <canvas id="ambient-canvas"></canvas>
-                <div id="portal-canvas" class="sr-only" aria-hidden="true">QualiaPortal WebGPU / Canvas2D Surface</div>
-                <!-- 2D shadow of the SAME manifold projection driving the 3D scene -->
-                <div id="portal-hud" style="position:absolute; bottom:12px; right:12px; z-index:10; display:flex; flex-direction:column; align-items:flex-end; gap:4px; pointer-events:none;">
-                    <span class="text-[9px] text-emerald-400/80" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">2D shadow · one project()</span>
-                    <canvas id="plane2d-canvas" width="160" height="160"
-                            style="width:160px; height:160px; border-radius:8px; border:1px solid rgba(52,211,153,0.3); background:rgba(0,0,0,0.6);"></canvas>
+        <div id="tab-portal" class="spatial-layout grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 3D Viewer + Interactive 3D Mesh & 10D Manifold Renderer -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <div class="glass-strong rounded-3xl overflow-hidden" style="height: 520px;" id="canvas-container">
+                    <canvas id="ambient-canvas"></canvas>
+                    <canvas id="render-canvas"></canvas>
+                    <canvas id="hud-overlay-canvas"></canvas>
+                    <div id="portal-canvas" class="sr-only" aria-hidden="true">QualiaPortal WebGPU / Canvas2D Surface</div>
+                    <!-- Top-left HUD overlay badge -->
+                    <div style="position:absolute; top:12px; left:14px; z-index:10; pointer-events:none;" class="flex flex-wrap items-center gap-2">
+                        <span id="viewport-mesh-badge" class="text-[11px] font-mono text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-500/30" style="background:rgba(6,10,18,0.78);">
+                            Mesh: Icosahedron · V=42 E=120 F=80 · χ=2
+                        </span>
+                        <span class="text-[10px] text-cyan-300/80 px-2 py-0.5 rounded border border-cyan-500/20" style="background:rgba(6,10,18,0.7);">
+                            Drag to orbit · Scroll to zoom
+                        </span>
+                    </div>
+                    <!-- 2D shadow of the SAME manifold projection driving the 3D scene -->
+                    <div id="portal-hud" style="position:absolute; bottom:12px; right:12px; z-index:10; display:flex; flex-direction:column; align-items:flex-end; gap:4px; pointer-events:none;">
+                        <span class="text-[9px] text-emerald-400/80" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">2D shadow · one project()</span>
+                        <canvas id="plane2d-canvas" width="160" height="160"
+                                style="width:160px; height:160px; border-radius:8px; border:1px solid rgba(52,211,153,0.3); background:rgba(0,0,0,0.6);"></canvas>
+                    </div>
+                </div>
+
+                <!-- Live VibeScript + Etalon Execution Receipt Bar -->
+                <div class="glass-panel rounded-2xl p-4 border border-emerald-500/25">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div class="text-xs font-semibold text-emerald-300 flex items-center gap-2">
+                            <i class="fas fa-certificate text-cyan-400"></i>
+                            <span>VibeScript 0.3 + Etalon Spatial Kernel Receipt (<code>render.spatial</code> · <code>mech.geometry</code> · <code>nquin.wire</code>)</span>
+                        </div>
+                        <span id="vibe-viewer-ast-hash" class="text-[11px] font-mono text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/25">
+                            CBOR-LD AST: initializing…
+                        </span>
+                    </div>
+                    <div id="vibe-viewer-receipt" class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                        <div class="bg-black/40 p-2.5 rounded-lg border border-white/10">
+                            <div class="text-[10px] text-white/45">Euler χ = V − E + F</div>
+                            <div id="vibe-stat-euler" class="text-emerald-300 font-semibold mt-0.5">χ = 2 (g = 0)</div>
+                        </div>
+                        <div class="bg-black/40 p-2.5 rounded-lg border border-white/10">
+                            <div class="text-[10px] text-white/45">AABB Volume / Area</div>
+                            <div id="vibe-stat-aabb" class="text-cyan-300 font-semibold mt-0.5">21.95 / 47.04</div>
+                        </div>
+                        <div class="bg-black/40 p-2.5 rounded-lg border border-white/10">
+                            <div class="text-[10px] text-white/45">Torus SDF / 10D Norm</div>
+                            <div id="vibe-stat-sdf" class="text-violet-300 font-semibold mt-0.5">-0.490 · |P₃|=2.84</div>
+                        </div>
+                        <div class="bg-black/40 p-2.5 rounded-lg border border-white/10">
+                            <div class="text-[10px] text-white/45">NQuin Wire Parity</div>
+                            <div id="vibe-stat-parity" class="text-amber-300 font-semibold mt-0.5">0x0000000000000038</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -192,27 +262,52 @@
                     <div>
                         <label class="text-sm text-white/60 block mb-2">Geometry Type</label>
                         <select id="geo-type" class="input-field" onchange="generateGeometry()">
-                            <option value="icosahedron">Icosahedron</option>
-                            <option value="cube">Cube</option>
-                            <option value="sphere">Sphere</option>
-                            <option value="torus">Torus</option>
-                            <option value="knot">Torus Knot</option>
+                            <option value="icosahedron">Icosahedron (Geodesic B-Rep)</option>
+                            <option value="cube">Cube (Subdivided Hexahedron)</option>
+                            <option value="sphere">Sphere (UV Manifold)</option>
+                            <option value="torus">Torus (Genus-1 Ring Surface)</option>
+                            <option value="knot">Torus Knot (p=2, q=3 Trefoil Tube)</option>
                         </select>
                     </div>
-                    
-                    <div>
-                        <label class="text-sm text-white/60 block mb-2">Detail Level</label>
-                        <input type="range" id="geo-detail" class="w-full" min="0" max="5" value="2" onchange="generateGeometry()">
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-white/60 block mb-1">Scale (<span id="geo-scale-label">1.4</span>)</label>
+                            <input type="range" id="geo-scale" class="w-full" min="0.6" max="2.4" step="0.1" value="1.4" oninput="generateGeometry()">
+                        </div>
+                        <div>
+                            <label class="text-xs text-white/60 block mb-1">Detail Level (<span id="geo-detail-label">2</span>)</label>
+                            <input type="range" id="geo-detail" class="w-full" min="0" max="5" value="2" oninput="syncDetailSliders(this.value); generateGeometry()">
+                            <input type="range" id="geo-res" class="hidden" min="0" max="5" value="2" onchange="syncDetailSliders(this.value); generateGeometry()">
+                        </div>
                     </div>
                     
                     <div>
                         <label class="text-sm text-white/60 block mb-2">Display Mode</label>
                         <select id="display-mode" class="input-field" onchange="updateDisplayMode()">
-                            <option value="wireframe">Wireframe</option>
-                            <option value="points">Points</option>
-                            <option value="solid">Solid</option>
-                            <option value="hybrid">Hybrid</option>
+                            <option value="hybrid" selected>Hybrid (Lit Solid + Wireframe + Nodes)</option>
+                            <option value="solid">Solid (Phong Lit Shaded Surface)</option>
+                            <option value="wireframe">Wireframe (Depth-Cued Edges)</option>
+                            <option value="points">Points (10D Vertex Nodes + Normals)</option>
                         </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="generateGeometry()" class="spinbtn w-full" id="btn-generate">
+                            <i class="fas fa-sync-alt mr-1.5"></i>Generate Mesh
+                        </button>
+                        <button onclick="encodeToQuins()" class="spinbtn w-full" id="encode-btn">
+                            <i class="fas fa-microchip mr-1.5"></i>Encode Quins
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="resetViewportCamera()" class="preset-pill w-full text-center" id="btn-clear">
+                            <i class="fas fa-compress-arrows-alt mr-1"></i>Reset Camera
+                        </button>
+                        <button type="button" onclick="runSpatialBenchmark()" class="preset-pill w-full text-center" id="btn-benchmark">
+                            <i class="fas fa-bolt mr-1"></i>Benchmark 10D
+                        </button>
                     </div>
 
                     <div>
@@ -235,10 +330,6 @@
                         <label class="text-[10px] text-white/45 block mt-2 mb-1">Window (±)</label>
                         <input type="range" id="t-window" class="w-full" min="0.02" max="1" step="0.01" value="0.08">
                     </div>
-                    
-                    <button onclick="encodeToQuins()" class="spinbtn w-full" id="encode-btn">
-                        <i class="fas fa-microchip mr-2"></i>Encode to Quins (WASM)
-                    </button>
 
                     <input type="file" id="mesh-file" accept=".obj,.stl,.glb,.gltf" class="hidden">
                     <button type="button" onclick="document.getElementById('mesh-file').click()"
@@ -247,7 +338,7 @@
                     </button>
                     <p class="text-[10px] text-white/45 mt-1" id="mesh-status"></p>
                     <label class="flex items-center gap-2 mt-2 text-xs text-white/70 cursor-pointer" id="animate-row">
-                        <input type="checkbox" id="animate-artefact"> Animate artefact <span class="text-white/40">(revolute joint rotation)</span>
+                        <input type="checkbox" id="animate-artefact" checked> Animate artefact <span class="text-white/40">(revolute joint rotation)</span>
                     </label>
                     <button type="button" class="spinbtn w-full mt-2" id="demo-refusal-btn">
                         <i class="fas fa-shield-halved mr-2"></i>Demo refusal (slide → clamp at bound)
@@ -310,14 +401,132 @@
                 </div>
             </div>
             <p class="text-[11px] text-white/40 mt-3 border-t border-white/10 pt-3">
-                This page uses a canvas2d ambient field fallback when WebGPU is unavailable, mirroring the Webizen shader contract.
-                Desktop and WebGPU browsers bind the same 48-byte struct into instanced particles and volumetric bloom.
+                This page pairs the WebGPU <code>QualiaPortal</code> surface with a real-time 3D B-Rep mesh and 10D manifold viewport plus live <code>vibe-wasm</code> execution receipts.
             </p>
         </div>
     </div>
 
     <!-- Tab OCS: Omni-Scale Coordinate System (OCS-10 to OCS-13) & 10D Spacetime Grounding -->
     <div id="tab-ocs" class="tab-pane">
+        <!-- Interactive OCS Relativistic & Cosmological Workbench -->
+        <div class="glass-strong rounded-3xl p-6 sm:p-8 mb-6 border border-cyan-500/30">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div>
+                    <span class="text-xs font-bold px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                        INTERACTIVE OCS WORKBENCH · LORENTZ BOOST (OCS-11) &amp; FLRW ΛCDM (OCS-12)
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">
+                        Relativistic Light-Cone &amp; $\Lambda\text{CDM}$ Cosmological Horizon Lab
+                    </h2>
+                </div>
+                <button type="button" onclick="runOcsWorkbench()" id="btn-ocs-run" class="spinbtn">
+                    <i class="fas fa-satellite-dish mr-2"></i>Run OCS VibeScript Kernel
+                </button>
+            </div>
+
+            <!-- Workbench Sliders & Selectors -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">
+                        Relative Velocity $\beta = v/c$: <span id="ocs-beta-val" class="text-emerald-300 font-mono font-bold">0.60c</span>
+                    </label>
+                    <input type="range" id="ocs-beta" class="w-full" min="0" max="0.98" step="0.01" value="0.60" oninput="runOcsWorkbench()">
+                    <div class="text-[11px] text-white/45 mt-1 font-mono" id="ocs-gamma-readout">γ = 1.2500 · L/L₀ = 0.800</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">
+                        Cosmological Redshift $z$: <span id="ocs-redshift-val" class="text-sky-300 font-mono font-bold">1.60</span>
+                    </label>
+                    <input type="range" id="ocs-redshift" class="w-full" min="0.05" max="8.0" step="0.05" value="1.60" oninput="runOcsWorkbench()">
+                    <div class="text-[11px] text-white/45 mt-1 font-mono" id="ocs-lookback-readout">Lookback: 9.76 Gyr · 1+z = 2.60</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">OCS Scale Domain Tier</label>
+                    <select id="ocs-scale-tier" class="input-field text-xs" onchange="runOcsWorkbench()">
+                        <option value="0">Tier 0 · Quantum (10⁻¹⁵ m)</option>
+                        <option value="1">Tier 1 · Molecular (10⁻⁹ m)</option>
+                        <option value="2">Tier 2 · Cellular (10⁻⁵ m)</option>
+                        <option value="3">Tier 3 · Terrestrial (10⁰ m · ITRS)</option>
+                        <option value="4" selected>Tier 4 · Planetary/Cislunar (10⁷ m)</option>
+                        <option value="5">Tier 5 · Stellar/Heliocentric (10¹¹ m · ICRS)</option>
+                        <option value="6">Tier 6 · Galactic (10²¹ m)</option>
+                        <option value="7">Tier 7 · Cosmological (10²⁶ m · FLRW)</option>
+                    </select>
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">Reference Frame &amp; Body</label>
+                    <select id="ocs-body" class="input-field text-xs" onchange="runOcsWorkbench()">
+                        <option value="icrs:sol-barycenter">ICRS · Solar System Barycenter</option>
+                        <option value="itrs:earth-wgs84" selected>ITRS · Earth Geocentric (GDA2020/WGS84)</option>
+                        <option value="luni:cislunar-l2">Cislunar · Earth–Moon L2 Halo</option>
+                        <option value="gal:sgr-a-star">Galactocentric · Sagittarius A*</option>
+                        <option value="flrw:cmb-last-scattering">FLRW · Deep-Field Horizon</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Dual Canvases: Minkowski Light-Cone + FLRW Cosmology -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="glass-panel p-4 rounded-2xl border border-emerald-500/25">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-emerald-300">
+                            <i class="fas fa-bolt mr-1.5"></i>Minkowski Spacetime &amp; Lorentz Boost $(x', ct')$
+                        </h3>
+                        <span class="text-[11px] font-mono text-white/50">Click canvas to move event $E(x, ct)$</span>
+                    </div>
+                    <canvas id="ocs-lightcone-canvas" width="560" height="360" class="workbench-canvas"></canvas>
+                    <div id="ocs-event-readout" class="mt-2 text-xs font-mono text-emerald-200/90 flex flex-wrap justify-between gap-2">
+                        <span>Event E: (x=1.20, ct=2.40)</span>
+                        <span>Boosted E': (x'=-0.30, ct'=2.10)</span>
+                        <span>ds² = -4.32 (Timelike Future)</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-2xl border border-sky-500/25">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-sky-300">
+                            <i class="fas fa-chart-line mr-1.5"></i>Flat $\Lambda\text{CDM}$ Distances ($G_7/K_{15}$ Quadrature)
+                        </h3>
+                        <span class="text-[11px] font-mono text-white/50">Click chart to scrub redshift $z$</span>
+                    </div>
+                    <canvas id="ocs-cosmology-canvas" width="560" height="360" class="workbench-canvas"></canvas>
+                    <div id="ocs-distance-readout" class="mt-2 text-xs font-mono text-sky-200/90 flex flex-wrap justify-between gap-2">
+                        <span>D_C = 4.63 Gpc</span>
+                        <span>D_L = 12.04 Gpc</span>
+                        <span>D_A = 1.78 Gpc (Etherington Δ = 0.00e+0)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live 64-bit CB-USRI Token & VibeScript Receipt -->
+            <div class="glass-panel p-4 rounded-2xl border border-cyan-500/20">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span class="text-xs font-semibold text-cyan-300">
+                        <i class="fas fa-fingerprint mr-1.5"></i>Live 64-Bit <code>CB-USRI</code> Context Token &amp; VibeScript 10D Projection Receipt
+                    </span>
+                    <span id="ocs-usri-uri" class="text-[11px] font-mono text-white/60">urn:omni:v1:itrs:earth-wgs84:tier4:1.20,2.40:j2000</span>
+                </div>
+                <div id="ocs-cb-usri-bar" class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
+                    <div class="bg-black/40 p-2.5 rounded-lg border border-cyan-500/30">
+                        <div class="text-[10px] text-white/45">Bit [63] MSB Guard</div>
+                        <div class="text-emerald-300 font-bold" id="ocs-bit-msb">0 (CB-USRI · non-DID)</div>
+                    </div>
+                    <div class="bg-black/40 p-2.5 rounded-lg border border-cyan-500/30">
+                        <div class="text-[10px] text-white/45">Bits [56..62] Scale/Frame</div>
+                        <div class="text-cyan-300 font-bold" id="ocs-bit-tier">0x44 (Tier 4 · Planetary)</div>
+                    </div>
+                    <div class="bg-black/40 p-2.5 rounded-lg border border-cyan-500/30">
+                        <div class="text-[10px] text-white/45">64-Bit CB-USRI Hex</div>
+                        <div class="text-violet-300 font-bold" id="ocs-bit-hex">0x443a9f0284c1b721</div>
+                    </div>
+                    <div class="bg-black/40 p-2.5 rounded-lg border border-cyan-500/30">
+                        <div class="text-[10px] text-white/45">VibeScript Receipt</div>
+                        <div class="text-amber-300 font-bold" id="ocs-vibe-receipt">AST: verified</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="glass-strong rounded-3xl p-8 mb-6 border border-cyan-500/25">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                 <div>
@@ -440,55 +649,92 @@ let gamma = 1.0 / (1.0 - beta_sq).sqrt();
     <!-- Tab 2: GeoSPARQL -->
     <div id="tab-geosparql" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-map-marker-alt text-emerald-400"></i>
-                GeoSPARQL Operations
-            </h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="text-2xl font-semibold flex items-center gap-3">
+                    <i class="fas fa-map-marker-alt text-emerald-400"></i>
+                    GeoSPARQL Topological Workbench (WASM + VibeScript)
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="preset-pill" onclick="loadGeoSparqlPreset('overlap')">Overlapping Polygons</button>
+                    <button type="button" class="preset-pill" onclick="loadGeoSparqlPreset('pip')">Point in Polygon</button>
+                    <button type="button" class="preset-pill" onclick="loadGeoSparqlPreset('disjoint')">Disjoint Sectors</button>
+                    <button type="button" class="preset-pill" onclick="loadGeoSparqlPreset('touch')">Touching Boundary</button>
+                    <button type="button" class="preset-pill" onclick="loadGeoSparqlPreset('lines')">Intersecting Linestrings</button>
+                </div>
+            </div>
             
-            <p class="text-white/70 mb-6">QualiaDB supports GeoSPARQL spatial predicates for querying geometric relationships. These operations run natively in WASM with zero-heap compliance.</p>
+            <p class="text-white/70 mb-5 text-sm">QualiaDB evaluates OGC GeoSPARQL topological predicates natively in WASM with zero-heap compliance and pairs every query with a VibeScript AABB &amp; NQuin parity receipt. <strong>Click anywhere on the 2D topological canvas below</strong> to reposition Geometry B interactively.</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
                 <div>
-                    <label class="text-sm text-white/60 block mb-2">Geometry A (WKT)</label>
-                    <textarea id="geo-a" class="input-field" rows="3" placeholder="POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))">POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))</textarea>
+                    <label class="text-sm text-cyan-300 font-medium block mb-2">Geometry A (WKT · Cyan)</label>
+                    <textarea id="geo-a" class="input-field font-mono text-xs" rows="2" oninput="runSpatialOp()">POLYGON((1 1, 8 1, 8 8, 1 8, 1 1))</textarea>
                 </div>
                 <div>
-                    <label class="text-sm text-white/60 block mb-2">Geometry B (WKT)</label>
-                    <textarea id="geo-b" class="input-field" rows="3" placeholder="POINT(5 5)">POINT(5 5)</textarea>
+                    <label class="text-sm text-amber-300 font-medium block mb-2">Geometry B (WKT · Amber — Click canvas to move)</label>
+                    <textarea id="geo-b" class="input-field font-mono text-xs" rows="2" oninput="runSpatialOp()">POLYGON((5 4, 12 4, 12 9, 5 9, 5 4))</textarea>
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
                     <label class="text-sm text-white/60 block mb-2">Spatial Operation</label>
-                    <select id="spatial-op" class="input-field">
+                    <select id="spatial-op" class="input-field" onchange="syncGeoSparqlSelects(this.value); runSpatialOp()">
+                        <option value="intersects" selected>sfIntersects (A ∩ B ≠ ∅)</option>
                         <option value="within">sfWithin (A within B)</option>
                         <option value="contains">sfContains (A contains B)</option>
-                        <option value="intersects">sfIntersects (A ∩ B ≠ ∅)</option>
-                        <option value="touches">sfTouches (A touches B)</option>
                         <option value="overlaps">sfOverlaps (A overlaps B)</option>
+                        <option value="touches">sfTouches (A touches B)</option>
                         <option value="distance">Distance (A to B)</option>
+                    </select>
+                    <select id="geosparql-fn" class="hidden" onchange="syncGeoSparqlSelects(this.value); runSpatialOp()">
+                        <option value="intersects" selected>sfIntersects</option>
+                        <option value="within">sfWithin</option>
+                        <option value="contains">sfContains</option>
+                        <option value="overlaps">sfOverlaps</option>
+                        <option value="touches">sfTouches</option>
+                        <option value="distance">distance</option>
                     </select>
                 </div>
                 <div>
                     <label class="text-sm text-white/60 block mb-2">CRS (Coordinate Reference)</label>
-                    <select id="geo-crs" class="input-field">
+                    <select id="geo-crs" class="input-field" onchange="runSpatialOp()">
                         <option value="4326">WGS84 (EPSG:4326)</option>
                         <option value="3857">Web Mercator (EPSG:3857)</option>
+                        <option value="7844">GDA2020 (EPSG:7844)</option>
                         <option value="27700">British National Grid</option>
                     </select>
                 </div>
-                <div class="flex items-end">
+                <div class="flex items-end gap-2">
                     <button onclick="runSpatialOp()" class="spinbtn w-full" id="spatial-run-btn">
                         <i class="fas fa-play mr-2"></i>Execute (WASM)
                     </button>
+                    <button onclick="runSpatialOp()" class="hidden" id="btn-geosparql">Execute</button>
+                </div>
+            </div>
+
+            <!-- Interactive 2D Topological Canvas -->
+            <div class="glass-panel p-4 rounded-2xl border border-emerald-500/25">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <span class="text-xs font-semibold text-emerald-300">
+                        <i class="fas fa-vector-square mr-1.5"></i>2D WKT Topological Plane · AABB Envelopes, Intersection Region &amp; Minimum-Distance Vector
+                    </span>
+                    <span id="geosparql-verdict-badge" class="text-xs font-mono px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        geo:sfIntersects = true
+                    </span>
+                </div>
+                <canvas id="geosparql-canvas" width="760" height="360" class="workbench-canvas cursor-crosshair"></canvas>
+                <div id="geosparql-vibe-receipt" class="mt-2 text-xs font-mono text-cyan-300/90 flex flex-wrap justify-between gap-2">
+                    <span>VibeScript AABB Volume: evaluating…</span>
+                    <span>DE-9IM Matrix: 212101212</span>
                 </div>
             </div>
         </div>
         
         <div class="glass-strong rounded-3xl p-6">
-            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Spatial Operation Result</h3>
-            <div id="spatial-result" class="code-block text-emerald-300 min-h-[200px]">Execute a spatial operation to see results…</div>
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Spatial Operation Result &amp; WASM Receipt</h3>
+            <div id="spatial-result" class="code-block text-emerald-300 min-h-[180px]">Execute a spatial operation to see results…</div>
+            <div id="geosparql-result" class="sr-only"></div>
         </div>
         
         <div class="glass-strong rounded-3xl p-6 mt-6">
@@ -507,44 +753,79 @@ SELECT ?feature ?result WHERE {
         </div>
     </div>
 
-    <!-- Tab 3: Quin Encoding -->
+    <!-- Tab 3: Quin Encoding & Parametric CAD -->
     <div id="tab-encoding" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-microchip text-emerald-400"></i>
-                48-byte QualiaQuin Encoding
-            </h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="text-2xl font-semibold flex items-center gap-3">
+                    <i class="fas fa-microchip text-emerald-400"></i>
+                    48-Byte QualiaQuin Encoding &amp; Parametric B-Rep CAD Solid Builder
+                </h2>
+                <button type="button" onclick="runCadBuilder()" id="btn-cad" class="spinbtn">
+                    <i class="fas fa-drafting-compass mr-2"></i>Build B-Rep &amp; Encode Quins
+                </button>
+            </div>
             
-            <p class="text-white/70 mb-6">Spatial geometries are encoded as sequences of 48-byte QualiaQuins. Each vertex becomes a Quin with the position packed into the object field alongside its 3-bit OCS scale tier.</p>
+            <p class="text-white/70 mb-6 text-sm">Spatial geometries and parametric B-Rep solids are encoded as sequences of 48-byte <code>NQuin</code> records. Each vertex and face is sealed with XOR parity and verified via VibeScript <code>render.spatial.brep_euler_characteristic</code> and <code>nquin.wire.compute_wire_parity</code>.</p>
+
+            <!-- Parametric CAD Controls + 3D Canvas -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="space-y-4">
+                    <div class="glass-panel p-4 rounded-xl">
+                        <label class="text-xs text-white/60 block mb-1.5">CAD Operation</label>
+                        <select id="cad-op" class="input-field text-xs mb-3" onchange="runCadBuilder()">
+                            <option value="extrude" selected>Linear Extrusion (2.5D Prism B-Rep)</option>
+                            <option value="revolve">Lathe Revolution (360° Axisymmetric)</option>
+                            <option value="loft">Twisted Helical Loft (Ruled Surface)</option>
+                            <option value="csg_diff">Boolean CSG Flange (Hollow Core)</option>
+                        </select>
+                        <label class="text-xs text-white/60 block mb-1.5">Cross-Section Profile</label>
+                        <select id="cad-profile" class="input-field text-xs mb-3" onchange="runCadBuilder()">
+                            <option value="hex_flange" selected>Hexagonal Structural Flange</option>
+                            <option value="gear_tooth">Involute 8-Tooth Spur Gear</option>
+                            <option value="i_beam">Structural Wide-Flange I-Beam</option>
+                            <option value="trefoil_duct">Tri-Lobe Epicycloid Conduit</option>
+                        </select>
+                        <label class="text-xs text-white/60 block mb-1">
+                            Extrusion / Segmentation Parameter: <span id="cad-param-label" class="text-emerald-300 font-mono">4</span>
+                        </label>
+                        <input type="range" id="cad-param" class="w-full" min="1" max="8" value="4" oninput="runCadBuilder()">
+                    </div>
+                    <div class="glass-panel p-4 rounded-xl text-xs font-mono space-y-1.5" id="cad-vibe-receipt">
+                        <div class="text-cyan-300 font-semibold">B-Rep Topology &amp; VibeScript Receipt</div>
+                        <div id="cad-topology-line" class="text-white/80">V=24 · E=36 · F=14 · χ=2</div>
+                        <div id="cad-parity-line" class="text-emerald-300">XOR Parity Verified · 0 errors</div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 glass-panel p-4 rounded-2xl border border-emerald-500/20">
+                    <canvas id="cad-canvas" width="720" height="300" class="workbench-canvas"></canvas>
+                </div>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div class="glass-panel p-4 rounded-xl">
                     <h4 class="text-sm font-semibold text-emerald-300 mb-2">Vertex Quin Layout</h4>
-                    <div class="code-block text-xs text-emerald-200">
-subject:   q_hash(geometry_id)
+                    <div class="code-block text-xs text-emerald-200">subject:   q_hash(geometry_id)
 predicate: q_hash("geo:hasVertex")
 object:    (tier &lt;&lt; 60) | (x &lt;&lt; 40) | (y &lt;&lt; 20) | z
 context:   cb_usri_token (MSB=0) or q_hash(graph_id)
 metadata:  (lamport_epoch &lt;&lt; 32) | vertex_index
-parity:    subject ^ predicate ^ object ^ context ^ metadata
-                    </div>
+parity:    subject ^ predicate ^ object ^ context ^ metadata</div>
                 </div>
                 <div class="glass-panel p-4 rounded-xl">
                     <h4 class="text-sm font-semibold text-emerald-300 mb-2">Face Quin Layout</h4>
-                    <div class="code-block text-xs text-emerald-200">
-subject:   q_hash(geometry_id)
+                    <div class="code-block text-xs text-emerald-200">subject:   q_hash(geometry_id)
 predicate: q_hash("geo:hasFace")
 object:    (v1 &lt;&lt; 40) | (v2 &lt;&lt; 20) | v3  [vertex indices]
 context:   cb_usri_token (MSB=0) or q_hash(graph_id)
 metadata:  (lamport_epoch &lt;&lt; 32) | face_index
-parity:    subject ^ predicate ^ object ^ context ^ metadata
-                    </div>
+parity:    subject ^ predicate ^ object ^ context ^ metadata</div>
                 </div>
             </div>
         </div>
         
         <div class="glass-strong rounded-3xl p-6">
-            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Live Encoding Dump</h3>
+            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Live 48-Byte NQuin Ledger Dump</h3>
             <div id="quin-dump" class="code-block text-emerald-300 min-h-[300px] max-h-[500px] overflow-y-auto">
                 Generate geometry and click "Encode to Quins" to see the actual QualiaQuin encoding…
             </div>
@@ -553,63 +834,74 @@ parity:    subject ^ predicate ^ object ^ context ^ metadata
 
     <!-- Tab 4: Spatial Operations -->
     <div id="tab-operations" class="tab-pane">
-        <div class="glass-strong rounded-3xl p-6 mb-6">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-calculator text-emerald-400"></i>
-                Native Spatial Operations
-            </h2>
-            
-            <p class="text-white/70 mb-6">QualiaDB provides native WASM implementations of common computational-geometry operations, following the standard algorithms and correctness properties described in the computational-geometry literature (de Berg, Cheong, van Kreveld &amp; Overmars, <em>Computational Geometry: Algorithms and Applications</em>, 3rd ed.).</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div class="glass-panel p-4 rounded-xl">
-                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Bounding Box</h4>
-                    <p class="text-white/60 text-xs">Compute axis-aligned bounding box for geometry</p>
+        <div id="tab-native">
+            <div class="glass-strong rounded-3xl p-6 mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <h2 class="text-2xl font-semibold flex items-center gap-3">
+                        <i class="fas fa-calculator text-emerald-400"></i>
+                        Native WASM Computational Geometry &amp; VibeScript Spatial Kernels
+                    </h2>
+                    <span class="text-xs font-mono px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                        qualia.js + vibe-wasm Live Execution
+                    </span>
                 </div>
-                <div class="glass-panel p-4 rounded-xl">
-                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Convex Hull</h4>
-                    <p class="text-white/60 text-xs">Compute convex hull using QuickHull algorithm</p>
+                
+                <p class="text-white/70 mb-6 text-sm">QualiaDB executes computational-geometry kernels directly via WASM (<code>geometry_convex_hull_2</code>, <code>geometry_delaunay_2</code>, <code>geometry_voronoi_2</code>, <code>geometry_orientation_2</code>, <code>geometry_nearest_site</code>) paired with VibeScript 0.3 spatial operators (<code>mech.geometry.aabb_volume</code>, <code>render.spatial.sdf_torus_eval</code>). <strong>Click directly on the canvas below to add new seed points or steer the query ray!</strong></p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+                    <div>
+                        <label class="text-xs text-white/60 block mb-1.5">Spatial Kernel Operation</label>
+                        <select id="native-op" class="input-field text-xs" onchange="runNativeOp()">
+                            <option value="convex-hull" selected>Convex Hull 2D (WASM geometry_convex_hull_2)</option>
+                            <option value="delaunay">Delaunay Triangulation (WASM geometry_delaunay_2)</option>
+                            <option value="voronoi">Voronoi Diagram + Dual (WASM geometry_voronoi_2)</option>
+                            <option value="aabb">3D AABB Hierarchy (VibeScript mech.geometry.aabb_volume)</option>
+                            <option value="bvh-ray">BVH Ray-Slab Traversal &amp; Normal Hit</option>
+                            <option value="frustum">Perspective 6-Plane Frustum Culling</option>
+                            <option value="csg-union">CSG Boolean SDF Field (VibeScript sdf_torus_eval)</option>
+                            <option value="bbox">Bounding Box (Alias: bbox)</option>
+                            <option value="convex_hull">Convex Hull (Alias: convex_hull)</option>
+                            <option value="triangulate">Triangulation (Alias: triangulate)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-white/60 block mb-1.5">
+                            Seed Sites (<span id="native-count-label" class="text-emerald-300 font-mono">24</span>)
+                        </label>
+                        <input type="range" id="native-count" class="w-full" min="6" max="64" value="24" oninput="resetCustomNativePoints(); runNativeOp()">
+                    </div>
+                    <div>
+                        <label class="text-xs text-white/60 block mb-1.5">Deterministic PRNG Seed</label>
+                        <input type="number" id="native-seed" class="input-field text-xs font-mono" value="42" min="1" max="9999" onchange="resetCustomNativePoints(); runNativeOp()">
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button onclick="runNativeOp()" class="spinbtn w-full" id="native-run-btn">
+                            <i class="fas fa-play mr-1.5"></i>Execute (WASM)
+                        </button>
+                        <button onclick="runNativeOp()" class="hidden" id="btn-native">Execute</button>
+                        <button type="button" onclick="resetCustomNativePoints(); runNativeOp()" class="preset-pill shrink-0" title="Reset clicked points">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="glass-panel p-4 rounded-xl">
-                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Triangulation</h4>
-                    <p class="text-white/60 text-xs">Delaunay triangulation of point set</p>
+
+                <!-- Interactive Native Spatial Ops Canvas -->
+                <div class="glass-panel p-4 rounded-2xl border border-emerald-500/25 mb-6">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span id="native-canvas-title" class="text-xs font-semibold text-emerald-300">
+                            <i class="fas fa-draw-polygon mr-1.5"></i>Interactive Computational Geometry Viewport — Click canvas to insert site / move query point
+                        </span>
+                        <span id="native-vibe-receipt" class="text-[11px] font-mono text-cyan-300">
+                            WASM Kernel Ready
+                        </span>
+                    </div>
+                    <canvas id="native-ops-canvas" width="760" height="420" class="workbench-canvas cursor-crosshair"></canvas>
                 </div>
-                <div class="glass-panel p-4 rounded-xl">
-                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Intersection</h4>
-                    <p class="text-white/60 text-xs">Compute intersection of two geometries</p>
+
+                <h3 class="text-lg font-semibold mb-3 text-emerald-400">WASM &amp; VibeScript Kernel Output</h3>
+                <div id="native-result" class="code-block text-emerald-300 min-h-[180px] max-h-[360px] overflow-y-auto">
+                    Select an operation and execute to see results…
                 </div>
-                <div class="glass-panel p-4 rounded-xl">
-                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Union</h4>
-                    <p class="text-white/60 text-xs">Compute union of two geometries</p>
-                </div>
-                <div class="glass-panel p-4 rounded-xl">
-                    <h4 class="text-sm font-semibold text-emerald-300 mb-2">Buffer</h4>
-                    <p class="text-white/60 text-xs">Compute buffer zone around geometry</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="glass-strong rounded-3xl p-6">
-            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Spatial Operation Demo</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label class="text-sm text-white/60 block mb-2">Operation</label>
-                    <select id="native-op" class="input-field">
-                        <option value="bbox">Bounding Box</option>
-                        <option value="convex_hull">Convex Hull</option>
-                        <option value="triangulate">Triangulation</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button onclick="runNativeOp()" class="spinbtn w-full" id="native-run-btn">
-                        <i class="fas fa-play mr-2"></i>Execute (WASM)
-                    </button>
-                </div>
-            </div>
-            
-            <div id="native-result" class="code-block text-emerald-300 min-h-[200px]">
-                Select an operation and execute to see results…
             </div>
         </div>
     </div>
@@ -617,14 +909,74 @@ parity:    subject ^ predicate ^ object ^ context ^ metadata
     <!-- Tab Geospatial: qualia-geospatial -->
     <div id="tab-geospatial" class="tab-pane">
         <div class="glass-strong rounded-3xl p-6 mb-6">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-mountain text-sky-400"></i>
-                qualia-geospatial — Local-First GIS, Hilbert Indexing &amp; Isogloss
-            </h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="text-2xl font-semibold flex items-center gap-3">
+                    <i class="fas fa-mountain text-sky-400"></i>
+                    qualia-geospatial — Hilbert Curve Indexing &amp; M64 DEM Terrain Lab
+                </h2>
+                <button type="button" onclick="runGeospatialLab()" id="btn-geospatial-run" class="spinbtn">
+                    <i class="fas fa-compass mr-2"></i>Recompute Hilbert &amp; DEM
+                </button>
+            </div>
             
-            <p class="text-white/70 mb-6">
-                <code>qualia-geospatial</code> provides local-first, zero-copy cartographic and digital elevation processing. It ingests hydro-enforced raster DEMs directly into M64 matter chunk directories, indexes multi-scale spatial coordinates with Hilbert space-filling curves, streams OGC WFS/WMS layers, and maps diachronic linguistic dialect boundaries.
+            <p class="text-white/70 mb-5 text-sm">
+                <code>qualia-geospatial</code> provides local-first, zero-copy cartographic and digital elevation processing. Explore 2D Hilbert space-filling curve locality (<code>xy_to_hilbert</code> / <code>hilbert_to_xy</code>) and inspect quantized 16-bit M64 hydro-enforced DEM elevation chunks with live slope/aspect vectors.
             </p>
+
+            <!-- Controls for Hilbert & DEM -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">
+                        Hilbert Curve Order $k$: <span id="hilbert-order-label" class="text-emerald-300 font-mono font-bold">4 (16×16 = 256 cells)</span>
+                    </label>
+                    <input type="range" id="hilbert-order" class="w-full" min="1" max="6" value="4" oninput="runGeospatialLab()">
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">
+                        1D Range-Query Locality Cluster: <span id="hilbert-range-label" class="text-cyan-300 font-mono font-bold">18% span</span>
+                    </label>
+                    <input type="range" id="hilbert-range" class="w-full" min="5" max="50" value="18" oninput="runGeospatialLab()">
+                </div>
+                <div class="glass-panel p-4 rounded-xl">
+                    <label class="text-xs text-white/60 block mb-1">M64 DEM Terrain Chunk Preset</label>
+                    <select id="dem-preset" class="input-field text-xs" onchange="runGeospatialLab()">
+                        <option value="alpine" selected>Alpine Ridge &amp; Hydro-Burned Glacial Valley</option>
+                        <option value="caldera">Volcanic Caldera &amp; Radial Drainage Basin</option>
+                        <option value="escarpment">Coastal Escarpment &amp; Braided River Delta</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Dual Canvases: Hilbert Curve + DEM Terrain -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="glass-panel p-4 rounded-2xl border border-emerald-500/25">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-emerald-300">
+                            <i class="fas fa-wave-square mr-1.5"></i>Hilbert Space-Filling Curve (<code>xy_to_hilbert</code>)
+                        </h3>
+                        <span class="text-[11px] font-mono text-white/50">Click or hover any cell</span>
+                    </div>
+                    <canvas id="hilbert-canvas" width="460" height="360" class="workbench-canvas cursor-pointer"></canvas>
+                    <div id="hilbert-readout" class="mt-2 text-xs font-mono text-emerald-200/90 flex flex-wrap justify-between gap-2">
+                        <span>Cell (x=5, y=10) → h = 142</span>
+                        <span>did:q42:spatial:0x8e40a12b9c31008e</span>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-2xl border border-sky-500/25">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-sky-300">
+                            <i class="fas fa-layer-group mr-1.5"></i>M64 DEM Terrain Chunk · Elevation, Contours &amp; Slope Vectors
+                        </h3>
+                        <span class="text-[11px] font-mono text-white/50">Click cell to sample AHD height</span>
+                    </div>
+                    <canvas id="dem-canvas" width="460" height="360" class="workbench-canvas cursor-pointer"></canvas>
+                    <div id="dem-readout" class="mt-2 text-xs font-mono text-sky-200/90 flex flex-wrap justify-between gap-2">
+                        <span>Elev: 1,428.4 m AHD (u16: 46812)</span>
+                        <span>Slope: 24.6° · Aspect: 138° SE</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="glass-panel p-4 rounded-xl">
@@ -668,8 +1020,7 @@ parity:    subject ^ predicate ^ object ^ context ^ metadata
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="glass-panel p-5 rounded-xl">
                     <h3 class="text-sm font-semibold text-white mb-2">Rust API Signature</h3>
-                    <div class="code-block text-xs text-sky-200">
-// Ingest GeoTIFF DEM into M64 matter chunk volume
+                    <div class="code-block text-xs text-sky-200">// Ingest GeoTIFF DEM into M64 matter chunk volume
 let raster = ElevationRaster::from_geotiff_bytes(&amp;geotiff_bytes)?;
 let m64 = compile_raster_to_m64(&amp;raster, CompressionCodec::Zstd)?;
 
@@ -678,8 +1029,7 @@ let hilbert_idx = xy_to_hilbert(easting_mm, northing_mm, 16);
 
 // Diachronic socio-linguistic toponym streamer
 let streamer = SonicToponymStreamer::new(&amp;manifest);
-let nearby_lects = streamer.query_radius(&amp;geodetic_coord, 5000.0);
-                    </div>
+let nearby_lects = streamer.query_radius(&amp;geodetic_coord, 5000.0);</div>
                 </div>
 
                 <div class="glass-panel p-5 rounded-xl">
@@ -700,12 +1050,48 @@ let nearby_lects = streamer.query_radius(&amp;geodetic_coord, 5000.0);
     <!-- Tab 5: Q42 10D Tensor -->
     <div id="tab-q42" class="tab-pane">
         <div id="tab-tensor" class="glass-strong rounded-3xl p-6 mb-6">
-            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
-                <i class="fas fa-atom text-emerald-400"></i>
-                Q42 10D Volumetric Tensor System &amp; Container Formats
-            </h2>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="text-2xl font-semibold flex items-center gap-3">
+                    <i class="fas fa-atom text-emerald-400"></i>
+                    Q42 10D Volumetric Tensor System &amp; Container Formats
+                </h2>
+                <button type="button" onclick="runQ42TensorLab()" id="btn-q42-project" class="spinbtn">
+                    <i class="fas fa-project-diagram mr-2"></i>Project 10D → 3D (VibeScript)
+                </button>
+            </div>
 
             <p class="text-white/70 mb-6">The Q42 10D Volumetric Tensor is a 10-dimensional coordinate system <code class="text-emerald-300">[q, v, w, x, y, z, t, α, μ, σ]</code> that encodes semantic concepts, rules, states, and multi-modal data into a quantized geometric structure executable via SIMD, Etalon GPU texture units, or Ground-State Resolvers, and serialized into <code>Container10D</code> (<code>.10d</code>), <code>M64</code>, and <code>EMF64</code> containers.</p>
+
+            <!-- Interactive 10D Projector Workbench -->
+            <div class="glass-panel p-5 rounded-2xl border border-emerald-500/25 mb-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                    <div class="space-y-3 text-xs">
+                        <div class="text-emerald-300 font-semibold">Interactive 10D State Vector Sliders</div>
+                        <div>
+                            <label class="text-white/60 block">Quantum Superposition $q$ (<span id="q42-q-val">0.85</span>)</label>
+                            <input type="range" id="q42-q" class="w-full" min="0" max="1" step="0.05" value="0.85" oninput="runQ42TensorLab()">
+                        </div>
+                        <div>
+                            <label class="text-white/60 block">Topological Variety $v$ (<span id="q42-v-val">0.40</span>)</label>
+                            <input type="range" id="q42-v" class="w-full" min="-1" max="1" step="0.05" value="0.40" oninput="runQ42TensorLab()">
+                        </div>
+                        <div>
+                            <label class="text-white/60 block">Manifold Bifurcation $w$ (<span id="q42-w-val">0.60</span>)</label>
+                            <input type="range" id="q42-w" class="w-full" min="0" max="1" step="0.05" value="0.60" oninput="runQ42TensorLab()">
+                        </div>
+                        <div>
+                            <label class="text-white/60 block">Spectral Signature $\sigma$ (<span id="q42-s-val">0.75</span>)</label>
+                            <input type="range" id="q42-s" class="w-full" min="0" max="1" step="0.05" value="0.75" oninput="runQ42TensorLab()">
+                        </div>
+                        <div id="q42-vibe-receipt" class="p-2.5 rounded-lg bg-black/40 border border-white/10 font-mono text-[11px] text-cyan-300">
+                            render.spatial.project_10d_to_3d ready
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <canvas id="q42-tensor-canvas" width="640" height="280" class="workbench-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
 
             <div class="glass-panel p-6 rounded-xl mb-6">
                 <h3 class="text-lg font-semibold text-emerald-400 mb-4">10D Coordinate System Overview</h3>

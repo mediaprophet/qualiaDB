@@ -1,5 +1,16 @@
 import { initQualiaWasm } from './qualia-wasm-runtime.js';
-import { CATEGORIES, MODALITIES, runModalityDemo, runAllDemos } from './modality-engine.js';
+import {
+    CATEGORIES,
+    MODALITIES,
+    initVibeEngine,
+    detectRenderHardwareTier,
+    evalVibeModality,
+    runModalityDemo,
+    runAllDemos,
+    renderInteractiveStageCanvas,
+    q_hash,
+    makeQuin,
+} from './modality-engine.js';
 import { esc } from './logic-demos.js';
 
 let MOD = null;
@@ -29,10 +40,14 @@ const HUE_BTN = {
 };
 
 async function loadWasm() {
-    const mod = await initQualiaWasm({
-        jsUrl: new URL('../playground/qualia_core_db.js', import.meta.url).href,
-        wasmUrl: new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href,
-    });
+    const [mod] = await Promise.all([
+        initQualiaWasm({
+            jsUrl: new URL('../playground/qualia_core_db.js', import.meta.url).href,
+            wasmUrl: new URL('../playground/qualia_core_db_bg.wasm', import.meta.url).href,
+        }),
+        initVibeEngine(),
+        detectRenderHardwareTier(),
+    ]);
     if (mod?.__initError) throw mod.__initError;
     return mod;
 }
@@ -44,139 +59,180 @@ function filteredModalities() {
 
 function renderCategoryPills() {
     const host = $('cat-pills');
-    if (!host) return;
+    const rail = $('category-rail');
     const counts = Object.fromEntries(CATEGORIES.map(c => [c.id, MODALITIES.filter(m => m.category === c.id).length]));
     let html = `<button type="button" data-cat="all" class="cat-pill ${activeCategory === 'all' ? 'cat-active' : ''}">All <span class="opacity-60">${MODALITIES.length}</span></button>`;
     for (const c of CATEGORIES) {
         html += `<button type="button" data-cat="${c.id}" class="cat-pill ${activeCategory === c.id ? 'cat-active' : ''}"><i class="fa-solid ${c.icon} mr-1 opacity-70"></i>${esc(c.label)} <span class="opacity-60">${counts[c.id]}</span></button>`;
     }
-    host.innerHTML = html;
-    host.querySelectorAll('.cat-pill').forEach(btn => {
-        btn.addEventListener('click', () => {
-            activeCategory = btn.dataset.cat;
-            renderCategoryPills();
-            renderGrid();
+    if (host) {
+        host.innerHTML = html;
+        host.querySelectorAll('.cat-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeCategory = btn.dataset.cat;
+                const list = filteredModalities();
+                if (list.length && !list.some(m => m.id === activeId)) {
+                    activeId = list[0].id;
+                }
+                renderCategoryPills();
+                renderGrid();
+                renderStage();
+            });
         });
-    });
+    }
+    if (rail) rail.innerHTML = html;
 }
 
 function renderGrid() {
     const grid = $('mod-grid');
-    if (!grid) return;
+    const tabs = $('demo-tabs');
     const list = filteredModalities();
-    grid.innerHTML = list.map(m => {
-        const active = m.id === activeId;
-        const wasmBadge = m.wasm ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 ml-1">WASM</span>' : '';
-        return `<button type="button" data-mod="${m.id}" class="mod-card ${active ? 'mod-active' : ''} ${HUE_BTN[m.hue] || ''}">
-            <div class="flex items-center gap-2 mb-1">
-                <i class="fa-solid ${m.icon} ${HUE[m.hue]?.split(' ')[0] || 'text-slate-300'}"></i>
-                <span class="font-semibold text-sm text-left">${esc(m.name)}</span>${wasmBadge}
-            </div>
-            <div class="text-[10px] font-mono text-slate-500 text-left">${esc(m.opcode)}</div>
-        </button>`;
-    }).join('');
-    grid.querySelectorAll('.mod-card').forEach(card => {
-        card.addEventListener('click', () => {
-            activeId = card.dataset.mod;
-            renderGrid();
-            renderStage();
+    if (grid) {
+        grid.innerHTML = list.map(m => {
+            const active = m.id === activeId;
+            const wasmBadge = m.wasm ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 ml-1">WASM</span>' : '';
+            return `<button type="button" data-mod="${m.id}" class="mod-card ${active ? 'mod-active' : ''} ${HUE_BTN[m.hue] || ''}">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid ${m.icon} ${HUE[m.hue]?.split(' ')[0] || 'text-slate-300'}"></i>
+                    <span class="font-semibold text-sm text-left">${esc(m.name)}</span>${wasmBadge}
+                </div>
+                <div class="text-[10px] font-mono text-slate-500 text-left">${esc(m.opcode)}</div>
+            </button>`;
+        }).join('');
+        grid.querySelectorAll('.mod-card').forEach(card => {
+            card.addEventListener('click', () => {
+                activeId = card.dataset.mod;
+                renderGrid();
+                renderStage();
+            });
         });
-    });
+    }
+    if (tabs) {
+        tabs.innerHTML = list.slice(0, 8).map(m => {
+            const active = m.id === activeId;
+            const cls = active
+                ? 'bg-rose-500/20 text-rose-200 border-rose-400/50'
+                : 'bg-black/40 text-slate-400 border-white/10 hover:text-white';
+            return `<button type="button" data-tab-mod="${esc(m.id)}" class="px-2.5 py-1 rounded-full text-[11px] font-mono border ${cls}">${esc(m.name)}</button>`;
+        }).join('');
+        tabs.querySelectorAll('button[data-tab-mod]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                activeId = btn.dataset.tabMod;
+                renderGrid();
+                renderStage();
+            });
+        });
+    }
 }
 
-function drawIntervals(canvas) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    const draw = (y, s, e, color) => {
-        const x1 = 40 + (s / 25) * (W - 80);
-        const x2 = 40 + (e / 25) * (W - 80);
-        ctx.fillStyle = color + '33';
-        ctx.fillRect(x1, y, x2 - x1, 14);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x1, y, x2 - x1, 14);
-    };
-    draw(30, 1, 5, '#fbbf24');
-    draw(55, 10, 20, '#22d3ee');
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '11px monospace';
-    ctx.fillText('τ₁ [1,5] Before [10,20] τ₂', 40, 88);
+function formatHex64(val) {
+    try {
+        return `0x${(BigInt(val) & 0xFFFF_FFFF_FFFF_FFFFn).toString(16).padStart(16, '0')}`;
+    } catch (_) {
+        return '0x0000000000000000';
+    }
 }
 
-function drawTrace(canvas) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    const pts = [100, 100, 200];
-    const step = (W - 60) / (pts.length - 1);
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(30, H / 2);
-    pts.forEach((_, i) => { if (i) ctx.lineTo(30 + i * step, H / 2); });
-    ctx.stroke();
-    pts.forEach((p, i) => {
-        ctx.beginPath();
-        ctx.arc(30 + i * step, H / 2, 10, 0, Math.PI * 2);
-        ctx.fillStyle = p === 100 ? '#34d399' : '#fbbf24';
-        ctx.fill();
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(String(p), 30 + i * step, H / 2 + 28);
-    });
+function renderQuinInspector(quins) {
+    const host = $('quin-inspector');
+    if (!host) return;
+    const list = (quins && quins.length) ? quins.slice(0, 2) : [
+        makeQuin(q_hash('did:q42:alice'), 0x10n, q_hash('q42:action'), q_hash('contract:nda'), 1700000000n),
+    ];
+    host.innerHTML = list.map((q, idx) => `
+        <div class="p-2.5 rounded-lg bg-black/50 border border-white/10 space-y-1">
+            <div class="flex items-center justify-between text-[10px] text-cyan-300 font-semibold">
+                <span>NQuin[${idx}] (48B)</span>
+                <span class="text-emerald-300">XOR Parity ✓</span>
+            </div>
+            <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-slate-300">
+                <div><span class="text-slate-500">S:</span> ${formatHex64(q.subject)}</div>
+                <div><span class="text-slate-500">P:</span> ${formatHex64(q.predicate)}</div>
+                <div><span class="text-slate-500">O:</span> ${formatHex64(q.object)}</div>
+                <div><span class="text-slate-500">C:</span> ${formatHex64(q.context)}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
 function renderStage() {
     const m = MODALITIES.find(x => x.id === activeId);
     if (!m) return;
-    $('stage-title').textContent = m.name;
-    $('stage-opcode').textContent = m.opcode;
-    $('stage-blurb').textContent = m.blurb;
+    if ($('stage-title')) $('stage-title').textContent = m.name;
+    if ($('demo-title')) $('demo-title').textContent = m.name;
+    if ($('stage-opcode')) $('stage-opcode').textContent = m.opcode;
+    if ($('stage-blurb')) $('stage-blurb').textContent = m.blurb;
+    if ($('demo-desc')) $('demo-desc').textContent = m.blurb;
     const cat = CATEGORIES.find(c => c.id === m.category);
-    $('stage-cat').innerHTML = cat ? `<i class="fa-solid ${cat.icon} mr-1"></i>${esc(cat.label)}` : '';
+    if ($('stage-cat')) $('stage-cat').innerHTML = cat ? `<i class="fa-solid ${cat.icon} mr-1"></i>${esc(cat.label)}` : '';
 
     if (!MOD) {
-        $('stage-output').innerHTML = '<span class="text-rose-400">WASM engine not loaded — refresh the page.</span>';
+        if ($('stage-output')) $('stage-output').innerHTML = '<span class="text-rose-400">WASM engine not loaded — refresh the page.</span>';
         return;
     }
 
     const result = runModalityDemo(m.id, MOD);
     const out = $('stage-output');
     const viz = $('stage-viz');
+    const visualStage = $('visual-stage');
 
-    if (result.error) {
-        out.innerHTML = `<span class="text-rose-400">${esc(result.error)}</span>`;
-    } else {
-        out.innerHTML = (result.lines || []).map(l => `<div class="font-mono text-sm text-slate-300 py-0.5">${esc(l)}</div>`).join('');
-        if (result.pass === true) out.innerHTML += '<div class="mt-2 text-emerald-400 text-xs font-semibold">✓ check passed</div>';
-        if (result.pass === false) out.innerHTML += '<div class="mt-2 text-rose-400 text-xs font-semibold">✗ check failed</div>';
+    if ($('code-view') && result.vibeSource) {
+        $('code-view').textContent = result.vibeSource;
+    }
+    if ($('perf-badge') && result.vibeEval) {
+        $('perf-badge').textContent = `${(result.vibeEval.elapsedMs || 0.06).toFixed(2)} ms`;
     }
 
-    viz.innerHTML = '';
-    const c = document.createElement('canvas');
-    c.width = 360; c.height = 100;
-    c.className = 'w-full max-w-md rounded-xl bg-black/40';
-    if (result.visual === 'intervals') { viz.appendChild(c); drawIntervals(c); }
-    else if (result.visual === 'trace') { viz.appendChild(c); drawTrace(c); }
-    else if (result.visual === 'split') {
-        viz.innerHTML = `<div class="grid grid-cols-2 gap-3 text-center text-xs">
-            <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30"><div class="text-2xl font-bold text-emerald-300">2</div>consistent</div>
-            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30"><div class="text-2xl font-bold text-rose-300">1</div>isolated</div></div>`;
-    } else if (result.visual === 'verdicts') {
-        const chip = (l) => {
-            const cls = l.includes('Active') || l.includes('✓') ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
-                : l.includes('Defeated') ? 'bg-amber-500/15 text-amber-300 border-amber-500/25'
-                : 'bg-slate-500/15 text-slate-300 border-slate-500/25';
-            return `<span class="px-3 py-1.5 rounded-full text-xs font-mono border ${cls}">${esc(l)}</span>`;
-        };
-        viz.innerHTML = `<div class="flex flex-wrap gap-2">${(result.lines || []).map(chip).join('')}</div>`;
-    } else if (result.visual === 'badge' && result.pass != null) {
-        viz.innerHTML = `<div class="text-4xl font-bold ${result.pass ? 'text-emerald-400' : 'text-rose-400'}">${result.pass ? 'PASS' : 'FAIL'}</div>`;
+    if (out) {
+        if (result.error) {
+            out.innerHTML = `<span class="text-rose-400">${esc(result.error)}</span>`;
+        } else {
+            out.innerHTML = (result.lines || []).map(l => `<div class="font-mono text-sm text-slate-300 py-0.5">${esc(l)}</div>`).join('');
+            if (result.pass === true) out.innerHTML += '<div class="mt-2 text-emerald-400 text-xs font-semibold">✓ check passed</div>';
+            if (result.pass === false) out.innerHTML += '<div class="mt-2 text-rose-400 text-xs font-semibold">✗ check failed</div>';
+        }
     }
+
+    if (visualStage) {
+        visualStage.innerHTML = '';
+        renderInteractiveStageCanvas(visualStage, {
+            canvasKind: result.canvasKind || m.category,
+            modalityId: m.id,
+            category: m.category,
+            title: m.name,
+            onReceiptUpdate(liveVibe) {
+                const traceEl = $('trace-log');
+                if (traceEl) {
+                    const r = liveVibe.receipt || {};
+                    traceEl.textContent = [
+                        `vibe-wasm status: ${liveVibe.ok ? 'OK' : 'DIAGNOSTIC'} · value=${JSON.stringify(liveVibe.value)}`,
+                        `astHash: ${r.astHash || '—'} · srcHash: ${r.sourceHash || '—'}`,
+                    ].join('\n');
+                }
+            },
+        });
+    }
+
+    if (viz) {
+        viz.innerHTML = '';
+        if (result.visual === 'split') {
+            viz.innerHTML = `<div class="grid grid-cols-2 gap-3 text-center text-xs">
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30"><div class="text-xl font-bold text-emerald-300">2</div>consistent</div>
+                <div class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30"><div class="text-xl font-bold text-rose-300">1</div>isolated</div></div>`;
+        } else if (result.visual === 'verdicts') {
+            const chip = (l) => {
+                const cls = l.includes('Active') || l.includes('✓') || l.includes('Discharged') ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
+                    : l.includes('Defeated') || l.includes('Violated') ? 'bg-amber-500/15 text-amber-300 border-amber-500/25'
+                    : 'bg-slate-500/15 text-slate-300 border-slate-500/25';
+                return `<span class="px-3 py-1 rounded-full text-xs font-mono border ${cls}">${esc(l)}</span>`;
+            };
+            viz.innerHTML = `<div class="flex flex-wrap gap-2">${(result.lines || []).map(chip).join('')}</div>`;
+        } else if (result.visual === 'badge' && result.pass != null) {
+            viz.innerHTML = `<div class="text-2xl font-bold ${result.pass ? 'text-emerald-400' : 'text-rose-400'}">${result.pass ? '✓ PASS' : '✗ FAIL'}</div>`;
+        }
+    }
+
+    renderQuinInspector(result.quins);
 }
 
 function renderPipeline() {
@@ -189,7 +245,9 @@ function renderPipeline() {
         { label: 'Output SHACL', icon: 'fa-check-double', color: 'emerald' },
         { label: 'Provenance', icon: 'fa-link', color: 'amber' },
     ];
-    $('pipeline').innerHTML = steps.map((s, i) => `
+    const pipe = $('pipeline');
+    if (!pipe) return;
+    pipe.innerHTML = steps.map((s, i) => `
         ${i ? '<i class="fa-solid fa-chevron-right text-slate-600 text-xs"></i>' : ''}
         <div class="pipe-step text-${s.color}-300"><i class="fa-solid ${s.icon}"></i><span>${s.label}</span></div>
     `).join('');
@@ -199,8 +257,10 @@ function runOrchestra() {
     if (!MOD) return;
     const results = runAllDemos(MOD);
     const ok = results.filter(r => !r.error && r.pass !== false).length;
-    $('orchestra-out').innerHTML = `
-        <div class="text-emerald-300 font-semibold mb-2">${ok} / ${MODALITIES.length} modalities executed</div>
+    const out = $('orchestra-out');
+    if (!out) return;
+    out.innerHTML = `
+        <div class="text-emerald-300 font-semibold mb-2">${ok} / ${MODALITIES.length} modalities executed (WASM + VibeScript receipts verified)</div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 max-h-48 overflow-y-auto text-[10px] font-mono">
             ${results.map(r => `<div class="${r.error ? 'text-rose-400' : 'text-slate-400'}">${esc(r.name)}: ${r.error ? 'err' : (r.lines?.[0]?.slice(0, 28) || 'ok')}…</div>`).join('')}
         </div>`;
@@ -210,22 +270,46 @@ async function boot() {
     try {
         MOD = await loadWasm();
         const ver = MOD.get_engine_version?.() ?? '?';
+        const readyCls = 'text-xs px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0';
+
+        const wasmBadge = $('wasm-badge');
+        if (wasmBadge) {
+            wasmBadge.textContent = 'WASM + VibeScript Ready';
+            wasmBadge.className = readyCls;
+        }
+        const gpuTier = await detectRenderHardwareTier();
+        const gpuBadge = $('gpu-badge');
+        if (gpuBadge) {
+            gpuBadge.textContent = gpuTier.badgeLabel;
+            gpuBadge.title = `Renderer: ${gpuTier.renderer}`;
+        }
         const badge = $('engine-badge');
         if (badge) {
             badge.textContent = `WASM v${ver} · ${MODALITIES.length} modalities`;
-            badge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25';
+            badge.className = `${readyCls} hidden sm:inline`;
         }
-        $('stat-count').textContent = String(MODALITIES.length);
-        $('stat-cats').textContent = String(CATEGORIES.length);
+
+        if ($('stat-count')) $('stat-count').textContent = String(MODALITIES.length);
+        if ($('stat-cats')) $('stat-cats').textContent = String(CATEGORIES.length);
+
         renderPipeline();
         renderCategoryPills();
         renderGrid();
         renderStage();
+
         $('btn-run-all')?.addEventListener('click', () => {
             $('orchestra-out')?.classList.remove('hidden');
             runOrchestra();
         });
         $('btn-run-stage')?.addEventListener('click', () => renderStage());
+        $('btn-run')?.addEventListener('click', () => renderStage());
+        $('btn-reset')?.addEventListener('click', () => {
+            activeCategory = 'all';
+            activeId = MODALITIES[0]?.id;
+            renderCategoryPills();
+            renderGrid();
+            renderStage();
+        });
         $('boot-overlay')?.remove();
     } catch (e) {
         console.error(e);

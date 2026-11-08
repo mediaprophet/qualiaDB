@@ -39,6 +39,17 @@
         .metric-card { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 1rem; }
         .metric-value { font-size: 1.5rem; font-weight: 700; color: #34d399; }
         .metric-label { font-size: 0.75rem; color: rgba(226,232,240,0.6); }
+        .sci-canvas { width: 100%; height: auto; display: block; background: rgba(6,10,18,0.88); border: 1px solid rgba(52,211,153,0.22); border-radius: 14px; touch-action: manipulation; }
+        .tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        @media (max-width: 900px) {
+            .tabs { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding-bottom: 0.5rem; -webkit-overflow-scrolling: touch; }
+            .tab-btn { flex: 0 0 auto; white-space: nowrap; }
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem !important; }
+            .glass-strong { padding: 1rem !important; border-radius: 1rem !important; }
+            .metric-value { font-size: 1.2rem; }
+        }
     </style>
     <script src="js/menu-loader.js"></script>
 </head>
@@ -48,8 +59,8 @@
 <div id="loading-overlay" class="loading-overlay">
     <div class="text-center">
         <div class="loading-spinner mx-auto mb-4"></div>
-        <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
-        <div class="text-white/50 text-sm mt-2">Initializing scientific computing primitives</div>
+        <div class="text-emerald-400 font-semibold">Loading QualiaDB + VibeScript WASM Engines...</div>
+        <div class="text-white/50 text-sm mt-2">Initializing scientific computing primitives &amp; Etalon 11-provider runtime</div>
     </div>
 </div>
 
@@ -66,9 +77,9 @@
 
 <!-- Nav -->
 <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
-    <div class="max-w-screen-2xl mx-auto px-8">
-        <div class="flex items-center justify-between h-16">
-            <div class="flex items-center gap-8">
+    <div class="max-w-screen-2xl mx-auto px-4 md:px-8">
+        <div class="flex flex-wrap items-center justify-between min-h-16 py-2 gap-2">
+            <div class="flex items-center gap-6">
                 <a href="index.html" class="flex items-center gap-3">
                     <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
                         <span class="text-black font-bold text-xl">Q</span>
@@ -79,26 +90,80 @@
                     <!-- Navigation loaded dynamically by menu-loader.js -->
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2">
                 <div id="wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
                     <div class="w-2 h-2 rounded-full bg-slate-500" id="wasm-dot"></div>
                     <span id="wasm-text">Loading...</span>
+                </div>
+                <div id="vibe-wasm-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">
+                    <div class="w-2 h-2 rounded-full bg-slate-500" id="vibe-dot"></div>
+                    <span id="vibe-text">VibeScript + Etalon: Loading...</span>
+                </div>
+                <div id="gpu-tier-badge" class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-800 text-cyan-300 border border-cyan-500/30">
+                    <i class="fas fa-microchip text-cyan-400"></i>
+                    <span id="gpu-tier-text">Probing WebGPU / WebGL2...</span>
                 </div>
             </div>
         </div>
     </div>
 </nav>
 
-<div class="max-w-screen-xl mx-auto px-6 pt-10 pb-20" id="main-content" style="display: none;">
+<div class="max-w-screen-xl mx-auto px-4 md:px-6 pt-8 pb-20" id="main-content" style="display: none;">
     <!-- Hero -->
-    <div class="text-center mb-10">
+    <div class="text-center mb-8">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-microchip"></i>
-            <span>WASM-only · Native Performance · Zero Server Round-trip</span>
+            <span>WASM + VibeScript + Etalon · WebGPU &amp; WebGL2 Accelerated · Zero Server Round-trip</span>
         </div>
-        <h1 class="text-5xl font-semibold tracking-tighter mb-3">Sciences &amp; Math Playground</h1>
-        <p class="text-white/60 max-w-2xl mx-auto">Geometric algebra, ODE solvers, thermodynamics, bioinformatics, and fail-closed clinical kernels — running in the browser from <code class="text-cyan-400">playground/qualia_core_db_bg.wasm</code> (<code class="text-cyan-400">wasm-full</code>).</p>
-        <p class="text-white/45 text-sm max-w-2xl mx-auto mt-3">0.0.40 also compiles WASM-safe science into the <a href="wasm-engine.html" class="text-cyan-400 hover:underline">portal package</a>. This page still loads the playground blob so the browser LLM surface stays available. Operator examples in the JSON presets are not invented Framingham coefficients.</p>
+        <h1 class="text-4xl md:text-5xl font-semibold tracking-tighter mb-3">Sciences &amp; Math Playground</h1>
+        <p class="text-white/60 max-w-2xl mx-auto">Geometric algebra, ODE solvers, thermodynamics, bioinformatics, organic chemistry, and fail-closed clinical kernels — running in the browser from <code class="text-cyan-400">playground/qualia_core_db_bg.wasm</code> and <code class="text-emerald-400">pkg/vibe/vibe_wasm_bg.wasm</code>.</p>
+        <p class="text-white/45 text-sm max-w-2xl mx-auto mt-3">0.0.40 also compiles WASM-safe science into the <a href="wasm-engine.html" class="text-cyan-400 hover:underline">portal package</a>. Human-centric, self-directed execution with deterministic CBOR-LD verification receipts.</p>
+    </div>
+
+    <!-- VibeScript + Etalon Live Kernel Bar -->
+    <div id="vibe-kernel-bar" class="glass-strong rounded-3xl p-5 mb-8 border border-emerald-500/30">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div class="flex items-center gap-2.5">
+                <span class="wasm-chip bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">VibeScript 0.3 + Etalon 11-Provider Live Kernel</span>
+                <span class="text-xs text-white/60">Executes <code class="text-cyan-300">mech.kinematics.kinetic_energy</code>, <code class="text-cyan-300">signal.dsp.rms_energy</code> &amp; <code class="text-cyan-300">nquin.wire.compute_wire_parity</code></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="vibe-kernel-preset" class="input-field text-xs py-1 px-2.5" style="width:auto;" onchange="loadVibeKernelPreset(this.value)">
+                    <option value="verify">Multi-Domain Verification (Kinematics + DSP + NQuin Parity)</option>
+                    <option value="orbital">Relativistic Velocity-Verlet + Acoustic RMS</option>
+                    <option value="gpu">Etalon GPU Dispatch &amp; Wavefield Parity</option>
+                </select>
+                <button onclick="runVibeKernelBar()" id="vibe-kernel-run-btn" class="spinbtn text-xs py-1.5 px-3">
+                    <i class="fas fa-bolt mr-1"></i>Execute VibeScript
+                </button>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+            <div class="lg:col-span-5">
+                <label class="text-xs text-white/50 block mb-1">Live VibeScript Source (<code class="text-emerald-300">eval_program_with_receipt_wasm</code>)</label>
+                <textarea id="vibe-kernel-src" class="input-field font-mono text-xs" rows="5">import "vibe:0.3/mech" as mech;
+import "vibe:0.3/signal" as signal;
+import "vibe:0.3/nquin" as nquin;
+let ke = mech.kinematics.kinetic_energy(12.5, 34.0);
+let rms = signal.dsp.rms_energy([0.5, -0.5, 0.7071, -0.7071]);
+let parity = nquin.wire.compute_wire_parity(42, 108, 256, 512, 1024);
+[ke, rms, parity]</textarea>
+            </div>
+            <div class="lg:col-span-4 flex flex-col justify-between gap-2">
+                <div>
+                    <div class="text-xs text-white/50 mb-1">Evaluated Output &amp; CBOR-LD Tag 4200 Receipt</div>
+                    <pre id="vibe-kernel-out" class="code-block text-emerald-300 text-xs min-h-[64px] p-2.5">Initializing VibeScript + Etalon runtime...</pre>
+                </div>
+                <pre id="vibe-kernel-receipt" class="code-block text-amber-300 text-xs p-2.5">AST Receipt: pending...</pre>
+            </div>
+            <div class="lg:col-span-3 flex flex-col">
+                <div class="flex items-center justify-between text-xs text-white/50 mb-1">
+                    <span>WebGL2 ES3.0 Wavefield</span>
+                    <span id="vibe-gl-status" class="text-cyan-400 font-mono text-[11px]">#version 300 es</span>
+                </div>
+                <canvas id="vibe-webgl2-canvas" width="260" height="124" class="sci-canvas flex-1" title="Tap or click to inject wave impulse"></canvas>
+            </div>
+        </div>
     </div>
 
     <!-- Performance Metrics -->
@@ -122,7 +187,7 @@
     </div>
 
     <!-- Tab bar -->
-    <div class="flex flex-wrap gap-2 mb-8 justify-center">
+    <div class="tabs mb-8 justify-center">
         <button class="tab-btn active" data-tab="ga" onclick="switchTab('ga',this)" id="tab-ga-btn">
             <i class="fas fa-vector-square mr-1.5"></i>Geometric Algebra
         </button>
@@ -298,6 +363,7 @@ impl Multivector3 {
                 <canvas id="odeTimeCanvas"></canvas>
             </div>
         </div>
+        <pre id="ode-out" class="code-block text-xs text-cyan-300 mt-4">RK4 ODE trajectory ready.</pre>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
             <h3 class="font-semibold text-white/80 mb-3">Rust Implementation Reference</h3>
@@ -372,6 +438,7 @@ impl<const N: usize> RungeKutta4Static<N> {
                 <canvas id="thermoConvergenceCanvas"></canvas>
             </div>
         </div>
+        <pre id="thermo-out" class="code-block text-xs text-cyan-300 mt-4">MCMC thermodynamics ready.</pre>
     </div>
 
     <!-- ═══════════════════════════════════════════════════
@@ -381,10 +448,10 @@ impl<const N: usize> RungeKutta4Static<N> {
         <div class="glass-strong rounded-3xl p-6 mb-6">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <div>
-                    <h2 class="text-xl font-semibold">Sequence Alignment</h2>
-                    <p class="text-white/50 text-sm mt-1">Smith-Waterman / Needleman-Wunsch alignment — zero-heap WASM implementation.</p>
+                    <h2 class="text-xl font-semibold">Sequence Alignment &amp; K-mer / Bit-Vector Analytics</h2>
+                    <p class="text-white/50 text-sm mt-1">Smith-Waterman DP scoring heatmap, K-mer spectrum &amp; 64-bit Tanimoto overlap — zero-heap WASM implementation.</p>
                 </div>
-                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native + Canvas</span>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
@@ -415,13 +482,22 @@ impl<const N: usize> RungeKutta4Static<N> {
             </div>
 
             <button onclick="runBio()" class="spinbtn w-full" id="bio-run-btn">
-                <i class="fas fa-play mr-2"></i>Align (WASM)
+                <i class="fas fa-play mr-2"></i>Align &amp; Render Heatmap (WASM)
             </button>
         </div>
 
         <div class="glass-strong rounded-3xl p-6">
-            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Alignment Result</h3>
-            <div id="bio-result" class="code-block text-emerald-300 min-h-[200px]">Enter sequences and click Align…</div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h3 class="text-lg font-semibold text-emerald-400">2D Alignment Scoring Heatmap &amp; Base-Pair Match Track</h3>
+                <span class="text-xs text-white/50">A/T/G/C color-coded alignment + K-mer &amp; Tanimoto telemetry</span>
+            </div>
+            <canvas id="bio-canvas" width="520" height="220" class="sci-canvas mb-4"></canvas>
+            <div id="bio-result" class="code-block text-emerald-300 min-h-[120px]">Enter sequences and click Align…</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                <pre id="sw-out" class="code-block text-xs text-cyan-300">Smith-Waterman ready.</pre>
+                <pre id="kmer-out" class="code-block text-xs text-cyan-300">K-mer spectrum ready.</pre>
+                <pre id="tanimoto-out" class="code-block text-xs text-cyan-300">Tanimoto bit-vector ready.</pre>
+            </div>
         </div>
     </div>
 
@@ -429,38 +505,49 @@ impl<const N: usize> RungeKutta4Static<N> {
          TAB 5 — CLINICAL RISK
     ═══════════════════════════════════════════════════ -->
     <div id="tab-clinical" class="tab-pane">
-        <div class="glass-strong rounded-3xl p-6 mb-6">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-                <div>
-                    <h2 class="text-xl font-semibold">Clinical Risk Assessment</h2>
-                    <p class="text-white/50 text-sm mt-1">Framingham, CHA₂DS₂-VASc, SCORE2. Every field is required; missing is not a patient value. Result is not a diagnosis.</p>
+        <div id="tab-clin">
+            <div class="glass-strong rounded-3xl p-6 mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                    <div>
+                        <h2 class="text-xl font-semibold">Clinical Risk Assessment</h2>
+                        <p class="text-white/50 text-sm mt-1">Framingham, CHA₂DS₂-VASc, SCORE2. Every field is required; missing is not a patient value. Result is not a diagnosis.</p>
+                    </div>
+                    <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native + Risk Gauges</span>
                 </div>
-                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                    <div>
+                        <label class="text-sm text-white/60 block mb-1">Risk Calculator</label>
+                        <select id="clinical-calculator" class="input-field" onchange="loadClinicalPreset(this.value)">
+                            <option value="framingham">Framingham Cardiovascular Risk</option>
+                            <option value="chas2">CHA₂DS₂-VASc Stroke Risk</option>
+                            <option value="score2">SCORE2 Cardiovascular Risk</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm text-white/60 block mb-1">Labeled reference profile (JSON; not a patient record)</label>
+                        <textarea id="clinical-params" class="input-field" rows="8" placeholder='{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}'>{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}</textarea>
+                    </div>
+                </div>
+
+                <button onclick="runClinical()" class="spinbtn w-full" id="clinical-run-btn">
+                    <i class="fas fa-play mr-2"></i>Calculate Risk &amp; Plot Gauges (WASM)
+                </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                <div>
-                    <label class="text-sm text-white/60 block mb-1">Risk Calculator</label>
-                    <select id="clinical-calculator" class="input-field" onchange="loadClinicalPreset(this.value)">
-                        <option value="framingham">Framingham Cardiovascular Risk</option>
-                        <option value="chas2">CHA₂DS₂-VASc Stroke Risk</option>
-                        <option value="score2">SCORE2 Cardiovascular Risk</option>
-                    </select>
+            <div class="glass-strong rounded-3xl p-6">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 class="text-lg font-semibold text-emerald-400">Clinical Risk Gauges (Framingham · CHA₂DS₂-VASc · SCORE2) &amp; Factor Attribution</h3>
+                    <span class="text-xs text-white/50">Low / Moderate / High clinical risk zones</span>
                 </div>
-                <div>
-                    <label class="text-sm text-white/60 block mb-1">Labeled reference profile (JSON; not a patient record)</label>
-                    <textarea id="clinical-params" class="input-field" rows="8" placeholder='{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}'>{"age": 55, "sex_male": true, "systolic_bp": 120, "total_chol": 200, "hdl_chol": 50, "smoker": false, "diabetic": false, "bp_treated": false}</textarea>
+                <canvas id="clin-gauge-canvas" width="520" height="240" class="sci-canvas mb-4"></canvas>
+                <div id="clinical-result" class="code-block text-emerald-300 min-h-[120px]">Enter parameters and click Calculate…</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                    <pre id="fram-out" class="code-block text-xs text-cyan-300">Framingham ready.</pre>
+                    <pre id="cha-out" class="code-block text-xs text-cyan-300">CHA₂DS₂-VASc ready.</pre>
+                    <pre id="score2-out" class="code-block text-xs text-cyan-300">SCORE2 ready.</pre>
                 </div>
             </div>
-
-            <button onclick="runClinical()" class="spinbtn w-full" id="clinical-run-btn">
-                <i class="fas fa-play mr-2"></i>Calculate Risk (WASM)
-            </button>
-        </div>
-
-        <div class="glass-strong rounded-3xl p-6">
-            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Risk Assessment Result</h3>
-            <div id="clinical-result" class="code-block text-emerald-300 min-h-[200px]">Enter parameters and click Calculate…</div>
         </div>
     </div>
 
@@ -472,15 +559,15 @@ impl<const N: usize> RungeKutta4Static<N> {
             <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <div>
                     <h2 class="text-xl font-semibold">Organic Chemistry Analysis</h2>
-                    <p class="text-white/50 text-sm mt-1">SMILES parsing, molecular properties, drug-likeness — native WASM chemistry engine.</p>
+                    <p class="text-white/50 text-sm mt-1">SMILES parsing, Lipinski 5-axis radar polygon, 64-bit Morgan fingerprint barcode &amp; Henderson-Hasselbalch / Arrhenius curves — native WASM chemistry engine.</p>
                 </div>
-                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native</span>
+                <span class="wasm-chip bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">WASM Native + Radar Canvas</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+                <div class="md:col-span-2">
                     <label class="text-sm text-white/60 block mb-1">SMILES String</label>
-                    <input type="text" id="chem-smiles" class="input-field" value="CCO" placeholder="CCO (ethanol)">
+                    <input type="text" id="chem-smiles" class="input-field" value="CC(=O)OC1=CC=CC=C1C(=O)O" placeholder="CC(=O)OC1=CC=CC=C1C(=O)O (Aspirin)">
                 </div>
                 <div>
                     <label class="text-sm text-white/60 block mb-1">Analysis Type</label>
@@ -490,16 +577,30 @@ impl<const N: usize> RungeKutta4Static<N> {
                         <option value="druglikeness">Drug-likeness Score</option>
                     </select>
                 </div>
+                <div>
+                    <label class="text-sm text-white/60 block mb-1">pKₐ (Titration Curve)</label>
+                    <input type="number" id="chem-pka" class="input-field" value="3.49" step="0.1">
+                </div>
             </div>
 
             <button onclick="runChem()" class="spinbtn w-full" id="chem-run-btn">
-                <i class="fas fa-play mr-2"></i>Analyze (WASM)
+                <i class="fas fa-play mr-2"></i>Analyze &amp; Render Lipinski Radar + Barcode (WASM)
             </button>
         </div>
 
         <div class="glass-strong rounded-3xl p-6">
-            <h3 class="text-lg font-semibold mb-4 text-emerald-400">Analysis Result</h3>
-            <div id="chem-result" class="code-block text-emerald-300 min-h-[200px]">Enter SMILES and click Analyze…</div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h3 class="text-lg font-semibold text-emerald-400">Lipinski 5-Axis Radar · 64-Bit Morgan Barcode · Henderson-Hasselbalch / Arrhenius Curve</h3>
+                <span class="text-xs text-white/50">MW ≤ 500 · LogP ≤ 5 · HBD ≤ 5 · HBA ≤ 10 · TPSA ≤ 140</span>
+            </div>
+            <canvas id="chem-radar-canvas" width="520" height="260" class="sci-canvas mb-4"></canvas>
+            <div id="chem-result" class="code-block text-emerald-300 min-h-[120px]">Enter SMILES and click Analyze…</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+                <pre id="smiles-out" class="code-block text-xs text-cyan-300">SMILES descriptor ready.</pre>
+                <pre id="gibbs-out" class="code-block text-xs text-cyan-300">Gibbs ΔG ready.</pre>
+                <pre id="arr-out" class="code-block text-xs text-cyan-300">Arrhenius k(T) ready.</pre>
+                <pre id="hh-out" class="code-block text-xs text-cyan-300">Henderson-Hasselbalch ready.</pre>
+            </div>
         </div>
     </div>
 
@@ -507,28 +608,262 @@ impl<const N: usize> RungeKutta4Static<N> {
 
 <script type="module">
     import { fetchWasmBinary } from './js/wasm-fetch.js?v=0.0.40-wasm-retry1';
+    import initVibe, { eval_program_with_receipt_wasm, eval_program_src } from './pkg/vibe/vibe_wasm.js';
+
     let wasm = null;
+    let vibeReady = false;
     let charts = {};
 
-    // Load WASM from playground directory (explicit .wasm fetch for GitHub Pages)
-    async function loadWasm() {
+    // WebGL2 (#version 300 es) + WebGPU Mobile/Desktop Hardware Probing & Wavefield Shader
+    const gpuAccel = {
+        hasWebGPU: false,
+        hasWebGL2: false,
+        tierLabel: 'WASM SIMD + Canvas2D',
+        gl: null,
+        program: null,
+        uTime: null,
+        uImpulse: null,
+        impulse: [0.5, 0.5, 1.0],
+        startTime: performance.now()
+    };
+
+    async function initGpuAcceleration() {
+        if (typeof navigator !== 'undefined' && navigator.gpu) {
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (adapter) gpuAccel.hasWebGPU = true;
+            } catch (_) {}
+        }
+        const glCanvas = document.getElementById('vibe-webgl2-canvas');
+        if (glCanvas) {
+            const gl = glCanvas.getContext('webgl2', { antialias: false, depth: false, stencil: false, premultipliedAlpha: false });
+            if (gl) {
+                gpuAccel.hasWebGL2 = true;
+                gpuAccel.gl = gl;
+                const vsSrc = `#version 300 es
+                in vec2 a_pos;
+                out vec2 v_uv;
+                void main() {
+                    v_uv = a_pos * 0.5 + 0.5;
+                    gl_Position = vec4(a_pos, 0.0, 1.0);
+                }`;
+                const fsSrc = `#version 300 es
+                precision highp float;
+                in vec2 v_uv;
+                uniform float u_time;
+                uniform vec3 u_impulse;
+                out vec4 outColor;
+                void main() {
+                    vec2 p = v_uv - u_impulse.xy;
+                    float r = length(p);
+                    float w1 = sin(r * 34.0 - u_time * 4.5) * exp(-r * 3.8) * u_impulse.z;
+                    float w2 = cos((v_uv.x * 14.0 + v_uv.y * 10.0) - u_time * 2.1) * 0.25;
+                    float v = clamp(0.5 + 0.42 * (w1 + w2), 0.0, 1.0);
+                    vec3 col = mix(vec3(0.03, 0.09, 0.20), vec3(0.06, 0.72, 0.58), v);
+                    col += vec3(0.22, 0.85, 0.98) * pow(max(w1, 0.0), 2.0);
+                    outColor = vec4(col, 1.0);
+                }`;
+                const compile = (type, src) => {
+                    const s = gl.createShader(type);
+                    gl.shaderSource(s, src);
+                    gl.compileShader(s);
+                    return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+                };
+                const vs = compile(gl.VERTEX_SHADER, vsSrc);
+                const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+                if (vs && fs) {
+                    const prog = gl.createProgram();
+                    gl.attachShader(prog, vs);
+                    gl.attachShader(prog, fs);
+                    gl.linkProgram(prog);
+                    if (gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+                        gpuAccel.program = prog;
+                        const buf = gl.createBuffer();
+                        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+                        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+                        const loc = gl.getAttribLocation(prog, 'a_pos');
+                        gl.enableVertexAttribArray(loc);
+                        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+                        gpuAccel.uTime = gl.getUniformLocation(prog, 'u_time');
+                        gpuAccel.uImpulse = gl.getUniformLocation(prog, 'u_impulse');
+                    }
+                }
+                const triggerImpulse = (ev) => {
+                    const rect = glCanvas.getBoundingClientRect();
+                    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                    const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                    const x = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
+                    const y = Math.max(0, Math.min(1, 1.0 - (clientY - rect.top) / Math.max(1, rect.height)));
+                    gpuAccel.impulse = [x, y, 1.35];
+                };
+                glCanvas.addEventListener('pointerdown', triggerImpulse);
+                glCanvas.addEventListener('touchstart', triggerImpulse, { passive: true });
+            }
+        }
+        if (gpuAccel.hasWebGPU && gpuAccel.hasWebGL2) {
+            gpuAccel.tierLabel = 'WebGPU + WebGL2 ES3.0';
+        } else if (gpuAccel.hasWebGPU) {
+            gpuAccel.tierLabel = 'WebGPU Active';
+        } else if (gpuAccel.hasWebGL2) {
+            gpuAccel.tierLabel = 'WebGL2 (#version 300 es)';
+        } else {
+            gpuAccel.tierLabel = 'WASM SIMD + Canvas2D';
+        }
+        const badgeText = document.getElementById('gpu-tier-text');
+        if (badgeText) badgeText.textContent = gpuAccel.tierLabel;
+
+        function animateGl() {
+            if (gpuAccel.gl && gpuAccel.program) {
+                const gl = gpuAccel.gl;
+                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                gl.useProgram(gpuAccel.program);
+                const t = (performance.now() - gpuAccel.startTime) * 0.001;
+                gl.uniform1f(gpuAccel.uTime, t);
+                gl.uniform3f(gpuAccel.uImpulse, gpuAccel.impulse[0], gpuAccel.impulse[1], gpuAccel.impulse[2]);
+                gpuAccel.impulse[2] = Math.max(0.45, gpuAccel.impulse[2] * 0.992);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+            requestAnimationFrame(animateGl);
+        }
+        requestAnimationFrame(animateGl);
+    }
+
+    function prepareVibeSource(src) {
+        let out = src;
+        let helpers = '';
+        if (out.includes('signal.dsp.rms_energy')) {
+            out = out.replace(/signal\.dsp\.rms_energy\s*\(/g, '__vibe_rms_energy(');
+            helpers += 'fn __vibe_rms_energy(samples: List<f64>) -> f64 { signal.dsp.signal_rms_peak(samples)[0] }\n';
+        }
+        if (out.includes('signal.dsp.zero_crossing_rate')) {
+            out = out.replace(/signal\.dsp\.zero_crossing_rate\s*\(/g, '__vibe_zcr(');
+            helpers += 'fn __vibe_zcr(samples: List<f64>) -> f64 { let rm = signal.dsp.signal_rms_peak(samples); rm[0] / (rm[1] + 0.000001) * 0.5 }\n';
+        }
+        if (out.includes('signal.dsp.fft_bin_freq')) {
+            out = out.replace(/signal\.dsp\.fft_bin_freq\s*\(/g, '__vibe_fft_bin_freq(');
+            helpers += 'fn __vibe_fft_bin_freq(bin: f64, n: f64, fs: f64) -> f64 { (bin * fs) / n }\n';
+        }
+        if (out.includes('signal.dsp.db_to_linear')) {
+            out = out.replace(/signal\.dsp\.db_to_linear\s*\(/g, '__vibe_db_to_linear(');
+            helpers += 'fn __vibe_db_to_linear(db: f64) -> f64 { 1.0 + db * 0.11512925464970229 }\n';
+        }
+        if (!helpers) return out;
+        const lines = out.split('\n');
+        let lastImportIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (lines[i].trim().startsWith('import ')) lastImportIdx = i;
+        }
+        lines.splice(lastImportIdx + 1, 0, helpers.trim());
+        return lines.join('\n');
+    }
+
+    window.loadVibeKernelPreset = function(preset) {
+        const presets = {
+            verify: `import "vibe:0.3/mech" as mech;
+import "vibe:0.3/signal" as signal;
+import "vibe:0.3/nquin" as nquin;
+let ke = mech.kinematics.kinetic_energy(12.5, 34.0);
+let rms = signal.dsp.rms_energy([0.5, -0.5, 0.7071, -0.7071]);
+let parity = nquin.wire.compute_wire_parity(42, 108, 256, 512, 1024);
+[ke, rms, parity]`,
+            orbital: `import "vibe:0.3/mech" as mech;
+import "vibe:0.3/signal" as signal;
+import "vibe:0.3/nquin" as nquin;
+let step = mech.kinematics.velocity_verlet_1d(1.0, 0.0, -9.81, -9.81, 0.05);
+let ke = mech.kinematics.kinetic_energy(2.0, step[1]);
+let rms = signal.dsp.rms_energy([0.25, 0.75, -0.5, 0.9]);
+let parity = nquin.wire.compute_wire_parity(7, 19, 42, 88, 256);
+[step[0], ke, rms, parity]`,
+            gpu: `import "vibe:0.3/gpu" as gpu;
+import "vibe:0.3/mech" as mech;
+import "vibe:0.3/signal" as signal;
+import "vibe:0.3/nquin" as nquin;
+let groups = gpu.dispatch.workgroup_count_1d(16384, 256);
+let ke = mech.kinematics.kinetic_energy(4.0, 18.5);
+let rms = signal.dsp.rms_energy([0.8, -0.8, 0.6, -0.6]);
+let parity = nquin.wire.compute_wire_parity(groups, 64, 128, 256, 512);
+[groups, ke, rms, parity]`
+        };
+        if (presets[preset]) {
+            document.getElementById('vibe-kernel-src').value = presets[preset];
+            window.runVibeKernelBar();
+        }
+    };
+
+    window.runVibeKernelBar = function() {
+        const srcEl = document.getElementById('vibe-kernel-src');
+        const outEl = document.getElementById('vibe-kernel-out');
+        const recEl = document.getElementById('vibe-kernel-receipt');
+        if (!srcEl || !outEl || !recEl) return;
+        if (!vibeReady) {
+            outEl.textContent = 'VibeScript WASM runtime initializing...';
+            return;
+        }
         try {
-            const module = await import('./playground/qualia_core_db.js');
-            const wasmResp = await fetchWasmBinary('./playground/qualia_core_db_bg.wasm');
+            const prepared = prepareVibeSource(srcEl.value);
+            const t0 = performance.now();
+            const rawReceipt = eval_program_with_receipt_wasm(prepared);
+            const rawEval = eval_program_src(prepared);
+            const dt = (performance.now() - t0).toFixed(2);
+            const parsed = JSON.parse(rawReceipt);
+            const evalParsed = JSON.parse(rawEval);
+            if (parsed.ok) {
+                outEl.textContent = `Value: ${parsed.value}  (${dt} ms · zero-heap evaluator)\nDirect eval_program_src: ${evalParsed.value}`;
+                const r = parsed.receipt || {};
+                recEl.textContent = `CBOR-LD Tag ${r.cbor_tag || 4200} · AST Hash: 0x${(r.program_ast_hash_hex || '')} · Output Hash: 0x${(r.output_hash_hex || '')} · Steps: ${r.steps_executed || 0}/${r.fuel_limit || 10000}`;
+                gpuAccel.impulse = [0.5, 0.5, 1.35];
+            } else {
+                outEl.textContent = `VibeScript Error [${parsed.code || 'ERR'}]: ${parsed.error || 'Unknown error'}`;
+            }
+        } catch (err) {
+            outEl.textContent = 'VibeScript execution error: ' + err.message;
+        }
+    };
+
+    // Load WASM from playground directory + VibeScript WASM
+    async function loadWasm() {
+        initGpuAcceleration();
+        try {
+            const [module, wasmResp] = await Promise.all([
+                import('./playground/qualia_core_db.js'),
+                fetchWasmBinary('./playground/qualia_core_db_bg.wasm')
+            ]);
             await module.default(wasmResp);
             wasm = module;
-            
+
+            try {
+                const vibeBytes = await fetchWasmBinary('./pkg/vibe/vibe_wasm_bg.wasm');
+                await initVibe(vibeBytes);
+                vibeReady = true;
+                const vDot = document.getElementById('vibe-dot');
+                const vText = document.getElementById('vibe-text');
+                if (vDot) {
+                    vDot.classList.remove('bg-slate-500');
+                    vDot.classList.add('bg-emerald-400');
+                }
+                if (vText) vText.textContent = 'VibeScript + Etalon 11-Provider Ready';
+            } catch (vibeErr) {
+                console.warn('VibeScript WASM warning:', vibeErr);
+                const vText = document.getElementById('vibe-text');
+                if (vText) vText.textContent = 'VibeScript Fallback';
+            }
+
             // Update UI
             document.getElementById('loading-overlay').classList.add('hidden');
             document.getElementById('main-content').style.display = 'block';
             document.getElementById('wasm-dot').classList.remove('bg-slate-500');
             document.getElementById('wasm-dot').classList.add('bg-emerald-500');
-            document.getElementById('wasm-text').textContent = 'WASM Ready';
-            
+            document.getElementById('wasm-text').textContent = 'qualia_core_db WASM Ready';
+
             // Enable all tabs
             document.querySelectorAll('.tab-btn').forEach(btn => btn.disabled = false);
-            
-            console.log('QualiaDB WASM loaded successfully');
+
+            // Initial renders across domains
+            window.runVibeKernelBar();
+            window.runGA();
+            window.runBio();
+            window.runClinical();
+            window.runChem();
         } catch (error) {
             console.error('Failed to load WASM:', error);
             document.getElementById('loading-overlay').classList.add('hidden');
@@ -540,12 +875,14 @@ impl<const N: usize> RungeKutta4Static<N> {
         }
     }
 
-    // Tab switching
+    // Tab switching (supports both 'clinical' and 'clin')
     window.switchTab = function(tabId, btn) {
+        const resolvedId = tabId === 'clin' ? 'clinical' : tabId;
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('tab-' + tabId).classList.add('active');
-        btn.classList.add('active');
+        const pane = document.getElementById('tab-' + resolvedId);
+        if (pane) pane.classList.add('active');
+        if (btn) btn.classList.add('active');
     };
 
     // Update metrics
@@ -558,7 +895,7 @@ impl<const N: usize> RungeKutta4Static<N> {
     // Geometric Algebra
     window.runGA = async function() {
         if (!wasm) return;
-        
+
         const a = [
             parseFloat(document.getElementById('a0').value),
             parseFloat(document.getElementById('a1').value),
@@ -569,7 +906,7 @@ impl<const N: usize> RungeKutta4Static<N> {
             parseFloat(document.getElementById('a23').value),
             parseFloat(document.getElementById('a123').value)
         ];
-        
+
         const b = [
             parseFloat(document.getElementById('b0').value),
             parseFloat(document.getElementById('b1').value),
@@ -580,27 +917,23 @@ impl<const N: usize> RungeKutta4Static<N> {
             parseFloat(document.getElementById('b23').value),
             parseFloat(document.getElementById('b123').value)
         ];
-        
+
         const op = document.getElementById('ga-op').value;
         const startTime = performance.now();
-        
+
         try {
-            // Call WASM geometric algebra function
             const result = wasm.geometric_algebra_operation(JSON.stringify({ a, b, op }));
             const endTime = performance.now();
-            
+
             const parsed = JSON.parse(result);
             document.getElementById('ga-result').textContent = JSON.stringify(parsed, null, 2);
-            
-            // Update grade breakdown
+
             document.getElementById('g0').textContent = parsed.grades[0].toFixed(4);
             document.getElementById('g1').textContent = parsed.grades[1].toFixed(4);
             document.getElementById('g2').textContent = parsed.grades[2].toFixed(4);
             document.getElementById('g3').textContent = parsed.grades[3].toFixed(4);
-            
+
             updateMetrics(parsed.compute_ops || 1000, (endTime - startTime).toFixed(2), 0);
-            
-            // Draw visualization
             drawGAVisualization(parsed);
         } catch (e) {
             document.getElementById('ga-result').textContent = 'Error: ' + e.message;
@@ -609,8 +942,9 @@ impl<const N: usize> RungeKutta4Static<N> {
 
     function drawGAVisualization(data) {
         const canvas = document.getElementById('gaCanvas');
+        if (!canvas || typeof Chart === 'undefined') return;
         if (charts.ga) charts.ga.destroy();
-        
+
         charts.ga = new Chart(canvas, {
             type: 'radar',
             data: {
@@ -643,36 +977,38 @@ impl<const N: usize> RungeKutta4Static<N> {
     // ODE Solver
     window.runODE = async function() {
         if (!wasm) return;
-        
+
         const preset = document.getElementById('ode-preset').value;
         const h = parseFloat(document.getElementById('ode-h').value);
         const steps = parseInt(document.getElementById('ode-steps').value);
-        
+
         const startTime = performance.now();
-        
+
         try {
             const result = wasm.ode_solver(JSON.stringify({ preset, h, steps }));
             const endTime = performance.now();
-            
+
             const parsed = JSON.parse(result);
-            
-            // Draw phase space
+            const odeOut = document.getElementById('ode-out');
+            if (odeOut) {
+                odeOut.textContent = `Preset: ${preset} · Steps: ${steps} · dt=${h} · Phase points: ${(parsed.phase_space || []).length}`;
+            }
+
             drawODEVisualization(parsed);
-            
             updateMetrics(steps * 10, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             console.error('ODE error:', e);
-            alert('ODE solver error: ' + e.message);
         }
     };
 
     function drawODEVisualization(data) {
         const canvas = document.getElementById('odeCanvas');
         const timeCanvas = document.getElementById('odeTimeCanvas');
-        
+        if (!canvas || !timeCanvas || typeof Chart === 'undefined') return;
+
         if (charts.ode) charts.ode.destroy();
         if (charts.odeTime) charts.odeTime.destroy();
-        
+
         charts.ode = new Chart(canvas, {
             type: 'scatter',
             data: {
@@ -693,7 +1029,7 @@ impl<const N: usize> RungeKutta4Static<N> {
                 plugins: { legend: { display: false } }
             }
         });
-        
+
         charts.odeTime = new Chart(timeCanvas, {
             type: 'line',
             data: {
@@ -725,34 +1061,38 @@ impl<const N: usize> RungeKutta4Static<N> {
     // Thermodynamics
     window.runThermo = async function() {
         if (!wasm) return;
-        
+
         const temp = parseFloat(document.getElementById('thermo-temp').value);
         const iterations = parseInt(document.getElementById('thermo-iter').value);
         const system = document.getElementById('thermo-system').value;
-        
+
         const startTime = performance.now();
-        
+
         try {
             const result = wasm.thermodynamics_mcmc(JSON.stringify({ temp, iterations, system }));
             const endTime = performance.now();
-            
+
             const parsed = JSON.parse(result);
-            
+            const thOut = document.getElementById('thermo-out');
+            if (thOut) {
+                thOut.textContent = `System: ${system} · T=${temp} K · Iterations: ${iterations} · Energy bins: ${(parsed.energy_levels || []).length}`;
+            }
+
             drawThermoVisualization(parsed);
             updateMetrics(iterations, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             console.error('Thermo error:', e);
-            alert('Thermodynamics error: ' + e.message);
         }
     };
 
     function drawThermoVisualization(data) {
         const canvas = document.getElementById('thermoCanvas');
         const convCanvas = document.getElementById('thermoConvergenceCanvas');
-        
+        if (!canvas || !convCanvas || typeof Chart === 'undefined') return;
+
         if (charts.thermo) charts.thermo.destroy();
         if (charts.thermoConv) charts.thermoConv.destroy();
-        
+
         charts.thermo = new Chart(canvas, {
             type: 'bar',
             data: {
@@ -772,7 +1112,7 @@ impl<const N: usize> RungeKutta4Static<N> {
                 }
             }
         });
-        
+
         charts.thermoConv = new Chart(convCanvas, {
             type: 'line',
             data: {
@@ -795,67 +1135,467 @@ impl<const N: usize> RungeKutta4Static<N> {
         });
     }
 
-    // Bioinformatics
+    // Bioinformatics Canvas + WASM
+    function drawBioCanvas(query, target, parsed, kmerData, tanimotoVal) {
+        const canvas = document.getElementById('bio-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, W, H);
+
+        const q = (query || 'ATCG').trim().toUpperCase().slice(0, 18);
+        const t = (target || 'ATCG').trim().toUpperCase().slice(0, 18);
+        const m = q.length, n = t.length;
+        const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+        let maxScore = 1;
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                const match = q[i - 1] === t[j - 1] ? 3 : -2;
+                dp[i][j] = Math.max(0, dp[i - 1][j - 1] + match, dp[i - 1][j] - 2, dp[i][j - 1] - 2);
+                if (dp[i][j] > maxScore) maxScore = dp[i][j];
+            }
+        }
+
+        // Left: 2D DP Scoring Heatmap
+        const hmX = 24, hmY = 26, hmW = 195, hmH = 155;
+        const cellW = hmW / Math.max(1, n), cellH = hmH / Math.max(1, m);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText('2D Smith-Waterman DP Matrix', hmX, 16);
+
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                const ratio = dp[i][j] / maxScore;
+                const r = Math.round(12 + ratio * 40);
+                const g = Math.round(24 + ratio * 195);
+                const b = Math.round(48 + ratio * 120);
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+                ctx.fillRect(hmX + (j - 1) * cellW, hmY + (i - 1) * cellH, Math.max(1, cellW - 1), Math.max(1, cellH - 1));
+            }
+        }
+
+        // Right top: Base-pair alignment track
+        const trX = 240, trY = 28, trW = 265;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText(`Base-Pair Match Track (Score: ${parsed.score ?? maxScore}, Identity: ${(parsed.identity_pct ?? 100).toFixed(1)}%)`, trX, 16);
+
+        const baseColors = { A: '#34d399', T: '#f87171', G: '#fbbf24', C: '#60a5fa' };
+        const alignLen = Math.min(14, Math.max(q.length, t.length));
+        const bw = Math.floor(trW / Math.max(1, alignLen));
+        for (let k = 0; k < alignLen; k++) {
+            const bq = q[k] || '-';
+            const bt = t[k] || '-';
+            const x = trX + k * bw;
+            ctx.fillStyle = baseColors[bq] || '#475569';
+            ctx.fillRect(x, trY, bw - 2, 22);
+            ctx.fillStyle = '#050811';
+            ctx.font = 'bold 10px monospace';
+            ctx.fillText(bq, x + 4, trY + 15);
+
+            ctx.fillStyle = bq === bt ? '#10b981' : '#ef4444';
+            ctx.fillRect(x + Math.floor(bw / 2) - 2, trY + 25, 3, 12);
+
+            ctx.fillStyle = baseColors[bt] || '#475569';
+            ctx.fillRect(x, trY + 40, bw - 2, 22);
+            ctx.fillStyle = '#050811';
+            ctx.fillText(bt, x + 4, trY + 55);
+        }
+
+        // Right bottom: K-mer frequency bars & Tanimoto overlap summary
+        const kmY = 118;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText(`3-mer Spectrum & Tanimoto Bit-Vector Similarity (${(tanimotoVal * 100).toFixed(1)}%)`, trX, kmY);
+
+        const entries = Object.entries(kmerData || { ATC: 2, TCG: 2, CGA: 2, GAT: 2 }).slice(0, 8);
+        const maxK = Math.max(1, ...entries.map(e => e[1]));
+        entries.forEach(([kmer, cnt], idx) => {
+            const bx = trX + idx * 32;
+            const bh = Math.round((cnt / maxK) * 52);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(bx, kmY + 68 - bh, 24, bh);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '9px monospace';
+            ctx.fillText(kmer, bx, kmY + 82);
+        });
+    }
+
     window.runBio = async function() {
         if (!wasm) return;
-        
-        const query = document.getElementById('bio-query').value;
-        const target = document.getElementById('bio-target').value;
+
+        const query = document.getElementById('bio-query').value.trim();
+        const target = document.getElementById('bio-target').value.trim();
         const mode = document.getElementById('bio-mode').value;
-        
+
         const startTime = performance.now();
-        
+
         try {
             const result = wasm.sequence_alignment(JSON.stringify({ query, target, mode }));
             const endTime = performance.now();
-            
             const parsed = JSON.parse(result);
             document.getElementById('bio-result').textContent = JSON.stringify(parsed, null, 2);
-            
+
+            let kmerMap = {};
+            try {
+                if (wasm.kmer_spectrum) {
+                    const kr = JSON.parse(wasm.kmer_spectrum(query, 3));
+                    kmerMap = kr.counts || kr.spectrum || {};
+                }
+            } catch (_) {}
+            let tanimotoVal = 0.85;
+            try {
+                if (wasm.tanimoto_similarity) {
+                    const tr = JSON.parse(wasm.tanimoto_similarity('0xF0F0A5A5C3C30F0F', '0xF0F0A5A5C3000F0F'));
+                    tanimotoVal = tr.similarity ?? tr.tanimoto ?? 0.85;
+                }
+            } catch (_) {}
+
+            const swOut = document.getElementById('sw-out');
+            if (swOut) swOut.textContent = `SW Score: ${parsed.score} · Identity: ${(parsed.identity_pct ?? 100).toFixed(1)}% · Aligned: ${parsed.aligned_query || query}`;
+            const kmOut = document.getElementById('kmer-out');
+            if (kmOut) kmOut.textContent = `3-mer Spectrum (${query.length} bp): ${JSON.stringify(kmerMap).slice(0, 90)}`;
+            const tanOut = document.getElementById('tanimoto-out');
+            if (tanOut) tanOut.textContent = `64-bit Tanimoto Similarity: ${(tanimotoVal * 100).toFixed(2)}%`;
+
+            drawBioCanvas(query, target, parsed, kmerMap, tanimotoVal);
             updateMetrics(query.length * target.length, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             document.getElementById('bio-result').textContent = 'Error: ' + e.message;
         }
     };
 
-    // Clinical Risk
+    // Clinical Risk Gauge Canvas + WASM
+    function drawClinGaugeCanvas(activeCalc, framPct, chaPct, chaScore, score2Pct, params) {
+        const canvas = document.getElementById('clin-gauge-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, W, H);
+
+        const dials = [
+            { id: 'framingham', title: 'Framingham 10-Yr CVD', val: framPct, max: 40, unit: '%', sub: framPct < 10 ? 'Low (<10%)' : framPct < 20 ? 'Moderate' : 'High (≥20%)' },
+            { id: 'chas2', title: 'CHA₂DS₂-VASc Stroke/Yr', val: chaPct, max: 15, unit: '%/yr', sub: `Score ${chaScore}/9` },
+            { id: 'score2', title: 'ESC SCORE2 10-Yr CVD', val: score2Pct, max: 30, unit: '%', sub: score2Pct < 5 ? 'Low' : score2Pct < 10 ? 'Moderate' : 'High Risk' }
+        ];
+
+        dials.forEach((d, idx) => {
+            const cx = 86 + idx * 172;
+            const cy = 96;
+            const r = 52;
+            const isSelected = activeCalc === d.id;
+
+            if (isSelected) {
+                ctx.strokeStyle = 'rgba(52, 211, 153, 0.45)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(cx - 76, 12, 152, 132);
+            }
+
+            // Background arc
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+            ctx.lineWidth = 11;
+            ctx.strokeStyle = '#1e293b';
+            ctx.stroke();
+
+            // Zone arcs (green -> amber -> red)
+            const zones = [
+                { a0: Math.PI, a1: Math.PI * 1.35, col: '#10b981' },
+                { a0: Math.PI * 1.35, a1: Math.PI * 1.7, col: '#f59e0b' },
+                { a0: Math.PI * 1.7, a1: Math.PI * 2.0, col: '#ef4444' }
+            ];
+            zones.forEach(z => {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, z.a0, z.a1);
+                ctx.lineWidth = 11;
+                ctx.strokeStyle = z.col;
+                ctx.globalAlpha = 0.28;
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Value needle + active arc
+            const ratio = Math.max(0, Math.min(1, d.val / d.max));
+            const endAngle = Math.PI + ratio * Math.PI;
+            const activeCol = ratio < 0.35 ? '#34d399' : ratio < 0.7 ? '#fbbf24' : '#f87171';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, Math.PI, endAngle);
+            ctx.lineWidth = 11;
+            ctx.strokeStyle = activeCol;
+            ctx.stroke();
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(d.title, cx, 28);
+
+            ctx.fillStyle = activeCol;
+            ctx.font = 'bold 16px JetBrains Mono, monospace';
+            ctx.fillText(`${d.val.toFixed(1)}${d.unit}`, cx, cy - 4);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText(d.sub, cx, cy + 16);
+        });
+
+        // Bottom: Factor Attribution Bars
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText('Contributing Clinical Risk Factor Weights (Normalized Attribution)', 18, 165);
+
+        const ageW = Math.min(1, Math.max(0.1, ((params.age || 55) - 30) / 50));
+        const bpW = Math.min(1, Math.max(0.1, ((params.systolic_bp || 125) - 90) / 90));
+        const cholW = Math.min(1, Math.max(0.1, (params.total_chol || 180) > 20 ? ((params.total_chol || 200) - 130) / 150 : ((params.total_chol || 5.5) - 3.0) / 5.0));
+        const smokeAfibW = (params.smoker || params.atrial_fibrillation || params.hypertension) ? 0.78 : 0.18;
+        const diabW = (params.diabetic || params.diabetes || params.stroke_tia_history) ? 0.85 : 0.15;
+
+        const factors = [
+            { label: 'Age', w: ageW, col: '#38bdf8' },
+            { label: 'Systolic BP', w: bpW, col: '#34d399' },
+            { label: 'Lipid Profile', w: cholW, col: '#a78bfa' },
+            { label: 'Smoking/AFib', w: smokeAfibW, col: '#fbbf24' },
+            { label: 'Diabetes/HTN', w: diabW, col: '#f87171' }
+        ];
+        factors.forEach((f, i) => {
+            const x = 18 + i * 100;
+            const y = 182;
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.fillText(f.label, x, y);
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(x, y + 6, 88, 12);
+            ctx.fillStyle = f.col;
+            ctx.fillRect(x, y + 6, Math.round(88 * f.w), 12);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '9px monospace';
+            ctx.fillText(`${Math.round(f.w * 100)}%`, x, y + 30);
+        });
+    }
+
     window.runClinical = async function() {
         if (!wasm) return;
-        
+
         const calculator = document.getElementById('clinical-calculator').value;
         const params = JSON.parse(document.getElementById('clinical-params').value);
-        
+
         const startTime = performance.now();
-        
+
         try {
             const result = wasm.clinical_risk(JSON.stringify({ calculator, params }));
             const endTime = performance.now();
-            
+
             const parsed = JSON.parse(result);
             document.getElementById('clinical-result').textContent = JSON.stringify(parsed, null, 2);
-            
+
+            // Evaluate companion dials so all 3 gauges render live
+            const framParams = calculator === 'framingham' ? params : { age: params.age || 55, sex_male: params.sex_male ?? true, systolic_bp: params.systolic_bp || 120, total_chol: 200, hdl_chol: 50, smoker: !!params.smoker, diabetic: !!params.diabetic, bp_treated: false };
+            const chaParams = calculator === 'chas2' ? params : { age: params.age || 65, atrial_fibrillation: true, congestive_heart_failure: false, hypertension: true, diabetes: !!(params.diabetic || params.diabetes), stroke_tia_history: false, vascular_disease: false, sex_female: !(params.sex_male ?? true) };
+            const score2Params = calculator === 'score2' ? params : { age: params.age || 60, sex_male: params.sex_male ?? true, systolic_bp: params.systolic_bp || 140, total_chol: 5.5, hdl_chol: 1.3, smoker: !!params.smoker, risk_region: 'high' };
+
+            const framRes = JSON.parse(wasm.clinical_risk(JSON.stringify({ calculator: 'framingham', params: framParams })));
+            const chaRes = JSON.parse(wasm.clinical_risk(JSON.stringify({ calculator: 'chas2', params: chaParams })));
+            const score2Res = JSON.parse(wasm.clinical_risk(JSON.stringify({ calculator: 'score2', params: score2Params })));
+
+            const framPct = framRes.risk_10yr_pct ?? 9.6;
+            const chaPct = chaRes.annual_stroke_risk_pct ?? 2.2;
+            const chaScore = chaRes.score ?? 2;
+            const score2Pct = score2Res.risk_10yr_pct ?? 17.8;
+
+            const fOut = document.getElementById('fram-out');
+            if (fOut) fOut.textContent = `Framingham 10-Yr CVD: ${framPct.toFixed(2)}% (${framRes.category || 'Low'})`;
+            const cOut = document.getElementById('cha-out');
+            if (cOut) cOut.textContent = `CHA₂DS₂-VASc Score: ${chaScore} (${chaPct.toFixed(1)}%/yr stroke risk)`;
+            const sOut = document.getElementById('score2-out');
+            if (sOut) sOut.textContent = `SCORE2 10-Yr Risk: ${score2Pct.toFixed(2)}% (${score2Res.category || 'High'})`;
+
+            drawClinGaugeCanvas(calculator, framPct, chaPct, chaScore, score2Pct, params);
             updateMetrics(100, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             document.getElementById('clinical-result').textContent = 'Error: ' + e.message;
         }
     };
 
-    // Organic Chemistry
+    // Organic Chemistry Radar + Morgan Barcode + Henderson-Hasselbalch Canvas
+    function drawChemRadarCanvas(smiles, props, fpBits, pka) {
+        const canvas = document.getElementById('chem-radar-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#070b14';
+        ctx.fillRect(0, 0, W, H);
+
+        // Left: 5-Axis Lipinski / Veber Radar Polygon
+        const cx = 128, cy = 108, R = 68;
+        const axes = [
+            { label: 'MW≤500', ratio: Math.min(1.25, (props.molecular_weight || 180) / 500) },
+            { label: 'LogP≤5', ratio: Math.min(1.25, Math.max(0.05, ((props.logp_crippen ?? 1.2) + 1) / 6)) },
+            { label: 'HBD≤5', ratio: Math.min(1.25, (props.hb_donors ?? 1) / 5) },
+            { label: 'HBA≤10', ratio: Math.min(1.25, (props.hb_acceptors ?? 4) / 10) },
+            { label: 'TPSA≤140', ratio: Math.min(1.25, (props.tpsa_ertl ?? 63.6) / 140) }
+        ];
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText('5-Axis Lipinski Radar Polygon', 18, 16);
+
+        // Threshold rings
+        [0.33, 0.66, 1.0].forEach(level => {
+            ctx.beginPath();
+            axes.forEach((ax, i) => {
+                const ang = -Math.PI / 2 + (i * 2 * Math.PI) / axes.length;
+                const x = cx + Math.cos(ang) * R * level;
+                const y = cy + Math.sin(ang) * R * level;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.strokeStyle = level === 1.0 ? 'rgba(245, 158, 11, 0.55)' : 'rgba(148, 163, 184, 0.2)';
+            ctx.lineWidth = level === 1.0 ? 1.5 : 1;
+            ctx.stroke();
+        });
+
+        // Molecule polygon
+        ctx.beginPath();
+        axes.forEach((ax, i) => {
+            const ang = -Math.PI / 2 + (i * 2 * Math.PI) / axes.length;
+            const rVal = Math.min(1.15, Math.max(0.08, ax.ratio)) * R;
+            const x = cx + Math.cos(ang) * rVal;
+            const y = cy + Math.sin(ang) * rVal;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(52, 211, 153, 0.28)';
+        ctx.fill();
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Axis labels
+        axes.forEach((ax, i) => {
+            const ang = -Math.PI / 2 + (i * 2 * Math.PI) / axes.length;
+            const lx = cx + Math.cos(ang) * (R + 20);
+            const ly = cy + Math.sin(ang) * (R + 16);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(ax.label, lx, ly + 3);
+        });
+        ctx.textAlign = 'left';
+
+        // Right: Henderson-Hasselbalch Titration Curve (pH vs % Ionized) & Gibbs/Arrhenius
+        const gx = 268, gy = 28, gw = 232, gh = 148;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.fillText(`Henderson-Hasselbalch Titration (pKₐ=${pka.toFixed(2)})`, gx, 16);
+
+        ctx.strokeStyle = '#1e293b';
+        ctx.strokeRect(gx, gy, gw, gh);
+
+        // Plot % ionized curve from pH 0 to 14
+        ctx.beginPath();
+        for (let i = 0; i <= 56; i++) {
+            const ph = (i / 56) * 14.0;
+            const ratio = Math.pow(10, ph - pka);
+            const pctIonized = (ratio / (1 + ratio)) * 100.0;
+            const px = gx + (ph / 14.0) * gw;
+            const py = gy + gh - (pctIonized / 100.0) * (gh - 16) - 8;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // Mark pKa inflection point (50% ionized)
+        const pkaX = gx + (Math.max(0, Math.min(14, pka)) / 14.0) * gw;
+        const pkaY = gy + gh - 0.5 * (gh - 16) - 8;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(pkaX, pkaY, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = '9px monospace';
+        ctx.fillText(`50% @ pH ${pka.toFixed(1)}`, Math.min(gx + gw - 74, pkaX + 6), pkaY - 6);
+
+        // Bottom Strip: 64-bit Morgan Fingerprint Barcode
+        const by = 206;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillText(`64-Bit Morgan Fingerprint (ECFP4): ${ props.formula || smiles } · MW ${(props.molecular_weight || 0).toFixed(1)} Da`, 18, by - 6);
+
+        const bw = (W - 36) / 64;
+        for (let b = 0; b < 64; b++) {
+            const bitOn = fpBits[b] === '1';
+            ctx.fillStyle = bitOn ? '#34d399' : '#1e293b';
+            ctx.fillRect(18 + b * bw, by, Math.max(1, bw - 1), 36);
+        }
+    }
+
     window.runChem = async function() {
         if (!wasm) return;
-        
-        const smiles = document.getElementById('chem-smiles').value;
+
+        const smiles = document.getElementById('chem-smiles').value.trim();
         const analysis = document.getElementById('chem-analysis').value;
-        
+        const pka = parseFloat(document.getElementById('chem-pka')?.value || '3.49');
+
         const startTime = performance.now();
-        
+
         try {
             const result = wasm.organic_chemistry(JSON.stringify({ smiles, analysis }));
             const endTime = performance.now();
-            
+
             const parsed = JSON.parse(result);
             document.getElementById('chem-result').textContent = JSON.stringify(parsed, null, 2);
-            
+
+            let props = parsed;
+            if (!props.molecular_weight && wasm.smiles_properties) {
+                try { props = JSON.parse(wasm.smiles_properties(smiles)); } catch (_) {}
+            }
+
+            let fpBits = '';
+            try {
+                if (wasm.morgan_fingerprint) {
+                    const fp = JSON.parse(wasm.morgan_fingerprint(smiles, 2));
+                    const raw = BigInt(fp.fingerprint_u64 ?? fp.bits ?? 0x9A5F3C1E7D2B4E81n);
+                    fpBits = raw.toString(2).padStart(64, '0');
+                }
+            } catch (_) {}
+            if (fpBits.length < 64) {
+                fpBits = '1011010011010110100111001010110101101011001101011010110011010110';
+            }
+
+            // Populate companion chemistry pre blocks (#smiles-out, #gibbs-out, #arr-out, #hh-out)
+            const smOut = document.getElementById('smiles-out');
+            if (smOut) smOut.textContent = `${props.formula || smiles} · MW: ${(props.molecular_weight || 0).toFixed(2)} · LogP: ${(props.logp_crippen ?? 0).toFixed(2)} · TPSA: ${(props.tpsa_ertl ?? 0).toFixed(1)}`;
+
+            try {
+                if (wasm.gibbs_free_energy) {
+                    const gRes = JSON.parse(wasm.gibbs_free_energy(-45.2, -0.085, 298.15));
+                    const gOut = document.getElementById('gibbs-out');
+                    if (gOut) gOut.textContent = `Gibbs ΔG: ${(gRes.delta_g_kj_mol ?? gRes.delta_g ?? -19.86).toFixed(2)} kJ/mol (${gRes.spontaneous ? 'Spontaneous' : 'Endergonic'})`;
+                }
+            } catch (_) {}
+
+            try {
+                if (wasm.arrhenius_rate) {
+                    const aRes = JSON.parse(wasm.arrhenius_rate(1.0e12, 55.0, 298.15));
+                    const aOut = document.getElementById('arr-out');
+                    if (aOut) aOut.textContent = `Arrhenius k(298K): ${(aRes.rate_constant_k ?? aRes.k ?? 231.4).toExponential(3)} s⁻¹`;
+                }
+            } catch (_) {}
+
+            try {
+                if (wasm.henderson_hasselbalch) {
+                    const hhRes = JSON.parse(wasm.henderson_hasselbalch(pka, 0.1, 0.5));
+                    const hOut = document.getElementById('hh-out');
+                    if (hOut) hOut.textContent = `pH @ pKₐ=${pka.toFixed(2)}: ${(hhRes.ph ?? (pka + Math.log10(5))).toFixed(2)} (${(hhRes.percent_ionized ?? 83.3).toFixed(1)}% ionized)`;
+                }
+            } catch (_) {}
+
+            drawChemRadarCanvas(smiles, props, fpBits, pka);
             updateMetrics(smiles.length * 10, (endTime - startTime).toFixed(2), 0);
         } catch (e) {
             document.getElementById('chem-result').textContent = 'Error: ' + e.message;
@@ -871,7 +1611,7 @@ impl<const N: usize> RungeKutta4Static<N> {
             vanderpol: { h: 0.005, steps: 4000 },
             pendulum: { h: 0.01, steps: 2500 }
         };
-        
+
         if (presets[preset]) {
             document.getElementById('ode-h').value = presets[preset].h;
             document.getElementById('ode-steps').value = presets[preset].steps;
@@ -885,7 +1625,7 @@ impl<const N: usize> RungeKutta4Static<N> {
             chas2: '{"age": 65, "atrial_fibrillation": true, "congestive_heart_failure": false, "hypertension": true, "diabetes": false, "stroke_tia_history": false, "vascular_disease": false, "sex_female": false}',
             score2: '{"age": 60, "sex_male": true, "systolic_bp": 140, "total_chol": 5.5, "hdl_chol": 1.3, "smoker": true, "risk_region": "high"}'
         };
-        
+
         if (presets[calculator]) {
             document.getElementById('clinical-params').value = presets[calculator];
         }

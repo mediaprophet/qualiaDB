@@ -69,3 +69,43 @@
 .nav-active {
     color: #fff;
 }
+
+
+/* Global Mobile & Touch Responsiveness Enhancements (WebGPU / WebGL2 / Canvas Viewports) */
+canvas {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+pre, .code-block {
+    max-width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+    body {
+        overflow-x: hidden;
+    }
+    .tab-bar,
+    .tabs,
+    #demo-tabs {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        flex-wrap: nowrap !important;
+    }
+}
+
+@media (max-width: 640px) {
+    nav .h-16 {
+        height: auto;
+        min-height: 3.5rem;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+        flex-wrap: wrap;
+    }
+    canvas {
+        height: auto;
+    }
+}

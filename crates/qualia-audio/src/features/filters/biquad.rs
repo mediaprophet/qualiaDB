@@ -32,7 +32,7 @@ impl BiquadCoeffs {
 
     /// Convert from `f64` [`etalon_signal::filter::BiquadCoeffs`].
     #[inline]
-    pub(crate) const fn from_etalon(c: etalon_signal::filter::BiquadCoeffs) -> Self {
+    pub const fn from_etalon(c: etalon_signal::filter::BiquadCoeffs) -> Self {
         Self {
             b0: c.b0 as f32,
             b1: c.b1 as f32,
@@ -40,6 +40,16 @@ impl BiquadCoeffs {
             a1: c.a1 as f32,
             a2: c.a2 as f32,
         }
+    }
+
+    /// Design a 2nd-order peaking EQ filter via `etalon_signal::filter::rbj_peaking_eq`.
+    pub fn design_peaking_eq(sample_rate: f32, center_hz: f32, q: f32, gain_db: f32) -> Self {
+        let sr = f64::from(if sample_rate > 1.0 { sample_rate } else { 1.0 });
+        let f0 = f64::from(center_hz).clamp(1.0e-4, sr * 0.5 * 0.999);
+        let q64 = f64::from(if q > 1.0e-4 { q } else { 1.0e-4 });
+        etalon_signal::filter::rbj_peaking_eq(sr, f0, q64, f64::from(gain_db))
+            .map(Self::from_etalon)
+            .unwrap_or_else(|_| Self::identity())
     }
 
     /// Build from raw (un-normalized) cookbook coefficients by dividing through

@@ -363,32 +363,16 @@ pub fn execute_prepared_value_call<'g>(
         pos_args
     };
 
-    if effective_args.len() != func.params.len() {
-        return Err(trap_to_diagnostic(
-            VibeTrap::ArityMismatch,
-            path_label,
-            span,
-        ));
-    }
-
     // Stack-allocated input scratch (zero heap on hot prepared path)
     let mut input_scratch = [0u8; 512];
     let mut param_offsets = [(0usize, 0usize, PrimitiveKind::U8, 0usize); 8];
-    if func.params.len() > param_offsets.len() {
-        return Err(trap_to_diagnostic(
-            VibeTrap::ArityMismatch,
-            path_label,
-            span,
-        ));
-    }
-
-    let mut cursor = 0usize;
-    for (idx, (spec, val)) in func.params.iter().zip(effective_args.iter()).enumerate() {
-        let start = cursor;
-        let elems = write_value_into_scratch(spec, val, &mut input_scratch, &mut cursor)
-            .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
-        param_offsets[idx] = (start, cursor, spec.kind, elems);
-    }
+    super::scalar_compat::marshal_args_into_scratch(
+        func,
+        effective_args,
+        &mut input_scratch,
+        &mut param_offsets,
+    )
+    .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
     let mut view_storage = [BorrowedSliceView::from_raw_bytes(&[], PrimitiveKind::U8, 0)
         .expect("empty view"); 8];
@@ -406,11 +390,23 @@ pub fn execute_prepared_value_call<'g>(
     let mut out_slice = CallerOutputSlice::new(&mut out_scratch[..out_byte_cap], func.output_kind)
         .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
+    let mut fallback_sim_gate = super::dispatch_adapter::SimulatedPolicyGate::new_for_actor(0);
+    fallback_sim_gate.budget.max_scratch_bytes = 1_048_576;
+    fallback_sim_gate.budget.max_vram_bytes = 1_048_576;
+    let mut sim_ctx = *ctx;
+    let (eff_ctx, eff_gate): (&CallExecutionContext, Option<&mut (dyn SentinelPolicyGate + '_)>) =
+        if ctx.mode == ExecutionMode::StandaloneDeveloper && gate.is_none() && !func.effects.is_pure() {
+            sim_ctx.mode = ExecutionMode::SimulatedGovernanceTest;
+            (&sim_ctx, Some(&mut fallback_sim_gate))
+        } else {
+            (ctx, gate)
+        };
+
     let outcome = dispatch_prepared_call(
         registry,
         handle,
-        ctx,
-        gate,
+        eff_ctx,
+        eff_gate,
         &view_storage[..func.params.len()],
         &mut out_slice,
     )
@@ -421,84 +417,6 @@ pub fn execute_prepared_value_call<'g>(
         .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
     Ok((result_val, outcome))
-}
-
-fn write_value_into_scratch(
-    spec: &ParamSpec,
-    val: &Value,
-    scratch: &mut [u8; 512],
-    cursor: &mut usize,
-) -> Result<usize, VibeTrap> {
-    match val {
-        Value::List(items) => {
-            for item in items {
-                write_scalar_into_scratch(spec.kind, item, scratch, cursor)?;
-            }
-            Ok(items.len())
-        }
-        scalar => {
-            write_scalar_into_scratch(spec.kind, scalar, scratch, cursor)?;
-            Ok(1)
-        }
-    }
-}
-
-fn write_scalar_into_scratch(
-    kind: PrimitiveKind,
-    val: &Value,
-    scratch: &mut [u8; 512],
-    cursor: &mut usize,
-) -> Result<(), VibeTrap> {
-    let need = kind.elem_size();
-    if *cursor + need > scratch.len() {
-        return Err(VibeTrap::SliceBoundsOverflow);
-    }
-    match kind {
-        PrimitiveKind::F64 => {
-            let n = val.as_f64().ok_or(VibeTrap::TypeMismatch)?;
-            scratch[*cursor..*cursor + 8].copy_from_slice(&n.to_le_bytes());
-        }
-        PrimitiveKind::F32 => {
-            let n = val.as_f64().ok_or(VibeTrap::TypeMismatch)? as f32;
-            scratch[*cursor..*cursor + 4].copy_from_slice(&n.to_le_bytes());
-        }
-        PrimitiveKind::I64 => {
-            let n = val.as_i64().ok_or(VibeTrap::TypeMismatch)?;
-            scratch[*cursor..*cursor + 8].copy_from_slice(&n.to_le_bytes());
-        }
-        PrimitiveKind::U64 => {
-            let n = match val {
-                Value::U64(u) => *u,
-                Value::I64(i) if *i >= 0 => *i as u64,
-                Value::F64(f) if *f >= 0.0 => *f as u64,
-                Value::Bool(b) => u64::from(*b),
-                _ => return Err(VibeTrap::TypeMismatch),
-            };
-            scratch[*cursor..*cursor + 8].copy_from_slice(&n.to_le_bytes());
-        }
-        PrimitiveKind::U32 => {
-            let n = val.as_i64().ok_or(VibeTrap::TypeMismatch)? as u32;
-            scratch[*cursor..*cursor + 4].copy_from_slice(&n.to_le_bytes());
-        }
-        PrimitiveKind::I32 => {
-            let n = val.as_i64().ok_or(VibeTrap::TypeMismatch)? as i32;
-            scratch[*cursor..*cursor + 4].copy_from_slice(&n.to_le_bytes());
-        }
-        PrimitiveKind::Bool | PrimitiveKind::U8 => {
-            let b = match val {
-                Value::Bool(b) => u8::from(*b),
-                Value::U64(u) => *u as u8,
-                Value::I64(i) => *i as u8,
-                _ => return Err(VibeTrap::TypeMismatch),
-            };
-            scratch[*cursor] = b;
-        }
-        PrimitiveKind::NQuin48
-        | PrimitiveKind::ResourceHandle
-        | PrimitiveKind::Utf8Bytes => return Err(VibeTrap::TypeMismatch),
-    }
-    *cursor += need;
-    Ok(())
 }
 
 fn decode_output_slice(
@@ -578,21 +496,31 @@ pub fn route_call<'g, H: Host>(
     }
 
     // 2. Check if `path` resolves directly to a registered `VibeNamespaceProvider` function
-    if let Some(handle) = try_prepare_path(registry, cache, path, target_profile)
-        .map_err(|t| trap_to_diagnostic(t, path, span))?
-    {
-        let (val, outcome) = execute_prepared_value_call(
-            registry,
-            &handle,
-            ctx,
-            gate,
-            pos_args,
-            budget,
-            span,
-            path,
-        )?;
-        *last_outcome = Some(outcome);
-        return Ok(val);
+    match try_prepare_path(registry, cache, path, target_profile) {
+        Ok(Some(handle)) => {
+            let (val, outcome) = execute_prepared_value_call(
+                registry,
+                &handle,
+                ctx,
+                gate,
+                pos_args,
+                budget,
+                span,
+                path,
+            )?;
+            *last_outcome = Some(outcome);
+            return Ok(val);
+        }
+        Ok(None) => {}
+        Err(VibeTrap::FunctionNotFound) => {
+            if let Some(val) =
+                super::scalar_compat::try_eval_convenience_kernel(path, pos_args, budget, span)?
+            {
+                return Ok(val);
+            }
+            return Err(trap_to_diagnostic(VibeTrap::FunctionNotFound, path, span));
+        }
+        Err(t) => return Err(trap_to_diagnostic(t, path, span)),
     }
 
     // 3. Otherwise route to built-in host capabilities (`math.*`, `graph.*`, `time.*`, etc.).

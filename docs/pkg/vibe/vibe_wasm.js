@@ -25,6 +25,7 @@ export class CompiledCell {
         wasm.__wbg_compiledcell_free(ptr, 0);
     }
     /**
+     * `code` size.
      * @returns {number}
      */
     get code_size() {
@@ -46,6 +47,7 @@ export class CompiledCell {
         return CompiledCell.__wrap(ret[0]);
     }
     /**
+     * Constants.
      * @returns {number}
      */
     get constants() {
@@ -84,6 +86,7 @@ export class CompiledCell {
         return CompiledCell.__wrap(ret[0]);
     }
     /**
+     * Functions.
      * @returns {number}
      */
     get functions() {
@@ -99,6 +102,7 @@ export class CompiledCell {
         return ret;
     }
     /**
+     * Top-level locals.
      * @returns {number}
      */
     get top_locals() {
@@ -175,16 +179,17 @@ export function ast_schema_json() {
 }
 
 /**
- * Capability invoke pin — default fail-closed E300 (parity with Host::capability_invoke).
- * Args are accepted as a JSON string for the JS boundary.
+ * Capability invoke — routes through `LocalHost` so Civics/stdlib kernels
+ * (`Econ.*`, `Statistics.ols`, `PhysicalUnits.convert`, …) work under WASM.
+ * Ungranted / unknown ids still fail closed with E300 / E100.
  * @param {string} id
- * @param {string} _args_json
+ * @param {string} args_json
  * @returns {any}
  */
-export function capability_invoke(id, _args_json) {
+export function capability_invoke(id, args_json) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(_args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(args_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.capability_invoke(ptr0, len0, ptr1, len1);
     return ret;
@@ -246,6 +251,22 @@ export function decode_and_run(bytes) {
 }
 
 /**
+ * Decodes tagged CBOR-LD AST bytes (Tag 4200) into a canonical representation,
+ * returning the reconstructed source code, AST hash, and provenance metadata.
+ * @param {Uint8Array} bytes
+ * @returns {any}
+ */
+export function decode_program_cborld_wasm(bytes) {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.decode_program_cborld_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Parse + check a module; collect up to eight diagnostics.
  * @param {string} src
  * @returns {any}
@@ -304,6 +325,22 @@ export function encode_cell_bytecode(src) {
 }
 
 /**
+ * Encodes a VibeScript source program into tagged CBOR-LD AST bytes (Tag 4200).
+ * Validates syntax and type consistency before serializing.
+ * @param {string} src
+ * @returns {Uint8Array}
+ */
+export function encode_program_cborld_wasm(src) {
+    const ptr0 = passStringToWasm0(src, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.encode_program_cborld_wasm(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * Evaluate a cell and return the result as a JSON-compatible JS value.
  * Playground Run uses `eval_program_src` (module + optional `main`), not this.
  * @param {string} src
@@ -339,6 +376,19 @@ export function eval_program_src(src) {
     const ptr0 = passStringToWasm0(src, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.eval_program_src(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Evaluates a Vibe program and returns the evaluated value together with a signed,
+ * reproducible execution receipt (containing source hash, AST hash, and engine metadata).
+ * @param {string} src
+ * @returns {any}
+ */
+export function eval_program_with_receipt_wasm(src) {
+    const ptr0 = passStringToWasm0(src, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.eval_program_with_receipt_wasm(ptr0, len0);
     return ret;
 }
 
@@ -465,22 +515,22 @@ export function run_program_bytecode(src, fn_name, args) {
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
-        __wbg___wbindgen_boolean_get_edaed31a367ce1bd: function(arg0) {
+        __wbg___wbindgen_boolean_get_5b446f51afd21013: function(arg0) {
             const v = arg0;
             const ret = typeof(v) === 'boolean' ? v : undefined;
             return isLikeNone(ret) ? 0xFFFFFF : ret ? 1 : 0;
         },
-        __wbg___wbindgen_is_null_6d937fbfb6478470: function(arg0) {
+        __wbg___wbindgen_is_null_e343b7d08827ba72: function(arg0) {
             const ret = arg0 === null;
             return ret;
         },
-        __wbg___wbindgen_number_get_1cc01dd708740256: function(arg0, arg1) {
+        __wbg___wbindgen_number_get_2e0e7dee9f701a71: function(arg0, arg1) {
             const obj = arg1;
             const ret = typeof(obj) === 'number' ? obj : undefined;
             getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
         },
-        __wbg___wbindgen_string_get_71bb4348194e31f0: function(arg0, arg1) {
+        __wbg___wbindgen_string_get_0380ccaa2f57f0d9: function(arg0, arg1) {
             const obj = arg1;
             const ret = typeof(obj) === 'string' ? obj : undefined;
             var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -488,39 +538,39 @@ function __wbg_get_imports() {
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
-        __wbg___wbindgen_throw_ea4887a5f8f9a9db: function(arg0, arg1) {
+        __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_new_2e117a478906f062: function() {
+        __wbg_new_617a8cdb8bb1130e: function() {
             const ret = new Object();
             return ret;
         },
-        __wbg_new_36e147a8ced3c6e0: function() {
+        __wbg_new_ee2291f50781bf1d: function() {
             const ret = new Array();
             return ret;
         },
-        __wbg_new_from_slice_543b875b27789a8f: function(arg0, arg1) {
+        __wbg_new_from_slice_9a868026ffa4208a: function(arg0, arg1) {
             const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
             return ret;
         },
-        __wbg_parse_1f9d3f9cbc8a7da2: function() { return handleError(function (arg0, arg1) {
+        __wbg_parse_0fc53dead14b3b42: function() { return handleError(function (arg0, arg1) {
             const ret = JSON.parse(getStringFromWasm0(arg0, arg1));
             return ret;
         }, arguments); },
-        __wbg_push_f724b5db8acf89d2: function(arg0, arg1) {
+        __wbg_push_2baf45db356cf468: function(arg0, arg1) {
             const ret = arg0.push(arg1);
             return ret;
         },
-        __wbg_set_4564f7dc44fcb0c9: function() { return handleError(function (arg0, arg1, arg2) {
+        __wbg_set_145a351398b48c65: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = Reflect.set(arg0, arg1, arg2);
             return ret;
         }, arguments); },
-        __wbindgen_cast_0000000000000001: function(arg0) {
+        __wbindgen_generic_0000000000000001: function(arg0) {
             // Cast intrinsic for `F64 -> Externref`.
             const ret = arg0;
             return ret;
         },
-        __wbindgen_cast_0000000000000002: function(arg0, arg1) {
+        __wbindgen_generic_0000000000000002: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
             return ret;
@@ -691,11 +741,15 @@ function __wbg_finalize_init(instance, module) {
 
 async function __wbg_load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
+        if (!module.ok) {
+            throw new Error(`failed to fetch Wasm: ${module.status} ${module.statusText} fetching '${module.url}'`);
+        }
+
         if (typeof WebAssembly.instantiateStreaming === 'function') {
             try {
                 return await WebAssembly.instantiateStreaming(module, imports);
             } catch (e) {
-                const validResponse = module.ok && expectedResponseType(module.type);
+                const validResponse = expectedResponseType(module.type);
 
                 if (validResponse && module.headers.get('Content-Type') !== 'application/wasm') {
                     console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);

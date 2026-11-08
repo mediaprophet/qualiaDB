@@ -1,6 +1,7 @@
 /**
- * Shared N3Logic + SHACL demo helpers for playground and logic-showcase pages.
- * Uses real WASM exports: parse_n3logic_wasm, validate_shacl_constraint_wasm, forward_chain_wasm.
+ * Shared N3Logic + SHACL + Modality demo definitions for playground and logic-showcase pages.
+ * Uses real WASM exports (`parse_n3logic_wasm`, `validate_shacl_constraint_wasm`, `forward_chain_wasm`)
+ * alongside `vibe-wasm` (`vibe:0.3/modality`, `vibe:0.3/qgraph`, `vibe:0.3/nquin`).
  */
 
 export const N3_RULE_ARROWS = [
@@ -120,6 +121,81 @@ export const FORWARD_CHAIN_PRESETS = {
         ],
     },
 };
+
+export const LOGIC_CATEGORIES = [
+    { id: 'deontic', label: 'Deontic Norms (0x10–0x12)', icon: 'fa-scale-balanced', canvasKind: 'deontic' },
+    { id: 'spatio-temporal', label: 'Allen Intervals & Spatio-Temporal', icon: 'fa-arrows-left-right', canvasKind: 'allen' },
+    { id: 'ltl', label: 'Temporal LTL (0x40–0x44)', icon: 'fa-infinity', canvasKind: 'ltl' },
+    { id: 'epistemic', label: 'Epistemic Kripke (0x20–0x22)', icon: 'fa-eye', canvasKind: 'epistemic' },
+    { id: 'paraconsistent', label: 'Paraconsistent Belnap F₄ (0x30–0x32)', icon: 'fa-shield-virus', canvasKind: 'paraconsistent' },
+    { id: 'inference', label: 'N3 / SHACL / Linear / Probabilistic', icon: 'fa-code-branch', canvasKind: 'inference' },
+];
+
+export const LOGIC_DEMOS = [
+    {
+        id: 'deontic-guardianship',
+        category: 'deontic',
+        canvasKind: 'deontic',
+        title: 'Deontic Normative Triad & Defeater Override (0x10–0x12)',
+        desc: 'Compiles OBLIGATE (0x10), PERMIT (0x11), and FORBID (0x12) norms with DEFEATER_BIT (bit 63) override in vibe-wasm and evaluates active vs defeated verdicts.',
+        n3Preset: N3_PRESETS.deontic,
+        vibeCode: `import "vibe:0.3/modality" as modality;\nimport "vibe:0.3/qgraph" as qgraph;\nimport "vibe:0.3/nquin" as nquin;\n\nfn main() {\n  let pred = modality.deontic.pack_norm_predicate(4201, 16, 0);\n  let def_pred = modality.deontic.pack_norm_predicate(4201, 17, 1);\n  let op = modality.deontic.norm_opcode(pred);\n  let par = qgraph.staging.seal_quin(101, pred, 202, 303, 1700000000);\n  let ok = nquin.wire.verify_wire_parity(101, pred, 202, 303, 1700000000, par);\n  return [op, pred, def_pred, ok];\n}`,
+    },
+    {
+        id: 'allen-lattice',
+        category: 'spatio-temporal',
+        canvasKind: 'allen',
+        title: 'Allen Interval Algebra & 13-Relation Lattice',
+        desc: 'Interactive dual timeline evaluating modality.allen.interval_relation(sA, eA, sB, eB) in vibe-wasm at 60 FPS across all 13 interval relations.',
+        n3Preset: N3_PRESETS.strict,
+        vibeCode: `import "vibe:0.3/modality" as modality;\nimport "vibe:0.3/nquin" as nquin;\n\nfn main() {\n  let rel_before = modality.allen.interval_relation(2, 7, 10, 18);\n  let rel_overlaps = modality.allen.interval_relation(5, 14, 10, 20);\n  let par = nquin.wire.compute_wire_parity(2, 7, 10, 18, rel_before);\n  let ok = nquin.wire.verify_wire_parity(2, 7, 10, 18, rel_before, par);\n  return [rel_before, rel_overlaps, par, ok];\n}`,
+    },
+    {
+        id: 'ltl-automaton',
+        category: 'ltl',
+        canvasKind: 'ltl',
+        title: 'Temporal LTL Trace Automaton (0x40–0x44)',
+        desc: 'Evaluates Globally G(φ), Finally F(ψ), Next X(φ), Until (φ U ψ), and Release (ψ R φ) across a 6-tick NQuin state trace.',
+        n3Preset: N3_PRESETS.defeasible,
+        vibeCode: `import "vibe:0.3/modality" as modality;\nimport "vibe:0.3/qgraph" as qgraph;\nimport "vibe:0.3/nquin" as nquin;\n\nfn main() {\n  let step = modality.allen.interval_relation(0, 6, 1, 7);\n  let par = qgraph.staging.seal_quin(64, 31, 1, 1, step);\n  let ok = qgraph.staging.verify_sealed_quin(64, 31, 1, 1, step, par);\n  return [step, par, ok];\n}`,
+    },
+    {
+        id: 'epistemic-kripke',
+        category: 'epistemic',
+        canvasKind: 'epistemic',
+        title: 'Epistemic Kripke Possible-Worlds & Common Knowledge (0x20–0x22)',
+        desc: 'Models KNOWS (0x20), BELIEVES (0x21), and COMMON_KNOWLEDGE (0x22) across possible worlds w₀…w₃ with certainty bands [8..15].',
+        n3Preset: N3_PRESETS.defeasible,
+        vibeCode: `import "vibe:0.3/qgraph" as qgraph;\nimport "vibe:0.3/nquin" as nquin;\n\nfn main() {\n  let knows_pred = 32 + (255 * 256);\n  let par = qgraph.staging.seal_quin(701, knows_pred, 9001, 1, 255);\n  let ok = nquin.wire.verify_wire_parity(701, knows_pred, 9001, 1, 255, par);\n  return [knows_pred, par, ok];\n}`,
+    },
+    {
+        id: 'paraconsistent-belnap',
+        category: 'paraconsistent',
+        canvasKind: 'paraconsistent',
+        title: 'Paraconsistent Belnap F₄ Bilattice Router (0x30–0x32)',
+        desc: 'Isolates contradictory assertions (Both ⊤) into a quarantined sub-context (context ⊕ q_hash("q42:isolated")) to prevent classical explosion.',
+        n3Preset: N3_PRESETS.defeater,
+        vibeCode: `import "vibe:0.3/qgraph" as qgraph;\nimport "vibe:0.3/nquin" as nquin;\n\nfn main() {\n  let iso_ctx = 5042;\n  let par = qgraph.staging.seal_quin(1, 48, 200, iso_ctx, 1);\n  let ok = qgraph.staging.verify_sealed_quin(1, 48, 200, iso_ctx, 1, par);\n  return [iso_ctx, par, ok];\n}`,
+    },
+    {
+        id: 'inference-n3-shacl',
+        category: 'inference',
+        canvasKind: 'inference',
+        title: 'N3 Defeasible Proof DAG, Fuzzy Curve & Linear Petri-Net',
+        desc: 'Combines forward_chain_wasm, validate_shacl_constraint_wasm, and linear token consumption (-o) with CBOR-LD Tag 4200 receipts.',
+        n3Preset: N3_PRESETS.linear,
+        vibeCode: `import "vibe:0.3/qgraph" as qgraph;\nimport "vibe:0.3/nquin" as nquin;\n\nfn main() {\n  let par = qgraph.staging.seal_quin(42, 16, 1024, 7, 99);\n  let ok = nquin.wire.verify_wire_parity(42, 16, 1024, 7, 99, par);\n  return [par, ok];\n}`,
+    },
+];
+
+export function getLogicDemosByCategory(catId) {
+    if (!catId || catId === 'all') return LOGIC_DEMOS;
+    return LOGIC_DEMOS.filter((d) => d.category === catId);
+}
+
+export function getLogicDemoById(id) {
+    return LOGIC_DEMOS.find((d) => d.id === id) || LOGIC_DEMOS[0];
+}
 
 /** Client-side N3 rule surface parse (WASM parse_n3logic_wasm emits static triples only). */
 export function detectN3Rules(text) {

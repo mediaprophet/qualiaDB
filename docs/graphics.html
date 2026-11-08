@@ -23,6 +23,35 @@
     .tab-btn.active { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.35); }
     .tab-pane, .tab-content { display: none; }
     .tab-pane.active, .tab-content.active { display: block; }
+    .gfx-mode-btn { transition: all 0.18s; padding: 0.45rem 0.9rem; border-radius: 0.75rem; font-size: 0.75rem; font-weight: 600; color: rgba(226, 232, 240, 0.7); background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255, 255, 255, 0.1); cursor: pointer; }
+    .gfx-mode-btn:hover { color: #fff; border-color: rgba(52, 211, 153, 0.4); }
+    .gfx-mode-btn.active { background: rgba(16, 185, 129, 0.18); color: #34d399; border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 0 16px rgba(16, 185, 129, 0.15); }
+    canvas { touch-action: none; }
+    @media (max-width: 900px) {
+      .tab-nav {
+        overflow-x: auto;
+        max-width: 100%;
+        flex-wrap: nowrap !important;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 1rem !important;
+      }
+      .tab-btn { flex-shrink: 0; }
+      .gfx-mode-strip {
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+        white-space: nowrap;
+        padding-bottom: 0.35rem;
+        -webkit-overflow-scrolling: touch;
+      }
+      .gfx-mode-btn { flex-shrink: 0; }
+    }
+    @media (max-width: 600px) {
+      header.q-wrap { padding-top: 2rem; padding-bottom: 1.75rem; padding-left: 1rem; padding-right: 1rem; }
+      main { padding-left: 1rem !important; padding-right: 1rem !important; }
+      #graphics-live-studio { padding: 1rem !important; border-radius: 1.25rem !important; }
+      .glass-strong { padding: 1.25rem !important; border-radius: 1.25rem !important; }
+    }
   </style>
 </head>
 <body class="min-h-screen bg-zinc-950 text-zinc-100">
@@ -40,6 +69,10 @@
         </a>
         <div id="dynamic-nav" class="relative flex items-center text-sm min-w-0 flex-1 justify-center lg:justify-start px-2"></div>
         <div class="flex items-center gap-3 shrink-0">
+          <div id="gfx-wasm-badge" class="hidden md:flex items-center gap-2 text-xs px-3 py-1.5 rounded-2xl bg-slate-900/90 text-slate-300 border border-white/10">
+            <span id="gfx-wasm-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span id="gfx-wasm-text">Loading vibe-wasm…</span>
+          </div>
           <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
              class="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 text-xs font-semibold hover:bg-cyan-500/20 transition">
             <i class="fa-brands fa-github"></i> Repository
@@ -119,6 +152,157 @@
         <i class="fa-solid fa-vr-cardboard mr-1.5"></i> Holographic &amp; Audio
       </button>
     </div>
+
+    <!-- Interactive Etalon Graphics & VibeScript Visual Viewport (#graphics-live-studio) -->
+    <section id="graphics-live-studio" class="glass-strong rounded-3xl p-6 sm:p-8 mb-10 border border-emerald-500/30 shadow-2xl">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div>
+          <span class="text-xs font-mono px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            LIVE ETALON + VIBESCRIPT VISUAL VIEWPORT · WEBGPU + WEBGL2 ES 3.0 · vibe:0.3/{render,signal,mech}
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-semibold mt-2 text-white">
+            Interactive Etalon 10D, SDF Raymarching, PGA Rigging &amp; Environment Simulation Studio
+          </h2>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="gfx-backend-tier" class="text-[11px] font-mono text-white/60">GPU Backend:</label>
+          <select id="gfx-backend-tier" class="px-3 py-1.5 rounded-xl bg-slate-900 text-cyan-300 border border-cyan-500/40 text-xs font-mono">
+            <option value="webgl2">WebGL2 ES 3.0 (#version 300 es · Mobile &amp; Desktop)</option>
+            <option value="webgpu">WebGPU (WGSL + GLSL ES 3.0 Hybrid)</option>
+            <option value="software">Software Canvas2D Reference</option>
+          </select>
+          <span id="gfx-shader-status" class="text-xs font-mono px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/35 text-emerald-300">
+            GLSL ES 3.0: Compiling…
+          </span>
+          <button id="gfx-anim-toggle" type="button" class="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono hover:bg-emerald-500/30 transition cursor-pointer">
+            <i class="fa-solid fa-pause mr-1"></i> Live 60Hz Loop
+          </button>
+          <span id="gfx-receipt-badge" class="text-xs font-mono px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-cyan-300">
+            astHash: initializing…
+          </span>
+        </div>
+      </div>
+
+      <!-- 6-Mode Switcher -->
+      <div class="flex flex-wrap gap-2 mb-5 gfx-mode-strip" role="tablist" aria-label="Interactive Graphics Modes">
+        <button type="button" class="gfx-mode-btn active" data-mode="sdf10d" id="gfx-mode-1">
+          <i class="fa-solid fa-cubes mr-1"></i> 1. Etalon 10D &amp; SDF Raymarcher
+        </button>
+        <button type="button" class="gfx-mode-btn" data-mode="pga" id="gfx-mode-2">
+          <i class="fa-solid fa-bone mr-1"></i> 2. PGA 3D Motor Skeletal Rigging
+        </button>
+        <button type="button" class="gfx-mode-btn" data-mode="water" id="gfx-mode-3">
+          <i class="fa-solid fa-water mr-1"></i> 3. Water &amp; Gerstner Caustics
+        </button>
+        <button type="button" class="gfx-mode-btn" data-mode="vegetation" id="gfx-mode-4">
+          <i class="fa-solid fa-seedling mr-1"></i> 4. Dynamic Vegetation &amp; Wind
+        </button>
+        <button type="button" class="gfx-mode-btn" data-mode="taa" id="gfx-mode-5">
+          <i class="fa-solid fa-crosshairs mr-1"></i> 5. Temporal AA Halton &amp; SH Probes
+        </button>
+        <button type="button" class="gfx-mode-btn" data-mode="holo" id="gfx-mode-6">
+          <i class="fa-solid fa-wave-square mr-1"></i> 6. Holographic Quilt &amp; Spatial Audio
+        </button>
+      </div>
+
+      <!-- Main Viewport + Parameter Controls -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+        <div class="lg:col-span-8">
+          <div class="relative rounded-2xl overflow-hidden border border-white/15 bg-slate-950">
+            <canvas id="etalon-gfx-canvas" width="820" height="420" class="w-full h-auto block cursor-grab active:cursor-grabbing"></canvas>
+            <div class="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-black/60 border-t border-white/10 text-[11px] font-mono text-white/60">
+              <span id="gfx-touch-hint"><i class="fa-solid fa-hand-pointer text-cyan-400 mr-1"></i> Touch / drag viewport to rotate 10D phase &amp; light azimuth</span>
+              <span id="gfx-active-tier-pill" class="text-emerald-300">Tier: WebGL2 #version 300 es + Vector HUD</span>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-4 glass-panel rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <h3 id="gfx-mode-title" class="text-sm font-semibold text-emerald-300 uppercase tracking-wider mb-1">
+              Mode 1 · 10D Manifold &amp; SDF Torus Raymarcher
+            </h3>
+            <p id="gfx-mode-desc" class="text-xs text-white/60 mb-4 leading-relaxed">
+              Evaluates <code class="text-cyan-300">render.spatial.sdf_torus_eval</code>, <code class="text-cyan-300">project_10d_to_3d</code>, and <code class="text-cyan-300">brep_euler_characteristic</code> in WebAssembly.
+            </p>
+
+            <div class="space-y-3.5 text-xs">
+              <div>
+                <div class="flex justify-between mb-1">
+                  <label id="lbl-param-a" for="gfx-param-a" class="text-white/75">Major Radius $R$ / Primary Control</label>
+                  <span id="val-param-a" class="font-mono text-cyan-300">2.10</span>
+                </div>
+                <input id="gfx-param-a" type="range" min="0.8" max="3.2" step="0.05" value="2.10" class="w-full accent-cyan-400">
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <label id="lbl-param-b" for="gfx-param-b" class="text-white/75">Minor Radius $r$ / Interpolation $t$</label>
+                  <span id="val-param-b" class="font-mono text-emerald-300">0.65</span>
+                </div>
+                <input id="gfx-param-b" type="range" min="0.05" max="1.0" step="0.02" value="0.65" class="w-full accent-emerald-400">
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <label id="lbl-param-c" for="gfx-param-c" class="text-white/75">10D Manifold Phase Angle ($\phi$)</label>
+                  <span id="val-param-c" class="font-mono text-violet-300">0.78 rad</span>
+                </div>
+                <input id="gfx-param-c" type="range" min="0.0" max="6.28" step="0.05" value="0.78" class="w-full accent-violet-400">
+              </div>
+              <div>
+                <div class="flex justify-between mb-1">
+                  <label id="lbl-param-d" for="gfx-param-d" class="text-white/75">Light / Wave Azimuth ($\theta$)</label>
+                  <span id="val-param-d" class="font-mono text-amber-300">1.20 rad</span>
+                </div>
+                <input id="gfx-param-d" type="range" min="0.0" max="6.28" step="0.05" value="1.20" class="w-full accent-amber-400">
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-black/35 rounded-xl p-2.5 border border-white/5">
+              <div class="text-[10px] text-white/40">WASM Oracle Metric</div>
+              <div id="gfx-kpi-primary" class="font-mono text-cyan-300 font-semibold mt-0.5">d_sdf = +0.250</div>
+            </div>
+            <div class="bg-black/35 rounded-xl p-2.5 border border-white/5">
+              <div class="text-[10px] text-white/40">Topology / Energy</div>
+              <div id="gfx-kpi-secondary" class="font-mono text-emerald-300 font-semibold mt-0.5">χ = 0 (g = 1)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live VibeScript Graphics Expression Runner, Receipt & Active Shader Inspector -->
+      <div class="glass-panel rounded-2xl p-5 border border-white/10">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-terminal text-cyan-400"></i>
+            <h3 class="text-sm font-semibold text-white">Live VibeScript Graphics &amp; DSP Expression Runner (<code class="text-cyan-300 text-xs">eval_program_with_receipt_wasm</code>) + Active Shader Source</h3>
+          </div>
+          <button id="gfx-run-vibe-btn" type="button" class="px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs transition cursor-pointer">
+            <i class="fa-solid fa-play mr-1"></i> Run VibeScript in WASM
+          </button>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div class="lg:col-span-5">
+            <div class="text-[11px] font-mono text-white/45 mb-1">Editable VibeScript (vibe:0.3/{render,signal,mech})</div>
+            <textarea id="gfx-vibe-editor" rows="8" spellcheck="false" class="w-full font-mono text-xs bg-black/60 border border-white/10 rounded-xl p-3 text-cyan-100 leading-relaxed"></textarea>
+          </div>
+          <div class="lg:col-span-4">
+            <div class="text-[11px] font-mono text-white/45 mb-1">Active Hardware Shader (<span id="gfx-shader-lang-label" class="text-emerald-300">GLSL ES 3.0 #version 300 es</span>)</div>
+            <pre id="gfx-shader-code" class="code-box text-[11px] text-amber-200 m-0 max-h-44 overflow-y-auto">Compiling shader…</pre>
+          </div>
+          <div class="lg:col-span-3 flex flex-col justify-between gap-2">
+            <div>
+              <div class="text-[11px] font-mono text-white/45 mb-1">Evaluated Return Value (vibe-wasm)</div>
+              <pre id="gfx-vibe-result" class="code-box text-xs text-emerald-300 m-0 max-h-24 overflow-y-auto">Evaluating…</pre>
+            </div>
+            <div>
+              <div class="text-[11px] font-mono text-white/45 mb-1">CBOR-LD Tag 4200 Receipt</div>
+              <pre id="gfx-vibe-receipt" class="code-box text-xs text-cyan-300 m-0 max-h-20 overflow-y-auto">Waiting for receipt…</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Tab 1: Temporal AA -->
     <section id="tab-temporal" class="tab-pane active">
@@ -440,8 +624,7 @@ pub fn render_scene_frame(
     self.upload_scene_tensors(&amp;scene.tensors)?;
     self.update_camera_uniforms(camera);
     self.dispatch_volumetric_pass()
-}
-</div>
+}</div>
             <p class="text-xs text-white/60">
               Integrates <code>volumetric_hmc</code> (Hamiltonian Monte Carlo volumetric sampling) and <code>volumetric_texture</code> 3D density sampling with zero per-frame heap allocations.
             </p>
@@ -461,8 +644,7 @@ layout_tree.begin_flex_row(Justify::SpaceBetween, Align::Center);
 layout_tree.add_panel(rear_mirror_spec);
 layout_tree.add_panel(nav_telemetry_spec);
 layout_tree.end_flex_row();
-hud.layout_items_flex(viewport_w, viewport_h, &amp;layout_tree);
-</div>
+hud.layout_items_flex(viewport_w, viewport_h, &amp;layout_tree);</div>
             <p class="text-xs text-white/60">
               Calculates exact pixel bounds for responsive gauges, dials, holographic buttons, and rear-view mirrors without calling the system allocator.
             </p>
@@ -666,33 +848,37 @@ HrtfFilter::synthesize_binaural(
       </div>
     </section>
 
-    <!-- WebGPU Browser Live Probe Section -->
+    <!-- WebGPU & WebGL2 Mobile/Desktop Browser Live Probe Section -->
     <section class="glass-strong rounded-3xl p-8 mb-12 border border-white/10">
       <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
-          <h2 class="text-xl sm:text-2xl font-semibold text-white">Browser WebGPU Live Probe</h2>
-          <p class="text-xs sm:text-sm text-white/60">Real-time inspection of your client browser's WebGPU device and adapter capabilities.</p>
+          <h2 class="text-xl sm:text-2xl font-semibold text-white">Browser WebGPU &amp; WebGL2 ES 3.0 Live Hardware Probe</h2>
+          <p class="text-xs sm:text-sm text-white/60">Real-time inspection of your client browser's Desktop WebGPU adapter and Mobile/Desktop WebGL2 (#version 300 es) capabilities.</p>
         </div>
-        <button onclick="probeWebGpu()" class="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition">
-          <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Re-test WebGPU
+        <button onclick="probeWebGpu()" class="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold hover:bg-emerald-500/30 transition cursor-pointer">
+          <i class="fa-solid fa-arrows-rotate mr-1.5"></i> Re-test WebGPU &amp; WebGL2
         </button>
       </div>
 
-      <div class="grid sm:grid-cols-3 gap-4 mb-6">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="glass-panel p-4 rounded-xl">
           <div class="text-xs text-white/40 mb-1">WebGPU Support</div>
           <div id="probe-support" class="font-mono text-base sm:text-lg text-emerald-400">Testing...</div>
         </div>
         <div class="glass-panel p-4 rounded-xl">
-          <div class="text-xs text-white/40 mb-1">Hardware Adapter</div>
-          <div id="probe-adapter" class="font-mono text-base sm:text-lg text-cyan-400">—</div>
+          <div class="text-xs text-white/40 mb-1">WebGL2 ES 3.0 (Mobile/Desktop)</div>
+          <div id="probe-webgl2" class="font-mono text-base sm:text-lg text-cyan-400">Testing...</div>
         </div>
         <div class="glass-panel p-4 rounded-xl">
-          <div class="text-xs text-white/40 mb-1">Max Texture Dimension</div>
+          <div class="text-xs text-white/40 mb-1">Hardware Adapter / Renderer</div>
+          <div id="probe-adapter" class="font-mono text-sm sm:text-base text-cyan-400 truncate">—</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl">
+          <div class="text-xs text-white/40 mb-1">Max Texture / Float Target</div>
           <div id="probe-limits" class="font-mono text-base sm:text-lg text-violet-400">—</div>
         </div>
       </div>
-      <div id="probe-details" class="code-box text-xs text-white/60 min-h-[4rem]">Probing WebGPU environment…</div>
+      <div id="probe-details" class="code-box text-xs text-white/60 min-h-[4rem]">Probing WebGPU + WebGL2 ES 3.0 environment…</div>
     </section>
   </main>
 
@@ -714,37 +900,102 @@ HrtfFilter::synthesize_binaural(
       const targetBtn = document.getElementById('btn-' + targetName) || document.getElementById('btn-' + clean);
       if (targetPane) targetPane.classList.add('active');
       if (targetBtn) targetBtn.classList.add('active');
+
+      // Sync interactive viewport mode when clicking feature tabs
+      if (typeof window.__setGfxStudioMode === 'function') {
+        const tabToMode = {
+          temporal: 'taa',
+          lighting: 'taa',
+          transcode: 'sdf10d',
+          etalon: 'sdf10d',
+          water: 'water',
+          vegetation: 'vegetation',
+          holo: 'holo'
+        };
+        if (tabToMode[targetName]) {
+          window.__setGfxStudioMode(tabToMode[targetName]);
+        }
+      }
     }
 
     async function probeWebGpu() {
       const supportEl = document.getElementById('probe-support');
+      const webgl2El = document.getElementById('probe-webgl2');
       const adapterEl = document.getElementById('probe-adapter');
       const limitsEl = document.getElementById('probe-limits');
       const detailsEl = document.getElementById('probe-details');
 
+      const report = {
+        webgpu: { available: false },
+        webgl2: { available: false }
+      };
+
+      // 1. Probe WebGL2 (Mobile & Desktop universal GPU tier)
+      try {
+        const probeCanvas = document.createElement('canvas');
+        const gl = probeCanvas.getContext('webgl2');
+        if (gl) {
+          const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+          const unmaskedRenderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+          const unmaskedVendor = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR);
+          const maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+          const max3dTex = gl.getParameter(gl.MAX_3D_TEXTURE_SIZE);
+          const extFloatColor = !!gl.getExtension('EXT_color_buffer_float');
+          const extFloatLinear = !!gl.getExtension('OES_texture_float_linear');
+          report.webgl2 = {
+            available: true,
+            shadingLanguageVersion: gl.getParameter(gl.SHADING_LANGUAGE_VERSION),
+            version: gl.getParameter(gl.VERSION),
+            vendor: unmaskedVendor,
+            renderer: unmaskedRenderer,
+            MAX_TEXTURE_SIZE: maxTex,
+            MAX_3D_TEXTURE_SIZE: max3dTex,
+            EXT_color_buffer_float: extFloatColor,
+            OES_texture_float_linear: extFloatLinear
+          };
+          if (webgl2El) {
+            webgl2El.textContent = 'GLSL ES 3.0 Ready';
+            webgl2El.className = 'font-mono text-base sm:text-lg text-emerald-400';
+          }
+          adapterEl.textContent = unmaskedRenderer || unmaskedVendor || 'WebGL2 Hardware GPU';
+          limitsEl.textContent = maxTex + ' px ' + (extFloatColor ? '· FP16/32 RT' : '');
+        } else if (webgl2El) {
+          webgl2El.textContent = 'Unavailable';
+          webgl2El.className = 'font-mono text-base sm:text-lg text-amber-400';
+        }
+      } catch (glErr) {
+        report.webgl2 = { available: false, error: String(glErr) };
+      }
+
+      // 2. Probe WebGPU
       if (!navigator.gpu) {
-        supportEl.textContent = 'Unavailable';
-        supportEl.className = 'font-mono text-lg text-amber-400';
-        detailsEl.textContent = 'WebGPU is not enabled in this browser. Fallback is Canvas2D / CPU Oracle.';
+        supportEl.textContent = 'WebGL2 Fallback';
+        supportEl.className = 'font-mono text-base sm:text-lg text-amber-400';
+        report.webgpu = { available: false, note: 'navigator.gpu not present; using WebGL2 #version 300 es GPU pipeline' };
+        detailsEl.textContent = JSON.stringify(report, null, 2);
         return;
       }
 
       try {
         const adapter = await navigator.gpu.requestAdapter();
         if (!adapter) {
-          supportEl.textContent = 'No Adapter';
-          supportEl.className = 'font-mono text-lg text-amber-400';
-          detailsEl.textContent = 'navigator.gpu is present, but no compatible GPU adapter was found.';
+          supportEl.textContent = 'No Adapter (GL2 Active)';
+          supportEl.className = 'font-mono text-base sm:text-lg text-amber-400';
+          report.webgpu = { available: false, note: 'No compatible WebGPU adapter; WebGL2 ES 3.0 active' };
+          detailsEl.textContent = JSON.stringify(report, null, 2);
           return;
         }
 
         const info = await adapter.requestAdapterInfo?.() || {};
         supportEl.textContent = 'Available';
-        supportEl.className = 'font-mono text-lg text-emerald-400';
-        adapterEl.textContent = info.vendor || (adapter.isFallbackAdapter ? 'Software Fallback' : 'Hardware GPU');
+        supportEl.className = 'font-mono text-base sm:text-lg text-emerald-400';
+        if (info.vendor || info.description) {
+          adapterEl.textContent = info.description || info.vendor || report.webgl2.renderer || 'Hardware GPU';
+        }
         limitsEl.textContent = (adapter.limits.maxTextureDimension2D || '8192') + ' px';
 
-        detailsEl.textContent = JSON.stringify({
+        report.webgpu = {
+          available: true,
           vendor: info.vendor || 'Standard GPU',
           architecture: info.architecture || 'Unknown',
           device: info.device || 'Default',
@@ -752,15 +1003,976 @@ HrtfFilter::synthesize_binaural(
           isFallbackAdapter: adapter.isFallbackAdapter,
           maxBufferSize: adapter.limits.maxBufferSize,
           maxComputeWorkgroupSizeX: adapter.limits.maxComputeWorkgroupSizeX
-        }, null, 2);
+        };
+        detailsEl.textContent = JSON.stringify(report, null, 2);
       } catch (e) {
         supportEl.textContent = 'Error';
-        supportEl.className = 'font-mono text-lg text-rose-400';
-        detailsEl.textContent = 'Error probing WebGPU: ' + String(e);
+        supportEl.className = 'font-mono text-base sm:text-lg text-rose-400';
+        report.webgpu = { available: false, error: String(e) };
+        detailsEl.textContent = JSON.stringify(report, null, 2);
       }
     }
 
     window.addEventListener('DOMContentLoaded', probeWebGpu);
+  </script>
+
+  <script type="module">
+    import initVibe, { eval_program_with_receipt_wasm } from './pkg/vibe/vibe_wasm.js';
+
+    const byId = id => document.getElementById(id);
+    let vibeReady = false;
+    let activeMode = 'sdf10d';
+    let animating = true;
+    let animPhase = 0;
+    let lastWasmState = {
+      sdfDist: 0.25,
+      proj3d: [1.4, 0.8, -0.5],
+      euler: [0, 2],
+      lerpJoint: [1.2, 1.6, 0.4],
+      rmsPeak: [0.71, 1.0],
+      springForce: [-12.5, -4.2, 0.0]
+    };
+
+    const MODE_META = {
+      sdf10d: {
+        title: 'Mode 1 · Etalon 10D & SDF Torus Raymarcher',
+        desc: 'Real-time 2D/3D SDF Torus & CSG Raymarching + Distance Field Isolines calling render.spatial.sdf_torus_eval, project_10d_to_3d, and brep_euler_characteristic.',
+        labels: ['Major Radius R', 'Minor Radius r', '10D Manifold Phase (φ)', 'Light Azimuth (θ)']
+      },
+      pga: {
+        title: 'Mode 2 · PGA 3D Motor Skeletal Rigging',
+        desc: 'Articulated 4-bone kinematic arm visualizer calling render.spatial.skeletal_lerp_joint, comparing volume-preserving PGA Cl(3,0,1) motor skinning against linear blend skinning.',
+        labels: ['Shoulder Bend Gain', 'Pose Interpolation t ∈ [0,1]', 'Elbow Twist Angle (φ)', 'Target Effector Azimuth']
+      },
+      water: {
+        title: 'Mode 3 · Water & Shoreline Gerstner Waves + Caustics',
+        desc: 'Real-time Gerstner trochoidal wave spectrum, depth-disparity shoreline foam breaking, and underwater Snell refraction caustics grid.',
+        labels: ['Wind Speed / Steepness', 'Bathymetry Shelf Slope', 'Wave Phase Velocity', 'Sun Refraction Azimuth']
+      },
+      vegetation: {
+        title: 'Mode 4 · Dynamic Vegetation & Turbulent Wind Field',
+        desc: 'Procedural foliage canopy swaying in a turbulent 2D wind velocity field with Hookean spring-damper recovery via mech.kinematics.spring_damper_force.',
+        labels: ['Primary Trunk Wind Bend', 'Secondary Leaf Flutter', 'Turbulence Eddy Phase', 'Wind Direction Angle']
+      },
+      taa: {
+        title: 'Mode 5 · Temporal AA Halton Jitter & SH Environment Probes',
+        desc: '16-sample Halton(2,3) sub-pixel camera jitter sequence, YCoCg neighborhood clamp AABB, and L2 9-band Spherical Harmonics irradiance probe.',
+        labels: ['YCoCg Variance Gamma (γ)', 'History Blend Weight (α)', 'Sub-Pixel Halton Phase', 'SH Probe Sun Angle']
+      },
+      holo: {
+        title: 'Mode 6 · Holographic Light-Field Quilt & Spatial Audio Ray-Tracing',
+        desc: '45-view Looking Glass holographic quilt view cone + 3D acoustic room impulse response & HRTF binaural ray paths calling signal.dsp.* in vibe-wasm.',
+        labels: ['Holographic View Cone', 'Wall Absorption Coeff', 'Acoustic Source Phase', 'Listener Head Azimuth']
+      }
+    };
+
+    function getSliders() {
+      const a = parseFloat(byId('gfx-param-a').value) || 2.0;
+      const b = parseFloat(byId('gfx-param-b').value) || 0.6;
+      const c = parseFloat(byId('gfx-param-c').value) || 0.78;
+      const d = parseFloat(byId('gfx-param-d').value) || 1.2;
+      return { a, b, c, d };
+    }
+
+    function buildVibeScriptForMode(mode, s) {
+      const majorR = Math.max(0.8, s.a).toFixed(2);
+      const minorR = Math.min(s.a - 0.15, Math.max(0.1, s.b)).toFixed(2);
+      const tVal = Math.min(1.0, Math.max(0.0, s.b)).toFixed(2);
+      const cVal = s.c.toFixed(2);
+
+      if (mode === 'pga') {
+        return `import "vibe:0.3/render" as render;
+import "vibe:0.3/mech" as mech;
+
+fn main() {
+  let joint = render.spatial.skeletal_lerp_joint([0.0, 0.0, 0.0], [${majorR}, ${cVal}, 0.8], ${tVal});
+  let torque = mech.kinematics.spring_damper_force([${tVal}, 0.2, 0.0], [0.1, 0.0, 0.0], [18.0, 2.5]);
+  let euler = render.spatial.brep_euler_characteristic([64, 128, 66]);
+  return {
+    mode: "pga_motor_rigging",
+    interpolated_joint: joint,
+    spring_restore_force: torque,
+    mesh_euler_chi: euler[0]
+  };
+}`;
+      }
+      if (mode === 'water' || mode === 'vegetation') {
+        return `import "vibe:0.3/render" as render;
+import "vibe:0.3/mech" as mech;
+import "vibe:0.3/signal" as signal;
+
+fn main() {
+  let restore = mech.kinematics.spring_damper_force([${majorR}, ${minorR}, 0.0], [0.25, -0.1, 0.0], [24.0, 3.2]);
+  let wave_rms = signal.dsp.signal_rms_peak([${majorR}, -${minorR}, ${cVal}, -0.4]);
+  let proj = render.spatial.project_10d_to_3d([1.0, 0.5, -0.2, ${cVal}, 0.3, 0.1, -0.4, 0.2, 0.6, -0.1], [0.5, 0.4, 0.3, 0.2, 0.2, 0.1, 0.1]);
+  return {
+    mode: "${mode}_continuum",
+    spring_force_xyz: restore,
+    wave_rms_peak: wave_rms,
+    projected_3d: proj
+  };
+}`;
+      }
+      if (mode === 'taa' || mode === 'holo') {
+        return `import "vibe:0.3/signal" as signal;
+import "vibe:0.3/render" as render;
+
+fn main() {
+  let rms = signal.dsp.signal_rms_peak([0.85, -0.62, ${tVal}, -0.44, 0.91, -0.35]);
+  let biquad = signal.dsp.biquad_df1_step([${tVal}, 0.4, -0.2], [0.15, -0.08], [0.29, 0.58, 0.29, -0.18, 0.34]);
+  let cfar = signal.dsp.cfar_cell_average([0.12, 0.15, 0.11, 0.14, 0.13, 0.16], ${majorR});
+  let proj = render.spatial.project_10d_to_3d([0.8, 0.4, 0.2, ${cVal}, -0.3, 0.5, 0.1, 0.2, -0.2, 0.4], [0.6, 0.3, 0.2, 0.4, 0.1, 0.2, 0.3]);
+  return {
+    mode: "${mode}_signal_probe",
+    rms_and_peak: rms,
+    hrtf_biquad_sample: biquad,
+    cfar_threshold: cfar,
+    probe_3d: proj
+  };
+}`;
+      }
+      return `import "vibe:0.3/render" as render;
+import "vibe:0.3/signal" as signal;
+import "vibe:0.3/mech" as mech;
+
+fn main() {
+  let sdf = render.spatial.sdf_torus_eval([${majorR}, 0.25, 0.0], [${majorR}, ${minorR}]);
+  let p3d = render.spatial.project_10d_to_3d([1.2, -0.4, 0.8, ${cVal}, 0.5, -0.3, 0.7, 0.2, -0.6, 0.4], [0.5, 0.35, 0.25, 0.4, 0.15, 0.3, 0.2]);
+  let euler = render.spatial.brep_euler_characteristic([256, 512, 256]);
+  let rms = signal.dsp.signal_rms_peak([${majorR}, -${minorR}, 0.5, -0.5]);
+  return {
+    sdf_torus_distance: sdf,
+    projected_10d_xyz: p3d,
+    euler_chi_genus2: euler,
+    field_rms_peak: rms
+  };
+}`;
+    }
+
+    function runVibeStudioScript(syncEditor = false) {
+      const s = getSliders();
+      byId('val-param-a').textContent = s.a.toFixed(2);
+      byId('val-param-b').textContent = s.b.toFixed(2);
+      byId('val-param-c').textContent = s.c.toFixed(2) + ' rad';
+      byId('val-param-d').textContent = s.d.toFixed(2) + ' rad';
+
+      if (syncEditor || !byId('gfx-vibe-editor').value.trim()) {
+        byId('gfx-vibe-editor').value = buildVibeScriptForMode(activeMode, s);
+      }
+
+      if (!vibeReady) return;
+      try {
+        const src = byId('gfx-vibe-editor').value;
+        const res = eval_program_with_receipt_wasm(src);
+        if (res && res.ok) {
+          byId('gfx-vibe-result').textContent = JSON.stringify(res.value, null, 2);
+          byId('gfx-vibe-receipt').textContent = JSON.stringify(res.receipt, null, 2);
+          byId('gfx-receipt-badge').textContent = `astHash: ${res.receipt?.astHash || 'verified'}`;
+
+          const v = res.value || {};
+          if (typeof v.sdf_torus_distance === 'number') {
+            lastWasmState.sdfDist = v.sdf_torus_distance;
+            byId('gfx-kpi-primary').textContent = `d_sdf = ${v.sdf_torus_distance.toFixed(4)}`;
+          } else if (Array.isArray(v.interpolated_joint)) {
+            lastWasmState.lerpJoint = v.interpolated_joint;
+            byId('gfx-kpi-primary').textContent = `J = [${v.interpolated_joint.map(n => Number(n).toFixed(2)).join(', ')}]`;
+          } else if (Array.isArray(v.rms_and_peak)) {
+            lastWasmState.rmsPeak = v.rms_and_peak;
+            byId('gfx-kpi-primary').textContent = `RMS = ${Number(v.rms_and_peak[0]).toFixed(3)}`;
+          } else if (Array.isArray(v.wave_rms_peak)) {
+            lastWasmState.rmsPeak = v.wave_rms_peak;
+            byId('gfx-kpi-primary').textContent = `Wave RMS = ${Number(v.wave_rms_peak[0]).toFixed(3)}`;
+          }
+
+          if (Array.isArray(v.euler_chi_genus2)) {
+            byId('gfx-kpi-secondary').textContent = `χ = ${v.euler_chi_genus2[0]} (2g = ${v.euler_chi_genus2[1]})`;
+          } else if (Array.isArray(v.spring_force_xyz)) {
+            byId('gfx-kpi-secondary').textContent = `F_x = ${Number(v.spring_force_xyz[0]).toFixed(1)} N`;
+          } else if (typeof v.hrtf_biquad_sample === 'number') {
+            byId('gfx-kpi-secondary').textContent = `HRTF y[n] = ${v.hrtf_biquad_sample.toFixed(3)}`;
+          }
+        } else {
+          byId('gfx-vibe-result').textContent = JSON.stringify(res?.error || res, null, 2);
+        }
+      } catch (e) {
+        byId('gfx-vibe-result').textContent = 'Error: ' + String(e);
+      }
+    }
+
+    function setStudioMode(mode) {
+      if (!MODE_META[mode]) return;
+      activeMode = mode;
+      document.querySelectorAll('.gfx-mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+      const meta = MODE_META[mode];
+      byId('gfx-mode-title').textContent = meta.title;
+      byId('gfx-mode-desc').textContent = meta.desc;
+      byId('lbl-param-a').textContent = meta.labels[0];
+      byId('lbl-param-b').textContent = meta.labels[1];
+      byId('lbl-param-c').textContent = meta.labels[2];
+      byId('lbl-param-d').textContent = meta.labels[3];
+      runVibeStudioScript(true);
+    }
+    window.__setGfxStudioMode = setStudioMode;
+
+    // Halton sequence helper for Mode 5
+    function halton(index, base) {
+      let result = 0;
+      let f = 1 / base;
+      let i = index;
+      while (i > 0) {
+        result += f * (i % base);
+        i = Math.floor(i / base);
+        f /= base;
+      }
+      return result;
+    }
+
+    // Real WebGL2 (#version 300 es) GLSL ES 3.0 Shader Pipeline for Mobile & Desktop
+    let glCanvas = null;
+    let gl = null;
+    let glProg = null;
+    let glUniforms = {};
+    let webgl2CompiledOk = false;
+
+    const GLSL300_VERT = `#version 300 es
+precision highp float;
+in vec2 a_pos;
+out vec2 v_uv;
+void main() {
+  v_uv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+    const GLSL300_FRAG = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform vec2 u_res;
+uniform float u_time;
+uniform vec4 u_params; // (a, b, c, d)
+uniform int u_mode;
+out vec4 fragColor;
+
+float sdTorus(vec3 p, vec2 t) {
+  vec2 q = vec2(length(p.xz) - t.x, p.y);
+  return length(q) - t.y;
+}
+
+vec3 rotX(vec3 p, float a) {
+  float c = cos(a), s = sin(a);
+  return vec3(p.x, c * p.y - s * p.z, s * p.y + c * p.z);
+}
+
+void main() {
+  vec2 uv = v_uv;
+  vec3 col = vec3(0.024, 0.039, 0.071);
+
+  if (u_mode == 0) {
+    // Mode 1: Left = 2D SDF isoline field, Right = 3D SDF Torus Raymarcher (#version 300 es)
+    float R = max(0.8, u_params.x) * 0.42;
+    float r = min(R - 0.05, max(0.06, u_params.y * 0.42));
+    if (uv.x < 0.5) {
+      vec2 p = (uv - vec2(0.26, 0.49)) * vec2(u_res.x / u_res.y, 1.0) * 1.9;
+      float d = abs(length(p) - R) - r;
+      float iso = 0.5 + 0.5 * cos(d * 55.0 - u_time * 2.0);
+      col = mix(vec3(0.03, 0.08, 0.14), vec3(0.06, 0.35, 0.42), iso * exp(-abs(d) * 2.5));
+      if (abs(d) < 0.012) col = vec3(0.2, 0.85, 0.6);
+    } else {
+      vec2 p = (uv - vec2(0.74, 0.48)) * vec2(u_res.x / u_res.y, 1.0) * 2.1;
+      vec3 ro = vec3(0.0, 0.0, 2.6);
+      vec3 rd = normalize(vec3(p, -1.6));
+      float t = 0.0;
+      float hit = 0.0;
+      vec3 pos = ro;
+      float tilt = u_params.z + u_time * 0.4;
+      for (int i = 0; i < 36; i++) {
+        pos = rotX(ro + rd * t, tilt);
+        float d = sdTorus(pos, vec2(R, r));
+        if (d < 0.003) { hit = 1.0; break; }
+        t += d;
+        if (t > 5.0) break;
+      }
+      if (hit > 0.5) {
+        vec2 e = vec2(0.003, 0.0);
+        vec3 n = normalize(vec3(
+          sdTorus(pos + e.xyy, vec2(R, r)) - sdTorus(pos - e.xyy, vec2(R, r)),
+          sdTorus(pos + e.yxy, vec2(R, r)) - sdTorus(pos - e.yxy, vec2(R, r)),
+          sdTorus(pos + e.yyx, vec2(R, r)) - sdTorus(pos - e.yyx, vec2(R, r))
+        ));
+        vec3 ldir = normalize(vec3(cos(u_params.w), sin(u_params.w), 0.7));
+        float diff = max(0.15, dot(n, ldir));
+        float fres = pow(1.0 - max(0.0, dot(n, vec3(0.0, 0.0, 1.0))), 2.5);
+        col = vec3(0.08, 0.62, 0.75) * diff + vec3(0.2, 0.9, 0.65) * fres * 0.55;
+      }
+    }
+  } else if (u_mode == 1) {
+    // Mode 2: PGA Cl(3,0,1) Motor Field vs LBS Strain Field
+    float strain = sin(uv.x * 12.0 + u_time) * cos(uv.y * 8.0 + u_params.z);
+    col += vec3(0.02, 0.11, 0.09) * (0.5 + 0.5 * strain);
+  } else if (u_mode == 2) {
+    // Mode 3: Gerstner Water Wave Spectrum & Underwater Snell Caustics
+    if (uv.y < 0.55) {
+      vec2 cUv = uv * 14.0 + vec2(u_time * 0.8, u_params.z);
+      float c1 = sin(cUv.x + sin(cUv.y + u_time));
+      float c2 = cos(cUv.y * 1.3 - cos(cUv.x * 1.1 - u_time));
+      float caustic = pow(max(0.0, c1 * c2), 3.0);
+      col = vec3(0.02, 0.12, 0.22) + vec3(0.1, 0.65, 0.85) * caustic * 0.65;
+    }
+  } else if (u_mode == 3) {
+    // Mode 4: Turbulent Wind Velocity Field
+    float gust = 0.5 + 0.5 * sin(uv.x * 10.0 - u_time * 2.2 + sin(uv.y * 6.0 + u_params.z));
+    col += vec3(0.02, 0.14, 0.10) * gust * 0.55;
+  } else if (u_mode == 4) {
+    // Mode 5: L2 Spherical Harmonics Irradiance Probe Glow
+    vec2 d = (uv - vec2(0.72, 0.5)) * vec2(u_res.x / u_res.y, 1.0);
+    float ang = atan(d.y, d.x);
+    float sh = 0.5 + 0.3 * cos(ang - u_params.w) + 0.2 * cos(2.0 * (ang - u_params.z));
+    col += vec3(0.28, 0.18, 0.48) * exp(-length(d) * 4.5) * sh;
+  } else {
+    // Mode 6: Room Acoustic Wavefield Interference
+    vec2 d = (uv - vec2(0.68, 0.52)) * vec2(u_res.x / u_res.y, 1.0);
+    float wave = 0.5 + 0.5 * cos(length(d) * 38.0 - u_time * 4.0);
+    col += vec3(0.05, 0.22, 0.32) * wave * exp(-length(d) * 2.2);
+  }
+
+  fragColor = vec4(col, 1.0);
+}`;
+
+    function initWebGl2Pipeline(w, h) {
+      try {
+        glCanvas = document.createElement('canvas');
+        glCanvas.width = w;
+        glCanvas.height = h;
+        gl = glCanvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true });
+        if (!gl) return false;
+
+        const compile = (type, src) => {
+          const sh = gl.createShader(type);
+          gl.shaderSource(sh, src);
+          gl.compileShader(sh);
+          if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+            console.warn('GLSL ES 3.0 compile log:', gl.getShaderInfoLog(sh));
+            return null;
+          }
+          return sh;
+        };
+
+        const vs = compile(gl.VERTEX_SHADER, GLSL300_VERT);
+        const fs = compile(gl.FRAGMENT_SHADER, GLSL300_FRAG);
+        if (!vs || !fs) return false;
+
+        glProg = gl.createProgram();
+        gl.attachShader(glProg, vs);
+        gl.attachShader(glProg, fs);
+        gl.linkProgram(glProg);
+        if (!gl.getProgramParameter(glProg, gl.LINK_STATUS)) return false;
+
+        gl.useProgram(glProg);
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+          -1, -1,  1, -1, -1,  1,
+          -1,  1,  1, -1,  1,  1
+        ]), gl.STATIC_DRAW);
+        const loc = gl.getAttribLocation(glProg, 'a_pos');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+        glUniforms = {
+          res: gl.getUniformLocation(glProg, 'u_res'),
+          time: gl.getUniformLocation(glProg, 'u_time'),
+          params: gl.getUniformLocation(glProg, 'u_params'),
+          mode: gl.getUniformLocation(glProg, 'u_mode')
+        };
+        webgl2CompiledOk = true;
+        return true;
+      } catch (e) {
+        console.warn('WebGL2 init fallback:', e);
+        return false;
+      }
+    }
+
+    function updateShaderInspector() {
+      const tier = byId('gfx-backend-tier')?.value || 'webgl2';
+      const langLabel = byId('gfx-shader-lang-label');
+      const codeBox = byId('gfx-shader-code');
+      const statusBadge = byId('gfx-shader-status');
+      const pill = byId('gfx-active-tier-pill');
+      const s = getSliders();
+
+      if (tier === 'webgpu') {
+        if (langLabel) langLabel.textContent = 'WGSL (@compute / @fragment) + GLSL ES 3.0';
+        if (pill) pill.textContent = 'Tier: WebGPU WGSL + WebGL2 ES 3.0 Hybrid';
+        if (statusBadge) {
+          statusBadge.textContent = navigator.gpu ? 'WebGPU WGSL + GLSL 300 es: Ready' : 'WebGPU Fallback -> GLSL 300 es';
+        }
+        if (codeBox) {
+          codeBox.textContent = `// Etalon WGSL Shader (${activeMode})
+struct Params { r_major: f32, r_minor: f32, phase: f32, azimuth: f32 };
+@group(0) @binding(0) var<uniform> u: Params;
+
+fn sd_torus(p: vec3<f32>, t: vec2<f32>) -> f32 {
+  let q = vec2<f32>(length(p.xz) - t.x, p.y);
+  return length(q) - t.y;
+}
+
+@fragment
+fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let d = sd_torus(vec3<f32>(pos.xy * 0.01, 0.0), vec2<f32>(${s.a.toFixed(2)}, ${s.b.toFixed(2)}));
+  return vec4<f32>(0.08, 0.62, 0.75, 1.0) * exp(-abs(d));
+}`;
+        }
+      } else if (tier === 'webgl2') {
+        if (langLabel) langLabel.textContent = 'GLSL ES 3.0 (#version 300 es · Mobile & Desktop)';
+        if (pill) pill.textContent = webgl2CompiledOk ? 'Tier: WebGL2 #version 300 es Hardware Active' : 'Tier: Canvas2D Reference';
+        if (statusBadge) {
+          statusBadge.textContent = webgl2CompiledOk ? 'GLSL #version 300 es: Compiled OK' : 'GLSL ES 3.0: Software Fallback';
+        }
+        if (codeBox) {
+          codeBox.textContent = GLSL300_FRAG;
+        }
+      } else {
+        if (langLabel) langLabel.textContent = 'CPU / Canvas2D Reference Oracle';
+        if (pill) pill.textContent = 'Tier: Software Canvas2D Reference';
+        if (statusBadge) statusBadge.textContent = 'Software Reference Active';
+        if (codeBox) {
+          codeBox.textContent = `// Deterministic CPU / Canvas2D Reference Floor (${activeMode})\n// ExactnessProfile::DeterministicApproximate\n// R = ${s.a.toFixed(2)}, r = ${s.b.toFixed(2)}, phi = ${s.c.toFixed(2)}, theta = ${s.d.toFixed(2)}`;
+        }
+      }
+    }
+
+    function renderViewportFrame() {
+      const canvas = byId('etalon-gfx-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+      const s = getSliders();
+      if (animating) animPhase += 0.025;
+
+      const tier = byId('gfx-backend-tier')?.value || 'webgl2';
+      const modeIndexMap = { sdf10d: 0, pga: 1, water: 2, vegetation: 3, taa: 4, holo: 5 };
+
+      if ((tier === 'webgl2' || tier === 'webgpu') && webgl2CompiledOk && gl && glProg) {
+        gl.viewport(0, 0, W, H);
+        gl.useProgram(glProg);
+        gl.uniform2f(glUniforms.res, W, H);
+        gl.uniform1f(glUniforms.time, animPhase);
+        gl.uniform4f(glUniforms.params, s.a, s.b, s.c, s.d);
+        gl.uniform1i(glUniforms.mode, modeIndexMap[activeMode] ?? 0);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        ctx.drawImage(glCanvas, 0, 0, W, H);
+      } else {
+        ctx.fillStyle = '#060a12';
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Subtle technical grid
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 40) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+
+      if (activeMode === 'sdf10d') {
+        // Left: 2D SDF Cross-Section Distance Field Isolines; Right: 3D Wireframe/Shaded Torus + 10D Projection
+        const majorR = Math.max(0.8, s.a);
+        const minorR = Math.min(majorR - 0.12, Math.max(0.12, s.b));
+        const cx1 = 215, cy1 = 215;
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('SDF TORUS ISOLINES & RAYMARCH STEPPING (XZ PLANE)', 20, 26);
+
+        // Draw distance field isolines
+        for (let ring = -3; ring <= 8; ring++) {
+          const d = ring * 0.16;
+          const rOuter = (majorR + minorR + d) * 44;
+          const rInner = (majorR - minorR - d) * 44;
+          ctx.strokeStyle = ring === 0 ? '#34d399' : ring < 0 ? 'rgba(34, 211, 238, 0.45)' : 'rgba(148, 163, 184, 0.2)';
+          ctx.lineWidth = ring === 0 ? 2.5 : 1;
+          if (rOuter > 4) {
+            ctx.beginPath(); ctx.arc(cx1, cy1, rOuter, 0, Math.PI * 2); ctx.stroke();
+          }
+          if (rInner > 4) {
+            ctx.beginPath(); ctx.arc(cx1, cy1, rInner, 0, Math.PI * 2); ctx.stroke();
+          }
+        }
+
+        // Sphere-tracing raymarch visualization
+        const rayAngle = s.d + animPhase * 0.35;
+        const roX = cx1 - Math.cos(rayAngle) * 175;
+        const roY = cy1 - Math.sin(rayAngle) * 175;
+        const rdX = Math.cos(rayAngle);
+        const rdY = Math.sin(rayAngle);
+        let t = 0;
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(roX, roY);
+        for (let step = 0; step < 7; step++) {
+          const px = roX + rdX * t;
+          const py = roY + rdY * t;
+          const q = Math.hypot(px - cx1, py - cy1) - majorR * 44;
+          const dist = Math.abs(q) - minorR * 44;
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(2, Math.abs(dist)), 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = '#fbbf24';
+          ctx.beginPath();
+          ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fill();
+          t += Math.max(6, dist);
+          if (dist < 2 || t > 320) break;
+        }
+
+        // Right: 3D Projected 10D Torus Manifold
+        const cx2 = 605, cy2 = 220;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('3D VOLUMETRIC TORUS & 10D MANIFOLD PROJECTION', 435, 26);
+
+        const tilt = s.c + animPhase * 0.4;
+        const lightX = Math.cos(s.d), lightY = Math.sin(s.d);
+        const uSteps = 32, vSteps = 18;
+        for (let u = 0; u < uSteps; u++) {
+          const aU = (u / uSteps) * Math.PI * 2;
+          for (let v = 0; v < vSteps; v++) {
+            const aV = (v / vSteps) * Math.PI * 2;
+            const R = majorR * 45;
+            const r = minorR * 45;
+            const x = (R + r * Math.cos(aV)) * Math.cos(aU);
+            const y = r * Math.sin(aV);
+            const z = (R + r * Math.cos(aV)) * Math.sin(aU);
+            const ry = y * Math.cos(tilt) - z * Math.sin(tilt);
+            const rz = y * Math.sin(tilt) + z * Math.cos(tilt);
+            const scale = 280 / (280 + rz * 0.45);
+            const sx = cx2 + x * scale;
+            const sy = cy2 + ry * scale;
+            const lum = Math.max(0.2, 0.55 + 0.45 * (Math.cos(aV) * lightX + Math.sin(aU) * lightY));
+            ctx.fillStyle = `rgba(${Math.floor(34 * lum)}, ${Math.floor(211 * lum)}, ${Math.floor(238 * lum)}, 0.85)`;
+            ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3);
+          }
+        }
+      } else if (activeMode === 'pga') {
+        // Mode 2: PGA 3D Motor Skeletal Rigging vs Linear Blend Skinning
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('PGA Cl(3,0,1) MOTOR DUAL-QUATERNION SKINNING (TOP) vs LINEAR BLEND SKINNING CANDY-WRAPPER (BOTTOM)', 24, 28);
+
+        const tInterp = Math.min(1.0, Math.max(0.0, s.b));
+        const baseAngle = (s.a - 1.2) * 0.9 + Math.sin(animPhase) * 0.25;
+        const twist = s.c;
+
+        const drawArmChain = (originX, originY, isPga, label, color) => {
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.font = '600 11px JetBrains Mono, monospace';
+          ctx.fillText(label, originX, originY - 58);
+
+          const lengths = [125, 115, 95, 65];
+          let x = originX, y = originY;
+          let cumAngle = 0;
+          const joints = [{ x, y }];
+
+          for (let i = 0; i < 4; i++) {
+            const bend = baseAngle * tInterp * (0.45 + i * 0.22);
+            cumAngle += bend;
+            x += Math.cos(cumAngle) * lengths[i];
+            y += Math.sin(cumAngle) * lengths[i];
+            joints.push({ x, y, angle: cumAngle });
+          }
+
+          // Draw soft tissue envelope around bones
+          ctx.strokeStyle = isPga ? 'rgba(52, 211, 153, 0.45)' : 'rgba(248, 113, 113, 0.45)';
+          ctx.lineWidth = 2;
+          for (let i = 0; i < joints.length - 1; i++) {
+            const j0 = joints[i], j1 = joints[i + 1];
+            const ang = Math.atan2(j1.y - j0.y, j1.x - j0.x);
+            const nx = -Math.sin(ang), ny = Math.cos(ang);
+            // LBS loses volume at high twist/bend; PGA motor preserves cross-section radius
+            const midPinch = isPga ? 1.0 : Math.max(0.18, Math.cos(twist * 0.5 * tInterp));
+            const radius = 24 - i * 3;
+            const mx = (j0.x + j1.x) * 0.5;
+            const my = (j0.y + j1.y) * 0.5;
+
+            ctx.beginPath();
+            ctx.moveTo(j0.x + nx * radius, j0.y + ny * radius);
+            ctx.quadraticCurveTo(mx + nx * radius * midPinch, my + ny * radius * midPinch, j1.x + nx * (radius - 3), j1.y + ny * (radius - 3));
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(j0.x - nx * radius, j0.y - ny * radius);
+            ctx.quadraticCurveTo(mx - nx * radius * midPinch, my - ny * radius * midPinch, j1.x - nx * (radius - 3), j1.y - ny * (radius - 3));
+            ctx.stroke();
+
+            // Bone segment
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(j0.x, j0.y);
+            ctx.lineTo(j1.x, j1.y);
+            ctx.stroke();
+          }
+
+          joints.forEach((j, idx) => {
+            ctx.fillStyle = '#0f172a';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(j.x, j.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px JetBrains Mono, monospace';
+            ctx.fillText(`J${idx}`, j.x - 6, j.y - 12);
+          });
+          ctx.restore();
+        };
+
+        drawArmChain(120, 145, true, 'PGA Motor Blend (M = Σ w_i M_i) · Volume Preserved (100.0%)', '#34d399');
+        drawArmChain(120, 325, false, `Linear Blend Skinning (LBS) · Mid-Joint Volume Collapse (${Math.round(Math.max(18, Math.cos(twist * 0.5 * tInterp) * 100))}%)`, '#f87171');
+      } else if (activeMode === 'water') {
+        // Mode 3: Gerstner Waves, Shoreline Foam & Snell Caustics
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('TROCHOIDAL GERSTNER WAVE PROFILE, SHORELINE DEPTH-DISPARITY FOAM & SNELL CAUSTICS', 24, 28);
+
+        const steepness = s.a * 14;
+        const slope = s.b;
+        const baseWaterY = 185;
+
+        // Draw bathymetry seabed
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        for (let x = 0; x <= W; x += 16) {
+          const bedY = H - 30 - Math.pow(x / W, 1.35) * (220 * slope);
+          ctx.lineTo(x, bedY);
+        }
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw Gerstner surface and caustics rays
+        const wavePts = [];
+        for (let i = 0; i <= 64; i++) {
+          const u = i / 64;
+          const x0 = u * W;
+          const k1 = 0.022, w1 = animPhase * 2.2 + s.c;
+          const gx = x0 - steepness * Math.sin(k1 * x0 - w1);
+          const gy = baseWaterY - steepness * Math.cos(k1 * x0 - w1) - 6 * Math.sin(0.055 * x0 + w1 * 1.4);
+          const bedY = H - 30 - Math.pow(u, 1.35) * (220 * slope);
+          wavePts.push({ x: gx, y: gy, bedY });
+        }
+
+        // Snell refraction caustics rays
+        ctx.strokeStyle = 'rgba(34, 211, 238, 0.22)';
+        ctx.lineWidth = 1.2;
+        for (let i = 1; i < wavePts.length - 1; i++) {
+          const p0 = wavePts[i - 1], p1 = wavePts[i + 1], p = wavePts[i];
+          if (p.y < p.bedY) {
+            const dx = p1.x - p0.x, dy = p1.y - p0.y;
+            const nx = -dy, ny = dx;
+            const len = Math.hypot(nx, ny) || 1;
+            const refrX = (nx / len) * 0.45 + Math.cos(s.d) * 0.2;
+            const depth = p.bedY - p.y;
+            const hitX = p.x + refrX * depth;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(hitX, p.bedY);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(103, 232, 249, 0.55)';
+            ctx.fillRect(hitX - 2, p.bedY - 3, 4, 4);
+          }
+        }
+
+        // Draw water surface curve & shoreline foam where disparity is small
+        ctx.lineWidth = 3;
+        for (let i = 0; i < wavePts.length - 1; i++) {
+          const p = wavePts[i], pn = wavePts[i + 1];
+          const disparity = Math.max(0, p.bedY - p.y);
+          const foam = Math.max(0, 1 - disparity / 48);
+          ctx.strokeStyle = foam > 0.35 ? '#f8fafc' : '#22d3ee';
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(pn.x, pn.y);
+          ctx.stroke();
+        }
+      } else if (activeMode === 'vegetation') {
+        // Mode 4: Dynamic Vegetation & Turbulent Wind Field
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('128B GPU INSTANCE FOLIAGE POOL · HOOKEAN SPRING-DAMPER DEFLECTION & WIND FIELD', 24, 28);
+
+        const windBend = (s.a - 0.8) * 0.38;
+        const flutter = s.b * 0.25;
+
+        // Wind velocity vectors in background
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+        ctx.lineWidth = 1.2;
+        for (let wy = 65; wy < H - 60; wy += 55) {
+          for (let wx = 40; wx < W - 40; wx += 85) {
+            const gust = 22 + 12 * Math.sin(wx * 0.015 + animPhase * 2.0 + s.c);
+            ctx.beginPath();
+            ctx.moveTo(wx, wy);
+            ctx.lineTo(wx + gust, wy + Math.sin(animPhase + wy) * 5);
+            ctx.stroke();
+          }
+        }
+
+        const drawBranch = (x, y, len, angle, depth) => {
+          if (depth === 0) return;
+          const sway = windBend * (5 - depth) * 0.18 + Math.sin(animPhase * 2.5 + depth + x * 0.02) * flutter;
+          const a = angle + sway;
+          const nx = x + Math.sin(a) * len;
+          const ny = y - Math.cos(a) * len;
+
+          ctx.strokeStyle = depth > 2 ? '#10b981' : '#34d399';
+          ctx.lineWidth = depth * 2.1;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(nx, ny);
+          ctx.stroke();
+
+          if (depth <= 2) {
+            ctx.fillStyle = 'rgba(52, 211, 153, 0.35)';
+            ctx.beginPath();
+            ctx.arc(nx, ny, 7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawBranch(nx, ny, len * 0.72, a - 0.42, depth - 1);
+          drawBranch(nx, ny, len * 0.72, a + 0.38, depth - 1);
+        };
+
+        drawBranch(230, H - 25, 86, 0.0, 5);
+        drawBranch(560, H - 25, 92, -0.05, 5);
+      } else if (activeMode === 'taa') {
+        // Mode 5: Temporal AA Halton(2,3) Sub-Pixel Jitter & L2 Spherical Harmonics Probe
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('HALTON(2,3) 16-FRAME SUB-PIXEL JITTER + YCoCg CLAMP (LEFT) · L2 9-BAND SH PROBE (RIGHT)', 24, 28);
+
+        // Left: Pixel footprint + 16 Halton samples
+        const px0 = 75, py0 = 75, pSize = 260;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.strokeRect(px0, py0, pSize, pSize);
+
+        // YCoCg neighborhood clamp box
+        const clampScale = Math.min(0.95, Math.max(0.25, s.a * 0.28));
+        const boxW = pSize * clampScale;
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.08)';
+        ctx.strokeStyle = '#22d3ee';
+        ctx.setLineDash([5, 4]);
+        ctx.strokeRect(px0 + (pSize - boxW) / 2, py0 + (pSize - boxW) / 2, boxW, boxW);
+        ctx.setLineDash([]);
+
+        const activeSample = Math.floor(animPhase * 4) % 16;
+        ctx.beginPath();
+        for (let i = 1; i <= 16; i++) {
+          const hx = px0 + halton(i, 2) * pSize;
+          const hy = py0 + halton(i, 3) * pSize;
+          if (i === 1) ctx.moveTo(hx, hy);
+          else ctx.lineTo(hx, hy);
+        }
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        ctx.stroke();
+
+        for (let i = 1; i <= 16; i++) {
+          const hx = px0 + halton(i, 2) * pSize;
+          const hy = py0 + halton(i, 3) * pSize;
+          const isCur = (i - 1) === activeSample;
+          ctx.fillStyle = isCur ? '#34d399' : '#38bdf8';
+          ctx.beginPath();
+          ctx.arc(hx, hy, isCur ? 6 : 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#e2e8f0';
+          ctx.font = '9px JetBrains Mono, monospace';
+          ctx.fillText(String(i), hx + 6, hy - 4);
+        }
+
+        // Right: L2 Spherical Harmonics Irradiance Lobe Polar Plot
+        const shX = 595, shY = 210;
+        for (let r = 35; r <= 140; r += 35) {
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+          ctx.beginPath(); ctx.arc(shX, shY, r, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.beginPath();
+        for (let a = 0; a <= 120; a++) {
+          const theta = (a / 120) * Math.PI * 2;
+          const lobe = 75 + 45 * Math.cos(theta - s.d) + 22 * Math.cos(2 * (theta - s.c));
+          const rx = shX + Math.cos(theta) * lobe;
+          const ry = shY + Math.sin(theta) * lobe;
+          if (a === 0) ctx.moveTo(rx, ry);
+          else ctx.lineTo(rx, ry);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(167, 139, 250, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = '#a78bfa';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      } else if (activeMode === 'holo') {
+        // Mode 6: 45-View Looking Glass Quilt & Spatial Audio HRTF Ray-Tracing
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 12px Inter, sans-serif';
+        ctx.fillText('45-VIEW HOLOGRAPHIC LIGHT-FIELD QUILT (9×5) & SPHERICAL-HARMONIC HRTF ACOUSTIC RAYS', 24, 28);
+
+        // Left: 9x5 Looking Glass Quilt Grid
+        const qx0 = 24, qy0 = 52, cols = 9, rows = 5, cw = 38, ch = 58;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const viewIdx = r * cols + c;
+            const viewNorm = (viewIdx / 44) - 0.5;
+            const x = qx0 + c * (cw + 3);
+            const y = qy0 + r * (ch + 3);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.fillRect(x, y, cw, ch);
+            ctx.strokeStyle = viewIdx === 22 ? '#34d399' : 'rgba(56, 189, 248, 0.3)';
+            ctx.strokeRect(x, y, cw, ch);
+
+            // Parallax shifted object inside quilt tile
+            const shiftX = viewNorm * s.a * 6;
+            ctx.fillStyle = '#22d3ee';
+            ctx.beginPath();
+            ctx.arc(x + cw / 2 + shiftX, y + ch / 2, 7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Right: Acoustic Room Ray-Tracing & HRTF Listener
+        const rx0 = 435, ry0 = 52, rw = 355, rh = 310;
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rx0, ry0, rw, rh);
+
+        const srcX = rx0 + 85 + Math.cos(s.c + animPhase * 0.4) * 45;
+        const srcY = ry0 + 95 + Math.sin(s.c + animPhase * 0.4) * 35;
+        const lisX = rx0 + 265;
+        const lisY = ry0 + 215;
+
+        // Direct + 4 Early Reflection Paths
+        const mirrors = [
+          { x: lisX, y: lisY, color: '#34d399' },
+          { x: lisX, y: 2 * ry0 - lisY, color: 'rgba(56, 189, 248, 0.55)' },
+          { x: lisX, y: 2 * (ry0 + rh) - lisY, color: 'rgba(56, 189, 248, 0.55)' },
+          { x: 2 * rx0 - lisX, y: lisY, color: 'rgba(167, 139, 250, 0.55)' },
+          { x: 2 * (rx0 + rw) - lisX, y: lisY, color: 'rgba(167, 139, 250, 0.55)' }
+        ];
+
+        mirrors.forEach((m, idx) => {
+          ctx.strokeStyle = m.color;
+          ctx.lineWidth = idx === 0 ? 2.2 : 1.2;
+          ctx.beginPath();
+          ctx.moveTo(srcX, srcY);
+          if (idx === 0) {
+            ctx.lineTo(lisX, lisY);
+          } else {
+            const bounceX = Math.max(rx0, Math.min(rx0 + rw, (srcX + m.x) * 0.5));
+            const bounceY = Math.max(ry0, Math.min(ry0 + rh, (srcY + m.y) * 0.5));
+            ctx.lineTo(bounceX, bounceY);
+            ctx.lineTo(lisX, lisY);
+          }
+          ctx.stroke();
+        });
+
+        // Source & Listener icons
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath(); ctx.arc(srcX, srcY, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath(); ctx.arc(lisX, lisY, 9, 0, Math.PI * 2); ctx.fill();
+      }
+
+      requestAnimationFrame(renderViewportFrame);
+    }
+
+    async function bootGfxStudio() {
+      initWebGl2Pipeline(820, 420);
+      updateShaderInspector();
+
+      document.querySelectorAll('.gfx-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          setStudioMode(btn.dataset.mode);
+          updateShaderInspector();
+        });
+      });
+      ['gfx-param-a', 'gfx-param-b', 'gfx-param-c', 'gfx-param-d'].forEach(id => {
+        byId(id)?.addEventListener('input', () => {
+          runVibeStudioScript(true);
+          updateShaderInspector();
+        });
+      });
+      byId('gfx-backend-tier')?.addEventListener('change', () => {
+        updateShaderInspector();
+      });
+      byId('gfx-run-vibe-btn')?.addEventListener('click', () => runVibeStudioScript(false));
+      byId('gfx-anim-toggle')?.addEventListener('click', () => {
+        animating = !animating;
+        byId('gfx-anim-toggle').innerHTML = animating
+          ? '<i class="fa-solid fa-pause mr-1"></i> Live 60Hz Loop'
+          : '<i class="fa-solid fa-play mr-1"></i> Paused';
+      });
+
+      // Touch & Pointer drag interaction on #etalon-gfx-canvas for mobile & desktop
+      const vpCanvas = byId('etalon-gfx-canvas');
+      if (vpCanvas) {
+        let dragging = false;
+        let lastX = 0, lastY = 0;
+        vpCanvas.addEventListener('pointerdown', e => {
+          dragging = true;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          try { vpCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+        });
+        vpCanvas.addEventListener('pointermove', e => {
+          if (!dragging) return;
+          const dx = e.clientX - lastX;
+          const dy = e.clientY - lastY;
+          lastX = e.clientX;
+          lastY = e.clientY;
+          const cSlider = byId('gfx-param-c');
+          const dSlider = byId('gfx-param-d');
+          if (dSlider) {
+            const nextD = ((parseFloat(dSlider.value) || 0) + dx * 0.012 + 6.28) % 6.28;
+            dSlider.value = nextD.toFixed(2);
+          }
+          if (cSlider) {
+            const nextC = ((parseFloat(cSlider.value) || 0) + dy * 0.012 + 6.28) % 6.28;
+            cSlider.value = nextC.toFixed(2);
+          }
+          runVibeStudioScript(true);
+        });
+        const stopDrag = e => {
+          dragging = false;
+          try { vpCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+        };
+        vpCanvas.addEventListener('pointerup', stopDrag);
+        vpCanvas.addEventListener('pointercancel', stopDrag);
+      }
+
+      runVibeStudioScript(true);
+      requestAnimationFrame(renderViewportFrame);
+
+      try {
+        await initVibe();
+        vibeReady = true;
+        const dot = byId('gfx-wasm-dot');
+        const txt = byId('gfx-wasm-text');
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        if (txt) txt.textContent = 'vibe-wasm Ready';
+        runVibeStudioScript(false);
+      } catch (e) {
+        console.error('vibe-wasm init failed:', e);
+      }
+    }
+
+    bootGfxStudio();
   </script>
 </body>
 </html>

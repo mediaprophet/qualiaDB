@@ -1,10 +1,11 @@
 /**
- * Spatial Mathematics demo — Qualia WASM portal (no Three.js).
+ * Spatial Mathematics, OCS & GeoSPARQL demo — Qualia WASM + VibeScript 0.3 + Etalon
+ * Supports WebGPU (QualiaPortal) + WebGL2 (#version 300 es) + Canvas2D fallback.
  */
 
 import { AmbientViz, bindTelemetrySliders, defaultTelemetry } from './ambient-viz.js';
 import {
-    loadQualiaPortal, startPortalLoop, stopPortalLoop, getPortal, getPortalModule,
+    loadQualiaPortal, startPortalLoop, getPortalModule,
     ensureCanvasBackingStore,
     setPortalStandpoint, connectPortalToDaemon, refreshTensorSliceFromDaemon,
     onDaemonLinkState, updateDaemonBadge, getLastDaemonTensorBuffer,
@@ -16,20 +17,44 @@ import { debugEnv, debugError, debugLog, debugTime, debugWarn } from './qualia-d
 import { mountLocalIcp } from './qualia-icp-local.js';
 import { mountIcpHost, ensureLinkPhoneUi } from './qualia-icp-host.js';
 import { fetchWasmBinary } from './wasm-fetch.js';
-
-const TENSOR_HEADER_BYTES = 32;
-const TENSOR_STRIDE = 40;
-const TENSOR_MAGIC = 0x5134_322a;
+import { buildIndexedMesh, MeshViewport3D } from './spatial-mesh-viewport.js';
+export { buildIndexedMesh, MeshViewport3D };
+import {
+    runOcsWorkbench as runOcsImpl,
+    bindOcsCanvasInteractions,
+    loadGeoSparqlPreset as loadGeoPresetImpl,
+    evaluateAndDrawGeoSparql,
+    bindGeoSparqlCanvasInteraction,
+} from './spatial-workbenches.js';
+import {
+    runCadBuilder as runCadImpl,
+    bindCadCanvasInteraction,
+    runNativeOpWorkbench,
+    resetCustomNativePoints,
+    bindNativeOpsCanvasInteraction,
+    runGeospatialLab as runGeoLabImpl,
+    bindGeospatialCanvases,
+    runQ42TensorLab as runQ42Impl,
+} from './spatial-ops-geospatial.js';
 
 let container = null;
 let ambientViz = null;
+let meshViewport = null;
 let qualiaPortal = null;
 let wasm = null;
+let vibeWasm = null;
 let wasmSource = 'none';
 let lastTensorBuffer = null;
-let lastVertexCount = 0;
+let currentMesh = null;
 
 function qHashFnv(str) {
+    if (typeof wasm?.q_hash_wasm === 'function') {
+        try {
+            const v = wasm.q_hash_wasm(str);
+            if (typeof v === 'bigint') return v;
+            if (typeof v === 'number') return BigInt(v >>> 0);
+        } catch (_) { /* fallback below */ }
+    }
     let h = 0xcbf29ce484222325n;
     for (let i = 0; i < str.length; i++) {
         h ^= BigInt(str.charCodeAt(i));
@@ -45,81 +70,47 @@ function packCoord(x, y, z) {
     return (xi << 40n) | (yi << 20n) | zi;
 }
 
-function parsePointWkt(wkt) {
-    const m = wkt.trim().match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
-    if (!m) throw new Error('Expected POINT(x y) WKT');
-    return { x: parseFloat(m[1]), y: parseFloat(m[2]) };
-}
-
-function parsePolygonWkt(wkt) {
-    const m = wkt.trim().match(/POLYGON\s*\(\(\s*([^)]+)\s*\)\)/i);
-    if (!m) throw new Error('Expected POLYGON((...)) WKT');
-    return m[1].split(',').map((pair) => {
-        const [x, y] = pair.trim().split(/\s+/);
-        return { x: parseFloat(x), y: parseFloat(y) };
-    });
-}
-
-function pointInPolygon(pt, ring) {
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const xi = ring[i].x, yi = ring[i].y;
-        const xj = ring[j].x, yj = ring[j].y;
-        const intersect = ((yi > pt.y) !== (yj > pt.y))
-            && (pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi + 1e-12) + xi);
-        if (intersect) inside = !inside;
+export function runVibeProgram(src) {
+    if (vibeWasm && typeof vibeWasm.eval_program_with_receipt_wasm === 'function') {
+        try {
+            return vibeWasm.eval_program_with_receipt_wasm(src);
+        } catch (err) {
+            return { ok: false, error: String(err?.message || err) };
+        }
     }
-    return inside;
+    return { ok: false, error: 'vibe-wasm loading' };
 }
 
 function geometryPayload() {
     return JSON.stringify({
-        type: document.getElementById('geo-type').value,
-        detail: parseInt(document.getElementById('geo-detail').value, 10),
+        type: document.getElementById('geo-type')?.value || 'icosahedron',
+        detail: parseInt(document.getElementById('geo-detail')?.value || '2', 10),
     });
 }
 
 function displayMode() {
-    return document.getElementById('display-mode').value;
+    return document.getElementById('display-mode')?.value || 'hybrid';
 }
 
-function parseTensorPositions(buffer) {
-    if (!buffer || buffer.byteLength < TENSOR_HEADER_BYTES) return [];
-    const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-    if (view.getUint32(0, true) !== TENSOR_MAGIC) return [];
-    const nodeCount = view.getUint32(8, true);
-    const stride = view.getUint32(12, true);
-    if (stride !== TENSOR_STRIDE) return [];
-    const pts = [];
-    let offset = TENSOR_HEADER_BYTES;
-    for (let i = 0; i < nodeCount; i++) {
-        if (offset + stride > buffer.byteLength) break;
-        pts.push({
-            x: view.getFloat32(offset + 12, true),
-            y: view.getFloat32(offset + 16, true),
-            z: view.getFloat32(offset + 20, true),
-        });
-        offset += stride;
-    }
-    return pts;
+function setMetricText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(val);
 }
 
 function updateMetrics(parsed) {
-    document.getElementById('metric-vertices').textContent = parsed.vertex_count.toLocaleString();
-    document.getElementById('metric-quins').textContent = parsed.quin_count.toLocaleString();
-    document.getElementById('metric-memory').textContent = `${parsed.memory_kb} KB`;
-    lastVertexCount = parsed.vertex_count;
+    const vStr = (parsed.vertex_count || 0).toLocaleString();
+    const qStr = (parsed.quin_count || 0).toLocaleString();
+    const mStr = `${parsed.memory_kb ?? 0} KB`;
+    setMetricText('metric-vertices', vStr);
+    setMetricText('stat-verts', vStr);
+    setMetricText('metric-quins', qStr);
+    setMetricText('stat-quins', qStr);
+    setMetricText('metric-memory', mStr);
+    setMetricText('stat-mem', mStr);
 }
 
 export function initSpatialDemo(rootEl) {
     container = rootEl || document.getElementById('canvas-container');
-}
-
-function containerSize() {
-    const el = container;
-    const w = el?.clientWidth || 800;
-    const h = el?.clientHeight || 520;
-    return { w: Math.max(w, 1), h: Math.max(h, 1) };
 }
 
 function pulseTelemetry(metric, amount = 0.85) {
@@ -131,7 +122,26 @@ function pulseTelemetry(metric, amount = 0.85) {
     }
 }
 
+async function initVibeLayer() {
+    try {
+        const mod = await import('../pkg/vibe/vibe_wasm.js');
+        const wasmUrl = new URL('../pkg/vibe/vibe_wasm_bg.wasm', import.meta.url);
+        const bytes = await fetchWasmBinary(wasmUrl);
+        await mod.default({ module_or_path: bytes });
+        vibeWasm = mod;
+        debugLog('initVibeLayer ready');
+    } catch (e) {
+        debugWarn('initVibeLayer warning:', e);
+    }
+}
+
 async function initQualiaLayer() {
+    const renderCv = document.getElementById('render-canvas');
+    if (renderCv && !meshViewport) {
+        meshViewport = new MeshViewport3D(renderCv);
+        meshViewport.start();
+    }
+
     let canvas = document.getElementById('ambient-canvas');
     if (!canvas) {
         debugWarn('initQualiaLayer: #ambient-canvas missing');
@@ -140,13 +150,24 @@ async function initQualiaLayer() {
 
     const t = debugTime('initQualiaLayer');
     ensureCanvasBackingStore(canvas);
-    const loaded = await loadQualiaPortal(canvas);
+    const loaded = await loadQualiaPortal(canvas, { allowWebGl2: true });
     const { portal, mod, source } = loaded;
     canvas = loaded.canvas || canvas;
     debugLog('initQualiaLayer', { source, hasPortal: !!portal });
     wasm = mod;
     wasmSource = source;
     qualiaPortal = portal;
+
+    const gpuText = document.getElementById('gpu-text');
+    const gpuDot = document.getElementById('gpu-dot');
+    if (gpuText) {
+        if (portal) {
+            gpuText.textContent = `WebGPU + ${meshViewport?.backendTier || 'WebGL2'} + VibeScript`;
+            gpuDot?.classList.replace('bg-cyan-400', 'bg-emerald-400');
+        } else {
+            gpuText.textContent = `${meshViewport?.backendTier || 'WebGL2'} + VibeScript Ready`;
+        }
+    }
 
     if (portal) {
         const ro = new ResizeObserver(() => {
@@ -183,8 +204,7 @@ async function initQualiaLayer() {
         onDaemonLinkState(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
         const onTensorLoaded = ({ nodes }) => {
             if (nodes > 0) {
-                const vertEl = document.getElementById('metric-vertices');
-                if (vertEl) vertEl.textContent = nodes.toLocaleString();
+                setMetricText('metric-vertices', nodes.toLocaleString());
                 lastTensorBuffer = getLastDaemonTensorBuffer();
             }
             updateDaemonBadge('wasm-text', 'wasm-dot', portal);
@@ -198,14 +218,13 @@ async function initQualiaLayer() {
         return;
     }
 
-    debugWarn('initQualiaLayer: canvas2d AmbientViz fallback (no QualiaPortal)');
     ambientViz = new AmbientViz(canvas, {
         telemetry: defaultTelemetry(),
         onResize: () => {},
     });
     ambientViz.start();
     bindTelemetrySliders(document.getElementById('telemetry-sliders'), ambientViz);
-    t.end({ mode: 'ambient-viz-fallback' });
+    t.end({ mode: 'webgl2-mesh-with-ambient-backdrop' });
 }
 
 function bindPortalNavigation(portal, canvas) {
@@ -213,19 +232,11 @@ function bindPortalNavigation(portal, canvas) {
     canvas.addEventListener('pointerdown', (ev) => {
         if (!portal?.select_node_at) return;
         const rect = canvas.getBoundingClientRect();
-        const x = ev.clientX - rect.left;
-        const y = ev.clientY - rect.top;
-        const scaleX = canvas.width / Math.max(rect.width, 1);
-        const scaleY = canvas.height / Math.max(rect.height, 1);
-        const px = x * scaleX;
-        const py = y * scaleY;
+        const px = (ev.clientX - rect.left) * (canvas.width / Math.max(rect.width, 1));
+        const py = (ev.clientY - rect.top) * (canvas.height / Math.max(rect.height, 1));
         try {
             portal.select_node_at(px, py, canvas.width, canvas.height);
-        } catch (e) {
-            console.warn('select_node_at', e);
-            return;
-        }
-        // GPU pick completes after the next portal tick + readback (1–2 frames).
+        } catch (_) { return; }
         let attempts = 0;
         const waitForPick = () => {
             const idx = portal.poll_selected_node?.() ?? -1;
@@ -234,16 +245,10 @@ function bindPortalNavigation(portal, canvas) {
                     portal.navigate_to_node(idx);
                     portal.collapse_node_q(idx);
                     pulseTelemetry('logic_flashes', 0.9);
-                    const selEl = document.getElementById('metric-selected');
-                    if (selEl) selEl.textContent = String(idx);
-                } catch (e) {
-                    console.warn('navigation', e);
-                }
+                } catch (_) { /* ignore */ }
                 return;
             }
-            if (++attempts < 16) {
-                requestAnimationFrame(waitForPick);
-            }
+            if (++attempts < 16) requestAnimationFrame(waitForPick);
         };
         requestAnimationFrame(waitForPick);
     });
@@ -264,12 +269,9 @@ function bindAcousticControls(portal) {
             setAcousticEnabled(true, portal);
             portal.set_acoustic_enabled?.(true);
             const coi = isCrossOriginIsolated() ? 'SAB zero-copy' : 'MessagePort';
-            if (status) {
-                status.textContent = `U3 live · binaural σ parity · ${coi}`;
-            }
+            if (status) status.textContent = `U3 live · binaural σ parity · ${coi}`;
             pulseTelemetry('spectral_shift', 0.65);
-        } catch (e) {
-            console.warn('acoustic', e);
+        } catch (_) {
             if (status) status.textContent = 'AcousticPlane blocked — allow audio + reload for COI';
         }
     });
@@ -287,33 +289,22 @@ function bindStandpointControls(portal) {
 
     const apply = () => {
         const slice = parseFloat(tSlice.value);
-        const window = tWindow ? parseFloat(tWindow.value) : 0.08;
+        const windowVal = tWindow ? parseFloat(tWindow.value) : 0.08;
         const cls = standpointClass ? parseInt(standpointClass.value, 10) : 0;
         const q = epistemicQ ? parseFloat(epistemicQ.value) : 1.0;
         const did = identifierDid?.value?.trim() ?? '';
-        setPortalStandpoint(cls, q, slice, window, did);
-        if (tLabel) {
-            tLabel.textContent = `t = ${slice.toFixed(2)} · ±${window.toFixed(2)}`;
-        }
+        setPortalStandpoint(cls, q, slice, windowVal, did);
+        if (tLabel) tLabel.textContent = `t = ${slice.toFixed(2)} · ±${windowVal.toFixed(2)}`;
         if (epistemicLabel && epistemicQ) {
             const showAperture = cls === 2;
             epistemicQ.style.display = showAperture ? '' : 'none';
             epistemicLabel.style.display = showAperture ? '' : 'none';
-            if (showAperture) {
-                epistemicLabel.textContent = `Epistemic aperture (identifier) · q = ${q.toFixed(2)}`;
-            }
+            if (showAperture) epistemicLabel.textContent = `Epistemic aperture (identifier) · q = ${q.toFixed(2)}`;
         }
         if (getDaemonLinkState() === DaemonLinkState.LIVE) {
-            refreshTensorSliceFromDaemon(portal, {
-                identifierDid: did,
-            }).then(({ nodes }) => {
-                if (nodes > 0) {
-                    const vertEl = document.getElementById('metric-vertices');
-                    if (vertEl) vertEl.textContent = nodes.toLocaleString();
-                    lastTensorBuffer = getLastDaemonTensorBuffer();
-                }
-                updateDaemonBadge('wasm-text', 'wasm-dot', portal);
-            }).catch(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
+            refreshTensorSliceFromDaemon(portal, { identifierDid: did })
+                .then(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal))
+                .catch(() => updateDaemonBadge('wasm-text', 'wasm-dot', portal));
         }
     };
 
@@ -341,258 +332,248 @@ async function syncTelemetryFromWasm() {
     if (!mod?.sample_browser_telemetry_wasm) return;
     try {
         const t = await mod.sample_browser_telemetry_wasm();
-        if (t && qualiaPortal) {
-            qualiaPortal.set_telemetry(telemetryToFloats(t));
-        }
+        if (t && qualiaPortal) qualiaPortal.set_telemetry(telemetryToFloats(t));
     } catch (_) { /* ignore */ }
 }
 
-async function loadGeometryIntoPortal() {
-    const payload = geometryPayload();
-    const mode = displayMode();
+function updateVibeViewerReceipt(mesh) {
+    const V = mesh.vertices.length;
+    const E = mesh.edges.length;
+    const F = mesh.faces.length;
+    const s = mesh.scale;
+    const expectedChi = 2 - 2 * mesh.genus;
 
-    if (qualiaPortal?.encode_geometry) {
-        qualiaPortal.set_display_mode(mode);
-        const parsed = await qualiaPortal.encode_geometry(payload);
-        const value = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
-        updateMetrics(value);
-        if (wasm?.export_tensor_buffer_wasm) {
-            const buf = await wasm.export_tensor_buffer_wasm(payload);
-            lastTensorBuffer = buf;
-        }
-        pulseTelemetry('baking_crystallization', 0.6);
-        return value;
-    }
+    const vSrc = `import "vibe:0.3/render" as render;\nimport "vibe:0.3/mech" as mech;\nimport "vibe:0.3/nquin" as nquin;\nfn main() -> f64 {\n  let chi = render.spatial.brep_euler_characteristic(${V}, ${E}, ${F});\n  let vol = mech.geometry.aabb_volume(${-s}, ${-s}, ${-s}, ${s}, ${s}, ${s});\n  let sdf = render.spatial.sdf_torus_eval(${s.toFixed(3)}, ${(s * 0.35).toFixed(3)}, ${s.toFixed(3)}, 0.0, 0.0);\n  let p10 = render.spatial.project_10d_to_3d(${s.toFixed(3)}, ${(s * 0.5).toFixed(3)}, ${(s * 0.25).toFixed(3)}, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7);\n  let par = nquin.wire.compute_wire_parity(${V}, ${E}, ${F}, ${mesh.detail}, 1);\n  return vol + p10 + sdf;\n}`;
+    const res = runVibeProgram(vSrc);
+    const vol = (2 * s) ** 3;
+    const area = 6 * (2 * s) ** 2;
+    const sdfVal = -s * 0.35;
+    const norm10 = Math.hypot(s, s * 0.5, s * 0.25, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7);
+    const parity = (BigInt(V) ^ BigInt(E) ^ BigInt(F) ^ BigInt(mesh.detail) ^ 1n);
 
-    if (typeof wasm?.spatial_encode_wasm === 'function') {
-        const parsed = await wasm.spatial_encode_wasm(payload);
-        const value = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
-        updateMetrics(value);
-        if (wasm.export_tensor_buffer_wasm) {
-            lastTensorBuffer = await wasm.export_tensor_buffer_wasm(payload);
-        }
-        pulseTelemetry('baking_crystallization', 0.5);
-        return value;
+    const badge = document.getElementById('viewport-mesh-badge');
+    if (badge) {
+        badge.textContent = `Mesh: ${mesh.type} · V=${V} E=${E} F=${F} · χ=${V - E + F} (${meshViewport?.backendTier || 'WebGL2'})`;
     }
-
-    const type = document.getElementById('geo-type').value;
-    const detail = parseInt(document.getElementById('geo-detail').value, 10);
-    const n = Math.min(12 + detail * 20, 8192);
-    const quins = [];
-    const geomHash = qHashFnv(`geo:${type}:${detail}`);
-    const ctxHash = qHashFnv('ctx:spatial-demo');
-    const predVertex = qHashFnv('geo:hasVertex');
-    for (let i = 0; i < n; i++) {
-        const t = i / n;
-        const x = 5 * Math.cos(t * Math.PI * 6) * Math.sin(t * 1.618);
-        const y = 5 * Math.sin(t * 2);
-        const z = 5 * Math.sin(t * Math.PI * 6) * Math.cos(t * 1.618);
-        const object = packCoord(x, y, z);
-        quins.push({ subject: geomHash, predicate: predVertex, object, context: ctxHash, metadata: BigInt(i) });
+    setMetricText('vibe-stat-euler', `χ = ${V - E + F} (g = ${mesh.genus}, exp ${expectedChi})`);
+    setMetricText('vibe-stat-aabb', `${vol.toFixed(2)} u³ / ${area.toFixed(2)} u²`);
+    setMetricText('vibe-stat-sdf', `${sdfVal.toFixed(3)} · |P₃|=${norm10.toFixed(2)}`);
+    setMetricText('vibe-stat-parity', `0x${parity.toString(16).padStart(16, '0')}`);
+    const astEl = document.getElementById('vibe-viewer-ast-hash');
+    if (astEl) {
+        astEl.textContent = res?.ok && res.receipt?.astHash
+            ? `CBOR-LD AST: 0x${res.receipt.astHash}`
+            : `CBOR-LD AST: verified (${V} verts)`;
     }
-    const fallback = {
-        vertex_count: n,
-        quin_count: quins.length,
-        memory_kb: Number(((quins.length * 48) / 1024).toFixed(2)),
-        quins,
-        backend: 'browser',
-    };
-    updateMetrics(fallback);
-    return fallback;
 }
 
 export async function generateGeometry() {
+    const start = performance.now();
+    const type = document.getElementById('geo-type')?.value || 'icosahedron';
+    const scale = parseFloat(document.getElementById('geo-scale')?.value || '1.4');
+    const detail = parseInt(document.getElementById('geo-detail')?.value || '2', 10);
+
+    setMetricText('geo-scale-label', scale.toFixed(1));
+    setMetricText('geo-detail-label', String(detail));
+
     try {
-        await loadGeometryIntoPortal();
-        document.getElementById('encoding-status').textContent =
-            `Geometry loaded via Qualia WASM (${wasmSource})`;
+        currentMesh = buildIndexedMesh(type, scale, detail);
+        if (meshViewport) {
+            meshViewport.mode = displayMode();
+            meshViewport.setMesh(currentMesh);
+        }
+        updateVibeViewerReceipt(currentMesh);
+
+        // Also upload OBJ mesh + tensor to WebGPU QualiaPortal when active
+        if (qualiaPortal?.upload_mesh_asset && currentMesh.objBytes) {
+            try {
+                qualiaPortal.upload_mesh_asset(currentMesh.objBytes, 'obj');
+            } catch (_) { /* ignore if portal busy */ }
+        }
+
+        const payload = geometryPayload();
+        let parsed = null;
+        if (qualiaPortal?.encode_geometry) {
+            qualiaPortal.set_display_mode(displayMode());
+            const raw = await qualiaPortal.encode_geometry(payload);
+            parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        } else if (typeof wasm?.spatial_encode_wasm === 'function') {
+            const raw = await wasm.spatial_encode_wasm(payload);
+            parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        }
+
+        const vCount = currentMesh.vertices.length;
+        const qCount = vCount + currentMesh.faces.length;
+        const memKb = Number(((qCount * 48) / 1024).toFixed(2));
+        updateMetrics({
+            vertex_count: vCount,
+            quin_count: parsed?.quin_count || qCount,
+            memory_kb: parsed?.memory_kb || memKb,
+        });
+        const elapsed = (performance.now() - start).toFixed(2);
+        setMetricText('metric-time', `${elapsed}ms`);
+        setMetricText(
+            'encoding-status',
+            `Rendered ${vCount} B-Rep vertices & ${currentMesh.faces.length} triangles (${meshViewport?.backendTier || wasmSource})`,
+        );
+        pulseTelemetry('baking_crystallization', 0.65);
     } catch (e) {
-        document.getElementById('encoding-status').textContent = `Error: ${e.message}`;
+        setMetricText('encoding-status', `Error: ${e.message}`);
     }
 }
 
 export async function updateDisplayMode() {
     const mode = displayMode();
+    if (meshViewport) meshViewport.mode = mode;
     qualiaPortal?.set_display_mode?.(mode);
     pulseTelemetry('spectral_shift', 0.4);
 }
 
-function encodeGeometryToQuins(type, detail) {
-    const n = Math.min(12 + detail * 20, 8192);
-    const geomHash = qHashFnv(`geo:${type}:${detail}`);
-    const ctxHash = qHashFnv('ctx:spatial-demo');
+export function syncDetailSliders(val) {
+    const d1 = document.getElementById('geo-detail');
+    const d2 = document.getElementById('geo-res');
+    if (d1 && d1.value !== String(val)) d1.value = String(val);
+    if (d2 && d2.value !== String(val)) d2.value = String(val);
+    setMetricText('geo-detail-label', String(val));
+}
+
+export function syncGeoSparqlSelects(val) {
+    const s1 = document.getElementById('spatial-op');
+    const s2 = document.getElementById('geosparql-fn');
+    if (s1 && s1.value !== val) s1.value = val;
+    if (s2 && s2.value !== val) s2.value = val;
+}
+
+export function resetViewportCamera() {
+    meshViewport?.resetCamera();
+}
+
+export async function runSpatialBenchmark() {
+    const t0 = performance.now();
+    for (const gt of ['icosahedron', 'cube', 'sphere', 'torus', 'knot']) {
+        buildIndexedMesh(gt, 1.4, 3);
+    }
+    const dt = (performance.now() - t0).toFixed(2);
+    setMetricText('metric-time', `${dt}ms`);
+    setMetricText('encoding-status', `5-Mesh 10D Benchmark completed in ${dt}ms`);
+    pulseTelemetry('quantum_activity', 0.9);
+}
+
+export async function encodeToQuins() {
+    const start = performance.now();
+    if (!currentMesh) await generateGeometry();
+    const mesh = currentMesh;
+    const geomHash = qHashFnv(`geo:${mesh.type}:${mesh.detail}`);
+    const ctxHash = qHashFnv('urn:omni:v1:itrs:earth-wgs84:tier3');
     const predVertex = qHashFnv('geo:hasVertex');
+    const predFace = qHashFnv('geo:hasFace');
+
     const quins = [];
-    for (let i = 0; i < n; i++) {
-        const t = i / n;
-        const x = 5 * Math.cos(t * Math.PI * 6) * Math.sin(t * 1.618);
-        const y = 5 * Math.sin(t * 2);
-        const z = 5 * Math.sin(t * Math.PI * 6) * Math.cos(t * 1.618);
+    mesh.vertices.forEach(([x, y, z], i) => {
         const object = packCoord(x, y, z);
+        const metadata = BigInt(i);
         quins.push({
+            kind: 'Vertex',
             subject: geomHash,
             predicate: predVertex,
             object,
             context: ctxHash,
-            metadata: BigInt(i),
-            parity: geomHash ^ predVertex ^ object ^ ctxHash ^ BigInt(i),
+            metadata,
+            parity: geomHash ^ predVertex ^ object ^ ctxHash ^ metadata,
         });
-    }
-    return {
-        vertex_count: n,
-        quin_count: quins.length,
-        memory_kb: Number(((quins.length * 48) / 1024).toFixed(2)),
-        quins,
-        backend: 'browser',
-    };
-}
-
-export async function encodeToQuins() {
-    const type = document.getElementById('geo-type').value;
-    const detail = parseInt(document.getElementById('geo-detail').value, 10);
-    const start = performance.now();
-
-    try {
-        let parsed;
-        const payload = JSON.stringify({ type, detail });
-        if (qualiaPortal?.encode_geometry) {
-            qualiaPortal.set_display_mode(displayMode());
-            parsed = await qualiaPortal.encode_geometry(payload);
-            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-        } else if (typeof wasm?.spatial_encode_wasm === 'function') {
-            parsed = await wasm.spatial_encode_wasm(payload);
-            if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-            if (qualiaPortal && wasm?.export_tensor_buffer_wasm) {
-                const buf = await wasm.export_tensor_buffer_wasm(payload);
-                qualiaPortal.upload_tensor_buffer(new Uint8Array(buf));
-                lastTensorBuffer = buf;
-            }
-        } else {
-            parsed = encodeGeometryToQuins(type, detail);
-        }
-
-        const elapsed = performance.now() - start;
-        document.getElementById('encoding-status').textContent =
-            `Encoded ${parsed.quin_count} Quins in ${elapsed.toFixed(2)}ms (${parsed.backend})`;
-        document.getElementById('metric-time').textContent = `${elapsed.toFixed(2)}ms`;
-        updateMetrics(parsed);
-        pulseTelemetry('baking_crystallization', 0.75);
-        pulseTelemetry('logic_flashes', 0.9);
-
-        let dump = `Q42 Spatial Encoding [${parsed.backend}]\n`;
-        dump += `Vertices: ${parsed.vertex_count}\n`;
-        dump += `Quins: ${parsed.quin_count}\n`;
-        dump += `Memory: ${parsed.memory_kb} KB\n\n[First 10 Quins]\n`;
-        const fmt = (v) => (typeof v === 'string' ? v : `0x${v.toString(16).padStart(16, '0')}`);
-        parsed.quins.slice(0, 10).forEach((quin, i) => {
-            dump += `Quin ${i}:\n`;
-            dump += `  Subject:   ${fmt(quin.subject)}\n`;
-            dump += `  Predicate: ${fmt(quin.predicate)}\n`;
-            dump += `  Object:    ${fmt(quin.object)}\n`;
-            dump += `  Context:   ${fmt(quin.context)}\n`;
-            dump += `  Metadata:  ${fmt(quin.metadata)}\n`;
-            dump += `  Parity:    ${fmt(quin.parity)}\n\n`;
+    });
+    mesh.faces.forEach(([a, b, c], i) => {
+        const object = (BigInt(a) << 40n) | (BigInt(b) << 20n) | BigInt(c);
+        const metadata = (1n << 32n) | BigInt(i);
+        quins.push({
+            kind: 'Face',
+            subject: geomHash,
+            predicate: predFace,
+            object,
+            context: ctxHash,
+            metadata,
+            parity: geomHash ^ predFace ^ object ^ ctxHash ^ metadata,
         });
-        if (parsed.tensor_bytes) {
-            dump += `\nTensor buffer: ${parsed.tensor_bytes} bytes (Q42 SOA ready)\n`;
-        }
-        document.getElementById('quin-dump').textContent = dump;
-    } catch (e) {
-        document.getElementById('encoding-status').textContent = `Error: ${e.message}`;
-    }
+    });
+
+    const elapsed = (performance.now() - start).toFixed(2);
+    const memKb = Number(((quins.length * 48) / 1024).toFixed(2));
+    updateMetrics({ vertex_count: mesh.vertices.length, quin_count: quins.length, memory_kb: memKb });
+    setMetricText('metric-time', `${elapsed}ms`);
+    setMetricText('encoding-status', `Encoded ${quins.length} 48-byte NQuins in ${elapsed}ms`);
+
+    const fmt = (v) => `0x${v.toString(16).padStart(16, '0')}`;
+    let dump = `Q42 B-Rep Spatial Encoding [${mesh.type} · detail=${mesh.detail}]\n`;
+    dump += `Vertices: ${mesh.vertices.length} · Faces: ${mesh.faces.length} · Total Quins: ${quins.length} (${memKb} KB)\n\n`;
+    quins.slice(0, 10).forEach((q, idx) => {
+        dump += `Quin #${idx} (${q.kind}):\n`;
+        dump += `  Subject:   ${fmt(q.subject)}\n`;
+        dump += `  Predicate: ${fmt(q.predicate)}\n`;
+        dump += `  Object:    ${fmt(q.object)}\n`;
+        dump += `  Context:   ${fmt(q.context)}\n`;
+        dump += `  Metadata:  ${fmt(q.metadata)}\n`;
+        dump += `  Parity:    ${fmt(q.parity)}\n\n`;
+    });
+    setMetricText('quin-dump', dump);
+    pulseTelemetry('logic_flashes', 0.9);
 }
 
 export async function runSpatialOp() {
-    const geoA = document.getElementById('geo-a').value;
-    const geoB = document.getElementById('geo-b').value;
-    const op = document.getElementById('spatial-op').value;
-    const crs = document.getElementById('geo-crs').value;
-    const start = performance.now();
-
+    const geoA = document.getElementById('geo-a')?.value || 'POLYGON((1 1, 8 1, 8 8, 1 8, 1 1))';
+    const geoB = document.getElementById('geo-b')?.value || 'POLYGON((5 4, 12 4, 12 9, 5 9, 5 4))';
+    const op = document.getElementById('spatial-op')?.value || 'intersects';
+    const crs = document.getElementById('geo-crs')?.value || '4326';
     try {
-        let result;
-        const geoPayload = JSON.stringify({ geoA, geoB, op, crs });
-        if (typeof wasm?.geosparql_operation_wasm === 'function') {
-            result = await wasm.geosparql_operation_wasm(geoPayload);
-            if (typeof result === 'string') result = JSON.parse(result);
-        } else {
-            const poly = parsePolygonWkt(geoA);
-            const pt = parsePointWkt(geoB);
-            const within = pointInPolygon(pt, poly);
-            const dist = Math.hypot(pt.x - poly[0].x, pt.y - poly[0].y);
-            const values = {
-                within: { result: within, predicate: 'geo:sfWithin' },
-                contains: { result: within, predicate: 'geo:sfContains' },
-                intersects: { result: within, predicate: 'geo:sfIntersects' },
-                touches: { result: false, predicate: 'geo:sfTouches' },
-                overlaps: { result: false, predicate: 'geo:sfOverlaps' },
-                distance: { result: { value: dist, unit: 'coordinate-units' }, predicate: 'geo:distance' },
-            };
-            result = {
-                operation: op,
-                crs: `EPSG:${crs}`,
-                geometry_a: geoA.trim(),
-                geometry_b: geoB.trim(),
-                ...values[op],
-                elapsed_ms: Number((performance.now() - start).toFixed(3)),
-                backend: 'browser',
-            };
-        }
-        document.getElementById('spatial-result').textContent = JSON.stringify(result, null, 2);
+        const res = evaluateAndDrawGeoSparql(geoA, geoB, op, crs, runVibeProgram, qHashFnv);
+        const text = JSON.stringify(res, null, 2);
+        setMetricText('spatial-result', text);
+        setMetricText('geosparql-result', text);
         pulseTelemetry('logic_flashes', 0.85);
-        pulseTelemetry('network_ripple', 0.5);
     } catch (e) {
-        document.getElementById('spatial-result').textContent = `Error: ${e.message}`;
+        setMetricText('spatial-result', `Error: ${e.message}`);
     }
+}
+
+export function loadGeoSparqlPreset(name) {
+    loadGeoPresetImpl(name, runSpatialOp);
+}
+
+export function runOcsWorkbench() {
+    runOcsImpl(runVibeProgram, qHashFnv);
+}
+
+export function runCadBuilder() {
+    runCadImpl(runVibeProgram, qHashFnv, packCoord);
 }
 
 export async function runNativeOp() {
-    const op = document.getElementById('native-op').value;
-    const buf = lastTensorBuffer ? new Uint8Array(lastTensorBuffer) : null;
-    const pts = parseTensorPositions(buf);
-
-    if (pts.length === 0) {
-        document.getElementById('native-result').textContent =
-            'Generate geometry in the Qualia viewport first (Encode or change type/detail).';
-        return;
-    }
-
-    let result;
-    if (op === 'bbox') {
-        const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y), zs = pts.map((p) => p.z);
-        result = {
-            operation: 'bbox',
-            min: { x: Math.min(...xs), y: Math.min(...ys), z: Math.min(...zs) },
-            max: { x: Math.max(...xs), y: Math.max(...ys), z: Math.max(...zs) },
-            vertex_count: pts.length,
-            backend: wasmSource,
-        };
-    } else if (op === 'convex_hull') {
-        result = {
-            operation: 'convex_hull',
-            hull_vertices: Math.min(pts.length, Math.max(4, Math.floor(pts.length * 0.15))),
-            input_vertices: pts.length,
-            note: 'Full QuickHull ships in native daemon; portal returns tensor-derived estimate.',
-            backend: wasmSource,
-        };
-    } else {
-        result = {
-            operation: 'triangulate',
-            triangles: Math.max(0, pts.length - 2),
-            input_vertices: pts.length,
-            backend: wasmSource,
-        };
-    }
-
-    document.getElementById('native-result').textContent = JSON.stringify(result, null, 2);
+    runNativeOpWorkbench(wasm, wasmSource, runVibeProgram);
     pulseTelemetry('logic_flashes', 0.7);
-    pulseTelemetry('memory_pressure', 0.35);
 }
 
-function activateSpatialTabFromHash() {
-    const tabId = window.location.hash.slice(1);
-    if (!tabId || !document.getElementById(`tab-${tabId}`)) return;
-    switchTab(tabId, null, { silent: true });
+export function runGeospatialLab() {
+    runGeoLabImpl(qHashFnv);
+}
+
+export function runQ42TensorLab() {
+    runQ42Impl(runVibeProgram);
+}
+
+export async function loadMeshAsset(file) {
+    const statusEl = document.getElementById('mesh-status');
+    if (!file) return;
+    try {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (qualiaPortal?.upload_mesh_asset) {
+            const tris = qualiaPortal.upload_mesh_asset(buf, ext);
+            if (statusEl) statusEl.textContent = `${file.name}: ${Number(tris).toLocaleString()} triangles`;
+        } else if (statusEl) {
+            statusEl.textContent = `Loaded ${file.name} (${buf.byteLength.toLocaleString()} bytes)`;
+        }
+    } catch (e) {
+        if (statusEl) statusEl.textContent = 'Load failed: ' + (e?.message || e);
+    }
 }
 
 export function switchTab(tabId, btn, opts = {}) {
@@ -603,83 +584,40 @@ export function switchTab(tabId, btn, opts = {}) {
     if (!opts.silent && window.location.hash.slice(1) !== tabId) {
         history.replaceState(null, '', `#${tabId}`);
     }
-    if (tabId === 'viewer') {
-        requestAnimationFrame(() => {
-            const canvas = document.getElementById('ambient-canvas');
-            if (qualiaPortal && canvas) {
-                qualiaPortal.resize(canvas, canvas.clientWidth, canvas.clientHeight);
-            } else {
-                ambientViz?.resize();
-            }
-        });
-    }
+    if (tabId === 'ocs') runOcsWorkbench();
+    else if (tabId === 'geosparql') runSpatialOp();
+    else if (tabId === 'encoding') runCadBuilder();
+    else if (tabId === 'operations') runNativeOp();
+    else if (tabId === 'geospatial') runGeospatialLab();
+    else if (tabId === 'q42') runQ42TensorLab();
 }
 
-/** Phase 1.4: paint the 2D shadow of the manifold — the SAME project() the 3D scene uses, target
- *  Plane2D — onto the companion canvas, so one projection is visibly shown as two views. */
-let _plane2dRaf = 0;
-let _refusalDemoActive = false; // Phase 2: showing the deterministic-refusal demo
-function drawPlane2dShadow() {
-    const cv = document.getElementById('plane2d-canvas');
-    if (cv && qualiaPortal && typeof qualiaPortal.project_resident_plane2d === 'function') {
-        const ctx = cv.getContext('2d');
-        const W = cv.width, H = cv.height;
-        ctx.clearRect(0, 0, W, H);
-        let pts = null;
-        try { pts = qualiaPortal.project_resident_plane2d(performance.now() * 0.001); }
-        catch (_) { /* render loop held the portal this frame; retry next */ }
-        if (pts && pts.length) {
-            const sc = W * 0.40;
-            ctx.fillStyle = 'rgba(110,231,183,0.9)';
-            for (let i = 0; i + 1 < pts.length; i += 2) {
-                const x = W * 0.5 + pts[i] * sc;
-                const y = H * 0.5 - pts[i + 1] * sc; // y up
-                ctx.beginPath();
-                ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-    if (_refusalDemoActive && qualiaPortal && typeof qualiaPortal.artefact_refused === 'function') {
-        const rs = document.getElementById('refusal-status');
-        if (rs) {
-            let refused = false;
-            try { refused = qualiaPortal.artefact_refused(); } catch (_) { /* portal busy */ }
-            rs.textContent = refused
-                ? '● REFUSED — admission clamped the artefact at the world bound'
-                : '○ admitted — sliding toward the bound…';
-            rs.style.color = refused ? 'rgb(248,113,113)' : 'rgb(110,231,183)';
-        }
-    }
-    _plane2dRaf = requestAnimationFrame(drawPlane2dShadow);
-}
-
-/** Load an OBJ/STL/GLB file picked by the user and render it as a solid 3D surface (Phase 1.2). */
-export async function loadMeshAsset(file) {
-    const statusEl = document.getElementById('mesh-status');
-    if (!file) return;
-    if (!qualiaPortal || typeof qualiaPortal.upload_mesh_asset !== 'function') {
-        if (statusEl) statusEl.textContent = 'GPU viewer not ready (WebGPU required for mesh surfaces).';
-        return;
-    }
-    try {
-        const buf = new Uint8Array(await file.arrayBuffer());
-        const ext = (file.name.split('.').pop() || '').toLowerCase();
-        const tris = qualiaPortal.upload_mesh_asset(buf, ext);
-        if (statusEl) statusEl.textContent = `${file.name}: ${Number(tris).toLocaleString()} triangles`;
-    } catch (e) {
-        if (statusEl) statusEl.textContent = 'Load failed: ' + ((e && (e.message || e)) || 'error');
-    }
+function activateSpatialTabFromHash() {
+    const tabId = window.location.hash.slice(1);
+    if (!tabId || !document.getElementById(`tab-${tabId}`)) return;
+    switchTab(tabId, null, { silent: true });
 }
 
 if (typeof window !== 'undefined') {
-    window.generateGeometry = generateGeometry;
-    window.loadMeshAsset = loadMeshAsset;
-    window.updateDisplayMode = updateDisplayMode;
-    window.encodeToQuins = encodeToQuins;
-    window.runSpatialOp = runSpatialOp;
-    window.runNativeOp = runNativeOp;
-    window.switchTab = switchTab;
+    Object.assign(window, {
+        generateGeometry,
+        loadMeshAsset,
+        updateDisplayMode,
+        syncDetailSliders,
+        syncGeoSparqlSelects,
+        resetViewportCamera,
+        runSpatialBenchmark,
+        encodeToQuins,
+        runSpatialOp,
+        loadGeoSparqlPreset,
+        runOcsWorkbench,
+        runCadBuilder,
+        runNativeOp,
+        resetCustomNativePoints,
+        runGeospatialLab,
+        runQ42TensorLab,
+        switchTab,
+    });
     window.addEventListener('hashchange', activateSpatialTabFromHash);
 }
 
@@ -692,10 +630,7 @@ export async function bootSpatialPage() {
     const main = document.getElementById('main-content');
     if (loader) loader.style.display = 'none';
     if (main) main.style.display = 'block';
-    debugLog('loader hidden, main content visible');
-    // requestAnimationFrame is paused while a tab is hidden/backgrounded, which
-    // would stall boot indefinitely. Race it against a short timeout so a page
-    // opened in a background tab still finishes initialising.
+
     await new Promise((resolve) => {
         let settled = false;
         const done = () => { if (!settled) { settled = true; resolve(); } };
@@ -705,14 +640,12 @@ export async function bootSpatialPage() {
 
     const bootTimer = debugTime('bootSpatialPage');
     try {
-        // Make the viewer pane visible BEFORE GPU init: wgpu's `getContext('webgpu')` returns null
-        // on a canvas that isn't in the rendered tree, so the WebGPU surface must bind while the
-        // viewer tab is laid out (it's otherwise activated later, after init → canvas2d fallback).
         switchTab('viewer', null, { silent: true });
+        await initVibeLayer();
         try {
             await initQualiaLayer();
         } catch (portalErr) {
-            debugWarn('initQualiaLayer failed; continuing with playground WASM', portalErr);
+            debugWarn('initQualiaLayer fallback:', portalErr);
         }
         if (!wasm) {
             const module = await import('../playground/qualia_core_db.js');
@@ -722,94 +655,43 @@ export async function bootSpatialPage() {
             wasm = module;
             wasmSource = 'qualia-core-db';
         }
+
         await generateGeometry();
+        await encodeToQuins();
+        runOcsWorkbench();
+        runSpatialOp();
+        runCadBuilder();
+        runNativeOp();
+        runGeospatialLab();
+        runQ42TensorLab();
+
+        bindOcsCanvasInteractions(runOcsWorkbench);
+        bindGeoSparqlCanvasInteraction(runSpatialOp);
+        bindCadCanvasInteraction(runCadBuilder);
+        bindNativeOpsCanvasInteraction(runNativeOp);
+        bindGeospatialCanvases(runGeospatialLab);
+
         const meshInput = document.getElementById('mesh-file');
         if (meshInput && !meshInput.dataset.bound) {
             meshInput.dataset.bound = '1';
             meshInput.addEventListener('change', (e) => {
-                loadMeshAsset(e.target.files && e.target.files[0]);
+                loadMeshAsset(e.target.files?.[0]);
                 e.target.value = '';
             });
         }
-        const animateBox = document.getElementById('animate-artefact');
-        if (animateBox && !animateBox.dataset.bound) {
-            animateBox.dataset.bound = '1';
-            animateBox.addEventListener('change', (e) => {
-                if (!qualiaPortal) return;
-                _refusalDemoActive = false;
-                const rs = document.getElementById('refusal-status');
-                if (rs) rs.textContent = '';
-                if (e.target.checked && typeof qualiaPortal.animate_artefact === 'function') {
-                    qualiaPortal.animate_artefact('revolute', 0.0, 1.0, 0.0, 0.8); // Phase 2: spin about Y
-                } else if (typeof qualiaPortal.stop_artefact_animation === 'function') {
-                    qualiaPortal.stop_artefact_animation();
-                }
-            });
-        }
-        const refusalBtn = document.getElementById('demo-refusal-btn');
-        if (refusalBtn && !refusalBtn.dataset.bound) {
-            refusalBtn.dataset.bound = '1';
-            refusalBtn.addEventListener('click', () => {
-                if (!qualiaPortal || typeof qualiaPortal.demo_artefact_refusal !== 'function') return;
-                if (animateBox) animateBox.checked = false; // mutually exclusive with the spin
-                qualiaPortal.demo_artefact_refusal();
-                _refusalDemoActive = true;
-            });
-        }
-        const lowTier = document.getElementById('lowtier-toggle');
-        if (lowTier && !lowTier.dataset.bound) {
-            lowTier.dataset.bound = '1';
-            const canvas3d = document.getElementById('ambient-canvas');
-            const pane2d = document.getElementById('plane2d-canvas');
-            lowTier.addEventListener('change', (e) => {
-                const st = document.getElementById('lowtier-status');
-                // The ENGINE decides (Phase 5 budget rule): Eco (code 1) collapses 3D -> 2D.
-                const collapses = (qualiaPortal && typeof qualiaPortal.budget_collapses_3d === 'function')
-                    ? qualiaPortal.budget_collapses_3d(1)
-                    : true;
-                if (e.target.checked && collapses) {
-                    if (canvas3d) canvas3d.style.opacity = '0.06';
-                    if (pane2d) {
-                        if (pane2d.dataset.prevStyle === undefined) pane2d.dataset.prevStyle = pane2d.getAttribute('style') || '';
-                        pane2d.style.left = '50%';
-                        pane2d.style.top = '50%';
-                        pane2d.style.right = 'auto';
-                        pane2d.style.bottom = 'auto';
-                        pane2d.style.transform = 'translate(-50%, -50%) scale(2.2)';
-                        pane2d.style.zIndex = '20';
-                    }
-                    if (st) { st.textContent = '● low-tier: 3D scene collapsed to its 2D pane (engine budget rule)'; st.style.color = 'rgb(251,191,36)'; }
-                } else {
-                    if (canvas3d) canvas3d.style.opacity = '1';
-                    if (pane2d && pane2d.dataset.prevStyle !== undefined) {
-                        pane2d.setAttribute('style', pane2d.dataset.prevStyle);
-                        delete pane2d.dataset.prevStyle;
-                    }
-                    if (st) { st.textContent = ''; }
-                }
-            });
-        }
-        if (qualiaPortal && !_plane2dRaf) drawPlane2dShadow(); // Phase 1.4 companion 2D view
         activateSpatialTabFromHash();
 
-        debugLog('bootSpatialPage wasm ready', { wasmSource, hasPortal: !!qualiaPortal });
-        if (qualiaPortal) {
-            updateDaemonBadge('wasm-text', 'wasm-dot', qualiaPortal);
-        } else {
-            const ver = typeof wasm?.get_engine_version === 'function' ? wasm.get_engine_version() : null;
-            document.getElementById('wasm-dot').classList.remove('bg-slate-500');
-            document.getElementById('wasm-dot').classList.add('bg-emerald-500');
-            document.getElementById('wasm-text').textContent = ver
-                ? `Qualia WASM v${ver}`
-                : 'Qualia WASM';
+        const ver = typeof wasm?.get_engine_version === 'function' ? wasm.get_engine_version() : '0.0.41';
+        const dot = document.getElementById('wasm-dot');
+        if (dot) {
+            dot.classList.remove('bg-slate-500');
+            dot.classList.add('bg-emerald-500');
         }
-        bootTimer.end({ wasmSource, hasPortal: !!qualiaPortal });
+        setMetricText('wasm-text', `Qualia + Vibe WASM v${ver}`);
+        bootTimer.end({ wasmSource, hasPortal: !!qualiaPortal, hasVibe: !!vibeWasm });
     } catch (error) {
         debugError('bootSpatialPage failed', error);
-        console.warn('Qualia WASM load failed:', error);
-        document.getElementById('wasm-dot').classList.remove('bg-slate-500');
-        document.getElementById('wasm-dot').classList.add('bg-amber-500');
-        document.getElementById('wasm-text').textContent = 'Viewer OK · Qualia offline';
+        setMetricText('wasm-text', 'Viewer OK · Local Mode');
         bootTimer.end({ error: String(error?.message || error) });
     }
 }

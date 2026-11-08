@@ -302,9 +302,17 @@ pub(super) fn binop(op: BinOp, l: &Value, r: &Value, span: Span) -> Result<Value
 
     let a = l
         .as_f64()
+        .or_else(|| match l {
+            Value::List(xs) => xs.first().and_then(|v| v.as_f64()),
+            _ => None,
+        })
         .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number"))?;
     let b = r
         .as_f64()
+        .or_else(|| match r {
+            Value::List(xs) => xs.first().and_then(|v| v.as_f64()),
+            _ => None,
+        })
         .ok_or_else(|| Diagnostic::new(DiagCode::E600, span, "numeric operator on non-number"))?;
     if matches!(op, BinOp::Div | BinOp::Rem) && b == 0.0 {
         return Err(Diagnostic::new(DiagCode::E600, span, "division by zero"));

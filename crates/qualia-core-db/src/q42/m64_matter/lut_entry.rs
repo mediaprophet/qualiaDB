@@ -9,6 +9,20 @@ use crate::container_10d::crc32c::crc32c;
 
 pub const CONSTITUENT_LUT_ENTRY_BYTES: usize = 64;
 
+/// Computes the canonical 64-bit FNV-1a material hash for a `did:q42` or ontology material IRI.
+#[inline]
+pub const fn canonical_q42_material_hash(iri: &str) -> u64 {
+    let bytes = iri.as_bytes();
+    let mut hash: u64 = 0xcbf29ce484222325;
+    let mut i = 0;
+    while i < bytes.len() {
+        hash ^= bytes[i] as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+        i += 1;
+    }
+    hash
+}
+
 /// Fixed 64-Byte Constituent Look-Up Table Entry.
 #[repr(C, align(64))]
 #[derive(Copy, Clone, Debug, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]

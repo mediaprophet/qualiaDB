@@ -42,14 +42,33 @@
         .pipe-step i { font-size: 1rem; }
         #boot-overlay { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; background:rgba(5,5,8,0.95); }
         .stat-pill { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
-        #mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; max-height: 320px; overflow-y: auto; }
-        ::-webkit-scrollbar { width: 5px; }
+        #mod-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; max-height: 460px; overflow-y: auto; }
+        .stage-interactive-canvas { width: 100%; height: auto; aspect-ratio: 720 / 260; display: block; }
+        @media (max-width: 1024px) {
+            .showcase-shell, .main-workspace { flex-direction: column !important; height: auto !important; overflow: visible !important; }
+            .split-bottom { grid-template-columns: 1fr !important; height: auto !important; }
+            #mod-grid { max-height: 280px; }
+        }
+        @media (max-width: 768px) {
+            #cat-pills, #category-rail, #demo-tabs {
+                flex-wrap: nowrap !important;
+                justify-content: flex-start !important;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 0.35rem;
+                scrollbar-width: thin;
+            }
+            #cat-pills > button, #category-rail > button, #demo-tabs > button { flex-shrink: 0; }
+            #mod-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); max-height: 220px; }
+            .vibe-receipt-bar { font-size: 10px; line-height: 1.4; }
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
     </style>
     <script src="js/menu-loader.js"></script>
 </head>
 <body>
-    <div id="boot-overlay"><span class="text-rose-300 text-sm font-mono animate-pulse">Booting Modalities Observatory…</span></div>
+    <div id="boot-overlay"><span class="text-rose-300 text-sm font-mono animate-pulse">Booting Modalities Observatory (WASM + VibeScript)…</span></div>
 
     <nav class="sticky top-0 z-50 border-b border-white/10 glass">
         <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
@@ -60,27 +79,32 @@
                 </a>
                 <div id="dynamic-nav" class="text-sm"></div>
             </div>
-            <span id="engine-badge" class="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 shrink-0">…</span>
+            <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 shrink-0">
+                <span id="perf-badge" class="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 font-mono">0.05 ms</span>
+                <span id="gpu-badge" class="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 font-mono">WebGPU / WebGL2</span>
+                <span id="wasm-badge" class="text-[11px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Loading WASM…</span>
+                <span id="engine-badge" class="text-xs px-3 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700 hidden lg:inline">…</span>
+            </div>
         </div>
     </nav>
 
     <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-10 pb-20">
         <!-- Hero -->
         <header class="text-center mb-10 hero-glow glass rounded-3xl px-6 py-10">
-            <p class="text-rose-400 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Qualia Logic Systems</p>
+            <p class="text-rose-400 text-xs font-semibold tracking-[0.2em] uppercase mb-3">Qualia Logic Systems · Human Agency &amp; Self-Determination</p>
             <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4 bg-gradient-to-r from-rose-200 via-purple-200 to-cyan-200 bg-clip-text text-transparent">
                 Modalities Observatory
             </h1>
             <p class="text-white/60 max-w-3xl mx-auto text-sm sm:text-base leading-relaxed mb-6">
                 Every liberal-arts logic system in QualiaDB — deontic, epistemic, LTL, paraconsistent, ASP, dialectical, linear,
                 description logic, argumentation, Allen intervals, diffusion, neuro-symbolic sieve, CRDT, CogAI, SHACL, N3, and clinical modalities —
-                runnable live in your browser. Same reference semantics as <code class="text-cyan-400 text-xs">docs/tests/suites/modality-*.js</code>.
+                runnable live in your browser with <code class="text-cyan-400 text-xs">vibe-wasm</code> CBOR-LD Tag 4200 receipts and interactive HTML5 canvases.
             </p>
             <div class="flex flex-wrap justify-center gap-3 stat-pill">
-                <span class="px-3 py-1.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30"><span id="stat-count">21</span> logic modalities</span>
+                <span class="px-3 py-1.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30"><span id="stat-count">32</span> logic modalities</span>
                 <span class="px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30"><span id="stat-cats">8</span> categories</span>
                 <span class="px-3 py-1.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">48-byte NQuin ABI</span>
-                <span class="px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">90+ SHACL extensions</span>
+                <span class="px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">VibeScript 0.3 Providers</span>
             </div>
         </header>
 
@@ -91,7 +115,9 @@
         </section>
 
         <!-- Category filter -->
-        <div id="cat-pills" class="flex flex-wrap gap-2 mb-4 justify-center"></div>
+        <div id="cat-pills" class="flex flex-wrap gap-2 mb-3 justify-center"></div>
+        <div id="category-rail" class="hidden"></div>
+        <div id="demo-tabs" class="flex flex-wrap gap-1.5 mb-5 justify-center"></div>
 
         <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
             <!-- Modality picker -->
@@ -105,20 +131,46 @@
             </div>
 
             <!-- Demo stage -->
-            <div class="xl:col-span-3 glass rounded-2xl p-6 flex flex-col min-h-[420px]">
+            <div class="xl:col-span-3 glass rounded-2xl p-6 flex flex-col min-h-[480px]">
                 <div class="flex flex-wrap items-start gap-3 mb-4">
                     <div class="flex-1 min-w-0">
                         <div id="stage-cat" class="text-[10px] text-slate-500 mb-1"></div>
                         <h2 id="stage-title" class="text-2xl font-bold text-white">—</h2>
+                        <span id="demo-title" class="hidden">—</span>
                         <code id="stage-opcode" class="text-xs text-rose-400/80 font-mono">—</code>
                     </div>
-                    <button type="button" id="btn-run-stage" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shrink-0">
-                        <i class="fa-solid fa-play mr-1"></i> Run demo
-                    </button>
+                    <div id="demo-controls" class="flex items-center gap-2 shrink-0">
+                        <button type="button" id="btn-run" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold">
+                            <i class="fa-solid fa-play mr-1"></i> Run demo
+                        </button>
+                        <button type="button" id="btn-run-stage" class="hidden">Run</button>
+                        <button type="button" id="btn-reset" class="px-3 py-2 rounded-xl border border-white/15 hover:bg-white/5 text-slate-300 text-sm">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
                 </div>
                 <p id="stage-blurb" class="text-sm text-white/55 mb-4"></p>
-                <div id="stage-viz" class="mb-4 min-h-[80px]"></div>
-                <div id="stage-output" class="flex-1 p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-sm overflow-auto"></div>
+                <p id="demo-desc" class="hidden"></p>
+
+                <!-- Interactive Visual Stage -->
+                <div id="visual-stage" class="mb-4 space-y-3"></div>
+                <div id="stage-viz" class="mb-4 min-h-[40px]"></div>
+
+                <!-- Structured Trace Output -->
+                <div id="stage-output" class="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-sm overflow-auto mb-4"></div>
+
+                <!-- Inspector & VibeScript Program Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-auto">
+                    <div class="p-3.5 rounded-xl bg-black/45 border border-white/10">
+                        <div class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider mb-2"><i class="fa-solid fa-microchip mr-1"></i>48-Byte NQuin Inspector</div>
+                        <div id="quin-inspector" class="space-y-2 text-xs font-mono"></div>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-black/45 border border-white/10">
+                        <div class="text-[11px] font-semibold text-emerald-300 uppercase tracking-wider mb-2"><i class="fa-solid fa-file-code mr-1"></i>VibeScript 0.3 Program &amp; Trace</div>
+                        <pre id="code-view" class="text-[11px] font-mono text-emerald-200 whitespace-pre-wrap max-h-36 overflow-auto mb-2"></pre>
+                        <pre id="trace-log" class="text-[10px] font-mono text-slate-400 whitespace-pre-wrap max-h-24 overflow-auto border-t border-white/10 pt-2"></pre>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -132,12 +184,12 @@
             <a href="logic-showcase.html" class="glass rounded-2xl p-5 hover:border-rose-500/30 transition-colors block">
                 <i class="fa-solid fa-gavel text-rose-400 mb-2"></i>
                 <div class="font-semibold">Logic Showcase</div>
-                <p class="text-white/50 text-xs mt-1">Focused N3 + SHACL deep-dive</p>
+                <p class="text-white/50 text-xs mt-1">Focused N3 + SHACL + VibeScript deep-dive</p>
             </a>
             <a href="tests/" class="glass rounded-2xl p-5 hover:border-emerald-500/30 transition-colors block">
                 <i class="fa-solid fa-vial-circle-check text-emerald-400 mb-2"></i>
                 <div class="font-semibold">Test Harness</div>
-                <p class="text-white/50 text-xs mt-1">21 modality suites + WASM regression</p>
+                <p class="text-white/50 text-xs mt-1">Modality suites + WASM regression</p>
             </a>
         </section>
     </main>

@@ -163,6 +163,40 @@ pub fn compute_bishop_frames(
     Ok(n)
 }
 
+/// Compute Rotation-Minimizing Frames (Bishop frames) with optional closed-loop
+/// cyclic holonomy twist correction ($\Delta\theta / (n - 1)$ distributed across stations).
+///
+/// Returns `(frame_count, holonomy_defect_rad)`.
+pub fn compute_bishop_frames_cyclic(
+    path: &[Point3],
+    closed: bool,
+    initial_normal: Option<Point3>,
+    out_frames: &mut [AffineFrame3],
+) -> Result<(usize, f64), SweepError> {
+    let n = compute_bishop_frames(path, initial_normal, out_frames)?;
+    if !closed || n < 3 {
+        return Ok((n, 0.0));
+    }
+    let r0 = out_frames[0].e0;
+    let s0 = out_frames[0].e1;
+    let r_end = out_frames[n - 1].e0;
+    let cos_d = dot(r_end, r0);
+    let sin_d = dot(r_end, s0);
+    let defect_rad = sin_d.atan2(cos_d);
+    if defect_rad.abs() > 1e-12 {
+        let denom = (n - 1) as f64;
+        for (i, frame) in out_frames.iter_mut().enumerate().take(n) {
+            let angle = -defect_rad * (i as f64 / denom);
+            let (sa, ca) = angle.sin_cos();
+            let r_orig = frame.e0;
+            let s_orig = frame.e1;
+            frame.e0 = add(scale(r_orig, ca), scale(s_orig, sa));
+            frame.e1 = sub(scale(s_orig, ca), scale(r_orig, sa));
+        }
+    }
+    Ok((n, defect_rad))
+}
+
 #[inline]
 fn orthogonal_unit(t: Point3) -> Point3 {
     let cand = if t.x.abs() < 0.9 {

@@ -32,9 +32,14 @@ mod reader;
 pub use entity_compiler as twin_compiler;
 pub use entity_verifier as twin_verifier;
 pub mod species_meta;
+pub mod streaming_hydration;
 pub mod streaming_loader;
 pub mod variant_matrix;
 mod writer;
+
+pub use streaming_hydration::{
+    DEFAULT_HYDRATION_QUEUE_CAPACITY, EcopunkPackStreamer, HmcPackStreamer, LocalHostQ42Ext,
+};
 
 pub use entity_compiler::{
     compile_digital_twin, compile_entity, EntityCompileInput, EntityCompileOutput,

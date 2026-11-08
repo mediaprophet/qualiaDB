@@ -3,6 +3,7 @@ use super::*;
 impl<'a, H: Host> Engine<'a, H> {
     /// Evaluates a program.
     pub fn eval_program(&mut self, program: &Program, env: &mut Env) -> Result<Value, Diagnostic> {
+        populate_import_aliases(env, &program.imports)?;
         self.granted = program.requires.iter().map(|c| c.id.clone()).collect();
         let mut last = Value::Null;
         let has_cells = program.items.iter().any(|i| matches!(i, Item::Cell(_)));

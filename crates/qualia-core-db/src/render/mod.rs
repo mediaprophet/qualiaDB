@@ -209,3 +209,9 @@ pub mod naga_sanitize;
 pub mod portal;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_wasm;
+
+/// 4-Scale Botanical `.10d` Organ & Histology Dissection (`FLOWER` / `LEAF` / `WOOD` / `ROOT`).
+pub mod botanical_anatomy;
+/// Scale-5 Comparative Vertebrate 3-Layer `.10d` Anatomy (Skeletal / Muscular / Integument).
+pub mod vertebrate_anatomy;
+pub use vertebrate_anatomy as zoological_anatomy;

@@ -329,10 +329,10 @@ pub fn eval_program_src(src: &str) -> JsValue {
             let mut host = LocalHost::default();
             let mut env = Env::default();
             let result = (|| {
-                {
+                let top_val = {
                     let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
-                    engine.eval_program(&prog, &mut env)?;
-                }
+                    engine.eval_program(&prog, &mut env)?
+                };
                 let has_main = prog
                     .items
                     .iter()
@@ -340,7 +340,7 @@ pub fn eval_program_src(src: &str) -> JsValue {
                 if has_main {
                     eval_function(&prog, "main", Vec::new(), &mut host, &mut env)
                 } else {
-                    Ok(Value::Null)
+                    Ok(top_val)
                 }
             })();
             match result {
@@ -1256,10 +1256,10 @@ pub fn eval_program_with_receipt_wasm(src: &str) -> JsValue {
     let mut host = LocalHost::default();
     let mut env = Env::default();
     let result = (|| {
-        {
+        let top_val = {
             let mut engine = Engine::with_program(&mut host, Budget::default(), &prog);
-            engine.eval_program(&prog, &mut env)?;
-        }
+            engine.eval_program(&prog, &mut env)?
+        };
         let has_main = prog
             .items
             .iter()
@@ -1267,7 +1267,7 @@ pub fn eval_program_with_receipt_wasm(src: &str) -> JsValue {
         if has_main {
             eval_function(&prog, "main", Vec::new(), &mut host, &mut env)
         } else {
-            Ok(Value::Null)
+            Ok(top_val)
         }
     })();
 
