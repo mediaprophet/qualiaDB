@@ -112,6 +112,22 @@ fn header_crc_admits_legacy_first_56_with_flags_zero() {
 }
 
 #[test]
+fn header_crc_admits_legacy_first_56_with_occupancy_flags() {
+    let mut header = M64Header::default();
+    header.total_file_size = 192;
+    header.chunk_count = 1;
+    header.container_flags =
+        (M64_FLAG_3D_BRICK_16X16X16 as u32) | (M64_FLAG_LOCAL_METRIC_LRM3 as u32);
+    let bytes: &[u8; 64] = bytemuck::cast_ref(&header);
+    header.header_crc32c = crate::container_10d::crc32c::crc32c(&bytes[..56]);
+    assert_ne!(header.header_crc32c, header.compute_crc32c());
+    assert!(
+        header.validate().is_ok(),
+        "legacy first-56 CRC still admits when occupancy flags are set"
+    );
+}
+
+#[test]
 fn test_m64_strata_record_size_and_alignment() {
     assert_eq!(
         std::mem::size_of::<M64StrataColumnRecord>(),

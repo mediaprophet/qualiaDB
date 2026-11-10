@@ -45,7 +45,7 @@ pub struct EmfContainerReader<'a> {
 }
 
 impl<'a> EmfContainerReader<'a> {
-    /// Parse with [`EmfReadLimits::conservative`] so existing callers compile.
+    /// Parse under conservative 16 MiB / 4096-chunk budgets.
     pub fn parse(bytes: &'a [u8]) -> Result<Self, EmfError> {
         Self::parse_with_limits(bytes, EmfReadLimits::conservative())
     }
@@ -111,7 +111,7 @@ impl<'a> EmfContainerReader<'a> {
                 return Err(EmfError::PayloadOutOfBounds);
             }
             if start < 64 || ranges_overlap(start, end, directory_offset, directory_end) {
-                return Err(EmfError::PayloadOutOfBounds);
+                return Err(EmfError::PayloadOverlap);
             }
             let expected_bytes = usize::try_from(entry.cell_count)
                 .map_err(|_| EmfError::ArithmeticOverflow)?

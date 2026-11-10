@@ -255,7 +255,15 @@ impl<'a> M64Reader<'a> {
             if end > bytes.len() {
                 return Err(M64ReadError::PayloadBounds { chunk });
             }
-            if start < header.header_size as usize || (start < directory_end && end > directory_start) {
+            // LRM3 lives in [header_size, header_size+LRM3_BLOCK_BYTES). CRC covers those
+            // bytes, but a payload alias of the authenticated gap is still overlap.
+            let header_end = header.header_size as usize;
+            let metadata_end = if lrm3.is_some() {
+                header_end + LRM3_BLOCK_BYTES
+            } else {
+                header_end
+            };
+            if start < metadata_end || (start < directory_end && end > directory_start) {
                 return Err(M64ReadError::MetadataOverlap { chunk });
             }
 
@@ -675,5 +683,23 @@ mod tests {
             parse_one(&buffer),
             Err(M64ReadError::Lrm3(M64Error::ChecksumMismatch { .. }))
         ));
+    }
+
+    #[test]
+    fn rejects_payload_overlapping_authenticated_lrm3_gap() {
+        let mut lrm3 = M64LocalMetricHeader::default();
+        lrm3.update_crc();
+        let mut buffer = lrm3_container(&lrm3);
+        // Directory at 192..256; LRM3 occupies [64, 192). Alias the second LRM3
+        // cache line (128..192) so the range does not also hit the directory.
+        let mut entry: M64ChunkDirectoryEntry =
+            bytemuck::pod_read_unaligned(&buffer[192..256]);
+        entry.byte_offset = 128;
+        entry.update_crc();
+        buffer[192..256].copy_from_slice(bytemuck::bytes_of(&entry));
+        assert_eq!(
+            parse_one(&buffer).err(),
+            Some(M64ReadError::MetadataOverlap { chunk: 0 })
+        );
     }
 }
