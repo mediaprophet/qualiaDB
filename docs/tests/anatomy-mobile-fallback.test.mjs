@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const anatomy = readFileSync(new URL('../playground/anatomy.js', import.meta.url), 'utf8');
+const host = readFileSync(new URL('../playground/anatomy-host.js', import.meta.url), 'utf8');
 const shell = readFileSync(new URL('../js/qualia-shell.js', import.meta.url), 'utf8');
 const portal = readFileSync(
   new URL('../../crates/qualia-core-db/src/render/portal/mod.rs', import.meta.url),
@@ -12,23 +13,24 @@ const webgl2 = readFileSync(
   'utf8',
 );
 
-assert.match(anatomy, /getBrowserCapabilityReceipt/);
-assert.match(anatomy, /capabilityReceipt\.selection\.anatomy/);
-assert.match(anatomy, /allowWebGl2: capabilityReceipt\.webgl2\.available/);
-assert.match(anatomy, /body_render_receipt/);
-assert.match(anatomy, /if \(receipt\?\.success\)/);
-assert.match(anatomy, /__anatomyBooted = true/);
-assert.match(anatomy, /anatomy-\$\{key\}\.hmc\?v=\$\{ENGINE_VERSION\}/);
-assert.match(anatomy, /cache: "default"/);
-assert.doesNotMatch(anatomy, /cache: "force-cache"/);
-assert.doesNotMatch(anatomy, /if \(!navigator\.gpu\)/);
+assert.match(anatomy, /Deprecated as of 0\.0\.41/);
+assert.match(anatomy, /anatomy-host\.js/);
+assert.match(anatomy, /throw new Error\("anatomy\.js is deprecated/);
+assert.doesNotMatch(anatomy, /getBrowserCapabilityReceipt/);
+assert.doesNotMatch(anatomy, /__anatomyBooted/);
 
 const anatomyHtml = readFileSync(new URL('../playground/anatomy.html', import.meta.url), 'utf8');
-assert.match(anatomyHtml, /45000/);
-assert.match(anatomyHtml, /__anatomyBooted/);
-assert.match(anatomyHtml, /anatomy\.js\?v=0\.0\.40-anatomy-boot2/);
-assert.match(anatomyHtml, /Probing renderer/);
-assert.doesNotMatch(anatomyHtml, />Starting/);
+assert.match(anatomyHtml, /anatomy-host\.js/);
+assert.doesNotMatch(anatomyHtml, /src=["']anatomy\.js/);
+
+assert.match(host, /loadQualiaPortal/);
+assert.match(host, /allowWebGl2: true/);
+assert.match(host, /load_hmc_mesh/);
+assert.match(host, /human-welfare\.hmc/);
+assert.match(host, /cache: "no-store"/);
+assert.doesNotMatch(host, /cache: "force-cache"/);
+assert.doesNotMatch(host, /if \(!navigator\.gpu\)/);
+
 assert.match(readFileSync(new URL('../js/browser-capability.js', import.meta.url), 'utf8'), /WEBGPU_PROBE_BUDGET_MS/);
 assert.match(readFileSync(new URL('../js/browser-capability.js', import.meta.url), 'utf8'), /adapter_timeout/);
 

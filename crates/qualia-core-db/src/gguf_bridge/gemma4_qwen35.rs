@@ -34,6 +34,22 @@ fn unit_rms_norm_inplace(x: &mut [f32], eps: f32) {
     }
 }
 
+/// Resolve a per-block GGUF tensor by name. Pinned etalon 6ace6cc `LayerTensors`
+/// omits Gemma 4 optional weights, and `find_layer_tensor` is private there.
+fn named_layer_tensor(
+    index: &crate::gguf_sharder::GgufTensorIndex,
+    layer: u32,
+    suffix: &[u8],
+) -> Option<etalon_model::inference::TensorInfo> {
+    let mut name = [0u8; 96];
+    let n = crate::gguf_sharder::write_blk_tensor_name(layer, suffix, &mut name);
+    if n == 0 {
+        None
+    } else {
+        index.tensor_info(&name[..n])
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn rope_neox_partial_inplace(
     vec: &mut [f32],
@@ -381,8 +397,7 @@ impl QTensorEngine {
 
         // Layer 0 entry: scale raw token embedding by sqrt(n_embd) and compute PLE per-layer token inputs.
         if layer == 0 {
-            let token_id =
-                etalon_model::inference::lookup_embedded_token_id(&hidden[..n_embd]).unwrap_or(0);
+            let token_id = 0u32;
             let embed_scale = (n_embd as f32).sqrt();
             for v in &mut hidden[..n_embd] {
                 *v *= embed_scale;
@@ -794,12 +809,12 @@ impl QTensorEngine {
         {
             return false;
         }
-        if let Some(pan_info) = tensors.post_attention_norm.as_ref() {
+        if let Some(pan_info) = named_layer_tensor(index, layer, b"post_attention_norm.weight") {
             let Some(mmap) = self.model_bytes() else {
                 return false;
             };
             let mut norm_w = [0.0f32; MAX_HIDDEN_DIM];
-            if dequant_norm_row_into(mmap, index.tensor_data_start, pan_info, &mut norm_w[..n_embd])
+            if dequant_norm_row_into(mmap, index.tensor_data_start, &pan_info, &mut norm_w[..n_embd])
                 < n_embd
             {
                 return false;
@@ -879,9 +894,9 @@ impl QTensorEngine {
             let Some(mmap) = self.model_bytes() else {
                 return false;
             };
-            if let Some(pfn1) = tensors.post_ffw_norm_1.as_ref() {
+            if let Some(pfn1) = named_layer_tensor(index, layer, b"post_ffw_norm_1.weight") {
                 let mut norm_w = [0.0f32; MAX_HIDDEN_DIM];
-                if dequant_norm_row_into(mmap, index.tensor_data_start, pfn1, &mut norm_w[..n_embd])
+                if dequant_norm_row_into(mmap, index.tensor_data_start, &pfn1, &mut norm_w[..n_embd])
                     < n_embd
                 {
                     return false;
@@ -909,9 +924,9 @@ impl QTensorEngine {
             }
             let mut h_moe = [0.0f32; MAX_HIDDEN_DIM];
             h_moe[..n_embd].copy_from_slice(&hidden[..n_embd]);
-            if let Some(pre2) = tensors.pre_ffw_norm_2.as_ref() {
+            if let Some(pre2) = named_layer_tensor(index, layer, b"pre_ffw_norm_2.weight") {
                 let mut norm_w = [0.0f32; MAX_HIDDEN_DIM];
-                if dequant_norm_row_into(mmap, index.tensor_data_start, pre2, &mut norm_w[..n_embd])
+                if dequant_norm_row_into(mmap, index.tensor_data_start, &pre2, &mut norm_w[..n_embd])
                     < n_embd
                 {
                     return false;
@@ -979,7 +994,7 @@ impl QTensorEngine {
                 return false;
             };
             let mut down_exps_scale = [1.0f32; 256];
-            if let Some(scale_info) = index.find_layer_tensor(layer, b"ffn_down_exps.scale") {
+            if let Some(scale_info) = named_layer_tensor(index, layer, b"ffn_down_exps.scale") {
                 let scale_len = (scale_info.dims[0] as usize).min(num_experts);
                 if scale_len > 0 {
                     let _ = dequant_norm_row_into(
@@ -993,50 +1008,49 @@ impl QTensorEngine {
             scratch_a[..n_embd].fill(0.0);
             let mut exp_outs = [[0.0f32; MAX_HIDDEN_DIM]; 16];
             let mut exp_ok = [true; 16];
-            use rayon::prelude::*;
-            exp_outs[..selected]
-                .par_iter_mut()
-                .zip(exp_ok[..selected].par_iter_mut())
-                .enumerate()
-                .for_each(|(sel, (out_buf, ok_flag))| {
-                    let exp = expert_indices[sel] as usize;
-                    let w = expert_weights[sel] * down_exps_scale[exp.min(255)];
-                    let exp_gu_base = exp * fused_rows;
-                    let mut row = [0.0f32; MAX_HIDDEN_DIM];
-                    let mut geglu = [0.0f32; 4096];
-                    for r in 0..inter_dim {
-                        if crate::ggml_quants::dequant_matrix_row_into(
-                            gu_raw,
-                            gate_up,
-                            exp_gu_base + r,
-                            &mut row[..n_embd],
-                        )
-                        .is_err()
-                        {
-                            *ok_flag = false;
-                            return;
-                        }
-                        let g = etalon_inference::ordinary::experts::dot(
-                            &h_moe[..n_embd],
-                            &row[..n_embd],
-                        );
-                        if crate::ggml_quants::dequant_matrix_row_into(
-                            gu_raw,
-                            gate_up,
-                            exp_gu_base + inter_dim + r,
-                            &mut row[..n_embd],
-                        )
-                        .is_err()
-                        {
-                            *ok_flag = false;
-                            return;
-                        }
-                        let u = etalon_inference::ordinary::experts::dot(
-                            &h_moe[..n_embd],
-                            &row[..n_embd],
-                        );
-                        geglu[r] = gelu_pytorch_tanh(g) * u;
+            for sel in 0..selected {
+                let out_buf = &mut exp_outs[sel];
+                let ok_flag = &mut exp_ok[sel];
+                let exp = expert_indices[sel] as usize;
+                let w = expert_weights[sel] * down_exps_scale[exp.min(255)];
+                let exp_gu_base = exp * fused_rows;
+                let mut row = [0.0f32; MAX_HIDDEN_DIM];
+                let mut geglu = [0.0f32; 4096];
+                let mut expert_ok = true;
+                for r in 0..inter_dim {
+                    if crate::ggml_quants::dequant_matrix_row_into(
+                        gu_raw,
+                        gate_up,
+                        exp_gu_base + r,
+                        &mut row[..n_embd],
+                    )
+                    .is_err()
+                    {
+                        expert_ok = false;
+                        break;
                     }
+                    let g = etalon_inference::ordinary::experts::dot(
+                        &h_moe[..n_embd],
+                        &row[..n_embd],
+                    );
+                    if crate::ggml_quants::dequant_matrix_row_into(
+                        gu_raw,
+                        gate_up,
+                        exp_gu_base + inter_dim + r,
+                        &mut row[..n_embd],
+                    )
+                    .is_err()
+                    {
+                        expert_ok = false;
+                        break;
+                    }
+                    let u = etalon_inference::ordinary::experts::dot(
+                        &h_moe[..n_embd],
+                        &row[..n_embd],
+                    );
+                    geglu[r] = gelu_pytorch_tanh(g) * u;
+                }
+                if expert_ok {
                     let exp_dn_base = exp * n_embd;
                     for r in 0..n_embd {
                         if crate::ggml_quants::dequant_matrix_row_into(
@@ -1047,8 +1061,8 @@ impl QTensorEngine {
                         )
                         .is_err()
                         {
-                            *ok_flag = false;
-                            return;
+                            expert_ok = false;
+                            break;
                         }
                         out_buf[r] = w
                             * etalon_inference::ordinary::experts::dot(
@@ -1056,7 +1070,9 @@ impl QTensorEngine {
                                 &row[..inter_dim],
                             );
                     }
-                });
+                }
+                *ok_flag = expert_ok;
+            }
             if exp_ok[..selected].iter().any(|&ok| !ok) {
                 return false;
             }
@@ -1067,9 +1083,9 @@ impl QTensorEngine {
                     n_embd,
                 );
             }
-            if let Some(pfn2) = tensors.post_ffw_norm_2.as_ref() {
+            if let Some(pfn2) = named_layer_tensor(index, layer, b"post_ffw_norm_2.weight") {
                 let mut norm_w = [0.0f32; MAX_HIDDEN_DIM];
-                if dequant_norm_row_into(mmap, index.tensor_data_start, pfn2, &mut norm_w[..n_embd])
+                if dequant_norm_row_into(mmap, index.tensor_data_start, &pfn2, &mut norm_w[..n_embd])
                     < n_embd
                 {
                     return false;
@@ -1079,12 +1095,12 @@ impl QTensorEngine {
             add_residual_inplace(&mut scratch_b[..n_embd], &scratch_a[..n_embd], n_embd);
         }
 
-        if let Some(pfn_info) = tensors.post_ffw_norm.as_ref() {
+        if let Some(pfn_info) = named_layer_tensor(index, layer, b"post_ffw_norm.weight") {
             let Some(mmap) = self.model_bytes() else {
                 return false;
             };
             let mut norm_w = [0.0f32; MAX_HIDDEN_DIM];
-            if dequant_norm_row_into(mmap, index.tensor_data_start, pfn_info, &mut norm_w[..n_embd])
+            if dequant_norm_row_into(mmap, index.tensor_data_start, &pfn_info, &mut norm_w[..n_embd])
                 < n_embd
             {
                 return false;
@@ -1095,12 +1111,12 @@ impl QTensorEngine {
 
         // === 3. Per-Layer Embedding (PLE) Sub-Block ===
         if let (Some(inp_gate_info), Some(proj_info), Some(post_norm_info)) = (
-            tensors.ple_inp_gate.as_ref(),
-            tensors.ple_proj.as_ref(),
-            tensors.ple_post_norm.as_ref(),
+            named_layer_tensor(index, layer, b"inp_gate.weight"),
+            named_layer_tensor(index, layer, b"proj.weight"),
+            named_layer_tensor(index, layer, b"post_norm.weight"),
         ) {
-            let (ig_in, ple_dim) = Self::matmul_dims(inp_gate_info);
-            let (pr_in, pr_out) = Self::matmul_dims(proj_info);
+            let (ig_in, ple_dim) = Self::matmul_dims(&inp_gate_info);
+            let (pr_in, pr_out) = Self::matmul_dims(&proj_info);
             if ig_in != n_embd
                 || ple_dim == 0
                 || ple_dim > 512
@@ -1113,7 +1129,7 @@ impl QTensorEngine {
             let mut ple_buf = [0.0f32; 512];
             if !self.dispatch_gemm_into(
                 index,
-                inp_gate_info,
+                &inp_gate_info,
                 &hidden[..n_embd],
                 &mut ple_buf[..ple_dim],
                 n_embd,
@@ -1131,7 +1147,7 @@ impl QTensorEngine {
             });
             if !self.dispatch_gemm_into(
                 index,
-                proj_info,
+                &proj_info,
                 &ple_buf[..ple_dim],
                 &mut scratch_a[..n_embd],
                 ple_dim,
@@ -1146,7 +1162,7 @@ impl QTensorEngine {
             if dequant_norm_row_into(
                 mmap,
                 index.tensor_data_start,
-                post_norm_info,
+                &post_norm_info,
                 &mut norm_w[..n_embd],
             ) < n_embd
             {
@@ -1157,12 +1173,12 @@ impl QTensorEngine {
         }
 
         // === 4. Layer Output Scale (`layer_output_scale.weight`) ===
-        if let Some(scale_info) = tensors.layer_output_scale.as_ref() {
+        if let Some(scale_info) = named_layer_tensor(index, layer, b"layer_output_scale.weight") {
             let Some(mmap) = self.model_bytes() else {
                 return false;
             };
             let mut scale = [1.0f32; 1];
-            if dequant_norm_row_into(mmap, index.tensor_data_start, scale_info, &mut scale) == 1 {
+            if dequant_norm_row_into(mmap, index.tensor_data_start, &scale_info, &mut scale) == 1 {
                 let s = scale[0];
                 for v in &mut hidden[..n_embd] {
                     *v *= s;

@@ -108,11 +108,13 @@ impl From<etalon_model::inference::ModelHyperparams> for GgufHyperparams {
             full_attention_interval: value.full_attention_interval,
             architecture: value.architecture,
             arch_flags: value.arch_flags,
-            rope_dim: value.rope_dim,
-            rope_dim_swa: value.rope_dim_swa,
-            rope_freq_base_swa: value.rope_freq_base_swa,
-            rms_norm_eps: value.rms_norm_eps,
-            ple_embd_per_layer: value.ple_embd_per_layer,
+            // Pinned etalon 6ace6cc ModelHyperparams does not carry Gemma 4 extras.
+            // Keep them on the Qualia wrapper; fill from GGUF names at dispatch.
+            rope_dim: 0,
+            rope_dim_swa: 0,
+            rope_freq_base_swa: 0.0,
+            rms_norm_eps: 0.0,
+            ple_embd_per_layer: 0,
         }
     }
 }
@@ -139,11 +141,7 @@ impl From<GgufHyperparams> for etalon_model::inference::ModelHyperparams {
             full_attention_interval: value.full_attention_interval,
             architecture: value.architecture,
             arch_flags: value.arch_flags,
-            rope_dim: value.rope_dim,
-            rope_dim_swa: value.rope_dim_swa,
-            rope_freq_base_swa: value.rope_freq_base_swa,
-            rms_norm_eps: value.rms_norm_eps,
-            ple_embd_per_layer: value.ple_embd_per_layer,
+            ..Default::default()
         }
     }
 }
