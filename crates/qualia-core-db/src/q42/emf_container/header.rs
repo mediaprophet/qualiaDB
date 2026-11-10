@@ -21,6 +21,9 @@ pub const EMF_FLAG_SPECTRAL_BANDS: u16 = 1 << 2;
 /// Flag: BLAKE3-Bao verified outboard hash tree enabled.
 pub const EMF_FLAG_BAO_VERIFIED: u16 = 1 << 3;
 
+/// Fail-closed decoded dense-volume cap: 8³ cells × 2048 bricks.
+pub const MAX_DENSE_CELLS: usize = 1_048_576;
+
 /// Permittivity of free space epsilon_0 in F/m.
 pub const EPSILON_0: f32 = 8.854_187_8e-12;
 /// Permeability of free space mu_0 in H/m (or N/A^2).
@@ -48,6 +51,8 @@ pub enum EmfError {
     /// Directory Hilbert keys do not round-trip for any order in 1..=8
     /// inside `grid_dims_bricks`.
     HilbertOrder,
+    /// Decoded `[t][z][y][x]` cell count exceeds [`MAX_DENSE_CELLS`].
+    DenseVolumeCap { cells: usize, cap: usize },
 }
 
 impl std::fmt::Display for EmfError {
@@ -74,6 +79,9 @@ impl std::fmt::Display for EmfError {
             Self::DirectoryAlignment => write!(f, "EMF chunk directory not 64-byte aligned"),
             Self::ArithmeticOverflow => write!(f, "Arithmetic overflow in EMF calculation"),
             Self::HilbertOrder => write!(f, "EMF Hilbert brick order could not be inferred"),
+            Self::DenseVolumeCap { cells, cap } => {
+                write!(f, "EMF dense volume {cells} cells exceeds cap {cap}")
+            }
         }
     }
 }

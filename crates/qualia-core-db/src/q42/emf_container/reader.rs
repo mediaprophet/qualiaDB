@@ -7,7 +7,7 @@ use super::chunk_directory::{
     emf_brick_voxel_coords, emf_brick_voxel_linear_index, EmfChunkDirectoryEntry,
     CHUNK_DIRECTORY_ENTRY_BYTES, EMF_BRICK_SIDE,
 };
-use super::header::{EmfCellRecord64, EmfContainerHeader, EmfError};
+use super::header::{EmfCellRecord64, EmfContainerHeader, EmfError, MAX_DENSE_CELLS};
 use crate::q42::m64_matter::brick3d::{decode_hilbert3d_u64, encode_hilbert3d_u64};
 
 /// Explicit EMF admission budgets (file bytes and directory rows).
@@ -265,6 +265,12 @@ impl<'a> EmfContainerReader<'a> {
             .and_then(|n| n.checked_mul(nz as usize))
             .and_then(|n| n.checked_mul(nt as usize))
             .ok_or(EmfError::ArithmeticOverflow)?;
+        if cell_count > MAX_DENSE_CELLS {
+            return Err(EmfError::DenseVolumeCap {
+                cells: cell_count,
+                cap: MAX_DENSE_CELLS,
+            });
+        }
         let mut cells = vec![EmfCellRecord64::default(); cell_count];
         let mut sigma_sum = 0.0f64;
         let mut sigma_n = 0u64;

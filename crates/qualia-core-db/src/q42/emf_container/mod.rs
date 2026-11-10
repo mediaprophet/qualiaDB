@@ -211,4 +211,27 @@ mod tests {
             Some(EmfError::PayloadOverlap)
         );
     }
+
+    #[test]
+    fn dense_volume_rejects_decoded_cell_cap() {
+        // 17×16×8 bricks × 8³ cells = 1_114_112 > MAX_DENSE_CELLS (1_048_576).
+        // One tiny payload still parses; dense unpack must fail closed before vec![].
+        let mut writer = EmfContainerWriter::new([0.0; 3], 1.0, [17, 16, 8], 0.0);
+        let cells = [EmfCellRecord64::default()];
+        writer.add_brick_chunk(0, &cells, 0, 1, 0).unwrap();
+        let bytes = writer.to_bytes().expect("EMF serialize");
+        let reader = EmfContainerReader::parse(&bytes).expect("tiny payload parses");
+        let err = reader.dense_volume().expect_err("dense volume cap");
+        assert_eq!(
+            err,
+            EmfError::DenseVolumeCap {
+                cells: 1_114_112,
+                cap: MAX_DENSE_CELLS,
+            }
+        );
+        assert_eq!(
+            err.to_string(),
+            "EMF dense volume 1114112 cells exceeds cap 1048576"
+        );
+    }
 }

@@ -269,8 +269,9 @@ export class QualiaPortal {
     last_parsed(): any | undefined;
     /**
      * P9.2 — Load a `.10d` container asset: parse the section table, extract
-     * the QuantizedMesh and Tensor10DNodes (provenance) sections, upload the
-     * mesh to the GPU, and report node/triangle counts.
+     * the QuantizedMesh, optional SurfaceReading (per-vertex colour), optional
+     * UV01, optional MAT3/MAT4, Tensor10DNodes (provenance), and mesh frames;
+     * upload to the GPU. Texture bytes stay in HMC/deps (`load_texture_encoded`).
      *
      * **Governance fail-closed:** if the header carries
      * `FLAG_DEFAULT_DISPOSITION_REFUSE` (bit 0) and no attestation section is
@@ -341,6 +342,18 @@ export class QualiaPortal {
      */
     load_body_organs_colored(organs: Array<any>): any;
     /**
+     * Load a sibling `Q42EMF64` (`.emf`) volume. Cells are the field values;
+     * GPU RGBA and AcousticPlane σ are conversions of those cells.
+     *
+     * Anatomy hosts fetch this from the same URL as the mesh with only the
+     * trailing extension replaced: `foo.10d` → `foo.emf`. Values are not stored
+     * inside `.10d`.
+     *
+     * Returns `{ nx, ny, nz, nt, cell_count, mean_sigma, frequency_hz, kind }`.
+     * `kind` is `"volume"` when `cell_count > 1`, otherwise `"cell"`.
+     */
+    load_emf(bytes: Uint8Array): any;
+    /**
      * Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
      * residency identity. Replaying the same asset returns the existing receipt without
      * rebuilding the GPU mesh; a different digest replaces the resident mesh.
@@ -363,7 +376,8 @@ export class QualiaPortal {
     /**
      * Hydrate one content-addressed PNG/JPEG/KTX2 dependency. Role 0 is sRGB
      * base colour, 1 a linear tangent-space normal, 2 linear packed data and
-     * 3 sRGB alpha-masked colour. Returns false for an unavailable GPU backend.
+     * 3 sRGB alpha-masked colour. Returns false for an unavailable GPU backend
+     * or a KTX2/BasisU payload the adapter cannot transcode (mesh still draws).
      * Call before scene submission so the material bind groups see residency.
      */
     load_texture_encoded(digest: Uint8Array, mime: string, encoded: Uint8Array, role: number, cutoff: number): boolean;
@@ -2517,6 +2531,7 @@ export interface InitOutput {
     readonly qualiaportal_load_body_from_qualia_bundle: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_body_from_qualia_bundle_mixed: (a: number, b: number, c: number, d: any, e: any) => [number, number, number];
     readonly qualiaportal_load_body_organs_colored: (a: number, b: any) => [number, number, number];
+    readonly qualiaportal_load_emf: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_hmc_mesh: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_q42: (a: number, b: number, c: number) => [number, number, number];
@@ -2711,12 +2726,12 @@ export interface InitOutput {
     readonly xform_z_geometric: (a: any) => [number, number, number];
     readonly xform_z_transform: (a: any) => [number, number, number];
     readonly xform_z_unit_step: (a: any) => [number, number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h177464af3c413bb8: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h177464af3c413bb8_404: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h177464af3c413bb8_405: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_405: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_406: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h4d620e5c0561b6a1: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__hf7f459f49ff6c97b: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__hc844605b547421da: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h1e82bb667b5b7bed: (a: number, b: number, c: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__hb465ae666141201f: (a: number, b: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
