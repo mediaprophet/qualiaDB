@@ -54,6 +54,20 @@ fn test_m64_chunk_directory_crc_roundtrip() {
 }
 
 #[test]
+fn test_m64_header_accepts_e64_magic_alias() {
+    let mut header = M64Header::default();
+    header.magic = E64_MAGIC;
+    header.update_crc();
+    assert!(header.validate().is_ok());
+    assert_eq!(header.magic, E64_MAGIC);
+    assert!(has_m64_magic(&header.magic));
+    assert!(has_m64_magic(&M64_MAGIC));
+    assert!(has_m64_magic(b"e64\0rest"));
+    assert!(!has_m64_magic(b"p64\0"));
+    assert!(!has_m64_magic(b""));
+}
+
+#[test]
 fn test_m64_header_crc_roundtrip() {
     let mut header = M64Header::default();
     header.total_file_size = 65536;

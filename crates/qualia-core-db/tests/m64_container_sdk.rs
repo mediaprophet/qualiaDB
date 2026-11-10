@@ -64,6 +64,11 @@ fn fixture(modes: &[u8]) -> Vec<u8> {
                 record.update_crc();
                 bytes[start..start + 64].copy_from_slice(bytemuck::bytes_of(&record));
             }
+            M64_MODE_SHELL => {
+                let mut record = M64ShellRecord::default();
+                record.update_crc();
+                bytes[start..start + 64].copy_from_slice(bytemuck::bytes_of(&record));
+            }
             _ => unreachable!(),
         }
     }
@@ -163,9 +168,9 @@ fn public_reader_rejects_header_and_directory_structural_failures() {
 #[test]
 fn public_reader_rejects_payload_policy_bounds_and_overlap() {
     let base = fixture(&[M64_MODE_POINT]);
-    let mut bytes = base.clone(); entry_edit(&mut bytes, 0, |e| e.chunk_record_mode = 4);
-    assert_eq!(error(&bytes), M64ReadError::UnsupportedMode { chunk: 0, mode: 4 });
-    for codec in [1, 2, 3, 4, 5, 6, 255] {
+    let mut bytes = base.clone(); entry_edit(&mut bytes, 0, |e| e.chunk_record_mode = 5);
+    assert_eq!(error(&bytes), M64ReadError::UnsupportedMode { chunk: 0, mode: 5 });
+    for codec in [1, 3, 4, 5, 6, 255] {
         bytes = base.clone(); entry_edit(&mut bytes, 0, |e| e.compression_flags = codec);
         assert_eq!(error(&bytes), M64ReadError::UnsupportedCodec { chunk: 0, codec });
     }
@@ -194,7 +199,7 @@ fn public_reader_rejects_payload_policy_bounds_and_overlap() {
 
 #[test]
 fn public_reader_checks_actual_record_crcs_and_discloses_unchecksummed_modes() {
-    for mode in [M64_MODE_STRATA, M64_MODE_PHASE_JUNCTURE] {
+    for mode in [M64_MODE_STRATA, M64_MODE_PHASE_JUNCTURE, M64_MODE_SHELL] {
         let mut bytes = fixture(&[mode]); bytes[128] ^= 1;
         assert!(matches!(error(&bytes), M64ReadError::Record {
             chunk: 0, record: 0, error: M64Error::ChecksumMismatch { .. },

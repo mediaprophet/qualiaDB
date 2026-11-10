@@ -19,8 +19,12 @@ pub struct M64ShellRecord {
     pub centroid: [f32; 3],
     pub crease: f32,
     pub flags: u32,
+    /// 4B: CRC-32C checksum of bytes 0..59 (Total = 64B).
     pub record_crc32c: u32,
 }
+
+/// Backward-compatible type alias for E64 shell records (`e64\0` is an M64 magic alias).
+pub type E64ShellRecord = M64ShellRecord;
 
 impl Default for M64ShellRecord {
     fn default() -> Self {
