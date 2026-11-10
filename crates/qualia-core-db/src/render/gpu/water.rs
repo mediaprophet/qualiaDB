@@ -267,7 +267,11 @@ impl WaterGpu {
     }
 
     /// Writes `uniform`.
-    pub(super) fn write_uniform(&self, belt: &mut UniformBelt, encoder: &mut etalon::CommandEncoder) {
+    pub(super) fn write_uniform(
+        &self,
+        belt: &mut UniformBelt,
+        encoder: &mut etalon::CommandEncoder,
+    ) {
         belt.write_and_unmap(bytemuck::bytes_of(&self.uniform));
         belt.record_copy(encoder, &self.uniform_buf, 0);
         // The caller advances the shared belt after this copy, keeping all

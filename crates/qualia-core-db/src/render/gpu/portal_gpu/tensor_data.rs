@@ -91,7 +91,7 @@ impl PortalGpu {
         )?;
 
         self.pick_readback.invalidate(false);
-        self.pick_semantic_result=None;
+        self.pick_semantic_result = None;
         self.ambient_bind_group = ambient_bind_group;
         self.projector_tensor_bind = Some(projector_tensor_bind);
         self.particle_buf = particle_buf;

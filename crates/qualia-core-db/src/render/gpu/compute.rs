@@ -272,16 +272,16 @@ impl super::PortalGpu {
                         bind_group_layouts: &[Some(&layout)],
                         immediate_size: 0,
                     });
-            let pipeline = self
-                .device
-                .create_compute_pipeline(&etalon::ComputePipelineDescriptor {
-                    label: Some("portal-compute-pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &module,
-                    entry_point: Some(entry_point),
-                    compilation_options: etalon::PipelineCompilationOptions::default(),
-                    cache: None,
-                });
+            let pipeline =
+                self.device
+                    .create_compute_pipeline(&etalon::ComputePipelineDescriptor {
+                        label: Some("portal-compute-pipeline"),
+                        layout: Some(&pipeline_layout),
+                        module: &module,
+                        entry_point: Some(entry_point),
+                        compilation_options: etalon::PipelineCompilationOptions::default(),
+                        cache: None,
+                    });
             self.compute
                 .cache
                 .insert(key, CachedPipeline { pipeline, layout });
@@ -508,11 +508,15 @@ impl super::PortalGpu {
             Ok(Some(true)) => {}
             Ok(Some(false)) => {
                 self.compute.pending = None;
-                return Some(Err(format!("compute_readback: dispatch {dispatch_id}: map failed or stale")));
+                return Some(Err(format!(
+                    "compute_readback: dispatch {dispatch_id}: map failed or stale"
+                )));
             }
             Err(error) => {
                 self.compute.pending = None;
-                return Some(Err(format!("compute_readback: dispatch {dispatch_id}: {error}")));
+                return Some(Err(format!(
+                    "compute_readback: dispatch {dispatch_id}: {error}"
+                )));
             }
         }
         let mut out = vec![0; pending.readback.bytes()];

@@ -6,9 +6,9 @@
 
 use crate::render::instance_culling::GpuInstanceRecord;
 
+pub(super) use etalon_render::picking::MESH_PICK_FLAG;
 #[cfg(test)]
 use etalon_render::picking::{decode_mesh_slot, encode_mesh_slot};
-pub(super) use etalon_render::picking::MESH_PICK_FLAG;
 
 #[allow(dead_code)]
 pub(super) fn snapshot_semantic_ids(

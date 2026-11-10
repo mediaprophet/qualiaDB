@@ -105,7 +105,8 @@ mod tests {
     #[test]
     fn target_budget_is_bounded_and_format_aware() {
         let rgba8 =
-            etalon_render::temporal::target_bytes(64, 32, etalon::TextureFormat::Rgba8Unorm).unwrap();
+            etalon_render::temporal::target_bytes(64, 32, etalon::TextureFormat::Rgba8Unorm)
+                .unwrap();
         let rgba16 =
             etalon_render::temporal::target_bytes(64, 32, etalon::TextureFormat::Rgba16Float)
                 .unwrap();

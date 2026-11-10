@@ -32,11 +32,10 @@
 //! Strictly zero-V8, fully sealed `.10d` living containers with `MAT4`, `UV01`, `FNRM`, `SRD1`,
 //! `PROC1`, `EONT1`, `MRP1`, and `PROV` sections.
 
-use bytemuck;
 use crate::container_10d::entity_ontology_section::{
     AffordanceBinaryRecord, DevelopmentalKeyframeRecord, EntityOntologyMiniHeader,
-    AFFORDANCE_RECORD_SIZE, DEVELOPMENTAL_KEYFRAME_RECORD_SIZE,
-    ENTITY_ONTOLOGY_MINI_HEADER_SIZE, ENTITY_ONTOLOGY_SECTION_VERSION, MAGIC_EONT,
+    AFFORDANCE_RECORD_SIZE, DEVELOPMENTAL_KEYFRAME_RECORD_SIZE, ENTITY_ONTOLOGY_MINI_HEADER_SIZE,
+    ENTITY_ONTOLOGY_SECTION_VERSION, MAGIC_EONT,
 };
 use crate::container_10d::header::{Container10dHeader, MAX_SECTION_COUNT};
 use crate::container_10d::integrity::{seal_whole_file_crc32c, verify_whole_file_crc32c};
@@ -61,14 +60,13 @@ use crate::container_10d::{
 };
 use crate::q_hash;
 use crate::render::assets::Mesh;
-use crate::render::compile_10d::{
-    compile_mesh_to_10d_with_extras_and_frames, Compile10dExtras,
-};
+use crate::render::compile_10d::{compile_mesh_to_10d_with_extras_and_frames, Compile10dExtras};
 use crate::specialized_libs::computational_geometry::space_colonization::{
     lateral_whorl_directions, space_colonization_3d, SpaceColonizationConfig, ROOT_PARENT,
 };
 use crate::specialized_libs::computational_geometry::tree_skeleton_3d::pipe_model_radii;
 use crate::specialized_libs::computational_geometry::Point3;
+use bytemuck;
 use etalon_sim::leaf_biophysics::{LeafEconomicsProfile, LeafVascularSkeleton};
 use etalon_sim::metamer_fspm::{Metamer, MetamerOrgan, MetamerPlantGraph, ThermalPhenology};
 use serde::{Deserialize, Serialize};
@@ -109,9 +107,15 @@ impl BotanicalEducationScale {
     pub const fn name(&self) -> &'static str {
         match self {
             Self::Scale1WholeOrganismAndRoots => "Scale 1: Whole Organism & Root Architecture",
-            Self::Scale2BranchPhyllotaxisAndStemWedge => "Scale 2: Branch Phyllotaxis & Stem Wedge Anatomy",
-            Self::Scale3FloralAndGumnutDissection => "Scale 3: Floral & Fruit Reproductive Dissection",
-            Self::Scale4FoliarVenationAndCellularHistology => "Scale 4: Foliar Lamina Venation & Cellular Histology",
+            Self::Scale2BranchPhyllotaxisAndStemWedge => {
+                "Scale 2: Branch Phyllotaxis & Stem Wedge Anatomy"
+            }
+            Self::Scale3FloralAndGumnutDissection => {
+                "Scale 3: Floral & Fruit Reproductive Dissection"
+            }
+            Self::Scale4FoliarVenationAndCellularHistology => {
+                "Scale 4: Foliar Lamina Venation & Cellular Histology"
+            }
         }
     }
 
@@ -284,7 +288,9 @@ impl HistologicalTissueLayer {
             Self::AmphistomaticStomatalGuardCells => "Amphistomatic Stomatal Guard Cells",
             Self::IsobilateralPalisadeMesophyll => "Isobilateral Palisade Mesophyll Columns",
             Self::SpongyMesophyllAndAirSpaces => "Spongy Mesophyll Parenchyma & Air Spaces",
-            Self::CollateralVascularBundleXylemPhloem => "Collateral Vascular Bundle (Xylem & Phloem)",
+            Self::CollateralVascularBundleXylemPhloem => {
+                "Collateral Vascular Bundle (Xylem & Phloem)"
+            }
             Self::SclerenchymaBundleSheathGirders => "Sclerenchyma Bundle Sheath Girders",
             Self::SchizogenousEssentialOilGland => "Schizogenous Essential Oil Secretory Cavity",
         }
@@ -298,7 +304,9 @@ impl HistologicalTissueLayer {
             | Self::SecondaryPhloemAndKinoDucts
             | Self::VascularCambium
             | Self::SapwoodSecondaryXylem
-            | Self::HeartwoodAndPith => BotanicalEducationScale::Scale2BranchPhyllotaxisAndStemWedge,
+            | Self::HeartwoodAndPith => {
+                BotanicalEducationScale::Scale2BranchPhyllotaxisAndStemWedge
+            }
 
             Self::PeduncleAndPedicel
             | Self::HypanthiumCalyxTube
@@ -308,7 +316,9 @@ impl HistologicalTissueLayer {
             | Self::GynoeciumStyleStigma
             | Self::OvaryLoculesAndOvules
             | Self::WoodyPericarpAndDehiscingValves
-            | Self::FertileWingedSeedsAndChaff => BotanicalEducationScale::Scale3FloralAndGumnutDissection,
+            | Self::FertileWingedSeedsAndChaff => {
+                BotanicalEducationScale::Scale3FloralAndGumnutDissection
+            }
 
             Self::WaxyCuticle
             | Self::UpperAndLowerEpidermis
@@ -335,7 +345,7 @@ impl HistologicalTissueLayer {
 
             Self::PeduncleAndPedicel => [0.48, 0.56, 0.38, 1.0], // Glaucous green stem
             Self::HypanthiumCalyxTube => [0.74, 0.72, 0.56, 1.0], // Creamy-green cup
-            Self::OperculumCalyptra => [0.88, 0.84, 0.68, 1.0], // Pale conical cap
+            Self::OperculumCalyptra => [0.88, 0.84, 0.68, 1.0],  // Pale conical cap
             Self::StaminalRingFilaments => [0.98, 0.96, 0.85, 1.0], // Fluffy cream filaments
             Self::VersatileAnthersAndPollen => [0.96, 0.82, 0.24, 1.0], // Golden yellow pollen
             Self::GynoeciumStyleStigma => [0.65, 0.78, 0.48, 1.0], // Translucent green style
@@ -347,10 +357,10 @@ impl HistologicalTissueLayer {
             Self::UpperAndLowerEpidermis => [0.46, 0.62, 0.42, 1.0], // Bright epidermal green
             Self::AmphistomaticStomatalGuardCells => [0.36, 0.54, 0.32, 1.0], // Kidney guard cell green
             Self::IsobilateralPalisadeMesophyll => [0.24, 0.48, 0.22, 1.0], // Deep chloroplast green
-            Self::SpongyMesophyllAndAirSpaces => [0.38, 0.58, 0.36, 0.9], // Aerated parenchyma
+            Self::SpongyMesophyllAndAirSpaces => [0.38, 0.58, 0.36, 0.9],   // Aerated parenchyma
             Self::CollateralVascularBundleXylemPhloem => [0.75, 0.68, 0.48, 1.0], // Lignified xylem/phloem
             Self::SclerenchymaBundleSheathGirders => [0.82, 0.76, 0.54, 1.0], // Lignified fibrous girders
-            Self::SchizogenousEssentialOilGland => [0.95, 0.84, 0.35, 0.95], // Golden cineole oil
+            Self::SchizogenousEssentialOilGland => [0.95, 0.84, 0.35, 0.95],  // Golden cineole oil
         }
     }
 
@@ -424,7 +434,10 @@ impl CompiledBotanicalOrgan10d {
     }
 
     /// Find the submesh slice for a specific tissue layer.
-    pub fn tissue_layer_slice(&self, layer: HistologicalTissueLayer) -> Option<&TissueSubmeshSlice> {
+    pub fn tissue_layer_slice(
+        &self,
+        layer: HistologicalTissueLayer,
+    ) -> Option<&TissueSubmeshSlice> {
         self.tissue_slices.iter().find(|s| s.layer == layer)
     }
 
@@ -581,13 +594,7 @@ impl OrganMeshBuilder {
         }
     }
 
-    fn add_vertex(
-        &mut self,
-        pos: [f32; 3],
-        norm: [f32; 3],
-        uv: [f32; 2],
-        col: [u8; 4],
-    ) -> u32 {
+    fn add_vertex(&mut self, pos: [f32; 3], norm: [f32; 3], uv: [f32; 2], col: [u8; 4]) -> u32 {
         let idx = self.positions.len() as u32;
         self.positions.push(pos);
         self.normals.push(norm);
@@ -639,8 +646,8 @@ impl OrganMeshBuilder {
             }
         }
         for normal in &mut self.normals[vertex_start..] {
-            let len = (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2])
-                .sqrt();
+            let len =
+                (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]).sqrt();
             if len > 1e-8 {
                 normal[0] /= len;
                 normal[1] /= len;
@@ -724,12 +731,7 @@ impl OrganMeshBuilder {
     }
 
     /// Add a 3D box cell (e.g. brick epidermal or columnar palisade cell).
-    fn add_box_cell(
-        &mut self,
-        center: [f32; 3],
-        half_extents: [f32; 3],
-        col: [u8; 4],
-    ) {
+    fn add_box_cell(&mut self, center: [f32; 3], half_extents: [f32; 3], col: [u8; 4]) {
         let cx = center[0];
         let cy = center[1];
         let cz = center[2];
@@ -739,47 +741,65 @@ impl OrganMeshBuilder {
 
         let faces = [
             // +Y top
-            ([0.0, 1.0, 0.0], [
-                [cx - hx, cy + hy, cz - hz],
-                [cx - hx, cy + hy, cz + hz],
-                [cx + hx, cy + hy, cz + hz],
-                [cx + hx, cy + hy, cz - hz],
-            ]),
+            (
+                [0.0, 1.0, 0.0],
+                [
+                    [cx - hx, cy + hy, cz - hz],
+                    [cx - hx, cy + hy, cz + hz],
+                    [cx + hx, cy + hy, cz + hz],
+                    [cx + hx, cy + hy, cz - hz],
+                ],
+            ),
             // -Y bottom
-            ([0.0, -1.0, 0.0], [
-                [cx - hx, cy - hy, cz - hz],
-                [cx + hx, cy - hy, cz - hz],
-                [cx + hx, cy - hy, cz + hz],
-                [cx - hx, cy - hy, cz + hz],
-            ]),
+            (
+                [0.0, -1.0, 0.0],
+                [
+                    [cx - hx, cy - hy, cz - hz],
+                    [cx + hx, cy - hy, cz - hz],
+                    [cx + hx, cy - hy, cz + hz],
+                    [cx - hx, cy - hy, cz + hz],
+                ],
+            ),
             // +X right
-            ([1.0, 0.0, 0.0], [
-                [cx + hx, cy - hy, cz - hz],
-                [cx + hx, cy + hy, cz - hz],
-                [cx + hx, cy + hy, cz + hz],
-                [cx + hx, cy - hy, cz + hz],
-            ]),
+            (
+                [1.0, 0.0, 0.0],
+                [
+                    [cx + hx, cy - hy, cz - hz],
+                    [cx + hx, cy + hy, cz - hz],
+                    [cx + hx, cy + hy, cz + hz],
+                    [cx + hx, cy - hy, cz + hz],
+                ],
+            ),
             // -X left
-            ([-1.0, 0.0, 0.0], [
-                [cx - hx, cy - hy, cz - hz],
-                [cx - hx, cy - hy, cz + hz],
-                [cx - hx, cy + hy, cz + hz],
-                [cx - hx, cy + hy, cz - hz],
-            ]),
+            (
+                [-1.0, 0.0, 0.0],
+                [
+                    [cx - hx, cy - hy, cz - hz],
+                    [cx - hx, cy - hy, cz + hz],
+                    [cx - hx, cy + hy, cz + hz],
+                    [cx - hx, cy + hy, cz - hz],
+                ],
+            ),
             // +Z front
-            ([0.0, 0.0, 1.0], [
-                [cx - hx, cy - hy, cz + hz],
-                [cx + hx, cy - hy, cz + hz],
-                [cx + hx, cy + hy, cz + hz],
-                [cx - hx, cy + hy, cz + hz],
-            ]),
+            (
+                [0.0, 0.0, 1.0],
+                [
+                    [cx - hx, cy - hy, cz + hz],
+                    [cx + hx, cy - hy, cz + hz],
+                    [cx + hx, cy + hy, cz + hz],
+                    [cx - hx, cy + hy, cz + hz],
+                ],
+            ),
             // -Z back
-            ([0.0, 0.0, -1.0], [
-                [cx - hx, cy - hy, cz - hz],
-                [cx - hx, cy + hy, cz - hz],
-                [cx + hx, cy + hy, cz - hz],
-                [cx + hx, cy - hy, cz - hz],
-            ]),
+            (
+                [0.0, 0.0, -1.0],
+                [
+                    [cx - hx, cy - hy, cz - hz],
+                    [cx - hx, cy + hy, cz - hz],
+                    [cx + hx, cy + hy, cz - hz],
+                    [cx + hx, cy - hy, cz - hz],
+                ],
+            ),
         ];
 
         for (norm, corners) in faces {
@@ -953,8 +973,12 @@ fn attach_morph_section(
     header: &MorphSectionHeader,
     deltas: &[QuantizedMorphDelta],
 ) -> Result<Vec<u8>, String> {
-    let needed = morph_section_encoded_len(deltas.len())
-        .ok_or_else(|| format!("morph_section_encoded_len overflow: deltas={}", deltas.len()))?;
+    let needed = morph_section_encoded_len(deltas.len()).ok_or_else(|| {
+        format!(
+            "morph_section_encoded_len overflow: deltas={}",
+            deltas.len()
+        )
+    })?;
     let mut buf = vec![0u8; needed];
     encode_morph_section(header, deltas, &mut buf)
         .map_err(|e| format!("encode_morph_section: {e:?}"))?;
@@ -1063,8 +1087,7 @@ fn seal_botanical_organ_10d(
         mat.multiply_vertex_color = true;
         mat.wind_animated = matches!(
             slice.layer,
-            HistologicalTissueLayer::WaxyCuticle
-                | HistologicalTissueLayer::StaminalRingFilaments
+            HistologicalTissueLayer::WaxyCuticle | HistologicalTissueLayer::StaminalRingFilaments
         );
         mat.base_color = base_col;
         mat.roughness = roughness;
@@ -1374,7 +1397,11 @@ pub fn build_scale1_whole_organism_10d(
         // Above-ground fluted buttress collar spur flaring from lower bole into root crown
         let b_top = [cos_a * bole_r * 0.65, bole_r * 2.2, sin_a * bole_r * 0.65];
         let p0 = [cos_a * bole_r * 1.15, -bole_r * 0.08, sin_a * bole_r * 1.15];
-        let p1 = [cos_a * lat_len * 0.52, -bole_r * 0.85, sin_a * lat_len * 0.52];
+        let p1 = [
+            cos_a * lat_len * 0.52,
+            -bole_r * 0.85,
+            sin_a * lat_len * 0.52,
+        ];
         let p2 = [cos_a * lat_len, -bole_r * 1.75, sin_a * lat_len];
 
         let r_base = bole_r * 0.58;
@@ -1903,11 +1930,7 @@ pub fn build_scale2_stem_bark_wedge_10d(
                     0.0
                 };
                 let r_eff = r_outer + fissure;
-                let pos = [
-                    disp[0] + norm[0] * r_eff,
-                    y,
-                    disp[2] + norm[2] * r_eff,
-                ];
+                let pos = [disp[0] + norm[0] * r_eff, y, disp[2] + norm[2] * r_eff];
                 b.add_vertex(pos, norm, [a_frac, y_frac], base_col);
             }
         }
@@ -1932,11 +1955,7 @@ pub fn build_scale2_stem_bark_wedge_10d(
                     let a_frac = a as f32 / n_radial as f32;
                     let theta = a_frac * wedge_span_rad;
                     let norm = [-theta.cos(), 0.0, -theta.sin()];
-                    let pos = [
-                        disp[0] - norm[0] * r_inner,
-                        y,
-                        disp[2] - norm[2] * r_inner,
-                    ];
+                    let pos = [disp[0] - norm[0] * r_inner, y, disp[2] - norm[2] * r_inner];
                     b.add_vertex(pos, norm, [a_frac, y_frac], base_col);
                 }
             }
@@ -1996,10 +2015,30 @@ pub fn build_scale2_stem_bark_wedge_10d(
         }
 
         // 5. Radial Cut Face at theta = 0 (Normal = [0, 0, -1])
-        let i0 = b.add_vertex([disp[0] + r_inner, y_bot, disp[2]], [0.0, 0.0, -1.0], [0.0, 0.0], base_col);
-        let i1 = b.add_vertex([disp[0] + r_inner, y_top, disp[2]], [0.0, 0.0, -1.0], [0.0, 1.0], base_col);
-        let i2 = b.add_vertex([disp[0] + r_outer, y_top, disp[2]], [0.0, 0.0, -1.0], [1.0, 1.0], base_col);
-        let i3 = b.add_vertex([disp[0] + r_outer, y_bot, disp[2]], [0.0, 0.0, -1.0], [1.0, 0.0], base_col);
+        let i0 = b.add_vertex(
+            [disp[0] + r_inner, y_bot, disp[2]],
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0],
+            base_col,
+        );
+        let i1 = b.add_vertex(
+            [disp[0] + r_inner, y_top, disp[2]],
+            [0.0, 0.0, -1.0],
+            [0.0, 1.0],
+            base_col,
+        );
+        let i2 = b.add_vertex(
+            [disp[0] + r_outer, y_top, disp[2]],
+            [0.0, 0.0, -1.0],
+            [1.0, 1.0],
+            base_col,
+        );
+        let i3 = b.add_vertex(
+            [disp[0] + r_outer, y_bot, disp[2]],
+            [0.0, 0.0, -1.0],
+            [1.0, 0.0],
+            base_col,
+        );
         b.add_quad(i0, i1, i2, i3);
 
         // 6. Tangential Cut Face at theta = 270° (Normal = [1, 0, 0])
@@ -2007,25 +2046,41 @@ pub fn build_scale2_stem_bark_wedge_10d(
         let sin_270 = wedge_span_rad.sin();
         let norm_tangent = [-sin_270, 0.0, cos_270];
         let j0 = b.add_vertex(
-            [disp[0] + cos_270 * r_inner, y_bot, disp[2] + sin_270 * r_inner],
+            [
+                disp[0] + cos_270 * r_inner,
+                y_bot,
+                disp[2] + sin_270 * r_inner,
+            ],
             norm_tangent,
             [0.0, 0.0],
             base_col,
         );
         let j1 = b.add_vertex(
-            [disp[0] + cos_270 * r_outer, y_bot, disp[2] + sin_270 * r_outer],
+            [
+                disp[0] + cos_270 * r_outer,
+                y_bot,
+                disp[2] + sin_270 * r_outer,
+            ],
             norm_tangent,
             [1.0, 0.0],
             base_col,
         );
         let j2 = b.add_vertex(
-            [disp[0] + cos_270 * r_outer, y_top, disp[2] + sin_270 * r_outer],
+            [
+                disp[0] + cos_270 * r_outer,
+                y_top,
+                disp[2] + sin_270 * r_outer,
+            ],
             norm_tangent,
             [1.0, 1.0],
             base_col,
         );
         let j3 = b.add_vertex(
-            [disp[0] + cos_270 * r_inner, y_top, disp[2] + sin_270 * r_inner],
+            [
+                disp[0] + cos_270 * r_inner,
+                y_top,
+                disp[2] + sin_270 * r_inner,
+            ],
             norm_tangent,
             [0.0, 1.0],
             base_col,
@@ -2054,8 +2109,16 @@ pub fn build_scale2_stem_bark_wedge_10d(
                         let t0 = (a as f32 / 8.0) * wedge_span_rad;
                         let t1 = ((a + 1) as f32 / 8.0) * wedge_span_rad;
                         b.add_cylinder_segment(
-                            [disp[0] + t0.cos() * r_ring, y_top + 0.0008, disp[2] + t0.sin() * r_ring],
-                            [disp[0] + t1.cos() * r_ring, y_top + 0.0008, disp[2] + t1.sin() * r_ring],
+                            [
+                                disp[0] + t0.cos() * r_ring,
+                                y_top + 0.0008,
+                                disp[2] + t0.sin() * r_ring,
+                            ],
+                            [
+                                disp[0] + t1.cos() * r_ring,
+                                y_top + 0.0008,
+                                disp[2] + t1.sin() * r_ring,
+                            ],
                             0.0009,
                             0.0009,
                             4,
@@ -2086,7 +2149,8 @@ pub fn build_scale2_stem_bark_wedge_10d(
                 for pore_i in 0..14 {
                     let pf = (pore_i as f32 + 0.5) / 14.0;
                     let p_theta = pf * wedge_span_rad;
-                    let p_rad = r_inner + (0.22 + 0.58 * ((pore_i * 7 % 5) as f32 / 4.0)) * (r_outer - r_inner);
+                    let p_rad = r_inner
+                        + (0.22 + 0.58 * ((pore_i * 7 % 5) as f32 / 4.0)) * (r_outer - r_inner);
                     let px = disp[0] + p_theta.cos() * p_rad;
                     let pz = disp[2] + p_theta.sin() * p_rad;
                     b.add_cylinder_segment(
@@ -2415,7 +2479,11 @@ pub fn build_scale3_floral_and_gumnut_dissection_10d(
         let theta = frac * 2.0 * PI;
         let r_insertion = cup_rim_r * (0.84 + whorl * 0.055);
 
-        let p_base = [theta.cos() * r_insertion, cup_rim_y, theta.sin() * r_insertion];
+        let p_base = [
+            theta.cos() * r_insertion,
+            cup_rim_y,
+            theta.sin() * r_insertion,
+        ];
 
         // Anthesis controls uncurling from inflexed bud posture to radiant cream burst
         let uncurl = anthesis_progress_01.clamp(0.0, 1.0);
@@ -2884,7 +2952,12 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
             let g_col = (126.0 + 14.0 * margin_highlight - 16.0 * tip_flush) as u8;
             let b_col = (96.0 + 10.0 * margin_highlight - 22.0 * tip_flush) as u8;
 
-            b.add_vertex([x, y, z], [0.0, 0.0, 1.0], [u_frac, frac], [r_col, g_col, b_col, 255]);
+            b.add_vertex(
+                [x, y, z],
+                [0.0, 0.0, 1.0],
+                [u_frac, frac],
+                [r_col, g_col, b_col, 255],
+            );
         }
     }
     let stride = (n_blade_cols + 1) as u32;
@@ -3067,8 +3140,16 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
     for vx in [-0.0011_f32, 0.0_f32, 0.0011_f32] {
         // Adaxial (+Z) lignified xylem tracheary vessels
         b.add_cylinder_segment(
-            [vein_center[0] + vx, vein_center[1] - by_half * 0.88, vein_center[2] + 0.0008],
-            [vein_center[0] + vx, vein_center[1] + by_half * 0.88, vein_center[2] + 0.0008],
+            [
+                vein_center[0] + vx,
+                vein_center[1] - by_half * 0.88,
+                vein_center[2] + 0.0008,
+            ],
+            [
+                vein_center[0] + vx,
+                vein_center[1] + by_half * 0.88,
+                vein_center[2] + 0.0008,
+            ],
             0.00062,
             0.00062,
             8,
@@ -3077,8 +3158,16 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
         );
         // Abaxial (-Z) phloem sieve tubes and companion cells
         b.add_cylinder_segment(
-            [vein_center[0] + vx * 0.85, vein_center[1] - by_half * 0.88, vein_center[2] - 0.0008],
-            [vein_center[0] + vx * 0.85, vein_center[1] + by_half * 0.88, vein_center[2] - 0.0008],
+            [
+                vein_center[0] + vx * 0.85,
+                vein_center[1] - by_half * 0.88,
+                vein_center[2] - 0.0008,
+            ],
+            [
+                vein_center[0] + vx * 0.85,
+                vein_center[1] + by_half * 0.88,
+                vein_center[2] - 0.0008,
+            ],
             0.00052,
             0.00052,
             8,
@@ -3129,10 +3218,7 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
     b.end_tissue_layer();
 
     // Layer 3: Amphistomatic Stomatal Guard Cells (sunken on BOTH +Z adaxial and -Z abaxial faces)
-    b.begin_tissue_layer(
-        HistologicalTissueLayer::AmphistomaticStomatalGuardCells,
-        3,
-    );
+    b.begin_tissue_layer(HistologicalTissueLayer::AmphistomaticStomatalGuardCells, 3);
     let stomata_grid = [(2usize, 1usize), (4usize, 3usize), (2usize, 4usize)];
     for &(ix, iy) in &stomata_grid {
         let cx = block_origin[0] - bx_half + (ix as f32 + 0.5) * cell_w;
@@ -3169,10 +3255,7 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
     b.end_tissue_layer();
 
     // Layer 4: Isobilateral Palisade Mesophyll (Chlorenchyma columns under BOTH +Z and -Z faces!)
-    b.begin_tissue_layer(
-        HistologicalTissueLayer::IsobilateralPalisadeMesophyll,
-        4,
-    );
+    b.begin_tissue_layer(HistologicalTissueLayer::IsobilateralPalisadeMesophyll, 4);
     let pal_nx = 9usize;
     let pal_ny = 7usize;
     let pal_w = (bx_half * 2.0) / (pal_nx as f32);
@@ -3185,7 +3268,8 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
             // Leave clear structural channels for the vascular bundle (left-center) and oil gland (right-center)
             let dist_vein = (cx - vein_center[0]).abs();
             let gland_center_x = block_origin[0] + 0.0048;
-            let dist_gland = ((cx - gland_center_x).powi(2) + (cy - block_origin[1]).powi(2)).sqrt();
+            let dist_gland =
+                ((cx - gland_center_x).powi(2) + (cy - block_origin[1]).powi(2)).sqrt();
             if dist_vein < 0.0024 || dist_gland < 0.0038 {
                 continue;
             }
@@ -3220,7 +3304,8 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
             let cx = block_origin[0] - bx_half * 0.84 + (sx as f32 * 0.0044);
             let cy = block_origin[1] - by_half * 0.82 + (sy as f32 * 0.0052);
             let dist_vein = (cx - vein_center[0]).abs();
-            let dist_gland = ((cx - (block_origin[0] + 0.0048)).powi(2) + (cy - block_origin[1]).powi(2)).sqrt();
+            let dist_gland =
+                ((cx - (block_origin[0] + 0.0048)).powi(2) + (cy - block_origin[1]).powi(2)).sqrt();
             if dist_vein < 0.0024 || dist_gland < 0.0038 {
                 continue;
             }
@@ -3237,10 +3322,7 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
     b.end_tissue_layer();
 
     // Layer 7: Sclerenchyma Bundle Sheath Girders (Lignified I-beam fiber columns along Z)
-    b.begin_tissue_layer(
-        HistologicalTissueLayer::SclerenchymaBundleSheathGirders,
-        6,
-    );
+    b.begin_tissue_layer(HistologicalTissueLayer::SclerenchymaBundleSheathGirders, 6);
     // Adaxial (+Z) sclerenchyma girder anchoring vascular bundle to upper epidermis
     b.add_box_cell(
         [vein_center[0], block_origin[1], block_origin[2] + 0.0026],
@@ -3256,10 +3338,7 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
     b.end_tissue_layer();
 
     // Layer 8: Schizogenous Essential Oil Gland Cavities (in Histological Block + Lamina Areoles)
-    b.begin_tissue_layer(
-        HistologicalTissueLayer::SchizogenousEssentialOilGland,
-        7,
-    );
+    b.begin_tissue_layer(HistologicalTissueLayer::SchizogenousEssentialOilGland, 7);
     // 1. Primary magnified schizogenous oil gland cavity inside the histological cutaway block
     let gland_center = [block_origin[0] + 0.0048, block_origin[1], block_origin[2]];
     b.add_ellipsoid(
@@ -3354,22 +3433,22 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
 /// - `leaf-anatomy-cutaway.10d`
 /// - `whole-organism-roots.10d`
 #[cfg(not(target_arch = "wasm32"))]
-pub fn write_corymbia_educational_assets_to_disk(
-    repo_root: &Path,
-) -> std::io::Result<usize> {
+pub fn write_corymbia_educational_assets_to_disk(repo_root: &Path) -> std::io::Result<usize> {
     let target_dir = repo_root.join("assets/models/corymbia-aparrerinja/10d");
     fs::create_dir_all(&target_dir)?;
 
     let target_dir_root = repo_root.join("assets/models/corymbia-aparrerinja");
 
-    let organ_scale1 = build_scale1_whole_organism_10d("corymbia-aparrerinja", DevelopmentalStage::Mature)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let organ_scale1 =
+        build_scale1_whole_organism_10d("corymbia-aparrerinja", DevelopmentalStage::Mature)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     let organ_scale2 = build_scale2_stem_bark_wedge_10d("corymbia-aparrerinja", 0.0)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
-    let organ_scale3 = build_scale3_floral_and_gumnut_dissection_10d("corymbia-aparrerinja", 0.75, 0.5)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+    let organ_scale3 =
+        build_scale3_floral_and_gumnut_dissection_10d("corymbia-aparrerinja", 0.75, 0.5)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
     let organ_scale4 = build_scale4_leaf_venation_and_histology_10d("corymbia-aparrerinja", 0.5)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
@@ -3413,8 +3492,9 @@ mod tests {
 
     #[test]
     fn test_scale1_whole_organism_high_density() {
-        let organ = build_scale1_whole_organism_10d("corymbia-aparrerinja", DevelopmentalStage::Mature)
-            .expect("Scale 1 generator must succeed");
+        let organ =
+            build_scale1_whole_organism_10d("corymbia-aparrerinja", DevelopmentalStage::Mature)
+                .expect("Scale 1 generator must succeed");
 
         assert!(
             organ.vertex_count() >= 2500,
@@ -3429,19 +3509,27 @@ mod tests {
 
         // Verify root tissues present
         assert!(
-            organ.tissue_layer_slice(HistologicalTissueLayer::PhellogenCorkCambium).is_some(),
+            organ
+                .tissue_layer_slice(HistologicalTissueLayer::PhellogenCorkCambium)
+                .is_some(),
             "Scale 1 must contain subterranean root architecture"
         );
         assert!(
-            organ.tissue_layer_slice(HistologicalTissueLayer::OuterRhytidome).is_some(),
+            organ
+                .tissue_layer_slice(HistologicalTissueLayer::OuterRhytidome)
+                .is_some(),
             "Scale 1 must contain chalk-white outer rhytidome bole"
         );
         assert!(
-            organ.tissue_layer_slice(HistologicalTissueLayer::WaxyCuticle).is_some(),
+            organ
+                .tissue_layer_slice(HistologicalTissueLayer::WaxyCuticle)
+                .is_some(),
             "Scale 1 must contain pendulous foliage"
         );
 
-        organ.verify_all().expect("Scale 1 .10d container must pass verify_all()");
+        organ
+            .verify_all()
+            .expect("Scale 1 .10d container must pass verify_all()");
     }
 
     #[test]
@@ -3468,7 +3556,8 @@ mod tests {
         ];
 
         for layer in stem_layers {
-            let slice = organ_solid.tissue_layer_slice(layer)
+            let slice = organ_solid
+                .tissue_layer_slice(layer)
                 .unwrap_or_else(|| panic!("Missing stem layer: {:?}", layer));
             assert!(slice.vertex_count > 0, "Empty vertex count for {:?}", layer);
             assert!(slice.index_count > 0, "Empty index count for {:?}", layer);
@@ -3484,8 +3573,12 @@ mod tests {
             "Peeled stem wedge must have displaced vertices"
         );
 
-        organ_solid.verify_all().expect("Solid Scale 2 container must pass verify_all()");
-        organ_peeled.verify_all().expect("Peeled Scale 2 container must pass verify_all()");
+        organ_solid
+            .verify_all()
+            .expect("Solid Scale 2 container must pass verify_all()");
+        organ_peeled
+            .verify_all()
+            .expect("Peeled Scale 2 container must pass verify_all()");
     }
 
     #[test]
@@ -3513,13 +3606,16 @@ mod tests {
         ];
 
         for layer in floral_layers {
-            let slice = organ.tissue_layer_slice(layer)
+            let slice = organ
+                .tissue_layer_slice(layer)
                 .unwrap_or_else(|| panic!("Missing floral layer: {:?}", layer));
             assert!(slice.vertex_count > 0, "Empty vertex count for {:?}", layer);
             assert!(slice.index_count > 0, "Empty index count for {:?}", layer);
         }
 
-        organ.verify_all().expect("Scale 3 container must pass verify_all()");
+        organ
+            .verify_all()
+            .expect("Scale 3 container must pass verify_all()");
     }
 
     #[test]
@@ -3546,21 +3642,29 @@ mod tests {
         ];
 
         for layer in foliar_layers {
-            let slice = organ.tissue_layer_slice(layer)
+            let slice = organ
+                .tissue_layer_slice(layer)
                 .unwrap_or_else(|| panic!("Missing foliar layer: {:?}", layer));
             assert!(slice.vertex_count > 0, "Empty vertex count for {:?}", layer);
             assert!(slice.index_count > 0, "Empty index count for {:?}", layer);
         }
 
-        organ.verify_all().expect("Scale 4 container must pass verify_all()");
+        organ
+            .verify_all()
+            .expect("Scale 4 container must pass verify_all()");
     }
 
     #[test]
     fn test_all_23_tissue_layers_covered_with_non_empty_slices() {
-        let organ1 = build_scale1_whole_organism_10d("corymbia-aparrerinja", DevelopmentalStage::Mature).unwrap();
+        let organ1 =
+            build_scale1_whole_organism_10d("corymbia-aparrerinja", DevelopmentalStage::Mature)
+                .unwrap();
         let organ2 = build_scale2_stem_bark_wedge_10d("corymbia-aparrerinja", 0.0).unwrap();
-        let organ3 = build_scale3_floral_and_gumnut_dissection_10d("corymbia-aparrerinja", 0.5, 0.5).unwrap();
-        let organ4 = build_scale4_leaf_venation_and_histology_10d("corymbia-aparrerinja", 0.5).unwrap();
+        let organ3 =
+            build_scale3_floral_and_gumnut_dissection_10d("corymbia-aparrerinja", 0.5, 0.5)
+                .unwrap();
+        let organ4 =
+            build_scale4_leaf_venation_and_histology_10d("corymbia-aparrerinja", 0.5).unwrap();
 
         let all_layers = [
             HistologicalTissueLayer::OuterRhytidome,
@@ -3591,7 +3695,8 @@ mod tests {
         assert_eq!(all_layers.len(), 23);
 
         for layer in all_layers {
-            let found = organ1.tissue_layer_slice(layer)
+            let found = organ1
+                .tissue_layer_slice(layer)
                 .or_else(|| organ2.tissue_layer_slice(layer))
                 .or_else(|| organ3.tissue_layer_slice(layer))
                 .or_else(|| organ4.tissue_layer_slice(layer));
@@ -3602,9 +3707,21 @@ mod tests {
                 layer
             );
             let slice = found.unwrap();
-            assert!(slice.vertex_count > 0, "Layer {:?} vertex count must be > 0", layer);
-            assert!(slice.index_count > 0, "Layer {:?} index count must be > 0", layer);
-            assert!(!slice.plant_ontology_id.is_empty(), "Layer {:?} must have a PO ID", layer);
+            assert!(
+                slice.vertex_count > 0,
+                "Layer {:?} vertex count must be > 0",
+                layer
+            );
+            assert!(
+                slice.index_count > 0,
+                "Layer {:?} index count must be > 0",
+                layer
+            );
+            assert!(
+                !slice.plant_ontology_id.is_empty(),
+                "Layer {:?} must have a PO ID",
+                layer
+            );
         }
     }
 
@@ -3613,7 +3730,10 @@ mod tests {
         let profile = LeafEconomicsProfile::eucalyptus_sclerophyll();
         let skeleton = LeafVascularSkeleton::new(profile, 1.25);
 
-        assert!(skeleton.edge_count > 0, "Vascular skeleton must contain edges");
+        assert!(
+            skeleton.edge_count > 0,
+            "Vascular skeleton must contain edges"
+        );
         for i in 0..skeleton.edge_count {
             let edge = skeleton.edges[i];
             assert!(

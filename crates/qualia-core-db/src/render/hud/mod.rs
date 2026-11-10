@@ -769,6 +769,9 @@ mod tests {
 
         compute_hud_flex_layout_all(&mut items, 800.0, 600.0);
         assert_eq!(items[0].y, 0.0);
-        assert!(items[1].y > 0.0, "second child in column should have y offset");
+        assert!(
+            items[1].y > 0.0,
+            "second child in column should have y offset"
+        );
     }
 }

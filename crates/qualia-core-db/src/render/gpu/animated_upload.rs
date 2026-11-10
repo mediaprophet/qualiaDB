@@ -30,17 +30,14 @@ pub fn upload_rig_motor_palette_gpu(
     if end_joint > max_total_joints {
         return false;
     }
-    if palette[..count]
-        .iter()
-        .any(|m| {
-            m.current_r
-                .iter()
-                .chain(m.current_d.iter())
-                .chain(m.prev_r.iter())
-                .chain(m.prev_d.iter())
-                .any(|v| !v.is_finite())
-        })
-    {
+    if palette[..count].iter().any(|m| {
+        m.current_r
+            .iter()
+            .chain(m.current_d.iter())
+            .chain(m.prev_r.iter())
+            .chain(m.prev_d.iter())
+            .any(|v| !v.is_finite())
+    }) {
         return false;
     }
     let byte_offset = (first_joint * core::mem::size_of::<GpuJointMotorPair>()) as u64;
@@ -91,13 +88,18 @@ impl PortalGpu {
         {
             return false;
         }
-        if mesh.normal_workspace.validate_position_span(mesh.cpu_positions.len(), first, end).is_err() {
+        if mesh
+            .normal_workspace
+            .validate_position_span(mesh.cpu_positions.len(), first, end)
+            .is_err()
+        {
             return false;
         }
         mesh.cpu_positions[first..end].copy_from_slice(positions);
         // Maintain the legacy edit workspace so later topology-based edits
         // start from the actual posed geometry, without replacing skin normals.
-        mesh.normal_workspace.update_positions_prevalidated(&mesh.cpu_positions, first, end);
+        mesh.normal_workspace
+            .update_positions_prevalidated(&mesh.cpu_positions, first, end);
         self.queue.write_buffer(
             &mesh.vertex_buf,
             (first * 12) as u64,
@@ -129,7 +131,7 @@ impl PortalGpu {
         // Any generic writer retires external source identity. The source-bound
         // owner restores its already-preflighted next state after this commit.
         self.pick_readback.invalidate(true);
-        self.pick_semantic_result=None;
+        self.pick_semantic_result = None;
         self.source_motion.retire();
         true
     }

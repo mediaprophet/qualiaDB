@@ -11,10 +11,10 @@
 //! live adapter never presents the mesh. The wasm path uses
 //! `queue.write_buffer` instead, which does not map at creation.
 
+use etalon::Buffer;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc;
 use std::sync::Arc;
-use etalon::Buffer;
 
 /// A slot in the native uniform belt ring.
 #[cfg(not(target_arch = "wasm32"))]

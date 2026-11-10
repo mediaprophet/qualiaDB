@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 pub(super) use etalon_render::texture_layout::TextureIdentity;
 #[cfg(test)]
-use etalon_render::texture_layout::{mip_chain_layout,mip_semantic_matches,validate_upload};
+use etalon_render::texture_layout::{mip_chain_layout, mip_semantic_matches, validate_upload};
 pub use etalon_render::texture_layout::{TextureColorSpace, TextureUploadError};
 
 pub(super) type ResidentTexture =

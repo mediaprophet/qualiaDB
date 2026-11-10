@@ -55,21 +55,21 @@ pub const JOINT_TAIL_TIP: usize = 17;
 /// Canonical topological parent array for the 18-joint fauna rig (`parent < 0` for root).
 pub const FAUNA_PARENT_INDICES: [i32; FAUNA_MAX_JOINTS] = [
     -1, // 0: PelvisRoot
-     0, // 1: Spine
-     1, // 2: Chest
-     2, // 3: Neck
-     3, // 4: Head
-     4, // 5: Jaw
-     0, // 6: LeftHip
-     6, // 7: LeftKnee
-     7, // 8: LeftAnkle
-     0, // 9: RightHip
-     9, // 10: RightKnee
+    0,  // 1: Spine
+    1,  // 2: Chest
+    2,  // 3: Neck
+    3,  // 4: Head
+    4,  // 5: Jaw
+    0,  // 6: LeftHip
+    6,  // 7: LeftKnee
+    7,  // 8: LeftAnkle
+    0,  // 9: RightHip
+    9,  // 10: RightKnee
     10, // 11: RightAnkle
-     2, // 12: LeftShoulder (Chest)
+    2,  // 12: LeftShoulder (Chest)
     12, // 13: LeftElbow
     13, // 14: LeftWristWing
-     0, // 15: TailBase (Pelvis)
+    0,  // 15: TailBase (Pelvis)
     15, // 16: TailMid
     16, // 17: TailTip
 ];
@@ -149,18 +149,29 @@ impl FaunaBiomechanicalArchetype {
             "phascolarctid_arboreal" | "koala" => Some(Self::PhascolarctidArboreal),
             "petaurid_glider" | "glider_possum" => Some(Self::PetauridGlider),
             "dasyurid_predator" | "quoll_dasyurid" => Some(Self::DasyuridPredator),
-            "pteropodid_chiroptera" | "flying_fox" | "chiroptera" => Some(Self::PteropodidChiroptera),
+            "pteropodid_chiroptera" | "flying_fox" | "chiroptera" => {
+                Some(Self::PteropodidChiroptera)
+            }
             "marine_pinniped_cetacean" | "pinniped_cetacean" | "cetacean" | "pinniped" => {
                 Some(Self::MarinePinnipedCetacean)
             }
             "ratite_bipedal" | "ratite" => Some(Self::RatiteBipedal),
             "raptor_soaring" | "raptor" => Some(Self::RaptorSoaring),
-            "passerine_psittacine" | "songbird" | "lyrebird" | "cockatoo_parrot"
+            "passerine_psittacine"
+            | "songbird"
+            | "lyrebird"
+            | "cockatoo_parrot"
             | "kookaburra_kingfisher" => Some(Self::PasserinePsittacine),
             "squamate_sprawling" | "goanna_skink" | "crocodilian" => Some(Self::SquamateSprawling),
             "serpentine_undulatory" | "snake" => Some(Self::SerpentineUndulatory),
-            "monotreme_teleost_amphibian" | "frog" | "fish" | "turtle" | "crayfish"
-            | "moth_insect" | "platypus" | "echidna" => Some(Self::MonotremeTeleostAmphibian),
+            "monotreme_teleost_amphibian"
+            | "frog"
+            | "fish"
+            | "turtle"
+            | "crayfish"
+            | "moth_insect"
+            | "platypus"
+            | "echidna" => Some(Self::MonotremeTeleostAmphibian),
             _ => None,
         }
     }
@@ -174,7 +185,9 @@ impl FaunaBiomechanicalArchetype {
             "Aves" => {
                 if gait == "soaring_flight" {
                     Self::RaptorSoaring
-                } else if archetype == "ratite" || gait == "bipedal_walk" && archetype.contains("casuarius") {
+                } else if archetype == "ratite"
+                    || gait == "bipedal_walk" && archetype.contains("casuarius")
+                {
                     Self::RatiteBipedal
                 } else {
                     Self::PasserinePsittacine
@@ -399,10 +412,14 @@ impl FaunaSkeletalRig10d {
 
         // CLIP 1: Walk / Stalk (subtle alternating stride, spine yaw, tail counterbalance)
         let mut walk_pose = rest_pose;
-        let walk_hip_rot = Motor::from_rotation_translation([0.98, 0.18, 0.0, 0.0], [0.0, 0.0, 0.0]);
-        let walk_hip_rev = Motor::from_rotation_translation([0.98, -0.18, 0.0, 0.0], [0.0, 0.0, 0.0]);
-        let walk_spine_yaw = Motor::from_rotation_translation([0.99, 0.0, 0.08, 0.0], [0.0, 0.0, 0.0]);
-        let walk_tail_sway = Motor::from_rotation_translation([0.99, 0.0, -0.12, 0.0], [0.0, 0.0, 0.0]);
+        let walk_hip_rot =
+            Motor::from_rotation_translation([0.98, 0.18, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let walk_hip_rev =
+            Motor::from_rotation_translation([0.98, -0.18, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let walk_spine_yaw =
+            Motor::from_rotation_translation([0.99, 0.0, 0.08, 0.0], [0.0, 0.0, 0.0]);
+        let walk_tail_sway =
+            Motor::from_rotation_translation([0.99, 0.0, -0.12, 0.0], [0.0, 0.0, 0.0]);
 
         walk_pose[JOINT_LEFT_HIP] = walk_pose[JOINT_LEFT_HIP].mul(&walk_hip_rot).normalize();
         walk_pose[JOINT_RIGHT_HIP] = walk_pose[JOINT_RIGHT_HIP].mul(&walk_hip_rev).normalize();
@@ -412,37 +429,60 @@ impl FaunaSkeletalRig10d {
 
         // CLIP 2: Cruise / Trot / Glide (deeper stride or wing expansion)
         let mut cruise_pose = rest_pose;
-        let cruise_hip_rot = Motor::from_rotation_translation([0.94, 0.34, 0.0, 0.0], [0.0, 0.0, 0.0]);
-        let cruise_hip_rev = Motor::from_rotation_translation([0.94, -0.34, 0.0, 0.0], [0.0, 0.0, 0.0]);
-        let cruise_chest_pitch = Motor::from_rotation_translation([0.99, -0.10, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let cruise_hip_rot =
+            Motor::from_rotation_translation([0.94, 0.34, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let cruise_hip_rev =
+            Motor::from_rotation_translation([0.94, -0.34, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let cruise_chest_pitch =
+            Motor::from_rotation_translation([0.99, -0.10, 0.0, 0.0], [0.0, 0.0, 0.0]);
 
         cruise_pose[JOINT_LEFT_HIP] = cruise_pose[JOINT_LEFT_HIP].mul(&cruise_hip_rot).normalize();
-        cruise_pose[JOINT_RIGHT_HIP] = cruise_pose[JOINT_RIGHT_HIP].mul(&cruise_hip_rev).normalize();
-        cruise_pose[JOINT_CHEST] = cruise_pose[JOINT_CHEST].mul(&cruise_chest_pitch).normalize();
+        cruise_pose[JOINT_RIGHT_HIP] = cruise_pose[JOINT_RIGHT_HIP]
+            .mul(&cruise_hip_rev)
+            .normalize();
+        cruise_pose[JOINT_CHEST] = cruise_pose[JOINT_CHEST]
+            .mul(&cruise_chest_pitch)
+            .normalize();
         clip_poses[CLIP_CRUISE_TROT_GLIDE] = cruise_pose;
 
         // CLIP 3: Sprint / Saltatorial Hop / Dive (synchronous limb flex or rapid propulsion)
         let mut sprint_pose = rest_pose;
-        let sprint_hip_rot = Motor::from_rotation_translation([0.88, 0.48, 0.0, 0.0], [0.0, 0.0, 0.0]);
-        let sprint_knee_rot = Motor::from_rotation_translation([0.92, -0.38, 0.0, 0.0], [0.0, 0.0, 0.0]);
-        let sprint_spine_pitch = Motor::from_rotation_translation([0.97, 0.22, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let sprint_hip_rot =
+            Motor::from_rotation_translation([0.88, 0.48, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let sprint_knee_rot =
+            Motor::from_rotation_translation([0.92, -0.38, 0.0, 0.0], [0.0, 0.0, 0.0]);
+        let sprint_spine_pitch =
+            Motor::from_rotation_translation([0.97, 0.22, 0.0, 0.0], [0.0, 0.0, 0.0]);
 
         sprint_pose[JOINT_LEFT_HIP] = sprint_pose[JOINT_LEFT_HIP].mul(&sprint_hip_rot).normalize();
-        sprint_pose[JOINT_LEFT_KNEE] = sprint_pose[JOINT_LEFT_KNEE].mul(&sprint_knee_rot).normalize();
-        sprint_pose[JOINT_RIGHT_HIP] = sprint_pose[JOINT_RIGHT_HIP].mul(&sprint_hip_rot).normalize();
-        sprint_pose[JOINT_RIGHT_KNEE] = sprint_pose[JOINT_RIGHT_KNEE].mul(&sprint_knee_rot).normalize();
-        sprint_pose[JOINT_SPINE] = sprint_pose[JOINT_SPINE].mul(&sprint_spine_pitch).normalize();
+        sprint_pose[JOINT_LEFT_KNEE] = sprint_pose[JOINT_LEFT_KNEE]
+            .mul(&sprint_knee_rot)
+            .normalize();
+        sprint_pose[JOINT_RIGHT_HIP] = sprint_pose[JOINT_RIGHT_HIP]
+            .mul(&sprint_hip_rot)
+            .normalize();
+        sprint_pose[JOINT_RIGHT_KNEE] = sprint_pose[JOINT_RIGHT_KNEE]
+            .mul(&sprint_knee_rot)
+            .normalize();
+        sprint_pose[JOINT_SPINE] = sprint_pose[JOINT_SPINE]
+            .mul(&sprint_spine_pitch)
+            .normalize();
         clip_poses[CLIP_SPRINT_HOP_DIVE] = sprint_pose;
 
         // CLIP 4: Turn (asymmetric yaw on spine, neck and tail)
         let mut turn_pose = rest_pose;
-        let turn_spine_yaw = Motor::from_rotation_translation([0.95, 0.0, 0.31, 0.0], [0.0, 0.0, 0.0]);
-        let turn_neck_yaw = Motor::from_rotation_translation([0.93, 0.0, 0.36, 0.0], [0.0, 0.0, 0.0]);
-        let turn_tail_counter = Motor::from_rotation_translation([0.94, 0.0, -0.34, 0.0], [0.0, 0.0, 0.0]);
+        let turn_spine_yaw =
+            Motor::from_rotation_translation([0.95, 0.0, 0.31, 0.0], [0.0, 0.0, 0.0]);
+        let turn_neck_yaw =
+            Motor::from_rotation_translation([0.93, 0.0, 0.36, 0.0], [0.0, 0.0, 0.0]);
+        let turn_tail_counter =
+            Motor::from_rotation_translation([0.94, 0.0, -0.34, 0.0], [0.0, 0.0, 0.0]);
 
         turn_pose[JOINT_SPINE] = turn_pose[JOINT_SPINE].mul(&turn_spine_yaw).normalize();
         turn_pose[JOINT_NECK] = turn_pose[JOINT_NECK].mul(&turn_neck_yaw).normalize();
-        turn_pose[JOINT_TAIL_MID] = turn_pose[JOINT_TAIL_MID].mul(&turn_tail_counter).normalize();
+        turn_pose[JOINT_TAIL_MID] = turn_pose[JOINT_TAIL_MID]
+            .mul(&turn_tail_counter)
+            .normalize();
         clip_poses[CLIP_TURN] = turn_pose;
 
         // 4. Build 2D Delaunay Blend Space
@@ -680,13 +720,11 @@ impl FaunaSkeletalRig10d {
         amplitude_rad: f32,
     ) {
         const RESPIRATION_HZ: f32 = 0.35;
-        let angle = (amplitude_rad
-            * (std::f32::consts::TAU * RESPIRATION_HZ * time_sec).sin()) as f64;
+        let angle =
+            (amplitude_rad * (std::f32::consts::TAU * RESPIRATION_HZ * time_sec).sin()) as f64;
         let half = angle * 0.5;
-        let pitch_rotor = Motor::from_rotation_translation(
-            [half.cos(), half.sin(), 0.0, 0.0],
-            [0.0, 0.0, 0.0],
-        );
+        let pitch_rotor =
+            Motor::from_rotation_translation([half.cos(), half.sin(), 0.0, 0.0], [0.0, 0.0, 0.0]);
 
         if JOINT_CHEST < pose.len() {
             pose[JOINT_CHEST] = pose[JOINT_CHEST].mul(&pitch_rotor).normalize();
@@ -746,7 +784,11 @@ impl FaunaSkeletalRig10d {
         // Left Hindlimb
         let (_, _p_l_hip) = world_motors[JOINT_LEFT_HIP].to_rotation_translation();
         let (_, p_l_knee) = world_motors[JOINT_LEFT_KNEE].to_rotation_translation();
-        let left_pole = [p_l_knee[0] as f32, p_l_knee[1] as f32, (p_l_knee[2] + 0.6) as f32];
+        let left_pole = [
+            p_l_knee[0] as f32,
+            p_l_knee[1] as f32,
+            (p_l_knee[2] + 0.6) as f32,
+        ];
 
         let left_res = solve_two_bone_motor_ik_zero_heap(
             world_motors[JOINT_LEFT_HIP],
@@ -772,7 +814,11 @@ impl FaunaSkeletalRig10d {
         // Right Hindlimb
         let (_, _p_r_hip) = world_motors[JOINT_RIGHT_HIP].to_rotation_translation();
         let (_, p_r_knee) = world_motors[JOINT_RIGHT_KNEE].to_rotation_translation();
-        let right_pole = [p_r_knee[0] as f32, p_r_knee[1] as f32, (p_r_knee[2] + 0.6) as f32];
+        let right_pole = [
+            p_r_knee[0] as f32,
+            p_r_knee[1] as f32,
+            (p_r_knee[2] + 0.6) as f32,
+        ];
 
         let right_res = solve_two_bone_motor_ik_zero_heap(
             world_motors[JOINT_RIGHT_HIP],
@@ -790,7 +836,8 @@ impl FaunaSkeletalRig10d {
         world_motors[JOINT_RIGHT_KNEE] = right_res.world_motors[1];
         world_motors[JOINT_RIGHT_ANKLE] = right_res.world_motors[2];
 
-        local_pose[JOINT_RIGHT_HIP] = world_to_local_motor(&p_pelvis, &world_motors[JOINT_RIGHT_HIP]);
+        local_pose[JOINT_RIGHT_HIP] =
+            world_to_local_motor(&p_pelvis, &world_motors[JOINT_RIGHT_HIP]);
         local_pose[JOINT_RIGHT_KNEE] = right_res.local_motors[1];
         local_pose[JOINT_RIGHT_ANKLE] = right_res.local_motors[2];
 
@@ -1056,7 +1103,10 @@ mod tests {
                 }
             }
         }
-        assert!(saw_signals, "Locomotion ABSM layer must emit footstep signals");
+        assert!(
+            saw_signals,
+            "Locomotion ABSM layer must emit footstep signals"
+        );
     }
 
     #[test]
@@ -1077,7 +1127,10 @@ mod tests {
         // Constrained FABRIK tail adaptation (within 30-degree cone limit)
         let tail_target = [0.0f32, 0.72, -0.82];
         let tail_err = rig.solve_tail_fabrik_ik(&mut pose, tail_target).unwrap();
-        assert!(tail_err < 0.15, "Tail FABRIK error must converge: {tail_err}");
+        assert!(
+            tail_err < 0.15,
+            "Tail FABRIK error must converge: {tail_err}"
+        );
     }
 
     #[test]
@@ -1089,8 +1142,7 @@ mod tests {
         rig.evaluate_gpu_palette(&pose);
 
         // Perturb root translation by +0.10 m in Z for frame 2
-        pose[JOINT_PELVIS_ROOT] =
-            Motor::from_translation(0.0, 0.25, 0.10);
+        pose[JOINT_PELVIS_ROOT] = Motor::from_translation(0.0, 0.25, 0.10);
         rig.evaluate_gpu_palette(&pose);
 
         let test_vertex = [0.0f32, 0.25, 0.0];
@@ -1135,7 +1187,14 @@ mod tests {
         let mut out_pos = [[0.0f32; 3]];
         let mut out_norm = [[0.0f32; 3]];
         let n = rig
-            .evaluate_morph_deltas(&base_pos, &base_norm, &deltas, &weights, &mut out_pos, &mut out_norm)
+            .evaluate_morph_deltas(
+                &base_pos,
+                &base_norm,
+                &deltas,
+                &weights,
+                &mut out_pos,
+                &mut out_norm,
+            )
             .unwrap();
         assert_eq!(n, 1);
         // Displaced by 0.3 * 0.1 = 0.03 in Y

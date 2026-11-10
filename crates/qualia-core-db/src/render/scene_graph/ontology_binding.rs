@@ -153,7 +153,9 @@ pub fn interpolate_ontogenetic_scales(
 
     let p = growth_progress_01.clamp(0.0, 1.0);
     let first_age = keyframes[0].age_days;
-    let last_age = keyframes[keyframes.len() - 1].age_days.max(first_age + 1e-4);
+    let last_age = keyframes[keyframes.len() - 1]
+        .age_days
+        .max(first_age + 1e-4);
     let target_age = first_age + p * (last_age - first_age);
 
     let mut idx = 0usize;
@@ -176,8 +178,10 @@ pub fn interpolate_ontogenetic_scales(
     let span = (k1.age_days - k0.age_days).max(1e-5);
     let t = ((target_age - k0.age_days) / span).clamp(0.0, 1.0);
 
-    let crown = k0.allometric_crown_scale + t * (k1.allometric_crown_scale - k0.allometric_crown_scale);
-    let trunk = k0.allometric_trunk_scale + t * (k1.allometric_trunk_scale - k0.allometric_trunk_scale);
+    let crown =
+        k0.allometric_crown_scale + t * (k1.allometric_crown_scale - k0.allometric_crown_scale);
+    let trunk =
+        k0.allometric_trunk_scale + t * (k1.allometric_trunk_scale - k0.allometric_trunk_scale);
     let lai = k0.lai_multiplier + t * (k1.lai_multiplier - k0.lai_multiplier);
     let mesh_hash = if t < 0.5 {
         k0.mesh_asset_hash
@@ -285,10 +289,10 @@ pub fn dispatch_affordance(
             }
 
             // 3. Apply metabolic state transitions
-            state.energy_permill = ((state.energy_permill as i32) + (rec.energy_delta as i32))
-                .clamp(0, 1000) as u16;
-            state.damage_permill = ((state.damage_permill as i32) + (rec.damage_delta as i32))
-                .clamp(0, 1000) as u16;
+            state.energy_permill =
+                ((state.energy_permill as i32) + (rec.energy_delta as i32)).clamp(0, 1000) as u16;
+            state.damage_permill =
+                ((state.damage_permill as i32) + (rec.damage_delta as i32)).clamp(0, 1000) as u16;
             state.hydration_permill = ((state.hydration_permill as i32)
                 + (rec.hydration_delta as i32))
                 .clamp(0, 1000) as u16;
@@ -418,8 +422,7 @@ mod tests {
         assert!(dispatch_affordance(&mut state, &affordances, 0xCAFE, 0b0001, true).is_none());
 
         // Permitted when both deontic and capability gates pass.
-        let outcome =
-            dispatch_affordance(&mut state, &affordances, 0xCAFE, 0b0111, true).unwrap();
+        let outcome = dispatch_affordance(&mut state, &affordances, 0xCAFE, 0b0111, true).unwrap();
         assert_eq!(outcome.action_id, 0xCAFE);
         assert_eq!(outcome.emitted_topic_hash, 0xBEEF);
         assert_eq!(outcome.animation_clip_id, 14);

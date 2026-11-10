@@ -28,16 +28,28 @@ fn frame(binding: SourceFrameBinding, sequence: u64, tick: u64) -> SourceMeshFra
 #[test]
 fn zero_initial_epoch_refuses_without_consuming_cold_binding() {
     let mut state = SourceFrameState::default();
-    assert_eq!(state.bind(SourceFrameBinding { transport_epoch: 0, ..binding() }),
-        Err(SourceFrameError::Input));
+    assert_eq!(
+        state.bind(SourceFrameBinding {
+            transport_epoch: 0,
+            ..binding()
+        }),
+        Err(SourceFrameError::Input)
+    );
     assert_eq!(state.binding(), None);
     assert!(!state.externally_controlled());
-    let current = SourceFrameBinding { transport_epoch: 23, ..binding() };
+    let current = SourceFrameBinding {
+        transport_epoch: 23,
+        ..binding()
+    };
     state.bind(current).unwrap();
     assert_eq!(state.binding(), Some(current));
-    assert!(state.prepare(&frame(current, 1, 0), current.mesh_generation).is_ok());
-    assert!(matches!(state.prepare(&frame(binding(), 99, 0), current.mesh_generation),
-        Err(SourceFrameError::Stale)));
+    assert!(state
+        .prepare(&frame(current, 1, 0), current.mesh_generation)
+        .is_ok());
+    assert!(matches!(
+        state.prepare(&frame(binding(), 99, 0), current.mesh_generation),
+        Err(SourceFrameError::Stale)
+    ));
 }
 
 #[test]

@@ -144,6 +144,6 @@ impl PortalGpu {
         // Pointer coordinates not submitted yet may target the new pose. Old
         // readbacks/results cannot claim to describe it.
         self.pick_readback.invalidate(retain_unsubmitted_pointer);
-        self.pick_semantic_result=None;
+        self.pick_semantic_result = None;
     }
 }

@@ -104,7 +104,9 @@ impl QualiaPortal {
         }
         // A source-bound native MotionPlayer supplies complete posed streams.
         // It must not be overwritten by this generic SKL1 playback owner.
-        if self.scene_animation.external_controlled { return Ok(()); }
+        if self.scene_animation.external_controlled {
+            return Ok(());
+        }
         let dt = (dt_ms as f64 * 0.001).min(1.0);
         let empty = ActivityCue {
             token: 1,

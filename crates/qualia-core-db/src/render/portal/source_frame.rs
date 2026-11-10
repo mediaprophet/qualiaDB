@@ -47,8 +47,13 @@ impl QualiaPortal {
         }
         self.source_motion_backend()?;
         let gpu = self.gpu.as_mut().ok_or(SourceFrameError::Backend)?;
-        let binding =
-            gpu.bind_source_motion_model_at_epoch(model, source_sha256, source_generation, transport_epoch, limits)?;
+        let binding = gpu.bind_source_motion_model_at_epoch(
+            model,
+            source_sha256,
+            source_generation,
+            transport_epoch,
+            limits,
+        )?;
         // Exactly one authoritative source player now owns pose. Retired handles
         // do not resume the old generic player; a new scene installation resets it.
         self.scene_animation.external_controlled = true;
@@ -109,7 +114,10 @@ impl QualiaPortal {
         // GPU pose commit retains an unsubmitted pointer for the next posed
         // mesh pass. Keep the portal polling lease consistent with that queue,
         // while never retaining the previous pose's selected result.
-        self.pending_gpu_pick = self.gpu.as_ref().is_some_and(|gpu| gpu.pick_readback_pending());
+        self.pending_gpu_pick = self
+            .gpu
+            .as_ref()
+            .is_some_and(|gpu| gpu.pick_readback_pending());
         Ok(receipt)
     }
     fn clear_source_pose_selection(&mut self) {
