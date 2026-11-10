@@ -222,7 +222,9 @@ pub use holographic_scene::{
 
 pub mod p64_cartridge;
 pub use p64_cartridge::{
-    encode_trigger_rules_cbor_ld_into, load_p64_slot_f32_seed_into, mount_p64_cartridge_onto_engine,
+    encode_trigger_rules_cbor_ld_into, load_p64_slot_f32_seed_into,
     pack_p64_extension_cartridge_into, unpack_p64_extension_cartridge_into, P64ExtensionHeader,
     P64_EXT_CARTRIDGE_MAGIC,
 };
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub use p64_cartridge::mount_p64_cartridge_onto_engine;

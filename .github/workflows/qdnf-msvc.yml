@@ -91,7 +91,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends libssl-dev pkg-config
 
       # Same QDNF slice as windows-msvc. Documented Linux native runner; no vendor/, so no --offline.
+      # HostAdmission plus Gemma 4 PLE TLS can exceed the default 8 MiB Linux stack.
       - name: QDNF slice (qualia-core-db)
+        env:
+          RUST_MIN_STACK: "33554432"
         run: |
           cargo test -p qualia-core-db --lib -- \
             --test-threads=1 \

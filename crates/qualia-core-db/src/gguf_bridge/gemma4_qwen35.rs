@@ -8,9 +8,19 @@ use super::*;
 const MAX_G4_PLE_TOTAL: usize = 64 * 256;
 const MAX_G4_PLE_SLOTS: usize = 64;
 
+type Gemma4PleRing = Vec<[f32; MAX_G4_PLE_TOTAL]>;
+
 std::thread_local! {
-    static GEMMA4_PLE_RING: core::cell::RefCell<[[f32; MAX_G4_PLE_TOTAL]; MAX_G4_PLE_SLOTS]> =
-        const { core::cell::RefCell::new([[0.0f32; MAX_G4_PLE_TOTAL]; MAX_G4_PLE_SLOTS]) };
+    static GEMMA4_PLE_RING: core::cell::RefCell<Option<Gemma4PleRing>> =
+        const { core::cell::RefCell::new(None) };
+}
+
+fn with_ple_ring<R>(f: impl FnOnce(&mut [[f32; MAX_G4_PLE_TOTAL]]) -> R) -> R {
+    GEMMA4_PLE_RING.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        let ring = slot.get_or_insert_with(|| vec![[0.0f32; MAX_G4_PLE_TOTAL]; MAX_G4_PLE_SLOTS]);
+        f(ring)
+    })
 }
 
 #[inline]
@@ -466,9 +476,8 @@ impl QTensorEngine {
                             proj_ple[i] = (proj_ple[i] + tok_ple[i]) * inv_sqrt2;
                         }
                     }
-                    GEMMA4_PLE_RING.with(|cell| {
-                        cell.borrow_mut()[slot_ring][..total_ple]
-                            .copy_from_slice(&proj_ple[..total_ple]);
+                    with_ple_ring(|ring| {
+                        ring[slot_ring][..total_ple].copy_from_slice(&proj_ple[..total_ple]);
                     });
                 }
             }
@@ -1137,8 +1146,7 @@ impl QTensorEngine {
             ) {
                 return false;
             }
-            GEMMA4_PLE_RING.with(|cell| {
-                let ring = cell.borrow();
+            with_ple_ring(|ring| {
                 let s = layer as usize * ple_dim;
                 let tok_ple = &ring[slot_ring][s..s + ple_dim];
                 for i in 0..ple_dim {

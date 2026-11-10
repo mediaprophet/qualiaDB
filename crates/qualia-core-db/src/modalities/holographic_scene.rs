@@ -8,7 +8,7 @@
 //!    propagation delay, Allen Interval sequencing, and Defeater (`DEFEATER_BIT`) overrides
 //! 5. Multi-vendor `.p64` neural extension slot selection with Tier-0 universal fallback
 
-use crate::deontic_logic::DEFEATER_BIT;
+use crate::frame_layout::DEFEATER_BIT;
 use crate::modalities::manifold::ManifoldCoordinate10D;
 use crate::modalities::spatio_temporal::TemporalOp;
 use crate::{q_hash, NQuin};

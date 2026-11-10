@@ -9,9 +9,11 @@
 //!   `Gemma 4` PLE tables, or LoRA deltas.
 
 use crate::modalities::holographic_scene::{
-    decode_trigger_rules_cbor_ld_into, select_p64_vendor_slot, P64ExtensionSlot,
-    PredicateTriggerRule, SceneGraphError, CBOR_LD_SCENE_MAGIC,
+    decode_trigger_rules_cbor_ld_into, P64ExtensionSlot, PredicateTriggerRule, SceneGraphError,
+    CBOR_LD_SCENE_MAGIC,
 };
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+use crate::modalities::holographic_scene::select_p64_vendor_slot;
 use crate::NQuin;
 
 pub const P64_EXT_CARTRIDGE_MAGIC: [u8; 8] = *b"P64EXT01";
@@ -272,6 +274,7 @@ pub fn load_p64_slot_f32_seed_into(
 /// recurrent-state seed slot exists for `(preferred_model_id, architecture_id)`.
 /// Even when no Tier-1 vendor slot matches (e.g., running on a cloud or different vendor LLM),
 /// the Tier-0 `PredicateTriggerRule`s and `NQuin` guardrails are unpacked and returned.
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 pub fn mount_p64_cartridge_onto_engine(
     cartridge_bytes: &[u8],
     preferred_model_id: &str,
@@ -300,7 +303,7 @@ pub fn mount_p64_cartridge_onto_engine(
     Ok((header, false))
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(not(target_arch = "wasm32"), feature = "gpu-runtime")))]
 mod tests {
     use super::*;
     use crate::modalities::holographic_scene::pack_preset_defeater_quin;
