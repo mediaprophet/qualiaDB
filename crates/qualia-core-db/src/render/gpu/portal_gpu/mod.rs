@@ -1,6 +1,7 @@
 //! Decomposed portal GPU lifecycle, pass dispatch, and execution submodules.
 
 pub(super) mod constructors;
+pub(super) mod holograph;
 pub(super) mod init;
 pub(super) mod lighting_passes;
 pub(super) mod picking;

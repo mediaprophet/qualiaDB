@@ -1,9 +1,9 @@
 //! Frame rendering execution, temporal resolve handoff, and presentation for PortalGpu.
 
 use super::super::{
-    AmbientUniforms, PortalGpu, TemporalProducerViews, ambient_draw_instances,
-    create_picking_texture, output_pass, portal_bloom_enabled, reserve_view_resources,
-    run_bloom_passes, temporal_resolve_gpu,
+    ambient_draw_instances, create_picking_texture, output_pass, portal_bloom_enabled,
+    reserve_view_resources, run_bloom_passes, temporal_resolve_gpu, AmbientUniforms, PortalGpu,
+    TemporalProducerViews,
 };
 use crate::render::telemetry::SystemTelemetry;
 
@@ -148,7 +148,7 @@ impl PortalGpu {
                 let (_, _, frame_target_reservation, _) = reserve_view_resources(fw, fh, false)?;
                 let temporal_was_enabled = self.temporal_resolve.take().is_some();
                 self.pick_readback.invalidate(false);
-                self.pick_semantic_result=None;
+                self.pick_semantic_result = None;
                 self.scene_depth.replace(&self.device, fw, fh);
                 if temporal_was_enabled {
                     self.temporal_resolve = temporal_resolve_gpu::TemporalResolveGpu::try_new(
@@ -205,11 +205,13 @@ impl PortalGpu {
         self.record_picking_pass(&mut encoder);
 
         let use_bloom = self.hdr_exposure_available();
-        let use_hdr_scene = use_bloom
-            || self
-                .output_chain
-                .as_ref()
-                .is_some_and(output_pass::OutputChain::uses_hdr_scene);
+        let holograph_only = self.holographic.is_some() && self.mesh.is_none();
+        let use_hdr_scene = !holograph_only
+            && (use_bloom
+                || self
+                    .output_chain
+                    .as_ref()
+                    .is_some_and(output_pass::OutputChain::uses_hdr_scene));
         let temporal_scene_view = temporal
             .as_ref()
             .and_then(|_| self.temporal_scene_color_view().cloned());
@@ -329,6 +331,7 @@ impl PortalGpu {
                         true,
                     );
                 }
+                self.record_holographic(&mut pass, true);
 
                 if self.tensor_projection_enabled {
                     if let (Some(tensor_bind), count) =
@@ -450,6 +453,7 @@ impl PortalGpu {
                     false,
                 );
             }
+            self.record_holographic(&mut pass, false);
 
             if self.tensor_projection_enabled {
                 if let (Some(tensor_bind), count) =

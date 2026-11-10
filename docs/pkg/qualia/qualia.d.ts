@@ -370,6 +370,18 @@ export class QualiaPortal {
      */
     load_q42(bytes: Uint8Array): any;
     /**
+     * Layout an RDF document as a holographic semantic graph and upload it to
+     * the active theatre: WebGL2 (RGBA32F, required on mobile) or WebGPU (SSBO).
+     *
+     * `content_type` is a media type (`text/turtle`) or Qualia format id (`turtle`).
+     * Returns `{ node_count, triple_count, truncated, backend, labels }`.
+     */
+    load_rdf_graph(payload: Uint8Array, content_type: string): any;
+    /**
+     * UTF-8 RDF document helper for `load_rdf_graph`.
+     */
+    load_rdf_graph_text(payload: string, content_type: string): any;
+    /**
      * Generic scene asset alias for [`Self::load_assets_colored`] (QG-20).
      */
     load_scene_assets(assets: Array<any>): any;
@@ -426,6 +438,10 @@ export class QualiaPortal {
      * Output must hold `instance_count * mesh_instance_record_stride()` bytes.
      */
     pack_mesh_instance_records(transforms_column_major: Float32Array, semantic_id_words: Uint32Array, packed_output: Uint8Array): number;
+    /**
+     * Pick the nearest resource crystal at canvas pixels. `-1` on miss.
+     */
+    pick_holograph_at(x: number, y: number, canvas_w: number, canvas_h: number): number;
     /**
      * Returns selected tensor index, or `-1` if none / pick still pending.
      */
@@ -497,6 +513,10 @@ export class QualiaPortal {
      * Seeks scene animation to `time`.
      */
     seek_scene_animation(time: number): void;
+    /**
+     * Spotlight a holographic resource (`-1` recedes the query light).
+     */
+    select_holograph_index(index: number): void;
     /**
      * Queue GPU picking at canvas pixel `(x, y)`. Result available after the next `tick`.
      */
@@ -2535,6 +2555,8 @@ export interface InitOutput {
     readonly qualiaportal_load_hmc_mesh: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_q42: (a: number, b: number, c: number) => [number, number, number];
+    readonly qualiaportal_load_rdf_graph: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly qualiaportal_load_rdf_graph_text: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_scene_assets: (a: number, b: any) => [number, number, number];
     readonly qualiaportal_load_texture_encoded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => [number, number, number];
     readonly qualiaportal_mesh_instance_record_stride: (a: number) => number;
@@ -2546,6 +2568,7 @@ export interface InitOutput {
     readonly qualiaportal_operational_mode: (a: number) => number;
     readonly qualiaportal_pack_manifest: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_pack_mesh_instance_records: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: any) => [number, number, number];
+    readonly qualiaportal_pick_holograph_at: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly qualiaportal_poll_selected_node: (a: number) => number;
     readonly qualiaportal_present_scene_activity: (a: number, b: bigint, c: bigint, d: bigint, e: bigint, f: number, g: number) => [number, number, number];
     readonly qualiaportal_project_resident_plane2d: (a: number, b: number) => [number, number];
@@ -2562,6 +2585,7 @@ export interface InitOutput {
     readonly qualiaportal_screen_space_ao_height: (a: number) => number;
     readonly qualiaportal_screen_space_ao_width: (a: number) => number;
     readonly qualiaportal_seek_scene_animation: (a: number, b: number) => [number, number];
+    readonly qualiaportal_select_holograph_index: (a: number, b: number) => void;
     readonly qualiaportal_select_node_at: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly qualiaportal_select_scene_animation_clip: (a: number, b: bigint, c: bigint, d: number) => [number, number, number];
     readonly qualiaportal_selected_node_index: (a: number) => number;
@@ -2727,8 +2751,8 @@ export interface InitOutput {
     readonly xform_z_transform: (a: any) => [number, number, number];
     readonly xform_z_unit_step: (a: any) => [number, number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_405: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_406: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_409: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_410: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h4d620e5c0561b6a1: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__hf7f459f49ff6c97b: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h1e82bb667b5b7bed: (a: number, b: number, c: any) => void;

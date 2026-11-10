@@ -207,6 +207,8 @@ pub struct QualiaPortal {
     present_misses: u8,
     graphics: PortalGraphicsState,
     etalon_steward: WorkerSteward,
+    rdf_holograph_w_angle: f32,
+    rdf_scene: Box<crate::render::rdf_holograph::RdfHolographScene>,
 }
 
 #[wasm_bindgen]
@@ -276,6 +278,8 @@ impl QualiaPortal {
             present_misses: 0,
             graphics: PortalGraphicsState::default(),
             etalon_steward,
+            rdf_holograph_w_angle: 0.0,
+            rdf_scene: crate::render::rdf_holograph::RdfHolographScene::empty_box(),
         };
         portal.paint_frame(&canvas)?;
         Ok(portal)
@@ -597,6 +601,43 @@ impl QualiaPortal {
     /// Selected tensor-node index, or `-1` while none/pick pending.
     pub fn selected_node_index(&self) -> i32 {
         self.selected_node.map(|n| n as i32).unwrap_or(-1)
+    }
+
+    /// Spotlight a holographic resource (`-1` recedes the query light).
+    pub fn select_holograph_index(&mut self, index: i32) {
+        if index < 0 || (index as usize) >= self.rdf_scene.node_count() {
+            self.selected_node = None;
+            return;
+        }
+        let kind = self.rdf_scene.labels().get(index as usize).map(|l| l.kind);
+        if matches!(kind, Some("predicate" | "plane")) {
+            self.selected_node = None;
+            return;
+        }
+        self.selected_node = Some(index as u32);
+    }
+
+    /// Pick the nearest resource crystal at canvas pixels. `-1` on miss.
+    pub fn pick_holograph_at(&mut self, x: f32, y: f32, canvas_w: f32, canvas_h: f32) -> i32 {
+        let aspect = canvas_w / canvas_h.max(1.0);
+        let vp = crate::render::camera::orbit_view_projection_with_near(
+            self.camera.yaw,
+            self.camera.pitch,
+            self.camera.zoom,
+            self.camera.target,
+            aspect,
+            self.camera.near_plane,
+        );
+        let idx = crate::render::rdf_holograph::pick_resource_at(
+            &self.rdf_scene,
+            &vp,
+            x,
+            y,
+            canvas_w,
+            canvas_h,
+        );
+        self.select_holograph_index(idx);
+        idx
     }
 
     /// Selected mesh semantic identity as hexadecimal, or an empty string while absent/pending.
@@ -1375,6 +1416,138 @@ impl QualiaPortal {
         let kind = if loaded.cell_count > 1 { "volume" } else { "cell" };
         Reflect::set(&result, &JsValue::from_str("kind"), &JsValue::from_str(kind))?;
         Ok(result.into())
+    }
+
+    /// Layout an RDF document as a holographic semantic graph and upload it to
+    /// the active theatre: WebGL2 (RGBA32F, required on mobile) or WebGPU (SSBO).
+    ///
+    /// `content_type` is a media type (`text/turtle`) or Qualia format id (`turtle`).
+    /// Returns `{ node_count, triple_count, truncated, backend, labels }`.
+    pub fn load_rdf_graph(
+        &mut self,
+        payload: &[u8],
+        content_type: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.rdf_scene.clear();
+        crate::render::rdf_holograph::layout_rdf_bytes_into(
+            content_type,
+            payload,
+            self.rdf_scene.as_mut(),
+        )
+        .map_err(JsValue::from_str)?;
+        if self.rdf_scene.is_empty() {
+            return Err(JsValue::from_str("rdf_holograph_empty_graph"));
+        }
+
+        let mut backend = "none";
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(ref mut gpu) = self.gpu {
+                gpu.upload_holographic_nodes(self.rdf_scene.nodes())
+                    .map_err(|e| JsValue::from_str(&e))?;
+                backend = "webgpu";
+                self.tier = 2;
+            }
+            if backend == "none" {
+                if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                    webgl2.upload_holograph_scene(&self.rdf_scene).map_err(|e| {
+                        let detail = e
+                            .as_string()
+                            .unwrap_or_else(|| "webgl2_holograph_upload_failed".into());
+                        JsValue::from_str(&format!("webgl2_holograph_upload_failed:{detail}"))
+                    })?;
+                    backend = "webgl2";
+                    self.tier = 1;
+                }
+            }
+        }
+        if backend == "none" {
+            return Err(JsValue::from_str(
+                "rdf_holograph_requires_webgl2_or_webgpu",
+            ));
+        }
+
+        // Layout recenters on the origin; W-axis spin in the holograph shaders
+        // rotates around that origin, so the camera must look at it.
+        self.camera.target = [0.0, 0.0, 0.0];
+        self.camera.zoom = crate::render::rdf_holograph::framing_zoom(&self.rdf_scene);
+        self.camera.pitch = 0.24;
+        self.camera.yaw = 0.18;
+        self.rdf_holograph_w_angle = 0.0;
+        self.sky_preset = None;
+        self.sky_clear = [0.01, 0.03, 0.07, 1.0];
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_clear_color(0.01, 0.03, 0.07, 1.0);
+            gpu.set_camera_target(
+                self.camera.yaw,
+                self.camera.pitch,
+                self.camera.zoom,
+                0.0,
+                0.0,
+                0.0,
+            );
+        }
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+            webgl2.set_clear(self.sky_clear);
+        }
+
+        let labels = Array::new();
+        const LABEL_RECEIPT_CAP: usize = 8;
+        for (i, label) in self.rdf_scene.labels().iter().enumerate().take(LABEL_RECEIPT_CAP) {
+            let obj = js_sys::Object::new();
+            Reflect::set(&obj, &JsValue::from_str("index"), &JsValue::from_f64(i as f64))?;
+            let mut hex = [0u8; 18];
+            hex[0] = b'0';
+            hex[1] = b'x';
+            let mut v = label.id;
+            let digits = b"0123456789abcdef";
+            let mut k = 16;
+            while k > 0 {
+                k -= 1;
+                hex[2 + k] = digits[(v & 0xf) as usize];
+                v >>= 4;
+            }
+            let hex_str = core::str::from_utf8(&hex).unwrap_or("0x0");
+            Reflect::set(&obj, &JsValue::from_str("id"), &JsValue::from_str(hex_str))?;
+            Reflect::set(&obj, &JsValue::from_str("kind"), &JsValue::from_str(label.kind))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("degree"),
+                &JsValue::from_f64(label.degree as f64),
+            )?;
+            labels.push(&obj);
+        }
+
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("node_count"),
+            &JsValue::from_f64(self.rdf_scene.node_count() as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("triple_count"),
+            &JsValue::from_f64(self.rdf_scene.triple_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("truncated"),
+            &JsValue::from_bool(self.rdf_scene.truncated),
+        )?;
+        Reflect::set(&result, &JsValue::from_str("backend"), &JsValue::from_str(backend))?;
+        Reflect::set(&result, &JsValue::from_str("labels"), &labels)?;
+        Ok(result.into())
+    }
+
+    /// UTF-8 RDF document helper for `load_rdf_graph`.
+    pub fn load_rdf_graph_text(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.load_rdf_graph(payload.as_bytes(), content_type)
     }
 
     /// Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed
@@ -2507,6 +2680,21 @@ impl QualiaPortal {
                 Failed,
             }
             let present = if let Some(ref mut gpu) = self.gpu {
+                if self.rdf_scene.node_count() > 0 {
+                    self.camera.yaw =
+                        (self.camera.yaw + 0.00035) % std::f32::consts::TAU;
+                    gpu.set_camera_target(
+                        self.camera.yaw,
+                        self.camera.pitch,
+                        self.camera.zoom,
+                        self.camera.target[0],
+                        self.camera.target[1],
+                        self.camera.target[2],
+                    );
+                    gpu.set_holograph_selected(
+                        self.selected_node.map(|n| n as i32).unwrap_or(-1),
+                    );
+                }
                 // The WebGPU swapchain texture tracks the canvas backing store, but the depth
                 // texture is only re-created on `resize()`. If the canvas was resized after init
                 // (layout settle, DPR, window resize) without a `resize()` call, color and depth
@@ -2639,6 +2827,15 @@ impl QualiaPortal {
                 }
             }
             if let Some(ref mut webgl2) = self.anatomy_webgl2 {
+                webgl2.set_holograph_w_angle(self.rdf_holograph_w_angle);
+                webgl2.set_holograph_selected(
+                    self.selected_node.map(|n| n as i32).unwrap_or(-1),
+                );
+                self.rdf_holograph_w_angle =
+                    (self.rdf_holograph_w_angle + 0.00055) % std::f32::consts::TAU;
+                if self.rdf_scene.node_count() > 0 {
+                    self.camera.yaw = (self.camera.yaw + 0.00035) % std::f32::consts::TAU;
+                }
                 webgl2.render(
                     self.camera.yaw,
                     self.camera.pitch,

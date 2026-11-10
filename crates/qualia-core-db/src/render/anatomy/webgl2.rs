@@ -17,6 +17,10 @@ use crate::render::camera::orbit_view_projection_with_near;
 
 use super::webgl2_output::WebGl2Output;
 use super::webgl2_sky::WebGl2Sky;
+#[cfg(feature = "gpu-runtime")]
+use super::webgl2_holograph::WebGl2Holograph;
+#[cfg(feature = "gpu-runtime")]
+use crate::render::rdf_holograph::RdfHolographScene;
 
 const VERTEX_SHADER: &str = r#"#version 300 es
 precision highp float;
@@ -199,6 +203,12 @@ pub struct AnatomyWebGl2 {
     near_plane: f32,
     /// Sky clear. Daylight by default so a missed preset is not a black frame.
     clear: [f32; 4],
+    #[cfg(feature = "gpu-runtime")]
+    holograph: Option<WebGl2Holograph>,
+    #[cfg(feature = "gpu-runtime")]
+    holograph_w_angle: f32,
+    #[cfg(feature = "gpu-runtime")]
+    holograph_selected: i32,
 }
 
 impl AnatomyWebGl2 {
@@ -281,6 +291,8 @@ impl AnatomyWebGl2 {
         gl.disable(WebGl2RenderingContext::BLEND);
         let sky = WebGl2Sky::try_new(&gl).ok();
         let output = WebGl2Output::try_new(&gl).ok();
+        #[cfg(feature = "gpu-runtime")]
+        let holograph = WebGl2Holograph::try_new(&gl).ok();
 
         Ok(Self {
             gl,
@@ -310,6 +322,12 @@ impl AnatomyWebGl2 {
             frame_count: 0,
             near_plane: crate::render::camera::CAMERA_NEAR_PLANE,
             clear: [0.55, 0.74, 0.92, 1.0],
+            #[cfg(feature = "gpu-runtime")]
+            holograph,
+            #[cfg(feature = "gpu-runtime")]
+            holograph_w_angle: 0.0,
+            #[cfg(feature = "gpu-runtime")]
+            holograph_selected: -1,
         })
     }
 
@@ -471,10 +489,28 @@ impl AnatomyWebGl2 {
         }
         let width = width.max(1);
         let height = height.max(1);
-        let output_active = self
-            .output
-            .as_mut()
-            .is_some_and(|output| output.begin_scene(&self.gl, width, height));
+        let has_holograph = {
+            #[cfg(feature = "gpu-runtime")]
+            {
+                self.holograph.as_ref().is_some_and(|h| h.count() > 0)
+            }
+            #[cfg(not(feature = "gpu-runtime"))]
+            {
+                false
+            }
+        };
+        // RDF holograph is a self-emissive field. The HDR mesh compositor
+        // swallows it, so holograph-only frames present to the canvas.
+        let holograph_direct = has_holograph && self.index_count == 0;
+        let output_active = if holograph_direct {
+            self.gl
+                .bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
+            false
+        } else {
+            self.output
+                .as_mut()
+                .is_some_and(|output| output.begin_scene(&self.gl, width, height))
+        };
         if !output_active {
             self.gl
                 .bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
@@ -500,7 +536,7 @@ impl AnatomyWebGl2 {
                 )?;
             }
         }
-        if self.index_count == 0 {
+        if self.index_count == 0 && !has_holograph {
             if output_active {
                 if let Some(output) = &self.output {
                     output.finish_scene(&self.gl);
@@ -518,40 +554,54 @@ impl AnatomyWebGl2 {
             self.near_plane,
         );
         let flat: &[f32] = bytemuck::cast_slice(&matrix);
-        self.gl.use_program(Some(&self.program));
-        self.gl.bind_vertex_array(Some(&self.vao));
-        self.gl
-            .uniform_matrix4fv_with_f32_array(Some(&self.view_projection), false, flat);
-        self.gl
-            .uniform3f(Some(&self.sun_dir), sun_dir[0], sun_dir[1], sun_dir[2]);
-        self.gl.uniform1f(Some(&self.sun_int), sun_intensity);
-        self.gl.uniform1f(Some(&self.amb), ambient);
         let eye = crate::render::camera::orbit_eye_position_target(yaw, pitch, zoom, target);
-        self.gl.uniform3f(Some(&self.eye), eye[0], eye[1], eye[2]);
-        self.gl.uniform3f(
-            Some(&self.fog_rgb),
-            self.atmosphere.fog_rgb[0],
-            self.atmosphere.fog_rgb[1],
-            self.atmosphere.fog_rgb[2],
-        );
-        self.gl.uniform1f(
-            Some(&self.fog_density),
-            self.atmosphere.fog_density.clamp(0.0, 0.05),
-        );
-        self.gl.uniform1f(Some(&self.fog_falloff), 0.35);
-        self.gl.uniform1f(Some(&self.fog_max_opacity), 0.92);
-        self.gl.uniform1f(
-            Some(&self.fog_enabled),
-            f32::from(self.atmosphere.fog_density > 0.0),
-        );
-        self.gl.uniform1f(Some(&self.time), self.frame_count as f32 * 0.04);
-        self.gl.draw_elements_with_i32(
-            WebGl2RenderingContext::TRIANGLES,
-            self.index_count,
-            WebGl2RenderingContext::UNSIGNED_INT,
-            0,
-        );
-        self.gl.bind_vertex_array(None);
+        if self.index_count > 0 {
+            self.gl.use_program(Some(&self.program));
+            self.gl.bind_vertex_array(Some(&self.vao));
+            self.gl
+                .uniform_matrix4fv_with_f32_array(Some(&self.view_projection), false, flat);
+            self.gl
+                .uniform3f(Some(&self.sun_dir), sun_dir[0], sun_dir[1], sun_dir[2]);
+            self.gl.uniform1f(Some(&self.sun_int), sun_intensity);
+            self.gl.uniform1f(Some(&self.amb), ambient);
+            self.gl.uniform3f(Some(&self.eye), eye[0], eye[1], eye[2]);
+            self.gl.uniform3f(
+                Some(&self.fog_rgb),
+                self.atmosphere.fog_rgb[0],
+                self.atmosphere.fog_rgb[1],
+                self.atmosphere.fog_rgb[2],
+            );
+            self.gl.uniform1f(
+                Some(&self.fog_density),
+                self.atmosphere.fog_density.clamp(0.0, 0.05),
+            );
+            self.gl.uniform1f(Some(&self.fog_falloff), 0.35);
+            self.gl.uniform1f(Some(&self.fog_max_opacity), 0.92);
+            self.gl.uniform1f(
+                Some(&self.fog_enabled),
+                f32::from(self.atmosphere.fog_density > 0.0),
+            );
+            self.gl
+                .uniform1f(Some(&self.time), self.frame_count as f32 * 0.04);
+            self.gl.draw_elements_with_i32(
+                WebGl2RenderingContext::TRIANGLES,
+                self.index_count,
+                WebGl2RenderingContext::UNSIGNED_INT,
+                0,
+            );
+            self.gl.bind_vertex_array(None);
+        }
+        #[cfg(feature = "gpu-runtime")]
+        if let Some(holograph) = &self.holograph {
+            holograph.render(
+                &self.gl,
+                flat,
+                eye,
+                self.frame_count as f32 * 0.04,
+                self.holograph_selected,
+                self.holograph_w_angle,
+            );
+        }
 
         if output_active {
             if let Some(output) = &self.output {
@@ -576,6 +626,37 @@ impl AnatomyWebGl2 {
         if near.is_finite() && (0.00001..=1.0).contains(&near) {
             self.near_plane = near;
         }
+    }
+
+    /// Uploads an RDF holographic scene. Requires RGBA32F; fails closed if the pass is absent.
+    #[cfg(feature = "gpu-runtime")]
+    pub fn upload_holograph_scene(&mut self, scene: &RdfHolographScene) -> Result<(), JsValue> {
+        if self.holograph.is_none() {
+            self.holograph = Some(WebGl2Holograph::try_new(&self.gl)?);
+        }
+        self.frame_count = 0;
+        self.holograph
+            .as_mut()
+            .ok_or_else(|| JsValue::from_str("webgl2_holograph_unavailable"))?
+            .upload_scene(&self.gl, scene)
+    }
+
+    /// W-axis rotation applied to the holographic RDF theatre.
+    #[cfg(feature = "gpu-runtime")]
+    pub fn set_holograph_w_angle(&mut self, angle: f32) {
+        self.holograph_w_angle = angle;
+    }
+
+    /// Selected holographic instance index, or `-1` for none.
+    #[cfg(feature = "gpu-runtime")]
+    pub fn set_holograph_selected(&mut self, selected: i32) {
+        self.holograph_selected = selected;
+    }
+
+    /// Resident holographic instance count.
+    #[cfg(feature = "gpu-runtime")]
+    pub fn holograph_count(&self) -> i32 {
+        self.holograph.as_ref().map_or(0, |h| h.count())
     }
 
     /// Sets exposure compensation in EV; `false` when out of range.
@@ -619,9 +700,18 @@ impl AnatomyWebGl2 {
         if positions.is_empty() || positions.iter().flatten().any(|v| !v.is_finite()) {
             return;
         }
-        let Some(end) = (start as usize).checked_add(positions.len()) else { return; };
-        if end > self.vertex_count { return; }
-        let Some(offset) = (start as usize).checked_mul(12).and_then(|n| i32::try_from(n).ok()) else { return; };
+        let Some(end) = (start as usize).checked_add(positions.len()) else {
+            return;
+        };
+        if end > self.vertex_count {
+            return;
+        }
+        let Some(offset) = (start as usize)
+            .checked_mul(12)
+            .and_then(|n| i32::try_from(n).ok())
+        else {
+            return;
+        };
         self.gl.bind_buffer(
             WebGl2RenderingContext::ARRAY_BUFFER,
             Some(&self.position_buffer),

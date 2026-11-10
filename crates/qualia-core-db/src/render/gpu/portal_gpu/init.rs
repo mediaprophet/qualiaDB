@@ -7,8 +7,8 @@ use crate::render::camera::CameraState;
 use crate::render::standpoint::spectator_default;
 use crate::render::telemetry::ParticleInstance;
 use crate::shaders::viewport::{AMBIENT_WGSL, MESH_WGSL, PROJECTOR_WGSL};
-use std::sync::Arc;
 use etalon::util::DeviceExt;
+use std::sync::Arc;
 
 impl PortalGpu {
     /// Builds from `device`.
@@ -296,19 +296,20 @@ impl PortalGpu {
             contents: bytemuck::cast_slice(&IDENTITY_MAT4),
             usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
         });
-        let mesh_model_layout = device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
-            label: Some("portal-mesh-model-layout"),
-            entries: &[etalon::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: etalon::ShaderStages::VERTEX,
-                ty: etalon::BindingType::Buffer {
-                    ty: etalon::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: std::num::NonZeroU64::new(64),
-                },
-                count: None,
-            }],
-        });
+        let mesh_model_layout =
+            device.create_bind_group_layout(&etalon::BindGroupLayoutDescriptor {
+                label: Some("portal-mesh-model-layout"),
+                entries: &[etalon::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: etalon::ShaderStages::VERTEX,
+                    ty: etalon::BindingType::Buffer {
+                        ty: etalon::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: std::num::NonZeroU64::new(64),
+                    },
+                    count: None,
+                }],
+            });
         let mesh_model_bind = device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("portal-mesh-model-bind"),
             layout: &mesh_model_layout,
@@ -384,11 +385,12 @@ impl PortalGpu {
         });
         let atmosphere_profile = AtmospherePreset::from_id(0);
         let atmosphere_uniform = atmosphere::AtmosphereUniform::from_profile(atmosphere_profile);
-        let atmosphere_uniform_buf = device.create_buffer_init(&etalon::util::BufferInitDescriptor {
-            label: Some("portal-atmosphere-uniform"),
-            contents: bytemuck::bytes_of(&atmosphere_uniform),
-            usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
-        });
+        let atmosphere_uniform_buf =
+            device.create_buffer_init(&etalon::util::BufferInitDescriptor {
+                label: Some("portal-atmosphere-uniform"),
+                contents: bytemuck::bytes_of(&atmosphere_uniform),
+                usage: etalon::BufferUsages::UNIFORM | etalon::BufferUsages::COPY_DST,
+            });
         let mesh_material_layout = materials::create_layout(&device);
         let mesh_texture_layout = material_textures::create_layout(&device);
         let ao_prepass_camera_layout = create_ao_prepass_camera_layout(&device);
@@ -443,16 +445,17 @@ impl PortalGpu {
         // WebGPU's portable four-group baseline without dropping any material or lighting path.
         // Position, colour and generated normal streams remain separate for future authored data.
         // Culling remains disabled until import winding has an explicit canonical contract.
-        let mesh_pipeline_layout = device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
-            label: Some("portal-mesh-pipeline-layout"),
-            bind_group_layouts: &[
-                Some(&mesh_frame_layout),
-                Some(&mesh_model_layout),
-                Some(&mesh_material_layout),
-                Some(&mesh_instance_layout),
-            ],
-            immediate_size: 0,
-        });
+        let mesh_pipeline_layout =
+            device.create_pipeline_layout(&etalon::PipelineLayoutDescriptor {
+                label: Some("portal-mesh-pipeline-layout"),
+                bind_group_layouts: &[
+                    Some(&mesh_frame_layout),
+                    Some(&mesh_model_layout),
+                    Some(&mesh_material_layout),
+                    Some(&mesh_instance_layout),
+                ],
+                immediate_size: 0,
+            });
         let water = water::WaterGpu::new(
             &device,
             &mesh_frame_layout,
@@ -613,37 +616,38 @@ impl PortalGpu {
         let mut transparent_depth_state = depth_state.clone();
         transparent_depth_state.depth_write_enabled = Some(false);
         transparent_depth_state.depth_compare = Some(etalon::CompareFunction::LessEqual);
-        let mesh_pipeline_blend = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
-            label: Some("portal-mesh-transparent-pipeline"),
-            layout: Some(&mesh_pipeline_layout),
-            vertex: etalon::VertexState {
-                module: &mesh_shader,
-                entry_point: Some("vertex_main"),
-                compilation_options: Default::default(),
-                buffers: &[
-                    Some(mesh_vertex_layout.clone()),
-                    Some(mesh_color_layout.clone()),
-                    Some(mesh_normal_layout.clone()),
-                    Some(mesh_tangent_layout.clone()),
-                    Some(mesh_uv_layout.clone()),
-                ],
-            },
-            fragment: Some(etalon::FragmentState {
-                module: &mesh_shader,
-                entry_point: Some("fragment_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(color_target_state(format))],
-            }),
-            primitive: etalon::PrimitiveState {
-                topology: etalon::PrimitiveTopology::TriangleList,
-                cull_mode: None,
-                ..Default::default()
-            },
-            depth_stencil: Some(transparent_depth_state.clone()),
-            multisample: etalon::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
+        let mesh_pipeline_blend =
+            device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
+                label: Some("portal-mesh-transparent-pipeline"),
+                layout: Some(&mesh_pipeline_layout),
+                vertex: etalon::VertexState {
+                    module: &mesh_shader,
+                    entry_point: Some("vertex_main"),
+                    compilation_options: Default::default(),
+                    buffers: &[
+                        Some(mesh_vertex_layout.clone()),
+                        Some(mesh_color_layout.clone()),
+                        Some(mesh_normal_layout.clone()),
+                        Some(mesh_tangent_layout.clone()),
+                        Some(mesh_uv_layout.clone()),
+                    ],
+                },
+                fragment: Some(etalon::FragmentState {
+                    module: &mesh_shader,
+                    entry_point: Some("fragment_main"),
+                    compilation_options: Default::default(),
+                    targets: &[Some(color_target_state(format))],
+                }),
+                primitive: etalon::PrimitiveState {
+                    topology: etalon::PrimitiveTopology::TriangleList,
+                    cull_mode: None,
+                    ..Default::default()
+                },
+                depth_stencil: Some(transparent_depth_state.clone()),
+                multisample: etalon::MultisampleState::default(),
+                multiview_mask: None,
+                cache: None,
+            });
 
         let picking_pipeline = device.create_render_pipeline(&etalon::RenderPipelineDescriptor {
             label: Some("portal-picking-pipeline"),
@@ -996,8 +1000,10 @@ impl PortalGpu {
             ambient_bind_group_layout,
             ambient_bind_group,
             projector_tensor_layout,
+            projector_camera_layout,
             projector_camera_bind,
             projector_tensor_bind: None,
+            holographic: None,
             uniform_buf,
             telemetry_buf,
             camera_buf,

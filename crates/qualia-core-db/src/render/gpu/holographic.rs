@@ -12,8 +12,7 @@ pub use etalon_render::scene_contract::{FrameCameraPod, ManifoldProjectionPod};
 pub use etalon_render::volumetric::{
     CameraUniform as EtalonCameraUniform,
     ObserverStandpointUniform as EtalonObserverStandpointUniform,
-    VolumetricPipeline as EtalonVolumetricPipeline,
-    HOLOGRAPHIC_WGSL as ETALON_HOLOGRAPHIC_WGSL,
+    VolumetricPipeline as EtalonVolumetricPipeline, HOLOGRAPHIC_WGSL as ETALON_HOLOGRAPHIC_WGSL,
 };
 
 /// Primitive geometric archetype evaluated procedurally inside the holographic shader.
@@ -194,7 +193,10 @@ mod tests {
 
         let etalon_node: etalon_render::volumetric::HolographicNodeGpu = node.into();
         assert_eq!(etalon_node.position_scale, node.position_scale);
-        assert_eq!(etalon_node.half_extents_primitive, node.half_extents_primitive);
+        assert_eq!(
+            etalon_node.half_extents_primitive,
+            node.half_extents_primitive
+        );
         assert_eq!(etalon_node.frequency_amplitude, node.frequency_amplitude);
         assert_eq!(etalon_node.manifold_tensor, node.manifold_tensor);
         assert_eq!(etalon_node.connection_endpoint, [4.0, 5.0, 6.0, 0.75]);
@@ -202,7 +204,10 @@ mod tests {
 
         let roundtrip: HolographicNodeGpu = etalon_node.into();
         assert_eq!(roundtrip.position_scale, node.position_scale);
-        assert_eq!(roundtrip.half_extents_primitive, node.half_extents_primitive);
+        assert_eq!(
+            roundtrip.half_extents_primitive,
+            node.half_extents_primitive
+        );
         assert_eq!(roundtrip.frequency_amplitude, node.frequency_amplitude);
         assert_eq!(roundtrip.manifold_tensor, node.manifold_tensor);
         assert_eq!(roundtrip.connection_endpoint, node.connection_endpoint);

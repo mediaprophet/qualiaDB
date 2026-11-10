@@ -125,12 +125,13 @@ impl PortalGpu {
         };
 
         // Request an adapter that supports the surface
-        let adapter = pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
-            power_preference: etalon::PowerPreference::HighPerformance,
-            compatible_surface: Some(&surface),
-            ..Default::default()
-        }))
-        .map_err(|e| format!("Failed to find wgpu adapter for surface: {e}"))?;
+        let adapter =
+            pollster::block_on(instance.request_adapter(&etalon::RequestAdapterOptions {
+                power_preference: etalon::PowerPreference::HighPerformance,
+                compatible_surface: Some(&surface),
+                ..Default::default()
+            }))
+            .map_err(|e| format!("Failed to find wgpu adapter for surface: {e}"))?;
 
         let caps = surface.get_capabilities(&adapter);
         if caps.formats.is_empty() {
@@ -146,14 +147,15 @@ impl PortalGpu {
             .find(|f| f.has_srgb_suffix())
             .unwrap_or(caps.formats[0]);
 
-        let (device, queue) = pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor {
-            label: Some("Webizen GPU Surface"),
-            required_features: etalon::Features::empty(),
-            required_limits: etalon::Limits::downlevel_defaults(),
-            memory_hints: etalon::MemoryHints::default(),
-            ..Default::default()
-        }))
-        .map_err(|e| format!("Failed to request device for surface: {e}"))?;
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&etalon::DeviceDescriptor {
+                label: Some("Webizen GPU Surface"),
+                required_features: etalon::Features::empty(),
+                required_limits: etalon::Limits::downlevel_defaults(),
+                memory_hints: etalon::MemoryHints::default(),
+                ..Default::default()
+            }))
+            .map_err(|e| format!("Failed to request device for surface: {e}"))?;
 
         let device = Arc::new(device);
         let queue = Arc::new(queue);

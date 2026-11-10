@@ -55,6 +55,13 @@
       "group": "Core"
     },
     {
+      "label": "RDF Holograph Theatre",
+      "href": "graph.html",
+      "icon": "fa-atom",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
       "label": "Semantic Instruments",
       "href": "semantic-instruments.html",
       "icon": "fa-toolbox",

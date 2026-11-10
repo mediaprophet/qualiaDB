@@ -14,6 +14,20 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Windows PowerShell 5.1 (.NET Framework) has no [IO.Path]::GetRelativePath.
+function Get-PathRelativeTo([string]$Base, [string]$Target) {
+    $baseFull = [IO.Path]::GetFullPath($Base).TrimEnd('\', '/')
+    $targetFull = [IO.Path]::GetFullPath($Target)
+    $prefix = $baseFull + [IO.Path]::DirectorySeparatorChar
+    if ($targetFull.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $targetFull.Substring($prefix.Length)
+    }
+    if ($targetFull.Equals($baseFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return "."
+    }
+    throw "Path '$Target' is not under '$Base'"
+}
+
 if (-not (Test-Path (Join-Path $CrateDir "Cargo.toml"))) {
     throw "qualia-core-db crate not found at $CrateDir"
 }
@@ -33,7 +47,9 @@ try {
     $env:RUSTUP_TOOLCHAIN = $Toolchain
     $memoryFlags = if ($FlagProfile -eq "Full") {
         "-C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296 "
-    } else { "" }
+    } else {
+        "-C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=1073741824 "
+    }
     $env:RUSTFLAGS = "-C target-feature=+simd128 ${memoryFlags}--cfg getrandom_backend=""wasm_js"""
     Push-Location $CrateDir
     try {
@@ -63,7 +79,7 @@ try {
     }
     New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
     foreach ($file in $files) {
-        $relative = [IO.Path]::GetRelativePath($scratch, $file.FullName)
+        $relative = Get-PathRelativeTo $scratch $file.FullName
         $destination = Join-Path $OutputDir $relative
         New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
         Copy-Item -LiteralPath $file.FullName -Destination $destination -Force

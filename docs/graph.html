@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDF Holograph Theatre · QualiaDB</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <style>
+        :root {
+            --holo-cyan: #67e8f9;
+            --holo-indigo: #818cf8;
+            --holo-gold: #fde68a;
+            --glass: rgba(4, 10, 22, 0.42);
+            --line: rgba(165, 243, 252, 0.28);
+        }
+        html, body { height: 100%; margin: 0; background: #010208; color: #e2e8f0; }
+        body { font-family: Inter, system-ui, sans-serif; overflow: hidden; }
+        #theatre {
+            position: fixed; inset: 0;
+            background: #010208;
+        }
+        #render-canvas {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            display: block; cursor: grab; touch-action: none; background: transparent;
+        }
+        #render-canvas:active { cursor: grabbing; }
+        .vignette {
+            pointer-events: none; position: absolute; inset: 0; z-index: 3;
+            background: radial-gradient(circle at 50% 46%, transparent 52%, rgba(0,0,0,0.45) 100%);
+        }
+        .hud-glyph, .hud-compact, .hud-inspect {
+            position: absolute; z-index: 6; pointer-events: auto;
+            transition: opacity 280ms ease, transform 280ms ease;
+        }
+        .hud-glyph {
+            left: 1.1rem; bottom: 1.1rem;
+            width: 44px; height: 44px;
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            clip-path: polygon(50% 0%, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
+            box-shadow: 0 0 22px rgba(103, 232, 249, 0.18);
+            cursor: pointer;
+        }
+        .hud-glyph::after {
+            content: "";
+            position: absolute; inset: 10px;
+            border: 1px solid rgba(253, 230, 138, 0.55);
+            clip-path: polygon(50% 0%, 92% 25%, 92% 75%, 50% 100%, 8% 75%, 8% 25%);
+        }
+        .hud-compact {
+            left: 1.1rem; bottom: 1.1rem;
+            width: min(22rem, calc(100vw - 2.2rem));
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            border-radius: 2px;
+            padding: 0.85rem 1rem;
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.12);
+        }
+        .hud-inspect {
+            top: 4.5rem; right: 1.1rem;
+            width: min(26rem, calc(100vw - 2.2rem));
+            max-height: calc(100vh - 6rem);
+            overflow: auto;
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            border-radius: 2px;
+            padding: 1rem;
+            box-shadow: 0 0 48px rgba(103, 232, 249, 0.1);
+        }
+        .is-min .hud-compact, .is-min .hud-inspect { opacity: 0; pointer-events: none; transform: translateY(8px); }
+        .is-compact .hud-glyph, .is-compact .hud-inspect { opacity: 0; pointer-events: none; }
+        .is-inspect .hud-glyph { opacity: 0.35; }
+        .kicker {
+            font-size: 0.62rem; letter-spacing: 0.28em; text-transform: uppercase;
+            color: rgba(165, 243, 252, 0.72);
+        }
+        .stat { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.7rem; color: #67e8f9; }
+        textarea {
+            width: 100%; min-height: 8rem; resize: vertical;
+            background: rgba(2, 6, 14, 0.55); color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 2px;
+            font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.7rem;
+            padding: 0.55rem;
+        }
+        .spinbtn, .chip, .ghost {
+            border: 1px solid var(--line); color: #ecfeff; background: rgba(14, 116, 144, 0.16);
+            border-radius: 9999px; padding: 0.32rem 0.8rem; font-size: 0.72rem; cursor: pointer;
+        }
+        .ghost { background: transparent; }
+        .chip { color: #c7d2fe; border-color: rgba(129, 140, 248, 0.45); background: rgba(67, 56, 202, 0.16); }
+        #search {
+            width: 100%; background: rgba(2, 6, 14, 0.55); color: #e2e8f0;
+            border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 9999px;
+            padding: 0.35rem 0.8rem; font-size: 0.75rem;
+        }
+        #drop-veil {
+            display: none; position: absolute; inset: 0; z-index: 8;
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px dashed rgba(103, 232, 249, 0.55);
+            align-items: center; justify-content: center;
+            font-size: 1.1rem; color: #67e8f9; letter-spacing: 0.24em;
+        }
+        #drop-veil.active { display: flex; }
+        #fail-closed {
+            display: none; position: absolute; inset: 0; z-index: 9;
+            background: rgba(2, 4, 10, 0.94); align-items: center; justify-content: center;
+            flex-direction: column; gap: 0.8rem; text-align: center; padding: 2rem;
+        }
+        #fail-closed.show { display: flex; }
+        #hud-hint {
+            position: absolute; right: 1.1rem; bottom: 1.1rem; z-index: 5;
+            font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;
+            color: rgba(148, 163, 184, 0.55); pointer-events: none;
+        }
+        @media (max-width: 860px) {
+            .hud-inspect { top: auto; bottom: 0; right: 0; left: 0; width: 100%; max-height: 46vh; }
+        }
+    </style>
+    <script src="js/menu-loader.js"></script>
+    <script src="js/webgpu-limits-shim.js"></script>
+</head>
+<body>
+    <div id="theatre" class="is-min">
+        <canvas id="render-canvas"></canvas>
+        <div class="vignette"></div>
+        <div id="drop-veil">DROP RDF</div>
+        <div id="fail-closed">
+            <div class="text-cyan-300 text-xl font-semibold">Holographic theatre requires WebGL2</div>
+            <div class="text-slate-400 max-w-md text-sm">This graph is a GLSL ES 300 / WebGPU volumetric field. Canvas2D is not a holograph path. Use a browser with WebGL2 (mobile) or WebGPU (desktop).</div>
+        </div>
+        <button id="hud-glyph" class="hud-glyph" title="Open instrument" aria-label="Open HUD"></button>
+        <aside id="hud-compact" class="hud-compact" aria-label="Compact instrument">
+            <div class="flex items-center justify-between mb-2">
+                <div class="kicker">QualiaPortal</div>
+                <div class="flex gap-1">
+                    <button class="ghost" id="hud-expand" type="button">inspect</button>
+                    <button class="ghost" id="hud-min-a" type="button">min</button>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5 mb-2">
+                <button class="chip" data-sample="foaf" type="button">FOAF</button>
+                <button class="chip" data-sample="org" type="button">Org</button>
+                <button class="chip" data-sample="star" type="button">Star</button>
+            </div>
+            <input id="search" type="search" placeholder="spotlight a resource…" autocomplete="off">
+            <div class="flex gap-3 mt-2">
+                <div class="stat" id="telem-nodes">nodes 0</div>
+                <div class="stat" id="telem-triples">triples 0</div>
+                <div class="stat" id="telem-w">W 0.00</div>
+            </div>
+            <div class="stat mt-1" id="backend">backend: —</div>
+            <div class="stat mt-1" id="status">arming QualiaPortal…</div>
+        </aside>
+        <aside id="hud-inspect" class="hud-inspect" aria-label="Inspection">
+            <div class="flex items-center justify-between mb-2">
+                <div class="kicker">Inspection</div>
+                <button class="ghost" id="hud-min-b" type="button">minimize</button>
+            </div>
+            <label class="kicker">Turtle / N-Triples / JSON-LD</label>
+            <textarea id="rdf-source" spellcheck="false"></textarea>
+            <div class="flex gap-2 mt-2 mb-3">
+                <button id="load-btn" class="spinbtn" type="button">Project graph</button>
+                <select id="rdf-format" class="bg-slate-950 border border-slate-700 rounded-full px-3 text-xs">
+                    <option value="text/turtle">turtle</option>
+                    <option value="application/n-triples">n-triples</option>
+                    <option value="application/n-quads">n-quads</option>
+                    <option value="application/ld+json">json-ld</option>
+                </select>
+            </div>
+            <div id="inspector" class="text-xs text-indigo-100/90 font-mono min-h-[3rem]"></div>
+        </aside>
+        <div id="hud-hint">h instrument · esc recede</div>
+    </div>
+    <script type="module" src="js/rdf-holograph-theatre.js?v=0.0.41-cinema14"></script>
+</body>
+</html>

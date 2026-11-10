@@ -231,6 +231,11 @@ impl PortalGpu {
             bytemuck::bytes_of(&atmosphere),
         );
     }
+    /// Packs the holographic selection index into observer padding for cinema WGSL.
+    pub fn set_holograph_selected(&mut self, selected: i32) {
+        self.observer._padding[0] = selected as f32;
+    }
+
     /// Sets the observer standpoint used by telemetry/temporal views.
     pub fn set_standpoint(&mut self, observer: ObserverStandpoint) {
         self.observer = observer;
