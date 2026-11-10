@@ -117,6 +117,15 @@ pub struct PackReport {
     pub q42_sidecar_path: String,
 }
 
+/// `male` or `female`. Anything else is refused.
+pub fn model_from_token(token: &str) -> Result<AnatomyModel, String> {
+    match token {
+        "male" => Ok(AnatomyModel::Male),
+        "female" => Ok(AnatomyModel::Female),
+        _ => Err("model must be male or female".into()),
+    }
+}
+
 /// Build a curated `.hmc` pack for `model` and write it to `out_path`.
 ///
 /// `curated` is the set of normalised base tokens to include (defaults to
@@ -168,12 +177,26 @@ pub fn build_anatomy_pack(
     }
 
     // Fetch each selected GLB.
+    eprintln!(
+        "atlas {}: {} reference organs",
+        model.as_str(),
+        selected.len()
+    );
     let mut fetched: Vec<(String, Vec<u8>)> = Vec::new();
     let mut failed: Vec<(String, String)> = Vec::new();
     for organ in &selected {
         match fetch_glb(&organ.glb_url) {
             Ok(bytes) => fetched.push((organ.filename.clone(), bytes)),
             Err(e) => failed.push((organ.filename.clone(), format!("fetch: {e}"))),
+        }
+        let done = fetched.len() + failed.len();
+        if done == selected.len() || done % 25 == 0 {
+            eprintln!(
+                "atlas {}: fetched {done}/{} ({} failed)",
+                model.as_str(),
+                selected.len(),
+                failed.len()
+            );
         }
     }
 

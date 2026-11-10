@@ -69,8 +69,18 @@ impl QTensorEngine {
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
@@ -195,8 +205,18 @@ impl QTensorEngine {
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
@@ -333,8 +353,18 @@ impl QTensorEngine {
         self.tensor_data_offset = 0; // P64 blob offsets are absolute
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
@@ -439,8 +469,18 @@ impl QTensorEngine {
         self.hyperparams = index.hyperparams;
         #[cfg(feature = "gpu-runtime")]
         {
+            let vocab_chunk_bytes = index
+                .logits_projection_info()
+                .and_then(|info| {
+                    let (_, vocab) = Self::matmul_dims(info);
+                    crate::ggml_quants::tensor_byte_len(&info)
+                        .and_then(|tb| tb.checked_div(vocab.max(1)))
+                })
+                .map(|rb| rb.saturating_mul(VOCAB_CHUNK_ROWS))
+                .unwrap_or(0);
             let staging = index
                 .max_layer_tensor_bytes
+                .max(vocab_chunk_bytes)
                 .max(4096)
                 .min(MAX_WGPU_WEIGHT_STAGING);
             self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);

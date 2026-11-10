@@ -8,6 +8,7 @@
 
 pub mod authoring;
 pub mod contextual_assertion;
+pub mod contextual_evidence;
 pub mod contribution_lifecycle;
 pub mod finance;
 pub mod projects;

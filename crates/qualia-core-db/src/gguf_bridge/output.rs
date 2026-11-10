@@ -29,9 +29,17 @@ impl QTensorEngine {
                 max_chunks,
                 sieve_mask,
             )
-            .map(|r| StreamingArgmaxResult {
-                best_token_id: r.best_token_id,
-                max_logit: r.max_logit,
+            .map(|r| {
+                let softcap = index.hyperparams.logit_softcap;
+                let max_logit = if softcap > 0.0 {
+                    (r.max_logit / softcap).tanh() * softcap
+                } else {
+                    r.max_logit
+                };
+                StreamingArgmaxResult {
+                    best_token_id: r.best_token_id,
+                    max_logit,
+                }
             })
     }
 
@@ -69,9 +77,17 @@ impl QTensorEngine {
     ) -> Option<StreamingArgmaxResult> {
         etalon_inference::projections::ProjectionGpuEngine::new(self)
             .dispatch_output_top1_chunked(index, hidden, emb_dim)
-            .map(|r| StreamingArgmaxResult {
-                best_token_id: r.best_token_id,
-                max_logit: r.max_logit,
+            .map(|r| {
+                let softcap = index.hyperparams.logit_softcap;
+                let max_logit = if softcap > 0.0 {
+                    (r.max_logit / softcap).tanh() * softcap
+                } else {
+                    r.max_logit
+                };
+                StreamingArgmaxResult {
+                    best_token_id: r.best_token_id,
+                    max_logit,
+                }
             })
     }
 

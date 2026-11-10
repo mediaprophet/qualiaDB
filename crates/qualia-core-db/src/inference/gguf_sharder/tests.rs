@@ -370,8 +370,12 @@ fn gemma4_decode_supported_fails_closed() {
     h.arch_flags = ARCH_FLAG_HAS_PLE | ARCH_FLAG_HAS_SWA | ARCH_FLAG_HAS_SHARED_KV;
     // Ensure force env is not set for this test.
     std::env::remove_var("QUALIA_LLM_FORCE_UNSUPPORTED_ARCH");
-    let err = h.decode_supported().unwrap_err();
-    assert!(err.contains("gemma4"), "{err}");
+    h.decode_supported()
+        .expect("Gemma 4 decoder graph is now natively supported");
+    let mut unsupported_ple = GgufHyperparams::default();
+    unsupported_ple.architecture = ARCH_OTHER;
+    unsupported_ple.arch_flags = ARCH_FLAG_HAS_PLE;
+    let err = unsupported_ple.decode_supported().unwrap_err();
     assert!(err.contains("PLE") || err.contains("per-layer"), "{err}");
 }
 

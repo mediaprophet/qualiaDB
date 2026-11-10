@@ -370,13 +370,19 @@ fn cli_read_intent() -> AgentIntent {
 
 /// Default vault path when none is supplied (Windows-friendly).
 pub fn default_vault_path() -> PathBuf {
-    if let Ok(dir) = std::env::var("QUALIA_LLM_VAULT") {
+    if let Ok(dir) = std::env::var("QUALIA_LLM_VAULT").or_else(|_| std::env::var("QUALIA_MODEL_PATHS")) {
         let trimmed = dir.trim();
         if !trimmed.is_empty() {
             return PathBuf::from(trimmed);
         }
     }
-    let canonical = PathBuf::from("C:/LLM_Models");
+    for candidate in ["C:/LLM_files", "C:/LLM_Models", "C:/llmmodels"] {
+        let canonical = PathBuf::from(candidate);
+        if canonical.is_dir() {
+            return canonical;
+        }
+    }
+    let canonical = PathBuf::from("C:/LLM_files");
     if canonical.is_dir() {
         return canonical;
     }

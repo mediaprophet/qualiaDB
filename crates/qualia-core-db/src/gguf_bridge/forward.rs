@@ -56,6 +56,30 @@ impl QTensorEngine {
             }
         };
         let tensors = index.get_layer_tensors(layer);
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_GEMMA4
+            || Self::is_qwen35_gated_attention_layer(index, &tensors)
+        {
+            let batch_elems = emb_dim * n_tokens as usize;
+            if batch_elems > batch_hidden.len() {
+                return Err(PrefillLayerStage::BatchHiddenTooSmall);
+            }
+            for t in 0..n_tokens {
+                let off = t as usize * emb_dim;
+                let t_hidden = &mut batch_hidden[off..off + emb_dim];
+                if !self.dispatch_transformer_layer(
+                    index,
+                    layer,
+                    batch_start_token_idx + t,
+                    t_hidden,
+                    emb_dim,
+                    scratch_a,
+                    scratch_b,
+                ) {
+                    return Err(PrefillLayerStage::DispatchQueryFfn);
+                }
+            }
+            return Ok(());
+        }
         if tensors.is_hybrid_ssm_layer() {
             let batch_elems = emb_dim * n_tokens as usize;
             if batch_elems > batch_hidden.len() {
@@ -467,6 +491,11 @@ impl QTensorEngine {
             }
             #[cfg(target_arch = "wasm32")]
             return false;
+        }
+        if index.hyperparams.architecture == etalon_model::inference::ARCH_GEMMA4 {
+            return self.dispatch_gemma4_layer(
+                index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
+            );
         }
         etalon_inference::ordinary::HybridEngine { host: self }.layer(
             index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,

@@ -406,6 +406,11 @@ impl QTensorEngine {
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             return None; // Gated attention executes only through its admitted owner.
         }
+        if Self::is_qwen35_gated_attention_layer(index, tensors) {
+            return self.dispatch_qwen35_gated_attention_layer(
+                index, layer, token_idx, hidden, emb_dim, tensors, scratch_a, scratch_b,
+            );
+        }
         etalon_inference::ordinary::attention::AttentionEngine { host: self }
             .dispatch_attention_layer(
                 index, layer, token_idx, hidden, emb_dim, tensors, scratch_a, scratch_b,

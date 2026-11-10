@@ -172,10 +172,10 @@ fn discover_local_models() -> Vec<serde_json::Value> {
     if let Some(path) = resident.as_deref() {
         push_model_path(&mut candidates, Path::new(path), MAX_MODELS);
     }
-    if let Some(configured) = std::env::var_os("QUALIA_MODEL_PATHS") {
+    if let Some(configured) = std::env::var_os("QUALIA_MODEL_PATHS").or_else(|| std::env::var_os("QUALIA_LLM_VAULT")) {
         for path in std::env::split_paths(&configured).take(MAX_MODELS) {
             if path.is_dir() {
-                scan_dir_for_models(&mut candidates, &path, 2, MAX_MODELS);
+                scan_dir_for_models(&mut candidates, &path, 4, MAX_MODELS);
             } else {
                 push_model_path(&mut candidates, &path, MAX_MODELS);
             }
@@ -190,13 +190,14 @@ fn discover_local_models() -> Vec<serde_json::Value> {
 
     // Common system model directories
     let common_dirs = [
+        std::path::PathBuf::from(r"C:\LLM_files"),
         std::path::PathBuf::from(r"C:\LLM_Models"),
         std::path::PathBuf::from(r"C:\models"),
         std::path::PathBuf::from("storage/Models"),
         std::path::PathBuf::from("storage/models"),
     ];
     for dir in &common_dirs {
-        scan_dir_for_models(&mut candidates, dir, 2, MAX_MODELS);
+        scan_dir_for_models(&mut candidates, dir, 4, MAX_MODELS);
     }
 
     // User home directory model locations

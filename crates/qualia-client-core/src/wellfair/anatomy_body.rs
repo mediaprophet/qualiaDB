@@ -342,7 +342,7 @@ mod tests {
     #[test]
     #[ignore = "live network: discovers + fetches + compiles a full model (QUALIA_TEST_MODEL=male|female)"]
     fn compile_full_body_from_sparql() {
-        use crate::wellfair::ccf_resolver::{
+        use super::ccf_resolver::{
             discover_ref_organs, fetch_glb, organs_for_model, HRA_SPARQL_ENDPOINT,
         };
         let model = match std::env::var("QUALIA_TEST_MODEL").as_deref() {

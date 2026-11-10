@@ -48,7 +48,7 @@ impl Default for ProtocolLimits {
     fn default() -> Self {
         Self {
             max_message_bytes: 1024 * 1024,
-            max_tools: 64,
+            max_tools: 128,
             max_id_bytes: 256,
         }
     }

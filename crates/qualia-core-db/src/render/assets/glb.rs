@@ -139,8 +139,28 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
                             "NORMAL count must match POSITION count".into(),
                         ));
                     }
+                    let mut repair = false;
                     for normal in &mut values {
-                        *normal = normalize_imported_normal(*normal)?;
+                        if normal.iter().any(|v| !v.is_finite()) {
+                            return Err(AssetError::Parse(
+                                "NORMAL contains non-finite values".into(),
+                            ));
+                        }
+                        match normalize_imported_normal(*normal) {
+                            Ok(unit) => *normal = unit,
+                            Err(_) => {
+                                repair = true;
+                                *normal = [0.0, 0.0, 0.0];
+                            }
+                        }
+                    }
+                    if repair {
+                        let generated = generate_import_normals(&prim_pos, &prim_indices)?;
+                        for (normal, face) in values.iter_mut().zip(generated) {
+                            if *normal == [0.0, 0.0, 0.0] {
+                                *normal = face;
+                            }
+                        }
                     }
                     saw_authored_normals = true;
                     values

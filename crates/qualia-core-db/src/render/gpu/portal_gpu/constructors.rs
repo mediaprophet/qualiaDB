@@ -201,7 +201,7 @@ impl PortalGpu {
         let instance = etalon::Instance::new(instance_desc);
         instance
             .request_adapter(&etalon::RequestAdapterOptions {
-                power_preference: etalon::PowerPreference::LowPower,
+                power_preference: etalon::PowerPreference::HighPerformance,
                 compatible_surface: None,
                 ..Default::default()
             })
@@ -235,14 +235,14 @@ impl PortalGpu {
         if portal_gpu_init_aborted() {
             return Err("aborted".into());
         }
-        // Phones often refuse low-power or the first preference and then
-        // answer the next. One miss must not drop the lit frame.
+        // Hybrid laptops answer LowPower on the iGPU. Ask for the discrete
+        // GPU first; phones that refuse it still get None then LowPower.
         let mut adapter = None;
         let mut last_err = String::from("no WebGPU adapter");
         for pref in [
+            etalon::PowerPreference::HighPerformance,
             etalon::PowerPreference::None,
             etalon::PowerPreference::LowPower,
-            etalon::PowerPreference::HighPerformance,
         ] {
             if portal_gpu_init_aborted() {
                 return Err("aborted".into());

@@ -267,7 +267,7 @@ pub fn write_vc_claim_quins(
     ]
 }
 
-use crate::modalities::logic::deontic::{DEFEATER_BIT, OP_FORBID, OP_OBLIGATE, OP_PERMIT};
+pub use crate::modalities::logic::deontic::{DEFEATER_BIT, OP_FORBID, OP_OBLIGATE, OP_PERMIT};
 use crate::modalities::logic::n3_compiler::CompiledRule;
 use crate::modalities::logic::n3_parser::RuleType;
 

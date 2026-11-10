@@ -91,14 +91,23 @@ pub fn inspect_layer_kv_projections(
     let has_k = tensors.attn_k.is_some();
     let has_v = tensors.attn_v.is_some();
     let has_q = tensors.attn_q.is_some();
-    let naming = if has_k && has_v && has_q {
-        let mut blk_k = [0u8; 96];
+    let gemma4_valid = idx.hyperparams.architecture == crate::inference::gguf_sharder::ARCH_GEMMA4
+        && has_q
+        && (has_k
+            || (idx.hyperparams.shared_kv_layers > 0
+                && layer
+                    >= idx
+                        .hyperparams
+                        .n_layer
+                        .saturating_sub(idx.hyperparams.shared_kv_layers)));
+    let naming = if (has_k && has_v && has_q) || gemma4_valid {
+        let mut blk_q = [0u8; 96];
         let blk_len = crate::inference::gguf_sharder::write_blk_tensor_name(
             layer,
-            b"attn_k.weight",
-            &mut blk_k,
+            b"attn_q.weight",
+            &mut blk_q,
         );
-        if blk_len > 0 && idx.tensor_info(&blk_k[..blk_len]).is_some() {
+        if blk_len > 0 && idx.tensor_info(&blk_q[..blk_len]).is_some() {
             Some(KvProjectionNaming::GgufStandard)
         } else {
             Some(KvProjectionNaming::HuggingFace)
@@ -109,8 +118,8 @@ pub fn inspect_layer_kv_projections(
     LayerKvProjections {
         layer,
         naming,
-        has_k,
-        has_v,
+        has_k: has_k || gemma4_valid,
+        has_v: has_v || gemma4_valid,
         has_q,
     }
 }

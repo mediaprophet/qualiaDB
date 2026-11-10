@@ -4,6 +4,7 @@
 use crate::NQuin;
 
 /// Allen's Interval Algebra operations for temporal reasoning
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TemporalOp {
     Before,
     Meets,

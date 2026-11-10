@@ -213,6 +213,11 @@ impl AnatomyWebGl2 {
             &"failIfMajorPerformanceCaveat".into(),
             &false.into(),
         )?;
+        js_sys::Reflect::set(
+            &options,
+            &"powerPreference".into(),
+            &"high-performance".into(),
+        )?;
         let gl = canvas
             .get_context_with_context_options("webgl2", &options)?
             .ok_or_else(|| JsValue::from_str("webgl2_context_unavailable"))?

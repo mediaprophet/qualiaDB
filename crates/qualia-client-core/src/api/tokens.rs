@@ -1340,6 +1340,7 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
 
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
+    let search_paths = state.config.lock().unwrap().model_search_paths.clone();
     let models_dir = PathBuf::from(&storage_path).join("Models");
     let active_path = load_active_model_from_disk();
     let mut models = Vec::new();
@@ -1419,6 +1420,17 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
                     {
                         push_model(Path::new(&manifest.gguf_path));
                     }
+                }
+            }
+        }
+    }
+
+    for root in &search_paths {
+        let root_path = Path::new(root);
+        if root_path.is_dir() {
+            if let Ok(entries) = crate::model_lifecycle::scan_vault_gguf(root_path) {
+                for entry in entries {
+                    push_model(Path::new(&entry.path));
                 }
             }
         }

@@ -1,0 +1,16 @@
+[package]
+name = "qualia-anatomy-pack"
+version = "0.0.41"
+edition = "2021"
+description = "Human Reference Atlas packer used by Synth. No mail, mixnet, or desktop shell."
+license = "Apache-2.0"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+qualia-core-db = { workspace = true }
+wellfare-core = { workspace = true }
+reqwest = { workspace = true, default-features = false, features = ["rustls", "json", "blocking"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -198,6 +198,31 @@ impl super::QTensorEngine {
         self.ssm_recurrent_state.fill(0.0);
     }
 
+    /// Export a zero-heap snapshot of the current hybrid SSM / GatedDeltaNet recurrent state
+    /// (`ssm_recurrent_state`) into caller-supplied `out` (`f32` slice).
+    /// Returns `Some(self.ssm_recurrent_state.len())` when `out` has sufficient capacity.
+    #[must_use]
+    pub fn snapshot_recurrent_state_into(&self, out: &mut [f32]) -> Option<usize> {
+        let len = self.ssm_recurrent_state.len();
+        if out.len() < len {
+            return None;
+        }
+        out[..len].copy_from_slice(&self.ssm_recurrent_state);
+        Some(len)
+    }
+
+    /// Restore a hybrid SSM / GatedDeltaNet recurrent state snapshot from a `.p64` neural
+    /// extension cartridge or pre-warmed scene seed into `self.ssm_recurrent_state` (zero-heap).
+    #[must_use]
+    pub fn restore_recurrent_state_from_slice(&mut self, src: &[f32]) -> bool {
+        let len = self.ssm_recurrent_state.len();
+        if len == 0 || src.len() != len {
+            return false;
+        }
+        self.ssm_recurrent_state.copy_from_slice(src);
+        true
+    }
+
     pub(crate) fn dispatch_hybrid_ssm_layer(
         &mut self,
         index: &GgufTensorIndex,
