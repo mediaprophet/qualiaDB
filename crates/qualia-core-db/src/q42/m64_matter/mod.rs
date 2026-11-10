@@ -17,6 +17,7 @@ pub mod lrm3;
 pub mod lut_entry;
 pub mod phase_juncture;
 pub mod point_record;
+pub mod shell_record;
 pub mod strata_record;
 #[cfg(test)]
 mod tests;
@@ -34,4 +35,5 @@ pub use lrm3::*;
 pub use lut_entry::*;
 pub use phase_juncture::*;
 pub use point_record::*;
+pub use shell_record::*;
 pub use strata_record::*;

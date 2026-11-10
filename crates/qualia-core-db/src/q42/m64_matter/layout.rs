@@ -32,6 +32,8 @@ pub const M64_MODE_HOLO: u8 = 0x01;
 pub const M64_MODE_STRATA: u8 = 0x02;
 /// Mode 0x03: Quantum q-branch boundary conditions & CSG tool excavation.
 pub const M64_MODE_PHASE_JUNCTURE: u8 = 0x03;
+/// Mode 0x04: Radial-Edge B-Rep shell face records (per-record CRC-32C).
+pub const M64_MODE_SHELL: u8 = 0x04;
 
 /// Flag indicating chunks are organized as 16x16x16 3D volumetric bricks.
 pub const M64_FLAG_3D_BRICK_16X16X16: u16 = 1 << 4;

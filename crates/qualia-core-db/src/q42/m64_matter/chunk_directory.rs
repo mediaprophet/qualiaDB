@@ -54,7 +54,7 @@ pub struct M64ChunkDirectoryEntry {
     pub srid_geodetic_code: u32,
     /// 2B: Identifier of the Bank 1 LUT recipe set for this chunk.
     pub lut_bank_epoch_id: u16,
-    /// 1B: Chunk record mode (0x00=Point, 0x01=Holo, 0x02=Strata, 0x03=PhaseJuncture).
+    /// 1B: Chunk record mode (0x00=Point, 0x01=Holo, 0x02=Strata, 0x03=PhaseJuncture, 0x04=Shell).
     pub chunk_record_mode: u8,
     /// 1B: Compression flags (0=Uncompressed mmap, 1=LZ4 block, 2=Bao verified).
     pub compression_flags: u8,

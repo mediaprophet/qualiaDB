@@ -6,8 +6,8 @@
 use super::{
     M64ChunkDirectoryEntry, M64Error, M64GeoRasterError, M64GeoRasterMetadata, M64Header,
     M64PhaseJunctureRecord, M64RasterSample, M64StrataColumnRecord, M64_FLAG_3D_BRICK_16X16X16,
-    M64_FLAG_LOCAL_METRIC_LRM3, M64_MAGIC, M64_MODE_HOLO, M64_MODE_PHASE_JUNCTURE,
-    M64_MODE_POINT, M64_MODE_STRATA,
+    E64_MAGIC, M64_FLAG_LOCAL_METRIC_LRM3, M64_MAGIC, M64_MODE_HOLO, M64_MODE_PHASE_JUNCTURE,
+    M64_MODE_POINT, M64_MODE_SHELL, M64_MODE_STRATA, M64HoloRecord, M64ShellRecord,
 };
 
 /// Explicit admission budgets; there is no implicit unlimited/default policy.
@@ -188,7 +188,11 @@ impl<'a> M64Reader<'a> {
 
             if !matches!(
                 entry.chunk_record_mode,
-                M64_MODE_POINT | M64_MODE_HOLO | M64_MODE_STRATA | M64_MODE_PHASE_JUNCTURE
+                M64_MODE_POINT
+                    | M64_MODE_HOLO
+                    | M64_MODE_STRATA
+                    | M64_MODE_PHASE_JUNCTURE
+                    | M64_MODE_SHELL
             ) {
                 return Err(M64ReadError::UnsupportedMode {
                     chunk,
@@ -258,10 +262,14 @@ impl<'a> M64Reader<'a> {
             let start = entry.byte_offset as usize;
             let end = start + entry.byte_length as usize;
             for (record, raw) in bytes[start..end].chunks_exact(64).enumerate() {
-                let result = if entry.chunk_record_mode == M64_MODE_STRATA {
-                    bytemuck::pod_read_unaligned::<M64StrataColumnRecord>(raw).validate()
-                } else {
-                    bytemuck::pod_read_unaligned::<M64PhaseJunctureRecord>(raw).validate()
+                let result = match entry.chunk_record_mode {
+                    M64_MODE_STRATA => {
+                        bytemuck::pod_read_unaligned::<M64StrataColumnRecord>(raw).validate()
+                    }
+                    M64_MODE_SHELL => {
+                        bytemuck::pod_read_unaligned::<M64ShellRecord>(raw).validate()
+                    }
+                    _ => bytemuck::pod_read_unaligned::<M64PhaseJunctureRecord>(raw).validate(),
                 };
                 result.map_err(|error| M64ReadError::Record { chunk, record, error })?;
                 verification.record_crc_checked += 1;
@@ -402,6 +410,74 @@ mod tests {
             tampered_result.err(),
             Some(M64ReadError::BaoHashMismatch { chunk_index: 0 }),
             "Expected BaoHashMismatch on tampered payload"
+        );
+    }
+
+    fn one_record_container(magic: [u8; 4], mode: u8, payload: &[u8; 64]) -> Vec<u8> {
+        let mut header = M64Header::default();
+        header.magic = magic;
+        header.total_file_size = 192;
+        header.chunk_count = 1;
+        header.chunk_table_offset = 64;
+        header.update_crc();
+        let mut entry = M64ChunkDirectoryEntry {
+            chunk_uuid: [0; 16],
+            spatial_hilbert_index: 0,
+            byte_offset: 128,
+            byte_length: 64,
+            record_count: 1,
+            srid_geodetic_code: 0,
+            lut_bank_epoch_id: 0,
+            chunk_record_mode: mode,
+            compression_flags: 0,
+            bao_root_hash_prefix: [0u8; 12],
+            entry_crc32c: 0,
+        };
+        entry.update_crc();
+        let mut buffer = vec![0u8; 192];
+        buffer[..64].copy_from_slice(bytemuck::bytes_of(&header));
+        buffer[64..128].copy_from_slice(bytemuck::bytes_of(&entry));
+        buffer[128..192].copy_from_slice(payload);
+        buffer
+    }
+
+    #[test]
+    fn admits_e64_magic_and_shell_mode_with_crc() {
+        let mut rec = M64ShellRecord::default();
+        rec.face_id = 3;
+        rec.update_crc();
+        let buffer = one_record_container(E64_MAGIC, M64_MODE_SHELL, bytemuck::cast_ref(&rec));
+        let limits = M64ReadLimits {
+            max_file_bytes: 1024,
+            max_chunks: 4,
+            max_records: 4,
+        };
+        let mut scratch = [M64PayloadInterval::default(); 4];
+        let reader = M64Reader::parse(&buffer, limits, &mut scratch).expect("e64 shell");
+        assert_eq!(reader.header().magic, E64_MAGIC);
+        assert_eq!(reader.verification().record_crc_checked, 1);
+        assert_eq!(
+            reader.chunk(0).unwrap().directory_entry().chunk_record_mode,
+            M64_MODE_SHELL
+        );
+    }
+
+    #[test]
+    fn admits_holo_without_per_record_crc() {
+        let rec = M64HoloRecord::default();
+        let buffer = one_record_container(M64_MAGIC, M64_MODE_HOLO, bytemuck::cast_ref(&rec));
+        let limits = M64ReadLimits {
+            max_file_bytes: 1024,
+            max_chunks: 4,
+            max_records: 4,
+        };
+        let mut scratch = [M64PayloadInterval::default(); 4];
+        let reader = M64Reader::parse(&buffer, limits, &mut scratch).expect("holo");
+        assert_eq!(reader.verification().records_without_checksum, 1);
+        assert_eq!(reader.verification().record_crc_checked, 0);
+        assert_eq!(
+            reader.chunk(0).unwrap().directory_entry().chunk_record_mode,
+            M64_MODE_HOLO
         );
     }
 }

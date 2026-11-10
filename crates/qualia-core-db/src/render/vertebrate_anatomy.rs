@@ -886,7 +886,7 @@ impl AnatomyMeshAccumulator {
 
 // ── PBR Material Builder Helpers ─────────────────────────────────────────────
 
-fn make_pbr_material(
+pub fn make_pbr_material(
     id_str: &str,
     base_color: [f32; 4],
     roughness: f32,
@@ -955,7 +955,6 @@ pub fn build_scale5_vertebrate_anatomy_10d(
     integument_vis_01: f32,
     explode_layer_01: f32,
 ) -> CompiledVertebrateAnatomy10d {
-    let rig = FaunaSkeletalRig10d::new(archetype);
     let (base_body_len, hip_height) = archetype.default_dimensions();
     let morphology = ArchetypeMorphology::for_archetype(archetype);
     let body_len = base_body_len * morphology.trunk;
@@ -2466,6 +2465,49 @@ pub fn build_scale5_vertebrate_anatomy_10d(
     });
 
     let int_end_v = acc.positions.len();
+
+    finalize_and_seal_vertebrate_anatomy_10d(
+        archetype,
+        acc,
+        materials,
+        submesh_ranges,
+        ost_start_v..ost_end_v,
+        myo_start_v..myo_end_v,
+        int_start_v..int_end_v,
+        osteology_vis_01,
+        myology_vis_01,
+        integument_vis_01,
+        explode_layer_01,
+    )
+}
+
+/// Finalizes an [`AnatomyMeshAccumulator`] built from either a portable model-family scaffold
+/// or a baseline archetype, applies zero-heap layer peeling & exploded-view displacement,
+/// and seals the 9-section `.10d` Living Container (`MAT4`, `UV01`, `FNRM`, `SRD1`, `PROC1`,
+/// `EONT1`, `MRP1`, `PROV`) with whole-file CRC-32C verification.
+#[allow(clippy::too_many_arguments)]
+pub fn finalize_and_seal_vertebrate_anatomy_10d(
+    archetype: FaunaBiomechanicalArchetype,
+    mut acc: AnatomyMeshAccumulator,
+    materials: Vec<MaterialRecord>,
+    submesh_ranges: Vec<SubmeshRange>,
+    osteology_range: std::ops::Range<usize>,
+    myology_range: std::ops::Range<usize>,
+    integument_range: std::ops::Range<usize>,
+    osteology_vis_01: f32,
+    myology_vis_01: f32,
+    integument_vis_01: f32,
+    explode_layer_01: f32,
+) -> CompiledVertebrateAnatomy10d {
+    let rig = FaunaSkeletalRig10d::new(archetype);
+    let (base_body_len, hip_height) = archetype.default_dimensions();
+    let morphology = ArchetypeMorphology::for_archetype(archetype);
+    let body_len = base_body_len * morphology.trunk;
+    let spine_len = (body_len * 0.32).max(0.10);
+    let femur_len = (hip_height * 0.48 * morphology.hindlimb).max(0.025);
+    let (ost_start_v, ost_end_v) = (osteology_range.start, osteology_range.end);
+    let (myo_start_v, myo_end_v) = (myology_range.start, myology_range.end);
+    let (int_start_v, int_end_v) = (integument_range.start, integument_range.end);
 
     // Ensure all positions and normals are strictly finite and unit-length for .10d FNRM validation
     for p in &mut acc.positions {
