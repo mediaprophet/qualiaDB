@@ -2,6 +2,7 @@
 
 pub mod access_modality;
 pub mod agency;
+pub mod anvil_policy;
 pub mod credentials;
 pub mod did_qi;
 pub mod identifier;
