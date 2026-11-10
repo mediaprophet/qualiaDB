@@ -209,3 +209,20 @@ pub use differential_render::{
 
 pub mod biological_ontology;
 pub use biological_ontology::*;
+
+pub mod holographic_scene;
+pub use holographic_scene::{
+    decode_trigger_rules_cbor_ld_into, encode_scene_slice_cbor_ld_into,
+    evaluate_predicate_triggers_zero_heap, pack_preset_command_quin, pack_preset_defeater_quin,
+    select_p64_vendor_slot, slice_scene_state_graph, AssetStateNode, P64ExtensionSlot,
+    PredicateTriggerRule, SceneGraphError, SceneSliceScope, ScheduledPresetCommand,
+    CBOR_LD_SCENE_MAGIC, OP_SCENE_BLEND_SUBPART, OP_SCENE_DEFEATER_CANCEL, OP_SCENE_PLAY_PRESET,
+    OP_SCENE_PREDICATE_TRIGGER,
+};
+
+pub mod p64_cartridge;
+pub use p64_cartridge::{
+    encode_trigger_rules_cbor_ld_into, load_p64_slot_f32_seed_into, mount_p64_cartridge_onto_engine,
+    pack_p64_extension_cartridge_into, unpack_p64_extension_cartridge_into, P64ExtensionHeader,
+    P64_EXT_CARTRIDGE_MAGIC,
+};

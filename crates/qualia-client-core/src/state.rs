@@ -104,6 +104,9 @@ pub struct AgentConfig {
     /// Studio WASM + companion gateway). Default: 8080. If 0, auto-finds
     /// an open port starting from 8080.
     pub settings_port: u16,
+    /// User-configurable external model directories scanned recursively for `.p64` / `.gguf` packages.
+    #[serde(default = "default_model_search_paths")]
+    pub model_search_paths: Vec<String>,
 }
 
 impl Default for AgentConfig {
@@ -116,11 +119,34 @@ impl Default for AgentConfig {
             daemon_port: 4242,
             inference_backend: "local".to_string(),
             settings_port: 8080,
+            model_search_paths: default_model_search_paths(),
         }
     }
 }
 
 /// Default dirs path.
+pub fn default_model_search_paths() -> Vec<String> {
+    let mut paths = Vec::new();
+    for env_key in ["QUALIA_LLM_VAULT", "QUALIA_MODEL_PATHS"] {
+        if let Some(val) = std::env::var_os(env_key) {
+            for p in std::env::split_paths(&val) {
+                if !p.as_os_str().is_empty() {
+                    paths.push(p.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        for candidate in [r"C:\LLM_files", r"C:\LLM_Models"] {
+            if !paths.iter().any(|p| p.eq_ignore_ascii_case(candidate)) {
+                paths.push(candidate.to_string());
+            }
+        }
+    }
+    paths
+}
+
 pub fn dirs_default_path() -> String {
     #[cfg(target_os = "windows")]
     {

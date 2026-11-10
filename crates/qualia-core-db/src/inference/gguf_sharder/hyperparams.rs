@@ -44,6 +44,11 @@ pub struct GgufHyperparams {
     pub architecture: u32,
     /// `ARCH_FLAG_*()` bitmask.
     pub arch_flags: u32,
+    pub rope_dim: u32,
+    pub rope_dim_swa: u32,
+    pub rope_freq_base_swa: f32,
+    pub rms_norm_eps: f32,
+    pub ple_embd_per_layer: u32,
 }
 
 impl GgufHyperparams {
@@ -103,6 +108,11 @@ impl From<etalon_model::inference::ModelHyperparams> for GgufHyperparams {
             full_attention_interval: value.full_attention_interval,
             architecture: value.architecture,
             arch_flags: value.arch_flags,
+            rope_dim: value.rope_dim,
+            rope_dim_swa: value.rope_dim_swa,
+            rope_freq_base_swa: value.rope_freq_base_swa,
+            rms_norm_eps: value.rms_norm_eps,
+            ple_embd_per_layer: value.ple_embd_per_layer,
         }
     }
 }
@@ -129,6 +139,11 @@ impl From<GgufHyperparams> for etalon_model::inference::ModelHyperparams {
             full_attention_interval: value.full_attention_interval,
             architecture: value.architecture,
             arch_flags: value.arch_flags,
+            rope_dim: value.rope_dim,
+            rope_dim_swa: value.rope_dim_swa,
+            rope_freq_base_swa: value.rope_freq_base_swa,
+            rms_norm_eps: value.rms_norm_eps,
+            ple_embd_per_layer: value.ple_embd_per_layer,
         }
     }
 }

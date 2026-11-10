@@ -3,25 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0a0a0f">
+    <meta name="theme-color" content="#070d0c">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Qualia-DB 3D Anatomy Demo</title>
+    <title>QualiaDB 3D Welfare, OSCE Clinical &amp; Maternal-Fetal Anatomy Studio</title>
     <style>
         :root {
-            --bg-dark: #0a0a0f;
-            --panel-bg: rgba(18, 18, 28, 0.94);
-            --accent: #00f0ff;
-            --accent-dim: rgba(0, 240, 255, 0.2);
-            --text-main: #e0e0e0;
-            --text-dim: #888;
+            --bg-dark: #070d0c;
+            --panel-bg: rgba(11, 20, 18, 0.96);
+            --card-bg: rgba(16, 29, 26, 0.88);
+            --border: rgba(45, 212, 191, 0.20);
+            --border-subtle: rgba(255, 255, 255, 0.09);
+            --accent: #2dd4bf;
+            --accent-dim: rgba(45, 212, 191, 0.16);
+            --accent-sky: #38bdf8;
+            --accent-amber: #fbbf24;
+            --accent-rose: #fb7185;
+            --accent-purple: #c084fc;
+            --text-main: #ecfdf5;
+            --text-dim: #94a3b8;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
             --safe-left: env(safe-area-inset-left, 0px);
             --safe-right: env(safe-area-inset-right, 0px);
-            --sheet-h: min(72dvh, 560px);
-            --topbar-h: 52px;
+            --sheet-h: min(78dvh, 660px);
+            --topbar-h: 54px;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -34,7 +41,7 @@
             overflow: hidden;
             background-color: var(--bg-dark);
             color: var(--text-main);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             overscroll-behavior: none;
         }
 
@@ -43,65 +50,133 @@
             flex-direction: column;
         }
 
-        /* ── Top bar (always visible on mobile; slim on desktop) ── */
+        /* ── Topbar ── */
         .topbar {
             flex: 0 0 auto;
-            height: calc(var(--topbar-h) + var(--safe-top));
+            min-height: calc(var(--topbar-h) + var(--safe-top));
             padding: var(--safe-top) max(12px, var(--safe-right)) 0 max(12px, var(--safe-left));
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: rgba(10, 10, 15, 0.88);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 8px;
+            background: rgba(7, 13, 12, 0.95);
+            border-bottom: 1px solid var(--border);
             backdrop-filter: blur(14px);
             z-index: 40;
+            flex-wrap: wrap;
+        }
+        .topbar-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            margin-right: auto;
         }
         .topbar h1 {
             margin: 0;
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 0.94rem;
+            font-weight: 700;
             color: #fff;
-            flex: 1;
-            min-width: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            letter-spacing: -0.01em;
         }
+        .badge-10d {
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            font-size: 0.66rem;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(45, 212, 191, 0.14);
+            border: 1px solid rgba(45, 212, 191, 0.45);
+            color: var(--accent);
+            white-space: nowrap;
+        }
+
+        .profile-pills, .lens-pills {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            max-width: 100%;
+            padding: 3px 0;
+        }
+        .pill-btn {
+            border: 1px solid var(--border-subtle);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-dim);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 5px 9px;
+            border-radius: 7px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.14s;
+        }
+        .pill-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-main);
+        }
+        .pill-btn.active {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.35);
+        }
+        .pill-btn.preg.active {
+            background: rgba(251, 113, 133, 0.18);
+            border-color: var(--accent-rose);
+            color: #fda4af;
+        }
+        .pill-btn.eco.active {
+            background: rgba(251, 191, 36, 0.18);
+            border-color: var(--accent-amber);
+            color: #fde68a;
+        }
+        .pill-btn.lens-person.active {
+            background: rgba(56, 189, 248, 0.18);
+            border-color: var(--accent-sky);
+            color: #7dd3fc;
+        }
+        .pill-btn.lens-clinician.active {
+            background: rgba(192, 132, 252, 0.20);
+            border-color: var(--accent-purple);
+            color: #e9d5ff;
+        }
+
         .topbar-links {
             display: none;
-            gap: 12px;
-            font-size: 0.78rem;
+            gap: 10px;
+            font-size: 0.74rem;
         }
         .topbar-links a { color: var(--text-dim); text-decoration: none; }
         .topbar-links a:hover { color: var(--accent); }
 
         .icon-btn {
             flex: 0 0 auto;
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.12);
-            background: rgba(255,255,255,0.06);
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-main);
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            touch-action: manipulation;
         }
-        .icon-btn:active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
         .icon-btn.primary {
             background: var(--accent-dim);
-            border-color: rgba(0, 240, 255, 0.45);
+            border-color: rgba(45, 212, 191, 0.45);
             color: var(--accent);
             width: auto;
-            padding: 0 12px;
-            gap: 6px;
-            font-size: 0.82rem;
+            padding: 0 10px;
+            gap: 5px;
+            font-size: 0.75rem;
             font-weight: 600;
         }
 
+        /* ── Main Stage ── */
         .stage {
             flex: 1 1 auto;
             position: relative;
@@ -110,74 +185,136 @@
             overflow: hidden;
         }
 
-        /* ── Sidebar / bottom sheet ── */
         .sidebar {
-            width: 320px;
+            width: 340px;
             max-width: 100%;
             background: var(--panel-bg);
-            border-right: 1px solid rgba(255,255,255,0.1);
+            border-right: 1px solid var(--border);
             backdrop-filter: blur(16px);
-            padding: 16px;
+            padding: 11px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 10px;
             z-index: 30;
             overflow-y: auto;
             overscroll-behavior: contain;
-            -webkit-overflow-scrolling: touch;
         }
-        .sidebar .header { display: none; }
+
+        .right-panel {
+            width: 390px;
+            max-width: 100%;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            padding: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 28;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
 
         .control-group {
-            background: rgba(0,0,0,0.32);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
             border-radius: 10px;
-            padding: 12px;
+            padding: 10px;
             flex-shrink: 0;
         }
         .control-group h3 {
-            margin: 0 0 12px 0;
-            font-size: 0.92rem;
+            margin: 0 0 8px 0;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
             color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
         }
 
         .toggle-container {
-            display: flex;
-            background: rgba(0,0,0,0.5);
-            border-radius: 8px;
-            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+        }
+        .toggle-container-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .toggle-container-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin-top: 4px;
         }
         .toggle-btn {
-            flex: 1;
-            padding: 11px 8px;
-            border: none;
-            background: transparent;
+            padding: 6px 5px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.35);
             color: var(--text-dim);
             cursor: pointer;
-            transition: all 0.15s;
-            font-size: 0.82rem;
-            touch-action: manipulation;
-            min-height: 44px;
+            transition: all 0.14s;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-align: center;
+        }
+        .toggle-btn:hover {
+            border-color: rgba(45, 212, 191, 0.45);
+            color: var(--text-main);
         }
         .toggle-btn.active {
             background: var(--accent-dim);
             color: var(--accent);
-            box-shadow: inset 0 0 0 1px var(--accent);
+            border-color: var(--accent);
+        }
+        .toggle-btn.preg.active {
+            background: rgba(251, 113, 133, 0.18);
+            color: #fda4af;
+            border-color: var(--accent-rose);
+        }
+        .toggle-btn.osce.active {
+            background: rgba(192, 132, 252, 0.22);
+            color: #e9d5ff;
+            border-color: var(--accent-purple);
+        }
+
+        .slider-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 7px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--text-main);
+            font-family: ui-monospace, monospace;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            cursor: pointer;
         }
 
         .checkbox-label {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 7px;
+            margin-bottom: 5px;
             cursor: pointer;
-            color: #ccc;
-            min-height: 36px;
+            color: var(--text-main);
+            font-size: 0.74rem;
         }
         .checkbox-label input {
             cursor: pointer;
-            width: 18px;
-            height: 18px;
+            width: 14px;
+            height: 14px;
             accent-color: var(--accent);
         }
 
@@ -186,105 +323,241 @@
             position: relative;
             min-width: 0;
             min-height: 0;
-            background-image:
-                radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.05) 0%, transparent 70%);
+            background:
+                radial-gradient(circle at 50% 38%, rgba(45, 212, 191, 0.09) 0%, rgba(15, 23, 42, 0.4) 52%, #050a09 100%);
             touch-action: none;
+            overflow: hidden;
+        }
+
+        /* ── Viewport Overlays ── */
+        .viewport-hud-top {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            pointer-events: none;
+            z-index: 18;
+        }
+        .hud-card {
+            pointer-events: auto;
+            background: rgba(7, 13, 12, 0.86);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 7px 11px;
+            backdrop-filter: blur(10px);
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            font-size: 0.72rem;
+            max-width: 470px;
+        }
+        .cam-bar {
+            pointer-events: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            background: rgba(7, 13, 12, 0.86);
+            border: 1px solid var(--border-subtle);
+            border-radius: 9px;
+            padding: 4px;
+            backdrop-filter: blur(10px);
+        }
+        .cam-btn {
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            font-size: 0.69rem;
+            font-family: ui-monospace, monospace;
+            padding: 4px 7px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .cam-btn:hover, .cam-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        /* ── Layer Mode Bar on Viewport ── */
+        .viewport-layer-bar {
+            position: absolute;
+            left: 12px;
+            bottom: 48px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            background: rgba(7, 13, 12, 0.88);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            padding: 5px;
+            z-index: 19;
+            backdrop-filter: blur(10px);
+            max-width: calc(100% - 24px);
         }
 
         #tooltip {
             position: absolute;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(7, 13, 12, 0.95);
             border: 1px solid var(--accent);
             color: #fff;
-            padding: 8px 12px;
-            border-radius: 4px;
+            padding: 7px 10px;
+            border-radius: 7px;
             pointer-events: none;
             display: none;
-            font-family: monospace;
-            z-index: 20;
-            transform: translate(-50%, -150%);
+            font-family: ui-monospace, monospace;
+            font-size: 0.72rem;
+            z-index: 25;
+            transform: translate(-50%, -125%);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+            max-width: 290px;
         }
 
         #status {
             position: absolute;
             left: max(12px, var(--safe-left));
-            bottom: max(12px, var(--safe-bottom));
-            max-width: min(420px, calc(100% - 24px));
-            background: rgba(0, 0, 0, 0.78);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            bottom: max(10px, var(--safe-bottom));
+            max-width: min(600px, calc(100% - 24px));
+            background: rgba(7, 13, 12, 0.88);
+            border: 1px solid var(--border-subtle);
             border-left: 3px solid var(--accent);
             color: var(--text-main);
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 8px;
             font-family: ui-monospace, 'Cascadia Code', monospace;
-            font-size: 0.78rem;
-            line-height: 1.4;
+            font-size: 0.71rem;
+            line-height: 1.35;
             z-index: 20;
             pointer-events: none;
         }
-        #status.ok { border-left-color: #38e08a; }
-        #status.error { border-left-color: #ff6b6b; color: #ffd9d9; }
+        #status.ok { border-left-color: #2dd4bf; }
+        #status.error { border-left-color: #fb7185; color: #fecdd3; }
 
-        #progress-wrap {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: min(280px, calc(100% - 48px));
-            z-index: 21;
-            display: none;
-            pointer-events: none;
-        }
-        #progress-wrap.visible { display: block; }
-        #progress-label {
-            text-align: center;
-            font-size: 0.78rem;
-            color: #bcd;
-            margin-bottom: 8px;
-            text-shadow: 0 1px 4px #000;
-        }
-        .progress-bar {
-            height: 6px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #00f0ff, #38e08a);
-            border-radius: 999px;
-            transition: width 0.2s;
-        }
+        /* ── Mixer & Parts List ── */
+        .mixer-systems { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; max-height: 200px; overflow-y: auto; padding-right: 4px; }
+        .mixer-row { display: flex; align-items: center; gap: 5px; min-height: 24px; }
+        .SysDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .mixer-label { flex: 0 0 118px; font-size: 0.71rem; color: #d1fae5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mixer-fader { flex: 1; accent-color: var(--accent); cursor: pointer; height: 18px; }
+        .mixer-pct { width: 32px; text-align: right; font-family: ui-monospace, monospace; font-size: 0.66rem; color: var(--text-dim); }
+        .mixer-note { margin-top: 5px; font-size: 0.68rem; color: var(--text-dim); line-height: 1.35; }
 
-        .mixer-systems { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
-        .mixer-row { display: flex; align-items: center; gap: 10px; min-height: 36px; }
-        .mixer-label { flex: 0 0 110px; font-size: 0.76rem; color: #ccc; line-height: 1.2; }
-        .mixer-fader { flex: 1; accent-color: var(--accent); cursor: pointer; height: 28px; }
-        .mixer-fader:disabled { opacity: 0.35; cursor: not-allowed; }
-        .mixer-row-overlay .mixer-label { color: var(--text-dim); font-style: italic; }
-        .mixer-note { margin-top: 10px; font-size: 0.72rem; color: var(--text-dim); line-height: 1.4; }
-        .mixer-note em { color: #bcd; font-style: italic; }
-
-        #parts-count { font-weight: normal; color: var(--text-dim); font-size: 0.78rem; }
+        #parts-count { font-weight: normal; color: var(--text-dim); font-size: 0.70rem; }
         .parts-search {
             width: 100%;
-            box-sizing: border-box;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.45);
+            border: 1px solid var(--border-subtle);
             color: var(--text-main);
-            border-radius: 8px;
-            padding: 10px 10px;
-            font-size: 0.9rem;
+            border-radius: 7px;
+            padding: 6px 8px;
+            font-size: 0.75rem;
         }
-        .parts-buttons { display: flex; gap: 8px; margin: 8px 0; }
-        .parts-btn { flex: 1; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 5px; min-height: 42px; }
-        .parts-list { max-height: 220px; overflow-y: auto; margin-top: 2px; -webkit-overflow-scrolling: touch; }
-        .parts-group > summary { cursor: pointer; font-size: 0.82rem; color: var(--accent); padding: 8px 0; list-style: revert; min-height: 36px; }
-        .part-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #ccc; padding: 6px 0 6px 12px; cursor: pointer; min-height: 36px; }
-        .part-row input { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }
+        .parts-buttons { display: flex; gap: 5px; margin: 5px 0; }
+        .parts-btn { flex: 1; padding: 5px 4px; font-size: 0.70rem; }
+        .parts-list { max-height: 165px; overflow-y: auto; margin-top: 2px; }
+        .parts-group > summary { cursor: pointer; font-size: 0.74rem; color: var(--accent); padding: 3px 0; }
+        .part-row { display: flex; align-items: center; justify-content: space-between; gap: 5px; font-size: 0.71rem; color: #cbd5e1; padding: 3px 4px 3px 8px; cursor: pointer; border-radius: 5px; border: 1px solid transparent; }
+        .part-row:hover { background: rgba(45, 212, 191, 0.08); }
+        .part-row.selected { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+        .part-row input { accent-color: var(--accent); cursor: pointer; }
 
-        /* Floating zoom cluster (mobile + touch) */
+        /* ── OSCE, Comorbidity & Measurements Cards (Right Panel) ── */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+        }
+        .metric-box {
+            background: rgba(0, 0, 0, 0.36);
+            border: 1px solid var(--border-subtle);
+            border-radius: 7px;
+            padding: 6px 7px;
+        }
+        .metric-label {
+            font-size: 0.64rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .metric-val {
+            font-family: ui-monospace, 'Cascadia Code', monospace;
+            font-size: 0.80rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 2px;
+        }
+        .metric-sub {
+            font-size: 0.63rem;
+            color: var(--accent);
+            font-family: ui-monospace, monospace;
+        }
+
+        .osce-card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .osce-item {
+            padding: 7px 9px;
+            border-radius: 7px;
+            background: rgba(0, 0, 0, 0.40);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--accent);
+            font-size: 0.72rem;
+            line-height: 1.38;
+        }
+        .osce-item.strain { border-left-color: #fb7185; }
+        .osce-item.watch { border-left-color: #fbbf24; }
+        .osce-item.settled { border-left-color: #34d399; }
+        .osce-item.voi { border-left-color: #c084fc; }
+
+        .factor-chip-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+        }
+        .factor-chip {
+            font-size: 0.67rem;
+            font-family: ui-monospace, monospace;
+            padding: 3px 7px;
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-dim);
+            cursor: pointer;
+            user-select: none;
+        }
+        .factor-chip.active-adverse {
+            background: rgba(251, 113, 133, 0.18);
+            border-color: #fb7185;
+            color: #fecdd3;
+        }
+        .factor-chip.active-supportive {
+            background: rgba(52, 211, 153, 0.18);
+            border-color: #34d399;
+            color: #a7f3d0;
+        }
+
+        .q42-rule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-family: ui-monospace, monospace;
+            font-size: 0.68rem;
+        }
+        .q42-rule {
+            padding: 5px 7px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.38);
+            border-left: 3px solid var(--accent);
+        }
+        .q42-rule.forbid { border-left-color: var(--accent-rose); }
+        .q42-rule.obligate { border-left-color: var(--accent-purple); }
+        .q42-rule.ltl { border-left-color: var(--accent-sky); }
+
         .zoom-cluster {
             position: absolute;
             right: max(12px, var(--safe-right));
@@ -292,104 +565,61 @@
             transform: translateY(-50%);
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             z-index: 22;
         }
         .zoom-cluster button {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.14);
-            background: rgba(0,0,0,0.62);
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(7, 13, 12, 0.82);
             color: #fff;
-            font-size: 1.25rem;
+            font-size: 1.05rem;
             font-weight: 600;
             cursor: pointer;
-            touch-action: manipulation;
-            backdrop-filter: blur(8px);
         }
-        .zoom-cluster button:active { border-color: var(--accent); color: var(--accent); }
 
         #attribution {
             position: absolute;
             right: max(12px, var(--safe-right));
-            bottom: max(12px, var(--safe-bottom));
-            max-width: min(360px, calc(100% - 24px));
-            background: rgba(0, 0, 0, 0.78);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            bottom: max(10px, var(--safe-bottom));
+            max-width: min(320px, calc(100% - 24px));
+            background: rgba(7, 13, 12, 0.88);
+            border: 1px solid var(--border-subtle);
             color: var(--text-dim);
-            padding: 6px 11px;
+            padding: 4px 9px;
             border-radius: 8px;
             font-family: ui-monospace, monospace;
-            font-size: 0.7rem;
-            line-height: 1.5;
+            font-size: 0.66rem;
             z-index: 20;
         }
-        #attribution > summary {
-            cursor: pointer;
-            color: #bcd;
-            list-style: none;
-            text-align: right;
-            user-select: none;
-            padding: 4px 0;
-        }
+        #attribution > summary { cursor: pointer; color: var(--accent); list-style: none; text-align: right; }
         #attribution > summary::-webkit-details-marker { display: none; }
-        #attribution[open] > summary {
-            margin-bottom: 6px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        #attribution-body { text-align: left; display: flex; flex-direction: column; gap: 7px; }
-        #attribution .src { color: #fff; }
-        #attribution .scope { color: var(--text-dim); }
-        #attribution .note { color: var(--text-dim); font-style: italic; margin-top: 3px; }
-        #attribution a { color: var(--accent); text-decoration: none; }
-        #attribution a:hover { text-decoration: underline; }
 
         .sheet-scrim {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.45);
+            background: rgba(0,0,0,0.5);
             z-index: 45;
-            opacity: 0;
-            transition: opacity 0.2s;
         }
-        .sheet-scrim.open {
-            display: block;
-            opacity: 1;
-        }
+        .sheet-scrim.open { display: block; }
 
-        .sheet-handle {
-            display: none;
-            width: 40px;
-            height: 4px;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.22);
-            margin: 0 auto 10px;
-        }
-
-        .foot-note {
-            font-size: 0.78rem;
-            color: var(--text-dim);
-            line-height: 1.4;
-        }
-
-        /* ── Mobile: bottom sheet ── */
-        @media (max-width: 860px) {
-            .topbar-links { display: none; }
-            .sidebar .header { display: block; margin-bottom: 4px; }
-            .sidebar .header h1 { display: none; }
-            .sidebar .header a {
-                color: var(--text-dim);
-                text-decoration: none;
-                font-size: 0.82rem;
-                display: inline-block;
-                margin-right: 12px;
+        @media (max-width: 1180px) {
+            .right-panel { display: none; }
+            .right-panel.mobile-visible {
+                display: flex;
+                position: fixed;
+                right: 0;
+                top: var(--topbar-h);
+                bottom: 0;
+                width: min(390px, 94vw);
+                z-index: 55;
             }
+        }
 
-            .stage { flex-direction: column; }
-
+        @media (max-width: 860px) {
             .sidebar {
                 position: fixed;
                 left: 0;
@@ -399,159 +629,265 @@
                 height: var(--sheet-h);
                 max-height: var(--sheet-h);
                 border-right: none;
-                border-top: 1px solid rgba(255,255,255,0.12);
+                border-top: 1px solid var(--border);
                 border-radius: 18px 18px 0 0;
-                padding: 10px 14px calc(14px + var(--safe-bottom));
                 transform: translateY(110%);
-                transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.2, 1);
+                transition: transform 0.25s ease;
                 z-index: 50;
-                box-shadow: 0 -12px 40px rgba(0,0,0,0.45);
             }
             .sidebar.open { transform: translateY(0); }
-            .sheet-handle { display: block; }
-
-            #status {
-                bottom: max(64px, calc(12px + var(--safe-bottom)));
-                max-width: calc(100% - 88px);
-                font-size: 0.72rem;
-            }
-            #attribution {
-                bottom: max(64px, calc(12px + var(--safe-bottom)));
-                max-width: min(200px, 42vw);
-                font-size: 0.65rem;
-            }
-            .parts-list { max-height: 160px; }
-            .foot-note { display: none; }
         }
-
-        /* Desktop: show hub links in topbar, hide mobile-only chrome */
         @media (min-width: 861px) {
-            body { flex-direction: column; }
-            .topbar { height: 48px; padding-top: 0; }
             .topbar-links { display: flex; }
-            .icon-btn.primary span.label { display: none; }
-            .icon-btn.primary { width: 40px; padding: 0; }
-            .stage { flex-direction: row; }
-            .sidebar {
-                position: relative;
-                transform: none !important;
-                height: auto;
-                max-height: none;
-            }
-            .sheet-scrim { display: none !important; }
-            .sheet-handle { display: none; }
-            .zoom-cluster { display: none; }
-            #status { bottom: 14px; left: 16px; }
-            #attribution { bottom: 14px; right: 16px; max-width: 470px; }
         }
     </style>
-    <!-- Strip removed WebGPU limits before portal requestDevice (same hang fix as online-llm-demo). -->
     <script src="../js/webgpu-limits-shim.js"></script>
     <script src="../js/menu-loader.js"></script>
 </head>
 <body>
     <header class="topbar">
         <button type="button" class="icon-btn" id="btn-back" title="Back" aria-label="Back to playground" onclick="location.href='index.html'">←</button>
-        <h1 id="title">Qualia 3D Anatomy</h1>
-        <div class="topbar-links">
-            <a href="../index.html">Hub</a>
-            <a href="index.html">Playground</a>
+        <div class="topbar-title-wrap">
+            <h1 id="title">Qualia 3D Clinical OSCE, Welfare &amp; Anatomy</h1>
+            <span class="badge-10d" id="top-container-badge">Synth HMC · QualiaPortal</span>
         </div>
-        <button type="button" class="icon-btn primary" id="btn-controls" aria-expanded="false" aria-controls="sidebar" title="Body controls">
-            ☰ <span class="label">Controls</span>
+
+        <div class="profile-pills" role="tablist" aria-label="Biological and Ecosystem Profiles">
+            <button type="button" class="pill-btn active" id="pill-male" onclick="setSex('male')">♂ Male (XY)</button>
+            <button type="button" class="pill-btn" id="pill-female" onclick="setSex('female')">♀ Female (XX)</button>
+            <button type="button" class="pill-btn preg" id="pill-t1" onclick="setSex('female_trimester_1')">♀ Preg T1 (W10)</button>
+            <button type="button" class="pill-btn preg" id="pill-t2" onclick="setSex('female_trimester_2')">♀ Preg T2 (W22)</button>
+            <button type="button" class="pill-btn preg" id="pill-t3" onclick="setSex('female_trimester_3')">♀ Preg T3 (W38)</button>
+            <button type="button" class="pill-btn eco" id="pill-wallaby" onclick="setSex('wallaby')">🦘 Wallaby</button>
+            <button type="button" class="pill-btn eco" id="pill-whitegum" onclick="setSex('whitegum')">🌿 Whitegum</button>
+            <button type="button" class="pill-btn" id="pill-working-heart" onclick="setWorkingHeart()">♥ Working heart</button>
+        </div>
+
+        <!-- Dual Audience Lens Switcher (wellfare-core::anatomy::Lens::Person vs Lens::Clinician) -->
+        <div class="lens-pills" role="tablist" aria-label="Audience Lens">
+            <button type="button" class="pill-btn lens-person" id="btn-lens-person" onclick="setAudienceLens('person')" title="Patient / Person Illustration Lens: Plain-language explanations &amp; wellbeing bands">👤 Patient View</button>
+            <button type="button" class="pill-btn lens-clinician active" id="btn-lens-clinician" onclick="setAudienceLens('clinician')" title="Clinician / OSCE Evaluation Lens: Comorbidities, interactions, evidence tiers &amp; VOI pathway">🩺 OSCE Clinician</button>
+        </div>
+
+        <button type="button" class="icon-btn primary" id="btn-measurements-toggle" onclick="toggleMeasurementsPanel()" title="Toggle OSCE &amp; Welfare Panel">
+            🩺 <span>OSCE &amp; Metrics</span>
+        </button>
+        <button type="button" class="icon-btn primary" id="btn-controls" aria-expanded="false" aria-controls="sidebar" title="Anatomy Layers &amp; Controls" onclick="toggleLayersPanel()">
+            ☰ <span class="label">Layers</span>
         </button>
     </header>
 
     <div class="stage">
         <div class="sheet-scrim" id="sheet-scrim" aria-hidden="true"></div>
 
-        <aside class="sidebar" id="sidebar" role="dialog" aria-label="Anatomy controls">
-            <div class="sheet-handle" aria-hidden="true"></div>
-            <div class="header">
-                <a href="../index.html">← Hub</a>
-                <a href="index.html">← Playground</a>
-            </div>
-
-            <div class="control-group">
-                <h3>Reference Body</h3>
+        <!-- ── LEFT SIDEBAR: Anatomical Layer Peel Modes, Gestational Timeline, OSCE Case Presets & 17-System Mixer ── -->
+        <aside class="sidebar" id="sidebar" role="dialog" aria-label="Anatomy layers and OSCE controls">
+            <!-- 1. Anatomical Layer Modes (One-Click Peel Presets) -->
+            <div class="control-group" style="border-color:rgba(45, 212, 191, 0.38);">
+                <h3>
+                    <span>Anatomical Layer Peel Modes</span>
+                    <span id="active-layer-badge" style="font-family:monospace;font-size:0.66rem;color:var(--accent);">Composite</span>
+                </h3>
                 <div class="toggle-container">
-                    <button id="btn-male" class="toggle-btn active" type="button" onclick="setSex('male')">Male (VHM)</button>
-                    <button id="btn-female" class="toggle-btn" type="button" onclick="setSex('female')">Female (VHF)</button>
+                    <button type="button" class="toggle-btn active" id="layer-all" onclick="setAnatomyLayerMode('all')">All 17 Systems</button>
+                    <button type="button" class="toggle-btn osce" id="layer-sigma" onclick="setAnatomyLayerMode('sigma_xray')">🩺 OSCE σ-Burden X-Ray</button>
+                    <button type="button" class="toggle-btn" id="layer-surface" onclick="setAnatomyLayerMode('surface')">1. Skin / Surface</button>
+                    <button type="button" class="toggle-btn" id="layer-muscular" onclick="setAnatomyLayerMode('muscular')">2. Muscular Écorché</button>
+                    <button type="button" class="toggle-btn" id="layer-skeletal" onclick="setAnatomyLayerMode('skeletal')">3. Skeletal &amp; Pelvis</button>
+                    <button type="button" class="toggle-btn" id="layer-cardiopulm" onclick="setAnatomyLayerMode('cardiopulmonary')">4. Cardiopulmonary</button>
+                    <button type="button" class="toggle-btn" id="layer-visceral" onclick="setAnatomyLayerMode('visceral')">5. Visceral GI/Renal</button>
+                    <button type="button" class="toggle-btn" id="layer-neuro" onclick="setAnatomyLayerMode('neuro_endocrine')">6. Neuro-Endocrine</button>
                 </div>
-                <button id="btn-complete" class="toggle-btn" type="button" style="margin-top:8px;width:100%;border:1px solid rgba(255,255,255,0.15);border-radius:8px;" onclick="setSex('complete')">Complete body</button>
-                <div id="complete-loader" style="display:none;margin-top:8px;font-size:0.72rem;color:var(--text-dim);line-height:1.45;">
-                    The complete BodyParts3D body (CC BY-SA) is a large pack. Browsers can't fetch GitHub-release assets cross-origin, so:
-                    <div style="margin-top:6px;"><a id="complete-dl" href="#" rel="noopener" download>↓ Download anatomy-bodyparts3d.hmc</a></div>
-                    <div style="margin-top:6px;">then load the file:</div>
-                    <input id="complete-file" type="file" accept=".hmc" onchange="onCompleteFile(this.files[0])" style="margin-top:4px;width:100%;font-size:0.72rem;color:var(--text-dim);" />
-                    <div style="margin-top:6px;">The desktop app loads it directly — no download step. On phones, prefer Male/Female CCF packs (same-origin).</div>
+                <button type="button" class="toggle-btn preg" id="layer-maternal" style="width:100%;margin-top:4px;" onclick="setAnatomyLayerMode('maternal_fetal')">7. Maternal-Fetal &amp; Uteroplacental Unit</button>
+                <div class="mixer-note">Peel directly to any anatomical layer, or switch to <b>OSCE σ-Burden X-Ray</b> to colour organs by clinical strain (`550nm Green → 600nm Amber → 680nm Red`) with 3D comorbidity arcs.</div>
+            </div>
+
+            <!-- 2. Biological & Gestational Profile -->
+            <div class="control-group">
+                <h3>
+                    <span>Biological &amp; Gestational Profile</span>
+                    <span id="profile-tag" style="font-family:monospace;font-size:0.68rem;color:var(--accent-sky);">XY · W0</span>
+                </h3>
+                <div class="toggle-container">
+                    <button id="btn-male" class="toggle-btn active" type="button" onclick="setSex('male')">Male (XY · 178cm)</button>
+                    <button id="btn-female" class="toggle-btn" type="button" onclick="setSex('female')">Female (XX · 165cm)</button>
+                </div>
+                <div class="toggle-container-3">
+                    <button id="btn-trimester-1" class="toggle-btn preg" type="button" onclick="setSex('female_trimester_1')">Preg T1 (W10)</button>
+                    <button id="btn-trimester-2" class="toggle-btn preg" type="button" onclick="setSex('female_trimester_2')">Preg T2 (W22)</button>
+                    <button id="btn-trimester-3" class="toggle-btn preg" type="button" onclick="setSex('female_trimester_3')">Preg T3 (W38)</button>
+                </div>
+                <div class="slider-row" id="gestation-slider-wrap">
+                    <div class="slider-header">
+                        <span>Gestational Age (Weeks)</span>
+                        <span id="gestation-week-label" style="color:#fda4af;font-weight:700;">Week 0 (Baseline)</span>
+                    </div>
+                    <input type="range" id="gestation-slider" min="0" max="40" step="1" value="0" oninput="onGestationalWeekChange(this.value)">
                 </div>
             </div>
 
+            <!-- 3. Cross-Section, Calipers & Physiological Macros -->
             <div class="control-group">
-                <h3>Mixer — Attention</h3>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="ch-ambient" onchange="onAmbient(this.checked)"> Ambient σ field
+                <h3>
+                    <span>Dissection Cut &amp; Live Physiology</span>
+                    <span id="clip-label" style="font-size:0.66rem;color:#34d399;font-family:monospace;">Full 3D</span>
+                </h3>
+                <div class="toggle-container-3">
+                    <button type="button" class="toggle-btn active" id="clip-none" onclick="setClipMode('none')">Full 3D</button>
+                    <button type="button" class="toggle-btn" id="clip-sagittal" onclick="setClipMode('sagittal')">Sagittal Cut</button>
+                    <button type="button" class="toggle-btn" id="clip-explode" onclick="setClipMode('explode')">Exploded</button>
+                </div>
+                <div id="macro-buttons" class="toggle-container" style="margin-top:6px;"></div>
+                <label class="checkbox-label" style="margin-top:7px;">
+                    <input type="checkbox" id="ch-calipers" checked onchange="onCalipersToggle(this.checked)"> Show 3D Clinical &amp; Obstetric Calipers
                 </label>
-                <div id="mixer-systems" class="mixer-systems"></div>
-                <div class="mixer-note">Compose which body systems you attend to. Drag a fader to 0 to mute. Systems marked <em>·overlay</em> (ECS / ENS / glymphatic) are distributed networks painted on host organs.</div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="ch-comorbidity-arcs" checked onchange="onComorbidityArcsToggle(this.checked)"> Show 3D Comorbidity &amp; Organ Interaction Arcs
+                </label>
             </div>
 
+            <!-- 4. 17-System Attention Mixer -->
             <div class="control-group">
-                <h3>Parts <span id="parts-count"></span></h3>
-                <input id="parts-search" type="search" enterkeyhint="search" placeholder="Search parts…" oninput="onPartSearch(this.value)" class="parts-search" autocomplete="off" />
+                <h3>
+                    <span>17-System Fine Opacity Mixer</span>
+                    <button type="button" class="cam-btn" onclick="resetSystemMixer()">Reset</button>
+                </h3>
+                <div id="mixer-systems" class="mixer-systems"></div>
+            </div>
+
+            <!-- 5. Organ & Structure Picker -->
+            <div class="control-group">
+                <h3>Organ &amp; Structure Picker <span id="parts-count"></span></h3>
+                <input id="parts-search" type="search" enterkeyhint="search" placeholder="Search organs, bones, nerves, fetal parts…" oninput="onPartSearch(this.value)" class="parts-search" autocomplete="off" />
                 <div class="parts-buttons">
                     <button type="button" class="toggle-btn parts-btn" onclick="setAllParts(true)">Select all</button>
                     <button type="button" class="toggle-btn parts-btn" onclick="setAllParts(false)">Deselect all</button>
                 </div>
                 <div id="parts-list" class="parts-list"></div>
-                <div class="mixer-note">Every structure in this body, grouped by system. Untick a part to hide it.</div>
-            </div>
-
-            <div class="foot-note">
-                Real HuBMAP/CCF reference-organ meshes, compiled to sealed <b>.10d</b> and shipped in one transparent <b>.hmc</b> bundle, rendered by the Qualia engine on <b>WebGPU</b> — the same renderer that runs natively on the desktop.
             </div>
         </aside>
 
+        <!-- ── CENTER 3D VIEWPORT ── -->
         <div id="canvas-container">
+            <div class="viewport-hud-top">
+                <div class="hud-card" id="hud-summary">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <span style="color:var(--accent);font-weight:700;" id="hud-title">Adult Male (XY) · 17-System Digital Twin</span>
+                        <span id="hud-lens-badge" style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:rgba(192,132,252,0.2);color:#e9d5ff;border:1px solid rgba(192,132,252,0.4);">OSCE Clinician Lens</span>
+                    </div>
+                    <div style="color:var(--text-dim);font-size:0.68rem;margin-top:3px;" id="hud-subtitle">Click any 3D organ to illustrate clinical findings, comorbidities &amp; .q42 rules</div>
+                </div>
+                <div class="cam-bar" role="toolbar" aria-label="Camera Presets">
+                    <button type="button" class="cam-btn active" onclick="setCameraPreset('hero')">3/4 Hero</button>
+                    <button type="button" class="cam-btn" onclick="setCameraPreset('anterior')">Anterior</button>
+                    <button type="button" class="cam-btn" onclick="setCameraPreset('lateral')">Lateral / Sagittal</button>
+                    <button type="button" class="cam-btn" onclick="setCameraPreset('pelvic')">Pelvic / Uterine</button>
+                    <button type="button" class="cam-btn" onclick="setCameraPreset('cranial')">Cranial / Neural</button>
+                    <button type="button" class="cam-btn" id="btn-spin-toggle" onclick="toggleAutoSpin()">Spin: OFF</button>
+                </div>
+            </div>
+
+            <!-- Quick Anatomical Layer Peel Bar at bottom of viewport -->
+            <div class="viewport-layer-bar" role="toolbar" aria-label="Quick Layer Peel">
+                <button type="button" class="cam-btn active" data-layer-pill="all" onclick="setAnatomyLayerMode('all')">All Layers</button>
+                <button type="button" class="cam-btn" data-layer-pill="surface" onclick="setAnatomyLayerMode('surface')">Skin</button>
+                <button type="button" class="cam-btn" data-layer-pill="muscular" onclick="setAnatomyLayerMode('muscular')">Muscular</button>
+                <button type="button" class="cam-btn" data-layer-pill="skeletal" onclick="setAnatomyLayerMode('skeletal')">Skeletal</button>
+                <button type="button" class="cam-btn" data-layer-pill="cardiopulmonary" onclick="setAnatomyLayerMode('cardiopulmonary')">Cardiopulmonary</button>
+                <button type="button" class="cam-btn" data-layer-pill="visceral" onclick="setAnatomyLayerMode('visceral')">Visceral GI/Renal</button>
+                <button type="button" class="cam-btn" data-layer-pill="neuro_endocrine" onclick="setAnatomyLayerMode('neuro_endocrine')">Neuro-Endocrine</button>
+                <button type="button" class="cam-btn" data-layer-pill="maternal_fetal" onclick="setAnatomyLayerMode('maternal_fetal')">Maternal-Fetal</button>
+                <button type="button" class="cam-btn" data-layer-pill="sigma_xray" style="border-color:rgba(192,132,252,0.5);color:#e9d5ff;" onclick="setAnatomyLayerMode('sigma_xray')">🩺 OSCE σ-Burden X-Ray</button>
+            </div>
+
             <div id="tooltip"></div>
-            <div id="progress-wrap" aria-live="polite">
-                <div id="progress-label">Loading body…</div>
-                <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-            </div>
             <div class="zoom-cluster" aria-label="Zoom">
-                <button type="button" id="btn-zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
-                <button type="button" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
-                <button type="button" id="btn-zoom-reset" title="Reset view" aria-label="Reset view">↻</button>
+                <button type="button" id="btn-zoom-in" title="Zoom in" aria-label="Zoom in" onclick="nudgeZoom(-0.45)">+</button>
+                <button type="button" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out" onclick="nudgeZoom(0.55)">−</button>
+                <button type="button" id="btn-zoom-reset" title="Reset view" aria-label="Reset view" onclick="setCameraPreset('hero')">↻</button>
             </div>
-            <div id="status" class="status">Probing renderer…</div>
+            <div id="status" class="status ok">Ready · 17-System .10d + .q42 + OSCE Comorbidity Studio</div>
             <details id="attribution" class="attribution">
-                <summary>ⓘ Sources</summary>
+                <summary>ⓘ Epistemic Boundary &amp; .10d/.q42 Spec</summary>
                 <div id="attribution-body"></div>
             </details>
         </div>
+
+        <!-- ── RIGHT PANEL: OSCE Structured Clinical Evaluation, Comorbidity Visualizer, VOI Pathway & Biometry ── -->
+        <aside class="right-panel" id="right-panel" aria-label="OSCE Clinical Evaluation, Comorbidities and Measurements">
+            <!-- 1. OSCE Clinical Scenario & Comorbidity Selector -->
+            <div class="control-group" style="border-color:rgba(192, 132, 252, 0.45);">
+                <h3>
+                    <span style="color:#e9d5ff;">🩺 OSCE Clinical &amp; Comorbidity Scenario</span>
+                    <span id="osce-sigma-badge" style="font-family:monospace;font-size:0.66rem;color:#34d399;">σ = 0.50</span>
+                </h3>
+                <div class="toggle-container">
+                    <button type="button" class="toggle-btn osce active" id="osce-case-0" onclick="selectOsceCase(0)">0. Healthy Baseline</button>
+                    <button type="button" class="toggle-btn osce" id="osce-case-1" onclick="selectOsceCase(1)">1. Cardiorenal-Metabolic</button>
+                    <button type="button" class="toggle-btn osce" id="osce-case-2" onclick="selectOsceCase(2)">2. Preeclampsia / IVC (W34)</button>
+                    <button type="button" class="toggle-btn osce" id="osce-case-3" onclick="selectOsceCase(3)">3. Hepatic Herb–Drug &amp; Heat</button>
+                    <button type="button" class="toggle-btn osce" id="osce-case-4" style="grid-column:span 2;" onclick="selectOsceCase(4)">4. Lumbar Disc Load &amp; Sciatic Radiculopathy</button>
+                </div>
+                <div style="margin-top:7px;font-size:0.68rem;color:var(--text-dim);">Active Clinical, Pharmacological &amp; Lifestyle Factors (click to toggle):</div>
+                <div id="osce-factor-chips" class="factor-chip-wrap"></div>
+            </div>
+
+            <!-- 2. Selected Organ / Structure Clinical & Patient Illustration -->
+            <div class="control-group" id="selected-organ-card" style="border-color:rgba(56, 189, 248, 0.4);">
+                <h3>
+                    <span id="selected-organ-header">Selected Structure &amp; Comorbidity Link</span>
+                    <span id="selected-organ-sys" style="font-size:0.66rem;color:var(--accent-sky);">Click 3D Organ</span>
+                </h3>
+                <div id="selected-organ-name" style="font-size:0.86rem;font-weight:700;color:#fff;">Whole-Body Digital Twin</div>
+                <div id="selected-organ-desc" style="font-size:0.72rem;color:var(--text-dim);margin-top:4px;line-height:1.4;"></div>
+                <div id="selected-organ-relations" style="margin-top:6px;font-size:0.69rem;color:#93c5fd;font-family:monospace;"></div>
+            </div>
+
+            <!-- 3. Dual-Lens System Burden, Comorbidity & Pairwise Interactions (`wellfare-core::anatomy::lens`) -->
+            <div class="control-group">
+                <h3>
+                    <span id="lens-section-title">Systemic Convergence &amp; Comorbidities</span>
+                    <span id="lens-epistemic-badge" style="font-size:0.64rem;color:#fbbf24;font-family:monospace;">Hypothesis · Non-Diagnostic</span>
+                </h3>
+                <div id="osce-implications-list" class="osce-card-list"></div>
+                <div id="osce-boundary-note" class="mixer-note" style="margin-top:7px;color:#cbd5e1;"></div>
+            </div>
+
+            <!-- 4. VOI-Ranked Investigative Pathway (`wellfare-core::anatomy::pathway`) -->
+            <div class="control-group" id="voi-pathway-card">
+                <h3>
+                    <span style="color:#c084fc;">Investigative Pathway (Ranked by VOI)</span>
+                    <span style="font-size:0.64rem;color:#c084fc;font-family:monospace;">wellfare-core::pathway</span>
+                </h3>
+                <div id="osce-voi-list" class="osce-card-list"></div>
+            </div>
+
+            <!-- 5. Anthropometric, Obstetric & Cardiorespiratory Calipers -->
+            <div class="control-group">
+                <h3>
+                    <span>Anthropometric, Obstetric &amp; Vitals</span>
+                    <span id="obstetric-badge" style="font-size:0.64rem;color:var(--accent);font-family:monospace;">ISO / CCF</span>
+                </h3>
+                <div class="metric-grid" id="metrics-anthropometric"></div>
+                <div class="metric-grid" id="metrics-obstetric" style="margin-top:5px;"></div>
+                <div class="metric-grid" id="metrics-physiology" style="margin-top:5px;"></div>
+            </div>
+
+            <!-- 6. .q42 (`Q42LOGIC`) Welfare & Deontic Rules -->
+            <div class="control-group">
+                <h3>
+                    <span>.q42 (`Q42LOGIC`) Welfare &amp; RoM Rules</span>
+                    <span style="font-size:0.64rem;color:#c084fc;font-family:monospace;">16×48B NQuins</span>
+                </h3>
+                <div class="q42-rule-list" id="q42-rules-list"></div>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                    <button type="button" class="toggle-btn active" style="flex:1;" onclick="exportCurrent10dContainer()">↓ Export .10d Model</button>
+                    <button type="button" class="toggle-btn" style="flex:1;border-color:rgba(192,132,252,0.5);color:#e9d5ff;" onclick="exportCurrentQ42Container()">↓ Export .q42 Rules</button>
+                </div>
+            </div>
+        </aside>
     </div>
 
-    <!-- Fallback if the ES module never runs (file:// or blocked WASM).
-         Do not treat a live boot as failure: WebGPU requestAdapter can sit
-         pending for many seconds. Skip if the module marked boot, or a canvas
-         already exists, or status has moved off the initial probe line. -->
-    <script>
-      setTimeout(function () {
-        if (window.__anatomyBooted) return;
-        var stage = document.getElementById('canvas-container');
-        if (stage && stage.querySelector('canvas')) return;
-        var s = document.getElementById('status');
-        var text = s ? s.textContent.trim() : '';
-        if (text.indexOf('Starting') === 0 || text.indexOf('Probing') === 0) {
-          s.className = 'status error';
-          s.textContent = (location.protocol === 'file:')
-            ? 'This demo must be SERVED over HTTP, not opened as a file. Serve docs/ and open playground/anatomy.html in a WebGPU or WebGL2 browser (Chrome/Edge, Safari 18+).'
-            : 'The renderer module did not load. Needs a WebGPU or WebGL2 browser over HTTPS/HTTP. Open the console for the specific error.';
-        }
-      }, 45000);
-    </script>
-
-    <script type="module" src="anatomy.js?v=0.0.40-anatomy-boot2"></script>
+    <script type="module" src="anatomy-host.js?v=0.0.42-cad-controls"></script>
 </body>
 </html>

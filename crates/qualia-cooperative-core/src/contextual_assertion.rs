@@ -82,6 +82,8 @@ pub struct ContextualAssertion {
     /// Identifier of the root primary source or sensor event from which this statement originates.
     /// Dependent inferences derived from the same root source share `root_source_id`.
     pub root_source_id: String,
+    /// Parent assertions. Omitted or empty means this assertion does not name parents.
+    #[serde(default)]
     pub derived_from_assertion_ids: Vec<String>,
     pub scope_domain: String,
     pub sensitivity: SensitivityClass,

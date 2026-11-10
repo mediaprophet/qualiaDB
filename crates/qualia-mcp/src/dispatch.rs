@@ -28,17 +28,22 @@ pub fn enforce_fiduciary_tool_dispatch(
         b"get_did_info" => get_did_info(payload.arguments_raw),
         b"get_wallet_status" => get_wallet_status(payload.arguments_raw),
 
-        // ── VibeScript DSL ──────────────────────────────────────────────────
+        // ── VibeScript DSL, Etalon-Vibe SDK & Software Building ─────────────
         b"vibe_check" => vibe_check(payload.arguments_raw),
         b"vibe_compile" => vibe_compile(payload.arguments_raw),
         b"vibe_format" => vibe_format(payload.arguments_raw),
         b"vibe_invoke" => vibe_invoke(payload.arguments_raw),
         b"vibe_eval" => vibe_eval(payload.arguments_raw),
         b"vibe_catalog" => vibe_catalog(payload.arguments_raw),
+        b"etalon_vibe_sdk" => etalon_vibe_sdk(payload.arguments_raw),
         b"wgsl_forge" => wgsl_forge(payload.arguments_raw),
         b"poet_authoring" => poet_authoring(payload.arguments_raw),
         b"poet_studio_domain" => poet_studio_domain(payload.arguments_raw),
         b"poet_artifact_lifecycle" => poet_artifact_lifecycle(payload.arguments_raw),
+
+        // ── Living-World Anatomy & Omniversal Cosmic Coordinates (0.0.41) ───
+        b"living_world_anatomy" => living_world_anatomy(payload.arguments_raw),
+        b"cosmic_coordinates" => cosmic_coordinates(payload.arguments_raw),
 
         // ── Simulation: Geomechanics, Space Weather, Fire Ecology ───────────
         b"sim_soil_compaction" => sim_soil_compaction(payload.arguments_raw),

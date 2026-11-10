@@ -4,6 +4,10 @@
 //! tissue/material density, and simulation mass against its `.q42` QUDT trait envelope
 //! (`AusTraits` / `AFD` / `AVONET` / `made:Artefact` specs per `DTA-ID-05`, `DTA-SEM-05`, `DTA-PHY-02`).
 //! Enforces zero-heap validation and relative scale invariants (e.g. preventing oversized fauna vs 4WD).
+//!
+//! The constants below are reference examples for when a species corpus has no assertion for a
+//! bound. Admission of a real subject uses [`super::corpus_envelope::cited_envelope_from_corpus`],
+//! which cites assertion ids and labels a silent bound as a model assumption.
 
 /// Normative QUDT species-trait and artefact dimensional admission envelope.
 ///

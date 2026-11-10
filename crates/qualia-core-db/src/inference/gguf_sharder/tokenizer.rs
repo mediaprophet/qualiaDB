@@ -254,11 +254,16 @@ impl GgufTokenizer {
         special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
         let merge_pairs = Self::parse_merge_pairs(merges_raw);
         let (merge_rank_index, merge_rank_collision) = Self::build_merge_rank_index(&merge_pairs);
+        let default_add_bos = bos_id.is_some()
+            || vocab
+                .get(bos as usize)
+                .is_some_and(|s| s.starts_with('<') && s.ends_with('>'))
+            || vocab.len() <= 256;
         let mut tok = Self {
             vocab,
             bos_token_id: bos,
             eos_token_id: eos,
-            add_bos_token: add_bos.unwrap_or(true),
+            add_bos_token: add_bos.unwrap_or(default_add_bos),
             pre_type: pre_type.unwrap_or_default(),
             merge_pairs,
             merge_rank_index,
@@ -658,8 +663,29 @@ impl GgufTokenizer {
     }
 
     fn encode_greedy(&self, text: &str) -> Vec<u32> {
+        let mut normalized = String::new();
+        let text_to_scan = if self.token_to_id_map.contains_key("\u{2581}") && text.contains(' ') {
+            normalized.reserve(text.len() + 16);
+            let mut in_special = false;
+            for ch in text.chars() {
+                if ch == '<' {
+                    in_special = true;
+                    normalized.push(ch);
+                } else if ch == '>' && in_special {
+                    in_special = false;
+                    normalized.push(ch);
+                } else if ch == ' ' && !in_special {
+                    normalized.push('\u{2581}');
+                } else {
+                    normalized.push(ch);
+                }
+            }
+            normalized.as_str()
+        } else {
+            text
+        };
         let mut ids = Vec::new();
-        let mut remaining = text;
+        let mut remaining = text_to_scan;
         while !remaining.is_empty() {
             let mut matched = false;
             for (token, id) in &self.token_to_id {
@@ -730,6 +756,43 @@ impl GgufTokenizer {
     fn bpe_piece(&self, piece: &str) -> Vec<u32> {
         if piece.is_empty() {
             return Vec::new();
+        }
+        if self.token_to_id_map.contains_key("\u{2581}") && piece.contains(' ') {
+            let sp_word = piece.replace(' ', "\u{2581}");
+            if let Some(&id) = self.token_to_id_map.get(sp_word.as_str()) {
+                return vec![id];
+            }
+            let mut symbols: Vec<String> = sp_word.chars().map(|c| c.to_string()).collect();
+            loop {
+                let mut best_rank: Option<usize> = None;
+                let mut best_idx = 0usize;
+                for i in 0..symbols.len().saturating_sub(1) {
+                    if let Some(rank) = self.merge_rank_str(&symbols[i], &symbols[i + 1]) {
+                        if best_rank.is_none() || rank < best_rank.unwrap() {
+                            best_rank = Some(rank);
+                            best_idx = i;
+                        }
+                    }
+                }
+                let Some(_rank) = best_rank else { break };
+                let merged = format!("{}{}", symbols[best_idx], symbols[best_idx + 1]);
+                symbols[best_idx] = merged;
+                symbols.remove(best_idx + 1);
+            }
+            let mut ids = Vec::with_capacity(symbols.len());
+            for sym in symbols {
+                if let Some(&id) = self.token_to_id_map.get(sym.as_str()) {
+                    ids.push(id);
+                } else {
+                    for ch in sym.chars() {
+                        let s = ch.to_string();
+                        if let Some(&id) = self.token_to_id_map.get(s.as_str()) {
+                            ids.push(id);
+                        }
+                    }
+                }
+            }
+            return ids;
         }
         if let Some(&id) = self.token_to_id_map.get(piece) {
             return vec![id];

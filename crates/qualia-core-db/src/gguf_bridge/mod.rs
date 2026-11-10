@@ -250,7 +250,7 @@ mod mc8_wasm;
 /// Hard context ceiling — sized to keep KV arena under the 512MB RAM floor (Gemma 42L).
 pub const MAX_CONTEXT_WINDOW: u32 = 1024;
 /// Maximum bytes for the static KV arena (load-time allocation only).
-pub const KV_CACHE_MAX_BYTES: usize = 448 * 1024 * 1024;
+pub const KV_CACHE_MAX_BYTES: usize = 768 * 1024 * 1024;
 
 /// Static ring-buffer KV layout: `[layer][slot][K | V]` in f32, OR (W5a int8 mode) packed int8 +
 /// per-(slot,kv_head) f32 scale in the same 4-byte-element buffer. `total_f32_elems` counts 4-byte
@@ -418,8 +418,8 @@ impl KvCacheLayout {
     }
 }
 
-/// Max GEMM row/column for stack buffers and reusable GPU staging (Gemma 4 FFN = 4×2560).
-const MAX_STACK_GEMM_DIM: usize = 10240;
+/// Max GEMM row/column for stack buffers and reusable GPU staging (Gemma 4 E4B double-wide FFN = 8×2560 = 20480).
+const MAX_STACK_GEMM_DIM: usize = 20480;
 const MAX_STACK_GEMM_OUT: usize = MAX_STACK_GEMM_DIM;
 const MAX_STACK_GEMM_IN: usize = MAX_STACK_GEMM_DIM;
 /// Stack scratch for pre-norm hidden (SmolLM2 n_embd=960; cap supports Gemma-class models).
@@ -430,8 +430,8 @@ pub(crate) const RMS_NORM_EPS: f32 = 1e-5;
 pub const PREFILL_CHUNK_SIZE: usize = 64;
 /// Per-token KV masks uploaded for batched Q-SDPA (`PREFILL_CHUNK_SIZE × mask words`).
 const MAX_ATTN_MASK_UPLOAD_WORDS: usize = PREFILL_CHUNK_SIZE * KV_ATTENTION_MASK_WORDS;
-/// Max stacked embedding floats in a prefill chunk (`MAX_STACK_GEMM_IN × 64`).
-pub const MAX_PREFILL_BATCH_FLOATS: usize = MAX_STACK_GEMM_IN * PREFILL_CHUNK_SIZE;
+/// Max stacked embedding floats in a prefill chunk (`10240 × 64`).
+pub const MAX_PREFILL_BATCH_FLOATS: usize = 10240 * PREFILL_CHUNK_SIZE;
 /// `llm_agent` stack chunk buffer (Gemma 2560 × 64).
 pub const PREFILL_CHUNK_STACK_FLOATS: usize = 2560 * PREFILL_CHUNK_SIZE;
 /// wgpu default max buffer size on many drivers (256 MiB).
@@ -440,7 +440,7 @@ const MAX_WGPU_WEIGHT_STAGING: usize = 64 * 1024 * 1024;
 /// 10240 is the native GEMM output-buffer ceiling and a 256-row multiple, so
 /// resident logits chunk offsets stay storage-binding aligned while the current
 /// 49k-vocab model drops from six output chunks/token to five.
-pub const VOCAB_CHUNK_ROWS: usize = MAX_STACK_GEMM_OUT;
+pub const VOCAB_CHUNK_ROWS: usize = 10240;
 
 /// Streaming argmax result across chunked vocabulary projection.
 pub use etalon_inference::projections::StreamingArgmaxResult;
@@ -496,12 +496,13 @@ pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
 mod forward;
+mod gemma4_qwen35;
 mod moe_ffn;
 mod moe_gguf;
 mod ssm_forward;
 pub use etalon_inference::ordinary::ssm_layout::SsmStateError;
 /// Conservative legacy default; callers may admit larger external model state.
-pub const DEFAULT_SSM_STATE_BYTE_BUDGET: usize = 36 * 1024 * 1024;
+pub const DEFAULT_SSM_STATE_BYTE_BUDGET: usize = 128 * 1024 * 1024;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use forward::PrefillDispatchFailure;
 mod gemm;

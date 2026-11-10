@@ -385,7 +385,7 @@ impl AnatomyMeshAccumulator {
             let ref_up = if ty.abs() < 0.92 {
                 [0.0_f32, 1.0_f32, 0.0_f32]
             } else {
-                [0.0_f32, 0.0_f32, 1.0_f32]
+                [0.0_f32, 0.0_f32, if ty >= 0.0 { -1.0_f32 } else { 1.0_f32 }]
             };
             let mut ux = ref_up[1] * tz - ref_up[2] * ty;
             let mut uy = ref_up[2] * tx - ref_up[0] * tz;
@@ -645,7 +645,7 @@ impl AnatomyMeshAccumulator {
 
         for (i, ring) in rings.iter_mut().enumerate() {
             let t = i as f32 / 6.0;
-            let fusiform = (t * core::f32::consts::PI).sin().powf(0.75);
+            let fusiform = (t * core::f32::consts::PI).sin().max(0.0).powf(0.75);
             let r_scale = 0.18 + 0.82 * fusiform;
             let tendon_blend = if t < 0.20 {
                 1.0 - (t / 0.20)

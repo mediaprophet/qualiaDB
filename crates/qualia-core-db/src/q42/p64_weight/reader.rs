@@ -134,6 +134,7 @@ impl P64TensorIndex {
             full_attention_interval: 0,
             architecture: self.hparams.architecture,
             arch_flags: self.hparams.arch_flags,
+            ..GgufHyperparams::default()
         }
     }
 

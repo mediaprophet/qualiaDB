@@ -36,6 +36,7 @@ pub use manifold_identity_container::{
 pub mod manifold_identity_v2;
 pub mod mesh_section;
 pub mod metric_check;
+pub mod corpus_envelope;
 pub mod metric_trait_gate;
 pub mod morph_section;
 pub mod node_section;
@@ -155,6 +156,11 @@ pub use metric_check::{
     proposed_metric_descriptor, verify_descriptor_against_reality, MetricBranchDescriptor,
     MetricCompletenessDescriptor, MetricDivergence, MetricKind, BOUNDARY_CLIQUE_BRANCH_INDEX,
     METRIC_BRANCH_COUNT,
+};
+pub use corpus_envelope::{
+    cited_envelope_from_corpus, reference_envelope_for_species, BoundBasis, BoundCitation,
+    CitedMetricEnvelope, P_BODY_HEIGHT, P_BODY_LENGTH, P_BODY_MASS, P_BODY_WIDTH, UNIT_KILOGRAM,
+    UNIT_METRE,
 };
 pub use metric_trait_gate::{
     measure_aabb_extents_zero_heap, verify_fauna_vs_vehicle_scale_invariant_zero_heap,

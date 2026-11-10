@@ -47,6 +47,15 @@
           if (compatibilityAdapter) return compatibilityAdapter;
         }
 
+        // Hybrid laptops: LowPower is the iGPU. Ask for the discrete GPU first.
+        // Phones keep the Android path above; iGPU remains the fallback below.
+        if (!isAndroid && !alreadyFallback) {
+          const highPerf = await originalRequestAdapter.call(this, Object.assign({}, options || {}, {
+            powerPreference: 'high-performance',
+          }));
+          if (highPerf) return highPerf;
+        }
+
         const adapter = await originalRequestAdapter.call(this, options);
         if (adapter || alreadyFallback) return adapter;
 
@@ -62,7 +71,7 @@
           if (compatibilityAdapter) return compatibilityAdapter;
         }
 
-        console.debug('[qualia] WebGPU compatibility adapter unavailable; trying low-power adapter');
+        console.debug('[qualia] WebGPU high-performance adapter unavailable; trying low-power adapter');
         const lowPowerAdapter = await originalRequestAdapter.call(this, {
           powerPreference: 'low-power',
         });
@@ -72,6 +81,27 @@
         return originalRequestAdapter.call(this, { forceFallbackAdapter: true });
       };
       Object.defineProperty(gpuProto, '__qualiaAdapterPatched', { value: true });
+    }
+  }
+
+  // WebGL2 has no requestAdapter. Without this, Chrome on Optimus binds Intel.
+  if (typeof HTMLCanvasElement !== 'undefined') {
+    const canvasProto = HTMLCanvasElement.prototype;
+    if (!canvasProto.__qualiaContextPatched) {
+      const originalGetContext = canvasProto.getContext;
+      canvasProto.getContext = function (type, attrs) {
+        const kind = String(type || '').toLowerCase();
+        const isAndroid = /Android/i.test(navigator.userAgent || '');
+        if (
+          !isAndroid
+          && (kind === 'webgl' || kind === 'webgl2' || kind === 'experimental-webgl')
+          && (!attrs || attrs.powerPreference == null)
+        ) {
+          attrs = Object.assign({ powerPreference: 'high-performance' }, attrs || {});
+        }
+        return originalGetContext.call(this, type, attrs);
+      };
+      Object.defineProperty(canvasProto, '__qualiaContextPatched', { value: true });
     }
   }
 

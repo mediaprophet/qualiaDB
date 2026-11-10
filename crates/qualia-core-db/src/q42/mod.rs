@@ -40,6 +40,8 @@ pub mod q42_volume;
 /// Upstream source / connector catalogue without data bundling (AST-07).
 pub mod source_catalogue;
 pub mod selective_streamer;
+/// One taxon concept's sources, evidenced assertions, conflicts and gaps (Ecopunk G72).
+pub mod species_corpus;
 /// Canonical `.q42` spatial, volumetric, and multi-sensory ontological predicates (§3.6.2).
 pub mod spatial_predicates;
 pub mod yaml_ld_q42;

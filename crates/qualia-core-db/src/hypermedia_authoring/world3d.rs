@@ -169,6 +169,60 @@ impl Camera3D {
         self.near_plane = near.max(0.001);
         self.far_plane = far.max(self.near_plane + 0.001);
     }
+
+    /// Godot `Camera3D.unproject_position` with an explicit look-at basis.
+    /// World metres → viewport pixels (origin top-left). `None` if behind `near`.
+    pub fn unproject_position_look_at(
+        eye: [f64; 3],
+        target: [f64; 3],
+        up: [f64; 3],
+        fov_v_deg: f64,
+        world: [f64; 3],
+        viewport: (f64, f64),
+        near: f64,
+    ) -> Option<[f64; 2]> {
+        fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+            [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+        }
+        fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+            a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+        }
+        fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+            [
+                a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0],
+            ]
+        }
+        fn norm(a: [f64; 3]) -> Option<[f64; 3]> {
+            let len = dot(a, a).sqrt();
+            if len < 1e-12 {
+                None
+            } else {
+                Some([a[0] / len, a[1] / len, a[2] / len])
+            }
+        }
+        let forward = norm(sub(target, eye))?;
+        let right = norm(cross(forward, up))?;
+        let cam_up = cross(right, forward);
+        let delta = sub(world, eye);
+        let cam_x = dot(delta, right);
+        let cam_y = dot(delta, cam_up);
+        let cam_z = dot(delta, forward);
+        if cam_z <= near.max(1e-6) {
+            return None;
+        }
+        let (vw, vh) = viewport;
+        if vw <= 0.0 || vh <= 0.0 {
+            return None;
+        }
+        let fov = fov_v_deg.clamp(1.0, 179.0).to_radians();
+        let scale = 1.0 / (cam_z * (fov * 0.5).tan());
+        let aspect = vw / vh;
+        let ndc_x = cam_x * scale / aspect;
+        let ndc_y = cam_y * scale;
+        Some([(ndc_x + 1.0) * 0.5 * vw, (1.0 - ndc_y) * 0.5 * vh])
+    }
 }
 
 /// A 3D light.
@@ -402,6 +456,36 @@ mod tests {
         let mut cam = Camera3D::new("cam1");
         cam.set_fov(90.0);
         assert_eq!(cam.fov, 90.0);
+    }
+
+    #[test]
+    fn camera_unproject_look_at_centers_the_target() {
+        let px = Camera3D::unproject_position_look_at(
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            90.0,
+            [0.0, 0.0, 1.0],
+            (1920.0, 1080.0),
+            0.1,
+        )
+        .expect("target is in front of the camera");
+        assert!((px[0] - 960.0).abs() < 1e-6);
+        assert!((px[1] - 540.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn camera_unproject_rejects_points_behind_near() {
+        assert!(Camera3D::unproject_position_look_at(
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            60.0,
+            [0.0, 0.0, -1.0],
+            (800.0, 600.0),
+            0.1,
+        )
+        .is_none());
     }
 
     #[test]

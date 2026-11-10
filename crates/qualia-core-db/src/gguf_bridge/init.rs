@@ -602,6 +602,25 @@ impl QTensorEngine {
         ) {
             Ok(resources) => resources,
             Err(error) => {
+                if !matches!(
+                    error,
+                    etalon_inference::gpu_resources::ResourceError::PolicyDenied
+                ) && (h.architecture == crate::gguf_sharder::ARCH_GEMMA4
+                    || h.ssm_conv_kernel > 0
+                    || (h.arch_flags & crate::gguf_sharder::ARCH_FLAG_HAS_QK_NORM) != 0
+                    || crate::llm_bench::cpu_attention_enabled())
+                {
+                    let cpu = vec![0f32; layout.total_f32_elems].into_boxed_slice();
+                    self.kv_layout = Some(layout);
+                    self.kv_cache_cpu = Some(cpu);
+                    self.kv_cache_gpu = None;
+                    log::info!(
+                        "LLM_LOAD|kv-cache|0.86|Reserved {:.1} MiB host KV cache (context {})",
+                        bytes as f64 / (1024.0 * 1024.0),
+                        layout.max_context,
+                    );
+                    return;
+                }
                 log::warn!("inference KV resource admission failed: {error:?}");
                 return;
             }

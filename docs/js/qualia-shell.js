@@ -307,6 +307,7 @@ export async function loadQualiaPortal(canvas, options = {}) {
 
 export function startPortalLoop(canvas, onFrame, onCanvasReplaced) {
     if (!portal) return;
+    stopPortalLoop();
     let last = performance.now();
     let recoveryInFlight = false;
     let recoveryCount = 0;
@@ -386,8 +387,11 @@ export function startPortalLoop(canvas, onFrame, onCanvasReplaced) {
         }
     };
     const loop = (now) => {
-        const dt = Math.min(now - last, 50);
-        last = now;
+        const stamp = Number.isFinite(now) ? now : performance.now();
+        let dt = stamp - last;
+        last = stamp;
+        if (!Number.isFinite(dt) || dt < 0) dt = 16.67;
+        dt = Math.min(dt, 50);
         if (!recoveryInFlight) {
             try {
                 portal.tick(canvas, dt);

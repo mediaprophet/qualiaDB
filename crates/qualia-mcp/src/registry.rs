@@ -51,8 +51,7 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Inspect queued ILP micropayments from pending_payments.ndjson.",
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
-
-        // ── VibeScript DSL & Software Building ──────────────────────────────
+        // ── VibeScript DSL, Etalon-Vibe SDK & Software Building ─────────────
         McpToolDescriptor {
             name: "vibe_check",
             description: "Parse and typecheck VibeScript 0.1 source code. Returns diagnostics, AST validation, and evidential typing.",
@@ -84,6 +83,11 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","properties":{"prefix":{"type":"string"},"seam":{"type":"string"},"limit":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
+            name: "etalon_vibe_sdk",
+            description: "Inspect the 11 Etalon-Vibe SDK provider namespaces (mech, gpu, forge, render, signal, sense, p64, nquin, infer, qgraph, modality), 37 descriptors, and 5-field NQuin48 parity.",
+            input_schema: r#"{"type":"object","properties":{"provider":{"type":"string"}}}"#,
+        },
+        McpToolDescriptor {
             name: "wgsl_forge",
             description: "Deterministic WGSL generation, Naga validation, Roofline arithmetic intensity, schedule pruning, and attention synthesis.",
             input_schema: r#"{"type":"object","properties":{"op":{"type":"string","enum":["list_kernels","generate","validate","roofline","schedule_candidates","attention_synthesize"]},"kernel":{"type":"string"},"target":{"type":"string"},"workgroup_size":{"type":"integer"},"items_per_invocation":{"type":"integer"},"vector_width":{"type":"integer"},"source":{"type":"string"},"n":{"type":"integer"},"head_dim":{"type":"integer"},"head_count":{"type":"integer"},"context_tokens":{"type":"integer"},"batch_tokens":{"type":"integer"},"mode":{"type":"string"}}}"#,
@@ -103,7 +107,17 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Full MCP lifecycle (create, edit, inspect, import, export, undo, redo, list) for POET Studio artifacts and QualiaDB/industry formats.",
             input_schema: r#"{"type":"object","properties":{"action":{"type":"string","enum":["create","edit","inspect","import","export","undo","redo","list_artifacts"]},"artifact_id":{"type":"string"},"domain":{"type":"string"},"format":{"type":"string"},"mutation":{"type":"string"},"args":{"type":"object"}}}"#,
         },
-
+        // ── Living-World Anatomy & Omniversal Cosmic Coordinates (0.0.41) ───
+        McpToolDescriptor {
+            name: "living_world_anatomy",
+            description: "Living-world botanical (Scales 1..4 PO: / APC:) and comparative vertebrate (Scale 5 UBERON: 18-joint PGA rig & 3-layer osteology/myology/integument peel) anatomical ontology and zero-heap ray-sphere Loupe picking.",
+            input_schema: r#"{"type":"object","properties":{"op":{"type":"string","enum":["catalog","pins","pin_by_id","ray_pick","root_flare","layer_peel"]},"scale":{"type":"integer"},"pin_id":{"type":"string"},"ray_origin":{"type":"array","items":{"type":"number"}},"ray_dir":{"type":"array","items":{"type":"number"}},"max_dist":{"type":"number"},"base_radius":{"type":"number"},"depth_m":{"type":"number"},"flare_factor":{"type":"number"},"osteology_vis":{"type":"number"},"myology_vis":{"type":"number"},"integument_vis":{"type":"number"},"explode":{"type":"number"}}}"#,
+        },
+        McpToolDescriptor {
+            name: "cosmic_coordinates",
+            description: "Omniversal Coordinate System (OCS v2.2.0): celestial profiles, FLRW redshift cosmology, pulsar dispersion delay, warp velocity/Cochrane curves, HEALPix indexing, and USRI realm classes.",
+            input_schema: r#"{"type":"object","properties":{"op":{"type":"string","enum":["celestial_profile","redshift","pulsar_dispersion","warp","healpix","usri_realm"]},"body":{"type":"string"},"z":{"type":"number"},"dm_pc_cm3":{"type":"number"},"freq_hz":{"type":"number"},"warp_factor":{"type":"number"},"scale":{"type":"string","enum":["tos","tng"]},"x":{"type":"integer"},"y":{"type":"integer"},"total_z":{"type":"integer"},"nside":{"type":"integer"},"realm":{"type":"string"}}}"#,
+        },
         // ── Simulation: Geomechanics, Space Weather, Fire Ecology ───────────
         McpToolDescriptor {
             name: "sim_soil_compaction",
@@ -125,7 +139,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Evaluate Olson fuel accumulation, dead fuel moisture (DFMC), Byram fireline intensity, and Rothermel rate of spread.",
             input_schema: r#"{"type":"object","required":["air_temp_c","relative_humidity_pct"],"properties":{"air_temp_c":{"type":"number"},"relative_humidity_pct":{"type":"number"},"wind_speed_kmh":{"type":"number"},"stand_age_years":{"type":"number"}}}"#,
         },
-
         // ── Geospatial & Planetary Coordinates ──────────────────────────────
         McpToolDescriptor {
             name: "geospatial_transform",
@@ -142,7 +155,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Query geological strata, lithology, and hydrogeological properties from WFS catalogs.",
             input_schema: r#"{"type":"object","required":["unit_code"],"properties":{"unit_code":{"type":"string"},"easting":{"type":"number"},"northing":{"type":"number"}}}"#,
         },
-
         // ── Vision, Biosense & Media ────────────────────────────────────────
         McpToolDescriptor {
             name: "computer_vision",
@@ -164,7 +176,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Presentation Attack Detection (liveness analysis) on biometric facial tracking.",
             input_schema: r#"{"type":"object","properties":{"landmark_jitter":{"type":"number"},"profile_asymmetry":{"type":"number"},"non_rigid_depth_var":{"type":"number"}}}"#,
         },
-
         // ── Auditory Intelligence ───────────────────────────────────────────
         McpToolDescriptor {
             name: "audio_features",
@@ -176,7 +187,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Zero-heap 3D spatial audio positioning, distance attenuation, and binaural stereo panning.",
             input_schema: r#"{"type":"object","required":["emitter_x","emitter_y","emitter_z"],"properties":{"emitter_x":{"type":"number"},"emitter_y":{"type":"number"},"emitter_z":{"type":"number"},"listener_x":{"type":"number"},"listener_y":{"type":"number"},"listener_z":{"type":"number"}}}"#,
         },
-
         // ── Logic Modalities & N3 Reasoning ─────────────────────────────────
         McpToolDescriptor {
             name: "evaluate_modality",
@@ -198,7 +208,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Inject a deterministic test Quin through the paraconsistent router.",
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
-
         // ── SHACL Constraints & Verification ────────────────────────────────
         McpToolDescriptor {
             name: "validate_shacl",
@@ -225,7 +234,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Decentralized shape-target routing between shapes and loci.",
             input_schema: r#"{"type":"object","required":["routes"],"properties":{"routes":{"type":"array"},"query_locus":{"type":"integer"},"query_shape":{"type":"integer"}}}"#,
         },
-
         // ── QApps Host Runtime ──────────────────────────────────────────────
         McpToolDescriptor {
             name: "list_qapps",
@@ -252,7 +260,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Describe the current QApp host surface schema exposed by Qualia.",
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
-
         // ── Scientific & Engineering Compute ────────────────────────────────
         McpToolDescriptor {
             name: "matrix_operation",
@@ -344,7 +351,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Validate conditioning profile specification against schema rules.",
             input_schema: r#"{"type":"object","properties":{"profile":{"type":"object"}}}"#,
         },
-
         // ── Data Formats: Zero-Heap RDF, JSON, CSV ──────────────────────────
         McpToolDescriptor {
             name: "parse_rdf",
@@ -376,7 +382,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Serialize quins to CSV tabular output.",
             input_schema: r#"{"type":"object","required":["headers","predicate_hashes"],"properties":{"quins":{"type":"array"},"headers":{"type":"array"},"predicate_hashes":{"type":"array"}}}"#,
         },
-
         // ── Cooperative Governance ──────────────────────────────────────────
         McpToolDescriptor {
             name: "values_check",
@@ -403,7 +408,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Track-M agent cooperation gate authorization check.",
             input_schema: r#"{"type":"object","required":["caller","verified"],"properties":{"caller":{"type":"string"},"verified":{"type":"boolean"},"grounded":{"type":"boolean"}}}"#,
         },
-
         // ── Quantum Computing & Optimization ────────────────────────────────
         McpToolDescriptor {
             name: "qpu_optimize",
@@ -420,7 +424,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Return QPU bridge connection and job-queue status.",
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
-
         // ── Local LLM Intelligence ─────────────────────────────────────────
         McpToolDescriptor {
             name: "llm_infer",
@@ -437,7 +440,6 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             description: "Discover GGUF models under storage and resident mounted models.",
             input_schema: r#"{"type":"object","properties":{}}"#,
         },
-
         // ── System Status & Tasks ───────────────────────────────────────────
         McpToolDescriptor {
             name: "get_system_status",

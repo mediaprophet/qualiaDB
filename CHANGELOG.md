@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- Prefer `high-performance` GPU adapters on desktop QualiaPortal (WebGPU then WebGL2, Intel iGPU as fallback) so hybrid laptops do not pin anatomy/studio to the integrated chip. `docs/js/webgpu-limits-shim.js` applies immediately; portal Rust matches on the next `wasm-pack`.
+
 - Pin the qualified Etalon resource, tensor and Forge lifecycle update: reject foreign device/queue use and stale device readback, retain cancellation cleanup, and add browser transport and actual Portal device-loss recovery qualification. Remaining MoE and inference expansion is deferred to a separate sprint.
 
 - Preserve configured generic MoE expert counts and top-k selection through native P64 metadata and Etalon dispatch. Validate recurrent-state budgets, clear recurrent history on sequence reset, prevent KV-only prefix reuse for hybrid models, and propagate recurrent-layer failures.
@@ -24,6 +26,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Isolated browser device diagnostics from the portal build, restored explicit unsupported diagnostics for excluded scientific functions, and made CPU harness selection exclude GPU tests exactly.
 
 ### Added
+
+- `qualia-seal-10d` seals cardiac SKL1 (6-joint `beat` clip) plus optional OCC1 occupancy into sibling Matter-64 (`.m64`, LRM3 + 16³ HOLO bricks) and `Q42EMF64` (`.emf`, 8³ depolarization / dielectric cells). The `.10d` envelope gains VOX0, FEMC, MRP1, FIEL, and MID2 `FIELD_KIND_ELECTROMAGNETIC` on the σ axis using existing codecs. Reconstruct still does not write those containers.
 
 - Adopt Etalon's canonical inference, model, generic MoE, compute/render resources, Forge, diagnostics and optimization-lab libraries at immutable revision `6252bf58f3078bb26098dfe2e903fa1cf02bbeba`. P64 is the native model format, with GGUF import/compatibility adapters; Qwen-specific architecture handling remains distinct from generic MoE. QualiaDB retains authenticated Webizen policy and token/artifact acceptance, while explicit developer and lab modes can run independently.
 - Add an explicit Qwen35 CPU linear-layer lab adapter with retained verified model leases, checked memory budgets, caller-selected packing and normalization representation, and transactional Etalon execution. This layer API does not admit complete Qwen model execution.
