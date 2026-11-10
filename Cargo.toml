@@ -192,24 +192,3 @@ imap-proto = { path = "vendor/imap-proto" }
 
 [patch."https://github.com/mediaprophet/vibe-script.git"]
 vibescript-abi = { path = "crates/vibescript-abi" }
-
-[patch."https://github.com/mediaprophet/etalon.git"]
-naga = { path = "../etalon/naga" }
-etalon = { path = "../etalon/etalon" }
-etalon-diagnostics = { path = "../etalon/crates/etalon-diagnostics" }
-etalon-agent = { path = "../etalon/crates/etalon-agent" }
-etalon-wgsl-forge = { path = "../etalon/crates/etalon-wgsl-forge" }
-etalon-nquin = { path = "../etalon/crates/etalon-nquin" }
-etalon-tensor = { path = "../etalon/crates/etalon-tensor" }
-etalon-render = { path = "../etalon/crates/etalon-render" }
-etalon-sim = { path = "../etalon/crates/etalon-sim" }
-etalon-signal = { path = "../etalon/crates/etalon-signal" }
-etalon-wasm = { path = "../etalon/crates/etalon-wasm" }
-etalon-model = { path = "../etalon/crates/etalon-model" }
-etalon-resources = { path = "../etalon/crates/etalon-resources" }
-etalon-inference-kernel = { path = "../etalon/crates/etalon-inference-kernel" }
-etalon-inference = { path = "../etalon/crates/etalon-inference" }
-etalon-inference-contract = { path = "../etalon/crates/etalon-inference-contract" }
-etalon-model-io = { path = "../etalon/crates/etalon-model-io" }
-etalon-inference-lab = { path = "../etalon/crates/etalon-inference-lab" }
-etalon-vibe = { path = "../etalon/crates/etalon-vibe" }
