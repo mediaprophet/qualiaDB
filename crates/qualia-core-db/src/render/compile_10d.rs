@@ -642,17 +642,19 @@ pub fn decode_10d_mesh_frames(
     // Selection/codec admission lives in the focused shared SDK; this oversized
     // legacy compiler retains only compatibility error projection (see SDK note).
     crate::container_10d::read_container_mesh_frames_with_limits(
-        container_10d, expected_vertex_count,
+        container_10d,
+        expected_vertex_count,
         crate::container_10d::MeshFrameDecodeLimits::COMPATIBILITY,
     )
-        .map_err(|error| match error {
-            crate::container_10d::TypedPayloadError::Header(_) => Compile10dError::BadHeader,
-            crate::container_10d::TypedPayloadError::Sections(e) => Compile10dError::Section(e),
-            crate::container_10d::TypedPayloadError::Frames(e) => Compile10dError::Normals(e),
-            crate::container_10d::TypedPayloadError::VertexCount { expected, got } =>
-                Compile10dError::NormalVertexCountMismatch { expected, got },
-            other => Compile10dError::TypedPayload(other),
-        })
+    .map_err(|error| match error {
+        crate::container_10d::TypedPayloadError::Header(_) => Compile10dError::BadHeader,
+        crate::container_10d::TypedPayloadError::Sections(e) => Compile10dError::Section(e),
+        crate::container_10d::TypedPayloadError::Frames(e) => Compile10dError::Normals(e),
+        crate::container_10d::TypedPayloadError::VertexCount { expected, got } => {
+            Compile10dError::NormalVertexCountMismatch { expected, got }
+        }
+        other => Compile10dError::TypedPayload(other),
+    })
 }
 
 /// Read Tensor10D nodes from a sealed `.10d` (first Tensor10DNodes section).

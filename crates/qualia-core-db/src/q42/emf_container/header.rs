@@ -45,6 +45,9 @@ pub enum EmfError {
     DirectoryBounds,
     DirectoryAlignment,
     ArithmeticOverflow,
+    /// Directory Hilbert keys do not round-trip for any order in 1..=8
+    /// inside `grid_dims_bricks`.
+    HilbertOrder,
 }
 
 impl std::fmt::Display for EmfError {
@@ -70,6 +73,7 @@ impl std::fmt::Display for EmfError {
             Self::DirectoryBounds => write!(f, "EMF chunk directory out of bounds"),
             Self::DirectoryAlignment => write!(f, "EMF chunk directory not 64-byte aligned"),
             Self::ArithmeticOverflow => write!(f, "Arithmetic overflow in EMF calculation"),
+            Self::HilbertOrder => write!(f, "EMF Hilbert brick order could not be inferred"),
         }
     }
 }
@@ -259,6 +263,38 @@ impl EmfCellRecord64 {
     pub fn poynting_flux_magnitude(&self) -> f32 {
         let s = self.poynting_vector();
         (s[0] * s[0] + s[1] * s[1] + s[2] * s[2]).sqrt()
+    }
+
+    /// |E| in V/m.
+    #[inline]
+    pub fn e_magnitude(&self) -> f32 {
+        (self.e_field[0] * self.e_field[0]
+            + self.e_field[1] * self.e_field[1]
+            + self.e_field[2] * self.e_field[2])
+            .sqrt()
+    }
+
+    /// Optical frequency in Hz from `wavelength_nm`, or 0 when the cell is quasi-static.
+    #[inline]
+    pub fn optical_frequency_hz(&self) -> f32 {
+        if self.wavelength_nm > 0.0 {
+            (SPEED_OF_LIGHT as f64 / (self.wavelength_nm as f64 * 1e-9)) as f32
+        } else {
+            0.0
+        }
+    }
+
+    /// σ used by AcousticPlane and CIE display. Authored `spectral_sigma` wins;
+    /// otherwise fold 400–700 nm into [0, 1] the same way `sigma_to_wavelength_nm` inverts.
+    #[inline]
+    pub fn effective_sigma(&self) -> f32 {
+        if self.spectral_sigma != 0.0 {
+            self.spectral_sigma
+        } else if self.wavelength_nm > 0.0 {
+            ((self.wavelength_nm - 400.0) / 300.0).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
     }
 
     /// Total electromagnetic energy density u_EM = 0.5 * (epsilon_0 * |E|^2 + |B|^2 / mu_0) in J/m³.

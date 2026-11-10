@@ -104,16 +104,16 @@ struct ProjectedNode {
 
 mod body_scene;
 mod scene_animation;
-mod source_frame;
 mod scene_mesh;
+mod source_frame;
 pub(crate) use scene_mesh::BodyMeshAccum;
 #[allow(unused_imports)]
 pub(crate) use scene_mesh::SceneMeshAccum;
 mod capabilities;
 pub use capabilities::probe_portal_graphics;
 mod exposure;
-mod part_vertices;
 mod graphics;
+mod part_vertices;
 use graphics::PortalGraphicsState;
 mod recovery;
 mod texture_upload;
@@ -1237,8 +1237,9 @@ impl QualiaPortal {
     }
 
     /// P9.2 — Load a `.10d` container asset: parse the section table, extract
-    /// the QuantizedMesh and Tensor10DNodes (provenance) sections, upload the
-    /// mesh to the GPU, and report node/triangle counts.
+    /// the QuantizedMesh, optional SurfaceReading (per-vertex colour), optional
+    /// UV01, optional MAT3/MAT4, Tensor10DNodes (provenance), and mesh frames;
+    /// upload to the GPU. Texture bytes stay in HMC/deps (`load_texture_encoded`).
     ///
     /// **Governance fail-closed:** if the header carries
     /// `FLAG_DEFAULT_DISPOSITION_REFUSE` (bit 0) and no attestation section is
@@ -1248,128 +1249,18 @@ impl QualiaPortal {
     /// Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
     pub fn load_10d(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         self.hmc_mesh_residency.clear();
-        use crate::container_10d::{
-            self,
-            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
-        };
+        let decoded = crate::render::portal_load_10d::decode_load_10d(bytes)
+            .map_err(|e| JsValue::from_str(&e))?;
 
-        let mut bytes_mut = bytes.to_vec();
-        let header = Container10dHeader::parse(&bytes_mut)
-            .map_err(|e| JsValue::from_str(&format!("10d header: {e}")))?;
-
-        // Verify whole-file CRC-32C.
-        container_10d::verify_whole_file_crc32c(&mut bytes_mut)
-            .map_err(|e| JsValue::from_str(&format!("10d CRC: {e}")))?;
-
-        let descs = container_10d::parse_section_table(&bytes_mut, &header)
-            .map_err(|e| JsValue::from_str(&format!("10d section table: {e}")))?;
-
-        let mut mesh = None;
-
-        let mut provenance_mu: f32 = 0.0;
-        let mut has_attestation = false;
-
-        for desc in descs.iter() {
-            let st = container_10d::SectionType::from_u8(desc.section_type)
-                .ok_or_else(|| JsValue::from_str("10d: unknown section type"))?;
-            let off = desc.byte_offset as usize;
-            let len = desc.byte_length as usize;
-            let payload = &bytes_mut[off..off + len];
-
-            match st {
-                container_10d::SectionType::QuantizedMesh => {
-                    mesh = Some(
-                        container_10d::decode_mesh_section(payload)
-                            .map_err(|e| JsValue::from_str(&format!("10d mesh decode: {e}")))?,
-                    );
-                }
-                container_10d::SectionType::Tensor10DNodes => {
-                    if let Ok(t) = container_10d::read_node(payload, 0) {
-                        provenance_mu = t.mu;
-                    }
-                }
-                container_10d::SectionType::ProvenanceSidecar => {
-                    if let Ok(view) =
-                        crate::container_10d::provenance_section::decode_provenance_section(payload)
-                    {
-                        if crate::container_10d::provenance_section::validate_provenance(&view)
-                            .is_ok()
-                        {
-                            has_attestation = true;
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let mesh = mesh.ok_or_else(|| JsValue::from_str("10d: no mesh section"))?;
-        // Shared SDK owns legacy/MID2 selection; keep this oversized portal as glue.
-        let frames = container_10d::read_container_mesh_frames_with_limits(
-            &bytes_mut, mesh.vertex_count(),
-            container_10d::MeshFrameDecodeLimits {
-                max_vertices: container_10d::MAX_NORMAL_COUNT,
-                max_payload_bytes: 64 * 1024 * 1024,
-                max_decoded_bytes: 256 * 1024 * 1024,
-            },
-        )
-            .map_err(|e| JsValue::from_str(&format!("10d frames decode: {e}")))?;
-        let (authored_normals, authored_tangents) = frames
-            .map(|frames| (frames.normals, frames.tangents)).unwrap_or((None, None));
-        if authored_normals
-            .as_ref()
-            .is_some_and(|normals: &Vec<[f32; 3]>| normals.len() != mesh.vertex_count())
-        {
-            return Err(JsValue::from_str(
-                "10d normal field vertex count does not match mesh",
-            ));
-        }
-        if authored_tangents
-            .as_ref()
-            .is_some_and(|tangents: &Vec<[f32; 4]>| tangents.len() != mesh.vertex_count())
-        {
-            return Err(JsValue::from_str(
-                "10d tangent field vertex count does not match mesh",
-            ));
-        }
-
-        // Governance fail-closed: default-Refuse flag set and no attestation →
-        // mesh is displayable but not citable.
-        let governance_refused =
-            (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
-
-        // Centre + scale the mesh to the orbit frame (same as upload_mesh_asset).
-        let c = mesh.centroid();
-        let ext = [
-            mesh.max[0] - mesh.min[0],
-            mesh.max[1] - mesh.min[1],
-            mesh.max[2] - mesh.min[2],
-        ];
-        let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
-        let s = 1.6 / span;
-        let positions: Vec<[f32; 3]> = mesh
-            .positions
-            .iter()
-            .map(|p| [(p[0] - c[0]) * s, (p[1] - c[1]) * s, (p[2] - c[2]) * s])
-            .collect();
-        let indices: Vec<u32> = mesh
-            .triangles
-            .iter()
-            .flat_map(|t| [t[0], t[1], t[2]])
-            .collect();
-
-        let tri_count = mesh.triangles.len() as u32;
-        let vert_count = mesh.positions.len() as u32;
+        let tri_count = decoded.triangle_count;
+        let vert_count = decoded.vertex_count;
+        let provenance_mu = decoded.provenance_mu;
+        let governance_refused = decoded.governance_refused;
 
         #[cfg(target_arch = "wasm32")]
         if let Some(ref mut gpu) = self.gpu {
-            gpu.upload_mesh_colored_with_frames(
-                &positions,
-                &[],
-                authored_normals.as_deref(),
-                authored_tangents.as_deref(),
-                &indices,
-            );
+            crate::render::portal_load_10d::upload_load_10d_to_gpu(gpu, &decoded)
+                .map_err(|e| JsValue::from_str(&format!("10d GPU upload: {e}")))?;
             self.tier = 2;
         }
 
@@ -1410,6 +1301,79 @@ impl QualiaPortal {
             &JsValue::from_bool(governance_refused),
         )?;
 
+        Ok(result.into())
+    }
+
+    /// Load a sibling `Q42EMF64` (`.emf`) volume. Cells are the field values;
+    /// GPU RGBA and AcousticPlane σ are conversions of those cells.
+    ///
+    /// Anatomy hosts fetch this from the same URL as the mesh with only the
+    /// trailing extension replaced: `foo.10d` → `foo.emf`. Values are not stored
+    /// inside `.10d`.
+    ///
+    /// Returns `{ nx, ny, nz, nt, cell_count, mean_sigma, frequency_hz, kind }`.
+    /// `kind` is `"volume"` when `cell_count > 1`, otherwise `"cell"`.
+    pub fn load_emf(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        let loaded = crate::render::portal_load_emf::decode_emf_scientific(bytes)
+            .map_err(|e| JsValue::from_str(&e))?;
+        self.telemetry.spectral_shift = loaded.mean_sigma;
+
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            let display: Vec<_> = loaded
+                .cells
+                .iter()
+                .map(crate::render::gpu::emf_field_cell_from_scientific)
+                .collect();
+            gpu.emf_upload_field(
+                &display,
+                loaded.nx,
+                loaded.ny,
+                loaded.nz,
+                loaded.nt,
+                loaded.bounds,
+            )
+            .map_err(|e| JsValue::from_str(&e))?;
+        }
+
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("nx"),
+            &JsValue::from_f64(loaded.nx as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("ny"),
+            &JsValue::from_f64(loaded.ny as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("nz"),
+            &JsValue::from_f64(loaded.nz as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("nt"),
+            &JsValue::from_f64(loaded.nt as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("cell_count"),
+            &JsValue::from_f64(loaded.cell_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("mean_sigma"),
+            &JsValue::from_f64(loaded.mean_sigma as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("frequency_hz"),
+            &JsValue::from_f64(loaded.frequency_hz as f64),
+        )?;
+        let kind = if loaded.cell_count > 1 { "volume" } else { "cell" };
+        Reflect::set(&result, &JsValue::from_str("kind"), &JsValue::from_str(kind))?;
         Ok(result.into())
     }
 

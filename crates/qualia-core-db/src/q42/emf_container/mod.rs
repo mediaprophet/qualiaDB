@@ -79,6 +79,18 @@ mod tests {
         assert!(poynting[0] != 0.0 || poynting[1] != 0.0 || poynting[2] != 0.0);
         let u_em = cell0.energy_density();
         assert!(u_em > 0.0);
+
+        let dense = reader.dense_volume().expect("dense unpack");
+        assert_eq!((dense.nx, dense.ny, dense.nz, dense.nt), (16, 16, 16, 1));
+        // brick (0,0,0) local (lx,ly,lz)=(3,2,1) → x=3, y=2, z=1
+        let idx0 = (1 * 16 * 16) + (2 * 16) + 3;
+        assert_eq!(dense.cells[idx0].e_field, [100.0, 200.0, 300.0]);
+        assert_eq!(dense.cells[idx0].wavelength_nm, 550.0);
+        assert!((dense.cells[idx0].effective_sigma() - 0.5).abs() < 1e-5);
+        // brick (1,1,0) local (5,6,7) → x=13, y=14, z=7
+        let idx1 = (7 * 16 * 16) + (14 * 16) + 13;
+        assert_eq!(dense.cells[idx1].e_field, [50.0, 0.0, 0.0]);
+        assert_eq!(dense.cells[idx1].wavelength_nm, 650.0);
     }
 
     #[test]

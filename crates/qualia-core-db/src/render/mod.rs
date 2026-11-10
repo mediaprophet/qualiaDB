@@ -193,8 +193,6 @@ mod texture_transcode_tests;
 ))]
 pub mod lod_chain;
 
-/// Borrowed source-bound pose contract and cold canonical model admission.
-pub mod source_frame;
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(feature = "gpu-runtime")]
 pub mod gpu;
@@ -207,8 +205,17 @@ pub mod naga_sanitize;
 /// The `#[wasm_bindgen]` portal facade (`QualiaPortal`) driving the browser viewport.
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal;
+/// CPU decode for QualiaPortal `load_10d` (SurfaceReading + UV01 + MAT3/MAT4 + orbit-frame mesh).
+/// Lives outside the wasm-only `portal` facade so native tests can cover the colour/UV/MAT path.
+pub mod portal_load_10d;
+/// PNG/KTX2 ingest for `load_10d` materials. Decode budgets are not the Prolog sentinel.
+pub mod portal_load_textures;
+/// CPU decode for QualiaPortal `load_emf` (sibling `Q42EMF64` dense unpack + AcousticPlane σ).
+pub mod portal_load_emf;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_wasm;
+/// Borrowed source-bound pose contract and cold canonical model admission.
+pub mod source_frame;
 
 /// 4-Scale Botanical `.10d` Organ & Histology Dissection (`FLOWER` / `LEAF` / `WOOD` / `ROOT`).
 pub mod botanical_anatomy;

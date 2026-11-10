@@ -14,17 +14,26 @@ pub(super) fn create_sampler(device: &etalon::Device, state: TextureSampler) -> 
         TextureAddressMode::Repeat => etalon::AddressMode::Repeat,
     };
     let (min_filter, mipmap_filter) = match state.min_filter {
-        TextureMinFilter::Nearest => (etalon::FilterMode::Nearest, etalon::MipmapFilterMode::Nearest),
-        TextureMinFilter::Linear => (etalon::FilterMode::Linear, etalon::MipmapFilterMode::Nearest),
-        TextureMinFilter::NearestMipmapNearest => {
-            (etalon::FilterMode::Nearest, etalon::MipmapFilterMode::Nearest)
-        }
-        TextureMinFilter::LinearMipmapNearest => {
-            (etalon::FilterMode::Linear, etalon::MipmapFilterMode::Nearest)
-        }
-        TextureMinFilter::NearestMipmapLinear => {
-            (etalon::FilterMode::Nearest, etalon::MipmapFilterMode::Linear)
-        }
+        TextureMinFilter::Nearest => (
+            etalon::FilterMode::Nearest,
+            etalon::MipmapFilterMode::Nearest,
+        ),
+        TextureMinFilter::Linear => (
+            etalon::FilterMode::Linear,
+            etalon::MipmapFilterMode::Nearest,
+        ),
+        TextureMinFilter::NearestMipmapNearest => (
+            etalon::FilterMode::Nearest,
+            etalon::MipmapFilterMode::Nearest,
+        ),
+        TextureMinFilter::LinearMipmapNearest => (
+            etalon::FilterMode::Linear,
+            etalon::MipmapFilterMode::Nearest,
+        ),
+        TextureMinFilter::NearestMipmapLinear => (
+            etalon::FilterMode::Nearest,
+            etalon::MipmapFilterMode::Linear,
+        ),
         TextureMinFilter::LinearMipmapLinear => {
             (etalon::FilterMode::Linear, etalon::MipmapFilterMode::Linear)
         }

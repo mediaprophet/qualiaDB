@@ -168,35 +168,37 @@ impl SceneMeshAccum {
                 return;
             }
         }
-        let local_normals =
-            match container_10d::read_container_mesh_frames_with_limits(
-                &bytes, mesh.positions.len(),
-                container_10d::MeshFrameDecodeLimits {
-                    max_vertices: container_10d::MAX_NORMAL_COUNT,
-                    max_payload_bytes: 64 * 1024 * 1024,
-                    max_decoded_bytes: 256 * 1024 * 1024,
-                },
-            ).map(|frames| frames.and_then(|frames| frames.normals)) {
-                Ok(Some(normals)) => normals,
-                Ok(None) => {
-                    let mut normals = vec![[0.0; 3]; mesh.positions.len()];
-                    if crate::render::mesh_surface_frames::vertex_normals_into(
-                        &mesh.positions,
-                        &mesh.triangles,
-                        &mut normals,
-                    )
-                    .is_err()
-                    {
-                        self.assets_refused += 1;
-                        return;
-                    }
-                    normals
-                }
-                Err(_) => {
+        let local_normals = match container_10d::read_container_mesh_frames_with_limits(
+            &bytes,
+            mesh.positions.len(),
+            container_10d::MeshFrameDecodeLimits {
+                max_vertices: container_10d::MAX_NORMAL_COUNT,
+                max_payload_bytes: 64 * 1024 * 1024,
+                max_decoded_bytes: 256 * 1024 * 1024,
+            },
+        )
+        .map(|frames| frames.and_then(|frames| frames.normals))
+        {
+            Ok(Some(normals)) => normals,
+            Ok(None) => {
+                let mut normals = vec![[0.0; 3]; mesh.positions.len()];
+                if crate::render::mesh_surface_frames::vertex_normals_into(
+                    &mesh.positions,
+                    &mesh.triangles,
+                    &mut normals,
+                )
+                .is_err()
+                {
                     self.assets_refused += 1;
                     return;
                 }
-            };
+                normals
+            }
+            Err(_) => {
+                self.assets_refused += 1;
+                return;
+            }
+        };
         let governance_refused =
             (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
         if governance_refused {

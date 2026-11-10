@@ -2,8 +2,8 @@
 
 use crate::container_10d::provenance_section::ProvenanceSidecar;
 use crate::container_10d::{
-    attach_material_section, read_material_section_into, MaterialContainerError, MaterialRecord,
-    SubmeshRange,
+    attach_material_section, attach_texture_coordinate_section, read_material_section_into,
+    MaterialContainerError, MaterialRecord, SubmeshRange, TextureCoordinateContainerError,
 };
 use crate::q_hash;
 use crate::render::assets::Mesh;
@@ -16,6 +16,7 @@ use crate::tensor::Tensor10D;
 pub enum MaterialCompileError {
     Geometry(Compile10dError),
     Materials(MaterialContainerError),
+    TextureCoordinates(TextureCoordinateContainerError),
     IndexCountOverflow,
     MaterialIdentityCollision,
 }
@@ -70,6 +71,11 @@ impl From<MaterialContainerError> for MaterialCompileError {
         Self::Materials(value)
     }
 }
+impl From<TextureCoordinateContainerError> for MaterialCompileError {
+    fn from(value: TextureCoordinateContainerError) -> Self {
+        Self::TextureCoordinates(value)
+    }
+}
 
 /// Compile geometry and its optional streams, then attach validated material and submesh data.
 /// The output is a sealed `.10d` container; old static assets continue to use their implicit
@@ -122,6 +128,32 @@ pub fn compile_mesh_to_10d_with_materials(
         materials,
         ranges,
     )
+}
+
+/// Seal a PBR mesh: MAT4 materials plus optional UV01 and SurfaceReading.
+/// Texture payloads stay encoded in HMC/deps; bind them with `pack_pbr_set`.
+pub fn compile_10d_pbr(
+    mesh: &Mesh,
+    materials: &[MaterialRecord],
+    ranges: &[SubmeshRange],
+    uv0: Option<&[[f32; 2]]>,
+    surface_reading: Option<&[[f32; 4]]>,
+) -> Result<Vec<u8>, MaterialCompileError> {
+    let mut bytes = compile_mesh_with_materials(
+        mesh,
+        &[],
+        None,
+        Compile10dExtras::default(),
+        surface_reading,
+        None,
+        None,
+        materials,
+        ranges,
+    )?;
+    if let Some(uv) = uv0 {
+        bytes = attach_texture_coordinate_section(&bytes, uv)?;
+    }
+    Ok(bytes)
 }
 
 /// Read the material records and submesh ranges from a compiled mesh container.

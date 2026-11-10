@@ -683,7 +683,7 @@ pub const MAX_GPU_MATERIAL_DRAWS: usize = 65_536;
 
 use bloom::*;
 pub use compute::{ComputeBinding, ComputeBufferKind};
-pub use emf_pipeline::{EmfFieldCell, EmfSliceUniform};
+pub use emf_pipeline::{emf_field_cell_from_scientific, EmfFieldCell, EmfSliceUniform};
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;
@@ -699,6 +699,10 @@ mod mesh_pixel_tests;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "material_pixel_tests.rs"]
 mod material_pixel_tests;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[path = "material_pixel_portal_tests.rs"]
+mod material_pixel_portal_tests;
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[path = "environment_probe_pixel_tests.rs"]

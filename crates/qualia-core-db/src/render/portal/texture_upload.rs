@@ -2,11 +2,8 @@
 //! Codec, digest checks, mip semantics and residency remain engine-owned.
 
 use super::QualiaPortal;
-use crate::render::asset_package::HmcTextureResource;
 use crate::render::gpu::{TextureColorSpace, TextureMipSemantic};
-use crate::render::texture_decode::{
-    decode_hmc_texture_rgba8_into, inspect_hmc_texture_requirements, TextureDecodeLimits,
-};
+use crate::render::portal_load_textures::{ingest_portal_texture, PortalTextureIngest};
 use sha2::{Digest, Sha256};
 use wasm_bindgen::prelude::*;
 
@@ -14,7 +11,8 @@ use wasm_bindgen::prelude::*;
 impl QualiaPortal {
     /// Hydrate one content-addressed PNG/JPEG/KTX2 dependency. Role 0 is sRGB
     /// base colour, 1 a linear tangent-space normal, 2 linear packed data and
-    /// 3 sRGB alpha-masked colour. Returns false for an unavailable GPU backend.
+    /// 3 sRGB alpha-masked colour. Returns false for an unavailable GPU backend
+    /// or a KTX2/BasisU payload the adapter cannot transcode (mesh still draws).
     /// Call before scene submission so the material bind groups see residency.
     pub fn load_texture_encoded(
         &mut self,
@@ -45,18 +43,6 @@ impl QualiaPortal {
             ),
             _ => return Err(JsValue::from_str("unknown texture role")),
         };
-        let resource = HmcTextureResource {
-            digest: identity,
-            mime_type: mime,
-            bytes: encoded,
-        };
-        let limits = TextureDecodeLimits {
-            max_decoded_bytes: 4 * 1024 * 1024,
-            max_encoded_bytes: 4 * 1024 * 1024,
-            ..TextureDecodeLimits::default()
-        };
-        let (info, scratch_len) = inspect_hmc_texture_requirements(&resource, limits)
-            .map_err(|error| JsValue::from_str(&format!("texture admission: {error:?}")))?;
         self.adopt_pending_gpu();
         let Some(gpu) = self.gpu.as_mut() else {
             return Ok(false);
@@ -67,17 +53,19 @@ impl QualiaPortal {
         {
             return Ok(true);
         }
-        let mut rgba = vec![0; info.rgba8_bytes];
-        let mut scratch = vec![0; scratch_len];
-        decode_hmc_texture_rgba8_into(&resource, limits, &mut rgba, &mut scratch)
-            .map_err(|error| JsValue::from_str(&format!("texture decode: {error:?}")))?;
+        let decoded = match ingest_portal_texture(Some(mime), encoded)
+            .map_err(|error| JsValue::from_str(&format!("texture decode: {error:?}")))?
+        {
+            PortalTextureIngest::Rgba8(decoded) => decoded,
+            PortalTextureIngest::SkippedTranscode => return Ok(false),
+        };
         gpu.upload_resident_texture_rgba8_with_mips(
             identity,
             space,
             semantic,
-            info.width,
-            info.height,
-            &rgba,
+            decoded.width,
+            decoded.height,
+            &decoded.rgba8,
         )
         .map_err(|error| JsValue::from_str(&format!("texture upload: {error:?}")))?;
         Ok(true)

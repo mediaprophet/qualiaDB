@@ -14,12 +14,40 @@
 //! - manifold.scale → display saturation
 //! - manifold.manifold_curvature + Stokes polarization → display rim glow & highlight
 
+use etalon::util::DeviceExt;
 #[allow(unused_imports)]
 pub use etalon_render::emf::{
-    EMF_VOLUMETRIC_WGSL, EmfFieldCell, EmfPipeline, EmfPipelineDesc, EmfSliceUniform,
-    checked_field_bytes, checked_grid_cell_count,
+    checked_field_bytes, checked_grid_cell_count, EmfFieldCell, EmfPipeline, EmfPipelineDesc,
+    EmfSliceUniform, EMF_VOLUMETRIC_WGSL,
 };
-use etalon::util::DeviceExt;
+use crate::q42::emf_container::EmfCellRecord64;
+
+/// GPU display cell from a scientific `Q42EMF64` brick cell.
+///
+/// Amplitude is |E|, phase is coherence, frequency is c/λ, Stokes copy through.
+/// 10D display slots carry n, κ, α, σ, Poynting — the shader already maps those
+/// as saturation / glow. This is a conversion; the `.emf` cell stays the source.
+pub fn emf_field_cell_from_scientific(cell: &EmfCellRecord64) -> EmfFieldCell {
+    let sigma = cell.effective_sigma();
+    EmfFieldCell {
+        amplitude: cell.e_magnitude(),
+        phase: cell.coherence_phase,
+        frequency: cell.optical_frequency_hz(),
+        scale: cell.refractive_n,
+        attention_depth: cell.extinction_k,
+        epistemic_weight: cell.confidence_alpha,
+        topological_spin: 0.0,
+        temporal_decay: 0.0,
+        entropy_bias: 0.0,
+        spatial_phase: cell.coherence_phase,
+        recurrence_frequency: sigma,
+        density_threshold: cell.poynting_flux,
+        manifold_curvature: 0.0,
+        stokes_q: cell.stokes_q,
+        stokes_u: cell.stokes_u,
+        stokes_v: cell.stokes_v,
+    }
+}
 
 /// Per-portal EMF visualizer state.
 pub(crate) struct EmfState {
@@ -297,11 +325,31 @@ impl super::PortalGpu {
 mod tests {
     use super::super::PortalGpu;
     use super::*;
+    use crate::q42::emf_container::EmfCellRecord64;
 
     #[test]
     fn emf_field_cell_size() {
         // 3 f32 (amp/phase/freq) + 10 f32 (manifold) + 3 f32 (Stokes Q/U/V) = 16 f32 = 64 bytes
         assert_eq!(std::mem::size_of::<EmfFieldCell>(), 64);
+    }
+
+    #[test]
+    fn scientific_cell_maps_e_wavelength_and_stokes_into_display() {
+        let mut cell = EmfCellRecord64::default();
+        cell.e_field = [3.0, 4.0, 0.0];
+        cell.wavelength_nm = 550.0;
+        cell.coherence_phase = 1.25;
+        cell.stokes_q = 0.2;
+        cell.stokes_u = 0.1;
+        cell.stokes_v = 0.05;
+        cell.confidence_alpha = 0.9;
+        let display = emf_field_cell_from_scientific(&cell);
+        assert!((display.amplitude - 5.0).abs() < 1e-5);
+        assert!((display.phase - 1.25).abs() < 1e-6);
+        assert!((display.recurrence_frequency - 0.5).abs() < 1e-5);
+        assert_eq!(display.stokes_q, 0.2);
+        assert_eq!(display.epistemic_weight, 0.9);
+        assert!(display.frequency > 5.0e14 && display.frequency < 5.6e14);
     }
 
     #[test]

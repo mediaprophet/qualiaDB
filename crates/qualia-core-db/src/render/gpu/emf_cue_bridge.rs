@@ -7,10 +7,12 @@
 //!
 //! Strictly zero heap in hot paths (Tier-1 contract, `AGENTS.md` §0-A).
 
-use bytemuck::{Pod, Zeroable};
-use crate::modalities::typed_cue_profile::{CueEvaluationError, PhysicalCueEmission};
 #[cfg(test)]
-use crate::modalities::typed_cue_profile::{CalibrationStatus, PhysicalCueDomain, PhysicalUnitKind};
+use crate::modalities::typed_cue_profile::{
+    CalibrationStatus, PhysicalCueDomain, PhysicalUnitKind,
+};
+use crate::modalities::typed_cue_profile::{CueEvaluationError, PhysicalCueEmission};
+use bytemuck::{Pod, Zeroable};
 
 /// 64-byte GPU storage/uniform buffer descriptor for physical cues.
 ///
@@ -164,16 +166,28 @@ mod tests {
         assert_eq!(count, 2);
 
         assert_eq!(out[0].source_entity_did, 0x1111_2222_3333_4444);
-        assert_eq!(out[0].domain_code, PhysicalCueDomain::ElectromagneticOptical as u32);
-        assert_eq!(out[0].unit_code, PhysicalUnitKind::WattsPerSquareMeterIrradiance as u32);
+        assert_eq!(
+            out[0].domain_code,
+            PhysicalCueDomain::ElectromagneticOptical as u32
+        );
+        assert_eq!(
+            out[0].unit_code,
+            PhysicalUnitKind::WattsPerSquareMeterIrradiance as u32
+        );
         assert_eq!(out[0].magnitude, 120.0);
         assert_eq!(out[0].polarization_deg, 45.0);
         assert_eq!(out[0].uncalibrated_flag, 0);
         assert!(!out[0].is_uncalibrated());
 
         assert_eq!(out[1].source_entity_did, 0x5555_6666_7777_8888);
-        assert_eq!(out[1].domain_code, PhysicalCueDomain::AcousticMechanical as u32);
-        assert_eq!(out[1].unit_code, PhysicalUnitKind::DecibelSplAcoustic as u32);
+        assert_eq!(
+            out[1].domain_code,
+            PhysicalCueDomain::AcousticMechanical as u32
+        );
+        assert_eq!(
+            out[1].unit_code,
+            PhysicalUnitKind::DecibelSplAcoustic as u32
+        );
         assert_eq!(out[1].magnitude, 65.0);
         assert_eq!(out[1].polarization_deg, -1.0);
         assert_eq!(out[1].uncalibrated_flag, 0);
