@@ -11,7 +11,7 @@ const workspaceMembers = [...rootManifest.matchAll(/^\s*"([^"]+)",?\s*$/gm)]
   .map((match) => match[1])
   .filter((member) => member.startsWith('crates/'));
 
-assert.equal(workspaceMembers.length, 29, 'expected all 29 workspace crates');
+assert.equal(workspaceMembers.length, 31, 'expected all 31 workspace crates');
 
 const workspacePackageNames = [];
 for (const member of workspaceMembers) {

@@ -1,4 +1,4 @@
-// Deprecated. Do not load this file.
+// Deprecated as of 0.0.41. Do not load this file.
 //
 // The human welfare models are the Anatomy release
 // (mediaprophet/anatomy release/human-welfare.hmc), imported into
