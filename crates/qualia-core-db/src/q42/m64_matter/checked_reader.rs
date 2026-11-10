@@ -5,9 +5,10 @@
 
 use super::{
     M64ChunkDirectoryEntry, M64Error, M64GeoRasterError, M64GeoRasterMetadata, M64Header,
-    M64PhaseJunctureRecord, M64RasterSample, M64ShellRecord, M64StrataColumnRecord,
-    M64_FLAG_3D_BRICK_16X16X16, M64_FLAG_LOCAL_METRIC_LRM3, M64_MAGIC, M64_MODE_HOLO,
-    M64_MODE_PHASE_JUNCTURE, M64_MODE_POINT, M64_MODE_SHELL, M64_MODE_STRATA,
+    M64LocalMetricHeader, M64PhaseJunctureRecord, M64RasterSample, M64ShellRecord,
+    M64StrataColumnRecord, LRM3_BLOCK_BYTES, M64_FLAG_3D_BRICK_16X16X16,
+    M64_FLAG_LOCAL_METRIC_LRM3, M64_MAGIC, M64_MODE_HOLO, M64_MODE_PHASE_JUNCTURE, M64_MODE_POINT,
+    M64_MODE_SHELL, M64_MODE_STRATA,
 };
 
 #[cfg(test)]
@@ -44,6 +45,8 @@ pub enum M64ReadError {
     FileByteLimit,
     TruncatedHeader,
     Header(M64Error),
+    Lrm3Missing,
+    Lrm3(M64Error),
     UnsupportedVersion(u32),
     UnsupportedContainerFlags(u32),
     FileSizeMismatch,
@@ -106,6 +109,7 @@ pub struct M64Reader<'a> {
     directory_start: usize,
     verification: M64Verification,
     georaster: Option<M64GeoRasterMetadata>,
+    lrm3: Option<M64LocalMetricHeader>,
 }
 
 impl<'a> M64Reader<'a> {
@@ -175,6 +179,23 @@ impl<'a> M64Reader<'a> {
         if directory_start < header.header_size as usize || directory_end > bytes.len() {
             return Err(M64ReadError::DirectoryBounds);
         }
+
+        let lrm3 = if header.container_flags & (M64_FLAG_LOCAL_METRIC_LRM3 as u32) != 0 {
+            let header_size = usize::try_from(header.header_size)
+                .map_err(|_| M64ReadError::ArithmeticOverflow)?;
+            let lrm3_end = header_size
+                .checked_add(LRM3_BLOCK_BYTES)
+                .ok_or(M64ReadError::ArithmeticOverflow)?;
+            if lrm3_end > directory_start || lrm3_end > bytes.len() {
+                return Err(M64ReadError::Lrm3Missing);
+            }
+            let block: M64LocalMetricHeader =
+                bytemuck::pod_read_unaligned(&bytes[header_size..lrm3_end]);
+            block.validate().map_err(M64ReadError::Lrm3)?;
+            Some(block)
+        } else {
+            None
+        };
 
         let mut verification = M64Verification {
             chunks: count,
@@ -296,6 +317,7 @@ impl<'a> M64Reader<'a> {
             directory_start,
             verification,
             georaster,
+            lrm3,
         })
     }
 
@@ -305,6 +327,10 @@ impl<'a> M64Reader<'a> {
 
     pub fn georaster(&self) -> Option<&M64GeoRasterMetadata> {
         self.georaster.as_ref()
+    }
+
+    pub fn lrm3(&self) -> Option<&M64LocalMetricHeader> {
+        self.lrm3.as_ref()
     }
 
     pub fn raster_sample(&self, x: usize, y: usize) -> Option<M64RasterSample> {
@@ -581,5 +607,73 @@ mod tests {
                 mode: 0x05
             })
         );
+    }
+
+    fn lrm3_container(lrm3: &M64LocalMetricHeader) -> Vec<u8> {
+        let rec = M64HoloRecord::default();
+        let mut header = M64Header::default();
+        header.total_file_size = 320;
+        header.chunk_count = 1;
+        header.chunk_table_offset = 192;
+        header.container_flags = M64_FLAG_LOCAL_METRIC_LRM3 as u32;
+        header.update_crc();
+        let mut entry = M64ChunkDirectoryEntry {
+            chunk_uuid: [0; 16],
+            spatial_hilbert_index: 0,
+            byte_offset: 256,
+            byte_length: 64,
+            record_count: 1,
+            srid_geodetic_code: 0,
+            lut_bank_epoch_id: 0,
+            chunk_record_mode: M64_MODE_HOLO,
+            compression_flags: 0,
+            bao_root_hash_prefix: [0u8; 12],
+            entry_crc32c: 0,
+        };
+        entry.update_crc();
+        let mut buffer = vec![0u8; 320];
+        buffer[..64].copy_from_slice(bytemuck::bytes_of(&header));
+        buffer[64..192].copy_from_slice(bytemuck::bytes_of(lrm3));
+        buffer[192..256].copy_from_slice(bytemuck::bytes_of(&entry));
+        buffer[256..320].copy_from_slice(bytemuck::bytes_of(&rec));
+        buffer
+    }
+
+    #[test]
+    fn admits_lrm3_gap_when_flag_set_and_crc_valid() {
+        let mut lrm3 = M64LocalMetricHeader::default();
+        lrm3.anchor_did_hash = 0xAABB_CCDD_EEFF_0011;
+        lrm3.anisotropic_scale_um = [2.0, 3.0, 4.0];
+        lrm3.update_crc();
+        let buffer = lrm3_container(&lrm3);
+        let reader = parse_one(&buffer).expect("lrm3 container");
+        let parsed = reader.lrm3().expect("authenticated LRM3");
+        assert_eq!(parsed.anchor_did_hash, 0xAABB_CCDD_EEFF_0011);
+        assert_eq!(parsed.anisotropic_scale_um, [2.0, 3.0, 4.0]);
+        assert!(parsed.validate().is_ok());
+    }
+
+    #[test]
+    fn rejects_lrm3_flag_when_block_missing() {
+        let rec = M64HoloRecord::default();
+        let buffer = one_record_container(M64_MAGIC, M64_MODE_HOLO, bytemuck::cast_ref(&rec));
+        let mut header: M64Header = bytemuck::pod_read_unaligned(&buffer[..64]);
+        header.container_flags = M64_FLAG_LOCAL_METRIC_LRM3 as u32;
+        header.update_crc();
+        let mut tampered = buffer;
+        tampered[..64].copy_from_slice(bytemuck::bytes_of(&header));
+        assert_eq!(parse_one(&tampered).err(), Some(M64ReadError::Lrm3Missing));
+    }
+
+    #[test]
+    fn rejects_lrm3_gap_crc_mismatch() {
+        let mut lrm3 = M64LocalMetricHeader::default();
+        lrm3.update_crc();
+        let mut buffer = lrm3_container(&lrm3);
+        buffer[70] ^= 1;
+        assert!(matches!(
+            parse_one(&buffer),
+            Err(M64ReadError::Lrm3(M64Error::ChecksumMismatch { .. }))
+        ));
     }
 }

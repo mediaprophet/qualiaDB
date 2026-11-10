@@ -123,4 +123,66 @@ mod tests {
         assert_eq!(cell.spectral_sigma, 0.4);
         assert_eq!(cell.confidence_alpha, 1.0);
     }
+
+    fn tiny_emf(chunks: u64) -> Vec<u8> {
+        let mut writer = EmfContainerWriter::new([0.0; 3], 1.0, [1, 1, 1], 0.0);
+        let cells = [EmfCellRecord64::default()];
+        for i in 0..chunks {
+            writer.add_brick_chunk(i, &cells, 0, 1, 0).unwrap();
+        }
+        writer.to_bytes()
+    }
+
+    #[test]
+    fn parse_with_limits_enforces_file_and_chunk_budgets() {
+        let bytes = tiny_emf(2);
+        assert!(EmfContainerReader::parse(&bytes).is_ok());
+        assert_eq!(
+            EmfContainerReader::parse_with_limits(
+                &bytes,
+                EmfReadLimits {
+                    max_file_bytes: bytes.len() - 1,
+                    max_chunks: 16,
+                }
+            )
+            .err(),
+            Some(EmfError::FileByteLimit)
+        );
+        assert_eq!(
+            EmfContainerReader::parse_with_limits(
+                &bytes,
+                EmfReadLimits {
+                    max_file_bytes: bytes.len(),
+                    max_chunks: 1,
+                }
+            )
+            .err(),
+            Some(EmfError::ChunkLimitExceeded)
+        );
+    }
+
+    #[test]
+    fn parse_rejects_directory_aliasing_header_and_payload_overlap() {
+        let mut bytes = tiny_emf(2);
+        let mut header: EmfContainerHeader = bytemuck::pod_read_unaligned(&bytes[..64]);
+        header.directory_offset = 0;
+        header.update_crc();
+        bytes[..64].copy_from_slice(bytemuck::bytes_of(&header));
+        assert_eq!(
+            EmfContainerReader::parse(&bytes).err(),
+            Some(EmfError::DirectoryBounds)
+        );
+
+        let mut bytes = tiny_emf(2);
+        let dir1 = 64 + CHUNK_DIRECTORY_ENTRY_BYTES;
+        let mut entry: EmfChunkDirectoryEntry =
+            bytemuck::pod_read_unaligned(&bytes[dir1..dir1 + CHUNK_DIRECTORY_ENTRY_BYTES]);
+        entry.byte_offset = 192;
+        entry.update_crc();
+        bytes[dir1..dir1 + CHUNK_DIRECTORY_ENTRY_BYTES].copy_from_slice(bytemuck::bytes_of(&entry));
+        assert_eq!(
+            EmfContainerReader::parse(&bytes).err(),
+            Some(EmfError::PayloadOverlap)
+        );
+    }
 }

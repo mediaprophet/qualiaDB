@@ -7,7 +7,7 @@
 //!
 //! Every record and header is strictly 64 bytes (L1 cache-line DOD).
 
-use crate::container_10d::crc32c::crc32c;
+use crate::container_10d::crc32c::{crc32c, crc32c_update};
 use bytemuck::{Pod, Zeroable};
 
 pub use super::chunk_directory::{M64ChunkDirectoryEntry, M64Error, CHUNK_DIRECTORY_ENTRY_BYTES};
@@ -69,9 +69,9 @@ pub struct M64Header {
     pub chunk_table_offset: u64,
     /// 0x30..0x38: Number of spatial chunk partitions
     pub chunk_count: u64,
-    /// 0x38..0x3C: CRC-32C checksum of the first 56 bytes of this header
+    /// 0x38..0x3C: CRC-32C of bytes 0x00..0x38 and 0x3C..0x40 (excludes this field)
     pub header_crc32c: u32,
-    /// 0x3C..0x40: Container flags / alignment padding
+    /// 0x3C..0x40: Container flags (covered by header CRC-32C)
     pub container_flags: u32,
 }
 
@@ -95,20 +95,36 @@ impl Default for M64Header {
 }
 
 impl M64Header {
-    /// Compute the CRC-32C over the first 56 bytes of the header.
+    /// CRC-32C over header bytes excluding the CRC field (0x00..0x38 and 0x3C..0x40).
     #[inline]
     pub fn compute_crc32c(&self) -> u32 {
         let bytes: &[u8; 64] = bytemuck::cast_ref(self);
+        Self::crc_covering_flags(bytes)
+    }
+
+    /// Legacy CRC-32C over the first 56 bytes (does not cover `container_flags`).
+    #[inline]
+    fn crc_legacy_first_56(bytes: &[u8; 64]) -> u32 {
         crc32c(&bytes[..56])
     }
 
-    /// Update `header_crc32c` with the computed CRC-32C.
+    #[inline]
+    fn crc_covering_flags(bytes: &[u8; 64]) -> u32 {
+        let mut crc = crc32c_update(0xFFFF_FFFF, &bytes[..0x38]);
+        crc = crc32c_update(crc, &bytes[0x3C..0x40]);
+        !crc
+    }
+
+    /// Update `header_crc32c` with the flags-covering CRC-32C.
     #[inline]
     pub fn update_crc(&mut self) {
         self.header_crc32c = self.compute_crc32c();
     }
 
     /// Validate magic, version, header size, and CRC-32C.
+    ///
+    /// Accepts the flags-covering digest (current writers) or the legacy first-56
+    /// digest so existing files remain readable.
     #[inline]
     pub fn validate(&self) -> Result<(), M64Error> {
         if !has_m64_magic(&self.magic) {
@@ -122,13 +138,15 @@ impl M64Header {
             return Err(M64Error::InvalidHeaderSize);
         }
 
-        let computed = self.compute_crc32c();
-        if self.header_crc32c == computed {
+        let bytes: &[u8; 64] = bytemuck::cast_ref(self);
+        let covering = Self::crc_covering_flags(bytes);
+        if self.header_crc32c == covering || self.header_crc32c == Self::crc_legacy_first_56(bytes)
+        {
             Ok(())
         } else {
             Err(M64Error::ChecksumMismatch {
                 stored: self.header_crc32c,
-                computed,
+                computed: covering,
             })
         }
     }

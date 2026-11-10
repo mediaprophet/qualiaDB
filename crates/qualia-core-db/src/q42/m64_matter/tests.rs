@@ -85,6 +85,33 @@ fn test_m64_header_crc_roundtrip() {
 }
 
 #[test]
+fn header_crc_covers_container_flags() {
+    let mut header = M64Header::default();
+    header.container_flags =
+        (M64_FLAG_3D_BRICK_16X16X16 as u32) | (M64_FLAG_LOCAL_METRIC_LRM3 as u32);
+    header.update_crc();
+    assert!(header.validate().is_ok());
+
+    header.container_flags ^= M64_FLAG_LOCAL_METRIC_LRM3 as u32;
+    assert!(
+        matches!(header.validate(), Err(M64Error::ChecksumMismatch { .. })),
+        "flipping container_flags without updating CRC must fail"
+    );
+}
+
+#[test]
+fn header_crc_admits_legacy_first_56_with_flags_zero() {
+    let mut header = M64Header::default();
+    header.total_file_size = 192;
+    header.chunk_count = 1;
+    header.container_flags = 0;
+    let bytes: &[u8; 64] = bytemuck::cast_ref(&header);
+    header.header_crc32c = crate::container_10d::crc32c::crc32c(&bytes[..56]);
+    assert_ne!(header.header_crc32c, header.compute_crc32c());
+    assert!(header.validate().is_ok());
+}
+
+#[test]
 fn test_m64_strata_record_size_and_alignment() {
     assert_eq!(
         std::mem::size_of::<M64StrataColumnRecord>(),

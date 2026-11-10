@@ -9,6 +9,32 @@ use super::chunk_directory::{
 use super::header::{EmfCellRecord64, EmfContainerHeader, EmfError};
 use crate::q42::m64_matter::brick3d::encode_hilbert3d_u64;
 
+/// Explicit EMF admission budgets (file bytes and directory rows).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EmfReadLimits {
+    pub max_file_bytes: usize,
+    pub max_chunks: usize,
+}
+
+impl EmfReadLimits {
+    /// Conservative documented defaults used by [`EmfContainerReader::parse`].
+    ///
+    /// 16 MiB matches the produce-path resource budget; 4096 chunks is a
+    /// directory-row cap independent of brick payload size. Untrusted callers
+    /// should pass explicit limits via [`EmfContainerReader::parse_with_limits`].
+    pub const fn conservative() -> Self {
+        Self {
+            max_file_bytes: 16 * 1024 * 1024,
+            max_chunks: 4096,
+        }
+    }
+}
+
+#[inline]
+fn ranges_overlap(a_start: usize, a_end: usize, b_start: usize, b_end: usize) -> bool {
+    a_start < b_end && b_start < a_end
+}
+
 /// Immutable zero-copy view of an EMF-64 container file.
 #[derive(Debug)]
 pub struct EmfContainerReader<'a> {
@@ -19,8 +45,13 @@ pub struct EmfContainerReader<'a> {
 }
 
 impl<'a> EmfContainerReader<'a> {
-    /// Parse and validate an EMF container from a byte slice.
+    /// Parse with [`EmfReadLimits::conservative`] so existing callers compile.
     pub fn parse(bytes: &'a [u8]) -> Result<Self, EmfError> {
+        Self::parse_with_limits(bytes, EmfReadLimits::conservative())
+    }
+
+    /// Parse and validate an EMF container under explicit file/chunk budgets.
+    pub fn parse_with_limits(bytes: &'a [u8], limits: EmfReadLimits) -> Result<Self, EmfError> {
         if !cfg!(target_endian = "little") {
             return Err(EmfError::InvalidMagic);
         }
@@ -29,6 +60,9 @@ impl<'a> EmfContainerReader<'a> {
                 required: 64,
                 provided: bytes.len(),
             });
+        }
+        if bytes.len() > limits.max_file_bytes {
+            return Err(EmfError::FileByteLimit);
         }
 
         let header: EmfContainerHeader = bytemuck::pod_read_unaligned(&bytes[..64]);
@@ -39,8 +73,15 @@ impl<'a> EmfContainerReader<'a> {
         let chunk_count = usize::try_from(header.chunk_count)
             .map_err(|_| EmfError::ArithmeticOverflow)?;
 
-        if directory_offset % 64 != 0 {
-            return Err(EmfError::DirectoryAlignment);
+        if chunk_count > limits.max_chunks {
+            return Err(EmfError::ChunkLimitExceeded);
+        }
+        if directory_offset < 64 || directory_offset % 64 != 0 {
+            return Err(if directory_offset % 64 != 0 {
+                EmfError::DirectoryAlignment
+            } else {
+                EmfError::DirectoryBounds
+            });
         }
         let directory_bytes = chunk_count
             .checked_mul(CHUNK_DIRECTORY_ENTRY_BYTES)
@@ -53,7 +94,6 @@ impl<'a> EmfContainerReader<'a> {
             return Err(EmfError::DirectoryBounds);
         }
 
-        // Validate each chunk directory entry and Bao hash
         for chunk in 0..chunk_count {
             let offset = directory_offset + chunk * CHUNK_DIRECTORY_ENTRY_BYTES;
             let entry: EmfChunkDirectoryEntry =
@@ -70,6 +110,9 @@ impl<'a> EmfContainerReader<'a> {
             if end > bytes.len() {
                 return Err(EmfError::PayloadOutOfBounds);
             }
+            if start < 64 || ranges_overlap(start, end, directory_offset, directory_end) {
+                return Err(EmfError::PayloadOutOfBounds);
+            }
             let expected_bytes = usize::try_from(entry.cell_count)
                 .map_err(|_| EmfError::ArithmeticOverflow)?
                 .checked_mul(64)
@@ -78,7 +121,23 @@ impl<'a> EmfContainerReader<'a> {
                 return Err(EmfError::PayloadOutOfBounds);
             }
 
-            // BLAKE3-Bao digest prefix verification
+            for prev in 0..chunk {
+                let prev_off = directory_offset + prev * CHUNK_DIRECTORY_ENTRY_BYTES;
+                let prev_entry: EmfChunkDirectoryEntry = bytemuck::pod_read_unaligned(
+                    &bytes[prev_off..prev_off + CHUNK_DIRECTORY_ENTRY_BYTES],
+                );
+                let prev_start = usize::try_from(prev_entry.byte_offset)
+                    .map_err(|_| EmfError::ArithmeticOverflow)?;
+                let prev_len = usize::try_from(prev_entry.byte_length)
+                    .map_err(|_| EmfError::ArithmeticOverflow)?;
+                let prev_end = prev_start
+                    .checked_add(prev_len)
+                    .ok_or(EmfError::ArithmeticOverflow)?;
+                if ranges_overlap(start, end, prev_start, prev_end) {
+                    return Err(EmfError::PayloadOverlap);
+                }
+            }
+
             if (entry.flags & 2 != 0) || (entry.bao_hash_prefix != [0u8; 16]) {
                 let payload = &bytes[start..end];
                 let digest = blake3::hash(payload);

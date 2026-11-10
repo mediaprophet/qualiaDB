@@ -37,8 +37,10 @@ pub enum EmfError {
     ChecksumMismatch { stored: u32, computed: u32 },
     BaoHashMismatch { chunk_index: usize },
     BufferTooSmall { required: usize, provided: usize },
+    FileByteLimit,
     ChunkLimitExceeded,
     PayloadOutOfBounds,
+    PayloadOverlap,
     PayloadUnaligned,
     DirectoryBounds,
     DirectoryAlignment,
@@ -60,8 +62,10 @@ impl std::fmt::Display for EmfError {
             Self::BufferTooSmall { required, provided } => {
                 write!(f, "EMF buffer too small: required {required}, provided {provided}")
             }
+            Self::FileByteLimit => write!(f, "EMF file exceeds max_file_bytes"),
             Self::ChunkLimitExceeded => write!(f, "EMF chunk limit exceeded"),
             Self::PayloadOutOfBounds => write!(f, "EMF payload slice out of bounds"),
+            Self::PayloadOverlap => write!(f, "EMF payload ranges overlap"),
             Self::PayloadUnaligned => write!(f, "EMF payload is not 64-byte aligned"),
             Self::DirectoryBounds => write!(f, "EMF chunk directory out of bounds"),
             Self::DirectoryAlignment => write!(f, "EMF chunk directory not 64-byte aligned"),
