@@ -51,8 +51,8 @@ mod tests {
         writer.add_brick_chunk(h0, &brick0_cells, 0, 1, 0).unwrap();
         writer.add_brick_chunk(h1, &brick1_cells, 0, 1, 0).unwrap();
 
-        let bytes = writer.to_bytes();
-        assert_eq!(bytes.len(), writer.total_required_bytes());
+        let bytes = writer.to_bytes().expect("EMF serialize");
+        assert_eq!(bytes.len(), writer.total_required_bytes().expect("EMF size"));
 
         // Parse with zero-copy reader
         let reader = EmfContainerReader::parse(&bytes).expect("valid EMF container");
@@ -87,7 +87,7 @@ mod tests {
         let cells = [EmfCellRecord64::default(); EMF_BRICK_CELLS];
         writer.add_brick_chunk(0, &cells, 0, 1, 0).unwrap();
 
-        let mut bytes = writer.to_bytes();
+        let mut bytes = writer.to_bytes().expect("EMF serialize");
         assert!(EmfContainerReader::parse(&bytes).is_ok());
 
         // Tamper with chunk payload byte
@@ -130,7 +130,21 @@ mod tests {
         for i in 0..chunks {
             writer.add_brick_chunk(i, &cells, 0, 1, 0).unwrap();
         }
-        writer.to_bytes()
+        writer.to_bytes().expect("EMF serialize")
+    }
+
+    #[test]
+    fn writer_size_helpers_reject_wrapping_mul() {
+        assert_eq!(
+            EmfContainerWriter::checked_payload_bytes(usize::MAX / 64 + 1),
+            Err(EmfError::ArithmeticOverflow)
+        );
+        assert_eq!(
+            EmfContainerWriter::checked_directory_bytes(usize::MAX / CHUNK_DIRECTORY_ENTRY_BYTES + 1),
+            Err(EmfError::ArithmeticOverflow)
+        );
+        let empty = EmfContainerWriter::new([0.0; 3], 1.0, [0, 0, 0], 0.0);
+        assert_eq!(empty.total_required_bytes().expect("empty EMF size"), 64);
     }
 
     #[test]

@@ -71,7 +71,9 @@ pub fn encode_occupancy_emf(grid: &OccupancyGrid) -> Result<Vec<u8>, SealError> 
         }
     }
 
-    let bytes = writer.to_bytes();
+    let bytes = writer
+        .to_bytes()
+        .map_err(|e| SealError::Emf(format!("serialize: {e}")))?;
     if bytes.len() < 8 || &bytes[0..8] != b"Q42EMF64" {
         return Err(SealError::Emf("writer did not emit Q42EMF64 magic".into()));
     }

@@ -67,21 +67,39 @@ impl EmfContainerWriter {
         Ok(())
     }
 
+    /// Directory table size in bytes for `chunk_count` rows.
+    pub(crate) fn checked_directory_bytes(chunk_count: usize) -> Result<usize, EmfError> {
+        chunk_count
+            .checked_mul(CHUNK_DIRECTORY_ENTRY_BYTES)
+            .ok_or(EmfError::ArithmeticOverflow)
+    }
+
+    /// Payload size in bytes for `cell_count` 64-byte cells.
+    pub(crate) fn checked_payload_bytes(cell_count: usize) -> Result<usize, EmfError> {
+        cell_count
+            .checked_mul(64)
+            .ok_or(EmfError::ArithmeticOverflow)
+    }
+
     /// Calculate the exact total byte size needed to serialize this container.
-    pub fn total_required_bytes(&self) -> usize {
-        let chunk_count = self.chunks.len();
-        let header_bytes = 64;
-        let directory_bytes = chunk_count * CHUNK_DIRECTORY_ENTRY_BYTES;
-        let mut payload_bytes = 0;
+    pub fn total_required_bytes(&self) -> Result<usize, EmfError> {
+        let directory_bytes = Self::checked_directory_bytes(self.chunks.len())?;
+        let mut payload_bytes = 0usize;
         for c in &self.chunks {
-            payload_bytes += c.cells.len() * 64;
+            let chunk_payload = Self::checked_payload_bytes(c.cells.len())?;
+            payload_bytes = payload_bytes
+                .checked_add(chunk_payload)
+                .ok_or(EmfError::ArithmeticOverflow)?;
         }
-        header_bytes + directory_bytes + payload_bytes
+        64usize
+            .checked_add(directory_bytes)
+            .and_then(|n| n.checked_add(payload_bytes))
+            .ok_or(EmfError::ArithmeticOverflow)
     }
 
     /// Serialize the container into a caller-supplied fixed buffer (Tier-1 Zero-Heap).
     pub fn write_to_slice(&self, out: &mut [u8]) -> Result<usize, EmfError> {
-        let required = self.total_required_bytes();
+        let required = self.total_required_bytes()?;
         if out.len() < required {
             return Err(EmfError::BufferTooSmall {
                 required,
@@ -93,22 +111,35 @@ impl EmfContainerWriter {
         let mut sorted_indices: Vec<usize> = (0..self.chunks.len()).collect();
         sorted_indices.sort_by_key(|&idx| self.chunks[idx].spatial_hilbert_index);
 
-        let chunk_count = self.chunks.len() as u32;
+        let chunk_count =
+            u32::try_from(self.chunks.len()).map_err(|_| EmfError::ArithmeticOverflow)?;
         let directory_offset = 64u64;
-        let directory_bytes = (self.chunks.len() * CHUNK_DIRECTORY_ENTRY_BYTES) as u64;
-        let mut current_payload_offset = directory_offset + directory_bytes;
+        let directory_bytes = u64::try_from(Self::checked_directory_bytes(self.chunks.len())?)
+            .map_err(|_| EmfError::ArithmeticOverflow)?;
+        let mut current_payload_offset = directory_offset
+            .checked_add(directory_bytes)
+            .ok_or(EmfError::ArithmeticOverflow)?;
 
         // Write directory and payloads
         for (i, &chunk_idx) in sorted_indices.iter().enumerate() {
             let chunk = &self.chunks[chunk_idx];
-            let cell_count = chunk.cells.len() as u32;
-            let byte_length = cell_count * 64;
+            let cell_count =
+                u32::try_from(chunk.cells.len()).map_err(|_| EmfError::ArithmeticOverflow)?;
+            let byte_length = cell_count
+                .checked_mul(64)
+                .ok_or(EmfError::ArithmeticOverflow)?;
 
             // Serialize cell records to payload region
-            let p_start = current_payload_offset as usize;
-            let p_end = p_start + (byte_length as usize);
+            let p_start = usize::try_from(current_payload_offset)
+                .map_err(|_| EmfError::ArithmeticOverflow)?;
+            let payload_len = usize::try_from(byte_length).map_err(|_| EmfError::ArithmeticOverflow)?;
+            let p_end = p_start
+                .checked_add(payload_len)
+                .ok_or(EmfError::ArithmeticOverflow)?;
             let payload_slice = bytemuck::cast_slice(&chunk.cells);
-            out[p_start..p_end].copy_from_slice(payload_slice);
+            out.get_mut(p_start..p_end)
+                .ok_or(EmfError::PayloadOutOfBounds)?
+                .copy_from_slice(payload_slice);
 
             // Compute BLAKE3 digest of payload
             let digest = blake3::hash(&out[p_start..p_end]);
@@ -131,11 +162,23 @@ impl EmfContainerWriter {
             entry.update_crc();
 
             // Write directory row
-            let d_start = (directory_offset as usize) + i * CHUNK_DIRECTORY_ENTRY_BYTES;
-            let d_end = d_start + CHUNK_DIRECTORY_ENTRY_BYTES;
-            out[d_start..d_end].copy_from_slice(bytemuck::bytes_of(&entry));
+            let d_start = usize::try_from(directory_offset)
+                .map_err(|_| EmfError::ArithmeticOverflow)?
+                .checked_add(
+                    i.checked_mul(CHUNK_DIRECTORY_ENTRY_BYTES)
+                        .ok_or(EmfError::ArithmeticOverflow)?,
+                )
+                .ok_or(EmfError::ArithmeticOverflow)?;
+            let d_end = d_start
+                .checked_add(CHUNK_DIRECTORY_ENTRY_BYTES)
+                .ok_or(EmfError::ArithmeticOverflow)?;
+            out.get_mut(d_start..d_end)
+                .ok_or(EmfError::DirectoryBounds)?
+                .copy_from_slice(bytemuck::bytes_of(&entry));
 
-            current_payload_offset += byte_length as u64;
+            current_payload_offset = current_payload_offset
+                .checked_add(u64::from(byte_length))
+                .ok_or(EmfError::ArithmeticOverflow)?;
         }
 
         // Build and write container header
@@ -158,10 +201,10 @@ impl EmfContainerWriter {
     }
 
     /// Serialize the container into a heap-allocated `Vec<u8>` (Tier-2 Cold Construction).
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let required = self.total_required_bytes();
+    pub fn to_bytes(&self) -> Result<Vec<u8>, EmfError> {
+        let required = self.total_required_bytes()?;
         let mut out = vec![0u8; required];
-        self.write_to_slice(&mut out).expect("buffer allocated to exact size");
-        out
+        self.write_to_slice(&mut out)?;
+        Ok(out)
     }
 }
