@@ -83,9 +83,9 @@ void main() {
             d = sdf_sphere(p, scale * 0.92);
         } else if (kind == 3 || kind == 4 || prim == 4) {
             float rad = (kind == 3 ? 0.085 : 0.052) * (0.75 + 0.35 * pos_scale.w);
-            d = sdf_capsule(p, vec3(0.0), endp - center, rad);
-            vec3 ba = endp - center;
-            along = clamp(dot(p, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
+            vec3 halfv = endp - center;
+            d = sdf_capsule(p, -halfv, halfv, rad);
+            along = clamp(dot(p, halfv) / max(dot(halfv, halfv), 1e-5) * 0.5 + 0.5, 0.0, 1.0);
         } else if (kind == 1) {
             float spin = u_time * 0.11 + freq_amp.z;
             float cs = cos(spin);

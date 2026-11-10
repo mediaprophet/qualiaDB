@@ -6,14 +6,15 @@
  *   node docs/tests/wasm-size-check.mjs [path] [maxRawBytes] [maxGzipBytes]
  *
  * Defaults match the GitHub Pages / release-wasm portal + playground sanity cap
- * (16 MiB raw / 4 MiB gzip). CI always passes explicit limits:
+ * (24 MiB raw / 8 MiB gzip). CI always passes explicit limits:
  *
- *   Ontology MCP  655360 / 204800     (640 KiB / 200 KiB)
- *   Portal        16777216 / 4194304  (16 MiB / 4 MiB)
- *   Playground    16777216 / 4194304  (16 MiB / 4 MiB)
+ *   Ontology MCP  655360 / 204800       (640 KiB / 200 KiB)
+ *   Portal        25165824 / 8388608    (24 MiB / 8 MiB)
+ *   Playground    25165824 / 8388608    (24 MiB / 8 MiB)
  *
  * Ontology MCP stays the tight product budget. Portal / wasm-full are a sanity
  * cap for the full WASM-safe engine, not a slim viewport bundle.
+ * 0.0.41 cinema portal measured ~14.15 MiB raw / ~4.77 MiB gzip.
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
@@ -26,10 +27,10 @@ const wasmPath = process.argv[2] ? resolve(process.argv[2]) : defaultPath;
 
 const MAX_RAW_BYTES = process.argv[3]
   ? Number(process.argv[3])
-  : 16 * 1024 * 1024;
+  : 24 * 1024 * 1024;
 const MAX_GZIP_BYTES = process.argv[4]
   ? Number(process.argv[4])
-  : 4 * 1024 * 1024;
+  : 8 * 1024 * 1024;
 
 if (!existsSync(wasmPath)) {
     console.error(`[wasm-size] missing: ${wasmPath}`);

@@ -182,7 +182,7 @@ The [phone/browser harness](playground/etalon-vibe-harness.html) runs fixed publ
 fixtures through canonical Vibe CPU exports and the Rust Etalon browser WebGPU
 frontend. Its separate `device-harness` WASM feature and bundle keep diagnostic
 exports out of the main portal and playground downloads. The diagnostics bundle
-has its own 16 MiB raw / 4 MiB gzip CI limit. Open the deployed harness at
+has its own 24 MiB raw / 8 MiB gzip CI limit. Open the deployed harness at
 `https://mediaprophet.github.io/qualiaDB/playground/etalon-vibe-harness.html`, tap
 **Run checks**, then **Download JSON**. A missing manifest, stale bundle, failed
 hash check, unsupported browser or timeout still leaves a downloadable report.

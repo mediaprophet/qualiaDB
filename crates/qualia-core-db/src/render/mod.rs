@@ -199,6 +199,9 @@ pub mod gpu;
 /// RDF / NQuin → 96-byte holographic node layout (10D fold, RGBA32F atlas).
 #[cfg(feature = "gpu-runtime")]
 pub mod rdf_holograph;
+/// VibeScript theatre adapter: eval `construct_theatre`, pack via `layout_placed_into`.
+#[cfg(feature = "gpu-runtime")]
+pub mod rdf_holograph_vibe;
 /// Naga bridge: WGSL → naga IR → GLSL ES 300 compilation.
 #[cfg(any(feature = "webgl2", feature = "wgsl-forge"))]
 pub mod naga_bridge;

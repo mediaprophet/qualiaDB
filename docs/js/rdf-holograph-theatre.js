@@ -103,9 +103,15 @@ function setStatus(text) {
 let portal = null;
 let labels = [];
 let wAngle = 0;
+let vibeSource = "";
+const labelField = document.getElementById("label-field");
+
+function labelText(l) {
+    return (l.name || l.id || "").toString();
+}
 
 function visibleLabels() {
-    return labels.filter((l) => l.kind !== "plane");
+    return labels.filter((l) => l.kind !== "plane" && l.kind !== "predicate");
 }
 
 function applyQueryLight(filter) {
@@ -117,9 +123,10 @@ function applyQueryLight(filter) {
     }
     const hit = labels.findIndex((l) => {
         if (l.kind === "plane") return false;
-        const id = String(l.id).toLowerCase();
+        const id = String(l.id || "").toLowerCase();
+        const name = String(l.name || "").toLowerCase();
         const kind = String(l.kind || "").toLowerCase();
-        return kind.includes(q) || id.includes(q);
+        return kind.includes(q) || id.includes(q) || name.includes(q);
     });
     portal.select_holograph_index(hit);
 }
@@ -128,13 +135,41 @@ function renderInspector(filter) {
     const q = (filter || "").trim().toLowerCase();
     const rows = visibleLabels().filter((l) => {
         if (!q) return true;
-        const id = String(l.id);
+        const id = String(l.id || "");
+        const name = String(l.name || "");
         const kind = String(l.kind || "");
-        return kind.toLowerCase().includes(q) || id.toLowerCase().includes(q);
+        return kind.toLowerCase().includes(q)
+            || id.toLowerCase().includes(q)
+            || name.toLowerCase().includes(q);
     });
-    inspectorEl.textContent = rows.slice(0, 12).map((l) => `${l.kind} ${l.id}`).join("\n")
+    inspectorEl.textContent = rows.slice(0, 12).map((l) => `${l.kind} ${labelText(l)}`).join("\n")
         || (q ? "no match — graph recedes" : "");
     applyQueryLight(q);
+}
+
+function paintOverlays() {
+    if (!labelField || !portal || typeof portal.holograph_label_overlays !== "function") return;
+    const chips = portal.holograph_label_overlays(canvas.width, canvas.height) || [];
+    const cssW = Math.max(canvas.clientWidth || canvas.width, 1);
+    const cssH = Math.max(canvas.clientHeight || canvas.height, 1);
+    const sx = cssW / Math.max(canvas.width, 1);
+    const sy = cssH / Math.max(canvas.height, 1);
+    while (labelField.childElementCount > chips.length) {
+        labelField.removeChild(labelField.lastChild);
+    }
+    for (let i = 0; i < chips.length; i += 1) {
+        let el = labelField.children[i];
+        if (!el) {
+            el = document.createElement("div");
+            el.className = "label-chip";
+            labelField.appendChild(el);
+        }
+        const kind = chips[i].kind || "instance";
+        el.className = `label-chip is-${kind}`;
+        el.textContent = chips[i].name || "";
+        el.style.left = `${chips[i].x * sx}px`;
+        el.style.top = `${chips[i].y * sy}px`;
+    }
 }
 
 function projectGraph() {
@@ -142,22 +177,28 @@ function projectGraph() {
         setStatus("portal not armed");
         return;
     }
-    if (typeof portal.load_rdf_graph_text !== "function" && typeof portal.load_rdf_graph !== "function") {
+    if (typeof portal.load_rdf_graph_text !== "function"
+        && typeof portal.load_rdf_graph_vibe !== "function"
+        && typeof portal.load_rdf_graph !== "function") {
         failClosed("This QualiaPortal WASM build has no load_rdf_graph. Rebuild docs/pkg/qualia.");
         return;
     }
     const payload = sourceEl.value;
     const contentType = formatEl.value;
     try {
-        const receipt = typeof portal.load_rdf_graph_text === "function"
-            ? portal.load_rdf_graph_text(payload, contentType)
-            : portal.load_rdf_graph(new TextEncoder().encode(payload), contentType);
+        const receipt = typeof portal.load_rdf_graph_vibe === "function"
+            ? portal.load_rdf_graph_vibe(payload, contentType, vibeSource)
+            : (typeof portal.load_rdf_graph_text === "function"
+                ? portal.load_rdf_graph_text(payload, contentType)
+                : portal.load_rdf_graph(new TextEncoder().encode(payload), contentType));
         labels = receipt.labels || [];
         telemNodes.textContent = `nodes ${receipt.node_count}`;
         telemTriples.textContent = `triples ${receipt.triple_count}`;
-        backendEl.textContent = `backend: ${receipt.backend}${receipt.truncated ? " · truncated" : ""}`;
+        const layout = receipt.layout ? ` · ${receipt.layout}` : "";
+        backendEl.textContent = `backend: ${receipt.backend}${receipt.truncated ? " · truncated" : ""}${layout}`;
         setStatus(`projected ${receipt.node_count} holographic entities`);
         renderInspector(searchEl.value);
+        paintOverlays();
     } catch (err) {
         setStatus(String(err && err.message ? err.message : err));
     }
@@ -193,9 +234,16 @@ async function boot() {
         return;
     }
     backendEl.textContent = `backend: ${renderer}`;
+    try {
+        const vibeResp = await fetch(new URL("../vibe/cinema-graph.vibe", import.meta.url), { cache: "no-store" });
+        if (vibeResp.ok) vibeSource = await vibeResp.text();
+    } catch (_err) {
+        vibeSource = "";
+    }
     startPortalLoop(loaded.canvas || canvas, () => {
         wAngle = (wAngle + 0.00055) % (Math.PI * 2);
         telemW.textContent = `W ${wAngle.toFixed(2)}`;
+        paintOverlays();
     });
     projectGraph();
 }

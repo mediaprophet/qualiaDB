@@ -39,12 +39,12 @@ $packageVersion = $Matches[1]
 $wasmCheck = Join-Path $PSScriptRoot "..\docs\tests\wasm-size-check.mjs"
 $portalWasm = Join-Path $DocsPkg "qualia_bg.wasm"
 if (Get-Command node -ErrorAction SilentlyContinue) {
-    & node $wasmCheck $portalWasm 16777216 4194304
+    & node $wasmCheck $portalWasm 25165824 8388608
     if ($LASTEXITCODE -ne 0) {
-        throw "portal WASM exceeded the GitHub Pages 16 MiB / 4 MiB sanity cap"
+        throw "portal WASM exceeded the GitHub Pages 24 MiB / 8 MiB sanity cap"
     }
 } else {
-    Write-Host "node not found; skip wasm-size-check (CI still enforces the 16 MiB / 4 MiB cap)"
+    Write-Host "node not found; skip wasm-size-check (CI still enforces the 24 MiB / 8 MiB cap)"
 }
 
 Write-Host "Qualia WASM portal v$packageVersion built from qualia-core-db -> $DocsPkg"

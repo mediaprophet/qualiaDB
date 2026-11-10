@@ -631,6 +631,7 @@ impl QualiaPortal {
         let idx = crate::render::rdf_holograph::pick_resource_at(
             &self.rdf_scene,
             &vp,
+            self.rdf_holograph_w_angle,
             x,
             y,
             canvas_w,
@@ -638,6 +639,63 @@ impl QualiaPortal {
         );
         self.select_holograph_index(idx);
         idx
+    }
+
+    /// Screen-space name chips for in-field labels. Ingest/JS receipt may allocate.
+    pub fn holograph_label_overlays(
+        &self,
+        canvas_w: f32,
+        canvas_h: f32,
+    ) -> Result<JsValue, JsValue> {
+        let aspect = canvas_w / canvas_h.max(1.0);
+        let vp = crate::render::camera::orbit_view_projection_with_near(
+            self.camera.yaw,
+            self.camera.pitch,
+            self.camera.zoom,
+            self.camera.target,
+            aspect,
+            self.camera.near_plane,
+        );
+        let mut chips = [crate::render::rdf_holograph::HolographOverlay::default(); 256];
+        let n = crate::render::rdf_holograph::overlay_chips_into(
+            &self.rdf_scene,
+            &vp,
+            self.rdf_holograph_w_angle,
+            canvas_w,
+            canvas_h,
+            &mut chips,
+        );
+        let labels = Array::new();
+        for chip in chips.iter().take(n) {
+            let obj = js_sys::Object::new();
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("index"),
+                &JsValue::from_f64(chip.index as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("name"),
+                &JsValue::from_str(chip.name_str()),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str(chip.kind),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("x"),
+                &JsValue::from_f64(chip.sx as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("y"),
+                &JsValue::from_f64(chip.sy as f64),
+            )?;
+            labels.push(&obj);
+        }
+        Ok(labels.into())
     }
 
     /// Selected mesh semantic identity as hexadecimal, or an empty string while absent/pending.
@@ -1422,16 +1480,48 @@ impl QualiaPortal {
     /// the active theatre: WebGL2 (RGBA32F, required on mobile) or WebGPU (SSBO).
     ///
     /// `content_type` is a media type (`text/turtle`) or Qualia format id (`turtle`).
-    /// Returns `{ node_count, triple_count, truncated, backend, labels }`.
+    /// Scene construction uses the bundled cinema-graph.vibe (Qualia host Scene.*).
+    /// Returns `{ node_count, triple_count, truncated, backend, labels, layout }`.
     pub fn load_rdf_graph(
         &mut self,
         payload: &[u8],
         content_type: &str,
     ) -> Result<JsValue, JsValue> {
+        let text = core::str::from_utf8(payload).map_err(|_| JsValue::from_str("rdf_holograph_utf8"))?;
+        self.project_rdf_holograph(text, content_type, "")
+    }
+
+    /// UTF-8 RDF document helper for `load_rdf_graph`.
+    pub fn load_rdf_graph_text(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.project_rdf_holograph(payload, content_type, "")
+    }
+
+    /// Hot-edit theatre: evaluate `vibe_src` (`construct_theatre`) then pack GPU nodes.
+    /// Empty `vibe_src` uses the bundled cinema-graph.vibe.
+    pub fn load_rdf_graph_vibe(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+        vibe_src: &str,
+    ) -> Result<JsValue, JsValue> {
+        self.project_rdf_holograph(payload, content_type, vibe_src)
+    }
+
+    fn project_rdf_holograph(
+        &mut self,
+        payload: &str,
+        content_type: &str,
+        vibe_src: &str,
+    ) -> Result<JsValue, JsValue> {
         self.rdf_scene.clear();
-        crate::render::rdf_holograph::layout_rdf_bytes_into(
+        let (cam, layout) = crate::render::rdf_holograph_vibe::layout_rdf_with_vibe_into(
             content_type,
             payload,
+            vibe_src,
             self.rdf_scene.as_mut(),
         )
         .map_err(JsValue::from_str)?;
@@ -1467,12 +1557,11 @@ impl QualiaPortal {
             ));
         }
 
-        // Layout recenters on the origin; W-axis spin in the holograph shaders
-        // rotates around that origin, so the camera must look at it.
         self.camera.target = [0.0, 0.0, 0.0];
-        self.camera.zoom = crate::render::rdf_holograph::framing_zoom(&self.rdf_scene);
-        self.camera.pitch = 0.24;
-        self.camera.yaw = 0.18;
+        let framed = crate::render::rdf_holograph::framing_zoom(&self.rdf_scene);
+        self.camera.zoom = if cam.zoom > 0.05 { cam.zoom } else { framed };
+        self.camera.pitch = cam.pitch;
+        self.camera.yaw = cam.yaw;
         self.rdf_holograph_w_angle = 0.0;
         self.sky_preset = None;
         self.sky_clear = [0.01, 0.03, 0.07, 1.0];
@@ -1494,28 +1583,67 @@ impl QualiaPortal {
         }
 
         let labels = Array::new();
-        const LABEL_RECEIPT_CAP: usize = 8;
-        for (i, label) in self.rdf_scene.labels().iter().enumerate().take(LABEL_RECEIPT_CAP) {
+        const LABEL_RECEIPT_CAP: usize = 256;
+        for (i, label) in self
+            .rdf_scene
+            .labels()
+            .iter()
+            .enumerate()
+            .take(LABEL_RECEIPT_CAP)
+        {
             let obj = js_sys::Object::new();
-            Reflect::set(&obj, &JsValue::from_str("index"), &JsValue::from_f64(i as f64))?;
-            let mut hex = [0u8; 18];
-            hex[0] = b'0';
-            hex[1] = b'x';
-            let mut v = label.id;
-            let digits = b"0123456789abcdef";
-            let mut k = 16;
-            while k > 0 {
-                k -= 1;
-                hex[2 + k] = digits[(v & 0xf) as usize];
-                v >>= 4;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("index"),
+                &JsValue::from_f64(i as f64),
+            )?;
+            let display = label.name_str();
+            if display.is_empty() {
+                let mut hex = [0u8; 18];
+                hex[0] = b'0';
+                hex[1] = b'x';
+                let mut v = label.id;
+                let digits = b"0123456789abcdef";
+                let mut k = 16;
+                while k > 0 {
+                    k -= 1;
+                    hex[2 + k] = digits[(v & 0xf) as usize];
+                    v >>= 4;
+                }
+                let hex_str = core::str::from_utf8(&hex).unwrap_or("0x0");
+                Reflect::set(&obj, &JsValue::from_str("id"), &JsValue::from_str(hex_str))?;
+            } else {
+                Reflect::set(&obj, &JsValue::from_str("id"), &JsValue::from_str(display))?;
             }
-            let hex_str = core::str::from_utf8(&hex).unwrap_or("0x0");
-            Reflect::set(&obj, &JsValue::from_str("id"), &JsValue::from_str(hex_str))?;
-            Reflect::set(&obj, &JsValue::from_str("kind"), &JsValue::from_str(label.kind))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("name"),
+                &JsValue::from_str(display),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("kind"),
+                &JsValue::from_str(label.kind),
+            )?;
             Reflect::set(
                 &obj,
                 &JsValue::from_str("degree"),
                 &JsValue::from_f64(label.degree as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("x"),
+                &JsValue::from_f64(label.position[0] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("y"),
+                &JsValue::from_f64(label.position[1] as f64),
+            )?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("z"),
+                &JsValue::from_f64(label.position[2] as f64),
             )?;
             labels.push(&obj);
         }
@@ -1536,18 +1664,18 @@ impl QualiaPortal {
             &JsValue::from_str("truncated"),
             &JsValue::from_bool(self.rdf_scene.truncated),
         )?;
-        Reflect::set(&result, &JsValue::from_str("backend"), &JsValue::from_str(backend))?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("backend"),
+            &JsValue::from_str(backend),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("layout"),
+            &JsValue::from_str(layout),
+        )?;
         Reflect::set(&result, &JsValue::from_str("labels"), &labels)?;
         Ok(result.into())
-    }
-
-    /// UTF-8 RDF document helper for `load_rdf_graph`.
-    pub fn load_rdf_graph_text(
-        &mut self,
-        payload: &str,
-        content_type: &str,
-    ) -> Result<JsValue, JsValue> {
-        self.load_rdf_graph(payload.as_bytes(), content_type)
     }
 
     /// Load one verified `.10d` mesh from an HMC bundle and retain its digest-backed

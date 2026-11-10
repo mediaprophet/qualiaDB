@@ -162,8 +162,8 @@ export function ensureCanvasBackingStore(canvas, minW = 640, minH = 360, opts = 
 function portalPkgUrls() {
     const base = new URL('../pkg/qualia/', import.meta.url);
     return {
-        js: new URL('qualia.js?v=0.0.41-cinema14', base).href,
-        wasm: new URL('qualia_bg.wasm?v=0.0.41-cinema14', base).href,
+        js: new URL('qualia.js?v=0.0.41-cinema17', base).href,
+        wasm: new URL('qualia_bg.wasm?v=0.0.41-cinema17', base).href,
     };
 }
 

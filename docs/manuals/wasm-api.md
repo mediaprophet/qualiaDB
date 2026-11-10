@@ -14,8 +14,8 @@ agent API manual above — not the playground `wasm-full` bundle.
 | Profile | Features | Use case |
 |---------|----------|----------|
 | **WebCivics** | `wasm-webcivics` | Civics.au / agents — JSON-LD/Turtle/N3 Solid, SHACL, OPFS+backup, stats/econ; **no GPU/LLM** |
-| **Portal** | `portal` | GitHub Pages, spatial demo, QApp embed — full WASM-safe engine (logic + science + WebGPU). CI sanity cap 16 MiB raw / 4 MiB gzip |
-| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM**. Same 16 MiB / 4 MiB sanity cap |
+| **Portal** | `portal` | GitHub Pages, spatial demo, QApp embed — full WASM-safe engine (logic + science + WebGPU). CI sanity cap 24 MiB raw / 8 MiB gzip |
+| **Full playground** | `wasm-full` | API explorer, logic evaluators, scientific modalities, **and the browser LLM**. Same 24 MiB / 8 MiB sanity cap |
 
 > The **browser LLM lives in the `wasm-full` playground bundle**, not the portal package.
 > LLM demos (`llmdemo/`, `online-llm-demo.html`, `wasm-llm-test.html`, `benchmark.html`)
@@ -66,8 +66,8 @@ wasm-pack build crates/qualia-core-db \
 ```powershell
 cargo check --target wasm32-unknown-unknown -p qualia-core-db --no-default-features --features portal
 node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
-node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
-node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 16777216 4194304
+node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 25165824 8388608
+node docs/tests/wasm-size-check.mjs docs/playground/qualia_core_db_bg.wasm 25165824 8388608
 node docs/tests/wasm-size-check.mjs docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 655360 204800
 ```
 

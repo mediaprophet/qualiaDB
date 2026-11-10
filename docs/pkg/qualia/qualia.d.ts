@@ -259,6 +259,10 @@ export class QualiaPortal {
      */
     hdr_scene_available(): boolean;
     /**
+     * Screen-space name chips for in-field labels. Ingest/JS receipt may allocate.
+     */
+    holograph_label_overlays(canvas_w: number, canvas_h: number): any;
+    /**
      * Drop accumulated temporal history (e.g. after a camera cut or
      * scene swap) so the next frame isn't ghosted.
      */
@@ -374,13 +378,19 @@ export class QualiaPortal {
      * the active theatre: WebGL2 (RGBA32F, required on mobile) or WebGPU (SSBO).
      *
      * `content_type` is a media type (`text/turtle`) or Qualia format id (`turtle`).
-     * Returns `{ node_count, triple_count, truncated, backend, labels }`.
+     * Scene construction uses the bundled cinema-graph.vibe (Qualia host Scene.*).
+     * Returns `{ node_count, triple_count, truncated, backend, labels, layout }`.
      */
     load_rdf_graph(payload: Uint8Array, content_type: string): any;
     /**
      * UTF-8 RDF document helper for `load_rdf_graph`.
      */
     load_rdf_graph_text(payload: string, content_type: string): any;
+    /**
+     * Hot-edit theatre: evaluate `vibe_src` (`construct_theatre`) then pack GPU nodes.
+     * Empty `vibe_src` uses the bundled cinema-graph.vibe.
+     */
+    load_rdf_graph_vibe(payload: string, content_type: string, vibe_src: string): any;
     /**
      * Generic scene asset alias for [`Self::load_assets_colored`] (QG-20).
      */
@@ -2543,6 +2553,7 @@ export interface InitOutput {
     readonly qualiaportal_hdr_exposure_available: (a: number) => number;
     readonly qualiaportal_hdr_exposure_compensation: (a: number) => number;
     readonly qualiaportal_hdr_scene_available: (a: number) => number;
+    readonly qualiaportal_holograph_label_overlays: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_invalidate_temporal_history: (a: number) => void;
     readonly qualiaportal_last_parsed: (a: number) => any;
     readonly qualiaportal_load_10d: (a: number, b: number, c: number) => [number, number, number];
@@ -2557,6 +2568,7 @@ export interface InitOutput {
     readonly qualiaportal_load_q42: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_rdf_graph: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_load_rdf_graph_text: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly qualiaportal_load_rdf_graph_vibe: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
     readonly qualiaportal_load_scene_assets: (a: number, b: any) => [number, number, number];
     readonly qualiaportal_load_texture_encoded: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => [number, number, number];
     readonly qualiaportal_mesh_instance_record_stride: (a: number) => number;
@@ -2751,8 +2763,8 @@ export interface InitOutput {
     readonly xform_z_transform: (a: any) => [number, number, number];
     readonly xform_z_unit_step: (a: any) => [number, number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_409: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_410: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_411: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h314eeaee9dd8d564_412: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h4d620e5c0561b6a1: (a: number, b: number, c: any, d: any) => void;
     readonly wasm_bindgen__convert__closures_____invoke__hf7f459f49ff6c97b: (a: number, b: number, c: any) => [number, number];
     readonly wasm_bindgen__convert__closures_____invoke__h1e82bb667b5b7bed: (a: number, b: number, c: any) => void;

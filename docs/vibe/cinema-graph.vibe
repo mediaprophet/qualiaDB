@@ -1,0 +1,204 @@
+// Cinema RDF holograph theatre scene.
+// QualiaPortal evaluates this. It is not a synth produce source:
+// synth produce dispatches hypermedia.* (148 morphisms) into HMC / .10d / .emf.
+// This script places holographic nodes through Scene.* and Animation.* already
+// bound on the Qualia host. Changing this file does not require a wasm rebuild
+// when the theatre fetches it as text.
+//
+// Vibe 0.1 requirements used here:
+// - if-expr only in expression position (`return if cond { a } else { b };`
+//   or `let x = if cond { a } else { b };`). Branches are a single expression
+//   with no trailing semicolon. Statement `if` needs `;` on each body stmt.
+// - for-loops need a List-typed iterator or function `budget(steps: N)`.
+// - `list.push` returns a new list; rebind the result.
+// - Scene.add_node extra fields (`kind`, `name`, `scale`, `x2`/`y2`/`z2`,
+//   `is_type`, `degree`) pass through; holograph Rust packs them.
+module cinema_graph;
+import "vibe:0.1/math" as math;
+using Scene, Animation;
+
+pure fn at_least_one(n: f64) -> f64 {
+    return if n > 1.0 { n } else { 1.0 };
+}
+
+pure fn ring_point(i: f64, n: f64, radius: f64, y: f64) -> List {
+    let count = at_least_one(n);
+    let ang = i * 6.28318530718 / count;
+    return [math.cos(ang) * radius, y, math.sin(ang) * radius];
+}
+
+pure fn find_pos(id: u64, nodes: List) budget(steps: 8000) -> List {
+    for n in nodes {
+        if n.id == id {
+            return [n.x, n.y, n.z];
+        }
+    }
+    return [0.0, 0.0, 0.0];
+}
+
+pure fn class_index(id: u64, classes: List) budget(steps: 8000) -> f64 {
+    let mut i = 0.0;
+    for c in classes {
+        if c.id == id {
+            return i;
+        }
+        i = i + 1.0;
+    }
+    return -1.0;
+}
+
+pure fn typed_class(id: u64, triples: List) budget(steps: 8000) -> u64 {
+    for t in triples {
+        if t.is_type && t.subject == id {
+            return t.object;
+        }
+    }
+    return 0;
+}
+
+effect fn construct_theatre(resources: List, triples: List) budget(steps: 200000) {
+    Scene.create({ name: "cinema-graph" });
+    Scene.set_clear_colour({ r: 0.01, g: 0.03, b: 0.07, a: 1.0 });
+
+    let mut classes = [];
+    let mut instances = [];
+    let mut literals = [];
+    for r in resources {
+        if r.kind == "class" {
+            classes = classes.push(r);
+        } else if r.kind == "literal" {
+            literals = literals.push(r);
+        } else {
+            instances = instances.push(r);
+        }
+    }
+
+    let mut nodes = [];
+    let nc = len(classes);
+    let mut i = 0.0;
+    for c in classes {
+        let pt = ring_point(i, nc, 0.55, 1.05);
+        let node = Scene.add_node({
+            id: c.id,
+            x: pt[0],
+            y: pt[1],
+            z: pt[2],
+            kind: "class",
+            name: c.name,
+            scale: 0.46,
+            degree: c.degree
+        });
+        nodes = nodes.push(node);
+        i = i + 1.0;
+    }
+
+    let ni = len(instances);
+    i = 0.0;
+    for r in instances {
+        let cid = typed_class(r.id, triples);
+        let idx = class_index(cid, classes);
+        let hub = ring_point(idx, nc, 0.55, 1.05);
+        let sat = ring_point(i, ni, 0.95, 0.08);
+        let around = [hub[0] + sat[0], 0.08, hub[2] + sat[2]];
+        let lone = ring_point(i, ni, 1.55, 0.08);
+        let pt = if idx >= 0.0 { around } else { lone };
+        let node = Scene.add_node({
+            id: r.id,
+            x: pt[0],
+            y: pt[1],
+            z: pt[2],
+            kind: "instance",
+            name: r.name,
+            scale: 0.30,
+            degree: r.degree
+        });
+        nodes = nodes.push(node);
+        i = i + 1.0;
+    }
+
+    i = 0.0;
+    for r in literals {
+        let mut subj = [0.0, 0.08, 0.0];
+        for t in triples {
+            if t.object == r.id {
+                subj = find_pos(t.subject, nodes);
+            }
+        }
+        let outward = ring_point(i, len(literals), 0.42, -0.70);
+        let node = Scene.add_node({
+            id: r.id,
+            x: subj[0] + outward[0],
+            y: -0.70,
+            z: subj[2] + outward[2],
+            kind: "literal",
+            name: r.name,
+            scale: 0.20,
+            degree: r.degree
+        });
+        nodes = nodes.push(node);
+        i = i + 1.0;
+    }
+
+    let mut edges = [];
+    for t in triples {
+        let from = find_pos(t.subject, nodes);
+        let to = find_pos(t.object, nodes);
+        let mid = [
+            (from[0] + to[0]) * 0.5,
+            (from[1] + to[1]) * 0.5,
+            (from[2] + to[2]) * 0.5
+        ];
+        let edge = Scene.add_node({
+            id: t.predicate,
+            x: mid[0],
+            y: mid[1],
+            z: mid[2],
+            x2: to[0],
+            y2: to[1],
+            z2: to[2],
+            kind: "predicate",
+            name: t.name,
+            is_type: t.is_type,
+            scale: 0.05
+        });
+        edges = edges.push(edge);
+    }
+
+    i = 0.0;
+    let mut planes = [];
+    for c in classes {
+        let pt = ring_point(i, nc, 0.55, 1.05);
+        let well = Scene.add_node({
+            id: c.id,
+            x: pt[0],
+            y: pt[1],
+            z: pt[2],
+            kind: "plane",
+            name: c.name,
+            scale: 1.40
+        });
+        planes = planes.push(well);
+        i = i + 1.0;
+    }
+
+    let camera = Scene.add_camera({
+        yaw: 0.55,
+        pitch: 0.48,
+        zoom: 0.0,
+        fov: 45.0
+    });
+    let pose = Animation.orbit_spin(1.0);
+    return {
+        nodes: nodes,
+        edges: edges,
+        planes: planes,
+        camera: camera,
+        pose: pose
+    };
+}
+
+cell pose := Animation.orbit_spin(1.0);
+present theatre {
+    color: oklch(0.72, 0.12, 230.0)
+    pose: pose
+}

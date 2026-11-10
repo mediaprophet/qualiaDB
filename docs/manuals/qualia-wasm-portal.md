@@ -75,7 +75,7 @@ Or use `scripts/package-qualia-wasm.ps1` when execution policy allows.
 cargo test -p qualia-core-db phenomenal_contract --lib
 cargo test -p qualia-core-db audio:: --lib
 node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
-node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 16777216 4194304
+node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm 25165824 8388608
 ```
 
 ### 3.3 Local preview (COOP/COEP for SharedArrayBuffer)

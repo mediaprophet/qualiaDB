@@ -178,9 +178,9 @@ fn fragment_main(input: VertexOutput) -> HoloFragmentOut {
             d = sdf_sphere(p, scale * 0.92);
         } else if kind == 3 || kind == 4 || prim == 4 {
             let rad = select(0.052, 0.085, kind == 3) * (0.75 + 0.35 * node.position_scale.w);
-            d = sdf_capsule(p, vec3<f32>(0.0), endp - center, rad);
-            let ba = endp - center;
-            along = clamp(dot(p, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
+            let halfv = endp - center;
+            d = sdf_capsule(p, -halfv, halfv, rad);
+            along = clamp(dot(p, halfv) / max(dot(halfv, halfv), 1e-5) * 0.5 + 0.5, 0.0, 1.0);
         } else if kind == 1 {
             let q = rotate_y(p, time * 0.11 + node.frequency_amplitude.z);
             d = sdf_diamond(q, scale * 1.05);

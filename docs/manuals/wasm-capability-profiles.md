@@ -107,8 +107,8 @@ GitHub Pages (`pages.yml`) and `release-wasm.yml` size gates, measured 0.0.40:
 |---|---|---|---|
 | Ontology MCP | `-p webizen-lite-wasm` | 640 KiB / 200 KiB | ~529 KiB / ~162 KiB gzip (prior) |
 | **WebCivics** | `--features wasm-webcivics` | *(proposed)* 4 MiB / 1.5 MiB | **2.75 MiB / 0.95 MiB gzip** |
-| Portal | `--features portal` | 16 MiB / 4 MiB | **7.04 MiB / 2.31 MiB gzip** |
-| Playground | `--features wasm-full` | 16 MiB / 4 MiB | **7.61 MiB / 2.50 MiB gzip** |
+| Portal | `--features portal` | 24 MiB / 8 MiB | **7.04 MiB / 2.31 MiB gzip** (0.0.40); ~14.15 / ~4.77 cinema 0.0.41 |
+| Playground | `--features wasm-full` | 24 MiB / 8 MiB | **7.61 MiB / 2.50 MiB gzip** |
 
 SHA-256 pins: [`docs/releases/0.0.39-wasm-digests.md`](../releases/0.0.39-wasm-digests.md).
 

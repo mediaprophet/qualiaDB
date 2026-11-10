@@ -111,6 +111,17 @@
             flex-direction: column; gap: 0.8rem; text-align: center; padding: 2rem;
         }
         #fail-closed.show { display: flex; }
+        #label-field {
+            position: absolute; inset: 0; z-index: 4; pointer-events: none;
+        }
+        .label-chip {
+            position: absolute; transform: translate(-50%, -130%);
+            font-size: 0.68rem; letter-spacing: 0.06em; white-space: nowrap;
+            color: #ecfeff; text-shadow: 0 0 14px rgba(103, 232, 249, 0.65);
+            font-family: "JetBrains Mono", ui-monospace, monospace;
+        }
+        .label-chip.is-class { color: #c7d2fe; }
+        .label-chip.is-literal { color: #fde68a; }
         #hud-hint {
             position: absolute; right: 1.1rem; bottom: 1.1rem; z-index: 5;
             font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;
@@ -126,6 +137,7 @@
 <body>
     <div id="theatre" class="is-min">
         <canvas id="render-canvas"></canvas>
+        <div id="label-field"></div>
         <div class="vignette"></div>
         <div id="drop-veil">DROP RDF</div>
         <div id="fail-closed">
@@ -175,6 +187,6 @@
         </aside>
         <div id="hud-hint">h instrument · esc recede</div>
     </div>
-    <script type="module" src="js/rdf-holograph-theatre.js?v=0.0.41-cinema14"></script>
+    <script type="module" src="js/rdf-holograph-theatre.js?v=0.0.41-cinema17"></script>
 </body>
 </html>
