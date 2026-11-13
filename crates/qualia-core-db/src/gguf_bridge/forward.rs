@@ -406,6 +406,13 @@ impl QTensorEngine {
         scratch_b: &mut [f32],
         max_layers: u32,
     ) -> Result<(), PrefillDispatchFailure> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return Err(PrefillDispatchFailure::Layer {
+                layer: 0,
+                stage: PrefillLayerStage::DispatchQueryFfn,
+            });
+        }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             // Qwen prompt execution is token-major in its admitted Session;
             // the generic layer-major KV prefill has incompatible state rules.
@@ -471,6 +478,17 @@ impl QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required {
+            // Hidden-only execution lacks the token required by Gemma PLE.
+            return false;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required {
+            return self.dense_qwen_layer(
+                index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
+            );
+        }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             #[cfg(not(target_arch = "wasm32"))]
             {
@@ -493,9 +511,7 @@ impl QTensorEngine {
             return false;
         }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_GEMMA4 {
-            return self.dispatch_gemma4_layer(
-                index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
-            );
+            return false;
         }
         etalon_inference::ordinary::HybridEngine { host: self }.layer(
             index, layer, token_idx, hidden, emb_dim, scratch_a, scratch_b,
@@ -512,6 +528,9 @@ impl QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
     ) -> Option<u32> {
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         self.try_prepared_cuda_decode(index, hidden, emb_dim, token_idx)
     }
 
@@ -527,6 +546,9 @@ impl QTensorEngine {
         emb_dim: usize,
         token_idx: u32,
     ) -> Option<u32> {
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         self.try_prepared_cuda_decode_token(index, token_id, hidden, emb_dim, token_idx)
     }
 
@@ -542,7 +564,7 @@ impl QTensorEngine {
         token_idx: u32,
     ) -> Option<u32> {
         use super::RMS_NORM_EPS;
-        use crate::ggml_quants::{fetch_tensor_bytes, GGML_TYPE_Q4_K_SOA};
+        use crate::ggml_quants::{GGML_TYPE_Q4_K_SOA, fetch_tensor_bytes};
         use crate::gguf_bridge::cpu_ops::dequant_norm_row_into;
         use crate::inference::cuda_lane::{MegaPassLayerDims, MegaPassLayerWeights};
 
@@ -742,6 +764,16 @@ impl QTensorEngine {
         token_idx: u32,
         max_layers: u32,
     ) -> u32 {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required {
+            return 0;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required {
+            return self.dense_qwen_forward(
+                index, hidden, emb_dim, token_idx, max_layers, scratch_a, scratch_b,
+            );
+        }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             #[cfg(not(target_arch = "wasm32"))]
             return self.qwen35_forward(index, hidden, emb_dim, token_idx, max_layers);
@@ -1939,30 +1971,30 @@ impl QTensorEngine {
                 match cached {
                     Some(bg) => bg,
                     None => {
-                        let bg = self
-                            .gpu_device()
-                            .create_bind_group(&etalon::BindGroupDescriptor {
-                                label: Some("FusedArgmaxBind"),
-                                layout: &bind_layout,
-                                entries: &[
-                                    etalon::BindGroupEntry {
-                                        binding: 0,
-                                        resource: batch_buf.as_entire_binding(),
-                                    },
-                                    etalon::BindGroupEntry {
-                                        binding: 1,
-                                        resource: weight,
-                                    },
-                                    etalon::BindGroupEntry {
-                                        binding: 2,
-                                        resource: Self::mc8_dynamic_uniform_binding(params_buf),
-                                    },
-                                    etalon::BindGroupEntry {
-                                        binding: 3,
-                                        resource: output_buf.as_entire_binding(),
-                                    },
-                                ],
-                            });
+                        let bg =
+                            self.gpu_device()
+                                .create_bind_group(&etalon::BindGroupDescriptor {
+                                    label: Some("FusedArgmaxBind"),
+                                    layout: &bind_layout,
+                                    entries: &[
+                                        etalon::BindGroupEntry {
+                                            binding: 0,
+                                            resource: batch_buf.as_entire_binding(),
+                                        },
+                                        etalon::BindGroupEntry {
+                                            binding: 1,
+                                            resource: weight,
+                                        },
+                                        etalon::BindGroupEntry {
+                                            binding: 2,
+                                            resource: Self::mc8_dynamic_uniform_binding(params_buf),
+                                        },
+                                        etalon::BindGroupEntry {
+                                            binding: 3,
+                                            resource: output_buf.as_entire_binding(),
+                                        },
+                                    ],
+                                });
                         if let Ok(mut c) = self.mc8_bg_cache.lock() {
                             c.insert(key, bg.clone());
                         }
@@ -2019,6 +2051,11 @@ impl QTensorEngine {
         max_layers: u32,
         max_vocab_chunks: u32,
     ) -> u32 {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required || self.qwen35_gguf_required {
+            // This legacy speculative path lacks architecture-owned state rollback.
+            return 0;
+        }
         let mmap = match self.clone_model_bytes() {
             Some(m) => m,
             None => return 0,

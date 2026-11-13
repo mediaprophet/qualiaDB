@@ -14,6 +14,7 @@ pub mod local_head;
 pub mod local_head_adapter;
 pub mod local_recovery;
 mod open_checked;
+pub(crate) use open_checked::open_regular_exclusive;
 mod publish;
 pub mod quota;
 mod read;
@@ -82,7 +83,7 @@ fn entry_size(payload_len: usize, budget: usize) -> Result<usize, CustodyError> 
     Ok(total)
 }
 
-fn validate_root(root: &Path) -> Result<(), CustodyError> {
+pub(crate) fn validate_root(root: &Path) -> Result<(), CustodyError> {
     if !root.is_absolute() || root.as_os_str().len() > 4096 {
         return Err(CustodyError::InvalidRoot);
     }

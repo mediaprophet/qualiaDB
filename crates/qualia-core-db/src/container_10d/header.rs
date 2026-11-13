@@ -24,9 +24,9 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::container_10d::axis_role::{AxisRole, PROPOSED_AXIS_ROLES};
+use crate::container_10d::axis_role::PROPOSED_AXIS_ROLES;
 use crate::container_10d::metric_check::{
-    proposed_metric_descriptor, verify_descriptor_against_reality, MetricCompletenessDescriptor,
+    proposed_metric_descriptor, MetricCompletenessDescriptor,
 };
 
 /// `.10d` container magic — ASCII `"10d\0"`.
@@ -204,56 +204,7 @@ impl Container10dHeader {
     /// role, metric-completeness divergence from `full_distance` reality, and
     /// (P0.2) a consistent section-table pointer.
     pub fn parse(data: &[u8]) -> Result<Container10dHeader, HeaderParseError> {
-        if data.len() < HEADER_BYTE_SIZE {
-            return Err(HeaderParseError::TooShort { got: data.len() });
-        }
-        let mut buf = [0u8; HEADER_BYTE_SIZE];
-        buf.copy_from_slice(&data[..HEADER_BYTE_SIZE]);
-        // SAFETY: Container10dHeader is repr(C) + Pod + size 64; the buffer is
-        // exactly 64 bytes and initialised.
-        let header: Container10dHeader = *bytemuck::from_bytes(&buf);
-
-        if header.magic != MAGIC_10D {
-            return Err(HeaderParseError::BadMagic { got: header.magic });
-        }
-        if !SUPPORTED_HEADER_VERSIONS.contains(&header.version) {
-            return Err(HeaderParseError::UnknownVersion {
-                got: header.version,
-            });
-        }
-        if header.pad0 != [0, 0] {
-            return Err(HeaderParseError::NonZeroPadding { field: "pad0" });
-        }
-        // Section-table pointer consistency (P0.2). Either both zero (no
-        // table — a bare header) or both non-zero with offset >= header size,
-        // offset within the file, and count <= MAX_SECTION_COUNT. The
-        // table-bytes-within-file and per-descriptor validation is done by
-        // the section-table reader in `section.rs`; here we only gate the
-        // header-level pointer.
-        let (off, cnt) = (header.section_table_offset, header.section_count);
-        let both_zero = off == 0 && cnt == 0;
-        let both_nonzero = off != 0 && cnt != 0;
-        let valid_nonzero = both_nonzero
-            && off as usize >= HEADER_BYTE_SIZE
-            && off as usize <= data.len()
-            && cnt <= MAX_SECTION_COUNT;
-        if !both_zero && !valid_nonzero {
-            return Err(HeaderParseError::BadSectionTablePointer {
-                offset: off,
-                count: cnt,
-            });
-        }
-        for (i, &raw) in header.axis_roles.iter().enumerate() {
-            if AxisRole::from_u8(raw).is_none() || raw == AxisRole::Undefined as u8 {
-                return Err(HeaderParseError::UndefinedAxisRole {
-                    axis_index: i,
-                    got: raw,
-                });
-            }
-        }
-        verify_descriptor_against_reality(&header.metric_descriptor)
-            .map_err(|d| HeaderParseError::MetricDivergence(d.to_string()))?;
-        Ok(header)
+        prefix::parse_header_prefix(data, data.len() as u64).map_err(prefix::PrefixError::into_legacy)
     }
 }
 
@@ -530,3 +481,6 @@ mod tests {
         );
     }
 }
+
+/// Allocation-free structural prefix validation for bounded selective readers.
+pub mod prefix;

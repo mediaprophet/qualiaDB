@@ -10,7 +10,12 @@ use bytemuck::{Pod, Zeroable};
 pub const EMF_CONTAINER_MAGIC: [u8; 8] = *b"Q42EMF64";
 
 /// Current EMF container format version.
-pub const EMF_CONTAINER_VERSION: u16 = 1;
+pub const EMF_CONTAINER_VERSION: u16 = 2;
+/// Opt-in typed interpretation and original PCM tracks; default output remains v2.
+pub const EMF_EXTENDED_VERSION: u16 = 3;
+pub const EMF_LEGACY_VERSION: u16 = 1;
+/// V2 chunks carry a complete BLAKE3 digest trailer; old prefix fields are zero.
+pub const EMF_CHUNK_FLAG_BLAKE3_FULL: u16 = 1 << 2;
 
 /// Flag: chunks are organized as 8x8x8 3D volumetric bricks (512 cells = 32 KB).
 pub const EMF_FLAG_3D_BRICK_8X8X8: u16 = 1 << 0;
@@ -18,7 +23,8 @@ pub const EMF_FLAG_3D_BRICK_8X8X8: u16 = 1 << 0;
 pub const EMF_FLAG_STOKES_POLARIZED: u16 = 1 << 1;
 /// Flag: multi-spectral bands enabled.
 pub const EMF_FLAG_SPECTRAL_BANDS: u16 = 1 << 2;
-/// Flag: BLAKE3-Bao verified outboard hash tree enabled.
+/// Legacy flag: incorrectly claimed Bao verification of a truncated digest.
+/// V2 writers clear this bit; it is not a cryptographic assurance.
 pub const EMF_FLAG_BAO_VERIFIED: u16 = 1 << 3;
 
 /// Fail-closed decoded dense-volume cap: 8³ cells × 2048 bricks.
@@ -39,6 +45,14 @@ pub enum EmfError {
     InvalidHeaderSize,
     ChecksumMismatch { stored: u32, computed: u32 },
     BaoHashMismatch { chunk_index: usize },
+    FullHashMismatch { chunk_index: usize },
+    InvalidIntegrityEncoding { chunk_index: usize },
+    LegacyIntegrityRequiresOptIn,
+    ExtensionMetadata,
+    ExtensionLimits,
+    ExtensionHashMismatch,
+    AudioTrack { track_index:usize },
+    AudioHashMismatch { track_index:usize },
     BufferTooSmall { required: usize, provided: usize },
     FileByteLimit,
     ChunkLimitExceeded,
@@ -65,8 +79,16 @@ impl std::fmt::Display for EmfError {
                 write!(f, "EMF CRC-32C mismatch: stored {stored:#010x}, computed {computed:#010x}")
             }
             Self::BaoHashMismatch { chunk_index } => {
-                write!(f, "EMF Bao hash mismatch in chunk {chunk_index}")
+                write!(f, "EMF legacy truncated hash mismatch in chunk {chunk_index}")
             }
+            Self::FullHashMismatch { chunk_index } => write!(f, "EMF full BLAKE3 seal mismatch in chunk {chunk_index}"),
+            Self::InvalidIntegrityEncoding { chunk_index } => write!(f, "EMF invalid full BLAKE3 seal encoding in chunk {chunk_index}"),
+            Self::ExtensionMetadata => write!(f,"EMF invalid or unsupported v3 metadata/extents"),
+            Self::ExtensionLimits => write!(f,"EMF v3 extension exceeds explicit limits"),
+            Self::ExtensionHashMismatch => write!(f,"EMF v3 extension full BLAKE3 mismatch"),
+            Self::AudioTrack{track_index} => write!(f,"EMF invalid PCM track {track_index}"),
+            Self::AudioHashMismatch{track_index} => write!(f,"EMF PCM track {track_index} full BLAKE3 mismatch"),
+            Self::LegacyIntegrityRequiresOptIn => write!(f, "EMF v1 truncated integrity requires explicit legacy migration admission"),
             Self::BufferTooSmall { required, provided } => {
                 write!(f, "EMF buffer too small: required {required}, provided {provided}")
             }
@@ -151,7 +173,7 @@ impl EmfContainerHeader {
         if self.magic != EMF_CONTAINER_MAGIC {
             return Err(EmfError::InvalidMagic);
         }
-        if self.version != EMF_CONTAINER_VERSION {
+        if !matches!(self.version, EMF_LEGACY_VERSION | EMF_CONTAINER_VERSION | EMF_EXTENDED_VERSION) {
             return Err(EmfError::InvalidVersion(self.version));
         }
         let computed = self.compute_crc32c();

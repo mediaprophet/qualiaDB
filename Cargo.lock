@@ -4498,7 +4498,6 @@ dependencies = [
 [[package]]
 name = "etalon-model"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
 dependencies = [
  "bytemuck",
  "etalon-inference-kernel",
@@ -4509,7 +4508,6 @@ dependencies = [
 [[package]]
 name = "etalon-model-io"
 version = "0.0.2"
-source = "git+https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e"
 dependencies = [
  "memmap2",
  "sha2 0.10.9",

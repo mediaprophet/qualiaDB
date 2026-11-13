@@ -1,6 +1,6 @@
 //! Zero-Copy Structural Reader for EMF-64 Containers.
 //!
-//! Provides zero-copy parsing, CRC-32C and BLAKE3-Bao verification, and
+//! Provides zero-copy parsing, CRC-32C and full BLAKE3 verification, and
 //! fast 3D Hilbert key chunk lookup.
 
 use super::chunk_directory::{
@@ -8,6 +8,8 @@ use super::chunk_directory::{
     CHUNK_DIRECTORY_ENTRY_BYTES, EMF_BRICK_SIDE,
 };
 use super::header::{EmfCellRecord64, EmfContainerHeader, EmfError, MAX_DENSE_CELLS};
+use super::header::{EMF_EXTENDED_VERSION, EMF_CONTAINER_VERSION, EMF_CHUNK_FLAG_BLAKE3_FULL, EMF_FLAG_BAO_VERIFIED};
+use crate::q42::chunk_integrity::{verify_blake3_trailer, BLAKE3_TRAILER_BYTES};
 use crate::q42::m64_matter::brick3d::{decode_hilbert3d_u64, encode_hilbert3d_u64};
 
 /// Explicit EMF admission budgets (file bytes and directory rows).
@@ -43,6 +45,9 @@ pub struct EmfContainerReader<'a> {
     header: EmfContainerHeader,
     directory_offset: usize,
     chunk_count: usize,
+    directory_sorted: bool,
+    lookup_work_bound: usize,
+    extension: Option<super::extension::EmfExtensionView<'a>>,
 }
 
 impl<'a> EmfContainerReader<'a> {
@@ -53,6 +58,21 @@ impl<'a> EmfContainerReader<'a> {
 
     /// Parse and validate an EMF container under explicit file/chunk budgets.
     pub fn parse_with_limits(bytes: &'a [u8], limits: EmfReadLimits) -> Result<Self, EmfError> {
+        Self::parse_policy(bytes, limits, false, super::extension::EmfExtensionLimits {max_file_bytes:limits.max_file_bytes,..super::extension::EmfExtensionLimits::conservative()})
+    }
+
+    /// Migration-only admission of v1 files with defective truncated integrity.
+    /// A successful call does not certify a full digest for a legacy file.
+    pub fn parse_legacy_with_limits(bytes: &'a [u8], limits: EmfReadLimits) -> Result<Self, EmfError> {
+        Self::parse_policy(bytes, limits, true, super::extension::EmfExtensionLimits {max_file_bytes:limits.max_file_bytes,..super::extension::EmfExtensionLimits::conservative()})
+    }
+
+    /// Current-format reader with independently bounded metadata/PCM admission.
+    pub fn parse_with_extension_limits(bytes:&'a[u8],limits:EmfReadLimits,extension_limits:super::extension::EmfExtensionLimits)->Result<Self,EmfError>{
+        Self::parse_policy(bytes,limits,false,extension_limits)
+    }
+
+    fn parse_policy(bytes: &'a [u8], limits: EmfReadLimits, allow_legacy: bool, extension_limits:super::extension::EmfExtensionLimits) -> Result<Self, EmfError> {
         if !cfg!(target_endian = "little") {
             return Err(EmfError::InvalidMagic);
         }
@@ -68,6 +88,18 @@ impl<'a> EmfContainerReader<'a> {
 
         let header: EmfContainerHeader = bytemuck::pod_read_unaligned(&bytes[..64]);
         header.validate()?;
+        if header.version == super::header::EMF_LEGACY_VERSION && !allow_legacy {
+            return Err(EmfError::LegacyIntegrityRequiresOptIn);
+        }
+        let full_hash = matches!(header.version,EMF_CONTAINER_VERSION|EMF_EXTENDED_VERSION);
+        let extension = if header.version==EMF_EXTENDED_VERSION {
+            if header.flags & !7 != 0 {return Err(EmfError::ExtensionMetadata);}
+            Some(super::extension::parse_extension(bytes,extension_limits)?)
+        } else {None};
+        let field_end=extension.as_ref().map(|e|e.field_end).unwrap_or(bytes.len());
+        if full_hash && header.flags & EMF_FLAG_BAO_VERIFIED != 0 {
+            return Err(EmfError::InvalidIntegrityEncoding { chunk_index: 0 });
+        }
 
         let directory_offset = usize::try_from(header.directory_offset)
             .map_err(|_| EmfError::ArithmeticOverflow)?;
@@ -91,15 +123,19 @@ impl<'a> EmfContainerReader<'a> {
             .checked_add(directory_bytes)
             .ok_or(EmfError::ArithmeticOverflow)?;
 
-        if directory_end > bytes.len() {
+        if directory_end > field_end {
             return Err(EmfError::DirectoryBounds);
         }
 
+        let mut directory_sorted=true;let mut previous_key=None;let mut equal_run=0usize;let mut max_equal_run=0usize;
         for chunk in 0..chunk_count {
             let offset = directory_offset + chunk * CHUNK_DIRECTORY_ENTRY_BYTES;
             let entry: EmfChunkDirectoryEntry =
                 bytemuck::pod_read_unaligned(&bytes[offset..offset + CHUNK_DIRECTORY_ENTRY_BYTES]);
             entry.validate()?;
+            if previous_key.is_some_and(|key|key>entry.spatial_hilbert_index){directory_sorted=false;}
+            equal_run=if previous_key==Some(entry.spatial_hilbert_index){equal_run+1}else{1};
+            max_equal_run=max_equal_run.max(equal_run);previous_key=Some(entry.spatial_hilbert_index);
 
             let start = usize::try_from(entry.byte_offset).map_err(|_| EmfError::ArithmeticOverflow)?;
             let length = usize::try_from(entry.byte_length).map_err(|_| EmfError::ArithmeticOverflow)?;
@@ -108,7 +144,7 @@ impl<'a> EmfContainerReader<'a> {
             if start % 64 != 0 {
                 return Err(EmfError::PayloadUnaligned);
             }
-            if end > bytes.len() {
+            if end > field_end {
                 return Err(EmfError::PayloadOutOfBounds);
             }
             if start < 64 || ranges_overlap(start, end, directory_offset, directory_end) {
@@ -118,7 +154,9 @@ impl<'a> EmfContainerReader<'a> {
                 .map_err(|_| EmfError::ArithmeticOverflow)?
                 .checked_mul(64)
                 .ok_or(EmfError::ArithmeticOverflow)?;
-            if length != expected_bytes {
+            let stored_bytes = expected_bytes.checked_add(if full_hash { BLAKE3_TRAILER_BYTES } else { 0 })
+                .ok_or(EmfError::ArithmeticOverflow)?;
+            if length != stored_bytes {
                 return Err(EmfError::PayloadOutOfBounds);
             }
 
@@ -139,7 +177,17 @@ impl<'a> EmfContainerReader<'a> {
                 }
             }
 
-            if (entry.flags & 2 != 0) || (entry.bao_hash_prefix != [0u8; 16]) {
+            if full_hash {
+                if entry.flags & EMF_CHUNK_FLAG_BLAKE3_FULL == 0 || entry.flags & 2 != 0
+                    || entry.bao_hash_prefix != [0; 16] || entry.reserved != [0; 12] {
+                    return Err(EmfError::InvalidIntegrityEncoding { chunk_index: chunk });
+                }
+                let records_end = start + expected_bytes;
+                if !verify_blake3_trailer(&bytes[start..records_end], &bytes[records_end..end]) {
+                    return Err(EmfError::FullHashMismatch { chunk_index: chunk });
+                }
+            } else if (entry.flags & 2 != 0) || (entry.bao_hash_prefix != [0u8; 16]) {
+                // Legacy migration only: reproduce the defective comparison, never call it Bao.
                 let payload = &bytes[start..end];
                 let digest = blake3::hash(payload);
                 if digest.as_bytes()[..16] != entry.bao_hash_prefix {
@@ -148,11 +196,20 @@ impl<'a> EmfContainerReader<'a> {
             }
         }
 
+        let lookup_work_bound=if directory_sorted{(usize::BITS-chunk_count.leading_zeros()) as usize+max_equal_run+1}else{chunk_count}.max(1);
         Ok(Self {
             bytes,
             header,
             directory_offset,
             chunk_count,
+            directory_sorted,
+            lookup_work_bound,
+            extension,
+        }).and_then(|reader| {
+            if let Some(extension)=&reader.extension {
+                super::extension::validate_field_directory(&reader.header,reader.directory_offset,reader.chunk_count,reader.bytes,extension)?;
+            }
+            Ok(reader)
         })
     }
 
@@ -161,6 +218,9 @@ impl<'a> EmfContainerReader<'a> {
     pub fn header(&self) -> &EmfContainerHeader {
         &self.header
     }
+
+    /// Typed v3 interpretation and verified original PCM; absent for repaired v2.
+    pub fn extension(&self)->Option<&super::extension::EmfExtensionView<'a>>{self.extension.as_ref()}
 
     /// Total number of chunks / bricks in this container.
     #[inline]
@@ -183,7 +243,7 @@ impl<'a> EmfContainerReader<'a> {
     pub fn chunk_payload(&self, index: usize) -> Option<&'a [u8]> {
         let entry = self.chunk_entry(index)?;
         let start = entry.byte_offset as usize;
-        let end = start + entry.byte_length as usize;
+        let end = start + entry.cell_count as usize * 64;
         self.bytes.get(start..end)
     }
 
@@ -195,46 +255,45 @@ impl<'a> EmfContainerReader<'a> {
         Some(bytemuck::pod_read_unaligned(raw))
     }
 
-    /// Binary search the directory for a chunk matching the given 3D Hilbert spatial index.
-    pub fn find_chunk_by_hilbert(&self, hilbert_key: u64) -> Option<usize> {
-        let mut low = 0;
-        let mut high = self.chunk_count;
+    /// Legacy spatial-only lookup deterministically selects time index zero.
+    /// Use find_chunk_at_time for another stored snapshot.
+    pub fn find_chunk_by_hilbert(&self,hilbert_key:u64)->Option<usize>{self.find_chunk_at_time(hilbert_key,0)}
 
-        while low < high {
-            let mid = low + (high - low) / 2;
-            let entry = self.chunk_entry(mid)?;
-            if entry.spatial_hilbert_index == hilbert_key {
-                return Some(mid);
-            } else if entry.spatial_hilbert_index < hilbert_key {
-                low = mid + 1;
-            } else {
-                high = mid;
-            }
+    /// Exact spatial/time lookup. V3 canonical directories use a lower-bound
+    /// binary search then scan only equal spatial keys; unsorted v2 is bounded linear.
+    pub fn find_chunk_at_time(&self,hilbert_key:u64,time_slice:u32)->Option<usize>{
+        if !self.directory_sorted {
+            return (0..self.chunk_count).find(|&index|self.chunk_entry(index).is_some_and(|entry|entry.spatial_hilbert_index==hilbert_key&&entry.time_slice_index==time_slice));
         }
-        None
+        let mut low=0usize;let mut high=self.chunk_count;
+        while low<high {let middle=low+(high-low)/2;if self.chunk_entry(middle)?.spatial_hilbert_index<hilbert_key{low=middle+1;}else{high=middle;}}
+        while low<self.chunk_count {
+            let entry=self.chunk_entry(low)?;if entry.spatial_hilbert_index!=hilbert_key{return None;}
+            if entry.time_slice_index==time_slice{return Some(low);}low+=1;
+        }None
     }
 
+    /// Conservative directory visits per exact lookup, for caller work admission.
+    pub fn lookup_work_bound(&self)->usize{self.lookup_work_bound}
+
     /// Direct lookup of a voxel cell using brick coordinates `(bx, by, bz)` and local coords `(lx, ly, lz)`.
-    pub fn lookup_brick_cell(
-        &self,
-        bx: u32,
-        by: u32,
-        bz: u32,
-        lx: u8,
-        ly: u8,
-        lz: u8,
-        order: u32,
-    ) -> Option<EmfCellRecord64> {
-        let hilbert_key = encode_hilbert3d_u64(bx, by, bz, order);
-        let chunk_index = self.find_chunk_by_hilbert(hilbert_key)?;
-        let voxel_index = emf_brick_voxel_linear_index(lx, ly, lz);
-        self.cell(chunk_index, voxel_index)
+    pub fn lookup_brick_cell(&self,bx:u32,by:u32,bz:u32,lx:u8,ly:u8,lz:u8,order:u32)->Option<EmfCellRecord64>{
+        self.lookup_brick_cell_at_time(bx,by,bz,lx,ly,lz,order,0)
+    }
+
+    pub fn lookup_brick_cell_at_time(&self,bx:u32,by:u32,bz:u32,lx:u8,ly:u8,lz:u8,order:u32,time_slice:u32)->Option<EmfCellRecord64>{
+        if lx>=8||ly>=8||lz>=8||order==0||order>21{return None;}
+        if bx>=(1u32<<order)||by>=(1u32<<order)||bz>=(1u32<<order){return None;}
+        let hilbert_key=encode_hilbert3d_u64(bx,by,bz,order);
+        let chunk=self.find_chunk_at_time(hilbert_key,time_slice)?;
+        self.cell(chunk,emf_brick_voxel_linear_index(lx,ly,lz))
     }
 
     /// Unpack Hilbert 8³ bricks into a dense `[t][z][y][x]` grid of scientific cells.
     ///
-    /// This is the source of truth for GPU RGBA and AcousticPlane σ. `.10d` MID2/FIEL
-    /// names the field; it does not duplicate these cells.
+    /// This decodes physical fields only. V3 independent PCM and interpretation
+    /// remain available through extension(); they must not be inferred from sigma.
+    /// `.10d` MID2/FIEL names the field; it does not duplicate these cells.
     pub fn dense_volume(&self) -> Result<DenseEmfVolume, EmfError> {
         let dims = self.header.grid_dims_bricks;
         if dims[0] == 0 || dims[1] == 0 || dims[2] == 0 {
@@ -274,7 +333,10 @@ impl<'a> EmfContainerReader<'a> {
         let mut cells = vec![EmfCellRecord64::default(); cell_count];
         let mut sigma_sum = 0.0f64;
         let mut sigma_n = 0u64;
-        let order = infer_container_hilbert_order(self, dims)?;
+        let order = match &self.extension {
+            Some(extension)=>u32::from(extension.metadata().field.hilbert_order),
+            None=>infer_container_hilbert_order(self,dims)?,
+        };
 
         for i in 0..self.chunk_count {
             let entry = self.chunk_entry(i).ok_or(EmfError::DirectoryBounds)?;

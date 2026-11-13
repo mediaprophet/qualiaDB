@@ -184,7 +184,14 @@ fn inspect_table<'a>(
         };
         let payload_end = offset.checked_add(length).ok_or_else(bounds_error)?;
         let payload = data.get(offset..payload_end).ok_or_else(bounds_error)?;
-        table_validation::metadata_range(d, index, start, end)?;
+        // Structural retention permits unknown tags/reserved metadata. Keep
+        // the same payload/header/table exclusion without the strict typed
+        // descriptor validator, which intentionally rejects those extensions.
+        if length != 0
+            && (offset < super::HEADER_BYTE_SIZE || (offset < end && payload_end > start))
+        {
+            return Err(SectionTableError::SectionOverlapsMetadata { index });
+        }
         if d.stride != 0
             && u64::from(d.stride) * u64::from(d.element_count) != u64::from(d.byte_length)
         {

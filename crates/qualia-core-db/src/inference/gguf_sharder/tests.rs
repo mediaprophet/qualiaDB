@@ -364,14 +364,20 @@ fn chat_template_family_detection_and_rendering() {
 }
 
 #[test]
-fn gemma4_decode_supported_fails_closed() {
+fn gemma4_generic_decode_refuses_architecture_owned_graph() {
     let mut h = GgufHyperparams::default();
     h.architecture = ARCH_GEMMA4;
     h.arch_flags = ARCH_FLAG_HAS_PLE | ARCH_FLAG_HAS_SWA | ARCH_FLAG_HAS_SHARED_KV;
     // Ensure force env is not set for this test.
     std::env::remove_var("QUALIA_LLM_FORCE_UNSUPPORTED_ARCH");
-    h.decode_supported()
-        .expect("Gemma 4 decoder graph is now natively supported");
+    // The generic Llama-shaped owner must still refuse this architecture.
+    // Checked Gemma Plan success/refusal and token-aware execution live in
+    // gguf_bridge::gemma4::tests; no global admission exemption is implied.
+    let err = h.decode_supported().unwrap_err();
+    assert!(
+        err.contains("PLE") || err.contains("Gemma") || err.contains("shared"),
+        "{err}"
+    );
     let mut unsupported_ple = GgufHyperparams::default();
     unsupported_ple.architecture = ARCH_OTHER;
     unsupported_ple.arch_flags = ARCH_FLAG_HAS_PLE;

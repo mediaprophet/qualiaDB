@@ -15,6 +15,8 @@ pub mod chebi_parse;
 /// ChEBI in-memory chemical knowledge queries (AST-05).
 pub mod chebi_query;
 pub mod design_encode;
+/// Complete BLAKE3 digests for aligned EMF/M64 chunk payloads.
+pub mod chunk_integrity;
 /// Electromagnetic & wave-optical field container (.emf / EMF-64).
 pub mod emf_container;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).

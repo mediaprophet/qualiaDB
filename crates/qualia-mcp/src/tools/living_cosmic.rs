@@ -240,6 +240,32 @@ pub fn cosmic_coordinates(raw_args: &[u8]) -> Result<String, McpSystemError> {
     let v = parse_tool_args(raw_args)?;
     let op = v.get("op").and_then(Value::as_str).unwrap_or("celestial_profile");
 
+    let allowed: &[&str] = match op {
+        "celestial_profile" => &["op", "body"],
+        "redshift" => &["op", "z"],
+        "pulsar_dispersion" => &["op", "dm_pc_cm3", "freq_hz"],
+        "warp" => &["op", "warp_factor", "scale"],
+        "healpix" => &["op", "x", "y", "z", "nside"],
+        "usri_realm" => &["op", "realm"],
+        _ => &[],
+    };
+    if v.as_object().is_some_and(|map| map.keys().any(|key| !allowed.contains(&key.as_str()))) {
+        return Err(McpSystemError::ExecutionFailed(format!("Unknown argument for cosmic_coordinates({op}); HEALPix uses integer z, not total_z")));
+    }
+    for key in ["z", "dm_pc_cm3", "freq_hz", "warp_factor", "x", "y", "nside"] {
+        if v.get(key).is_some_and(|value| !value.is_number()) {
+            return Err(McpSystemError::InvalidParameters);
+        }
+    }
+    for key in ["body", "scale", "realm"] {
+        if v.get(key).is_some_and(|value| !value.is_string()) {
+            return Err(McpSystemError::InvalidParameters);
+        }
+    }
+    if v.get("scale").is_some_and(|scale| !matches!(scale.as_str(), Some("tos" | "tng"))) {
+        return Err(McpSystemError::InvalidParameters);
+    }
+
     match op {
         "celestial_profile" => {
             let name = v.get("body").and_then(Value::as_str).unwrap_or("earth");
@@ -303,10 +329,21 @@ pub fn cosmic_coordinates(raw_args: &[u8]) -> Result<String, McpSystemError> {
             .to_string())
         }
         "healpix" => {
+            if v.get("nside").is_some_and(|value| value.as_u64().is_none()) {
+                return Err(McpSystemError::InvalidParameters);
+            }
+            for key in ["x", "y", "z"] {
+                if v.get(key).is_some_and(|value| value.as_i64().is_none()) {
+                    return Err(McpSystemError::InvalidParameters);
+                }
+            }
             let x = v.get("x").and_then(Value::as_i64).unwrap_or(1);
             let y = v.get("y").and_then(Value::as_i64).unwrap_or(2);
             let z = v.get("z").and_then(Value::as_i64).unwrap_or(3);
             let nside = v.get("nside").and_then(Value::as_u64).unwrap_or(64);
+            if nside == 0 || !nside.is_power_of_two() || nside > (1 << 29) {
+                return Err(McpSystemError::InvalidParameters);
+            }
             let idx = compute_healpix_index([x, y, z], nside);
             Ok(json!({
                 "status": "ok",
@@ -336,6 +373,19 @@ pub fn cosmic_coordinates(raw_args: &[u8]) -> Result<String, McpSystemError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn healpix_contract_uses_integer_z_and_rejects_ignored_aliases() {
+        let valid: Value = serde_json::from_str(&cosmic_coordinates(br#"{"op":"healpix","x":1,"y":2,"z":900,"nside":64}"#).unwrap()).unwrap();
+        assert_eq!(valid["status"], "ok");
+        assert!(cosmic_coordinates(br#"{"op":"healpix","total_z":900}"#).is_err());
+        assert!(cosmic_coordinates(br#"{"op":"healpix","z":1.5}"#).is_err());
+        assert!(cosmic_coordinates(br#"{"op":"healpix","nside":0}"#).is_err());
+        assert!(cosmic_coordinates(br#"{"op":"healpix","nside":3}"#).is_err());
+        let schema: Value = serde_json::from_str(crate::registry::stable_mcp_tools().iter().find(|t| t.name == "cosmic_coordinates").unwrap().input_schema).unwrap();
+        assert!(schema["properties"].get("total_z").is_none());
+        assert_eq!(schema["allOf"][0]["then"]["properties"]["z"]["type"], "integer");
+    }
 
     #[test]
     fn test_etalon_vibe_sdk_mcp_tool() {

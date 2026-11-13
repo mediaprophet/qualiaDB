@@ -9,6 +9,8 @@ use super::permit::ExecutionPermit;
 use super::policy::{ContactState, TemporalGrant};
 use super::verified::{AuthorisedContact, VerifiedCredential};
 
+mod retirement;
+
 const MAX_RECORDS: usize = 8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

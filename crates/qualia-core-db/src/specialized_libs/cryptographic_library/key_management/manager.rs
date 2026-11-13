@@ -160,6 +160,11 @@ impl KeyStorage {
         Ok(())
     }
 
+    /// Borrowed lookup for policy-checked managed operations; never exports a key.
+    pub(super) fn borrow_managed_key(&self, key_id: &str) -> Option<&Key> {
+        self.key_data.get(key_id)
+    }
+
     /// Cloned `Key` for `key_id` or an error.
     pub fn get_key(&self, key_id: &str) -> Result<Key, CryptographicError> {
         self.key_data

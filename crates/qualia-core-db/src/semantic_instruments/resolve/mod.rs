@@ -9,3 +9,5 @@ pub use dependency::{
 };
 pub use registry::{InstalledRelease, LocalRegistry};
 pub use resolver::plan_resolution;
+
+pub mod bounded_closure;

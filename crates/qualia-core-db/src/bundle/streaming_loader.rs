@@ -14,14 +14,15 @@ use sha2::{Digest, Sha256};
 
 use crate::container_10d::crc32c::crc32c;
 use crate::container_10d::{
-    Container10dHeader, SectionDescriptor, SectionType, HEADER_BYTE_SIZE, MAGIC_10D,
-    SECTION_DESCRIPTOR_SIZE,
+    Container10dHeader, HEADER_BYTE_SIZE, MAGIC_10D, SECTION_DESCRIPTOR_SIZE, SectionDescriptor,
+    SectionType,
 };
 
-use super::format::{
-    BundleEntry, BundleError, BUNDLE_HEADER_SIZE, BUNDLE_MAGIC, BUNDLE_VERSION, OFF_CRC32C,
-    OFF_ENTRY_COUNT, OFF_FLAGS, OFF_INDEX_LENGTH, OFF_INDEX_OFFSET, OFF_MAGIC, OFF_TOTAL_LENGTH,
-    OFF_VERSION, SHA256_LEN,
+use super::format::{BundleEntry, BundleError, SHA256_LEN};
+#[cfg(test)]
+use super::format::BUNDLE_HEADER_SIZE;
+use super::stream::index::{
+    CheckedHeader, ExtentLimit, IndexError, IndexReadLimits, admit_header, decode_owned_index,
 };
 
 /// Priority tier for progressive `.hmc` range hydration.
@@ -52,88 +53,7 @@ pub struct HmcRangeRequest {
     pub section_type_raw: Option<u16>,
 }
 
-/// Validated 64-byte `.hmc` header metadata extracted from the initial `[0..64)` range read.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct HmcHeaderProbe {
-    pub version: u16,
-    pub flags: u16,
-    pub entry_count: u32,
-    pub index_offset: u64,
-    pub index_length: u64,
-    pub total_length: u64,
-    pub whole_file_crc32c: u32,
-}
-
-impl HmcHeaderProbe {
-    /// Parse the 64-byte front header of a `.hmc` bundle without needing the rest of the file.
-    pub fn parse_header_range(header_bytes: &[u8]) -> Result<Self, BundleError> {
-        if header_bytes.len() < BUNDLE_HEADER_SIZE {
-            return Err(BundleError::TooShort);
-        }
-        if header_bytes[OFF_MAGIC..OFF_MAGIC + 4] != BUNDLE_MAGIC {
-            return Err(BundleError::BadMagic);
-        }
-        let version = u16::from_le_bytes([header_bytes[OFF_VERSION], header_bytes[OFF_VERSION + 1]]);
-        if version != BUNDLE_VERSION {
-            return Err(BundleError::UnsupportedVersion(version));
-        }
-        let flags = u16::from_le_bytes([header_bytes[OFF_FLAGS], header_bytes[OFF_FLAGS + 1]]);
-        let entry_count = u32::from_le_bytes(
-            header_bytes[OFF_ENTRY_COUNT..OFF_ENTRY_COUNT + 4]
-                .try_into()
-                .unwrap(),
-        );
-        let index_offset = u64::from_le_bytes(
-            header_bytes[OFF_INDEX_OFFSET..OFF_INDEX_OFFSET + 8]
-                .try_into()
-                .unwrap(),
-        );
-        let index_length = u64::from_le_bytes(
-            header_bytes[OFF_INDEX_LENGTH..OFF_INDEX_LENGTH + 8]
-                .try_into()
-                .unwrap(),
-        );
-        let total_length = u64::from_le_bytes(
-            header_bytes[OFF_TOTAL_LENGTH..OFF_TOTAL_LENGTH + 8]
-                .try_into()
-                .unwrap(),
-        );
-        let whole_file_crc32c = u32::from_le_bytes(
-            header_bytes[OFF_CRC32C..OFF_CRC32C + 4]
-                .try_into()
-                .unwrap(),
-        );
-        let end = index_offset
-            .checked_add(index_length)
-            .ok_or(BundleError::BadIndexPointer {
-                offset: index_offset,
-                length: index_length,
-                total: total_length as usize,
-            })?;
-        if index_offset < BUNDLE_HEADER_SIZE as u64 || end > total_length {
-            return Err(BundleError::BadIndexPointer {
-                offset: index_offset,
-                length: index_length,
-                total: total_length as usize,
-            });
-        }
-        Ok(Self {
-            version,
-            flags,
-            entry_count,
-            index_offset,
-            index_length,
-            total_length,
-            whole_file_crc32c,
-        })
-    }
-
-    /// Byte range `(offset, length)` required to fetch the CBOR index footer.
-    #[inline]
-    pub fn index_footer_range(&self) -> (u64, u64) {
-        (self.index_offset, self.index_length)
-    }
-}
+pub use super::stream::index::HmcHeaderProbe;
 
 /// Progressive range planner constructed from the 64B `.hmc` header and CBOR index footer.
 #[derive(Debug, Clone)]
@@ -148,33 +68,54 @@ impl HmcProgressiveRangePlanner {
         header: HmcHeaderProbe,
         index_footer_bytes: &[u8],
     ) -> Result<Self, BundleError> {
-        if index_footer_bytes.len() as u64 != header.index_length {
-            return Err(BundleError::BadIndexPointer {
-                offset: header.index_offset,
-                length: header.index_length,
-                total: index_footer_bytes.len(),
-            });
-        }
-        let entries: Vec<BundleEntry> = ciborium::from_reader(index_footer_bytes)
-            .map_err(|e| BundleError::Cbor(e.to_string()))?;
-        for e in &entries {
-            let e_end = e
-                .offset
-                .checked_add(e.length)
-                .ok_or_else(|| BundleError::EntryOutOfBounds {
-                    key: e.key.clone(),
-                    offset: e.offset,
-                    length: e.length,
-                })?;
-            if e.offset < BUNDLE_HEADER_SIZE as u64 || e_end > header.index_offset {
-                return Err(BundleError::EntryOutOfBounds {
-                    key: e.key.clone(),
-                    offset: e.offset,
-                    length: e.length,
-                });
-            }
-        }
-        Ok(Self { header, entries })
+        Self::from_header_and_index_with_limits(
+            header,
+            index_footer_bytes,
+            header.total_length,
+            ExtentLimit::default(),
+            IndexReadLimits::default(),
+        )
+    }
+
+    /// Bounded structural admission. The public probe cannot prove original reserved bytes.
+    /// expected_extent must be pinned independently by the caller for a remote object.
+    pub fn from_header_and_index_with_limits(
+        header: HmcHeaderProbe,
+        index_footer_bytes: &[u8],
+        expected_extent: u64,
+        extent_limit: ExtentLimit,
+        limits: IndexReadLimits,
+    ) -> Result<Self, BundleError> {
+        let checked = CheckedHeader::from_probe(header, expected_extent, extent_limit, limits)
+            .map_err(IndexError::into_bundle_error)?;
+        Self::from_checked_index(checked, index_footer_bytes, limits)
+    }
+
+    /// Preferred remote facade: admit exact original header bytes and an independent extent.
+    /// Success validates directory structure; payload CRC/hash/proofs remain incomplete.
+    pub fn from_raw_header_and_index_with_limits(
+        header_bytes: &[u8],
+        index_footer_bytes: &[u8],
+        expected_extent: u64,
+        extent_limit: ExtentLimit,
+        limits: IndexReadLimits,
+    ) -> Result<Self, BundleError> {
+        let checked = admit_header(header_bytes, expected_extent, extent_limit, limits)
+            .map_err(IndexError::into_bundle_error)?;
+        Self::from_checked_index(checked, index_footer_bytes, limits)
+    }
+
+    fn from_checked_index(
+        checked: CheckedHeader,
+        bytes: &[u8],
+        limits: IndexReadLimits,
+    ) -> Result<Self, BundleError> {
+        let entries =
+            decode_owned_index(&checked, bytes, limits).map_err(IndexError::into_bundle_error)?;
+        Ok(Self {
+            header: checked.probe(),
+            entries,
+        })
     }
 
     /// Validated header probe.
@@ -211,7 +152,7 @@ impl HmcProgressiveRangePlanner {
         reqs
     }
 
-    /// Given the front prefix of a `.10d` entry inside the bundle (`>= 64 + section_count * 32` bytes),
+    /// Given the front prefix of a `.10d` entry inside the bundle (`>= 64 + section_count * 24` bytes),
     /// plan sub-entry section range requests ordered by [`StreamPriorityTier`].
     pub fn plan_10d_interior_section_ranges(
         &self,
@@ -229,7 +170,9 @@ impl HmcProgressiveRangePlanner {
         // Header validation also checks the table pointer against the supplied
         // slice. Include the available entry prefix, but never bytes belonging
         // to a following bundle entry.
-        let prefix_len = entry_prefix_bytes.len().min(usize::try_from(entry.length).unwrap_or(usize::MAX));
+        let prefix_len = entry_prefix_bytes
+            .len()
+            .min(usize::try_from(entry.length).unwrap_or(usize::MAX));
         let hdr = Container10dHeader::parse(&entry_prefix_bytes[..prefix_len])
             .map_err(|_| BundleError::BadMagic)?;
         if hdr.magic != MAGIC_10D {
@@ -237,10 +180,13 @@ impl HmcProgressiveRangePlanner {
         }
         let sec_count = hdr.section_count as usize;
         let toc_start = hdr.section_table_offset as usize;
-        let toc_end = sec_count.checked_mul(SECTION_DESCRIPTOR_SIZE)
+        let toc_end = sec_count
+            .checked_mul(SECTION_DESCRIPTOR_SIZE)
             .and_then(|size| toc_start.checked_add(size))
             .ok_or_else(|| BundleError::EntryOutOfBounds {
-                key: entry.key.clone(), offset: entry.offset, length: entry.length,
+                key: entry.key.clone(),
+                offset: entry.offset,
+                length: entry.length,
             })?;
         if toc_end as u64 > entry.length || entry_prefix_bytes.len() < toc_end {
             return Err(BundleError::TooShort);
@@ -249,19 +195,28 @@ impl HmcProgressiveRangePlanner {
         let mut out = Vec::with_capacity(sec_count);
         for i in 0..sec_count {
             let off = toc_start + i * SECTION_DESCRIPTOR_SIZE;
-            let sec: SectionDescriptor =
-                bytemuck::pod_read_unaligned(&entry_prefix_bytes[off..off + SECTION_DESCRIPTOR_SIZE]);
+            let sec: SectionDescriptor = bytemuck::pod_read_unaligned(
+                &entry_prefix_bytes[off..off + SECTION_DESCRIPTOR_SIZE],
+            );
             let section_offset = u64::from(sec.byte_offset);
             let section_length = u64::from(sec.byte_length);
-            if section_offset.checked_add(section_length).is_none_or(|end| end > entry.length) {
+            if section_offset
+                .checked_add(section_length)
+                .is_none_or(|end| end > entry.length)
+            {
                 return Err(BundleError::EntryOutOfBounds {
-                    key: entry.key.clone(), offset: section_offset, length: section_length,
+                    key: entry.key.clone(),
+                    offset: section_offset,
+                    length: section_length,
                 });
             }
-            let absolute_offset = entry.offset.checked_add(section_offset)
-                .ok_or_else(|| BundleError::EntryOutOfBounds {
-                    key: entry.key.clone(), offset: section_offset, length: section_length,
-                })?;
+            let absolute_offset = entry.offset.checked_add(section_offset).ok_or_else(|| {
+                BundleError::EntryOutOfBounds {
+                    key: entry.key.clone(),
+                    offset: section_offset,
+                    length: section_length,
+                }
+            })?;
             let tier = classify_10d_section_tier(u16::from(sec.section_type), is_low_lod_key);
             out.push(HmcRangeRequest {
                 entry_key: entry.key.clone(),
@@ -301,7 +256,10 @@ pub fn classify_entry_tier(key: &str, kind: &str) -> StreamPriorityTier {
 }
 
 /// Classify a `.10d` interior section into a progressive priority tier.
-pub fn classify_10d_section_tier(section_type_raw: u16, is_mid_lod_entry: bool) -> StreamPriorityTier {
+pub fn classify_10d_section_tier(
+    section_type_raw: u16,
+    is_mid_lod_entry: bool,
+) -> StreamPriorityTier {
     if section_type_raw == SectionType::MORPH_TARGETS_DISCRIMINANT {
         return StreamPriorityTier::Tier0SemanticAndProcedural;
     }
@@ -338,7 +296,15 @@ pub fn classify_10d_section_tier(section_type_raw: u16, is_mid_lod_entry: bool) 
 }
 
 /// Verify an arrived byte range against its `HmcRangeRequest` integrity digest (SHA-256 and/or CRC-32C).
-pub fn verify_arrived_range(req: &HmcRangeRequest, arrived_bytes: &[u8]) -> Result<(), BundleError> {
+pub fn verify_arrived_range(
+    req: &HmcRangeRequest,
+    arrived_bytes: &[u8],
+) -> Result<(), BundleError> {
+    if req.expected_sha256.is_none() && req.expected_crc32c.is_none() {
+        return Err(BundleError::Cbor(
+            "Range arrival requires an integrity digest".into(),
+        ));
+    }
     if arrived_bytes.len() as u64 != req.length {
         return Err(BundleError::LengthMismatch {
             header: req.length,
@@ -374,116 +340,5 @@ pub fn verify_arrived_range(req: &HmcRangeRequest, arrived_bytes: &[u8]) -> Resu
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::bundle::writer::BundleWriter;
-
-    #[test]
-    fn section_ranges_cannot_escape_their_bundle_entry() {
-        use crate::container_10d::{encode_container, AlignmentTier, SectionInput};
-        let header = Container10dHeader::proposed();
-        let section = SectionInput { section_type: SectionType::QuantizedMesh,
-            alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &[1, 2, 3, 4] };
-        let mut bytes = vec![0u8; 512];
-        let len = encode_container(&header, &[section], &mut bytes).unwrap();
-        bytes.truncate(len);
-        let mut writer = BundleWriter::new();
-        writer.add_file("mesh.10d", "10d", bytes.clone(), None).unwrap();
-        let bundle = writer.build().unwrap();
-        let probe = HmcHeaderProbe::parse_header_range(&bundle[..BUNDLE_HEADER_SIZE]).unwrap();
-        let footer = &bundle[probe.index_offset as usize..(probe.index_offset + probe.index_length) as usize];
-        let planner = HmcProgressiveRangePlanner::from_header_and_index(probe, footer).unwrap();
-        let ranges = planner.plan_10d_interior_section_ranges("mesh.10d", &bytes).unwrap();
-        assert_eq!(ranges.len(), 1);
-        assert!(ranges[0].offset + ranges[0].length <= planner.entries()[0].offset + len as u64);
-
-        // Keep a valid 10D header, but point the section at the next entry.
-        let table = Container10dHeader::parse(&bytes[..HEADER_BYTE_SIZE]).unwrap().section_table_offset as usize;
-        bytes[table + 4..table + 8].copy_from_slice(&(len as u32).to_le_bytes());
-        assert!(planner.plan_10d_interior_section_ranges("mesh.10d", &bytes).is_err());
-    }
-
-    #[test]
-    fn section_table_after_header_uses_only_the_selected_entry_prefix() {
-        use crate::container_10d::{encode_container, AlignmentTier, SectionInput};
-        let header = Container10dHeader::proposed();
-        let section = SectionInput { section_type: SectionType::QuantizedMesh,
-            alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &[1, 2, 3, 4] };
-        let mut bytes = vec![0u8; 512];
-        let len = encode_container(&header, &[section], &mut bytes).unwrap();
-        bytes.truncate(len);
-        let mut parsed = Container10dHeader::parse(&bytes).unwrap();
-        let old_table = parsed.section_table_offset as usize;
-        let descriptor = bytes[old_table..old_table + SECTION_DESCRIPTOR_SIZE].to_vec();
-        bytes[old_table..old_table + SECTION_DESCRIPTOR_SIZE].fill(0);
-        parsed.section_table_offset = 256;
-        bytes.resize(256 + SECTION_DESCRIPTOR_SIZE, 0);
-        bytes[256..].copy_from_slice(&descriptor);
-        bytes[..HEADER_BYTE_SIZE].copy_from_slice(&parsed.encode_to_vec64());
-        crate::container_10d::seal_whole_file_crc32c(&mut bytes);
-        crate::container_10d::integrity::check_whole_file_crc32c(&bytes).unwrap();
-        let sealed_header = Container10dHeader::parse(&bytes).unwrap();
-        assert_eq!(crate::container_10d::parse_section_table(&bytes, &sealed_header).unwrap().len(), 1);
-        let mut writer = BundleWriter::new();
-        writer.add_file("mesh.10d", "10d", bytes.clone(), None).unwrap();
-        let bundle = writer.build().unwrap();
-        let probe = HmcHeaderProbe::parse_header_range(&bundle[..BUNDLE_HEADER_SIZE]).unwrap();
-        let footer = &bundle[probe.index_offset as usize..(probe.index_offset + probe.index_length) as usize];
-        let planner = HmcProgressiveRangePlanner::from_header_and_index(probe, footer).unwrap();
-        assert_eq!(planner.plan_10d_interior_section_ranges("mesh.10d", &bytes).unwrap().len(), 1);
-        assert!(planner.plan_10d_interior_section_ranges("mesh.10d", &bytes[..128]).is_err());
-
-        // Supplying extra bytes must not make an out-of-entry table admissible.
-        let mut overrun = bytes.clone();
-        parsed.section_table_offset = bytes.len() as u32 + 1;
-        overrun[..HEADER_BYTE_SIZE].copy_from_slice(&parsed.encode_to_vec64());
-        overrun.resize(overrun.len() + SECTION_DESCRIPTOR_SIZE + 2, 0);
-        assert!(planner.plan_10d_interior_section_ranges("mesh.10d", &overrun).is_err());
-    }
-
-    #[test]
-    fn progressive_planner_orders_tier0_before_tier1_and_tier2_and_verifies_ranges() {
-        let mut writer = BundleWriter::new();
-        writer
-            .add_file("mesh_lod0.10d", "10d", vec![0x11; 512], None)
-            .unwrap();
-        writer
-            .add_file("mesh_lod2.10d", "10d", vec![0x22; 128], None)
-            .unwrap();
-        writer
-            .add_file("semantics.q42", "q42", vec![0x33; 96], None)
-            .unwrap();
-        let bundle_bytes = writer.build().unwrap();
-
-        // Phase 1: probe only the first 64 bytes
-        let probe = HmcHeaderProbe::parse_header_range(&bundle_bytes[..BUNDLE_HEADER_SIZE]).unwrap();
-        assert_eq!(probe.entry_count, 3);
-        let (idx_off, idx_len) = probe.index_footer_range();
-
-        // Phase 2: parse only the CBOR index footer range
-        let footer_slice = &bundle_bytes[idx_off as usize..(idx_off + idx_len) as usize];
-        let planner = HmcProgressiveRangePlanner::from_header_and_index(probe, footer_slice).unwrap();
-        let schedule = planner.plan_entry_ranges();
-        assert_eq!(schedule.len(), 3);
-
-        // Tier 0 (.q42) is scheduled first, then Tier 1 (lod2), then Tier 2 (lod0)
-        assert_eq!(schedule[0].entry_key, "semantics.q42");
-        assert_eq!(schedule[0].tier, StreamPriorityTier::Tier0SemanticAndProcedural);
-        assert_eq!(schedule[1].entry_key, "mesh_lod2.10d");
-        assert_eq!(schedule[1].tier, StreamPriorityTier::Tier1MidLodMeshes);
-        assert_eq!(schedule[2].entry_key, "mesh_lod0.10d");
-        assert_eq!(schedule[2].tier, StreamPriorityTier::Tier2HighPolyAndMip0);
-
-        // Verify arrived slices pass SHA-256 check and tampered slices fail closed
-        for req in &schedule {
-            let start = req.offset as usize;
-            let end = start + req.length as usize;
-            verify_arrived_range(req, &bundle_bytes[start..end]).unwrap();
-        }
-        let mut corrupted = bundle_bytes[schedule[0].offset as usize
-            ..(schedule[0].offset + schedule[0].length) as usize]
-            .to_vec();
-        corrupted[0] ^= 0xFF;
-        assert!(verify_arrived_range(&schedule[0], &corrupted).is_err());
-    }
-}
+#[path = "streaming_loader/tests.rs"]
+mod tests;

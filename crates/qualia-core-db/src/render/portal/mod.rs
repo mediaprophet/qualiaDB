@@ -37,6 +37,10 @@ use crate::gpu_context::{ambient_draw_instances, global_vram_ledger, Operational
 use crate::render::atmosphere::AtmospherePreset;
 use crate::render::camera::CameraState;
 mod camera_lens;
+mod emf_preview;
+#[path = "../portal_emf_metadata.rs"]
+mod emf_metadata;
+use crate::render::portal_emf_state::{self, EmfBackend, RetainedEmf};
 use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
 use crate::render::navigation::{
     camera_frame_node, cpu_pick_node_at_camera, CameraFlyTo, Q_COLLAPSED_EPS,
@@ -148,6 +152,7 @@ pub struct QualiaPortal {
     tier: u8,
     time: f64,
     last_tensor: Option<Vec<u8>>,
+    last_emf: RetainedEmf,
     /// Tensor node data remains pickable when its visual projection is hidden.
     tensor_projection_enabled: bool,
     telemetry: SystemTelemetry,
@@ -232,6 +237,7 @@ impl QualiaPortal {
             tier,
             time: 0.0,
             last_tensor: None,
+            last_emf: RetainedEmf::default(),
             tensor_projection_enabled: true,
             telemetry: SystemTelemetry::from_samples(
                 &crate::gpu_context::sample_ambient_telemetry(),
@@ -316,6 +322,7 @@ impl QualiaPortal {
             self.graphics_recovery_canvas_only = false;
         }
         self.gpu_init_failed = backend != "webgpu";
+        self.last_emf.invalidate(backend == "webgpu");
         self.present_misses = 0;
         if backend == "canvas2d" || backend == "unavailable" {
             self.tier = 0;
@@ -1403,39 +1410,32 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
-    /// Load a sibling `Q42EMF64` (`.emf`) volume. Cells are the field values;
-    /// GPU RGBA and AcousticPlane σ are conversions of those cells.
-    ///
-    /// Anatomy hosts fetch this from the same URL as the mesh with only the
-    /// trailing extension replaced: `foo.10d` → `foo.emf`. Values are not stored
-    /// inside `.10d`.
-    ///
-    /// Returns `{ nx, ny, nz, nt, cell_count, mean_sigma, frequency_hz, kind }`.
-    /// `kind` is `"volume"` when `cell_count > 1`, otherwise `"cell"`.
+    /// Inspect physical interpretation and original PCM without applying a
+    /// display or listening conversion. Exact clock integers remain in metadata_json.
+    pub fn inspect_emf(&self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        Ok(emf_metadata::inspect(bytes)?.into())
+    }
+
+    /// Field residency: 0 empty, 1 pending WebGPU, 2 uploaded, 3 unavailable.
+    /// Upload is not a claim that a browser frame has presented field pixels.
+    pub fn emf_display_state(&self) -> u8 {
+        self.last_emf.status() as u8
+    }
+
+    /// Load a sibling `Q42EMF64` field and return its dimensions, integrity,
+    /// exact interpretation JSON and original PCM tracks. The visible projection
+    /// is a declared derivative. V3 does not update implicit sigma sonification.
+    /// `frequency_hz` is null for v3; `kind` is volume when cell_count exceeds one.
     pub fn load_emf(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         let loaded = crate::render::portal_load_emf::decode_emf_scientific(bytes)
             .map_err(|e| JsValue::from_str(&e))?;
-        self.telemetry.spectral_shift = loaded.mean_sigma;
-
-        #[cfg(target_arch = "wasm32")]
-        if let Some(ref mut gpu) = self.gpu {
-            let display: Vec<_> = loaded
-                .cells
-                .iter()
-                .map(crate::render::gpu::emf_field_cell_from_scientific)
-                .collect();
-            gpu.emf_upload_field(
-                &display,
-                loaded.nx,
-                loaded.ny,
-                loaded.nz,
-                loaded.nt,
-                loaded.bounds,
-            )
-            .map_err(|e| JsValue::from_str(&e))?;
-        }
-
-        let result = js_sys::Object::new();
+        // Prepare all metadata before changing either accepted data or residency.
+        let result = emf_metadata::inspect(bytes)?;
+        Reflect::set(&result, &"display_conversion".into(),
+            &"legacy phase/sigma diagnostic; physical field retained; not calibrated RGB or a complete spectrum".into())?;
+        Reflect::set(&result, &"sonification".into(),
+            &if loaded.interpretation.is_some() { "no automatic EMF sonification; stored tracks are independent" }
+             else { "legacy-sigma-derived" }.into())?;
         Reflect::set(
             &result,
             &JsValue::from_str("nx"),
@@ -1469,10 +1469,29 @@ impl QualiaPortal {
         Reflect::set(
             &result,
             &JsValue::from_str("frequency_hz"),
-            &JsValue::from_f64(loaded.frequency_hz as f64),
+            &if loaded.interpretation.is_some() { JsValue::NULL }
+             else { JsValue::from_f64(loaded.frequency_hz as f64) },
         )?;
         let kind = if loaded.cell_count > 1 { "volume" } else { "cell" };
         Reflect::set(&result, &JsValue::from_str("kind"), &JsValue::from_str(kind))?;
+        let backend = if self.gpu.is_some() {
+            EmfBackend::WebGpu
+        } else if self.anatomy_webgl2.is_some() || self.gpu_init_failed {
+            EmfBackend::Unavailable
+        } else {
+            EmfBackend::Pending
+        };
+        Reflect::set(&result, &"display_status".into(),
+            &backend.accepted_status().as_str().into())?;
+        let legacy_sigma = loaded.interpretation.is_none().then_some(loaded.mean_sigma);
+        let gpu = &mut self.gpu;
+        self.last_emf.accept(loaded, backend, |field| {
+            portal_emf_state::upload(gpu.as_mut().ok_or("emf: WebGPU unavailable")?, field)
+        }).map_err(|e| JsValue::from_str(&e))?;
+        // v3 recordings and physical wavelengths are not implicit sigma sonification.
+        if let Some(sigma) = legacy_sigma {
+            self.telemetry.spectral_shift = sigma;
+        }
         Ok(result.into())
     }
 
@@ -2714,6 +2733,12 @@ impl QualiaPortal {
     fn adopt_pending_gpu(&mut self) {
         #[cfg(target_arch = "wasm32")]
         {
+            if let Some(ready) = PENDING_GPU_RESULT.with(|p| p.replace(None)) {
+                self.gpu_init_failed = !ready;
+                if !ready && self.gpu.is_none() {
+                    self.last_emf.invalidate(false);
+                }
+            }
             if self.gpu.is_none() && !self.gpu_init_failed {
                 if let Some(mut gpu) = PENDING_GPU.with(|p| p.borrow_mut().take()) {
                     gpu.set_camera_target(
@@ -2772,6 +2797,9 @@ impl QualiaPortal {
                     self.tier = 2;
                     gpu.set_tensor_projection_enabled(self.tensor_projection_enabled);
                     self.graphics.apply_to_gpu(&mut gpu);
+                    if let Err(error) = self.last_emf.replay(|field| portal_emf_state::upload(&mut gpu, field)) {
+                        self.description = format!("EMF retained; field upload unavailable: {error}");
+                    }
                     self.gpu = Some(gpu);
                     self.etalon_steward.mark_ready();
                 }
@@ -2779,6 +2807,9 @@ impl QualiaPortal {
             if self.anatomy_webgl2.is_none() {
                 if let Some(gl) = PENDING_WEBGL2.with(|p| p.borrow_mut().take()) {
                     self.anatomy_webgl2 = Some(gl);
+                    if self.gpu.is_none() {
+                        self.last_emf.invalidate(false);
+                    }
                 }
             }
         }
@@ -2836,6 +2867,7 @@ impl QualiaPortal {
                     && gpu.resize(cw, ch).is_err();
                 if resize_refused {
                     self.gpu = None;
+                    self.last_emf.invalidate(false);
                     self.gpu_init_failed = true;
                     self.graphics_recovery_requested = true;
                     self.graphics_recovery_canvas_only = true;
@@ -2900,6 +2932,7 @@ impl QualiaPortal {
                         return Ok(());
                     }
                     self.gpu = None;
+                    self.last_emf.invalidate(false);
                     self.gpu_init_failed = true;
                     self.tier = 0;
                     if self.body_renderer == BodyRendererBackend::WebGpu {
@@ -3069,18 +3102,20 @@ impl QualiaPortal {
 #[cfg(target_arch = "wasm32")]
 thread_local! {
     static PENDING_GPU: std::cell::RefCell<Option<PortalGpu>> = std::cell::RefCell::new(None);
+    static PENDING_GPU_RESULT: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
     static PENDING_WEBGL2: std::cell::RefCell<Option<AnatomyWebGl2>> = std::cell::RefCell::new(None);
 }
 
 /// Create the WebGPU device + surface asynchronously and stash it for the render loop to adopt.
-/// JS calls this **once, awaited**, right after constructing the portal and **before** the render
-/// loop starts — the canvas must still be context-free (no 2d context yet) so the WebGPU surface
+/// JS awaits this before constructing the portal and starting the render loop.
+/// The canvas must still be context-free (no 2d context yet) so the WebGPU surface
 /// can bind to it. Returns `true` if the GPU path is now armed; on `false`/throw the portal keeps
 /// the canvas2d fallback.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsValue> {
     if !has_webgpu() {
+        PENDING_GPU_RESULT.with(|p| p.set(Some(false)));
         return Ok(false);
     }
     reset_portal_gpu_init_flags();
@@ -3104,6 +3139,11 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
         }
     })
     .await;
+    let ready = outcome == "ok";
+    PENDING_GPU_RESULT.with(|p| p.set(Some(ready)));
+    if !ready {
+        PENDING_GPU.with(|p| *p.borrow_mut() = None);
+    }
     match outcome.as_str() {
         "ok" => Ok(true),
         "timeout" | "no-adapter" | "aborted" => {
@@ -3123,6 +3163,7 @@ pub async fn portal_init_webgpu(canvas: HtmlCanvasElement) -> Result<bool, JsVal
 pub fn portal_abort_webgpu() {
     abort_portal_gpu_init();
     PENDING_GPU.with(|p| *p.borrow_mut() = None);
+    PENDING_GPU_RESULT.with(|p| p.set(Some(false)));
 }
 
 /// True once WebGPU has called `getContext("webgpu")` on the init canvas.

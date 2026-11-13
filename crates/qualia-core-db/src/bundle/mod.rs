@@ -32,6 +32,7 @@ mod reader;
 pub use entity_compiler as twin_compiler;
 pub use entity_verifier as twin_verifier;
 pub mod species_meta;
+pub mod stream;
 pub mod streaming_hydration;
 pub mod streaming_loader;
 pub mod variant_matrix;

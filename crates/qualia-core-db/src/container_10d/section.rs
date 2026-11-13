@@ -34,6 +34,8 @@
 
 #[path = "section/table_validation.rs"]
 mod table_validation;
+/// Shared allocation-free descriptor geometry for full and partial readers.
+pub mod metadata;
 
 // FND-04: new preservation behavior lives in a focused child; the oversized
 // strict parser/writer remains unchanged pending its separate decomposition.
@@ -712,71 +714,9 @@ pub fn parse_section_table<'a>(
         if descs[..i].iter().any(|old| old.section_type == d.section_type) {
             return Err(SectionTableError::DuplicateSectionType { section_type: d.section_type });
         }
-        if d.reserved16 != 0 {
-            return Err(SectionTableError::NonZeroDescriptorReserved { index: i });
-        }
-        let st = SectionType::from_u8(d.section_type).ok_or(
-            SectionTableError::UndefinedSectionType {
-                index: i,
-                got: d.section_type,
-            },
-        )?;
-        if st == SectionType::Undefined {
-            return Err(SectionTableError::UndefinedSectionType {
-                index: i,
-                got: d.section_type,
-            });
-        }
-        if st == SectionType::ManifoldIdentityV2 && header.version < super::header::HEADER_VERSION {
-            return Err(SectionTableError::SectionRequiresVersion {
-                section_type: d.section_type,
-                minimum_version: super::header::HEADER_VERSION,
-                actual_version: header.version,
-            });
-        }
-        let tier = AlignmentTier::from_u8(d.alignment_tier).ok_or(
-            SectionTableError::UndefinedAlignmentTier {
-                index: i,
-                got: d.alignment_tier,
-            },
-        )?;
-        let align = tier.to_bytes();
+        metadata::validate_descriptor_metadata(d, i, header.version, data.len() as u64, table_start as u64, table_end as u64)?;
         let o = d.byte_offset as usize;
-        let l = d.byte_length as usize;
-        if o % align != 0 {
-            return Err(SectionTableError::MisalignedSection {
-                index: i,
-                offset: d.byte_offset,
-                tier,
-            });
-        }
-        let end = o.checked_add(l).ok_or(SectionTableError::OutOfBounds {
-            index: i,
-            offset: d.byte_offset,
-            length: d.byte_length,
-            file_len: data.len(),
-        })?;
-        if end > data.len() {
-            return Err(SectionTableError::OutOfBounds {
-                index: i,
-                offset: d.byte_offset,
-                length: d.byte_length,
-                file_len: data.len(),
-            });
-        }
-        table_validation::metadata_range(d, i, table_start, table_end)?;
-        // Stride consistency.
-        if d.stride > 0 {
-            let expected = d.stride as usize * d.element_count as usize;
-            if expected != l {
-                return Err(SectionTableError::StrideInconsistentDescriptor {
-                    index: i,
-                    stride: d.stride,
-                    element_count: d.element_count,
-                    byte_length: d.byte_length,
-                });
-            }
-        }
+        let end = o + d.byte_length as usize;
         // Per-section CRC.
         let stored = d.crc32c;
         let actual = crc32c(&data[o..end]);

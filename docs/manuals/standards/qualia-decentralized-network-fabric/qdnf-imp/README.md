@@ -27,6 +27,7 @@ implement networking, certify cryptography or change memory constants.
 | [Capability-scoped connection fabric](./capability-scoped-connection-fabric.md) | Architecture note for CSCP. Local supervisor in-tree; not MASQUE/noq/Internet/RFC. |
 | [draft-webcivics-cscp-00](../../../../standards/ietf/draft-webcivics-cscp-00.md) | Proposed IETF Internet-Draft: purpose-bound connect, exclude-then-rank, leases, evidence, receipts. Canonical copy under `docs/standards/ietf/`. Working document, not an RFC. |
 | [CSCP implementation programme](./cscp-imp/README.md) | Swarm plan, registry and Wave 1 tracking. Not the original 30 QDNF packages. |
+| [QBDL streaming programme](./qbdl-streaming/README.md) | 28 swarm packages: native PQ content streaming, HTTP/WebSockets, WebRTC, Etalon and Commons integration; implementation pending. |
 
 ## 2. Detailed checklists
 

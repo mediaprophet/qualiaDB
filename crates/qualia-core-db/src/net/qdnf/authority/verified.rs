@@ -2,6 +2,8 @@
 //!
 //! Constructors are crate-private. External crates cannot mint Active/Allow.
 
+mod received_finished;
+
 use crate::crypto::network::types::AEAD_KEY_LEN;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, StrongDigest};

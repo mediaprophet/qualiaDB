@@ -12,6 +12,8 @@ use super::handles::LeaseHandle;
 use super::leases::LeaseTable;
 
 const OPS: usize = 32;
+mod incarnation;
+mod inspect;
 
 /// Non-wrapping cancel epoch bound to an admitted operation.
 #[repr(transparent)]
@@ -51,6 +53,7 @@ struct OpSlot {
 }
 
 pub struct OperationTable {
+    incarnation: super::incarnation::CanonicalIncarnation,
     slots: [OpSlot; OPS],
 }
 
@@ -58,6 +61,7 @@ impl OperationTable {
     /// Creates a default `OperationTable`.
     pub const fn new() -> Self {
         Self {
+            incarnation: super::incarnation::CanonicalIncarnation::UNASSIGNED,
             slots: [OpSlot {
                 id: OperationId::ZERO,
                 generation: Generation::ZERO,

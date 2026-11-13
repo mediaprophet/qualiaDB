@@ -124,6 +124,7 @@ impl KeyGenerator {
             KeyAlgorithm::EdDSA,
             KeyAlgorithm::AES,
             KeyAlgorithm::ChaCha20,
+            KeyAlgorithm::X25519,
         ] {
             self.generation_algorithms
                 .insert(alg.clone(), GenerationAlgorithm::new(alg));
@@ -311,7 +312,7 @@ impl KeyGenerator {
             KeyAlgorithm::RSA => {
                 #[cfg(feature = "interop-crypto")]
                 {
-                    use rsa::{pkcs8::EncodePrivateKey, rand_core::OsRng, RsaPrivateKey};
+                    use rsa::{RsaPrivateKey, pkcs8::EncodePrivateKey, rand_core::OsRng};
                     let mut rng = OsRng;
                     let priv_key = RsaPrivateKey::new(&mut rng, 2048)
                         .map_err(|e| CryptographicError::SignatureError(e.to_string()))?;
@@ -348,6 +349,7 @@ impl KeyGenerator {
             KeyAlgorithm::AES | KeyAlgorithm::ChaCha20 | KeyAlgorithm::EdDSA => {
                 Ok(rand::random::<[u8; 32]>().to_vec())
             }
+            KeyAlgorithm::X25519 => x25519::generate(),
             other => Err(CryptographicError::UnsupportedAlgorithm(format!(
                 "{other:?} key generation not implemented"
             ))),
@@ -414,8 +416,8 @@ impl KeyGenerator {
                 #[cfg(feature = "interop-crypto")]
                 {
                     use rsa::{
-                        pkcs8::{DecodePrivateKey, EncodePublicKey},
                         RsaPrivateKey, RsaPublicKey,
+                        pkcs8::{DecodePrivateKey, EncodePublicKey},
                     };
                     let priv_key = RsaPrivateKey::from_pkcs8_der(&private_key.key_data)
                         .map_err(|e| CryptographicError::InvalidKey(e.to_string()))?;
@@ -464,6 +466,7 @@ impl KeyGenerator {
                 let signing_key = SigningKey::from_bytes(&seed);
                 Ok(signing_key.verifying_key().to_bytes().to_vec())
             }
+            KeyAlgorithm::X25519 => x25519::public(&private_key.key_data),
             other => Err(CryptographicError::UnsupportedAlgorithm(format!(
                 "{other:?} public key derivation not supported"
             ))),
@@ -513,3 +516,5 @@ impl SecurityAssessment {
         }
     }
 }
+
+mod x25519;

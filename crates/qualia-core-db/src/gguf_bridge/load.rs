@@ -14,6 +14,10 @@ impl QTensorEngine {
         if let Some(session) = &self.qwen35_ftw {
             return session.kv_cache_bytes() as u64;
         }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &self.gemma4 {
+            return session.kv_cache_bytes() as u64;
+        }
         self.kv_layout
             .as_ref()
             .map(|layout| (layout.total_f32_elems * std::mem::size_of::<f32>()) as u64)
@@ -49,7 +53,7 @@ impl QTensorEngine {
         // TODO(H3-exec): actually running overflow layers on the auxiliary circuit is the remaining
         // (out-of-scope) H3 step; the recorded plan is advisory until an execution stage consults it.
         let _ = crate::residency_planner::route_employment_from_passport(file_size as u64);
-        let index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
+        let mut index = crate::gguf_sharder::GgufTensorIndex::from_gguf(&mmap);
         if index.tensor_data_start == 0
             && index.max_tensor_bytes == 0
             && index.hyperparams.n_layer == 0
@@ -57,6 +61,18 @@ impl QTensorEngine {
             let msg = "GGUF header parse failed or yielded no tensor metadata".to_string();
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
+        }
+        if let Some(profile) = qwen35::gguf::Profile::parse(&mmap, &mut index)? {
+            return self.load_dense_qwen_gguf(mmap, index, profile);
+        }
+        if let Some(profile) = gemma4::Profile::parse(&mmap)? {
+            return self.load_gemma4_gguf(
+                mmap,
+                index,
+                profile,
+                MAX_CONTEXT_WINDOW as usize,
+                self.ssm_state_byte_budget,
+            );
         }
         if let Err(msg) = index.hyperparams.decode_supported() {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
@@ -93,6 +109,10 @@ impl QTensorEngine {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
             self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
             self.ftw_package = None;
         }
         self.gguf_mmap = Some(Arc::new(mmap));
@@ -236,6 +256,10 @@ impl QTensorEngine {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
             self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
             self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
@@ -387,6 +411,10 @@ impl QTensorEngine {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
             self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
             self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
@@ -500,6 +528,10 @@ impl QTensorEngine {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
             self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
             self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);
@@ -599,7 +631,9 @@ impl QTensorEngine {
     #[inline]
     #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
     pub(crate) fn poll_wait(&self) {
-        let _ = self.gpu_device().poll(etalon::PollType::wait_indefinitely());
+        let _ = self
+            .gpu_device()
+            .poll(etalon::PollType::wait_indefinitely());
         GPU_WAIT_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     }
 
@@ -617,7 +651,9 @@ impl QTensorEngine {
                     label: Some("EmptyRT"),
                 });
             self.submit_commands(Some(enc.finish()));
-            let _ = self.gpu_device().poll(etalon::PollType::wait_indefinitely());
+            let _ = self
+                .gpu_device()
+                .poll(etalon::PollType::wait_indefinitely());
         }
         t.elapsed().as_nanos() as u64
     }
@@ -666,6 +702,10 @@ impl QTensorEngine {
             self.prepared_native_bytes = None;
             self.prepared_native_sources = None;
             self.qwen35_ftw = None;
+            self.qwen35_gguf = None;
+            self.qwen35_gguf_required = false;
+            self.gemma4 = None;
+            self.gemma4_required = false;
             self.ftw_package = None;
         }
         self.gguf_mmap = Some(mmap);

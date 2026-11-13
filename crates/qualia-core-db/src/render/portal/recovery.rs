@@ -25,6 +25,7 @@ impl QualiaPortal {
         }
 
         self.gpu = None;
+        self.last_emf.invalidate(true);
         self.anatomy_webgl2 = None;
         self.gpu_init_failed = true;
         self.graphics_recovery_requested = true;

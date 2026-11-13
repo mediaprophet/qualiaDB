@@ -11,6 +11,11 @@ use super::{
 };
 use std::path::Path;
 
+pub mod recovery;
+pub use recovery::RecoveryRootScope;
+pub mod staging;
+pub use staging::StagingCharge;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct QuotaLimits {
     pub encoded_bytes: u64,
@@ -51,6 +56,8 @@ pub struct CustodyQuota<'root, const N: usize> {
     limits: QuotaLimits,
     usage: QuotaSnapshot,
     charged: [Option<[u8; 32]>; N],
+    recovery_owner: usize,
+    recovery_scope_serial: u64,
 }
 
 impl<'root, const N: usize> CustodyQuota<'root, N> {
@@ -78,6 +85,8 @@ impl<'root, const N: usize> CustodyQuota<'root, N> {
             limits,
             usage: snapshot,
             charged: [None; N],
+            recovery_owner: recovery::next_recovery_owner()?,
+            recovery_scope_serial: 0,
         })
     }
 
@@ -93,6 +102,16 @@ impl<'root, const N: usize> CustodyQuota<'root, N> {
         checkpoint: [u8; 32],
         bytes: usize,
     ) -> Result<(), QuotaError> {
+        let bytes = u64::try_from(bytes).map_err(|_| QuotaError::Overflow)?;
+        self.charge_u64(root, checkpoint, bytes)
+    }
+
+    fn charge_u64(
+        &mut self,
+        root: &Path,
+        checkpoint: [u8; 32],
+        bytes: u64,
+    ) -> Result<(), QuotaError> {
         if root != self.root {
             return Err(QuotaError::ScopeMismatch);
         }
@@ -104,7 +123,6 @@ impl<'root, const N: usize> CustodyQuota<'root, N> {
             .iter()
             .position(Option::is_none)
             .ok_or(QuotaError::SlotsExhausted)?;
-        let bytes = u64::try_from(bytes).map_err(|_| QuotaError::Overflow)?;
         let total = self
             .usage
             .encoded_bytes

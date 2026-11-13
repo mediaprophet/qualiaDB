@@ -237,3 +237,6 @@ impl AccessAuditLog {
         &self.entries
     }
 }
+
+mod managed_policy;
+pub use managed_policy::SigningAccess;

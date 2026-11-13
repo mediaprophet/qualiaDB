@@ -278,6 +278,11 @@ export async function loadQualiaPortal(canvas, options = {}) {
         if (options.requireBodyRenderer === true && !armedRenderer) {
             throw new Error(rendererError || 'No WebGPU or WebGL2 Anatomy renderer is available');
         }
+        // No armed renderer is a completed initialization refusal, not a GPU
+        // still on its way. Notify the existing frame-boundary adoption hook.
+        if (!armedRenderer && typeof mod.portal_abort_webgpu === 'function') {
+            mod.portal_abort_webgpu();
+        }
         portal = new mod.QualiaPortal(canvas);
         const tier = portal.tier?.() ?? -1;
         debugLog('QualiaPortal ready', { source: 'qualia-portal', tier, renderer: armedRenderer });

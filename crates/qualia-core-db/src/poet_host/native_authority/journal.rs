@@ -30,6 +30,8 @@ pub(super) struct DurableState {
     pub package_reviews: Vec<super::package_review::PackageReviewRecord>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub package_grant_decisions: Vec<super::package_review::PackageGrantDecision>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub graphs: Vec<super::graph::StoredGraph>,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -40,6 +42,7 @@ struct Entry {
 }
 
 pub(super) struct Journal {
+    anchor: TrustedProject,
     root: PathBuf,
     configured_root: PathBuf,
     _ownership: fs::File,
@@ -120,6 +123,7 @@ impl Journal {
         }
         paths.sort();
         let mut journal = Self {
+            anchor: anchor.clone(),
             root: canonical_root,
             configured_root: root.into(),
             _ownership: ownership,
@@ -175,11 +179,22 @@ impl Journal {
                 );
             }
             super::package_review::validate_ledger(&entry.state)?;
+            super::graph::validate_graphs(&entry.state.graphs, anchor)?;
             if let Some(previous) = latest.as_ref() {
+                super::graph::validate_graph_transition(
+                    &previous.graphs,
+                    &entry.state.graphs,
+                    admission_digest,
+                )?;
                 super::package_review::validate_grant_successor(
                     &previous.admission.snapshot,
                     &entry.state.admission.snapshot,
                 )?;
+            }
+            if latest.is_none() && !entry.state.graphs.is_empty() {
+                return Err(
+                    "initial native journal state contains unauthenticated graph history".into(),
+                );
             }
             last_admission_sequence = entry.state.admission.snapshot.sequence;
             last_admission_digest = Some(admission_digest);
@@ -194,6 +209,7 @@ impl Journal {
     }
     pub fn append(&mut self, state: &DurableState) -> Result<(), String> {
         super::package_review::validate_ledger(state)?;
+        super::graph::validate_graphs(&state.graphs, &self.anchor)?;
         if self
             .configured_root
             .canonicalize()

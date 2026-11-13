@@ -8,6 +8,10 @@ pub const AUTHORING_PROTOCOL_VERSION: &str = "2025-11-25";
 /// Backend methods must not print to stdout or expose private error details.
 pub trait AuthoringBackend {
     fn tools(&self) -> Vec<AuthoringTool>;
+    /// Host-specific bootstrap guidance published during MCP initialize.
+    fn instructions(&self) -> Option<String> {
+        None
+    }
     /// Return a domain result object; the protocol supplies MCP result wrapping.
     fn call(&mut self, name: &str, args: Value) -> Result<Value, ToolError>;
 }

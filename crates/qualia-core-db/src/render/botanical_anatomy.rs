@@ -76,6 +76,10 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
+// Coverage splitting is kept separate from the multi-scale geometry builders.
+#[path = "botanical_materials.rs"]
+mod tissue_materials;
+
 /// Canonical golden ratio angle ($\phi = 137.507764^\circ$) in radians.
 pub const GOLDEN_ANGLE_RAD: f32 = 2.39996323;
 pub const GOLDEN_ANGLE: f32 = GOLDEN_ANGLE_RAD;
@@ -1094,13 +1098,9 @@ fn seal_botanical_organ_10d(
         mat.metallic = metallic;
         mat.specular = 0.5;
 
-        materials.push(mat);
-        ranges.push(SubmeshRange {
-            first_index: slice.index_start,
-            index_count: slice.index_count,
-            material_id: mat_id,
-            semantic_id: mat_id,
-        });
+        tissue_materials::append_tissue_ranges(
+            mat, slice, indices, colors, &mut materials, &mut ranges,
+        )?;
     }
 
     if !materials.is_empty() {
@@ -2329,7 +2329,8 @@ pub fn build_scale3_floral_and_gumnut_dissection_10d(
     }
 
     // Woody stalk supporting the mature gumnut capsule at right
-    let gumnut_offset = [0.038_f32, 0.0_f32, 0.0_f32];
+    // Separate the dissection specimen in both front and side projections.
+    let gumnut_offset = [0.038_f32, 0.0_f32, -0.035_f32];
     b.add_cylinder_segment(
         [gumnut_offset[0], -0.016, gumnut_offset[2]],
         gumnut_offset,
@@ -2976,17 +2977,19 @@ pub fn build_scale4_leaf_venation_and_histology_10d(
     // Stepped back by `cut_clamped` so the underlying epidermis and mesophyll are exposed in cutaway view
     let cut_x_span = bx_half * (1.0 - cut_clamped * 0.45);
     let cut_x_center = block_origin[0] - bx_half * cut_clamped * 0.45;
+    // Partial coverage keeps both faces of the thin study sheet readable;
+    // two 225/255 faces would still obscure almost all underlying cells.
     // Adaxial (upper, +Z) waxy cuticle sheet
     b.add_box_cell(
         [cut_x_center, block_origin[1], block_origin[2] + bz_half],
         [cut_x_span, by_half, 0.00022],
-        [212, 228, 216, 225],
+        [212, 228, 216, 100],
     );
     // Abaxial (lower, -Z) waxy cuticle sheet
     b.add_box_cell(
         [cut_x_center, block_origin[1], block_origin[2] - bz_half],
         [cut_x_span, by_half, 0.00022],
-        [206, 222, 210, 225],
+        [206, 222, 210, 100],
     );
     b.end_tissue_layer();
 

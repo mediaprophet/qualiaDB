@@ -4,6 +4,7 @@ mod admission;
 pub mod delegation;
 pub mod enrollment;
 pub mod inference;
+pub mod graph;
 mod workflow;
 pub use workflow::{SourceReviewRequest, WorkflowEvidence};
 mod journal;
@@ -133,6 +134,7 @@ impl NativeAuthority {
                 package_requests: Vec::new(),
                 package_reviews: Vec::new(),
                 package_grant_decisions: Vec::new(),
+                graphs: Vec::new(),
             };
             journal.append(&initial)?;
             initial

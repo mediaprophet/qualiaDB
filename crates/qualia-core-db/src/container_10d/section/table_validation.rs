@@ -5,20 +5,6 @@ pub(super) fn borrow_table(bytes: &[u8]) -> Result<&[SectionDescriptor], Section
     bytemuck::try_cast_slice(bytes).map_err(|_| SectionTableError::UnalignedSectionTable)
 }
 
-pub(super) fn metadata_range(
-    descriptor: &SectionDescriptor,
-    index: usize,
-    table_start: usize,
-    table_end: usize,
-) -> Result<(), SectionTableError> {
-    let start = descriptor.byte_offset as usize;
-    let len = descriptor.byte_length as usize;
-    // Empty sections occupy no bytes; legacy encoders may share their offset.
-    if len != 0 && (start < HEADER_BYTE_SIZE || (start < table_end && start + len > table_start)) {
-        return Err(SectionTableError::SectionOverlapsMetadata { index });
-    }
-    Ok(())
-}
 
 fn gap(data: &[u8], start: usize, end: usize) -> Result<(), SectionTableError> {
     let bytes = data

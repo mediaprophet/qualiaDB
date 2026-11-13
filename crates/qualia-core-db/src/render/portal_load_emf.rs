@@ -3,22 +3,9 @@
 //! Sibling `Q42EMF64` (`.emf`) holds the field values. `.10d` MID2/FIEL names
 //! the field. RGBA and AcousticPlane Hz are conversions of these cells.
 
-use crate::q42::emf_container::{DenseEmfVolume, EmfCellRecord64, EmfContainerReader};
+use crate::q42::emf_container::{DenseEmfVolume, EmfContainerReader};
 use crate::render::acoustic::sigma_to_center_frequency_hz;
-
-/// Unpacked sibling `.emf` for GPU upload and AcousticPlane σ.
-#[derive(Clone, Debug)]
-pub struct LoadedEmf {
-    pub nx: u32,
-    pub ny: u32,
-    pub nz: u32,
-    pub nt: u32,
-    pub cell_count: u32,
-    pub mean_sigma: f32,
-    pub frequency_hz: f32,
-    pub bounds: [f32; 6],
-    pub cells: Vec<EmfCellRecord64>,
-}
+pub use crate::render::portal_emf_state::LoadedEmf;
 
 /// Parse `Q42EMF64` bytes and unpack Hilbert 8³ bricks into a dense xyz grid.
 pub fn decode_emf_scientific(bytes: &[u8]) -> Result<LoadedEmf, String> {
@@ -26,6 +13,10 @@ pub fn decode_emf_scientific(bytes: &[u8]) -> Result<LoadedEmf, String> {
         return Err("emf: expected Q42EMF64 magic".into());
     }
     let reader = EmfContainerReader::parse(bytes).map_err(|e| format!("emf: {e}"))?;
+    let interpretation = reader.extension().map(|extension| extension.metadata().clone());
+    if interpretation.as_ref().is_some_and(|metadata| !metadata.field.supports_legacy_visible_projection()) {
+        return Err("emf: declared RGB preview requires its named gamut, transfer and luminance conversion; use inspect_emf to retain metadata and PCM without this fixed visible-wavelength projection".into());
+    }
     let volume: DenseEmfVolume = reader
         .dense_volume()
         .map_err(|e| format!("emf volume: {e}"))?;
@@ -33,6 +24,8 @@ pub fn decode_emf_scientific(bytes: &[u8]) -> Result<LoadedEmf, String> {
         return Err("emf: empty dense volume".into());
     }
     Ok(LoadedEmf {
+        container_version: reader.header().version as u32,
+        interpretation,
         nx: volume.nx,
         ny: volume.ny,
         nz: volume.nz,

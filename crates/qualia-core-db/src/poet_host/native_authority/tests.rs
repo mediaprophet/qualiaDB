@@ -4,6 +4,8 @@ use super::*;
 mod package_review_tests;
 #[path = "package_tests.rs"]
 mod package_tests;
+#[path = "graph_tests.rs"]
+mod graph_tests;
 use qualia_cooperative_core::{
     authoring::*,
     projects::{Project, ProjectMembership, ProjectRole},

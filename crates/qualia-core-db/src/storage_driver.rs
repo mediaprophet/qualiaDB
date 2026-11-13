@@ -11,6 +11,9 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
+#[path = "storage_driver/ranges/mod.rs"]
+pub mod ranges;
+
 use memmap2::MmapOptions;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};

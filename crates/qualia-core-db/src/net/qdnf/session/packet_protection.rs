@@ -11,7 +11,7 @@ use crate::net::qdnf::session::packet::{
     nonce_from_packet_number, PacketNumber, PacketSpace, AEAD_NONCE_LEN,
 };
 use crate::net::qdnf::types::Generation;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 pub const PN_LEN: usize = 8;
 pub const OVERHEAD: usize = PN_LEN + AEAD_TAG_LEN;
@@ -143,7 +143,7 @@ impl PacketProtection {
         }
         let pn_bytes: [u8; 8] = sealed[..PN_LEN].try_into().map_err(|_| QdnfError::Range)?;
         let pn = PacketNumber(u64::from_be_bytes(pn_bytes));
-        let mut body = [0u8; MAX_PROTECTED_BODY];
+        let mut body = Zeroizing::new([0u8; MAX_PROTECTED_BODY]);
         body[..body_len].copy_from_slice(&sealed[PN_LEN..PN_LEN + body_len]);
         let mut tag = [0u8; AEAD_TAG_LEN];
         tag.copy_from_slice(&sealed[PN_LEN + body_len..]);

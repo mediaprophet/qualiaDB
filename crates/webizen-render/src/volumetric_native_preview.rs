@@ -156,14 +156,14 @@ struct NodeAdmission<'a> {
     first_mu: Option<f32>,
 }
 
-struct CappedPngWriter {
+pub(super) struct CappedPngWriter {
     bytes: Vec<u8>,
     cap: usize,
 }
 
 impl CappedPngWriter {
-    fn new(cap: usize) -> Self { Self { bytes: Vec::new(), cap } }
-    fn into_inner(self) -> Vec<u8> { self.bytes }
+    pub(super) fn new(cap: usize) -> Self { Self { bytes: Vec::new(), cap } }
+    pub(super) fn into_inner(self) -> Vec<u8> { self.bytes }
 }
 
 impl Write for CappedPngWriter {
@@ -183,18 +183,23 @@ impl VolumetricRenderer {
     /// Shared loader entry for the existing native general-purpose API. It
     /// retains Core's compatibility limits rather than the review profile.
     pub(super) fn load_10d_compat_asset(&mut self, bytes: &[u8]) -> Result<(u32, u32, f32), String> {
-        let (geometry, provenance_mu) = self.load_10d_with_profile(bytes, LoadProfile::compatibility())?;
+        let (geometry, provenance_mu) = self.load_10d_with_profile(bytes, LoadProfile::compatibility(), None)?;
         Ok((geometry.vertex_count, geometry.triangle_count, provenance_mu))
     }
 
     pub fn load_10d_review_asset(&mut self, bytes: &[u8]) -> Result<(ReviewGeometry, f32), String> {
-        self.load_10d_with_profile(bytes, LoadProfile::review())
+        self.load_10d_with_profile(bytes, LoadProfile::review(), None)
+    }
+
+    pub(super) fn load_10d_shot_pose(&mut self, bytes: &[u8], clip_id: u64, time: f64) -> Result<ReviewGeometry, String> {
+        self.load_10d_with_profile(bytes, LoadProfile::review(), Some((clip_id, time))).map(|r| r.0)
     }
 
     fn load_10d_with_profile(
         &mut self,
         bytes: &[u8],
         profile: LoadProfile,
+        pose: Option<(u64, f64)>,
     ) -> Result<(ReviewGeometry, f32), String> {
         if bytes.is_empty() || profile.max_input_bytes.is_some_and(|max| bytes.len() > max) {
             return Err("10d input is empty or exceeds the selected loader profile".into());
@@ -255,7 +260,7 @@ impl VolumetricRenderer {
         let frames = c::read_container_mesh_frames_with_limits(
             &verified, vertex_count, profile.frame_limits,
         ).map_err(|e| format!("10d authored normals/tangents: {e:?}"))?;
-        let (normals, tangents, normals_label, tangents_label) = match frames {
+        let (mut normals, mut tangents, normals_label, tangents_label) = match frames {
             Some(frame) => {
                 let normals = frame.normals;
                 let tangents = frame.tangents;
@@ -344,6 +349,32 @@ impl VolumetricRenderer {
                 material_id: material.id, semantic_id: 0 };
             (vec![material], vec![range], "legacy-default-material")
         };
+        let mut positions = mesh.positions.clone();
+        if let Some((clip_id, time)) = pose {
+            use qualia_core_db::render::skeletal::SkeletalPlayer;
+            let section = c::skeletal_container::read_skeletal_section(&verified)
+                .map_err(|e| format!("shot SKL1 read: {e:?}"))?;
+            // Player requires a tangent workspace even for untextured meshes. An
+            // internal zero UV workspace triggers its existing orthogonal fallback;
+            // it is never uploaded as an authored texture coordinate stream.
+            let fallback_uv = vec![[0.0; 2]; vertex_count];
+            let uv = texture_coordinates.as_deref().unwrap_or(&fallback_uv);
+            let fallback_normals = if normals.is_none() {
+                let mut derived = vec![[0.0; 3]; vertex_count];
+                qualia_core_db::etalon_render::surface_frames::surface::vertex_normals_from_indices_into(&positions, &indices, &mut derived)
+                    .map_err(|e| format!("shot normal derivation: {e:?}"))?;
+                Some(derived)
+            } else { None };
+            let bind_normals = normals.as_deref().or(fallback_normals.as_deref()).ok_or("shot normals missing")?;
+            let mut player = SkeletalPlayer::from_section(&section, &positions, bind_normals, uv, &indices)
+                .map_err(|e| format!("shot skeletal player: {e:?}"))?;
+            player.select_clip(clip_id, 0.0).map_err(|e| format!("shot clip: {e:?}"))?;
+            player.seek(time).map_err(|e| format!("shot time: {e:?}"))?;
+            player.advance(0.0, false).map_err(|e| format!("shot deformation: {e:?}"))?;
+            positions = player.positions().to_vec();
+            normals = Some(player.normals().to_vec());
+            tangents = Some(player.tangents().to_vec());
+        }
         let min = mesh.min;
         let max = mesh.max;
         let target = [
@@ -397,7 +428,7 @@ impl VolumetricRenderer {
             apply_review_camera_fit(&mut geometry, 1.0)?;
         }
         let upload = self.inner.upload_mesh_colored_with_frames_and_materials_and_uv0(
-            &mesh.positions, &colors, normals.as_deref(), tangents.as_deref(),
+            &positions, &colors, normals.as_deref(), tangents.as_deref(),
             texture_coordinates.as_deref(), &indices, &materials, &ranges,
         ).map_err(|e| format!("10d GPU upload: {e}"))?;
         if profile.require_renderable_mesh && upload == 0 {

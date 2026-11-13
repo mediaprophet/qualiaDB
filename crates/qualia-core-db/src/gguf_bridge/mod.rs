@@ -17,14 +17,14 @@
 
 // pub(crate) so the concern submodules (gemm / ffn / attention / output / embedding / mc8_wasm …)
 // inherit these via `use super::*` — keeps the impl split a pure structural move.
-pub(crate) use crate::gguf_sharder::GgufTensorInfo;
 pub(crate) use crate::NQuin;
+pub(crate) use crate::gguf_sharder::GgufTensorInfo;
 use log;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use memmap2::MmapOptions;
 pub(crate) use std::sync::Arc;
 
-pub use crate::ggml_quants::{fetch_token_embedding, ExecutionError};
+pub use crate::ggml_quants::{ExecutionError, fetch_token_embedding};
 
 /// Dequantize a mmap embedding row into caller-supplied `out` (no heap allocation).
 pub fn dequantize_token_embedding_into(
@@ -118,9 +118,9 @@ impl QTensor {
 // GPU uniform-buffer param structs (EmbeddingGpuParams / GemmGpuParams / AttentionGpuParams /
 // ElemGpuParams + ELEM_OP_* codes) and the quant-support gates now live in dedicated files.
 mod gpu_params;
+mod quant_support;
 #[cfg(feature = "gpu-runtime")]
 mod submission;
-mod quant_support;
 pub(crate) use gpu_params::*;
 pub(crate) use quant_support::*;
 
@@ -133,8 +133,8 @@ pub const KV_ATTENTION_MASK_WORDS: usize = crate::compute_universe::KV_ATTENTION
 #[cfg(target_arch = "wasm32")]
 #[inline]
 pub(crate) fn mc8_bg_hash(parts: &[u64]) -> u64 {
-        etalon_inference::browser_prefill::encoding::bg_hash(parts)
-    }
+    etalon_inference::browser_prefill::encoding::bg_hash(parts)
+}
 
 /// MC8 Part 3s: WebGPU dynamic uniform offsets must be multiples of 256 bytes.
 #[cfg(target_arch = "wasm32")]
@@ -475,19 +475,19 @@ pub(crate) use pipeline_cache::*;
 mod async_dispatch;
 mod attention;
 mod attention_adapter;
-mod projection_adapter;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-mod projection_gpu_adapter;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-mod native_resident_adapter;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-mod native_resident_planning_adapter;
-#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
-mod native_attention_adapter;
 #[cfg(target_arch = "wasm32")]
 mod browser;
 #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
 mod cuda_decode_plan;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_attention_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_resident_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod native_resident_planning_adapter;
+mod projection_adapter;
+#[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod projection_gpu_adapter;
 /// Hard cap on the KV context window a decode plan may request. Declared here rather than in the
 /// `cuda`-gated plan module because the raw-decode harness and the mega-pass guard validate
 /// against it on every target, CUDA or not.
@@ -496,6 +496,8 @@ pub(crate) const MAX_CUDA_CONTEXT_WINDOW: u32 = 4096;
 mod embedding;
 mod ffn;
 mod forward;
+#[cfg(not(target_arch = "wasm32"))]
+mod gemma4;
 mod gemma4_qwen35;
 mod moe_ffn;
 mod moe_gguf;
@@ -966,7 +968,7 @@ pub use state::QTensorEngine;
 #[cfg(not(target_arch = "wasm32"))]
 mod provider;
 #[cfg(not(target_arch = "wasm32"))]
-pub use provider::{NativeProviderSnapshot, NativeProviderScope};
+pub use provider::{NativeProviderScope, NativeProviderSnapshot};
 mod model_bytes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qwen35;
@@ -989,12 +991,16 @@ thread_local! {
 /// clear status line first (phones will freeze briefly — that is correct).
 #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
 pub async fn initialize_webgpu_engine(model_data: std::sync::Arc<[u8]>) -> Result<(), String> {
-    let stamp = etalon_wasm::readback::begin_browser_model().map_err(|e| format!("Browser model context: {e:?}"))?;
-    initialize_webgpu_engine_with_stamp(model_data,stamp).await
+    let stamp = etalon_wasm::readback::begin_browser_model()
+        .map_err(|e| format!("Browser model context: {e:?}"))?;
+    initialize_webgpu_engine_with_stamp(model_data, stamp).await
 }
 
-#[cfg(all(target_arch="wasm32",feature="gpu-runtime"))]
-pub(crate) async fn initialize_webgpu_engine_with_stamp(model_data:std::sync::Arc<[u8]>,stamp:etalon_wasm::worker_steward::CompletionStamp)->Result<(),String> {
+#[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
+pub(crate) async fn initialize_webgpu_engine_with_stamp(
+    model_data: std::sync::Arc<[u8]>,
+    stamp: etalon_wasm::worker_steward::CompletionStamp,
+) -> Result<(), String> {
     use wasm_yield::{clear_init_status, phase, set_init_status};
 
     {
@@ -1033,9 +1039,11 @@ pub(crate) async fn initialize_webgpu_engine_with_stamp(model_data:std::sync::Ar
         engine.adopt_resident_mmap(model_data)?;
     }
     phase("Engine resident — ready").await;
-    let worker=etalon_wasm::readback::browser_worker();
-    let current=worker.lock().unwrap();
-    if current.completion_stamp()!=stamp || !current.is_ready() {return Err("Browser model initialization superseded or cancelled".into());}
+    let worker = etalon_wasm::readback::browser_worker();
+    let current = worker.lock().unwrap();
+    if current.completion_stamp() != stamp || !current.is_ready() {
+        return Err("Browser model initialization superseded or cancelled".into());
+    }
     WASM_ENGINE_INSTANCE.with(|g| *g.borrow_mut() = Some(engine));
     clear_init_status();
     Ok(())

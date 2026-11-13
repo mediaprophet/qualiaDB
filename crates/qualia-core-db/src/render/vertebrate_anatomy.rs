@@ -40,6 +40,10 @@ use crate::container_10d::procedural_synthesis::{
     PROCEDURAL_SYNTHESIS_HEADER_SIZE, PROCEDURAL_SYNTHESIS_SECTION_VERSION,
 };
 use crate::container_10d::provenance_section::ProvenanceSidecar;
+#[path = "vertebrate_skin_seal.rs"]
+mod vertebrate_skin_seal;
+#[path = "vertebrate_authored_skin.rs"]
+pub mod authored_skin;
 use crate::container_10d::section::{
     encode_container, parse_section_table, AlignmentTier, SectionInput, SectionTableError,
     SectionType,
@@ -174,8 +178,10 @@ impl VertebrateMyologyGroup {
 pub struct CompiledVertebrateAnatomy10d {
     /// Biomechanical archetype.
     pub archetype: FaunaBiomechanicalArchetype,
-    /// 18-joint skeletal rig and kinematics definition.
+    /// Baseline archetype controls. Use `authored_skin` when present for the sealed rig.
     pub rig: FaunaSkeletalRig10d,
+    /// Species-authored bind and appended bilateral forelimbs, matching sealed SKL1.
+    pub authored_skin: Option<authored_skin::AuthoredSkinBinding>,
     /// Fully sealed and CRC-32C verified `.10d` living container binary.
     pub container_bytes: Vec<u8>,
     /// Total vertices across all 3 layers (>= 1,800).
@@ -317,6 +323,7 @@ fn sample_countershade(
 /// bicondylar long bones, curved costal rib arches, fusiform muscle bellies with tendons,
 /// internal viscera, and countershaded integument envelopes.
 pub struct AnatomyMeshAccumulator {
+    pub authored_skin: Option<authored_skin::AuthoredSkinBinding>,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub colors: Vec<[f32; 4]>,
@@ -332,6 +339,7 @@ type MeshAccumulator = AnatomyMeshAccumulator;
 impl AnatomyMeshAccumulator {
     pub fn new() -> Self {
         Self {
+            authored_skin: None,
             positions: Vec::with_capacity(6400),
             normals: Vec::with_capacity(6400),
             colors: Vec::with_capacity(6400),
@@ -359,6 +367,26 @@ impl AnatomyMeshAccumulator {
         let n_st = stations.len();
         let stride = (r_segs + 1) as u32;
         let base_idx = self.positions.len() as u32;
+
+        // Keep the historical first ring orientation, then transport it along
+        // the path. Re-selecting an up vector at each station can rotate a
+        // ring by almost 180 degrees at a bent knee and fold the connecting
+        // triangles, even though their indices remain connected.
+        use crate::specialized_libs::computational_geometry::{
+            compute_bishop_frames, math_geometry::AffineFrame3, Point3,
+        };
+        let path: Vec<Point3> = stations.iter().map(|s| Point3::new(
+            s.center[0] as f64, s.center[1] as f64, s.center[2] as f64,
+        )).collect();
+        let d = [path[1].x-path[0].x, path[1].y-path[0].y, path[1].z-path[0].z];
+        let len = (d[0]*d[0]+d[1]*d[1]+d[2]*d[2]).sqrt();
+        let t = if len > 1e-12 { [d[0]/len,d[1]/len,d[2]/len] } else { [0.0,0.0,0.0] };
+        let up = if t[1].abs() < 0.92 { [0.0,1.0,0.0] } else { [0.0,0.0,if t[1]>=0.0 {-1.0} else {1.0}] };
+        let initial = Point3::new(up[1]*t[2]-up[2]*t[1],up[2]*t[0]-up[0]*t[2],up[0]*t[1]-up[1]*t[0]);
+        let zero = Point3::new(0.0,0.0,0.0);
+        let mut frames = vec![AffineFrame3 { origin: zero, e0: zero, e1: zero, e2: zero }; n_st];
+        // Preserve the prior behaviour for invalid/degenerate legacy paths.
+        let transported = compute_bishop_frames(&path, Some(initial), &mut frames).is_ok();
 
         for (si, st) in stations.iter().enumerate() {
             let prev = if si > 0 {
@@ -392,9 +420,15 @@ impl AnatomyMeshAccumulator {
             uy /= ulen;
             uz /= ulen;
 
-            let vx = ty * uz - tz * uy;
-            let vy = tz * ux - tx * uz;
-            let vz = tx * uy - ty * ux;
+            let (vx, vy, vz) = if transported {
+                let f = &frames[si];
+                ux = f.e0.x as f32;
+                uy = f.e0.y as f32;
+                uz = f.e0.z as f32;
+                (f.e1.x as f32, f.e1.y as f32, f.e1.z as f32)
+            } else {
+                (ty * uz - tz * uy, tz * ux - tx * uz, tx * uy - ty * ux)
+            };
 
             let rx = st.radii[0].max(1e-4);
             let ry = st.radii[1].max(1e-4);
@@ -2939,8 +2973,8 @@ pub fn build_scale5_vertebrate_anatomy_10d(
 
 /// Finalizes an [`AnatomyMeshAccumulator`] built from either a portable model-family scaffold
 /// or a baseline archetype, applies zero-heap layer peeling & exploded-view displacement,
-/// and seals the 9-section `.10d` Living Container (`MAT4`, `UV01`, `FNRM`, `SRD1`, `PROC1`,
-/// `EONT1`, `MRP1`, `PROV`) with whole-file CRC-32C verification.
+/// and seals the `.10d` Living Container (`MAT4`, `UV01`, `FNRM`, `SRD1`, `PROC1`,
+/// `EONT1`, `MRP1`, `PROV`, `SKL1`) with whole-file CRC-32C verification.
 #[allow(clippy::too_many_arguments)]
 pub fn finalize_and_seal_vertebrate_anatomy_10d(
     archetype: FaunaBiomechanicalArchetype,
@@ -2955,7 +2989,20 @@ pub fn finalize_and_seal_vertebrate_anatomy_10d(
     integument_vis_01: f32,
     explode_layer_01: f32,
 ) -> CompiledVertebrateAnatomy10d {
-    let rig = FaunaSkeletalRig10d::new(archetype);
+    let mut rig = FaunaSkeletalRig10d::new(archetype);
+    if let Some(binding) = &acc.authored_skin {
+        // Keep the legacy control-rig view consistent for its original eighteen joints.
+        // The complete exported binding also carries the appended right forelimb.
+        for i in 0..rig.joints.len() {
+            let old_rest_inverse = rig.rest_pose[i].conjugate();
+            let rest = binding.joints[i].rest_local;
+            for pose in &mut rig.clip_poses {
+                pose[i] = rest.mul(&old_rest_inverse.mul(&pose[i])).normalize();
+            }
+            rig.rest_pose[i] = rest;
+            rig.joints[i] = binding.joints[i];
+        }
+    }
     let (base_body_len, hip_height) = archetype.default_dimensions();
     let morphology = ArchetypeMorphology::for_archetype(archetype);
     let body_len = base_body_len * morphology.trunk;
@@ -3004,7 +3051,7 @@ pub fn finalize_and_seal_vertebrate_anatomy_10d(
 
     // Merge computed alpha into RGBA colors
     for i in 0..total_v {
-        acc.colors[i][3] = eval_alphas[i];
+        acc.colors[i][3] *= eval_alphas[i];
     }
 
     // Compute Mesh AABB
@@ -3051,6 +3098,9 @@ pub fn finalize_and_seal_vertebrate_anatomy_10d(
     let mut sorted_materials = materials.clone();
     sorted_materials.sort_by_key(|m| m.id);
     sorted_materials.dedup_by_key(|m| m.id);
+    super::vertebrate_layer_materials::apply_layer_opacity(
+        &mut sorted_materials, &submesh_ranges, &acc.indices, &acc.colors,
+    );
     bytes = attach_material_section(
         &bytes,
         &sorted_materials,
@@ -3280,9 +3330,13 @@ pub fn finalize_and_seal_vertebrate_anatomy_10d(
     bytes = attach_morph_section(&bytes, &morph_header, &morph_deltas)
         .expect("attach_morph_section failed");
 
+    bytes = vertebrate_skin_seal::seal_skin(&bytes, &rig, acc.authored_skin.as_ref(), &acc.joint_indices, &acc.joint_weights)
+        .expect("attach skeletal section failed");
+
     CompiledVertebrateAnatomy10d {
         archetype,
         rig,
+        authored_skin: acc.authored_skin,
         container_bytes: bytes,
         vertex_count: total_v,
         triangle_count: acc.indices.len() / 3,
@@ -3294,7 +3348,7 @@ pub fn finalize_and_seal_vertebrate_anatomy_10d(
         colors: acc.colors,
         uvs: acc.uvs,
         indices: acc.indices,
-        materials,
+        materials: sorted_materials,
         submesh_ranges,
         skin_joint_indices: acc.joint_indices,
         skin_weights: acc.joint_weights,
@@ -3445,6 +3499,28 @@ mod tests {
     use super::*;
     use crate::container_10d::integrity::verify_whole_file_crc32c;
 
+    #[test]
+    fn wallaby_knee_loft_frames_do_not_flip() {
+        let centers = [
+            [0.068, 0.335, -0.115], [0.078, 0.278, -0.068],
+            [0.078, 0.222, -0.025], [0.072, 0.152, -0.082],
+            [0.066, 0.086, -0.136],
+        ];
+        let rings: Vec<_> = centers.into_iter().map(|center| AnatomicalLoftRing {
+            center, radii: [0.03, 0.03], dorsal_color: [1.0; 4],
+            flank_color: [1.0; 4], ventral_color: [1.0; 4],
+            primary_joint: 0, secondary_joint: 1, primary_weight: 0.8,
+        }).collect();
+        let mut mesh = AnatomyMeshAccumulator::new();
+        mesh.push_countershaded_loft(&rings, 32, ZoologicalAnatomicalLayer::ExternalIntegument, true);
+        for i in 0..rings.len()-1 {
+            let a = mesh.normals[i*33];
+            let b = mesh.normals[(i+1)*33];
+            let dot = a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+            assert!(dot > 0.5, "adjacent knee ring frames flipped: {i}: {dot}");
+        }
+    }
+
     const ALL_13_ARCHETYPES: [FaunaBiomechanicalArchetype; 13] = [
         FaunaBiomechanicalArchetype::MacropodSaltatorial,
         FaunaBiomechanicalArchetype::VombatidFossorial,
@@ -3508,6 +3584,14 @@ mod tests {
 
             // 5. Verify non-empty .10d container bytes
             assert!(!compiled.container_bytes.is_empty());
+            let skin = crate::container_10d::skeletal_container::read_skeletal_section(&compiled.container_bytes)
+                .expect("sealed anatomy skin");
+            assert_eq!(skin.counts().vertices, compiled.vertex_count);
+            for i in 0..compiled.vertex_count {
+                let influence = skin.skin(i).expect("vertex skin");
+                assert_eq!(influence.joints, compiled.skin_joint_indices[i]);
+                assert_eq!(influence.weights, compiled.skin_weights[i]);
+            }
         }
     }
 
@@ -3538,7 +3622,11 @@ mod tests {
         );
 
         // Verify tendon material has collagen PBR properties
-        let tendon_mat = &compiled.materials[9];
+        let tendon_mat = compiled
+            .materials
+            .iter()
+            .find(|material| material.id == achilles_range.material_id)
+            .expect("Achilles submesh material");
         assert!(
             tendon_mat.roughness < 0.35,
             "Tendon should have smooth glistening collagen sheen"

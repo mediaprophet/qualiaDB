@@ -1,5 +1,7 @@
 # GRM3 developmental M64 georaster profile — revision 1
 
+For the base header, record modes and repaired full-hash profile, see the [M64 standard](m64-matter-container.md). GRM3 retains its separate raw-only developmental contract.
+
 Status: proposed implementation contract approved for staged source development by
 the integration supervisor on 2026-10-25. Not a released standard or scientific
 qualification. FND-02/FND-04 remain open. Existing v1/v2 and `M64_VERSION=2`

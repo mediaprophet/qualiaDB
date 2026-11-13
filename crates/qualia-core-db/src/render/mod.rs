@@ -218,6 +218,8 @@ pub mod portal_load_10d;
 pub mod portal_load_textures;
 /// CPU decode for QualiaPortal `load_emf` (sibling `Q42EMF64` dense unpack + AcousticPlane σ).
 pub mod portal_load_emf;
+/// Bounded field ownership and GPU adoption/recovery state, testable natively.
+pub mod portal_emf_state;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_wasm;
 /// Borrowed source-bound pose contract and cold canonical model admission.
@@ -227,4 +229,5 @@ pub mod source_frame;
 pub mod botanical_anatomy;
 /// Scale-5 Comparative Vertebrate 3-Layer `.10d` Anatomy (Skeletal / Muscular / Integument).
 pub mod vertebrate_anatomy;
+mod vertebrate_layer_materials;
 pub use vertebrate_anatomy as zoological_anatomy;

@@ -33,11 +33,11 @@ pub struct EmfChunkDirectoryEntry {
     pub cell_count: u32,
     /// 0x18..0x1A: Bitmask of spectral bands present in this chunk
     pub spectral_band_mask: u16,
-    /// 0x1A..0x1C: Chunk flags (e.g. bit 1 = Bao verified)
+    /// 0x1A..0x1C: Chunk flags (bit 1 = defective legacy prefix; bit 2 = full BLAKE3 trailer)
     pub flags: u16,
     /// 0x1C..0x20: Temporal slice index (4D x,y,z,t support)
     pub time_slice_index: u32,
-    /// 0x20..0x30: BLAKE3-Bao verified outboard hash tree digest prefix (16 bytes)
+    /// 0x20..0x30: Legacy truncated digest field (zero in v2; full digest is in the trailer)
     pub bao_hash_prefix: [u8; 16],
     /// 0x30..0x3C: Reserved for expansion (12 bytes)
     pub reserved: [u8; 12],

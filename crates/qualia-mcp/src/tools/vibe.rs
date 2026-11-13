@@ -183,6 +183,15 @@ pub fn vibe_invoke(raw_args: &[u8]) -> Result<String, McpSystemError> {
 
     let empty_obj = json!({});
     let args_val = v.get("args").unwrap_or(&empty_obj);
+    if id.starts_with("hypermedia.") || id == "qualia.species.assemble_corpus" {
+        return Ok(json!({
+            "status": "error", "id": id,
+            "host": "qualia.poet.snapshot",
+            "error": {"code": "wrong_execution_host", "message": "Asset production operations execute in Synth ProductionSession. Use synth_operations to discover them and synth_produce_present with capability.invoke inside source. They are not bound in the generic Poet snapshot."},
+            "production_tool": "synth_produce_present",
+            "handle_lifetime": "one production source evaluation; export encoded resources before the session ends"
+        }).to_string());
+    }
     let vibe_args = json_to_vibe(args_val);
 
     let mut snap = qualia_core_db::poet_host::PoetSnapshot::live();
@@ -191,6 +200,7 @@ pub fn vibe_invoke(raw_args: &[u8]) -> Result<String, McpSystemError> {
     match snap.invoke_id(id, vibe_args) {
         Ok(val) => Ok(json!({
             "status": "ok",
+            "host": "qualia.poet.snapshot",
             "id": id,
             "seam": seam,
             "result": vibe_to_json(&val),
@@ -282,6 +292,9 @@ pub fn vibe_catalog(raw_args: &[u8]) -> Result<String, McpSystemError> {
     Ok(json!({
         "status": "ok",
         "total_bound": total_bound,
+        "host": "qualia.poet.snapshot",
+        "handle_lifetime": "one call",
+        "asset_production": {"host": "synth.production", "catalog_tool": "synth_operations", "execute_tool": "synth_produce_present", "note": "Hypermedia production IDs use a separate AssetHost, not this bound Poet catalog."},
         "matches": matches,
     })
     .to_string())

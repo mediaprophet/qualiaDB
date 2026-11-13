@@ -1,103 +1,204 @@
-# M64 Matter-64 format and checked SDK companion
+# M64 matter container standard
 
+**Revision:** 1, 12 November 2026. **Status:** Internal implementation-aligned standard. Default writer version: 2. Checked readers support versions 1 and 2 and the separately constrained developmental GRM3 version 3. See the [format overview](file-formats-overview.md) for terminology and security boundaries.
 
+## 1. Purpose and identity
 
-**Status:** source-grounded draft; not a new canonical standard. Installed Core/geospatial APIs are the current subject. Selected native conformance passed on Windows x86_64 little-endian: 7 direct SDK cases within a 22-case aggregate (7 M64, 9 typed-payload and 6 consumer cases), with zero failures. The execution is recorded in [the Round 2 log](../../../../ecopunk/docs/qa/implementation-2026-10-25/batch-6/rounds/round2/native-conformance.log). This companion describes the checked reader's actual structural scope and the geospatial writer's current raw output; it does not claim authentication, scientific validity, Bao verification, streaming, or a passed qualification gate.
+M64 stores fixed 64-byte matter records, organized into independently addressed chunks. Point samples, holographic matter, strata, phase junctions and shells are different record modes; a chunk has one mode. This is not the EMF electromagnetic-cell format. Canonical magic is the four bytes `6d 36 34 00` (`m64` followed by NUL). The [E64 compatibility spelling](e64-compatibility-format.md), `65 36 34 00`, is accepted for v1/v2 only. Extension-based guessing MUST NOT replace magic/version checks.
 
+All scalar fields below use little-endian encoding. Directory offsets are absolute file offsets. Fixed-width records do not imply that arbitrary source bytes may safely be cast to native structs: alignment, endianness, range validation and lifetime remain obligations.
 
+## 2. Header: 64 bytes
 
-## Wire family
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 4 | bytes | Canonical magic |
+| 4 | 4 | u32 | Version |
+| 8 | 8 | u64 | Header size: 64 for v1/v2; 192 for GRM3 |
+| 16 | 8 | u64 | Exact total file length |
+| 24 | 8 | f32[2] | Spatial origin: latitude, longitude |
+| 32 | 8 | f32[2] | Elevation datum: base altitude in metres, scale |
+| 40 | 8 | u64 | Directory offset |
+| 48 | 8 | u64 | Number of 64-byte directory rows |
+| 56 | 4 | u32 | Header CRC-32C |
+| 60 | 4 | u32 | Flags |
 
+The current header CRC covers **the concatenation of bytes [0,56) and [60,64)**. It is not the CRC of a 64-byte header with a zero checksum. Historical CRCs covering only [0,56) are accepted for compatibility; that omission leaves flags outside their checksum and is a legacy weakness, not the required writer rule.
 
+Recognized flags are bit 4 (`0x10`, 16³ brick layout) and bit 5 (`0x20`, LRM3 local reference frame present). Other bits are rejected by the checked profile. LRM3 starts at `header_size` and occupies 128 bytes before the directory. It does not change the v1/v2 header-size field to 192. The GRM3 extended header has its own rules and requires flags zero.
 
-- Canonical Matter-64 magic is `m64\0`; `e64\0` is the legacy magic alias for early `.e64` prototypes. Both retain the same M64 wire interpretation and header API (`E64Header` remains an exact alias of `M64Header`). This alias is specific to the M64 contract.
+## 3. Directory: 64 bytes per chunk
 
-- `M64_VERSION` is 2; `M64Reader::parse` accepts versions 1 and 2. The current geospatial raster writer still emits version 1. Do not infer the emitted version from the current-version constant.
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 16 | bytes | Chunk UUID |
+| 16 | 8 | u64 | Hilbert key |
+| 24 | 8 | u64 | Payload offset |
+| 32 | 4 | u32 | Stored byte length, including any trailer |
+| 36 | 4 | u32 | Record count, excluding the trailer |
+| 40 | 4 | u32 | Spatial reference identifier |
+| 44 | 2 | u16 | LUT epoch |
+| 46 | 1 | u8 | Record mode |
+| 47 | 1 | u8 | Codec identifier |
+| 48 | 12 | bytes | Defective historical digest prefix; zero in current raw/full profiles |
+| 60 | 4 | u32 | CRC-32C of row bytes [0,60) |
 
-- The wire is little-endian. The 64-byte header is followed by 64-byte directory entries and 64-byte records. Directory and payload starts must be 64-byte aligned.
+Mode identifiers are 0 point, 1 holo, 2 strata, 3 phase junction and 4 shell. A mode identifier is not a schema inference hint: an unsupported mode MUST be rejected before record interpretation.
 
+| Codec | Encoding and acceptance |
+|---:|---|
+| 0 | Raw records, exactly `64 × count` bytes. With a zero prefix, accepted without cryptographic chunk assurance. A nonzero prefix requires explicit legacy migration admission. |
+| 1 | Reserved/declared LZ4 path; the checked reader does not implement it and rejects it. |
+| 2 | Defective legacy prefix-verified records, exactly `64 × count`. Migration-only. |
+| 3 | Current full BLAKE3 records: exactly `64 × count + 64`; prefix bytes MUST be zero. |
 
+For codec 3, the final 64 bytes contain the **complete 32-byte default BLAKE3 digest over only the record bytes**, followed by 32 zero bytes. All 32 digest bytes and all 32 padding bytes are checked. Record CRC fields, where present, are part of the hashed record bytes. The trailer is excluded from record iteration and GPU upload. No compression or Bao proof tree is implied by codec 3.
 
-## Header and directory
+## 4. Record modes
 
+Every table below spans exactly 64 bytes. The generic container reader does not certify that encoded values describe physically plausible matter. Applications must validate finite values, domain constraints, referenced vertices/entities and applicable units before simulation.
 
+### 4.1 Point record (mode 0)
 
-The 64-byte `M64Header` contains, in order: magic `[0..4]`; version `[4..8]`; header size `[8..16]`; total file size `[16..24]`; latitude/longitude origin as `f32` `[24..32]`; base elevation metres and vertical scale as `f32` `[32..40]`; chunk-directory offset `[40..48]`; chunk count `[48..56]`; header CRC-32C `[56..60]`; and container flags `[60..64]`. The header CRC covers bytes `[0..56]`.
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 12 | f32[3] | Local x/y offsets in metres; z in metres relative to datum |
+| 12 | 4 | f32 | Intensity |
+| 16 | 6 | i16[3] | Quantized normal |
+| 22 | 1 | u8 | ASPRS LiDAR classification |
+| 23 | 1 | u8 | Return information |
+| 24 | 8 | u8[8] | Spectral channels |
+| 32 | 4 | u32 | Packed density, hardness, hydraulic porosity and flags bytes |
+| 36 | 4 | u32 | Timestamp, epoch seconds |
+| 40 | 8 | u64 | FNV-based DID reference |
+| 48 | 16 | bytes | Reserved |
 
+Normal packing clamps to [-1,1] and scales by 32767; unpacking divides by 32767. A DID hash is a compact semantic identifier, not a cryptographic signature or a replacement for a full digest. Point records have no individual CRC; codec 3 supplies chunk integrity.
 
+### 4.2 Holo record (mode 1)
 
-Each 64-byte `M64ChunkDirectoryEntry` carries chunk identifier bytes, Hilbert key, payload offset/length, record count, SRID/geodetic code, LUT epoch, record mode, codec flag, Bao-root prefix, and CRC-32C over bytes `[0..60]`. CRCs detect accidental corruption; they do not authenticate an issuer, content, or Bao proof.
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 6 | binary16[3] | Origin |
+| 6 | 1 | u8 | Metric class: 0 Euclidean, 1 cyclic, 2 hyperbolic |
+| 7 | 1 | u8 | Semantic class |
+| 8 | 2 | i16 | Parent relationship |
+| 10 | 4 | binary16[2] | Scale bounds |
+| 14 | 2 | i16 | Spin |
+| 16 | 6 | binary16[3] | Angular frequency vector |
+| 22 | 2 | binary16 | Damping |
+| 24 | 2 | binary16 | Mass |
+| 26 | 2 | u16 | Phase mask |
+| 28 | 4 | u32 | Hamiltonian reference |
+| 32 | 12 | i8[12] | Harmonic coefficients |
+| 44 | 4 | i8[4] | Tropism |
+| 48 | 6 | u8[6] | Spectral coefficients |
+| 54 | 2 | u8[2] | Roughness |
+| 56 | 8 | u64 | DID reference |
 
+Binary16 fields occupy u16 storage, with half-float interpretation. Holo has no per-record CRC. Semantic labels and compact coefficients require a shared interpretation profile; they do not establish a universal material ontology by themselves.
 
+### 4.3 Strata record (mode 2)
 
-## Checked reader contract
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 4 | i32 | Surface elevation, mm |
+| 4 | 2 | u16 | Water-table depth, mm |
+| 6 | 2 | u16 | Fluid depth, mm |
+| 8 | 4 | i16[2] | Horizontal velocity, mm/s |
+| 12 | 2 | u16 | Sediment concentration, ppm |
+| 14 | 2 | u16 | Roughness code (millimetre convention in this record) |
+| 16 | 12 | u16[6] | Layer thicknesses, mm |
+| 28 | 6 | u8[6] | Layer material/LUT indices |
+| 34 | 6 | u8[6] | Moisture fractions, 0–255 |
+| 40 | 6 | u8[6] | Compaction codes |
+| 46 | 6 | u8[6] | Artefact codes |
+| 52 | 2 | u16 | Shear strength, kPa |
+| 54 | 2 | u16 | Repose angle, tenths of a degree |
+| 56 | 2 | u16 | Dielectric coefficient × 100 |
+| 58 | 2 | u16 | Acoustic speed, m/s |
+| 60 | 4 | u32 | CRC-32C over [0,60) |
 
+Do not reinterpret the roughness code as a universally dimensionless Manning coefficient. Material indices and LUT epochs require an agreed bank. The base header defines no automatic embedded LUT section, length or offset. The banked LUT library is a consumer-side representation, not permission to insert unannounced bytes into the container.
 
+### 4.4 Phase junction (mode 3)
 
-`M64Reader::parse(bytes, M64ReadLimits, scratch)` requires explicit `max_file_bytes`, `max_chunks`, and `max_records` limits; there is no unlimited default. Caller-owned `M64PayloadInterval` scratch must have one entry per chunk. Parsing is little-endian only, uses checked arithmetic, and rejects unsupported flags/modes/codecs, size mismatch, malformed or out-of-range directory entries, misalignment, metadata overlap, payload overlap, and record-count/byte-length mismatch. Only raw codec flag 0 is admitted. Metadata and limits are checked before record CRC scanning; overlap sorting is iterative.
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 8 | u64 | DID reference |
+| 8 | 8 | u64 | Lamport clock |
+| 16 | 12 | i32[3] | Anchor, mm |
+| 28 | 4 | u32 | Branch identifier |
+| 32 | 4 | u32 | Event flags |
+| 36 | 4 | f32 | Action value; semantics depend on event profile |
+| 40 | 16 | f32[4] | Stress values |
+| 56 | 2 | u16 | Radius, mm |
+| 58 | 1 | u8 | Material identifier |
+| 59 | 1 | u8 | Delay in ticks |
+| 60 | 4 | u32 | CRC-32C over [0,60) |
 
+Flags 0–4 designate excavation, collapse, flood, cartoon and speculative events. The action field is not universally seconds: consumers also use quantities such as a volume deficit. Lamport clocks order events; they do not authenticate them or supply physical time.
 
+### 4.5 Shell record (mode 4)
 
-The reader accepts an unaligned input base by copying POD metadata with unaligned reads. `M64Chunk::payload()` and `record_bytes()` return borrowed bytes; they do not promise an aligned typed slice. Caller scratch may change on refusal. The view is immutable and zero-copy only for payload bytes.
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 4 | u32 | Face identifier |
+| 4 | 12 | u32[3] | Vertex references |
+| 16 | 12 | u32[3] | Edge references |
+| 28 | 12 | f32[3] | Normal |
+| 40 | 12 | f32[3] | Centroid |
+| 52 | 4 | f32 | Crease value |
+| 56 | 4 | u32 | Flags |
+| 60 | 4 | u32 | CRC-32C over [0,60) |
 
+Reference consistency and topology validity require the shell consumer; CRC success alone establishes neither.
 
+## 5. Spatial layout and local frames
 
-| Record mode | Record CRC behavior |
+The brick profile uses 16 × 16 × 16 records, 4096 records per brick. Local Morton order interleaves the four bits of x, y and z: x at bit `3i`, y at `3i+1`, z at `3i+2`. Macro brick order uses a Hilbert key. The helpers support orders through 21; their masking/clamping behavior is not a serialized declaration of coordinate range. The base header does not carry a Hilbert order. Producers and consumers must agree on that spatial profile.
 
-|---|---|
+A full codec-3 brick occupies 262,208 bytes: 262,144 record bytes plus a 64-byte trailer. A legal small chunk need not be a full brick; applications imposing full occupancy must check that separately.
 
-| `M64_MODE_POINT` (`0x00`) | No embedded record CRC in the current layout; counted but not certified by `M64Verification`. |
+LRM3 is a 128-byte block:
 
-| `M64_MODE_HOLO` (`0x01`) | No embedded record CRC in the current layout; counted but not certified by `M64Verification`. |
+| Offset | Bytes | Type | Meaning |
+|---:|---:|---|---|
+| 0 | 4 | bytes | `LRM3` |
+| 4 | 2 | u16 | Version 1 |
+| 6 | 1 | u8 | Tier |
+| 7 | 1 | u8 | Frame: 0 Cartesian, 1 cylindrical, 2 spherical |
+| 8 | 8 | u64 | DID reference |
+| 16 | 24 | f64[3] | Origin |
+| 40 | 16 | f32[4] | Quaternion x, y, z, w |
+| 56 | 12 | f32[3] | Scale in micrometres |
+| 68 | 12 | i32[3] | Minimum bounds, micrometres |
+| 80 | 12 | i32[3] | Maximum bounds, micrometres |
+| 92 | 32 | bytes | Reserved |
+| 124 | 4 | u32 | CRC-32C over [0,124) |
 
-| `M64_MODE_STRATA` (`0x02`) | Each fixed 64-byte record validates CRC-32C over bytes `[0..60]`. |
+The Cartesian helper scales by `1e-6`, rotates and translates. Advertising cylindrical or spherical frame codes does not establish equivalent transform support in that helper. Validate quaternion, scale, bounds and frame support at the consuming boundary.
 
-| `M64_MODE_PHASE_JUNCTURE` (`0x03`) | Each fixed 64-byte record validates CRC-32C over bytes `[0..60]`. |
+## 6. GRM3 georaster v3
 
+The [GRM3 companion](m64-georaster-v3.md) specifies the 128-byte metadata block at file offsets 64–191. It is developmental, not a promise that released v1/v2 readers accept v3. It uses canonical M64 magic, header size and directory offset 192, flags zero and **raw codec 0 strata chunks**. Codec 3 MUST NOT be substituted without a separately specified GRM3 revision.
 
+Authoritative georeferencing uses f64 latitude/longitude, i32 origin elevation in millimetres and explicit cell size, row direction, cell-center anchor, nodata and padding policy. Header f32 origin fields are summaries. Elevation records are absolute values; do not add the header base a second time. Chunks are 64 × 64 row-major cells (4096 records). Repeat-nearest edge padding is padding, not a new observation. A nodata sentinel is distinct from an absent chunk. Legacy raster emission loses some of this metadata; migration cannot reconstruct missing cell size or precision from the old bytes alone.
 
-`M64Verification` reports counts, including records without checksums. A successful parse proves only the structural checks and listed checksums. It does not validate domain/scientific meaning, issuer authority, signatures, or a Bao tree.
+## 7. Checked admission and consumer obligations
 
+The checked reader bounds file bytes, directory rows and total records using explicit limits, validates exact declared file length and supported version/header/flags, verifies header and directory CRCs, and uses caller-provided interval scratch to reject payload overlap. Offset arithmetic and record sizes are checked before slicing. Payloads cannot overlap required metadata. Each chunk must have a nonzero record count. Record CRCs are verified for strata, phase junction and shell; point and holo have no such field.
 
+Its verification report distinguishes `full_hash_chunks`, `legacy_prefix_chunks` and records without individual checksums. `records_without_checksum` does **not** mean a codec-3 point chunk lacks integrity: its full chunk digest still applies. A producer claiming the full-hash profile MUST require every relevant chunk to be codec 3 and every verification result to report the expected full-hash count, with no legacy prefix chunks.
 
-## Raw geospatial writer
+Default parsing rejects codec 2 and raw chunks carrying nonzero historical prefixes. `parse_legacy_with_limits` is an explicit migration API, not a fallback after a digest failure. Raw codec 0 with zero prefix remains valid but supplies only the applicable CRC checks. UUID uniqueness, directory sort order, scientific validity, LUT availability and referenced topology require application checks where those properties matter.
 
+## 8. Migration and worked layout
 
+For each admitted historical chunk, obtain the actual record bytes, validate available CRCs and independent provenance, calculate a new full digest, append its 64-byte trailer, select codec 3, zero the 12-byte prefix and rebuild offsets, stored lengths, row CRCs, total length and header CRC. Preserve record values and mode. Revalidate with the default checked reader. A successful prefix comparison does not prove the original bytes were authentic; newly hashing them cannot retroactively provide that provenance.
 
-`qualia_geospatial::compile_raster_to_m64` delegates to `compile_raster_to_m64_with_codec` with `UncompressedMmap`. Other codec variants return `UnsupportedCompression`; no compressed or Bao output is produced. The writer requires a little-endian host, nonzero dimensions, exactly `width × height` `i32` elevation samples in millimetres, and a caller buffer large enough for the computed result. Arithmetic overflow and short buffers return errors.
+A minimal illustrative v2 one-record full-hash layout is header [0,64), one directory row [64,128), record [128,192), digest [192,224), zero trailer padding [224,256). The directory records offset 128, stored length 128, count 1, codec 3. Header total length is 256. These positions describe a valid simple layout, not a requirement that every writer place directory before all payloads.
 
+## 9. Implementation authority
 
-
-The current output uses `m64\0`, version 1, record mode `0x02`, and codec flag 0. It partitions into 64×64-cell chunks, writes row-major chunks with Hilbert keys, and repeats the nearest input edge sample to fill partial edge chunks. Each output strata record stores `surface_elevation_mm` and has a record CRC. The frame SRID is retained; geographic origin and elevation datum values are narrowed to `f32`. Although `ElevationRaster` has `cell_size_mm` and `GeodeticFrame` has a vertical-datum declaration, this writer does not serialize them as a separate horizontal cell resolution or vertical-datum identifier. `ElevationRaster` has no separate nodata mask, so this API does not establish nodata semantics. These limits and conversions are part of the writer contract and must be represented honestly by callers.
-
-
-
-## Source references
-
-
-
-- Core layout and aliases: `C:/github/qualiaDB/crates/qualia-core-db/src/q42/m64_matter/layout.rs`.
-
-- Checked reader and structural checks: `C:/github/qualiaDB/crates/qualia-core-db/src/q42/m64_matter/checked_reader/{mod.rs,validation.rs,intervals.rs}`.
-
-- Header, directory and record layouts: `C:/github/qualiaDB/crates/qualia-core-db/src/q42/m64_matter/{chunk_directory.rs,point_record.rs,holo_record.rs,strata_record.rs,phase_juncture.rs}`.
-
-- Raw writer: `C:/github/qualiaDB/crates/qualia-geospatial/src/geotiff.rs` (`compile_raster_to_m64`, `compile_raster_to_m64_with_codec`).
-
-- Direct SDK fixture source: `C:/github/qualiaDB/crates/qualia-core-db/tests/m64_container_sdk.rs`; its seven direct cases passed in the recorded native run; this does not qualify every producer/consumer or target.
-
-
-
-## Subsequent developmental georaster profile
-
-An explicit opt-in M64 version-3 GRM3 georaster profile is described in
-[its separate developmental contract](m64-georaster-v3.md). The current default
-`M64_VERSION` remains 2 and the legacy raster writer still emits its unchanged
-version-1 bytes. The newer checked reader additionally admits the complete v3
-profile under its separate structural/metadata checks. Earlier readers refuse
-v3; the original Round 2 execution above qualified only its recorded v1/v2 scope.
-The new profile retains f64 origin, integer source elevations, cell spacing,
-datum/epoch declarations, source extent and explicit padding/nodata policy.
-It does not perform a CRS/datum transformation or validate identifier authority.
-See the source-pinned Round 3 results for execution status; this addition alone
-does not qualify the profile or establish production readiness.
+The [M64 module](../../../crates/qualia-core-db/src/q42/m64_matter/mod.rs), [layout](../../../crates/qualia-core-db/src/q42/m64_matter/layout.rs), [directory](../../../crates/qualia-core-db/src/q42/m64_matter/chunk_directory.rs), [checked reader](../../../crates/qualia-core-db/src/q42/m64_matter/checked_reader.rs), record modules in the same directory, [LRM3](../../../crates/qualia-core-db/src/q42/m64_matter/lrm3.rs), and [shared full-hash codec](../../../crates/qualia-core-db/src/q42/chunk_integrity/mod.rs) define the inspected implementation. Links are resolved within the repository. See [conformance](file-format-conformance.md) for executed checks and remaining limitations.

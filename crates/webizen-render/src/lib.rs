@@ -27,6 +27,10 @@ pub mod volumetric;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 mod volumetric_native_preview;
 #[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+mod volumetric_shot;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub use volumetric_shot::{NativeShot, ShotProbe};
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
 pub use volumetric_native_preview::{ReviewGeometry, ReviewView, REVIEW_VIEWS};
 #[cfg(feature = "qualia")]
 pub mod volumetric_hmc;

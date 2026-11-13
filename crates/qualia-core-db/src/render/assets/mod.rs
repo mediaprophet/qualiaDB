@@ -419,6 +419,7 @@ const CHUNK_BIN: u32 = 0x004E_4942; // "BIN\\0"
 
 #[path = "glb.rs"]
 mod glb;
+mod glb_static_scene;
 #[path = "glb_materials.rs"]
 mod glb_materials;
 #[path = "glb_texture_transform.rs"]
@@ -426,7 +427,7 @@ mod glb_texture_transform;
 #[path = "tangents.rs"]
 mod tangents;
 use glb::looks_like_glb;
-pub use glb::{import_glb, import_glb_with_normals};
+pub use glb::{import_glb, import_glb_with_normals, import_glb_static_scene};
 #[path = "glb_skins_anims.rs"]
 pub mod glb_skins_anims;
 pub use glb_skins_anims::{

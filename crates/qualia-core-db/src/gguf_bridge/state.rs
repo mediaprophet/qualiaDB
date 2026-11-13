@@ -11,6 +11,15 @@ pub struct QTensorEngine {
     /// Architecture-owned Qwen3.5 state; generic Llama execution never admits it.
     #[cfg(not(target_arch = "wasm32"))]
     pub(super) qwen35_ftw: Option<qwen35::ftw::session::Session>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) qwen35_gguf: Option<qwen35::gguf::Session>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) qwen35_gguf_required: bool,
+    /// Checked token-aware Gemma graph owns its per-layer KV and PLE state.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) gemma4: Option<gemma4::Session>,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) gemma4_required: bool,
     /// Browser WASM keeps a private device; native reuses `gpu_context::shared_gpu()`.
     #[cfg(all(target_arch = "wasm32", feature = "gpu-runtime"))]
     pub(super) device: etalon::Device,

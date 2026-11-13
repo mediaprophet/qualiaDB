@@ -30,7 +30,10 @@
 //! catches a flipped bit in the payload. The whole-file CRC-32C (P0.3)
 //! catches header corruption.
 
-use bytemuck::{bytes_of, from_bytes, Pod, Zeroable};
+mod view;
+pub use view::MeshSectionView;
+
+use bytemuck::{bytes_of, Pod, Zeroable};
 
 use crate::render::assets::Mesh;
 
@@ -104,6 +107,12 @@ pub enum MeshSectionError {
     UnknownFlags { got: u16 },
     /// A dequantization-frame bound is non-finite or min exceeds max.
     InvalidBounds { axis: usize },
+    /// A triangle references a vertex outside this section.
+    IndexOutOfBounds { index: u32, vertices: u32 },
+    /// Exact section extent has unclaimed trailing bytes.
+    TrailingBytes { expected: usize, got: usize },
+    /// Encoder input contains a non-finite coordinate.
+    InvalidPosition { vertex: usize, axis: usize },
 }
 
 impl std::fmt::Display for MeshSectionError {
@@ -129,6 +138,15 @@ impl std::fmt::Display for MeshSectionError {
                 f,
                 "10d MESH output buffer too small: need {needed}, have {have}"
             ),
+            Self::IndexOutOfBounds { index, vertices } => {
+                write!(f, "10d MESH index {index} outside {vertices} vertices")
+            }
+            Self::TrailingBytes { expected, got } => {
+                write!(f, "10d MESH trailing bytes: expected {expected}, got {got}")
+            }
+            Self::InvalidPosition { vertex, axis } => {
+                write!(f, "10d MESH non-finite vertex {vertex} axis {axis}")
+            }
             Self::InvalidBounds { axis } => write!(f, "10d MESH invalid bounds on axis {axis}"),
             Self::UnknownFlags { got } => write!(
                 f,
@@ -164,7 +182,12 @@ pub fn raw_geometry_len(vertex_count: usize, triangle_count: usize) -> usize {
 }
 
 #[inline]
-fn quantize(v: f32, min: f32, extent: f32) -> u16 {
+fn quantize(v: f32, min: f32, max: f32) -> u16 {
+    let extent = max - min;
+    if !extent.is_finite() || !(v - min).is_finite() {
+        let n = ((v as f64 - min as f64) / (max as f64 - min as f64)).clamp(0.0, 1.0);
+        return (n * 65535.0 + 0.5) as u16;
+    }
     if extent <= 0.0 {
         return 0;
     }
@@ -222,7 +245,7 @@ pub fn parse_mesh_header(bytes: &[u8]) -> Result<(MeshMiniHeader, usize), MeshSe
     let header: MeshMiniHeader = {
         let mut buf = [0u8; MESH_MINI_HEADER_SIZE];
         buf.copy_from_slice(&bytes[..MESH_MINI_HEADER_SIZE]);
-        *from_bytes(&buf)
+        bytemuck::pod_read_unaligned(&buf)
     };
     if header.reserved_u16 != 0 {
         return Err(MeshSectionError::NonZeroReserved {
@@ -290,9 +313,26 @@ pub fn encode_mesh_section(mesh: &Mesh, out: &mut [u8]) -> Result<usize, MeshSec
             max: MAX_TRIANGLE_COUNT,
         });
     }
+    // Validate before writing; narrowing an invalid u32 index would hide it.
+    for triangle in &mesh.triangles {
+        for &index in triangle {
+            if index as usize >= vcount {
+                return Err(MeshSectionError::IndexOutOfBounds {
+                    index,
+                    vertices: vcount as u32,
+                });
+            }
+        }
+    }
+    for (vertex, position) in mesh.positions.iter().enumerate() {
+        for (axis, value) in position.iter().enumerate() {
+            if !value.is_finite() {
+                return Err(MeshSectionError::InvalidPosition { vertex, axis });
+            }
+        }
+    }
     let u16_idx = fits_u16_indices(vcount);
     let (min, max) = bbox(&mesh.positions);
-    let extent = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
     let need = encoded_len(vcount, tcount);
     if out.len() < need {
         return Err(MeshSectionError::OutputBufferTooSmall {
@@ -314,7 +354,7 @@ pub fn encode_mesh_section(mesh: &Mesh, out: &mut [u8]) -> Result<usize, MeshSec
     let mut off = MESH_MINI_HEADER_SIZE;
     for p in &mesh.positions {
         for a in 0..3 {
-            out[off..off + 2].copy_from_slice(&quantize(p[a], min[a], extent[a]).to_le_bytes());
+            out[off..off + 2].copy_from_slice(&quantize(p[a], min[a], max[a]).to_le_bytes());
             off += 2;
         }
     }
@@ -337,47 +377,16 @@ pub fn encode_mesh_section(mesh: &Mesh, out: &mut [u8]) -> Result<usize, MeshSec
 /// (dequantized positions, exact indices). This is the ingest path (not a
 /// hot path), so `Vec` allocation is fine per AGENTS.md §2-B.
 pub fn decode_mesh_section(bytes: &[u8]) -> Result<Mesh, MeshSectionError> {
-    let (header, total) = parse_mesh_header(bytes)?;
-    let vcount = header.vertex_count as usize;
-    let tcount = header.triangle_count as usize;
-    let u16_idx = header.flags & FLAG_U16_INDICES != 0;
-    debug_assert_eq!(
-        total,
-        MESH_MINI_HEADER_SIZE + vcount * 6 + tcount * if u16_idx { 6 } else { 12 }
-    );
-
-    let mut positions = Vec::with_capacity(vcount);
-    let mut off = MESH_MINI_HEADER_SIZE;
-    for _ in 0..vcount {
-        let mut p = [0.0f32; 3];
-        for a in 0..3 {
-            let q = u16::from_le_bytes([bytes[off], bytes[off + 1]]);
-            p[a] = dequantize(q, header.min[a], header.max[a]);
-            off += 2;
-        }
-        positions.push(p);
+    let view = MeshSectionView::parse(bytes)?;
+    let header = view.header();
+    let mut positions = Vec::with_capacity(header.vertex_count as usize);
+    let mut triangles = Vec::with_capacity(header.triangle_count as usize);
+    for i in 0..header.vertex_count as usize {
+        positions.push(view.vertex(i).expect("admitted vertex count"));
     }
-
-    let mut triangles = Vec::with_capacity(tcount);
-    for _ in 0..tcount {
-        let mut t = [0u32; 3];
-        for corner in t.iter_mut() {
-            if u16_idx {
-                *corner = u16::from_le_bytes([bytes[off], bytes[off + 1]]) as u32;
-                off += 2;
-            } else {
-                *corner = u32::from_le_bytes([
-                    bytes[off],
-                    bytes[off + 1],
-                    bytes[off + 2],
-                    bytes[off + 3],
-                ]);
-                off += 4;
-            }
-        }
-        triangles.push(t);
+    for i in 0..header.triangle_count as usize {
+        triangles.push(view.triangle(i).expect("admitted triangle count"));
     }
-
     Ok(Mesh {
         positions,
         triangles,

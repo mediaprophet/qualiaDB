@@ -1,5 +1,7 @@
 //! Share-exchange: initiator ML-KEM public + X25519, responder ciphertext + X25519.
 
+pub(crate) mod leased;
+
 use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::kem::{encapsulate, MlKem768Secret};
 use crate::crypto::network::malformed::{reject_all_zero_dh, reject_malformed_kem_ct};

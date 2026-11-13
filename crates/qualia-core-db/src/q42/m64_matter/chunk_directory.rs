@@ -6,6 +6,8 @@
 use crate::container_10d::crc32c::crc32c;
 
 pub const CHUNK_DIRECTORY_ENTRY_BYTES: usize = 64;
+/// Raw records followed by a 64-byte full BLAKE3 digest trailer.
+pub const M64_CODEC_BLAKE3_FULL: u8 = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum M64Error {
@@ -56,9 +58,9 @@ pub struct M64ChunkDirectoryEntry {
     pub lut_bank_epoch_id: u16,
     /// 1B: Chunk record mode (0x00=Point, 0x01=Holo, 0x02=Strata, 0x03=PhaseJuncture, 0x04=Shell).
     pub chunk_record_mode: u8,
-    /// 1B: Compression flags (0=Uncompressed mmap, 1=LZ4 block, 2=Bao verified).
+    /// 1B: Codec (0=raw, 1=unsupported LZ4, 2=defective legacy prefix, 3=full BLAKE3 trailer).
     pub compression_flags: u8,
-    /// 12B: Prefix of BLAKE3-Bao verified outboard hash tree.
+    /// 12B: Legacy truncated hash field. Must be zero for codec 3; never a Bao proof.
     pub bao_root_hash_prefix: [u8; 12],
     /// 4B: CRC-32C checksum of bytes 0..59 (Total = 64B).
     pub entry_crc32c: u32,

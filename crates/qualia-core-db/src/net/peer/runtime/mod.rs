@@ -4,6 +4,7 @@ pub mod cancel;
 pub mod events;
 pub mod generations;
 pub mod handles;
+pub(crate) mod incarnation;
 pub mod leases;
 pub mod ledger;
 pub mod resources;

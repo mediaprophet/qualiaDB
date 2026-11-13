@@ -324,6 +324,14 @@ impl QTensorEngine {
             prepared_native_sources: None,
             #[cfg(not(target_arch = "wasm32"))]
             qwen35_ftw: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            qwen35_gguf: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            qwen35_gguf_required: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            gemma4: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            gemma4_required: false,
             gguf_mmap: None,
             #[cfg(target_arch = "wasm32")]
             cached_tokenizer: None,
@@ -492,6 +500,14 @@ impl QTensorEngine {
             prepared_native_sources: None,
             #[cfg(not(target_arch = "wasm32"))]
             qwen35_ftw: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            qwen35_gguf: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            qwen35_gguf_required: false,
+            #[cfg(not(target_arch = "wasm32"))]
+            gemma4: None,
+            #[cfg(not(target_arch = "wasm32"))]
+            gemma4_required: false,
             gguf_mmap: None,
             #[cfg(target_arch = "wasm32")]
             cached_tokenizer: None,
@@ -546,7 +562,11 @@ impl QTensorEngine {
     #[cfg(feature = "gpu-runtime")]
     /// Ensures the KV cache is allocated.
     pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
-        let layout = match KvCacheLayout::from_hyperparams(h) {
+        #[cfg(not(target_arch = "wasm32"))]
+        let candidate = self.dense_qwen_kv_layout(h);
+        #[cfg(target_arch = "wasm32")]
+        let candidate = KvCacheLayout::from_hyperparams(h);
+        let layout = match candidate {
             Some(l) => l,
             None => {
                 #[cfg(target_arch = "wasm32")]
@@ -587,13 +607,14 @@ impl QTensorEngine {
                         bytes,
                     ) {
                         log::warn!(
-                    "LLM_LOAD|kv-cache|denied|U0 budget {:.1} MiB used, need {:.1} MiB (mode {:?})",
-                    ledger.universe_used_bytes(crate::gpu_context::ComputeUniverse::LlmInference)
-                        as f64
-                        / (1024.0 * 1024.0),
-                    bytes as f64 / (1024.0 * 1024.0),
-                    orch.active_mode,
-                );
+                            "LLM_LOAD|kv-cache|denied|U0 budget {:.1} MiB used, need {:.1} MiB (mode {:?})",
+                            ledger.universe_used_bytes(
+                                crate::gpu_context::ComputeUniverse::LlmInference
+                            ) as f64
+                                / (1024.0 * 1024.0),
+                            bytes as f64 / (1024.0 * 1024.0),
+                            orch.active_mode,
+                        );
                         return Err(etalon_inference::gpu_resources::ResourceError::PolicyDenied);
                     }
                 }
@@ -664,7 +685,11 @@ impl QTensorEngine {
     /// CPU-only KV arena: layout + host mirror. No wgpu buffers.
     #[cfg(not(feature = "gpu-runtime"))]
     pub(crate) fn ensure_kv_cache(&mut self, h: &crate::gguf_sharder::GgufHyperparams) {
-        let layout = match KvCacheLayout::from_hyperparams(h) {
+        #[cfg(not(target_arch = "wasm32"))]
+        let candidate = self.dense_qwen_kv_layout(h);
+        #[cfg(target_arch = "wasm32")]
+        let candidate = KvCacheLayout::from_hyperparams(h);
+        let layout = match candidate {
             Some(l) => l,
             None => return,
         };

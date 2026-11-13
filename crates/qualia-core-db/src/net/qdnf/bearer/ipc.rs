@@ -20,32 +20,45 @@ struct QueuedFrame {
 }
 
 struct PairState {
-    a_to_b: [QueuedFrame; QUEUE_CAP],
+    a_to_b: Box<[QueuedFrame; QUEUE_CAP]>,
     a_len: usize,
-    b_to_a: [QueuedFrame; QUEUE_CAP],
+    b_to_a: Box<[QueuedFrame; QUEUE_CAP]>,
     b_len: usize,
     closed: bool,
 }
 
+// Cold-only fixed queue construction. Never materialize the ~512KiB pair on
+// the caller stack. The actual bearer owner must admit this existing backing.
+fn empty_queue() -> Result<Box<[QueuedFrame; QUEUE_CAP]>, QdnfError> {
+    let mut frames = Vec::new();
+    frames
+        .try_reserve_exact(QUEUE_CAP)
+        .map_err(|_| QdnfError::Capacity)?;
+    for _ in 0..QUEUE_CAP {
+        frames.push(QueuedFrame {
+            src: ObservedLocator::EMPTY,
+            len: 0,
+            bytes: [0; FRAME_CAP],
+        });
+    }
+    frames
+        .into_boxed_slice()
+        .try_into()
+        .map_err(|_| QdnfError::Capacity)
+}
 impl PairState {
-    fn empty() -> Self {
-        Self {
-            a_to_b: [QueuedFrame {
-                src: ObservedLocator::EMPTY,
-                len: 0,
-                bytes: [0u8; FRAME_CAP],
-            }; QUEUE_CAP],
+    fn empty() -> Result<Self, QdnfError> {
+        Ok(Self {
+            a_to_b: empty_queue()?,
             a_len: 0,
-            b_to_a: [QueuedFrame {
-                src: ObservedLocator::EMPTY,
-                len: 0,
-                bytes: [0u8; FRAME_CAP],
-            }; QUEUE_CAP],
+            b_to_a: empty_queue()?,
             b_len: 0,
             closed: false,
-        }
+        })
     }
 }
+// Only fixed heap-queue owners/indices cross constructor/Arc/Mutex value moves.
+const _: () = assert!(core::mem::size_of::<PairState>() <= 128);
 
 /// One end of a same-device IPC pair.
 pub struct IpcEndpoint {
@@ -73,9 +86,9 @@ impl IpcEndpoint {
         is_a: bool,
     ) -> (&'a mut [QueuedFrame; QUEUE_CAP], &'a mut usize) {
         if is_a {
-            (&mut state.a_to_b, &mut state.a_len)
+            (&mut *state.a_to_b, &mut state.a_len)
         } else {
-            (&mut state.b_to_a, &mut state.b_len)
+            (&mut *state.b_to_a, &mut state.b_len)
         }
     }
 }
@@ -85,7 +98,7 @@ pub fn ipc_pair(scope: ScopeEpoch, mtu: u16) -> Result<(IpcEndpoint, IpcEndpoint
     if mtu as usize > FRAME_CAP {
         return Err(QdnfError::Capacity);
     }
-    let state = Arc::new(Mutex::new(PairState::empty()));
+    let state = Arc::new(Mutex::new(PairState::empty()?));
     let a = IpcEndpoint {
         id: 0,
         locator: ObservedLocator::from_slice(&[0x01])?,
@@ -195,6 +208,40 @@ mod tests {
     use super::*;
     use crate::net::qdnf::frame::{encode_frame, FrameHeader};
     use crate::net::qdnf::registries::{FrameType, NextProtocol};
+
+    #[test]
+    fn cold_fixed_heap_queues_preserve_capacity_order_metadata_and_zero_heap_hot_io() {
+        use crate::specialized_libs::computational_geometry::allocation_counter::AllocGuard;
+        assert!(core::mem::size_of::<PairState>() <= 128);
+        let scope = ScopeEpoch { scope: 7, epoch: 9 };
+        let (mut a, mut b) = ipc_pair(scope, 1280).unwrap();
+        let mut header = FrameHeader::new(FrameType::DiscoveryBeacon, NextProtocol::QLink);
+        header.payload_len = 1;
+        let mut wire = [0u8; 81];
+        let mut out = [0u8; 128];
+        let dest = b.locator();
+        encode_frame(&header, &[0], &mut wire).unwrap();
+        a.send(&dest, &wire).unwrap();
+        b.recv(&mut out).unwrap(); // warmup
+        let measure = AllocGuard::begin("actual fixed IPC queues", true);
+        for n in 0..QUEUE_CAP {
+            encode_frame(&header, &[n as u8], &mut wire).unwrap();
+            assert_eq!(a.send(&dest, &wire), Ok(81));
+        }
+        assert_eq!(a.send(&dest, &wire), Err(QdnfError::WouldBlock));
+        for n in 0..QUEUE_CAP {
+            let (len, meta) = b.recv(&mut out).unwrap();
+            assert_eq!(len, 81);
+            assert_eq!(out[80], n as u8);
+            assert_eq!(meta.observed_source, a.locator());
+            assert_eq!(meta.scope, scope);
+        }
+        assert_eq!(b.recv(&mut out), Err(QdnfError::WouldBlock));
+        measure.check().unwrap();
+        let positive = AllocGuard::begin("IPC queue positive control", true);
+        std::hint::black_box(vec![1u8; 8]);
+        assert!(positive.check().is_err());
+    }
 
     #[test]
     fn ipc_exchanges_qframe_without_ip() {

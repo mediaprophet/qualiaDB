@@ -1,17 +1,19 @@
 //! Explicit developer/lab admission of one Qwen3.5 linear layer.
 //! This is not whole-model decode admission. Packing and ordinary norm storage
 //! are caller-selected source contracts; no exporter-version heuristic is used.
-mod source;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ftw;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod gguf;
+mod source;
 #[cfg(test)]
 mod tests;
 
 use super::QTensorEngine;
-use etalon_inference::ordinary::qwen35::{self, weights::CpuByteHost, Host, WorkspaceLayout};
+use etalon_inference::ordinary::qwen35::{self, Host, WorkspaceLayout, weights::CpuByteHost};
 use etalon_model::inference::{
-    qwen_roles::{Qwen35Packing, Qwen35Roles},
     TensorInfo,
+    qwen_roles::{Qwen35Packing, Qwen35Roles},
 };
 use source::RetainedBytes;
 

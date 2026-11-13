@@ -69,7 +69,7 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "vibe_invoke",
-            description: "Invoke any VibeScript capability by ID across logic, math, physics, audio, and studio domains.",
+            description: "Invoke bound generic Poet snapshot capabilities. Hypermedia and qualia.species asset operations use Synth ProductionSession via synth_produce_present; discover them with synth_operations.",
             input_schema: r#"{"type":"object","required":["id"],"properties":{"id":{"type":"string"},"args":{"type":"object"}}}"#,
         },
         McpToolDescriptor {
@@ -79,7 +79,7 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "vibe_catalog",
-            description: "List and query all bound VibeScript capability IDs filtered by prefix and/or architectural seam.",
+            description: "List bound generic Poet snapshot IDs by prefix/seam. This is a different execution host from the Hypermedia asset catalog exposed by synth_operations.",
             input_schema: r#"{"type":"object","properties":{"prefix":{"type":"string"},"seam":{"type":"string"},"limit":{"type":"integer"}}}"#,
         },
         McpToolDescriptor {
@@ -116,7 +116,7 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         McpToolDescriptor {
             name: "cosmic_coordinates",
             description: "Omniversal Coordinate System (OCS v2.2.0): celestial profiles, FLRW redshift cosmology, pulsar dispersion delay, warp velocity/Cochrane curves, HEALPix indexing, and USRI realm classes.",
-            input_schema: r#"{"type":"object","properties":{"op":{"type":"string","enum":["celestial_profile","redshift","pulsar_dispersion","warp","healpix","usri_realm"]},"body":{"type":"string"},"z":{"type":"number"},"dm_pc_cm3":{"type":"number"},"freq_hz":{"type":"number"},"warp_factor":{"type":"number"},"scale":{"type":"string","enum":["tos","tng"]},"x":{"type":"integer"},"y":{"type":"integer"},"total_z":{"type":"integer"},"nside":{"type":"integer"},"realm":{"type":"string"}}}"#,
+            input_schema: r#"{"type":"object","properties":{"op":{"type":"string","enum":["celestial_profile","redshift","pulsar_dispersion","warp","healpix","usri_realm"]},"body":{"type":"string"},"z":{"type":"number","description":"Redshift for op=redshift; signed integer direction component for op=healpix."},"dm_pc_cm3":{"type":"number"},"freq_hz":{"type":"number"},"warp_factor":{"type":"number"},"scale":{"type":"string","enum":["tos","tng"]},"x":{"type":"integer"},"y":{"type":"integer"},"nside":{"type":"integer"},"realm":{"type":"string"}},"additionalProperties":false,"allOf":[{"if":{"properties":{"op":{"const":"healpix"}},"required":["op"]},"then":{"properties":{"z":{"type":"integer"},"nside":{"type":"integer","minimum":1,"maximum":536870912}}}}]}"#,
         },
         // ── Simulation: Geomechanics, Space Weather, Fire Ecology ───────────
         McpToolDescriptor {
@@ -324,7 +324,7 @@ pub fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         McpToolDescriptor {
             name: "computational_geometry",
             description: "2D convex hull, Delaunay, Voronoi, nearest site, 3D primitive mesh generation.",
-            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["orientation_2","convex_hull_2","triangle_topology","delaunay_2","voronoi_2","nearest_site","mesh_topology","create_box","create_sphere","create_cylinder","create_plane"]},"points":{"type":"array"},"width":{"type":"number"},"height":{"type":"number"},"depth":{"type":"number"},"radius":{"type":"number"}}}"#,
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["orientation_2","convex_hull_2","triangle_topology","delaunay_2","voronoi_2","nearest_site","mesh_topology","create_box","create_sphere","create_cylinder","create_plane"]},"points":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"vertex_count":{"type":"integer"},"triangles":{"type":"array","items":{"type":"array","items":{"type":"integer"}}},"width":{"type":"number"},"height":{"type":"number"},"depth":{"type":"number"},"radius":{"type":"number"},"size":{"type":"number"},"lat_segments":{"type":"integer"},"lon_segments":{"type":"integer"},"segments":{"type":"integer"},"query":{"type":"array","items":{"type":"number"}}},"additionalProperties":false}"#,
         },
         McpToolDescriptor {
             name: "geometry_manifests",
@@ -481,4 +481,18 @@ pub fn tool_list_json() -> Value {
     json!({
         "tools": mapped
     })
+}
+
+#[cfg(test)]
+mod contract_tests {
+    use super::*;
+    #[test]
+    fn mesh_topology_schema_advertises_the_arguments_consumed_by_dispatch() {
+        let schema: Value = serde_json::from_str(stable_mcp_tools().iter().find(|tool| tool.name == "computational_geometry").unwrap().input_schema).unwrap();
+        assert_eq!(schema["properties"]["vertex_count"]["type"], "integer");
+        assert_eq!(schema["properties"]["triangles"]["type"], "array");
+        let result = crate::tools::computational_geometry(br#"{"op":"mesh_topology","vertex_count":3,"triangles":[[0,1,2]]}"#).unwrap();
+        let result: Value = serde_json::from_str(&result).unwrap();
+        assert!(result.get("error").is_none());
+    }
 }

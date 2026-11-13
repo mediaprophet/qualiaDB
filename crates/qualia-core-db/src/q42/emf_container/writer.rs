@@ -1,12 +1,13 @@
 //! Container Writer and Builder for EMF-64 Containers.
 //!
 //! Provides zero-copy / caller-buffered serialisation with automatic
-//! CRC-32C calculations and BLAKE3-Bao digest prefix generation.
+//! CRC-32C calculations and full 256-bit BLAKE3 chunk trailers.
 
 use super::chunk_directory::{EmfChunkDirectoryEntry, CHUNK_DIRECTORY_ENTRY_BYTES};
+use crate::q42::chunk_integrity::{blake3_trailer, BLAKE3_TRAILER_BYTES};
 use super::header::{
     EmfCellRecord64, EmfContainerHeader, EmfError, EMF_CONTAINER_MAGIC, EMF_CONTAINER_VERSION,
-    EMF_FLAG_3D_BRICK_8X8X8,
+    EMF_FLAG_3D_BRICK_8X8X8, EMF_FLAG_BAO_VERIFIED, EMF_CHUNK_FLAG_BLAKE3_FULL,
 };
 
 /// An uncompressed chunk staged for writing into an EMF-64 container.
@@ -78,6 +79,7 @@ impl EmfContainerWriter {
     pub(crate) fn checked_payload_bytes(cell_count: usize) -> Result<usize, EmfError> {
         cell_count
             .checked_mul(64)
+            .and_then(|n| n.checked_add(BLAKE3_TRAILER_BYTES))
             .ok_or(EmfError::ArithmeticOverflow)
     }
 
@@ -97,7 +99,7 @@ impl EmfContainerWriter {
             .ok_or(EmfError::ArithmeticOverflow)
     }
 
-    /// Serialize the container into a caller-supplied fixed buffer (Tier-1 Zero-Heap).
+    /// Serialize into caller output; cold sorting uses bounded-per-chunk scratch.
     pub fn write_to_slice(&self, out: &mut [u8]) -> Result<usize, EmfError> {
         let required = self.total_required_bytes()?;
         if out.len() < required {
@@ -127,12 +129,13 @@ impl EmfContainerWriter {
                 u32::try_from(chunk.cells.len()).map_err(|_| EmfError::ArithmeticOverflow)?;
             let byte_length = cell_count
                 .checked_mul(64)
+                .and_then(|n| n.checked_add(BLAKE3_TRAILER_BYTES as u32))
                 .ok_or(EmfError::ArithmeticOverflow)?;
 
             // Serialize cell records to payload region
             let p_start = usize::try_from(current_payload_offset)
                 .map_err(|_| EmfError::ArithmeticOverflow)?;
-            let payload_len = usize::try_from(byte_length).map_err(|_| EmfError::ArithmeticOverflow)?;
+            let payload_len = usize::try_from(byte_length).map_err(|_| EmfError::ArithmeticOverflow)? - BLAKE3_TRAILER_BYTES;
             let p_end = p_start
                 .checked_add(payload_len)
                 .ok_or(EmfError::ArithmeticOverflow)?;
@@ -141,10 +144,8 @@ impl EmfContainerWriter {
                 .ok_or(EmfError::PayloadOutOfBounds)?
                 .copy_from_slice(payload_slice);
 
-            // Compute BLAKE3 digest of payload
-            let digest = blake3::hash(&out[p_start..p_end]);
-            let mut bao_hash_prefix = [0u8; 16];
-            bao_hash_prefix.copy_from_slice(&digest.as_bytes()[..16]);
+            let trailer = blake3_trailer(&out[p_start..p_end]);
+            out[p_end..p_end + BLAKE3_TRAILER_BYTES].copy_from_slice(&trailer);
 
             // Construct directory entry
             let mut entry = EmfChunkDirectoryEntry {
@@ -153,9 +154,9 @@ impl EmfContainerWriter {
                 byte_length,
                 cell_count,
                 spectral_band_mask: chunk.spectral_band_mask,
-                flags: chunk.flags | 2, // Bit 1 = Bao verified
+                flags: (chunk.flags & !2) | EMF_CHUNK_FLAG_BLAKE3_FULL,
                 time_slice_index: chunk.time_slice_index,
-                bao_hash_prefix,
+                bao_hash_prefix: [0; 16],
                 reserved: [0u8; 12],
                 entry_crc32c: 0,
             };
@@ -185,7 +186,7 @@ impl EmfContainerWriter {
         let mut header = EmfContainerHeader {
             magic: EMF_CONTAINER_MAGIC,
             version: EMF_CONTAINER_VERSION,
-            flags: self.flags,
+            flags: self.flags & !EMF_FLAG_BAO_VERIFIED,
             chunk_count,
             directory_offset,
             reference_epoch_s: self.reference_epoch_s,
@@ -198,6 +199,24 @@ impl EmfContainerWriter {
         out[..64].copy_from_slice(bytemuck::bytes_of(&header));
 
         Ok(required)
+    }
+
+    /// Opt-in v3. Cells and their repaired v2 trailers remain byte-identical.
+    /// All extension/file limits are checked before allocating the output buffer.
+    pub fn to_bytes_v3(&self,field:&super::extension::EmfFieldInterpretation,tracks:&[super::extension::EmfAudioTrack<'_>],limits:super::extension::EmfExtensionLimits)->Result<Vec<u8>,EmfError>{
+        if !cfg!(target_endian="little")||self.flags&!7!=0||self.chunks.iter().any(|c|c.flags & !EMF_CHUNK_FLAG_BLAKE3_FULL !=0){return Err(EmfError::ExtensionMetadata);}
+        let probe=EmfContainerHeader{reference_epoch_s:self.reference_epoch_s,voxel_size_meters:self.voxel_size_meters,
+            grid_dims_bricks:self.grid_dims_bricks,origin_meters:self.origin_meters,..EmfContainerHeader::default()};
+        field.validate_header(&probe)?;
+        let prepared=super::extension::prepare_extension(field,tracks,limits)?;
+        let field_end=self.total_required_bytes()?;let total=prepared.required_file_bytes(field_end)?;
+        let mut bytes=vec![0u8;total];self.write_to_slice(&mut bytes[..field_end])?;
+        prepared.write_into(tracks,&mut bytes,field_end)?;
+        let mut header:EmfContainerHeader=bytemuck::pod_read_unaligned(&bytes[..64]);
+        header.version=super::header::EMF_EXTENDED_VERSION;header.update_crc();
+        bytes[..64].copy_from_slice(bytemuck::bytes_of(&header));
+        super::reader::EmfContainerReader::parse_with_extension_limits(&bytes,super::reader::EmfReadLimits{max_file_bytes:limits.max_file_bytes,max_chunks:self.chunks.len()},limits)?;
+        Ok(bytes)
     }
 
     /// Serialize the container into a heap-allocated `Vec<u8>` (Tier-2 Cold Construction).

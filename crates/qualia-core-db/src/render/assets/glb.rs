@@ -27,6 +27,16 @@ pub fn import_glb(bytes: &[u8]) -> Result<Mesh, AssetError> {
 /// available but authored tangents are absent. Authored tangent directions are orthogonalized
 /// before returning GPU streams.
 pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError> {
+    import_glb_impl(bytes, None)
+}
+
+/// Import the selected static scene, baking each node instance and its frames.
+/// The caller supplies hard output limits before instances are expanded.
+pub fn import_glb_static_scene(bytes: &[u8], max_vertices: usize, max_triangles: usize) -> Result<ImportedMesh, AssetError> {
+    import_glb_impl(bytes, Some((max_vertices, max_triangles)))
+}
+
+fn import_glb_impl(bytes: &[u8], scene_limits: Option<(usize, usize)>) -> Result<ImportedMesh, AssetError> {
     if bytes.len() < 12 {
         return Err(AssetError::Parse("GLB shorter than 12-byte header".into()));
     }
@@ -85,7 +95,13 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
     let mut saw_texture_coordinates_0 = false;
     let mut submeshes = Vec::new();
 
-    for mesh in meshes {
+    let instances = if scene_limits.is_some() {
+        super::glb_static_scene::instances(&gltf, meshes.len())?
+    } else {
+        (0..meshes.len()).map(|i| (i, crate::specialized_libs::computational_geometry::authoring::identity())).collect()
+    };
+    for (mesh_index, world) in instances {
+        let mesh = &meshes[mesh_index];
         for prim in mesh["primitives"].as_array().into_iter().flatten() {
             if prim["mode"].as_u64().unwrap_or(4) != 4 {
                 continue; // not TRIANGLES
@@ -97,6 +113,25 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
             let pos_acc = accessors
                 .get(pos_idx)
                 .ok_or_else(|| AssetError::Parse("POSITION accessor index out of range".into()))?;
+            if let Some((max_vertices, max_triangles)) = scene_limits {
+                let position_count = accessor_count(pos_acc)?;
+                let index_count = match prim["indices"].as_u64() {
+                    Some(i) => accessor_count(accessors.get(usize::try_from(i).map_err(|_| AssetError::Parse("index accessor out of range".into()))?).ok_or_else(|| AssetError::Parse("index accessor out of range".into()))?)?,
+                    None => position_count,
+                };
+                if position_count > max_vertices.saturating_sub(positions.len())
+                    || index_count > max_triangles.saturating_sub(triangles.len()).saturating_mul(3) {
+                    return Err(AssetError::Parse("GLB scene exceeds caller mesh budget".into()));
+                }
+                // MikkTSpace may allocate and split up to one vertex per index. Its
+                // temporary corner arrays are bounded by the same triangle budget.
+                for semantic in ["NORMAL", "TANGENT", "TEXCOORD_0"] {
+                    if let Some(i) = prim["attributes"][semantic].as_u64() {
+                        let accessor = accessors.get(usize::try_from(i).map_err(|_| AssetError::Parse(format!("{semantic} accessor out of range")))?).ok_or_else(|| AssetError::Parse(format!("{semantic} accessor out of range")))?;
+                        if accessor_count(accessor)? != position_count { return Err(AssetError::Parse(format!("{semantic} count must match POSITION count"))); }
+                    }
+                }
+            }
             let mut prim_pos = read_positions(pos_acc, buffer_views, bin)?;
             let vcount = prim_pos.len() as u32;
             let mut prim_indices = match prim["indices"].as_u64() {
@@ -139,28 +174,13 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
                             "NORMAL count must match POSITION count".into(),
                         ));
                     }
-                    let mut repair = false;
                     for normal in &mut values {
                         if normal.iter().any(|v| !v.is_finite()) {
                             return Err(AssetError::Parse(
                                 "NORMAL contains non-finite values".into(),
                             ));
                         }
-                        match normalize_imported_normal(*normal) {
-                            Ok(unit) => *normal = unit,
-                            Err(_) => {
-                                repair = true;
-                                *normal = [0.0, 0.0, 0.0];
-                            }
-                        }
-                    }
-                    if repair {
-                        let generated = generate_import_normals(&prim_pos, &prim_indices)?;
-                        for (normal, face) in values.iter_mut().zip(generated) {
-                            if *normal == [0.0, 0.0, 0.0] {
-                                *normal = face;
-                            }
-                        }
+                        *normal = normalize_imported_normal(*normal)?;
                     }
                     saw_authored_normals = true;
                     values
@@ -183,7 +203,7 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
                 }
                 None => vec![[0.0, 0.0]; prim_pos.len()],
             };
-            let prim_tangents = match prim["attributes"]["TANGENT"].as_u64() {
+            let mut prim_tangents = match prim["attributes"]["TANGENT"].as_u64() {
                 Some(tangent_idx) => {
                     let accessor = accessors.get(tangent_idx as usize).ok_or_else(|| {
                         AssetError::Parse("TANGENT accessor index out of range".into())
@@ -236,6 +256,13 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
                     }
                 }
             };
+            if let Some((max_vertices, max_triangles)) = scene_limits {
+                if positions.len().checked_add(prim_pos.len()).is_none_or(|n| n > max_vertices)
+                    || triangles.len().checked_add(prim_indices.len() / 3).is_none_or(|n| n > max_triangles) {
+                    return Err(AssetError::Parse("GLB scene exceeds caller mesh budget".into()));
+                }
+                super::glb_static_scene::apply(&world, &mut prim_pos, &mut prim_normals, &mut prim_tangents, &mut prim_indices)?;
+            }
             let base = u32::try_from(positions.len())
                 .map_err(|_| AssetError::Parse("GLB mesh exceeds the u32 vertex limit".into()))?;
             let first_index = u32::try_from(triangles.len().saturating_mul(3))
@@ -278,6 +305,36 @@ pub fn import_glb_with_normals(bytes: &[u8]) -> Result<ImportedMesh, AssetError>
     })
 }
 
+fn accessor_count(accessor: &Value) -> Result<usize, AssetError> {
+    accessor["count"].as_u64().and_then(|v| usize::try_from(v).ok())
+        .ok_or_else(|| AssetError::Parse("invalid accessor.count".into()))
+}
+
+/// Prove the complete accessor range before allocating any output. glTF bufferView
+/// limits apply independently of the enclosing BIN chunk, including interleaved data.
+fn preflight_accessor(accessor: &Value, bvs: &[Value], bin: &[u8], element: usize, component: usize, allow_stride: bool) -> Result<(), AssetError> {
+    if accessor.get("sparse").is_some() { return Err(AssetError::Parse("sparse accessors are unsupported".into())); }
+    let parse = |v: Option<u64>| -> Result<usize, AssetError> { v.and_then(|x| usize::try_from(x).ok()).ok_or_else(|| AssetError::Parse("invalid accessor range".into())) };
+    let count = accessor_count(accessor)?;
+    let index = parse(accessor["bufferView"].as_u64())?;
+    let view = bvs.get(index).ok_or_else(|| AssetError::Parse("bufferView index out of range".into()))?;
+    if view["buffer"].as_u64().unwrap_or(0) != 0 { return Err(AssetError::Parse("GLB accessor references external buffer".into())); }
+    let offset = parse(Some(view["byteOffset"].as_u64().unwrap_or(0)))?;
+    let length = parse(view["byteLength"].as_u64())?;
+    let inner = parse(Some(accessor["byteOffset"].as_u64().unwrap_or(0)))?;
+    let stride = parse(Some(view["byteStride"].as_u64().unwrap_or(element as u64)))?;
+    if stride < element || stride % component != 0 || (!allow_stride && stride != element) {
+        return Err(AssetError::Parse("invalid accessor byteStride".into()));
+    }
+    let end = offset.checked_add(length).filter(|&n| n <= bin.len()).ok_or_else(|| AssetError::Parse("bufferView exceeds BIN".into()))?;
+    let start = offset.checked_add(inner).filter(|&n| n <= end).ok_or_else(|| AssetError::Parse("accessor offset exceeds bufferView".into()))?;
+    if count != 0 {
+        let last = (count - 1).checked_mul(stride).and_then(|n| start.checked_add(n)).and_then(|n| n.checked_add(element)).ok_or_else(|| AssetError::Parse("accessor range overflow".into()))?;
+        if last > end { return Err(AssetError::Parse("accessor exceeds bufferView".into())); }
+    }
+    Ok(())
+}
+
 /// Read a FLOAT VEC3 accessor (e.g. `POSITION`) out of the GLB binary buffer.
 fn read_positions(
     accessor: &Value,
@@ -303,6 +360,7 @@ pub(super) fn read_vec3(
             "{semantic} accessor type must be VEC3"
         )));
     }
+    preflight_accessor(accessor, bvs, bin, 12, 4, true)?;
     let count = accessor["count"]
         .as_u64()
         .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?
@@ -353,6 +411,7 @@ pub(super) fn read_vec4(
             "{semantic} accessor type must be VEC4"
         )));
     }
+    preflight_accessor(accessor, bvs, bin, 16, 4, true)?;
     let count = accessor["count"]
         .as_u64()
         .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?
@@ -423,6 +482,7 @@ pub(super) fn read_texcoords_0(
             ));
         }
     };
+    preflight_accessor(accessor, bvs, bin, default_stride, component_size, true)?;
     let count = accessor["count"]
         .as_u64()
         .ok_or_else(|| AssetError::Parse("TEXCOORD_0 accessor.count missing".into()))?
@@ -512,6 +572,7 @@ pub(super) fn read_indices(
             ));
         }
     };
+    preflight_accessor(accessor, bvs, bin, comp, comp, false)?;
     let count = accessor["count"]
         .as_u64()
         .ok_or_else(|| AssetError::Parse("accessor.count missing".into()))?

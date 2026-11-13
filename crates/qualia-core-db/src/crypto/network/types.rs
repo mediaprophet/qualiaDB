@@ -30,6 +30,8 @@ pub enum KeyPurpose {
     RouteUpdate = 6,
     RecordSign = 7,
     DiscoveryHmac = 8,
+    ObjectContent = 9,
+    ObjectRecipient = 10,
 }
 
 /// Typed algorithm/length pair. Reject unknown combinations.

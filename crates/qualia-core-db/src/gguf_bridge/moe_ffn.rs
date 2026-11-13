@@ -24,7 +24,8 @@ impl QTensorEngine {
         model_state_byte_budget: usize,
     ) -> Result<GgufLoadReport, String> {
         let metadata_bytes = std::fs::metadata(dir.join("freetoken_weight.json"))
-            .map_err(|e| format!("FTW manifest metadata: {e}"))?.len();
+            .map_err(|e| format!("FTW manifest metadata: {e}"))?
+            .len();
         if max_context == 0 || metadata_bytes > model_state_byte_budget as u64 {
             return Err("FTW model state/metadata budget exhausted".into());
         }
@@ -53,6 +54,10 @@ impl QTensorEngine {
                 .map_err(|e| e.to_string())?;
             None
         };
+        self.qwen35_gguf = None;
+        self.qwen35_gguf_required = false;
+        self.gemma4 = None;
+        self.gemma4_required = false;
         self.qwen35_ftw = qwen35;
         self.tensor_index_cache = Some(index.clone());
         self.hyperparams = index.hyperparams;

@@ -673,6 +673,8 @@ impl PortalGpu {
 mod bloom;
 mod compute;
 mod emf_pipeline;
+#[cfg(target_arch = "wasm32")]
+mod emf_present;
 #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod native_device;
 mod particles;

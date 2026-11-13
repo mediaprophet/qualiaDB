@@ -252,3 +252,7 @@ native dependencies:
 - [RFC 8610: CDDL](https://www.rfc-editor.org/rfc/rfc8610.html)
 - [RFC 3972: Cryptographically Generated Addresses](https://www.rfc-editor.org/rfc/rfc3972.html),
   used as prior art only; QDNF does not claim SEND/CGA conformance
+
+## QBDL streaming advisory work
+
+The [QBDL streaming expert advisory brief](../qbdl-streaming-expert-advisor-brief.md) considers a native profile of the existing content-swarm service, with PQ protection and an HTTP compatibility binding. It integrates the existing policy, Commons, contracts and resource-accounting designs. It is an initial review document, not a new allocated service or a claim of implemented interoperability.

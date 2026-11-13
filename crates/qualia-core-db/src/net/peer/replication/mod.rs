@@ -74,3 +74,6 @@ pub use tombstone::{
     tombstone_implies_global_completeness, transport_ack_is_compaction_frontier, ReplicaGate,
     Tombstone, TombstoneTable, MAX_TOMBSTONES,
 };
+
+/// QBDL service framing; transport/runtime integration is tracked separately.
+pub mod qbdl;

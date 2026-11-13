@@ -1,7 +1,10 @@
 //! Bounded structural reader for little-endian M64/E64 containers.
 //!
 //! Header and directory PODs are copied to aligned stack values; payload bytes
-//! remain borrowed zero-copy slices. Supports BLAKE3-Bao digest prefix verification.
+//! remain borrowed zero-copy slices. Supports full BLAKE3 digests; truncated legacy hashes require migration opt-in.
+
+use crate::q42::chunk_integrity::{verify_blake3_trailer, BLAKE3_TRAILER_BYTES};
+use super::M64_CODEC_BLAKE3_FULL;
 
 use super::{
     M64ChunkDirectoryEntry, M64Error, M64GeoRasterError, M64GeoRasterMetadata, M64Header,
@@ -35,6 +38,8 @@ pub struct M64Verification {
     pub chunks: usize,
     pub total_records: u64,
     pub record_crc_checked: u64,
+    pub full_hash_chunks: usize,
+    pub legacy_prefix_chunks: usize,
     pub records_without_checksum: u64,
 }
 
@@ -66,6 +71,8 @@ pub enum M64ReadError {
     PayloadOverlap,
     Record { chunk: usize, record: usize, error: M64Error },
     BaoHashMismatch { chunk_index: usize },
+    FullHashMismatch { chunk_index: usize },
+    LegacyIntegrityRequiresOptIn { chunk_index: usize },
 }
 
 impl std::fmt::Display for M64ReadError {
@@ -118,6 +125,21 @@ impl<'a> M64Reader<'a> {
         bytes: &'a [u8],
         limits: M64ReadLimits,
         scratch: &mut [M64PayloadInterval],
+    ) -> Result<Self, M64ReadError> {
+        Self::parse_policy(bytes, limits, scratch, false)
+    }
+
+    /// Migration-only admission of defective legacy truncated hashes.
+    /// `legacy_prefix_chunks` reports these separately from full verification.
+    pub fn parse_legacy_with_limits(
+        bytes: &'a [u8], limits: M64ReadLimits, scratch: &mut [M64PayloadInterval],
+    ) -> Result<Self, M64ReadError> {
+        Self::parse_policy(bytes, limits, scratch, true)
+    }
+
+    fn parse_policy(
+        bytes: &'a [u8], limits: M64ReadLimits, scratch: &mut [M64PayloadInterval],
+        allow_legacy: bool,
     ) -> Result<Self, M64ReadError> {
         if !cfg!(target_endian = "little") {
             return Err(M64ReadError::UnsupportedEndian);
@@ -223,8 +245,8 @@ impl<'a> M64Reader<'a> {
                     mode: entry.chunk_record_mode,
                 });
             }
-            // Codec 0: Uncompressed, Codec 2: Bao verified outboard hash tree
-            if entry.compression_flags != 0 && entry.compression_flags != 2 {
+            // Codec 2 is legacy migration only; codec 3 verifies all 256 digest bits.
+            if !matches!(entry.compression_flags, 0 | 2 | M64_CODEC_BLAKE3_FULL) {
                 return Err(M64ReadError::UnsupportedCodec {
                     chunk,
                     codec: entry.compression_flags,
@@ -234,7 +256,10 @@ impl<'a> M64Reader<'a> {
             let expected_length = u64::from(entry.record_count)
                 .checked_mul(64)
                 .ok_or(M64ReadError::ArithmeticOverflow)?;
-            if entry.record_count == 0 || expected_length != u64::from(entry.byte_length) {
+            let full_hash = entry.compression_flags == M64_CODEC_BLAKE3_FULL;
+            let stored_length = expected_length.checked_add(if full_hash { BLAKE3_TRAILER_BYTES as u64 } else { 0 })
+                .ok_or(M64ReadError::ArithmeticOverflow)?;
+            if entry.record_count == 0 || stored_length != u64::from(entry.byte_length) {
                 return Err(M64ReadError::RecordLength { chunk });
             }
             verification.total_records = verification
@@ -267,8 +292,19 @@ impl<'a> M64Reader<'a> {
                 return Err(M64ReadError::MetadataOverlap { chunk });
             }
 
-            // BLAKE3-Bao root hash prefix verification
-            if entry.compression_flags == 2 || entry.bao_root_hash_prefix != [0u8; 12] {
+            if full_hash {
+                let record_end = end - BLAKE3_TRAILER_BYTES;
+                if entry.bao_root_hash_prefix != [0; 12]
+                    || !verify_blake3_trailer(&bytes[start..record_end], &bytes[record_end..end]) {
+                    return Err(M64ReadError::FullHashMismatch { chunk_index: chunk });
+                }
+                verification.full_hash_chunks += 1;
+            } else if entry.compression_flags == 2 || entry.bao_root_hash_prefix != [0u8; 12] {
+                if !allow_legacy {
+                    return Err(M64ReadError::LegacyIntegrityRequiresOptIn { chunk_index: chunk });
+                }
+                verification.legacy_prefix_chunks += 1;
+                // Defective historical comparison retained ONLY for explicit migration.
                 let chunk_payload = &bytes[start..end];
                 let digest = blake3::hash(chunk_payload);
                 if digest.as_bytes()[..12] != entry.bao_root_hash_prefix {
@@ -292,7 +328,7 @@ impl<'a> M64Reader<'a> {
                 continue;
             }
             let start = entry.byte_offset as usize;
-            let end = start + entry.byte_length as usize;
+            let end = start + entry.record_count as usize * 64;
             for (record, raw) in bytes[start..end].chunks_exact(64).enumerate() {
                 let result = match entry.chunk_record_mode {
                     M64_MODE_STRATA => {
@@ -369,7 +405,7 @@ impl<'a> M64Reader<'a> {
         let entry: M64ChunkDirectoryEntry =
             bytemuck::pod_read_unaligned(&self.bytes[offset..offset + 64]);
         let start = entry.byte_offset as usize;
-        let end = start + entry.byte_length as usize;
+        let end = start + entry.record_count as usize * 64;
         Some(M64Chunk {
             entry,
             payload: &self.bytes[start..end],
@@ -404,7 +440,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_checked_reader_bao_verification_and_tampering() {
+    fn legacy_prefix_requires_opt_in_and_detects_tampering() {
         let payload = [0x42u8; 64];
         let digest = blake3::hash(&payload);
         let mut bao_prefix = [0u8; 12];
@@ -443,13 +479,15 @@ mod tests {
         };
         let mut scratch = [M64PayloadInterval::default(); 16];
 
-        // Valid payload with Bao verification succeeds
-        let reader = M64Reader::parse(&buffer, limits, &mut scratch);
-        assert!(reader.is_ok(), "Expected valid Bao verification to pass");
+        assert!(matches!(M64Reader::parse(&buffer, limits, &mut scratch),
+            Err(M64ReadError::LegacyIntegrityRequiresOptIn { .. })));
+        let reader = M64Reader::parse_legacy_with_limits(&buffer, limits, &mut scratch).unwrap();
+        assert_eq!(reader.verification().legacy_prefix_chunks, 1);
+        assert_eq!(reader.verification().full_hash_chunks, 0);
 
         // Tamper with chunk payload byte
         buffer[130] ^= 0xFF;
-        let tampered_result = M64Reader::parse(&buffer, limits, &mut scratch);
+        let tampered_result = M64Reader::parse_legacy_with_limits(&buffer, limits, &mut scratch);
         assert_eq!(
             tampered_result.err(),
             Some(M64ReadError::BaoHashMismatch { chunk_index: 0 }),

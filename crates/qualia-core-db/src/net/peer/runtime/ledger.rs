@@ -6,6 +6,9 @@
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::Generation;
 
+mod headroom;
+mod incarnation;
+mod inspect;
 const HANDLE_SLOTS: usize = 32;
 
 #[repr(C)]
@@ -110,6 +113,7 @@ impl ReservationHandle {
 }
 
 pub struct ReservationLedger {
+    incarnation: super::incarnation::CanonicalIncarnation,
     host_cap: ResourceBudget,
     cell_cap: ResourceBudget,
     role_cap: ResourceBudget,
@@ -131,6 +135,7 @@ impl ReservationLedger {
         operation_cap: ResourceBudget,
     ) -> Self {
         Self {
+            incarnation: super::incarnation::CanonicalIncarnation::UNASSIGNED,
             host_cap,
             cell_cap,
             role_cap,

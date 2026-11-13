@@ -1,7 +1,12 @@
 //! Network-facing crypto adapters over existing Qualia primitives.
 
 pub mod aead;
+pub mod authority;
 pub mod chunks;
+pub mod cose;
+// The raw-message verification profile is portable; custody remains native.
+#[path = "../../specialized_libs/cryptographic_library/signing_profile.rs"]
+pub mod signing_profile;
 pub mod digest;
 pub mod dual_sign;
 pub mod ed25519;
@@ -29,3 +34,5 @@ pub use errors::CryptoError;
 pub use key_provider::{HardwareBackend, ProviderGrant, SoftwareBackend};
 pub use rotation::{RecoveredPossession, RotationState};
 pub use types::{AlgorithmSpec, KeyEpoch, KeyPurpose};
+
+pub mod object_stream;

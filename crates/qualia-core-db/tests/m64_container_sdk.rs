@@ -108,6 +108,7 @@ fn public_reader_preserves_versions_aliases_and_unaligned_borrowed_payloads() {
             assert_eq!(reader.header().magic, magic);
             assert_eq!(reader.verification(), M64Verification {
                 chunks: 4, total_records: 4, record_crc_checked: 2, records_without_checksum: 2,
+                full_hash_chunks: 0, legacy_prefix_chunks: 0,
             });
             let chunk = reader.chunk(2).unwrap();
             assert_eq!(chunk.payload().as_ptr(), source[448..].as_ptr());

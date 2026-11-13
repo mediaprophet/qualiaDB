@@ -1,5 +1,8 @@
 //! QSession handshake binding. No 0-RTT application data.
 
+// Endpoint-v1 currently requires the native managed-key owner.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod endpoint;
 mod fragmented;
 mod hello;
 

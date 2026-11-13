@@ -6,6 +6,8 @@ use crate::net::qdnf::types::Generation;
 use super::handles::{BufferLease, LeaseHandle};
 
 pub const LEASE_SLOTS: usize = 32;
+mod incarnation;
+mod inspect;
 
 #[derive(Clone, Copy)]
 struct Slot {
@@ -16,6 +18,7 @@ struct Slot {
 }
 
 pub struct LeaseTable {
+    incarnation: super::incarnation::CanonicalIncarnation,
     slots: [Slot; LEASE_SLOTS],
 }
 
@@ -23,6 +26,7 @@ impl LeaseTable {
     /// Creates a default `LeaseTable`.
     pub const fn new() -> Self {
         Self {
+            incarnation: super::incarnation::CanonicalIncarnation::UNASSIGNED,
             slots: [Slot {
                 generation: Generation::ZERO,
                 occupied: false,

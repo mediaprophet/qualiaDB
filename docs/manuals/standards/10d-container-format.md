@@ -1,5 +1,7 @@
 # `.10d` QuantizedMesh numeric payload companion
 
+The complete envelope and section registry are specified in the [10D container standard](10d-container-standard.md). This document remains its focused numeric companion.
+
 **Scope:** the numeric payload used by `SectionType::QuantizedMesh` in the current Core implementation. This companion records the implemented mini-header and coordinate decode contract. It does not replace the Q42 coordinate standard or claim to replace the historical `docs/plans/native-computational-geometry.md`, which is not present in this checkout.
 
 The [Q42 10D tensor standard](q42-10d-tensor-standard.md) defines tensor coordinates and their meanings. This document covers only the QuantizedMesh section payload's numeric frame and the enclosing structural checks needed to interpret it. The container header and section-table envelope remain governed by the existing implementation.

@@ -2,15 +2,17 @@
 //!
 //! Output is strictly cache-aligned (64-byte headers, directory rows, and cell records)
 //! and little-endian, featuring 3D Hilbert volumetric brick clustering, CRC-32C,
-//! and BLAKE3-Bao verified outboard digest prefixes.
+//! and complete 256-bit BLAKE3 digests. Legacy prefix checks are migration-only.
 
 pub mod chunk_directory;
+pub mod extension;
 pub mod header;
 pub mod reader;
 pub mod writer;
 
 pub use chunk_directory::*;
 pub use header::*;
+pub use extension::*;
 pub use reader::*;
 pub use writer::*;
 
@@ -109,8 +111,8 @@ mod tests {
         let res = EmfContainerReader::parse(&bytes);
         assert_eq!(
             res.err(),
-            Some(EmfError::BaoHashMismatch { chunk_index: 0 }),
-            "Expected BaoHashMismatch when payload is tampered"
+            Some(EmfError::FullHashMismatch { chunk_index: 0 }),
+            "Expected FullHashMismatch when payload is tampered"
         );
     }
 

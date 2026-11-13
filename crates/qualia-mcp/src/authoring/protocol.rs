@@ -187,12 +187,13 @@ impl<B: AuthoringBackend> AuthoringServer<B> {
         // Supported requested version is echoed. All other requests negotiate
         // the sole supported version; incompatible clients should disconnect.
         self.lifecycle = Lifecycle::AwaitingInitialized;
-        result(
-            id,
-            json!({"protocolVersion":AUTHORING_PROTOCOL_VERSION,
+        let mut initialized = json!({"protocolVersion":AUTHORING_PROTOCOL_VERSION,
             "capabilities":{"tools":{"listChanged":false}},
-            "serverInfo":{"name":"qualia-mcp-authoring", "version":env!("CARGO_PKG_VERSION")}}),
-        )
+            "serverInfo":{"name":"qualia-mcp-authoring", "version":env!("CARGO_PKG_VERSION")}});
+        if let Some(instructions) = self.backend.instructions() {
+            initialized["instructions"] = json!(instructions);
+        }
+        result(id, initialized)
     }
 
     fn call(&mut self, id: Value, params: Option<&Value>) -> Value {
@@ -213,8 +214,21 @@ impl<B: AuthoringBackend> AuthoringServer<B> {
             Some(value) if value.is_object() => value.clone(),
             _ => return error(id, -32602, "Tool arguments must be an object"),
         };
+        // Closed top-level contracts are enforced before dispatch, including callers
+        // which bypass a schema-aware client. Domain validators own nested semantics.
+        let schema = &self.tools.iter().find(|tool| tool.name == name).unwrap().input_schema;
+        if schema.get("additionalProperties") == Some(&Value::Bool(false)) {
+            if args.as_object().unwrap().keys().any(|key| schema.get("properties").and_then(Value::as_object).map_or(true, |properties| !properties.contains_key(key))) {
+                return result(id, json!({"content":[{"type":"text","text":"Unknown tool argument"}],
+                    "structuredContent":{"error":{"code":"invalid_arguments","message":"Unknown tool argument"}},"isError":true}));
+            }
+        }
         let (value, is_error) = match self.backend.call(name, args) {
-            Ok(value) if value.is_object() => (value, false),
+            Ok(value) if value.is_object() => {
+                let failed = matches!(value.get("status").and_then(Value::as_str), Some("error" | "failed"))
+                    || value.get("error").is_some_and(|error| !error.is_null());
+                (value, failed)
+            }
             Ok(_) => (
                 json!({"error":{"code":"invalid_backend_result", "message":"Backend result must be an object"}}),
                 true,

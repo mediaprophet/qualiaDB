@@ -56,3 +56,36 @@ mod tests {
         assert!(open_regular(&target).is_ok());
     }
 }
+
+/// Existing-file exclusive read profile for bounded native recovery. Root and
+/// ancestors still require the host's current protected-namespace lease.
+#[cfg(unix)]
+pub(crate) fn open_regular_exclusive(path: &Path) -> Result<File, CustodyError> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let file = OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK | libc::O_CLOEXEC)
+        .open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err(CustodyError::InvalidEncoding);
+    }
+    Ok(file)
+}
+#[cfg(windows)]
+pub(crate) fn open_regular_exclusive(path: &Path) -> Result<File, CustodyError> {
+    use std::os::windows::fs::{MetadataExt, OpenOptionsExt};
+    let file = OpenOptions::new()
+        .read(true)
+        .share_mode(0)
+        .custom_flags(0x0020_0000)
+        .open(path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.file_attributes() & 0x0000_0400 != 0 {
+        return Err(CustodyError::InvalidEncoding);
+    }
+    Ok(file)
+}
+#[cfg(not(any(unix, windows)))]
+pub(crate) fn open_regular_exclusive(_path: &Path) -> Result<File, CustodyError> {
+    Err(CustodyError::InvalidEncoding)
+}

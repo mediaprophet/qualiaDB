@@ -192,3 +192,9 @@ imap-proto = { path = "vendor/imap-proto" }
 
 [patch."https://github.com/mediaprophet/vibe-script.git"]
 vibescript-abi = { path = "crates/vibescript-abi" }
+
+# Workspace integration of the opened-file locality repair in the supplying crate.
+[patch."https://github.com/mediaprophet/etalon.git"]
+etalon-model-io = { path = "../etalon/crates/etalon-model-io" }
+# Narrow codec backport retains the original pinned inference-kernel identity.
+etalon-model = { path = "vendor/etalon-model-6ace6cc" }

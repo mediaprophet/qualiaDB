@@ -6,6 +6,8 @@
 //! zero-heap slice marshaling, `SentinelPolicyGate` enforcement, and budget charging.
 
 use super::dispatch_adapter::{dispatch_prepared_call, CallExecutionContext, DispatchOutcome};
+#[path = "native_budget.rs"]
+mod native_budget;
 use super::domain_providers::DeterministicMechanicsProvider;
 use super::gpu_inference_providers::{EtalonGpuComputeProvider, GovernedInferenceProvider};
 use super::graph_logic_providers::{DeonticTemporalProvider, StagedGraphMutationProvider};
@@ -134,7 +136,11 @@ impl PreparedCallCache {
 
     /// Looks up a cached `PreparedCallHandle` for `(path_hash, current_gen)`.
     #[inline]
-    pub fn get(&self, path_hash: u64, current_gen: RegistryGeneration) -> Option<PreparedCallHandle> {
+    pub fn get(
+        &self,
+        path_hash: u64,
+        current_gen: RegistryGeneration,
+    ) -> Option<PreparedCallHandle> {
         let mut i = 0;
         while i < self.entries.len() {
             if let Some((h, handle)) = self.entries[i] {
@@ -175,7 +181,10 @@ pub fn trap_to_diagnostic(trap: VibeTrap, path: &str, span: Span) -> Diagnostic 
     Diagnostic::new(
         code,
         span,
-        format!("extension trap {:?} (code {}) on `{path}`", trap, trap as u16),
+        format!(
+            "extension trap {:?} (code {}) on `{path}`",
+            trap, trap as u16
+        ),
     )
 }
 
@@ -211,8 +220,7 @@ pub fn try_prepare_path(
                 )?;
                 cache.insert(path_hash, handle);
                 return Ok(Some(handle));
-            } else if let Some((_slot, _prov, desc)) = registry.find_by_namespace_or_alias(ns_iri)
-            {
+            } else if let Some((_slot, _prov, desc)) = registry.find_by_namespace_or_alias(ns_iri) {
                 for sub_desc in desc.sub_namespaces {
                     if sub_desc.functions.iter().any(|f| f.name == rest) {
                         let handle = prepare_extension_call(
@@ -374,12 +382,13 @@ pub fn execute_prepared_value_call<'g>(
     )
     .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
-    let mut view_storage = [BorrowedSliceView::from_raw_bytes(&[], PrimitiveKind::U8, 0)
-        .expect("empty view"); 8];
+    let mut view_storage =
+        [BorrowedSliceView::from_raw_bytes(&[], PrimitiveKind::U8, 0).expect("empty view"); 8];
     for idx in 0..func.params.len() {
         let (start, end, kind, elems) = param_offsets[idx];
-        view_storage[idx] = BorrowedSliceView::from_raw_bytes(&input_scratch[start..end], kind, elems)
-            .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
+        view_storage[idx] =
+            BorrowedSliceView::from_raw_bytes(&input_scratch[start..end], kind, elems)
+                .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
     }
 
     let mut out_scratch = [0u8; 256];
@@ -394,13 +403,18 @@ pub fn execute_prepared_value_call<'g>(
     fallback_sim_gate.budget.max_scratch_bytes = 1_048_576;
     fallback_sim_gate.budget.max_vram_bytes = 1_048_576;
     let mut sim_ctx = *ctx;
-    let (eff_ctx, eff_gate): (&CallExecutionContext, Option<&mut (dyn SentinelPolicyGate + '_)>) =
-        if ctx.mode == ExecutionMode::StandaloneDeveloper && gate.is_none() && !func.effects.is_pure() {
-            sim_ctx.mode = ExecutionMode::SimulatedGovernanceTest;
-            (&sim_ctx, Some(&mut fallback_sim_gate))
-        } else {
-            (ctx, gate)
-        };
+    let (eff_ctx, eff_gate): (
+        &CallExecutionContext,
+        Option<&mut (dyn SentinelPolicyGate + '_)>,
+    ) = if ctx.mode == ExecutionMode::StandaloneDeveloper
+        && gate.is_none()
+        && !func.effects.is_pure()
+    {
+        sim_ctx.mode = ExecutionMode::SimulatedGovernanceTest;
+        (&sim_ctx, Some(&mut fallback_sim_gate))
+    } else {
+        (ctx, gate)
+    };
 
     let outcome = dispatch_prepared_call(
         registry,
@@ -424,7 +438,8 @@ fn decode_output_slice(
     out: &CallerOutputSlice<'_>,
 ) -> Result<Value, VibeTrap> {
     let count = out.written_elems();
-    let view = BorrowedSliceView::from_raw_bytes(out.written_byte_slice(), func.output_kind, count)?;
+    let view =
+        BorrowedSliceView::from_raw_bytes(out.written_byte_slice(), func.output_kind, count)?;
     if count == 1 {
         return decode_single_elem(&view, 0);
     }
@@ -499,14 +514,7 @@ pub fn route_call<'g, H: Host>(
     match try_prepare_path(registry, cache, path, target_profile) {
         Ok(Some(handle)) => {
             let (val, outcome) = execute_prepared_value_call(
-                registry,
-                &handle,
-                ctx,
-                gate,
-                pos_args,
-                budget,
-                span,
-                path,
+                registry, &handle, ctx, gate, pos_args, budget, span, path,
             )?;
             *last_outcome = Some(outcome);
             return Ok(val);
@@ -538,5 +546,5 @@ pub fn route_call<'g, H: Host>(
         }
     }
 
-    crate::bind::dispatch(host, path, pos_args, named_args, span)
+    native_budget::dispatch(host, path, pos_args, named_args, span, budget)
 }

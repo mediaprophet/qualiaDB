@@ -14,6 +14,14 @@ impl QTensorEngine {
         max_chunks: u32,
         sieve_mask: Option<&crate::neuro_symbolic_sieve::SieveStateMask>,
     ) -> Option<StreamingArgmaxResult> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required && !self.gemma4_ready(index) {
+            return None;
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required && !self.dense_qwen_ready(index) {
+            return None;
+        }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             #[cfg(not(target_arch = "wasm32"))]
             return self.qwen35_argmax(index, hidden, emb_dim, max_chunks, sieve_mask);
@@ -75,6 +83,9 @@ impl QTensorEngine {
         hidden: &[f32],
         emb_dim: usize,
     ) -> Option<StreamingArgmaxResult> {
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         etalon_inference::projections::ProjectionGpuEngine::new(self)
             .dispatch_output_top1_chunked(index, hidden, emb_dim)
             .map(|r| {
@@ -104,6 +115,9 @@ impl QTensorEngine {
         emb_dim: usize,
         k: usize,
     ) -> Option<Vec<crate::topk::TopKItem>> {
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         let mut selected = [crate::topk::TopKItem {
             token_id: 0,
             logit: f32::NEG_INFINITY,
@@ -121,6 +135,14 @@ impl QTensorEngine {
         hidden: &mut [f32],
         emb_dim: usize,
     ) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.gemma4_required {
+            return self.gemma4_output_norm(index, hidden, emb_dim);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required {
+            return self.dense_qwen_output_norm(index, hidden, emb_dim);
+        }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             #[cfg(not(target_arch = "wasm32"))]
             return self.qwen35_output_norm(index, hidden, emb_dim);

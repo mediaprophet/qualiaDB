@@ -2,7 +2,7 @@
 #![allow(unused_imports, unused_variables, unused_mut)]
 use crate::gguf_sharder::{GgufTensorIndex, LayerTensors};
 use etalon_inference::ordinary::ssm_layout::{
-    ssm_layout_for, SsmLayerStateLayout, SsmStateError, CONV_HISTORY_DEPTH,
+    CONV_HISTORY_DEPTH, SsmLayerStateLayout, SsmStateError, ssm_layout_for,
 };
 use etalon_inference::ordinary::{HybridEngine, LayerProvider};
 impl LayerProvider for super::QTensorEngine {
@@ -129,7 +129,15 @@ impl LayerProvider for super::QTensorEngine {
         if layer < 3 && crate::gguf_bridge::execution_env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
             let max_attn = attention.iter().fold(0f32, |m, &v| m.max(v.abs()));
             let max_hid = hidden.iter().fold(0f32, |m, &v| m.max(v.abs()));
-            eprintln!("[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}", layer, attn_ok, tensors.attn_norm.is_some(), tensors.ffn_norm.is_some(), max_attn, max_hid);
+            eprintln!(
+                "[layer-dbg] L{} attn_ok={} attn_norm={} ffn_norm={} max|attn_out|={:.4} max|hidden_postattn|={:.4}",
+                layer,
+                attn_ok,
+                tensors.attn_norm.is_some(),
+                tensors.ffn_norm.is_some(),
+                max_attn,
+                max_hid
+            );
         }
     }
     fn expert_source(
@@ -192,6 +200,14 @@ impl super::QTensorEngine {
 
     pub fn reset_recurrent_state(&mut self) {
         #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &mut self.gemma4 {
+            session.reset();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(session) = &mut self.qwen35_gguf {
+            session.reset();
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(session) = &mut self.qwen35_ftw {
             session.reset();
         }
@@ -203,6 +219,10 @@ impl super::QTensorEngine {
     /// Returns `Some(self.ssm_recurrent_state.len())` when `out` has sufficient capacity.
     #[must_use]
     pub fn snapshot_recurrent_state_into(&self, out: &mut [f32]) -> Option<usize> {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return None;
+        }
         let len = self.ssm_recurrent_state.len();
         if out.len() < len {
             return None;
@@ -215,6 +235,10 @@ impl super::QTensorEngine {
     /// extension cartridge or pre-warmed scene seed into `self.ssm_recurrent_state` (zero-heap).
     #[must_use]
     pub fn restore_recurrent_state_from_slice(&mut self, src: &[f32]) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return false;
+        }
         let len = self.ssm_recurrent_state.len();
         if len == 0 || src.len() != len {
             return false;
@@ -233,6 +257,10 @@ impl super::QTensorEngine {
         scratch_a: &mut [f32],
         scratch_b: &mut [f32],
     ) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        if self.qwen35_gguf_required || self.gemma4_required {
+            return false;
+        }
         if index.hyperparams.architecture == etalon_model::inference::ARCH_QWEN35_MOE {
             #[cfg(not(target_arch = "wasm32"))]
             return self.qwen35_attention(index, layer, hidden, emb_dim, tensors);

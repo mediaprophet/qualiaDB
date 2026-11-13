@@ -1,5 +1,8 @@
 //! Transcript-bound handshake key schedule (E02.1).
 
+#[path = "schedule/endpoint.rs"]
+pub(crate) mod endpoint;
+
 use crate::crypto::network::errors::CryptoError;
 use crate::crypto::network::kdf::hkdf_sha384;
 use crate::crypto::network::transcript::Transcript;

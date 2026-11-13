@@ -33,3 +33,11 @@ pub use recovery::*;
 pub use rotation::*;
 pub use search::*;
 pub use types::*;
+
+mod managed_signing;
+pub use managed_signing::*;
+
+mod managed_control;
+pub use managed_control::ManagedOperationControl;
+mod managed_object;
+pub use managed_object::*;
