@@ -547,8 +547,9 @@ mod tests {
             Ok(peer) => {
                 assert_eq!(peer.as_slice()[0], LOC_TAG_PEERCRED);
                 assert_ne!(peer.as_slice(), b"not-a-locator");
+                let local_a = a.local_locator();
                 let mut framed = a
-                    .into_framed_with(a.local_locator(), peer, scope(), 1280)
+                    .into_framed_with(local_a, peer, scope(), 1280)
                     .unwrap();
                 framed.send(&peer, b"\xffpayload").unwrap();
                 let mut other = b

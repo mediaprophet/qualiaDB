@@ -1,34 +1,24 @@
 use crate::q42::field_envelope::{Error, Family, Limits, StructuralView};
 
-const EMF_0100: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/emf-v4-mode-0x0100.emf"
-);
-const EMF_0107: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/emf-v4-mode-0x0107.emf"
-);
+const EMF_0100: &[u8] = include_bytes!("fixtures/golden/emf-v4-mode-0x0100.emf");
+const EMF_0107: &[u8] = include_bytes!("fixtures/golden/emf-v4-mode-0x0107.emf");
 const EMF_EDGE: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/emf-v4-edge-neg-zero-subnormal-dag32-sort.emf"
+    "fixtures/golden/emf-v4-edge-neg-zero-subnormal-dag32-sort.emf"
 );
-const QAC_0100: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/qac-v1-mode-0x0100.qac"
-);
-const QAC_CONT0: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/qac-v1-continuum-0x0000.qac"
-);
+const QAC_0100: &[u8] = include_bytes!("fixtures/golden/qac-v1-mode-0x0100.qac");
+const QAC_CONT0: &[u8] = include_bytes!("fixtures/golden/qac-v1-continuum-0x0000.qac");
 const QAC_NEG_ZERO: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/golden/qac-v1-pcm-neg-zero-preserved.qac"
+    "fixtures/golden/qac-v1-pcm-neg-zero-preserved.qac"
 );
 const MAL_IDX_NO_DOM: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/malformed/emf-index-digest-missing-domain.emf"
+    "fixtures/malformed/emf-index-digest-missing-domain.emf"
 );
-const MAL_SNAN: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/malformed/qac-num-f64-snan.qac"
-);
+const MAL_SNAN: &[u8] = include_bytes!("fixtures/malformed/qac-num-f64-snan.qac");
 const MAL_T01_SWAP: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/malformed/t01-cross-entry-chunk-swap.emf"
+    "fixtures/malformed/t01-cross-entry-chunk-swap.emf"
 );
 const MAL_T01_SPLICE: &[u8] = include_bytes!(
-    "../../../../../../docs/plans/emf-qac-evolution-2026-11-13/vectors/v01/fixtures/malformed/t01-cross-file-chunk-splice.emf"
+    "fixtures/malformed/t01-cross-file-chunk-splice.emf"
 );
 
 #[test]
