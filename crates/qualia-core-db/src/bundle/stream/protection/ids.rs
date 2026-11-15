@@ -1,5 +1,5 @@
 //! Private opaque-ID mapping; original ordinals never become public IDs.
-use super::{PreparedSource, publisher::PublisherError as E};
+use super::{publisher::PublisherError as E, PreparedSource};
 use crate::crypto::network::{digest::sha384, entropy::fill_os};
 use crate::net::qdnf::types::StrongDigest;
 #[derive(Clone, Copy)]

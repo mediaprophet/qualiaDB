@@ -1,0 +1,292 @@
+     Locking 13 packages to highest compatible versions
+      Adding bitflags v2.13.2
+      Adding errno v0.3.14
+      Adding fastrand v2.5.0
+      Adding getrandom v0.4.3
+      Adding linux-raw-sys v0.12.1
+      Adding log v0.4.35
+      Adding memmap2 v0.9.12
+      Adding once_cell v1.21.4
+      Adding r-efi v6.0.0
+      Adding rustix v1.1.4
+      Adding tempfile v3.27.0
+      Adding windows-link v0.2.1
+      Adding windows-sys v0.61.2
+   Compiling getrandom v0.4.3
+   Compiling libc v0.2.191
+   Compiling windows-link v0.2.1
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling log v0.4.35
+   Compiling memmap2 v0.9.12
+   Compiling windows-sys v0.61.2
+   Compiling tempfile v3.27.0
+   Compiling qualia-qbdl-stream-conformance v0.1.0 (C:\github\qualiaDB\tools\qbdl-stream-conformance)
+error[E0583]: file not found for module `ranges`
+  --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:14:1
+   |
+14 | pub mod ranges;
+   | ^^^^^^^^^^^^^^^
+   |
+   = help: to create the module `ranges`, create file "src\..\..\..\crates\qualia-core-db\src\ranges.rs" or "src\..\..\..\crates\qualia-core-db\src\ranges\mod.rs"
+   = note: if there is a `mod ranges` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:667:17
+    |
+667 |             use windows::core::PCWSTR;
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:668:17
+    |
+668 |             use windows::Win32::Foundation::{GENERIC_READ, INVALID_HANDLE_VALUE};
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:669:17
+    |
+669 |             use windows::Win32::Storage::FileSystem::{
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:673:17
+    |
+673 |             use windows::Win32::System::IO::DeviceIoControl;
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\net\ebpf_filter.rs:269:17
+    |
+269 |             use windows::Win32::Foundation::HANDLE;
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\net\ebpf_filter.rs:270:17
+    |
+270 |             use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineOpen0;
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\net\ebpf_filter.rs:316:17
+    |
+316 |             use windows::Win32::Foundation::HANDLE;
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\net\ebpf_filter.rs:317:17
+    |
+317 |             use windows::Win32::NetworkManagement::WindowsFilteringPlatform::FwpmEngineClose0;
+    |                 ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+error[E0433]: cannot find `zns_storage` in the crate root
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:522:42
+    |
+522 |     manager: Arc<std::sync::Mutex<crate::zns_storage::ZnsZoneManager>>,
+    |                                          ^^^^^^^^^^^ could not find `zns_storage` in the crate root
+    |
+note: found an item that was configured out
+   --> src\lib.rs:127:9
+    |
+125 | #[cfg(target_os = "linux")]
+    |       ------------------- the item is gated behind the `linux` feature
+126 | #[path = "../../../crates/qualia-core-db/src/zns_storage.rs"]
+127 | pub mod zns_storage;
+    |         ^^^^^^^^^^^
+
+error[E0433]: cannot find `zns_storage` in the crate root
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:530:25
+    |
+530 |         manager: crate::zns_storage::ZnsZoneManager,
+    |                         ^^^^^^^^^^^ could not find `zns_storage` in the crate root
+    |
+note: found an item that was configured out
+   --> src\lib.rs:127:9
+    |
+125 | #[cfg(target_os = "linux")]
+    |       ------------------- the item is gated behind the `linux` feature
+126 | #[path = "../../../crates/qualia-core-db/src/zns_storage.rs"]
+127 | pub mod zns_storage;
+    |         ^^^^^^^^^^^
+
+error[E0433]: cannot find `zns_storage` in the crate root
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:562:32
+    |
+562 |         let zone_type = crate::zns_storage::ZoneType::Sequential;
+    |                                ^^^^^^^^^^^ could not find `zns_storage` in the crate root
+    |
+note: found an item that was configured out
+   --> src\lib.rs:127:9
+    |
+125 | #[cfg(target_os = "linux")]
+    |       ------------------- the item is gated behind the `linux` feature
+126 | #[path = "../../../crates/qualia-core-db/src/zns_storage.rs"]
+127 | pub mod zns_storage;
+    |         ^^^^^^^^^^^
+
+error[E0433]: cannot find module or crate `windows` in this scope
+   --> src\..\..\..\crates\qualia-core-db\src\storage_driver.rs:722:30
+    |
+722 |             let _ = unsafe { windows::Win32::Foundation::CloseHandle(handle) };
+    |                              ^^^^^^^ use of unresolved module or unlinked crate `windows`
+    |
+    = help: if you wanted to use a crate named `windows`, use `cargo add windows` to add it to your `Cargo.toml`
+
+warning: unused import: `owned::decode_owned_index`
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\index\mod.rs:15:16
+   |
+15 | pub(crate) use owned::decode_owned_index;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `SparseWorkspaceKey` and `WorkspacePageAttempt`
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\sparse_workspace\mod.rs:13:24
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                        ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `derive_segment`, `open_leaf_raw`, and `seal_leaf_raw`
+  --> src\..\..\..\crates\qualia-core-db\src\crypto\network\object_stream\mod.rs:18:26
+   |
+18 | pub(crate) use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
+   |                          ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused imports: `open_master_raw` and `seal_master_raw`
+  --> src\..\..\..\crates\qualia-core-db\src\crypto\network\object_stream\mod.rs:21:23
+   |
+21 | pub(crate) use wrap::{open_master_raw, seal_master_raw};
+   |                       ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused import: `open_checked::open_regular_exclusive`
+  --> src\sensing\..\..\..\..\crates\qualia-core-db\src\sensing\local_custody\mod.rs:17:16
+   |
+17 | pub(crate) use open_checked::open_regular_exclusive;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0433]: cannot find `recovery` in `ranges`
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\tests.rs:11:13
+   |
+11 |     ranges::recovery::tests::{limits, locator, material, quota},
+   |             ^^^^^^^^ could not find `recovery` in `ranges`
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:63:14
+   |
+63 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+63 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+63 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+error[E0599]: no method named `open_range_recovery_source` found for reference `&MmapDriver` in the current scope
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:54:35
+   |
+54 |         let source = match driver.open_range_recovery_source(scope, locator, limits) {
+   |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `&MmapDriver`
+
+warning: method call on a diverging inference variable
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:62:58
+   |
+62 |         self.recovery_sources[index].scope = Some(source.scope_key());
+   |                                                          ^^^^^^^^^
+   |
+   = help: consider providing a type annotation
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: for more information, see issue #156047 <https://github.com/rust-lang/rust/issues/156047>
+   = note: `#[warn(method_call_on_diverging_infer_var)]` (part of `#[warn(future_incompatible)]`) on by default
+
+error[E0599]: no method named `scope_key` found for type `!` in the current scope
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:62:58
+   |
+62 |         self.recovery_sources[index].scope = Some(source.scope_key());
+   |                                                          ^^^^^^^^^ method not found in `!`
+
+error[E0599]: no method named `attempt_id` found for type `!` in the current scope
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:63:55
+   |
+63 |         self.recovery_sources[index].attempt = source.attempt_id();
+   |                                                       ^^^^^^^^^^ method not found in `!`
+
+warning: unreachable call
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:63:55
+   |
+63 |         self.recovery_sources[index].attempt = source.attempt_id();
+   |                                                ------ ^^^^^^^^^^ unreachable call
+   |                                                |
+   |                                                any code following this expression is unreachable
+   |
+   = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+
+error[E0599]: no method named `limits` found for type `!` in the current scope
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:64:59
+   |
+64 |         self.recovery_sources[index].limits = Some(source.limits());
+   |                                                           ^^^^^^ method not found in `!`
+
+warning: unreachable call
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:64:59
+   |
+64 |         self.recovery_sources[index].limits = Some(source.limits());
+   |                                                    ------ ^^^^^^ unreachable call
+   |                                                    |
+   |                                                    any code following this expression is unreachable
+
+warning: unreachable expression
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:68:12
+   |
+68 |           Ok(RetainedRecoverySource {
+   |  ____________^
+69 | |             owner: self.owner,
+70 | |             slot: index as u8,
+71 | |             generation,
+72 | |             source,
+   | |             ------ any code following this expression is unreachable
+73 | |         })
+   | |_________^ unreachable expression
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src\sensing\..\..\..\..\crates\qualia-core-db\src\sensing\local_custody\quota\recovery.rs:10:10
+   |
+10 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+10 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+10 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+error[E0599]: no method named `open_range_recovery_source` found for reference `&storage_driver::MmapDriver` in the current scope
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\recovery_source\admission.rs:54:35
+   |
+54 |         let source = match driver.open_range_recovery_source(scope, locator, limits) {
+   |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^ method not found in `&storage_driver::MmapDriver`
+
+Some errors have detailed explanations: E0433, E0583, E0599.
+For more information about an error, try `rustc --explain E0433`.
+warning: `qualia-qbdl-stream-conformance` (lib) generated 11 warnings
+error: could not compile `qualia-qbdl-stream-conformance` (lib) due to 17 previous errors; 12 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+warning: `qualia-qbdl-stream-conformance` (lib test) generated 9 warnings (9 duplicates)
+error: could not compile `qualia-qbdl-stream-conformance` (lib test) due to 18 previous errors; 10 warnings emitted

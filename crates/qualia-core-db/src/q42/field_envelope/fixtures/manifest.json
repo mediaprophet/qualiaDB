@@ -1,0 +1,730 @@
+{
+  "schema": "field-envelope-test-fixtures-v1",
+  "status": "candidate_preparation_not_release_conformance",
+  "provenance": "Byte-exact selected independent C04 fixture corpus; copied without generator modification from docs/plans/emf-qac-evolution-2026-11-13/vectors/fixtures",
+  "source_manifest_sha256": "ccf425174750458727777f80344682e1d8e60c9c08eef340684c1df71a5aaf78",
+  "source_hashes": {
+    "C:\\github\\qualiaDB\\docs\\plans\\emf-qac-evolution-2026-11-13\\emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+    "C:\\github\\qualiaDB\\docs\\plans\\emf-qac-evolution-2026-11-13\\qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2",
+    "C:\\github\\qualiaDB\\docs\\manuals\\standards\\emf-container-format.md": "fd7ce93a25cff3be2f5f5b7f249d9945dd4d54ce1daead846edefca2ecbb676d",
+    "C:\\github\\qualiaDB\\docs\\manuals\\standards\\emf-v3-extension.md": "29f45a1c2cd414c03d1cf56274cc16b08d6928e9685016f57a051b44d2f69463",
+    "C:\\github\\qualiaDB\\crates\\qualia-core-db\\src\\audio\\audio_spectral_sheet.rs": "9a351a134b868739e6501834b580ada02ba8554e3b6e6f99f477645f440b4898",
+    "C:\\github\\qualiaDB\\crates\\qualia-core-db\\src\\audio\\audio_spectral_sheet_v3.rs": "427a6d58d459ca0ab353d8c0ec89dbbfb73f75bbacbf9cdffe8bd75b9301dfde"
+  },
+  "fixtures": [
+    {
+      "path": "candidate/emf_candidate-aligned4096.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 8192,
+      "sha256": "ec6d9b45331201ece52ae7eade0fad5bd18df090c4befdb045ae5521e91e498c",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/emf_candidate-metadata-only.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 192,
+      "sha256": "72e27773b80a1da6f4e59799166097f184e5c4df05ff515f894b588daf571fae",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/emf_candidate-opaque.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "4cc595c03508dff4976c522b14dd738940aaa5a46c9c91bb12b60516086f3fcd",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/emf_candidate-two-entries.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1280,
+      "sha256": "2f88bffb3e289c8650c099102c9265428f15e2c987d70d704299c829bdf6b20f",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/qac_candidate-aligned4096.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 8192,
+      "sha256": "f307579a756838749c0cf2b7fd66104a4bacedb3ac3b0d6b725477c7534fbefd",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/qac_candidate-metadata-only.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 192,
+      "sha256": "04fba5589cd4ccd6f74842634b6bd221e3489fb8b0963924d3fe891f9a1e650f",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/qac_candidate-opaque.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "4daa1dcf29937cb82956ca8ee7fba7594bae8b522f0b8332d3f3fd67cfe9d2e1",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/qac_candidate-pcm-signed-zero.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 960,
+      "sha256": "0c1301438ca7343c96c80ff6dd2c21a6bbc26607a1b7b797a8a9deecb2c7c085",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "candidate/qac_candidate-two-entries.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 960,
+      "sha256": "824d68c6003d5ec4ee143c07c6895c8ed686628604a72ec9e7ee5fee0e97c722",
+      "expected": "accept",
+      "error": null,
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-count-overflow.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "6fb3826c1e89d093988726ecc42e6ff6dd6dfa4573551401db72ff26569ecbd4",
+      "expected": "reject",
+      "error": "extent",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-count-product-overflow.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "cb15ed8c6c0d381e60e677aff537eaa8e4da9496ad7f06361c98b6248a403b20",
+      "expected": "reject",
+      "error": "extent_overflow",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-directory-crc.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "83fccfcc3217ebc4a4d9d6db873b8619f31794d24f396d71063d1e90184e7c10",
+      "expected": "reject",
+      "error": "directory_crc",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-duplicate.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1280,
+      "sha256": "ea84ff29527ab5925dd489817a649f9e1d6541bdc5fba0984515b979348570a2",
+      "expected": "reject",
+      "error": "directory_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-header-crc.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "c1a67001e45fd284dc0996abaf4029d95ca4864198695971c92b6d681dfc14b1",
+      "expected": "reject",
+      "error": "header_crc",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-metadata-duplicate-id.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "3b81a028328877a061e28b3979a2ef84da77b5fb258e94d1f6e571c341938f7f",
+      "expected": "reject",
+      "error": "metadata_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-padding.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "03b5a210836d6f01e50a00ce7e8f68f70c7ead565da3de7f175c707abfad3939",
+      "expected": "reject",
+      "error": "padding",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-payload-digest-tail.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "2fc6a845e9814f3dd452cb930547bf0f955646f4a93dcb084fecc4a0041be309",
+      "expected": "reject",
+      "error": "payload_digest",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-payload-overlap.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "1d659dacb569be98951b8a2ca833418ec5ce06ed40da0c2573365ea9119ebc2f",
+      "expected": "reject",
+      "error": "extent",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-payload.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "70ccb0b267a675b1d5c25f1c20e5c7c71285b712c0a2b6ee36ff8af678f4035e",
+      "expected": "reject",
+      "error": "payload_digest",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-reordered.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1280,
+      "sha256": "536477128eef5619f42369e0b87541b2840866d4336678899c951a2d98da10d9",
+      "expected": "reject",
+      "error": "directory_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-reserved-directory.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "3c7a89e861e2652d4fb154ee715f40d65fc39e9a573591d71db4c7c3fd55dde2",
+      "expected": "reject",
+      "error": "reserved",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-reserved-header.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "a3e65f487cc29edc65db8402b0e131cd46faec87db573a9452f3ca2f093e27b6",
+      "expected": "reject",
+      "error": "reserved",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-root-tail.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "8b7ec82d1ef4ea28ad69abd0590668c726d941543b823fa85e60009dcc791195",
+      "expected": "reject",
+      "error": "index_digest",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-tlv-count.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "5bbf2e338d4e18281c70f732db6ee541075326b04217351b25f7ec80d58f7b80",
+      "expected": "reject",
+      "error": "tlv_length",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-tlv-padding.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "b8e1152aea79fe6b20d08233f1db5829ed3ee38b6b6c1e093269a244e67ae056",
+      "expected": "reject",
+      "error": "padding",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-tlv-reserved.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "a2cdbf40d661ec1668d2206677027bb8fa3b2d81af2b621f29d6411c2ed8bb65",
+      "expected": "reject",
+      "error": "reserved",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-tlv-zero-key.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "a73de56898a8d082c4cbf44828dfa4e3be6ee23b05f1e540dfb27967801e61db",
+      "expected": "reject",
+      "error": "field_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-truncated.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1087,
+      "sha256": "83188650d92b4c3c0efa63b70b81ecaf95c4127bbf5250ec5093712e3d31c2fa",
+      "expected": "reject",
+      "error": "file_length",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-unknown-codec.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "84335653517a37c12e811f8cee8fa6d9a0dd40349c93b2991ce926cd806c2b4c",
+      "expected": "reject",
+      "error": "codec",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/emf_candidate-unknown-critical-schema.emf",
+      "family": "emf_candidate",
+      "status": "candidate",
+      "size": 1088,
+      "sha256": "2aaa89e3eb0a70a751a294dce71241e97351a6076afb6c598cc0d5b5f68e23c0",
+      "expected": "reject",
+      "error": "critical_schema",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-count-overflow.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "195848f4205606b07b8197f9ed7fc0ab72d494e9baa1c76d97326fcc523ef5c3",
+      "expected": "reject",
+      "error": "extent",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-count-product-overflow.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "895652391be8bd08a7aff5eab0dc334de0bcbdf96fc4e6ff4a88ca2c18b31d41",
+      "expected": "reject",
+      "error": "extent_overflow",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-directory-crc.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "ab29dd2e215584607c330efea3d5c837f777a89b7815ff49de3fc82b591a1e08",
+      "expected": "reject",
+      "error": "directory_crc",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-duplicate.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 960,
+      "sha256": "d937c5750d59cb4492794f45d56793d33de24d6e86a9402f799e212341355348",
+      "expected": "reject",
+      "error": "directory_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-header-crc.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "cb53417aafa7666a858fe7621fda0f8dbd54a6c97bd35a1b9a391b4e78d4f618",
+      "expected": "reject",
+      "error": "header_crc",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-metadata-duplicate-id.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "92a609b4b5909581f15b4c319da598c2e28299ad94e921be6aac2f2da9ff6de9",
+      "expected": "reject",
+      "error": "metadata_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-padding.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "9c0e40f4350c215bcb142517c3029d0a1d8ed5781d608e7e0a847913a29bef07",
+      "expected": "reject",
+      "error": "padding",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-payload-digest-tail.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "a0833954cff49a9af0c67fd74f5c7d6c1b0aef6c67ea058826228d6b6625cfd3",
+      "expected": "reject",
+      "error": "payload_digest",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-payload-overlap.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "14de00dbf38b3a9dabfa8642a42229dc7109e31f046b91492f45ea46e22fc384",
+      "expected": "reject",
+      "error": "extent",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-payload.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "74bcd798986846e52681ee8e41d25591be962e3ea1c728f25161dbeb1d5ecb71",
+      "expected": "reject",
+      "error": "payload_digest",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-reordered.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 960,
+      "sha256": "5cfb6000323dbcceba3c9523ea8710d7e2a89683446d2950bdccc558e5cadcf6",
+      "expected": "reject",
+      "error": "directory_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-reserved-directory.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "43b13bbc7ebee9cb88e520c71da966991bde632b1ea35b7f4c35769af40fde87",
+      "expected": "reject",
+      "error": "reserved",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-reserved-header.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "7d19e85102b109c989d1063ebd464f36f49b382b1f1c06e40c348f277a3998fc",
+      "expected": "reject",
+      "error": "reserved",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-root-tail.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "056a6b8fa6f28660b20126616ff109b7aeb5e6a7a24d8426b7d7cf906bfd55ae",
+      "expected": "reject",
+      "error": "index_digest",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-tlv-count.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "f549c0fef668792184efed142950c5851c5b1e151137ce21c250322da7ebad5d",
+      "expected": "reject",
+      "error": "tlv_length",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-tlv-padding.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "f5059c6992e67df43cef86b1499cfdc25c67409637ff33918f71380d2d7b4464",
+      "expected": "reject",
+      "error": "padding",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-tlv-reserved.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "a8fd4183072940d4badf67764a949c84d72b60441035cb806c59d9eb4a7d3886",
+      "expected": "reject",
+      "error": "reserved",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-tlv-zero-key.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "485e72d0426e357ef118fc7651ada22dbb9510537c5684606ac5b17f2abb3749",
+      "expected": "reject",
+      "error": "field_order",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-truncated.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 767,
+      "sha256": "1605a291c1f49a5d4a2f0681193a5bbb226cd08659e8655c77ef8f8b4f970ddf",
+      "expected": "reject",
+      "error": "file_length",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-unknown-codec.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "673a584e90c343aa9c207ea57b3826883c0281e429f9e885671770c34066be8a",
+      "expected": "reject",
+      "error": "codec",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    },
+    {
+      "path": "malformed/qac_candidate-unknown-critical-schema.qac",
+      "family": "qac_candidate",
+      "status": "candidate",
+      "size": 768,
+      "sha256": "f5e77c1aa7eb42a676589bfdeb17f6e418e3c30cf5d7df84616fb7c8013dabfe",
+      "expected": "reject",
+      "error": "critical_schema",
+      "specification_hashes": {
+        "emf-evolution-specification.md": "2204be961d9a34a5d43361484c450beac9f4d04c08ea58d361a9ec5d61e4d67e",
+        "qac-acoustic-container-specification.md": "d09e42642db0556b00d78dd3f9ba3d17af0cad95bdcf44a9b2f9c6060eb79bd2"
+      },
+      "qualification": "candidate envelope/byte-layout only; C03 not accepted; no science or production conformance claim"
+    }
+  ]
+}

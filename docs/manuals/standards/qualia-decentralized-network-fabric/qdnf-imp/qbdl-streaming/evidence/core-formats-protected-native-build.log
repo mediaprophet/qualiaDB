@@ -1,0 +1,109 @@
+     Locking 1 package to highest compatible version
+      Adding etalon-model-io v0.0.2 (C:\github\etalon\crates\etalon-model-io)
+   Compiling etalon-model-io v0.0.2 (C:\github\etalon\crates\etalon-model-io)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\etalon_model_io-37xcfedklx7jv\s-ho3bt8d7x5-0eumv0x-working`
+
+warning: `etalon-model-io` (lib) generated 1 warning
+   Compiling etalon-inference v0.0.2 (https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\vibe-0wj2fpl55hix7\s-ho3729a5kj-0u09cpd-working`
+
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vibe` (lib) generated 2 warnings (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+   Compiling etalon-inference-lab v0.0.2 (https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6)
+   Compiling qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)
+warning: unused import: `WorkspacePageAttempt`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\sparse_workspace\mod.rs:13:44
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                                            ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `runtime::*`
+ --> crates\qualia-core-db\src\bundle\stream\storage\native\tests.rs:4:62
+  |
+4 |     policy::adopt_local_whole_source, proof::Representation, runtime::*, storage::*,
+  |                                                              ^^^^^^^^^^
+
+warning: unused import: `derive_segment`
+  --> crates\qualia-core-db\src\crypto\network\object_stream\mod.rs:18:26
+   |
+18 | pub(crate) use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
+   |                          ^^^^^^^^^^^^^^
+
+warning: unused import: `open::UnwrappedMetadata`
+ --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\mod.rs:9:16
+  |
+9 | pub(crate) use open::UnwrappedMetadata;
+  |                ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\inference_bench\prepared_domino.rs:51:14
+   |
+51 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+51 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+51 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\compute_universe_epoch.rs:36:10
+   |
+36 |         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+36 -         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+36 +         .try_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\qwen\retained.rs:74:37
+   |
+74 |         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+   |                                     ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+74 -         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+74 +         let generation = GENERATION.try_update(Ordering::AcqRel, Ordering::Acquire,
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:58:14
+   |
+58 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+58 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+58 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+error[E0502]: cannot borrow `bad_record` as immutable because it is also borrowed as mutable
+   --> crates\qualia-core-db\src\bundle\stream\formats\m64_tests.rs:215:59
+    |
+215 |     bad_record[192..256].copy_from_slice(&blake3_trailer(&bad_record[128..192]));
+    |     ----------           ---------------                  ^^^^^^^^^^ immutable borrow occurs here
+    |     |                    |
+    |     |                    mutable borrow later used by call
+    |     mutable borrow occurs here
+    |
+    = help: use `.split_at_mut(position)` to obtain two mutable non-overlapping sub-slices
+
+For more information about this error, try `rustc --explain E0502`.
+warning: `qualia-core-db` (lib test) generated 8 warnings
+error: could not compile `qualia-core-db` (lib test) due to 1 previous error; 8 warnings emitted

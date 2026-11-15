@@ -117,6 +117,8 @@ jobs:
         run: |
           cargo check -q --target wasm32-unknown-unknown -p webizen-lite-wasm
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features wasm-webcivics
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features wasm-logic
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features wasm-scientific

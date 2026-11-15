@@ -13,6 +13,8 @@ pub use recovery_source::{
 };
 mod plan;
 mod storage_stage;
+mod jobs;
+pub use jobs::{StorageJobTicket, StorageJobs, MAX_STORAGE_JOBS};
 mod transfer;
 pub use storage_stage::{ProofStorageBuffers, StorageBuffers, StorageStage, StorageStageControl};
 mod types;

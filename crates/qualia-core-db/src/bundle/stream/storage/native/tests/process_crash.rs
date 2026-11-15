@@ -49,19 +49,27 @@ fn crash_writer_child() {
             let mut nodes = [StrongDigest::ZERO; 32];
             let mut owner = AuthorityOwner::new();
             let mut grant = adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-            let mut stage = rt
-                .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                .unwrap();
+            let next = store.next_sequence().unwrap();
+            let mut attempt = workspace.begin_attempt();
+            let armed = {
+                let mut stage = rt
+                    .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
+                    .unwrap();
+                store
+                    .prepare_leaf_write(
+                        &mut stage,
+                        attempt.workspace(),
+                        0,
+                        &mut nodes,
+                        next,
+                        &|| 20,
+                        &|| Generation(1),
+                    )
+                    .unwrap()
+            };
             store
-                .write_leaf_with_hook(
-                    &mut stage,
-                    &mut grant,
-                    pins,
-                    workspace,
-                    0,
-                    &mut nodes,
-                    &|| 20,
-                    &|| Generation(1),
+                .wait_leaf_write(
+                    armed,
                     &mut |step| {
                         if step == target {
                             let mut stdout = std::io::stdout().lock();
@@ -76,6 +84,25 @@ fn crash_writer_child() {
                     },
                 )
                 .unwrap();
+            {
+                let mut stage = rt
+                    .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
+                    .unwrap();
+                store
+                    .commit_leaf_write(
+                        &mut stage,
+                        &mut grant,
+                        pins,
+                        attempt.workspace(),
+                        0,
+                        &mut nodes,
+                        &|| 20,
+                        &|| Generation(1),
+                    )
+                    .unwrap();
+                stage.recheck(20, Generation(1)).unwrap();
+                store.finish_leaf_write(next, 0, attempt).unwrap();
+            }
             panic!("writer returned without reaching requested barrier");
         },
     );

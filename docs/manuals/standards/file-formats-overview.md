@@ -7,6 +7,7 @@
 | Format | Standard | Current identity and integrity |
 |---|---|---|
 | EMF | [EMF container](emf-container-format.md) | `Q42EMF64`, v2; full 32-byte BLAKE3 per record payload plus header/directory CRC-32C |
+| QAC | [QAC acoustic container](qac-acoustic-container.md) | Canonical .qac; legacy v1/v2/v3 retained; typed successor structure is explicit opt-in, semantic implementation incomplete |
 | E64 | [E64 compatibility format](e64-compatibility-format.md) | `e64` + NUL; M64 v1/v2 wire alias; codec 3 full BLAKE3 |
 | M64 | [M64 matter container](m64-matter-container.md) | `m64` + NUL; default v2; codec 3 full BLAKE3, raw codec 0 distinct; developmental v3 GRM3 |
 | 10D | [10D container standard](10d-container-standard.md) | `10d` + NUL, v2; whole-file and section CRC-32C; typed payload profiles |

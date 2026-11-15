@@ -1,106 +1,109 @@
-//! CPU decode for QualiaPortal `load_emf`.
-//!
-//! Sibling `Q42EMF64` (`.emf`) holds the field values. `.10d` MID2/FIEL names
-//! the field. RGBA and AcousticPlane Hz are conversions of these cells.
-
-use crate::q42::emf_container::{DenseEmfVolume, EmfContainerReader};
-use crate::render::acoustic::sigma_to_center_frequency_hz;
-pub use crate::render::portal_emf_state::LoadedEmf;
-
-/// Parse `Q42EMF64` bytes and unpack Hilbert 8³ bricks into a dense xyz grid.
+//! Current EMF typed admission and bounded local-frame display projection.
+//! Exact source, physical vectors/units, clocks and frames remain scientific data;
+//! display magnitude does not imply carrier, colour, sigma or acoustic frequency.
+use crate::q42::{
+    emf_profiles as profiles,
+    field_envelope::{self as env, Family, StructuralView},
+    field_semantics as sem,
+};
+#[path = "portal_load_emf/admission.rs"]
+mod admission;
+#[path = "portal_load_emf/project.rs"]
+mod project;
+use crate::render::portal_emf_state::MAX_DISPLAY_CELLS;
+pub use crate::render::portal_emf_state::{DisplayEmfCell, DisplaySelection, LoadedEmf};
+#[derive(Clone, Copy, Debug)]
+pub struct PortalEmfLimits {
+    pub storage: env::Limits,
+    pub profiles: profiles::Limits,
+    pub total_payload_work: u64,
+    pub projection_work: u64,
+    pub source_bytes: usize,
+    pub peak_owned_bytes: usize,
+    pub display_cells: usize,
+    pub time_slices: usize,
+}
+impl Default for PortalEmfLimits {
+    fn default() -> Self {
+        Self {
+            storage: env::Limits::default(),
+            profiles: profiles::Limits::default(),
+            total_payload_work: 512 << 20,
+            projection_work: 64 << 20,
+            source_bytes: 128 << 20,
+            peak_owned_bytes: 256 << 20,
+            display_cells: MAX_DISPLAY_CELLS,
+            time_slices: 4096,
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Error {
+    Storage(env::Error),
+    Profile(profiles::Error),
+    Limit,
+    Allocation,
+    Overflow,
+    UnsupportedProjection(&'static str),
+    AmbiguousSelection,
+    SelectionMissing,
+    Overlap,
+    OrphanValidityMask,
+}
+impl From<env::Error> for Error {
+    fn from(e: env::Error) -> Self {
+        Self::Storage(e)
+    }
+}
+impl From<profiles::Error> for Error {
+    fn from(e: profiles::Error) -> Self {
+        Self::Profile(e)
+    }
+}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "emf: ")?;
+        match self {
+            Self::UnsupportedProjection(why) => f.write_str(why),
+            _ => write!(f, "{self:?}"),
+        }
+    }
+}
+impl std::error::Error for Error {}
+pub(super) fn charge(work: &mut u64, n: u64) -> Result<(), Error> {
+    *work = work.checked_sub(n).ok_or(Error::Limit)?;
+    Ok(())
+}
+pub(super) fn vector<T>(len: usize, budget: usize) -> Result<Vec<T>, Error> {
+    let bytes = len
+        .checked_mul(std::mem::size_of::<T>())
+        .ok_or(Error::Overflow)?;
+    if bytes > budget {
+        return Err(Error::Limit);
+    }
+    let mut v = Vec::new();
+    v.try_reserve_exact(len).map_err(|_| Error::Allocation)?;
+    Ok(v)
+}
+/// Default display selects only an unambiguous mode0 grid, with every exact tick.
+/// Independent metadata inspection remains available for unsupported projections.
 pub fn decode_emf_scientific(bytes: &[u8]) -> Result<LoadedEmf, String> {
-    if bytes.len() < 8 || &bytes[..8] != b"Q42EMF64" {
-        return Err("emf: expected Q42EMF64 magic".into());
+    decode_emf_with_selection(bytes, None, PortalEmfLimits::default()).map_err(|e| e.to_string())
+}
+pub fn decode_emf_with_selection(
+    bytes: &[u8],
+    selection: Option<DisplaySelection>,
+    limits: PortalEmfLimits,
+) -> Result<LoadedEmf, Error> {
+    if bytes.len() > limits.source_bytes {
+        return Err(Error::Limit);
     }
-    let reader = EmfContainerReader::parse(bytes).map_err(|e| format!("emf: {e}"))?;
-    let interpretation = reader.extension().map(|extension| extension.metadata().clone());
-    if interpretation.as_ref().is_some_and(|metadata| !metadata.field.supports_legacy_visible_projection()) {
-        return Err("emf: declared RGB preview requires its named gamut, transfer and luminance conversion; use inspect_emf to retain metadata and PCM without this fixed visible-wavelength projection".into());
-    }
-    let volume: DenseEmfVolume = reader
-        .dense_volume()
-        .map_err(|e| format!("emf volume: {e}"))?;
-    if volume.cells.is_empty() {
-        return Err("emf: empty dense volume".into());
-    }
-    Ok(LoadedEmf {
-        container_version: reader.header().version as u32,
-        interpretation,
-        nx: volume.nx,
-        ny: volume.ny,
-        nz: volume.nz,
-        nt: volume.nt,
-        cell_count: volume.cells.len() as u32,
-        mean_sigma: volume.mean_sigma,
-        frequency_hz: sigma_to_center_frequency_hz(volume.mean_sigma),
-        bounds: volume.bounds_meters(),
-        cells: volume.cells,
-    })
+    let view = StructuralView::open(bytes, Family::EmfV4Candidate, limits.storage)?;
+    let mut work = limits.projection_work;
+    let chunks = admission::admit_all(&view, limits, &mut work)?;
+    project::project(bytes, &view, &chunks, selection, limits, &mut work)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::q42::emf_container::{
-        emf_brick_voxel_linear_index, EmfCellRecord64, EmfContainerWriter, EMF_BRICK_CELLS,
-    };
-    use crate::q42::m64_matter::encode_hilbert3d_u64;
-
-    fn sealed_green_brick() -> Vec<u8> {
-        let mut writer = EmfContainerWriter::new([0.0, 0.0, 0.0], 0.5, [1, 1, 1], 0.0);
-        let mut cells = [EmfCellRecord64::default(); EMF_BRICK_CELLS];
-        let idx = emf_brick_voxel_linear_index(0, 0, 0);
-        cells[idx].e_field = [10.0, 0.0, 0.0];
-        cells[idx].wavelength_nm = 550.0;
-        cells[idx].confidence_alpha = 1.0;
-        cells[idx].poynting_flux = cells[idx].poynting_flux_magnitude();
-        writer
-            .add_brick_chunk(encode_hilbert3d_u64(0, 0, 0, 2), &cells, 0, 1, 0)
-            .expect("brick");
-        writer.to_bytes().expect("serialize")
-    }
-
-    #[test]
-    fn decode_rejects_non_emf_magic() {
-        assert!(decode_emf_scientific(b"10d\0not-emf").is_err());
-    }
-
-    #[test]
-    fn decode_unpacks_q42emf64_sigma_and_frequency() {
-        let bytes = sealed_green_brick();
-        let loaded = decode_emf_scientific(&bytes).expect("decode");
-        assert_eq!((loaded.nx, loaded.ny, loaded.nz, loaded.nt), (8, 8, 8, 1));
-        assert_eq!(loaded.cell_count, 512);
-        assert!((loaded.mean_sigma - 0.5).abs() < 0.05);
-        assert!(loaded.frequency_hz > 100.0 && loaded.frequency_hz < 2000.0);
-        assert!((loaded.cells[0].e_magnitude() - 10.0).abs() < 1e-5);
-        assert!((loaded.cells[0].effective_sigma() - 0.5).abs() < 1e-5);
-    }
-
-    /// Anatomy demo (and hosts) load field values from the sibling path:
-    /// `foo.10d` → `foo.emf` (replace trailing extension only). Values live in
-    /// Q42EMF64; they are never stored inside `.10d`.
-    fn sibling_emf_url(mesh_url: &str) -> Option<String> {
-        mesh_url
-            .strip_suffix(".10d")
-            .map(|stem| format!("{stem}.emf"))
-    }
-
-    #[test]
-    fn sibling_emf_path_replaces_trailing_10d_extension_only() {
-        assert_eq!(
-            sibling_emf_url("working/heart/master/heart-exterior.10d").as_deref(),
-            Some("working/heart/master/heart-exterior.emf")
-        );
-        assert_eq!(
-            sibling_emf_url("distribution/members/authored/male/heart.10d").as_deref(),
-            Some("distribution/members/authored/male/heart.emf")
-        );
-        assert_eq!(
-            sibling_emf_url("archive/foo.10d-backup/mesh.10d").as_deref(),
-            Some("archive/foo.10d-backup/mesh.emf")
-        );
-        assert_eq!(sibling_emf_url("mesh.emf"), None);
-        assert_eq!(sibling_emf_url("mesh.10d.bak"), None);
-    }
-}
+#[path = "portal_load_emf/tests.rs"]
+mod tests;

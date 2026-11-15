@@ -142,3 +142,5 @@ mod receive_tests;
 
 #[path = "endpoint_runtime_tests.rs"]
 mod runtime_tests;
+#[path = "protected_session_tests.rs"]
+mod protected_session_tests;

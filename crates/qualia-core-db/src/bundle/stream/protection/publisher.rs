@@ -1,5 +1,5 @@
 //! One private candidate attempt. Provider policy is not application authority.
-use super::geometry::{EMPTY_REF, EMPTY_ROOT, PreparedGeometry};
+use super::geometry::{PreparedGeometry, EMPTY_REF, EMPTY_ROOT};
 use crate::bundle::stream::proof::{OutboardNode, TreeSpec};
 use crate::crypto::network::object_stream::{Context, ObjectScope, PageRef, RootRow};
 use crate::net::qdnf::types::StrongDigest;

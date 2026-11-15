@@ -1,0 +1,108 @@
+{
+  "source": "Independent C04 fixture generator, 2026-11-13; legacy layouts only, no successor byte freeze implied",
+  "source_manifest_sha256": "ccf425174750458727777f80344682e1d8e60c9c08eef340684c1df71a5aaf78",
+  "fixtures": [
+    {
+      "path": "legacy/q4au-v1-contract.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 36,
+      "sha256": "c17ec2c1a7f369eb51b471aec21e21640bc5a4240f7ae099b24036775481a963",
+      "expected": "accept",
+      "error": null,
+      "qualification": "independently synthesized from observed source layout; not captured historical producer output"
+    },
+    {
+      "path": "malformed/q4au-v1-truncated.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 35,
+      "sha256": "5926a1b02859a55bec6e3e3fa6c672eb0eb2ecd534566f83d9367a3e6e46d8d4",
+      "expected": "reject",
+      "error": "extent"
+    },
+    {
+      "path": "legacy/q4au-v2-contract.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 72,
+      "sha256": "eeed0bfd14a5bc4eb5c618c9eae6af8cdb8211f359015cb8573234772f74672c",
+      "expected": "accept",
+      "error": null,
+      "qualification": "independently synthesized from observed source layout; not captured historical producer output"
+    },
+    {
+      "path": "malformed/q4au-v2-truncated.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 71,
+      "sha256": "bceb9843a6f37d8d7eeebd0d1363d16fbc068c8b54e3cedd8dd64adc9f1d40ce",
+      "expected": "reject",
+      "error": "extent"
+    },
+    {
+      "path": "legacy/q4au-v3-contract.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 628,
+      "sha256": "ae9b82c8d04efa1695f56d4d0151b9d9b549dc8a8e15cfb6e22002955e1c2ef6",
+      "expected": "accept",
+      "error": null,
+      "qualification": "independently synthesized from observed source layout; not captured historical producer output"
+    },
+    {
+      "path": "malformed/q4au-v3-truncated.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 627,
+      "sha256": "2b0090aa49cdc84023ad3630ad77fe4cb69e3335fe693ede2cd639c45c95b526",
+      "expected": "reject",
+      "error": "extent"
+    },
+    {
+      "path": "malformed/q4au-ascii-spelling.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 36,
+      "sha256": "4d8eb212c3fab86e6729e8078421e4cbb834c61c9039b9a0c87d5194afc60bdd",
+      "expected": "reject",
+      "error": "magic"
+    },
+    {
+      "path": "malformed/q4au-count-u32-max.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 36,
+      "sha256": "b929c9c7db785b1c4e909739c831f1e48a822b5926a1a370e17e6da53c280561",
+      "expected": "reject",
+      "error": "extent_overflow"
+    },
+    {
+      "path": "malformed/q4au-v3-hoa-expansion.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 628,
+      "sha256": "e656939cf4f8469cb2e3c8e35557a71e0ebe901bf0ba085689365c8b8aab35e6",
+      "expected": "reject",
+      "error": "extent"
+    },
+    {
+      "path": "malformed/q4au-v3-hrir-taps.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 628,
+      "sha256": "f712917e2e6971de27fc10ed32df009801e449986ee6ae22584517cc616ec8d7",
+      "expected": "reject",
+      "error": "hrir_taps"
+    },
+    {
+      "path": "malformed/q4au-v3-hrir-overlap.qac",
+      "family": "q4au_legacy",
+      "status": "legacy_synthesized",
+      "size": 628,
+      "sha256": "132f0d3aef13677288550e76ddb2f32cb181807e9a241c741e7cc97dd7426860",
+      "expected": "reject",
+      "error": "overlap"
+    }
+  ]
+}

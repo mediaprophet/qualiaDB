@@ -30,4 +30,15 @@ mod q42_range_tests;
 
 mod emf_v3;
 pub use emf_v3::EmfV3DirectoryView;
-#[cfg(test)] mod emf_v3_tests;
+#[cfg(test)]
+mod emf_v3_tests;
+
+mod m64_v3;
+pub use m64_v3::M64GeoRasterDirectoryView;
+#[cfg(test)]
+mod m64_v3_tests;
+
+mod qac;
+pub use qac::{QacAdmitError, QacCompleteView};
+#[cfg(test)]
+mod qac_tests;

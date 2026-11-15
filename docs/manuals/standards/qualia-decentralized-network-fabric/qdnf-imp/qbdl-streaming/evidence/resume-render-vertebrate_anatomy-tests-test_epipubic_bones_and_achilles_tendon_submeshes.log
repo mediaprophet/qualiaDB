@@ -1,0 +1,6 @@
+
+running 1 test
+test render::vertebrate_anatomy::tests::test_epipubic_bones_and_achilles_tendon_submeshes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10383 filtered out; finished in 0.25s
+

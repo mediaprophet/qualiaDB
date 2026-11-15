@@ -1,0 +1,33 @@
+
+running 22 tests
+test p2p::connectivity::cscp_h2::tests::cscp_control_then_qsession_on_local_tls_h2 ... ok
+test p2p::connectivity::cscp_h2::tests::honesty_flags_remain_false_for_local_h2 ... ok
+test p2p::connectivity::cscp_h2::tests::unknown_critical_capsule_rejected ... ok
+test p2p::connectivity::cscp_h2::tests::wrong_connect_protocol_rejected ... ok
+test p2p::connectivity::cscp_wss::tests::cscp_control_then_qsession_on_local_tls_wss ... ok
+test p2p::connectivity::demux::tests::stun_and_wg_and_overlay_not_lost ... ok
+test p2p::connectivity::establish::tests::carrier_ready_is_not_session_ready ... ok
+test p2p::connectivity::establish::tests::local_production_path_requires_qsession ... ok
+test p2p::connectivity::h2_capsule::tests::endpoints_own_listener_and_join_socket_tasks_before_release ... ok
+test p2p::connectivity::h2_capsule::tests::last_endpoint_can_be_dropped_inside_another_runtime ... ok
+test p2p::connectivity::ice::tests::ordinary_races_relay_before_direct ... ok
+test p2p::connectivity::ice::tests::relay_only_cannot_nominate_host ... ok
+test p2p::connectivity::ice::tests::role_conflict_and_consent_freshness ... ok
+test p2p::connectivity::ice_udp::tests::binding_check_required_before_nominate ... ok
+test p2p::connectivity::nat64::tests::unset_env_does_not_assume_well_known ... ok
+test p2p::connectivity::turn::tests::allocate_round_trip ... ok
+test p2p::connectivity::turn_local::tests::allocate_then_send_reaches_peer ... ok
+test p2p::connectivity::two_process::tests::two_process_authenticated_wss ... 
+running 1 test
+test p2p::connectivity::two_process::tests::two_process_authenticated_wss ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 10383 filtered out; finished in 0.05s
+
+ok
+test p2p::connectivity::wss::tests::accept_key_rfc6455_sample ... ok
+test p2p::connectivity::wss::tests::loopback_ws_datagram ... ok
+test p2p::connectivity::wss::tests::u16_length_keeps_256_and_rejects_oversize ... ok
+test p2p::connectivity::wss_tls::tests::tls_wss_verifies_cert_and_carries_256 ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 10362 filtered out; finished in 6.80s
+

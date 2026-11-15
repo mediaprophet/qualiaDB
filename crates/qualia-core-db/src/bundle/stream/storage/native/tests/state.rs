@@ -1,5 +1,57 @@
 use super::super::write::WriteStep;
 use super::*;
+use crate::bundle::stream::policy::LocalWholeSourceGrant;
+use crate::bundle::stream::runtime::{SparsePageWorkspace, TransferRuntime, TransferTicket};
+use crate::crypto::network::authority::PinAuthority;
+
+fn split_hook_write(
+    store: &mut NativeSparseStore<'_, '_>,
+    workspace: &mut SparsePageWorkspace,
+    rt: &mut TransferRuntime<'_>,
+    op: &TransferTicket,
+    grant: &mut LocalWholeSourceGrant<'_, '_>,
+    pins: &PinAuthority,
+    payload: &[u8],
+    scratch: &mut [u8],
+    nodes: &mut [StrongDigest],
+    clock: &impl Fn() -> u64,
+    policy: &impl Fn() -> Generation,
+    hook: &mut impl FnMut(WriteStep) -> Result<(), StoreError>,
+) -> Result<LeafBarrierObservation, StoreError> {
+    let next = store.next_sequence()?;
+    let mut attempt = workspace.begin_attempt();
+    let armed = {
+        let mut stage = rt
+            .storage_stage(op, payload, &[0], scratch, 20, Generation(1))
+            .unwrap();
+        store.prepare_leaf_write(
+            &mut stage,
+            attempt.workspace(),
+            0,
+            nodes,
+            next,
+            clock,
+            policy,
+        )?
+    };
+    store.wait_leaf_write(armed, hook)?;
+    let mut stage = rt
+        .storage_stage(op, payload, &[0], scratch, 20, Generation(1))
+        .unwrap();
+    store.commit_leaf_write(
+        &mut stage,
+        grant,
+        pins,
+        attempt.workspace(),
+        0,
+        nodes,
+        clock,
+        policy,
+    )?;
+    stage.recheck(clock(), policy())?;
+    store.finish_leaf_write(next, 0, attempt)
+}
+
 #[test]
 fn newer_facade_over_other_backend_mechanically_rejects_old_facade_key() {
     fixture(
@@ -38,15 +90,15 @@ fn current_policy_change_or_timeout_after_real_io_clears_marks_and_poison() {
                 {
                     let mut grant =
                         adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                    let mut stage = rt
-                        .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                        .unwrap();
-                    let result = store.write_leaf_with_hook(
-                        &mut stage,
+                    let result = split_hook_write(
+                        &mut store,
+                        workspace,
+                        rt,
+                        &op,
                         &mut grant,
                         pins,
-                        workspace,
-                        0,
+                        payload,
+                        &mut scratch,
                         &mut nodes,
                         &|| now.get(),
                         &|| policy.get(),
@@ -82,15 +134,15 @@ fn unwind_after_real_sync_clears_armed_page_and_keeps_store_poisoned() {
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                    .unwrap();
-                let _ = store.write_leaf_with_hook(
-                    &mut stage,
+                let _ = split_hook_write(
+                    &mut store,
+                    workspace,
+                    rt,
+                    &op,
                     &mut grant,
                     pins,
-                    workspace,
-                    0,
+                    payload,
+                    &mut scratch,
                     &mut nodes,
                     &|| 20,
                     &|| Generation(1),

@@ -3,6 +3,7 @@
 pub mod contract;
 pub mod fragment;
 pub mod ipc;
+pub mod local_stream;
 pub mod leased_ipc;
 pub mod lifecycle;
 pub mod metadata;

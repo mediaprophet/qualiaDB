@@ -135,11 +135,13 @@ mod tests {
             viewport::HOLOGRAPHIC_WGSL.as_bytes(),
             etalon_render::shaders::HOLOGRAPHIC_WGSL.as_bytes()
         );
+        #[cfg(feature = "gpu-runtime")]
         assert_eq!(
             HOLOGRAPHIC_STANDALONE_WGSL.as_bytes(),
             etalon_render::HOLOGRAPHIC_WGSL.as_bytes(),
             "HOLOGRAPHIC_STANDALONE_WGSL must be byte-for-byte identical to etalon_render::volumetric::HOLOGRAPHIC_WGSL"
         );
+        #[cfg(feature = "gpu-runtime")]
         assert_eq!(
             HOLOGRAPHIC_STANDALONE_WGSL.as_bytes(),
             crate::render::gpu::holographic::ETALON_HOLOGRAPHIC_WGSL.as_bytes()
@@ -155,11 +157,18 @@ mod tests {
             viewport::EMF_VOLUMETRIC_WGSL.as_bytes(),
             etalon_render::shaders::EMF_VOLUMETRIC_WGSL.as_bytes()
         );
+        #[cfg(feature = "gpu-runtime")]
         assert_eq!(
             EMF_VOLUMETRIC_STOKES_WGSL.as_bytes(),
             etalon_render::EMF_VOLUMETRIC_WGSL.as_bytes(),
             "EMF_VOLUMETRIC_STOKES_WGSL must be byte-for-byte identical to etalon_render::emf::EMF_VOLUMETRIC_WGSL"
         );
+
+        #[cfg(not(feature = "gpu-runtime"))]
+        {
+            assert_eq!(HOLOGRAPHIC_STANDALONE_WGSL, viewport::HOLOGRAPHIC_WGSL);
+            assert_eq!(EMF_VOLUMETRIC_STOKES_WGSL, viewport::EMF_VOLUMETRIC_WGSL);
+        }
 
         // 4. Full viewport shader registry byte-for-byte parity with etalon_render::shaders
         let pairs: &[(&str, &str, &str)] = &[

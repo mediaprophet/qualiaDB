@@ -1,0 +1,13 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.37s
+     Running tests\ggml_contract.rs (vendor\etalon-model-6ace6cc\target-isolated\debug\deps\ggml_contract-0c9fdba496225b69.exe)
+
+running 6 tests
+test scalar_nonfinite_bits_and_refusal_precedence_are_preserved ... ok
+test every_fp8_byte_matches_independent_exact_binary_value ... ok
+test q6_original_alignment_precondition_is_explicit_not_silently_claimed_safe ... ok
+test successful_and_refused_hot_codecs_allocate_zero_with_positive_control ... ok
+test q4_conversion_quantization_and_partial_rows_match_actual_original_bytes ... ok
+test thirteen_actual_original_codecs_match_full_output_bits_and_failures ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

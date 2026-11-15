@@ -1,5 +1,7 @@
 # QBDL streaming: remaining work and build handoff
 
+**Historical handoff (13 November 2026).** Current continuation: [continuation-2026-11-13.md](continuation-2026-11-13.md). Scope correction: [implementation-review-hmc-multiplexing-2026-11-13.md](implementation-review-hmc-multiplexing-2026-11-13.md). Progress: [progress-log.md](progress-log.md).
+
 **13 November 2026. Build-focused handoff; the complete streaming programme is unfinished.**
 
 The user reduced the immediate scope because token quota was nearly exhausted: leave a clean build so concurrent repository work can continue, and document everything still needed. Feature implementation and agent delegation were frozen. This document supersedes older checkpoint statements that a worker or build is still running; final execution results are recorded in the build section below. No commit, push, deployment or release is authorized by this handoff.

@@ -1,0 +1,34 @@
+
+running 29 tests
+test net::qdnf::authority::decoded::tests::allow_boolean_cannot_admit ... ok
+test net::qdnf::authority::digest_bind::tests::bindings_are_full_sha384_not_first_byte ... ok
+test net::qdnf::authority::digest_bind::tests::empty_or_zero_inputs_are_rejected ... ok
+test net::qdnf::authority::owner::retirement::tests::full_owner_requires_explicit_revoke_retire_and_monotonic_replacement ... ok
+test net::qdnf::authority::owner::retirement::tests::retirement_does_not_reset_exhausted_global_generation ... ok
+test net::qdnf::authority::owner::tests::bounded_admission_preserves_ceiling_and_exact_time_window ... ok
+test net::qdnf::authority::owner::tests::current_grant_issues_permit ... ok
+test net::qdnf::authority::owner::tests::decoded_allow_cannot_issue_permit ... ok
+test net::qdnf::authority::owner::tests::installed_scope_and_operation_cannot_be_rebound_at_consumption ... ok
+test net::qdnf::authority::owner::tests::invalid_binding_and_self_contact_refuse_before_install ... ok
+test net::qdnf::authority::owner::tests::legacy_ceiling_compatibility_does_not_drop_scope_or_revocation ... ok
+test net::qdnf::authority::owner::tests::rejected_admission_does_not_spend_capacity_or_generation ... ok
+test net::qdnf::authority::owner::tests::revoked_grant_cannot_issue_permit ... ok
+test net::qdnf::authority::owner::tests::stale_handle_is_rejected ... ok
+test net::qdnf::authority::permit::tests::expired_permit_is_rejected ... ok
+test net::qdnf::authority::policy::tests::allow_without_current_grant_is_not_admission ... ok
+test net::qdnf::authority::policy::tests::blocked_beats_allow ... ok
+test net::qdnf::authority::policy::tests::cache_hit_does_not_renew_expiry ... ok
+test net::qdnf::authority::policy::tests::cached_at_is_not_the_expiry_clock ... ok
+test net::qdnf::authority::policy::tests::collapse_to_trusted_peer_is_refused_even_when_all_facts_hold ... ok
+test net::qdnf::authority::policy::tests::current_allow_without_revocation_block_or_expiry ... ok
+test net::qdnf::authority::policy::tests::expired_historical_allow_cannot_authorize_current ... ok
+test net::qdnf::authority::policy::tests::payment_cannot_admit_without_control_allowance ... ok
+test net::qdnf::authority::policy::tests::payment_cannot_bypass_blocked_contact ... ok
+test net::qdnf::authority::policy::tests::reachability_is_not_authorization ... ok
+test net::qdnf::authority::policy::tests::revoked_beats_allow ... ok
+test net::qdnf::authority::policy::tests::revoked_precedes_blocked_and_expired ... ok
+test net::qdnf::authority::verified::tests::blocked_contact_cannot_be_required_active ... ok
+test net::qdnf::authority::verified::tests::zero_principal_is_rejected ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 10258 filtered out; finished in 0.06s
+

@@ -1,6 +1,7 @@
 //! Owner-held authority records and generation-bearing mutation handles.
 
 use crate::crypto::network::digest::sha384;
+use crate::net::peer::runtime::incarnation::CanonicalIncarnation;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, OperationId, ProfileId, StrongDigest};
 
@@ -54,11 +55,18 @@ pub struct MutationHandle {
     slot: u8,
     generation: Generation,
     principal: StrongDigest,
+    incarnation: CanonicalIncarnation,
 }
 
 impl MutationHandle {
     /// `Ok` when `permit` authorizes this handle; `QdnfError` otherwise.
     pub fn matches_permit(&self, permit: &ExecutionPermit) -> Result<(), QdnfError> {
+        if !self.incarnation.assigned()
+            || !permit.incarnation().assigned()
+            || self.incarnation != permit.incarnation()
+        {
+            return Err(QdnfError::StaleGeneration);
+        }
         if self.generation != permit.identity_generation() {
             return Err(QdnfError::StaleGeneration);
         }
@@ -71,6 +79,7 @@ impl MutationHandle {
 
 /// Single owner of verified grants, contacts and permits for this process.
 pub struct AuthorityOwner {
+    incarnation: CanonicalIncarnation,
     records: [Record; MAX_RECORDS],
     next_generation: Generation,
 }
@@ -79,6 +88,7 @@ impl AuthorityOwner {
     /// Creates a default `AuthorityOwner`.
     pub const fn new() -> Self {
         Self {
+            incarnation: CanonicalIncarnation::UNASSIGNED,
             records: [Record::EMPTY; MAX_RECORDS],
             next_generation: Generation::ZERO,
         }
@@ -150,6 +160,8 @@ impl AuthorityOwner {
         let authorised =
             AuthorisedContact::new(binding.principal, binding.recipient, contact, generation)?;
         // Every fallible admission check precedes publication/capacity use.
+        // Bind identity only after those checks; a failed install must stay unassigned.
+        let incarnation = self.bind_incarnation()?;
         let record = Record {
             occupied: true,
             generation,
@@ -169,6 +181,7 @@ impl AuthorityOwner {
             slot: slot as u8,
             generation,
             principal: binding.principal,
+            incarnation,
         };
         self.records[slot] = record;
         self.next_generation = generation;
@@ -226,6 +239,7 @@ impl AuthorityOwner {
             rec.generation,
             rec.expires_unix,
             resource_ceiling,
+            self.existing_incarnation(),
         )
     }
 
@@ -252,6 +266,7 @@ impl AuthorityOwner {
     }
 
     fn record(&self, handle: MutationHandle) -> Result<&Record, QdnfError> {
+        self.require_identity(handle.incarnation)?;
         let i = handle.slot as usize;
         if i >= MAX_RECORDS {
             return Err(QdnfError::Range);
@@ -270,6 +285,7 @@ impl AuthorityOwner {
     }
 
     fn record_mut(&mut self, handle: MutationHandle) -> Result<&mut Record, QdnfError> {
+        self.require_identity(handle.incarnation)?;
         let i = handle.slot as usize;
         if i >= MAX_RECORDS {
             return Err(QdnfError::Range);
@@ -291,6 +307,23 @@ impl AuthorityOwner {
 impl Default for AuthorityOwner {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl AuthorityOwner {
+    pub(crate) fn bind_incarnation(&mut self) -> Result<CanonicalIncarnation, QdnfError> {
+        self.incarnation.bind()
+    }
+
+    pub(crate) const fn existing_incarnation(&self) -> CanonicalIncarnation {
+        self.incarnation
+    }
+
+    fn require_identity(&self, incarnation: CanonicalIncarnation) -> Result<(), QdnfError> {
+        if !incarnation.assigned() || self.incarnation != incarnation {
+            return Err(QdnfError::StaleGeneration);
+        }
+        Ok(())
     }
 }
 

@@ -1,0 +1,32 @@
+
+running 15 tests
+test storage_driver::ranges::tests::actual_cleanup_denial_returns_pending_then_retries_after_handle_release ... FAILED
+test storage_driver::ranges::tests::actual_eof_is_not_implicitly_materialized_and_drop_keeps_charge ... ok
+test storage_driver::ranges::tests::actual_three_file_io_boundaries_holes_sync_and_success_cleanup ... ok
+test storage_driver::ranges::tests::allocation::actual_hot_io_has_zero_raw_allocation_calls_with_transient_positive_control ... ok
+test storage_driver::ranges::tests::canonical_quota_tokens_coexist_and_no_admission_error_mutates_root ... ok
+test storage_driver::ranges::tests::failed_root_preflight_keeps_charge_without_creating_a_staging_directory ... ok
+test storage_driver::ranges::tests::full_u64_ceiling_is_accounted_without_preallocating_file_or_zero_components ... ok
+test storage_driver::ranges::tests::limits_and_scope_fail_after_charge_before_filesystem_mutation ... ok
+test storage_driver::ranges::tests::markers::automatic_drop_checks_marker_and_preserves_foreign_replacement ... ok
+test storage_driver::ranges::tests::markers::missing_changed_torn_trailing_or_replaced_owner_never_deletes_directory ... ok
+test storage_driver::ranges::tests::markers::unwind_with_invalid_marker_does_not_bypass_guard ... ok
+test storage_driver::ranges::tests::partial_creation_error_closes_handles_then_cleans_directory ... ok
+test storage_driver::ranges::tests::true_u64_quota_overflow_refuses_without_consuming_slot ... ok
+test storage_driver::ranges::tests::unwind_cleans_owned_directory_but_cannot_refund_charge ... ok
+test storage_driver::ranges::tests::windows_retained_handles_deny_ordinary_writers ... ok
+
+failures:
+
+---- storage_driver::ranges::tests::actual_cleanup_denial_returns_pending_then_retries_after_handle_release stdout ----
+
+thread 'storage_driver::ranges::tests::actual_cleanup_denial_returns_pending_then_retries_after_handle_release' (17980) panicked at crates\qualia-core-db\src\storage_driver\ranges\tests.rs:337:32:
+called `Result::unwrap()` on an `Err` value: CleanupPending { path: "\\\\?\\C:\\Users\\Hp\\AppData\\Local\\Packages\\sandbox.{fb29fc27-7de5-494f-93d2-69bee1c00ecd}\\AC\\Temp\\.tmpv0ooZt\\qualia-range-PXAcJ6", parent: "\\\\?\\C:\\Users\\Hp\\AppData\\Local\\Packages\\sandbox.{fb29fc27-7de5-494f-93d2-69bee1c00ecd}\\AC\\Temp\\.tmpv0ooZt", charge: StagingCharge { root: "C:\\Users\\Hp\\AppData\\Local\\Packages\\sandbox.{fb29fc27-7de5-494f-93d2-69bee1c00ecd}\\AC\\Temp\\.tmpv0ooZt", attempt: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2], allowance: 28 }, error: OwnershipMarker }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    storage_driver::ranges::tests::actual_cleanup_denial_returns_pending_then_retries_after_handle_release
+
+test result: FAILED. 14 passed; 1 failed; 0 ignored; 0 measured; 10272 filtered out; finished in 0.37s
+

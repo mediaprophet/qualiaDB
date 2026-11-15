@@ -1,0 +1,27 @@
+[
+  {
+    "class": 4,
+    "status": 0,
+    "completion": 0,
+    "bytes": 8,
+    "raw_hex": "0700000020002200",
+    "device_type": 7,
+    "characteristics": "0x220020"
+  },
+  {
+    "class": 5,
+    "status": 0,
+    "completion": 0,
+    "bytes": 20,
+    "raw_hex": "ff2ee703ff000000080000004e00540046005300",
+    "name_bytes": 8,
+    "name": "NTFS"
+  },
+  {
+    "class": 51,
+    "status": 0,
+    "completion": 0,
+    "bytes": 1,
+    "is_remote": 0
+  }
+]

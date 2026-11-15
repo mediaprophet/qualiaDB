@@ -1,0 +1,30 @@
+
+running 25 tests
+test net::peer::runtime::cancel::tests::cancel_then_late_complete_releases_storage ... ok
+test net::peer::runtime::cancel::tests::cancel_epoch_does_not_wrap ... ok
+test net::peer::runtime::cancel::tests::stale_generation_is_rejected ... ok
+test net::peer::runtime::events::tests::cancel_in_flight_rejects_late_complete ... ok
+test net::peer::runtime::events::tests::complete_consumes_slot ... ok
+test net::peer::runtime::generations::tests::acquire_skips_retired_slot_and_never_wraps ... ok
+test net::peer::runtime::generations::tests::all_slots_exhausted_is_stale_generation ... ok
+test net::peer::runtime::generations::tests::released_handle_is_not_live_at_old_generation ... ok
+test net::peer::runtime::leases::tests::double_release_fails ... ok
+test net::peer::runtime::generations::tests::slot_at_max_next_fails_stale_generation ... ok
+test net::peer::runtime::leases::tests::thirty_third_acquire_is_capacity ... ok
+test net::peer::runtime::ledger::headroom::tests::counts_live_handles_not_budget_values ... ok
+test net::peer::runtime::ledger::tests::double_release_is_rejected ... ok
+test net::peer::runtime::ledger::tests::failed_reserve_leaves_counters_unchanged ... ok
+test net::peer::runtime::ledger::tests::r10_r11_release_checked_bytes_rejects_mismatched_caller_amount_and_stale_generation ... ok
+test net::peer::runtime::ledger::tests::foreign_generation_is_stale ... ok
+test net::peer::runtime::ledger::tests::release_requires_owner_handle ... ok
+test net::peer::runtime::ledger::tests::sybil_does_not_multiply_host_admission ... ok
+test net::peer::runtime::resources::tests::data_cannot_consume_essential_floor ... ok
+test net::peer::runtime::resources::tests::unknown_sender_charges_transient_pool ... ok
+test net::peer::runtime::scheduler::tests::background_not_starved_when_control_is_capped ... ok
+test net::peer::runtime::scheduler::tests::control_queue_is_capped ... ok
+test net::peer::runtime::scheduler::tests::expired_deadline_does_not_run ... ok
+test net::peer::runtime::scheduler::tests::identity_lookup_covers_classes_and_scopes_without_removing_work ... ok
+test net::peer::runtime::scheduler::tests::ninth_scope_is_capacity ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 10414 filtered out; finished in 0.01s
+

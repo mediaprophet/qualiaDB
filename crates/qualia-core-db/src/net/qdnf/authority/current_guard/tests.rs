@@ -71,3 +71,25 @@ fn pure_checks_have_zero_raw_allocations_with_positive_control() {
     std::hint::black_box(vec![1u8; 8]);
     assert!(positive.check().is_err());
 }
+#[test]
+fn replaced_same_mutex_equal_records_refuse_check_handle_then_restore() {
+    let (a, ha) = owner();
+    {
+        let current = CurrentAuthorityGuard::try_lock(&a).unwrap();
+        assert_eq!(current.check_handle(&a, ha, binding(), 11, 128), Ok(()));
+    }
+    let mut fake = AuthorityOwner::new();
+    fake.install_grant_with_ceiling(binding(), 10, 20, ContactState::Active, 128)
+        .unwrap();
+    let old = std::mem::replace(&mut *a.lock().unwrap(), fake);
+    {
+        let current = CurrentAuthorityGuard::try_lock(&a).unwrap();
+        assert_eq!(
+            current.check_handle(&a, ha, binding(), 11, 128),
+            Err(E::StaleGeneration)
+        );
+    }
+    let _replaced = std::mem::replace(&mut *a.lock().unwrap(), old);
+    let current = CurrentAuthorityGuard::try_lock(&a).unwrap();
+    assert_eq!(current.check_handle(&a, ha, binding(), 11, 128), Ok(()));
+}

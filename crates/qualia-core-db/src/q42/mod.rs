@@ -19,6 +19,20 @@ pub mod design_encode;
 pub mod chunk_integrity;
 /// Electromagnetic & wave-optical field container (.emf / EMF-64).
 pub mod emf_container;
+/// Maxwell Yee-FDTD, Poynting & dispersion operators delegated to Etalon providers.
+pub mod emf_operators;
+/// Typed candidate scientific EMF observations with explicit profile admission.
+pub mod emf_profiles;
+/// Cross-domain electromagnetic/acoustic material coupling & constitutive transducers.
+pub mod material_coupling;
+/// First-principles science oracle validation (energy conservation, Stokes-Mueller, calibration).
+pub mod science_validation;
+/// Shared candidate field-envelope structure and integrity; no scientific admission.
+pub mod field_envelope;
+/// Bounded shared field metadata/reference validation with domain-registry hooks.
+pub mod field_semantics;
+/// Full-spectrum physical axes and explicit SI conversions; independent of display bands.
+pub mod field_spectrum;
 /// Attested run recipe for a native `.p64` package (layout + mode + measured knobs).
 pub mod execution_profile;
 pub mod journal;

@@ -23,6 +23,9 @@ impl<'a> CurrentAuthorityGuard<'a> {
         if !core::ptr::eq(self.owner, owner) {
             return Err(E::Unauthorized);
         }
+        if !self.guard.existing_incarnation().assigned() {
+            return Err(E::StaleGeneration);
+        }
         Ok(())
     }
     pub(crate) fn check_handle(

@@ -1,0 +1,8 @@
+
+running 3 tests
+test net::qdnf::authority::current_guard::tests::exact_actual_owner_affinity_even_when_records_collide ... ok
+test net::qdnf::authority::current_guard::tests::pure_checks_have_zero_raw_allocations_with_positive_control ... ok
+test net::qdnf::authority::current_guard::tests::same_guard_enforces_time_ceiling_binding_and_revoke ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 10436 filtered out; finished in 0.01s
+

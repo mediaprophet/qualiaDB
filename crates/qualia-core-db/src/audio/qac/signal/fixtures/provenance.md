@@ -1,0 +1,2 @@
+Hand-authored little-endian payload oracles: PCM f32 bits 00000000,80000000,00000001,3f800000,bf800000,7f7fffff; signed i24 -8388608,+8388607,0,-1. STFT N=4 of [1,0,-1,0], forward negative exponent, unscaled, yields ordered complex bins (0,0),(2,0),(0,0),(2,0). These are source-owned independent payload expectations, not full historical acquisition files.
+STFT N=4 of [0,1,0,-1] gives (0,0),(0,-2),(0,0),(0,+2); full-bin signed offsets for Fs=4 Hz are [0,+1,-2,-1] Hz.

@@ -216,10 +216,12 @@ pub mod portal;
 pub mod portal_load_10d;
 /// PNG/KTX2 ingest for `load_10d` materials. Decode budgets are not the Prolog sentinel.
 pub mod portal_load_textures;
-/// CPU decode for QualiaPortal `load_emf` (sibling `Q42EMF64` dense unpack + AcousticPlane σ).
+/// CPU admission of current EMF and explicit local-grid display projection.
 pub mod portal_load_emf;
 /// Bounded field ownership and GPU adoption/recovery state, testable natively.
 pub mod portal_emf_state;
+/// Admitted current QAC source and bounded exact-sample windows.
+pub mod portal_qac;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod portal_wasm;
 /// Borrowed source-bound pose contract and cold canonical model admission.

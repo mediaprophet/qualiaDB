@@ -1,0 +1,21 @@
+
+running 16 tests
+test q42::emf_container::chunk_directory::tests::test_emf_brick_voxel_morton_roundtrip ... ok
+test q42::emf_container::chunk_directory::tests::test_emf_chunk_directory_crc_roundtrip ... ok
+test q42::emf_container::chunk_directory::tests::test_emf_chunk_directory_entry_size_and_alignment ... ok
+test q42::emf_container::extension::tests::v3_checks_metadata_field_boundaries_and_preserves_exact_large_epoch ... ok
+test q42::emf_container::extension::tests::v3_dense_decode_uses_declared_hilbert_order ... ok
+test q42::emf_container::extension::tests::v3_detects_all_extension_digest_bytes_and_pcm_tampering ... ok
+test q42::emf_container::extension::tests::v3_refuses_unknown_metadata_overlap_nonfinite_padding_and_limits ... ok
+test q42::emf_container::extension::tests::v3_roundtrip_preserves_v2_cells_exact_pcm_bits_time_and_interpretation ... ok
+test q42::emf_container::extension::tests::v3_same_spatial_brick_selects_exact_time_and_legacy_lookup_defaults_to_zero ... ok
+test q42::emf_container::tests::dense_volume_rejects_decoded_cell_cap ... ok
+test q42::emf_container::tests::parse_rejects_directory_aliasing_header_and_payload_overlap ... ok
+test q42::emf_container::tests::parse_with_limits_enforces_file_and_chunk_budgets ... ok
+test q42::emf_container::tests::test_emf_container_roundtrip_and_brick_lookup ... ok
+test q42::emf_container::tests::test_emf_legacy_52b_upgrade ... ok
+test q42::emf_container::tests::test_emf_tampering_detection ... ok
+test q42::emf_container::tests::writer_size_helpers_reject_wrapping_mul ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 10471 filtered out; finished in 0.03s
+

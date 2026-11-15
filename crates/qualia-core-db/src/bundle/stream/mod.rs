@@ -9,7 +9,11 @@ pub mod policy;
 
 pub mod selection;
 
+pub mod plan;
+
 pub mod formats;
+
+mod http;
 
 // Protected publication requires native managed-object key custody.
 #[cfg(not(target_arch = "wasm32"))]

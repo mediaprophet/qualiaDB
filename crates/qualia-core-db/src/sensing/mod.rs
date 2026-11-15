@@ -8,8 +8,10 @@
 
 use core::num::NonZeroU64;
 
+pub mod acquisition;
 pub mod association;
 pub mod association_table;
+pub mod authority;
 pub mod authorization;
 pub mod container;
 pub mod discovery;

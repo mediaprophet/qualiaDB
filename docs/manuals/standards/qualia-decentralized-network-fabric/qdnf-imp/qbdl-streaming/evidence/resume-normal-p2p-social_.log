@@ -1,0 +1,14 @@
+
+running 9 tests
+test p2p::social_qdnf::tests::chat_and_qdnf_demux_on_the_same_tunnel ... ok
+test p2p::social_qdnf::tests::fragmented_handshake_over_wireguard_overlay ... ok
+test p2p::social_qdnf::tests::honesty_flags_label_wireguard_not_libp2p_or_native ... ok
+test p2p::social_qdnf::tests::two_meshes_exchange_a_qframe_over_wireguard ... ok
+test p2p::social_qdnf::tests::unused_overlay_inner_is_not_a_qdnf_frame ... ok
+test p2p::social_webnet::tests::add_and_remove_peer_tracks_membership ... ok
+test p2p::social_webnet::tests::bad_peer_pubkey_is_rejected ... ok
+test p2p::social_webnet::tests::two_meshes_exchange_an_application_datagram ... ok
+test p2p::social_webnet::tests::two_meshes_peer_and_exchange_by_id ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 10375 filtered out; finished in 1.05s
+

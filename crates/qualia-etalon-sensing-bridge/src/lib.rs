@@ -11,6 +11,8 @@
 pub mod container_custody;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod local_publish;
+pub mod acquisition;
+pub mod emf_qac_authority;
 pub mod nfc;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod publish_store;

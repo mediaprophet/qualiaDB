@@ -11,7 +11,7 @@ pub const PRED_GEO_PACKED_CENTROID: u64 = q_hash("geo:hasPackedCentroid");
 pub const PRED_GEO_PACKED_BBOX_MIN: u64 = q_hash("geo:hasPackedBboxMin");
 pub const PRED_GEO_PACKED_BBOX_MAX: u64 = q_hash("geo:hasPackedBboxMax");
 
-/// Bake-time link to mmap STFT/CQT sidecar (`spectral/audio/{hash}.bin`).
+/// Link to a registered acoustic resource. Registry indices are not file digests.
 pub const PRED_HAS_SPECTRAL_SHEET: u64 = q_hash("q42:hasSpectralSheet");
 
 /// Scale tier for multi-scale spatial coordinate packing (§2.3)
@@ -121,49 +121,23 @@ pub fn migrate_unscaled_mm_quin(quin: &NQuin, target_tier: ScaleTier) -> NQuin {
     updated
 }
 
-/// Relative sidecar path under storage root — zero-heap (`spectral/audio/{hash:016x}.bin`).
-pub fn audio_sidecar_relpath(content_hash: u64, out: &mut [u8]) -> usize {
+/// Zero-heap canonical path from the complete final-byte BLAKE3 digest.
+/// Returns0 without mutation when caller capacity is insufficient.
+pub fn audio_sidecar_relpath(digest: &[u8; 32], out: &mut [u8]) -> usize {
     const PREFIX: &[u8] = b"spectral/audio/";
-    const SUFFIX: &[u8] = b".bin";
-    let hex = format_hash16(content_hash);
-    let need = PREFIX.len() + 16 + SUFFIX.len();
+    const SUFFIX: &[u8] = b".qac";
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let need = PREFIX.len() + 64 + SUFFIX.len();
     if out.len() < need {
         return 0;
     }
     out[..PREFIX.len()].copy_from_slice(PREFIX);
-    out[PREFIX.len()..PREFIX.len() + 16].copy_from_slice(&hex);
-    out[PREFIX.len() + 16..need].copy_from_slice(SUFFIX);
-    need
-}
-
-#[inline]
-fn format_hash16(h: u64) -> [u8; 16] {
-    let mut buf = [b'0'; 16];
-    let nibbles = [
-        ((h >> 60) & 0xf) as u8,
-        ((h >> 56) & 0xf) as u8,
-        ((h >> 52) & 0xf) as u8,
-        ((h >> 48) & 0xf) as u8,
-        ((h >> 44) & 0xf) as u8,
-        ((h >> 40) & 0xf) as u8,
-        ((h >> 36) & 0xf) as u8,
-        ((h >> 32) & 0xf) as u8,
-        ((h >> 28) & 0xf) as u8,
-        ((h >> 24) & 0xf) as u8,
-        ((h >> 20) & 0xf) as u8,
-        ((h >> 16) & 0xf) as u8,
-        ((h >> 12) & 0xf) as u8,
-        ((h >> 8) & 0xf) as u8,
-        ((h >> 4) & 0xf) as u8,
-        (h & 0xf) as u8,
-    ];
-    for (i, n) in nibbles.iter().enumerate() {
-        buf[i] = match *n {
-            0..=9 => b'0' + *n,
-            _ => b'a' + (*n - 10),
-        };
+    for (i, byte) in digest.iter().enumerate() {
+        out[PREFIX.len() + i * 2] = HEX[usize::from(byte >> 4)];
+        out[PREFIX.len() + i * 2 + 1] = HEX[usize::from(byte & 15)];
     }
-    buf
+    out[PREFIX.len() + 64..need].copy_from_slice(SUFFIX);
+    need
 }
 
 /// σ sheet index from baked NQuin object when `q42:hasSpectralSheet` is present.
@@ -210,9 +184,7 @@ fn sign_extend_20(v: u32) -> i32 {
 pub fn is_geo_vertex_quin(nquin: &NQuin) -> bool {
     let masked_7f = nquin.predicate & 0x7FFF_FFFF_FFFF_FF00;
     let masked_0f = nquin.predicate & 0x0FFF_FFFF_FFFF_FFFF;
-    let matches = |pred: u64| {
-        masked_7f == pred || masked_0f == (pred & 0x0FFF_FFFF_FFFF_FFFF)
-    };
+    let matches = |pred: u64| masked_7f == pred || masked_0f == (pred & 0x0FFF_FFFF_FFFF_FFFF);
     matches(PRED_GEO_VERTEX)
         || matches(PRED_GEO_PACKED_CENTROID)
         || matches(PRED_GEO_PACKED_BBOX_MIN)
@@ -286,12 +258,20 @@ mod tests {
 
     #[test]
     fn audio_sidecar_path_format() {
-        let mut buf = [0u8; 64];
-        let n = audio_sidecar_relpath(0xabc_def01_2345_6789, &mut buf);
-        assert_eq!(n, b"spectral/audio/".len() + 16 + b".bin".len());
-        let path = std::str::from_utf8(&buf[..n]).unwrap();
-        assert!(path.starts_with("spectral/audio/"));
-        assert!(path.ends_with(".bin"));
+        let mut digest = [0u8; 32];
+        digest[0] = 0xab;
+        digest[31] = 0xcd;
+        let mut buf = [0xa5; 96];
+        let n = audio_sidecar_relpath(&digest, &mut buf);
+        assert_eq!(n, b"spectral/audio/".len() + 64 + b".qac".len());
+        assert_eq!(
+            std::str::from_utf8(&buf[..n]).unwrap(),
+            "spectral/audio/ab000000000000000000000000000000000000000000000000000000000000cd.qac"
+        );
+        assert!(buf[n..].iter().all(|x| *x == 0xa5));
+        let mut small = [0xa5; 82];
+        assert_eq!(audio_sidecar_relpath(&digest, &mut small), 0);
+        assert!(small.iter().all(|x| *x == 0xa5));
     }
 
     #[test]
@@ -352,14 +332,35 @@ mod tests {
 
     #[test]
     fn test_canonical_exponent_mapping() {
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(0), ScaleTier::Nanometer);
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(1), ScaleTier::Micrometer);
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(2), ScaleTier::MillimeterDefault);
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(0),
+            ScaleTier::Nanometer
+        );
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(1),
+            ScaleTier::Micrometer
+        );
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(2),
+            ScaleTier::MillimeterDefault
+        );
         assert_eq!(ScaleTier::from_canonical_exponent_tier(3), ScaleTier::Meter);
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(4), ScaleTier::Kilometer);
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(5), ScaleTier::Megameter);
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(6), ScaleTier::Astronomical);
-        assert_eq!(ScaleTier::from_canonical_exponent_tier(7), ScaleTier::Parsec);
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(4),
+            ScaleTier::Kilometer
+        );
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(5),
+            ScaleTier::Megameter
+        );
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(6),
+            ScaleTier::Astronomical
+        );
+        assert_eq!(
+            ScaleTier::from_canonical_exponent_tier(7),
+            ScaleTier::Parsec
+        );
     }
 
     #[test]

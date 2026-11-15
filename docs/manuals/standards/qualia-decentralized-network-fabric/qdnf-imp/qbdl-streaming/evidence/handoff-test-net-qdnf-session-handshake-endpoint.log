@@ -1,0 +1,38 @@
+
+running 33 tests
+test net::qdnf::session::handshake::endpoint::established::protected_channel::tests::common_geometry_reuses_actual_frozen_private_header_without_loosening_its_limit ... ok
+test net::qdnf::session::handshake::endpoint::resource::identity::tests::drop_never_refunds_reconstructed_same_address_equal_reservation ... ok
+test net::qdnf::session::handshake::endpoint::resource::identity::tests::retained_refuses_replacement_then_releases_exact_restored_original ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::dropping_or_unwinding_lost_owner_keeps_canonical_charge ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::empty_handoff_refusal_preserves_original_owner_and_exact_retained_charge ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::exact_handoff_has_no_release_readmit_gap_and_scope_is_actual_ledger ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::failed_release_and_contended_scope_retain_exact_charge_for_retry ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::actual_inter_frame_revoke_prevents_queued_frame_send_without_refund ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::allocation_tests::actual_channel_hot_success_and_wouldblock_use_zero_raw_allocations ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::callback_unwind_erases_channel_and_preserves_unresolved_parent_charge ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::caught_frame_error_is_terminal_and_cannot_reveal_or_send ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::dropped_channel_closes_actual_bearer_but_retains_uncertain_charge ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::persistent_packet_numbers_received_bytes_retry_and_actual_owner_scope ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::receive_tests::authenticated_packet_replay_never_releases_second_plaintext ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::receive_tests::ciphertext_aad_canonical_header_and_observed_peer_tamper_refuse ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::receive_tests::outer_final_expiry_after_inner_success_clears_actual_output_and_aad ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::receive_tests::partial_bearer_send_is_terminal_without_claiming_peer_acceptance ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::receive_tests::receiver_capacity_and_foreign_pins_refuse_without_accepted_output ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::runtime_tests::channel_and_existing_runtime_share_exact_locked_ledger_without_relock_or_new_charge ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::runtime_tests::foreign_actual_ledger_scope_refuses_without_destroying_original_channel ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::runtime_tests::original_channel_charge_cannot_attach_to_reconstructed_ledger_before_new_registration ... ok
+test net::qdnf::session::handshake::endpoint::tests::channel_tests::shutdown_and_release_refusals_keep_same_owner_charge_for_retry ... ok
+test net::qdnf::session::handshake::endpoint::tests::fixture_tests::actual_intent_codec_and_client_transcript_match_independent_fixture ... ok
+test net::qdnf::session::handshake::endpoint::tests::independently_driven_actual_bearer_managed_keys_and_received_finished ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::fragment_source_scope_duplicate_trailing_order_and_intent_matrix ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::cryptographically_signed_wrong_role_or_commitment_refused ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::pin_revocation_foreign_owner_and_expiry_between_steps_fail_closed ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::valid_signed_flight_local_revoke_and_second_clock_prevent_send ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::state_tests::would_block_preserves_exact_next_frame_without_duplicate_send ... ok
+test net::qdnf::session::handshake::endpoint::tests::matrix_tests::wrong_received_finished_proof_selection_and_share_matrix ... ok
+test net::qdnf::session::handshake::endpoint::tests::negative_tests::cancellation_and_unwind_clear_retained_ephemerals_and_release_reservation ... ok
+test net::qdnf::session::handshake::endpoint::tests::negative_tests::local_revoke_before_send_and_late_signature_fail_closed ... ok
+test net::qdnf::session::handshake::endpoint::tests::negative_tests::resource_budget_and_early_install_refuse ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 10454 filtered out; finished in 19.27s
+

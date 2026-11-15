@@ -1,0 +1,1399 @@
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vibe` (lib) generated 1 warning (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+warning: unused imports: `Assembly` and `Progress`
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:8:26
+  |
+8 | pub(crate) use receive::{Assembly, Progress};
+  |                          ^^^^^^^^  ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `MessageSequence` and `PendingMessage`
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:9:23
+  |
+9 | pub(crate) use send::{MessageSequence, PendingMessage};
+  |                       ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused import: `WorkspacePageAttempt`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\sparse_workspace\mod.rs:13:44
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                                            ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `WorkClass`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:12:58
+   |
+12 |     ReservationLedger, ResourceBudget, ResourceGovernor, WorkClass,
+   |                                                          ^^^^^^^^^
+
+warning: unused imports: `RetainedRuntime`, `RuntimeCloseError`, and `RuntimeParents`
+ --> crates\qualia-core-db\src\bundle\stream\runtime\mod.rs:7:24
+  |
+7 | pub(crate) use state::{RetainedRuntime, RuntimeAccess, RuntimeCloseError, RuntimeParents};
+  |                        ^^^^^^^^^^^^^^^                 ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused import: `geometry::PreparedGeometry`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:17:16
+   |
+17 | pub(crate) use geometry::PreparedGeometry;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ids::Mapping`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:18:16
+   |
+18 | pub(crate) use ids::Mapping;
+   |                ^^^^^^^^^^^^
+
+warning: unused import: `metadata::PrivateReferences`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:19:16
+   |
+19 | pub(crate) use metadata::PrivateReferences;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Artifact`, `CandidateSink`, `ProtectedCandidate`, `ProtectedPublisher`, and `PublisherError`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:21:5
+   |
+21 |     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError,
+   |     ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused import: `derive_segment`
+  --> crates\qualia-core-db\src\crypto\network\object_stream\mod.rs:18:26
+   |
+18 | pub(crate) use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
+   |                          ^^^^^^^^^^^^^^
+
+warning: unused import: `open::UnwrappedMetadata`
+ --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\mod.rs:9:16
+  |
+9 | pub(crate) use open::UnwrappedMetadata;
+  |                ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\inference_bench\prepared_domino.rs:51:14
+   |
+51 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+51 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+51 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\compute_universe_epoch.rs:36:10
+   |
+36 |         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+36 -         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+36 +         .try_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\qwen\retained.rs:74:37
+   |
+74 |         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+   |                                     ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+74 -         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+74 +         let generation = GENERATION.try_update(Ordering::AcqRel, Ordering::Acquire,
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\sensing\local_custody\quota\recovery.rs:10:10
+   |
+10 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+10 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+10 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\net\peer\runtime\incarnation.rs:24:10
+   |
+24 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+24 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+24 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner\counted.rs:33:14
+   |
+33 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+33 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+33 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\recovery.rs:77:29
+   |
+77 |                         let mut material = UnacceptedMaterial { proof, payload };
+   |                             ----^^^^^^^^
+   |                             |
+   |                             help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: enum `CarrierError` is never used
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:11:17
+   |
+11 | pub(crate) enum CarrierError {
+   |                 ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `transcript` is never used
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:24:4
+   |
+24 | fn transcript(value: StrongDigest) -> Result<(), CarrierError> {
+   |    ^^^^^^^^^^
+
+warning: struct `Active` is never constructed
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\receive.rs:9:8
+  |
+9 | struct Active {
+  |        ^^^^^^
+
+warning: enum `Progress` is never used
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\receive.rs:16:17
+   |
+16 | pub(crate) enum Progress {
+   |                 ^^^^^^^^
+
+warning: struct `Assembly` is never constructed
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\receive.rs:23:19
+   |
+23 | pub(crate) struct Assembly<'a> {
+   |                   ^^^^^^^^
+
+warning: associated items `new`, `abort`, `accept`, `with_attempt`, and `accept_inner` are never used
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\receive.rs:32:19
+   |
+31 | impl<'a> Assembly<'a> {
+   | --------------------- associated items in this implementation
+32 |     pub(crate) fn new(
+   |                   ^^^
+...
+52 |     pub(crate) fn abort(&mut self) {
+   |                   ^^^^^
+...
+63 |     pub(crate) fn accept<T>(
+   |                   ^^^^^^
+...
+75 |     pub(crate) fn with_attempt<T, X>(
+   |                   ^^^^^^^^^^^^
+...
+98 |     fn accept_inner<T>(
+   |        ^^^^^^^^^^^^
+
+warning: struct `MessageSequence` is never constructed
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\send.rs:6:19
+  |
+6 | pub(crate) struct MessageSequence {
+  |                   ^^^^^^^^^^^^^^^
+
+warning: struct `PendingMessage` is never constructed
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\send.rs:10:19
+   |
+10 | pub(crate) struct PendingMessage<'a> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: associated items `new` and `begin` are never used
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\send.rs:17:19
+   |
+16 | impl MessageSequence {
+   | -------------------- associated items in this implementation
+17 |     pub(crate) fn new(value: StrongDigest) -> Result<Self, E> {
+   |                   ^^^
+...
+24 |     pub(crate) fn begin<'a>(&mut self, bytes: &'a [u8]) -> Result<PendingMessage<'a>, E> {
+   |                   ^^^^^
+
+warning: methods `current` and `drained` are never used
+  --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\send.rs:38:19
+   |
+37 | impl PendingMessage<'_> {
+   | ----------------------- methods in this implementation
+38 |     pub(crate) fn current(&self) -> Option<(ServiceRecordHeader, &[u8])> {
+   |                   ^^^^^^^
+...
+57 |     pub(crate) fn drained(&mut self) -> Result<(), E> {
+   |                   ^^^^^^^
+
+warning: field `incarnation` is never read
+  --> crates\qualia-core-db\src\net\peer\runtime\cancel.rs:56:5
+   |
+55 | pub struct OperationTable {
+   |            -------------- field in this struct
+56 |     incarnation: super::incarnation::CanonicalIncarnation,
+   |     ^^^^^^^^^^^
+
+warning: methods `bind_incarnation` and `existing_incarnation` are never used
+ --> crates\qualia-core-db\src\net\peer\runtime\cancel\incarnation.rs:5:19
+  |
+4 | impl OperationTable {
+  | ------------------- methods in this implementation
+5 |     pub(crate) fn bind_incarnation(&mut self) -> Result<CanonicalIncarnation, QdnfError> {
+  |                   ^^^^^^^^^^^^^^^^
+...
+8 |     pub(crate) const fn existing_incarnation(&self) -> CanonicalIncarnation {
+  |                         ^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `OperationSnapshot` is never constructed
+ --> crates\qualia-core-db\src\net\peer\runtime\cancel\inspect.rs:5:19
+  |
+5 | pub(crate) struct OperationSnapshot {
+  |                   ^^^^^^^^^^^^^^^^^
+
+warning: method `check_storage` is never used
+  --> crates\qualia-core-db\src\net\peer\runtime\cancel\inspect.rs:10:19
+   |
+ 9 | impl OperationTable {
+   | ------------------- method in this implementation
+10 |     pub(crate) fn check_storage(
+   |                   ^^^^^^^^^^^^^
+
+warning: associated function `fresh` is never used
+  --> crates\qualia-core-db\src\net\peer\runtime\incarnation.rs:18:19
+   |
+ 7 | impl CanonicalIncarnation {
+   | ------------------------- associated function in this implementation
+...
+18 |     pub(crate) fn fresh() -> Result<Self, QdnfError> {
+   |                   ^^^^^
+
+warning: field `incarnation` is never read
+  --> crates\qualia-core-db\src\net\peer\runtime\leases.rs:21:5
+   |
+20 | pub struct LeaseTable {
+   |            ---------- field in this struct
+21 |     incarnation: super::incarnation::CanonicalIncarnation,
+   |     ^^^^^^^^^^^
+
+warning: methods `bind_incarnation` and `existing_incarnation` are never used
+ --> crates\qualia-core-db\src\net\peer\runtime\leases\incarnation.rs:5:19
+  |
+4 | impl LeaseTable {
+  | --------------- methods in this implementation
+5 |     pub(crate) fn bind_incarnation(&mut self) -> Result<CanonicalIncarnation, QdnfError> {
+  |                   ^^^^^^^^^^^^^^^^
+...
+8 |     pub(crate) const fn existing_incarnation(&self) -> CanonicalIncarnation {
+  |                         ^^^^^^^^^^^^^^^^^^^^
+
+warning: method `check_lease` is never used
+ --> crates\qualia-core-db\src\net\peer\runtime\leases\inspect.rs:5:19
+  |
+4 | impl LeaseTable {
+  | --------------- method in this implementation
+5 |     pub(crate) fn check_lease(
+  |                   ^^^^^^^^^^^
+
+warning: field `incarnation` is never read
+  --> crates\qualia-core-db\src\net\peer\runtime\scheduler.rs:80:5
+   |
+79 | pub struct FairScheduler {
+   |            ------------- field in this struct
+80 |     incarnation: super::incarnation::CanonicalIncarnation,
+   |     ^^^^^^^^^^^
+
+warning: methods `bind_incarnation` and `existing_incarnation` are never used
+ --> crates\qualia-core-db\src\net\peer\runtime\scheduler\incarnation.rs:5:19
+  |
+4 | impl FairScheduler {
+  | ------------------ methods in this implementation
+5 |     pub(crate) fn bind_incarnation(&mut self) -> Result<CanonicalIncarnation, QdnfError> {
+  |                   ^^^^^^^^^^^^^^^^
+...
+8 |     pub(crate) const fn existing_incarnation(&self) -> CanonicalIncarnation {
+  |                         ^^^^^^^^^^^^^^^^^^^^
+
+warning: method `contains_work` is never used
+ --> crates\qualia-core-db\src\net\peer\runtime\scheduler\inspect.rs:4:19
+  |
+3 | impl FairScheduler {
+  | ------------------ method in this implementation
+4 |     pub(crate) fn contains_work(&self, expected: ScheduledWork) -> bool {
+  |                   ^^^^^^^^^^^^^
+
+warning: fields `receipt` and `peer_commitment` are never read
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\owner.rs:25:9
+   |
+22 | pub(super) struct ChannelCore<'a> {
+   |                   ----------- fields in this struct
+...
+25 |     pub receipt: AuthorityReceipt,
+   |         ^^^^^^^
+26 |     pub peer_commitment: StrongDigest,
+   |         ^^^^^^^^^^^^^^^
+
+warning: method `check` is never used
+   --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\owner.rs:117:12
+    |
+116 | impl ChannelCore<'_> {
+    | -------------------- method in this implementation
+117 |     pub fn check(
+    |            ^^^^^
+
+warning: struct `Unaccepted` is never constructed
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\receive.rs:11:8
+   |
+11 | struct Unaccepted<'a> {
+   |        ^^^^^^^^^^
+
+warning: method `receive_record` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\receive.rs:29:19
+   |
+24 | impl<B: Bearer> FrameIo<'_, '_, B> {
+   | ---------------------------------- method in this implementation
+...
+29 |     pub(super) fn receive_record(
+   |                   ^^^^^^^^^^^^^^
+
+warning: method `receive_record` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\receive.rs:99:19
+   |
+96 | impl<B: Bearer> ChannelIo<'_, '_, B> {
+   | ------------------------------------ method in this implementation
+...
+99 |     pub(crate) fn receive_record(
+   |                   ^^^^^^^^^^^^^^
+
+warning: method `with_runtime_scope` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\runtime_bridge.rs:10:19
+   |
+ 6 | impl<'a, B: Bearer> ProtectedChannel<'a, B> {
+   | ------------------------------------------- method in this implementation
+...
+10 |     pub(crate) fn with_runtime_scope<'b, 'p, T>(
+   |                   ^^^^^^^^^^^^^^^^^^
+
+warning: struct `ChannelIo` is never constructed
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\scope.rs:13:19
+   |
+13 | pub(crate) struct ChannelIo<'s, 'a, B: Bearer> {
+   |                   ^^^^^^^^^
+
+warning: struct `FrameIo` is never constructed
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\scope.rs:18:19
+   |
+18 | pub(crate) struct FrameIo<'s, 'a, B: Bearer> {
+   |                   ^^^^^^^
+
+warning: method `with_resources` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\scope.rs:28:19
+   |
+22 | impl<'a, B: Bearer> ProtectedChannel<'a, B> {
+   | ------------------------------------------- method in this implementation
+...
+28 |     pub(crate) fn with_resources<T>(
+   |                   ^^^^^^^^^^^^^^
+
+warning: method `with_current` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\scope.rs:59:19
+   |
+54 | impl<'a, B: Bearer> ChannelIo<'_, 'a, B> {
+   | ---------------------------------------- method in this implementation
+...
+59 |     pub(crate) fn with_current<T>(
+   |                   ^^^^^^^^^^^^
+
+warning: function `check_aad` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\send.rs:14:15
+   |
+14 | pub(super) fn check_aad(aad: &[u8; RECORD_AAD_BYTES], len: usize) -> Result<(), E> {
+   |               ^^^^^^^^^
+
+warning: methods `queue_record` and `send_pending` are never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\send.rs:37:19
+   |
+34 | impl<B: Bearer> FrameIo<'_, '_, B> {
+   | ---------------------------------- methods in this implementation
+...
+37 |     pub(crate) fn queue_record(
+   |                   ^^^^^^^^^^^^
+...
+81 |     pub(crate) fn send_pending(
+   |                   ^^^^^^^^^^^^
+
+warning: method `with_ledger` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\resource\retained.rs:36:29
+   |
+35 | impl RetainedEndpointReservation<'_> {
+   | ------------------------------------ method in this implementation
+36 |     pub(in super::super) fn with_ledger<T>(
+   |                             ^^^^^^^^^^^
+
+warning: method `check_runtime_access` is never used
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\resource\retained\identity.rs:16:36
+   |
+ 6 | impl RetainedEndpointReservation<'_> {
+   | ------------------------------------ method in this implementation
+...
+16 |     pub(in super::super::super) fn check_runtime_access(
+   |                                    ^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `RetainedRuntime` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\mod.rs:20:19
+   |
+20 | pub(crate) struct RetainedRuntime<'parent, 'host> {
+   |                   ^^^^^^^^^^^^^^^
+
+warning: function `charged_bytes` is never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\mod.rs:27:4
+   |
+27 | fn charged_bytes() -> Result<u64, E> {
+   |    ^^^^^^^^^^^^^
+
+warning: struct `RuntimeAccess` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\access.rs:12:19
+   |
+12 | pub(crate) struct RuntimeAccess<'borrow, 'parents> {
+   |                   ^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> crates\qualia-core-db\src\bundle\stream\runtime\state\access.rs:18:19
+    |
+ 17 | impl<'b, 'p> RuntimeAccess<'b, 'p> {
+    | ---------------------------------- associated items in this implementation
+ 18 |     pub(super) fn new(
+    |                   ^^^
+...
+ 30 |     pub(crate) fn verify_external_reservation(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 46 |     pub(crate) fn admit(
+    |                   ^^^^^
+...
+ 55 |     pub(crate) fn poll(&mut self, now: u64) -> Result<RuntimePoll, E> {
+    |                   ^^^^
+...
+ 58 |     pub(crate) fn issue_credit(
+    |                   ^^^^^^^^^^^^
+...
+ 66 |     pub(crate) fn state(&self, ticket: &TransferTicket) -> Result<TransferState, E> {
+    |                   ^^^^^
+...
+ 69 |     pub(crate) fn cancel_epoch(&self, ticket: &TransferTicket) -> Result<CancelEpoch, E> {
+    |                   ^^^^^^^^^^^^
+...
+ 72 |     pub(crate) fn cancel(&mut self, ticket: &TransferTicket) -> Result<(), E> {
+    |                   ^^^^^^
+...
+ 75 |     pub(crate) fn expire(&mut self, now: u64) -> Result<usize, E> {
+    |                   ^^^^^^
+...
+ 78 |     pub(crate) fn complete_io(
+    |                   ^^^^^^^^^^^
+...
+ 86 |     pub(crate) fn live_transfers(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^
+...
+ 89 |     pub(crate) fn pending_schedule_records(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 92 |     pub(crate) fn charged_window_bytes(&self) -> u64 {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+...
+ 95 |     pub(crate) fn supported_inflight(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^^^^^
+...
+ 98 |     pub(crate) fn parent_used(&self) -> AdmissionScopes {
+    |                   ^^^^^^^^^^^
+...
+101 |     pub(crate) fn acquire_sparse_page(
+    |                   ^^^^^^^^^^^^^^^^^^^
+...
+108 |     pub(crate) fn release_sparse_page(
+    |                   ^^^^^^^^^^^^^^^^^^^
+...
+116 |     pub(crate) fn storage_stage<'s>(
+    |                   ^^^^^^^^^^^^^
+...
+129 |     pub(crate) fn release_recovery_source<'root>(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^
+...
+135 |     pub(super) fn observe_cancellation(&mut self) -> Result<(), E> {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `RuntimeCloseError` is never constructed
+ --> crates\qualia-core-db\src\bundle\stream\runtime\state\close.rs:6:19
+  |
+6 | pub(crate) struct RuntimeCloseError<'parent, 'host> {
+  |                   ^^^^^^^^^^^^^^^^^
+
+warning: method `try_close` is never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\close.rs:18:19
+   |
+17 | impl<'parent, 'host> RetainedRuntime<'parent, 'host> {
+   | ---------------------------------------------------- method in this implementation
+18 |     pub(crate) fn try_close(mut self) -> Result<(), RuntimeCloseError<'parent, 'host>> {
+   |                   ^^^^^^^^^
+
+warning: struct `RuntimeData` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\data.rs:19:19
+   |
+19 | pub(super) struct RuntimeData {
+   |                   ^^^^^^^^^^^
+
+warning: associated items `take` and `attach` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\data.rs:43:12
+   |
+40 | impl RuntimeData {
+   | ---------------- associated items in this implementation
+...
+43 |     pub fn take(runtime: TransferRuntime<'_>) -> Self {
+   |            ^^^^
+...
+94 |     pub fn attach<'a>(
+   |            ^^^^^^
+
+warning: struct `ParentLoans` is never constructed
+ --> crates\qualia-core-db\src\bundle\stream\runtime\state\loans.rs:6:19
+  |
+6 | pub(super) struct ParentLoans<'s> {
+  |                   ^^^^^^^^^^^
+
+warning: function `error` is never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\loans.rs:12:4
+   |
+12 | fn error<T>(e: TryLockError<T>) -> E {
+   |    ^^^^^
+
+warning: associated items `acquire` and `identities` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\loans.rs:19:12
+   |
+18 | impl<'s> ParentLoans<'s> {
+   | ------------------------ associated items in this implementation
+19 |     pub fn acquire(
+   |            ^^^^^^^
+...
+36 |     pub fn identities(&self) -> ParentIdentities {
+   |            ^^^^^^^^^^
+
+warning: struct `ParentIdentities` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\parents.rs:12:19
+   |
+12 | pub(super) struct ParentIdentities {
+   |                   ^^^^^^^^^^^^^^^^
+
+warning: struct `RuntimeParents` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\parents.rs:20:19
+   |
+20 | pub(crate) struct RuntimeParents<'host> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: associated items `adopt`, `admit`, `loans`, `association`, and `try_close` are never used
+   --> crates\qualia-core-db\src\bundle\stream\runtime\state\parents.rs:32:19
+    |
+ 31 | impl<'host> RuntimeParents<'host> {
+    | --------------------------------- associated items in this implementation
+ 32 |     pub(crate) fn adopt(
+    |                   ^^^^^
+...
+ 60 |     pub(crate) fn admit<'p>(
+    |                   ^^^^^
+...
+109 |     pub(super) fn loans(&self) -> Result<ParentLoans<'_>, E> {
+    |                   ^^^^^
+...
+120 |     pub(super) fn association(&self, state: &RetainedRuntime<'_, '_>) -> Result<(), E> {
+    |                   ^^^^^^^^^^^
+...
+131 |     pub(crate) fn try_close(&mut self) -> Result<(), E> {
+    |                   ^^^^^^^^^
+
+warning: method `preflight` is never used
+ --> crates\qualia-core-db\src\bundle\stream\runtime\state\preflight.rs:6:12
+  |
+5 | impl RuntimeData {
+  | ---------------- method in this implementation
+6 |     pub fn preflight(&self, loans: &ParentLoans<'_>) -> Result<(), E> {
+  |            ^^^^^^^^^
+
+warning: struct `Restore` is never constructed
+ --> crates\qualia-core-db\src\bundle\stream\runtime\state\restore.rs:4:19
+  |
+4 | pub(super) struct Restore<'destination, 'parents> {
+  |                   ^^^^^^^
+
+warning: associated items `new` and `runtime` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\restore.rs:9:12
+   |
+ 8 | impl<'d, 'p> Restore<'d, 'p> {
+   | ---------------------------- associated items in this implementation
+ 9 |     pub fn new(destination: &'d mut Option<RuntimeData>, runtime: TransferRuntime<'p>) -> Self {
+   |            ^^^
+...
+15 |     pub fn runtime(&mut self) -> &mut TransferRuntime<'p> {
+   |            ^^^^^^^
+
+warning: methods `try_with_runtime` and `with_runtime_raw` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\scope.rs:8:19
+   |
+ 5 | impl<'host> RuntimeParents<'host> {
+   | --------------------------------- methods in this implementation
+...
+ 8 |     pub(crate) fn try_with_runtime<T>(
+   |                   ^^^^^^^^^^^^^^^^
+...
+21 |     pub(super) fn with_runtime_raw<T>(
+   |                   ^^^^^^^^^^^^^^^^
+
+warning: associated items `live_transfers`, `pending_schedule_records`, `charged_window_bytes`, and `move_bytes_per_poll` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\scope.rs:61:19
+   |
+60 | impl RetainedRuntime<'_, '_> {
+   | ---------------------------- associated items in this implementation
+61 |     pub(crate) fn live_transfers(&self) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^
+...
+64 |     pub(crate) fn pending_schedule_records(&self) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+67 |     pub(crate) fn charged_window_bytes(&self) -> Result<u64, E> {
+   |                   ^^^^^^^^^^^^^^^^^^^^
+...
+71 |     pub(crate) fn move_bytes_per_poll() -> usize {
+   |                   ^^^^^^^^^^^^^^^^^^^
+
+warning: struct `EntryRange` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:10:19
+   |
+10 | pub(crate) struct EntryRange {
+   |                   ^^^^^^^^^^
+
+warning: associated items `EMPTY` and `new` are never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:15:22
+   |
+14 | impl EntryRange {
+   | --------------- associated items in this implementation
+15 |     pub(crate) const EMPTY: Self = Self {
+   |                      ^^^^^
+...
+19 |     pub(super) const fn new(offset: u64, length: u64) -> Self {
+   |                         ^^^
+
+warning: enum `ObjectKind` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:24:17
+   |
+24 | pub(crate) enum ObjectKind {
+   |                 ^^^^^^^^^^
+
+warning: struct `SourceObject` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:30:19
+   |
+30 | pub(crate) struct SourceObject {
+   |                   ^^^^^^^^^^^^
+
+warning: associated items `EMPTY`, `entry`, `gap`, `kind`, `offset`, and `length` are never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:35:22
+   |
+34 | impl SourceObject {
+   | ----------------- associated items in this implementation
+35 |     pub(crate) const EMPTY: Self = Self {
+   |                      ^^^^^
+...
+39 |     pub(super) const fn entry(ordinal: u32, range: EntryRange) -> Self {
+   |                         ^^^^^
+...
+45 |     pub(super) const fn gap(offset: u64, length: u64) -> Self {
+   |                         ^^^
+...
+51 |     pub(crate) const fn kind(&self) -> ObjectKind {
+   |                         ^^^^
+...
+54 |     pub(crate) const fn offset(&self) -> u64 {
+   |                         ^^^^^^
+...
+57 |     pub(crate) const fn length(&self) -> u64 {
+   |                         ^^^^^^
+
+warning: function `metadata_length` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:63:15
+   |
+63 | pub(super) fn metadata_length(objects: usize, index_length: u64) -> Result<usize, Error> {
+   |               ^^^^^^^^^^^^^^^
+
+warning: function `prepare` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:81:15
+   |
+81 | pub(super) fn prepare(
+   |               ^^^^^^^
+
+warning: function `validate` is never used
+   --> crates\qualia-core-db\src\bundle\stream\protection\coverage.rs:164:15
+    |
+164 | pub(super) fn validate(
+    |               ^^^^^^^^
+
+warning: enum `ProtectionError` is never used
+ --> crates\qualia-core-db\src\bundle\stream\protection\error.rs:3:17
+  |
+3 | pub(crate) enum ProtectionError {
+  |                 ^^^^^^^^^^^^^^^
+
+warning: struct `PreparedSource` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\source.rs:13:19
+   |
+13 | pub(crate) struct PreparedSource<'a, 's> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> crates\qualia-core-db\src\bundle\stream\protection\source.rs:27:19
+    |
+ 19 | impl<'a, 's> PreparedSource<'a, 's> {
+    | ----------------------------------- associated items in this implementation
+...
+ 27 |     pub(crate) fn prepare(
+    |                   ^^^^^^^
+...
+ 82 |     pub(super) fn checked_header(&self) -> crate::bundle::stream::index::CheckedHeader {
+    |                   ^^^^^^^^^^^^^^
+...
+ 85 |     pub(crate) fn objects(&self) -> &[SourceObject] {
+    |                   ^^^^^^^
+...
+ 88 |     pub(crate) fn entry_count(&self) -> usize {
+    |                   ^^^^^^^^^^^
+...
+ 91 |     pub(crate) const fn metadata_length(&self) -> usize {
+    |                         ^^^^^^^^^^^^^^^
+...
+ 94 |     pub(crate) fn header_bytes(&self) -> &'a [u8] {
+    |                   ^^^^^^^^^^^^
+...
+ 97 |     pub(crate) fn index_bytes(&self) -> &'a [u8] {
+    |                   ^^^^^^^^^^^
+...
+100 |     pub(crate) fn source_bytes(&self) -> &'a [u8] {
+    |                   ^^^^^^^^^^^^
+...
+103 |     pub(crate) fn object_bytes(&self, ordinal: usize) -> Result<&'a [u8], Error> {
+    |                   ^^^^^^^^^^^^
+
+warning: methods `finish` and `sign_candidate` are never used
+   --> crates\qualia-core-db\src\bundle\stream\protection\finish.rs:10:19
+    |
+  9 | impl ProtectedPublisher<'_, '_, '_, '_> {
+    | --------------------------------------- methods in this implementation
+ 10 |     pub(crate) fn finish(
+    |                   ^^^^^^
+...
+109 |     pub(crate) fn sign_candidate(
+    |                   ^^^^^^^^^^^^^^
+
+warning: constant `EMPTY_REF` is never used
+ --> crates\qualia-core-db\src\bundle\stream\protection\geometry.rs:9:18
+  |
+9 | pub(crate) const EMPTY_REF: PageRef = PageRef {
+  |                  ^^^^^^^^^
+
+warning: constant `EMPTY_ROOT` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\geometry.rs:15:18
+   |
+15 | pub(crate) const EMPTY_ROOT: RootRow = RootRow {
+   |                  ^^^^^^^^^^
+
+warning: struct `PreparedGeometry` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\geometry.rs:19:19
+   |
+19 | pub(crate) struct PreparedGeometry<'a, 's> {
+   |                   ^^^^^^^^^^^^^^^^
+
+warning: associated items `prepare`, `object_count`, `metadata_length`, `encode_page`, `encode_context`, and `check_context` are never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\geometry.rs:26:19
+   |
+25 | impl<'a, 's> PreparedGeometry<'a, 's> {
+   | ------------------------------------- associated items in this implementation
+26 |     pub(crate) fn prepare(
+   |                   ^^^^^^^
+...
+51 |     pub(crate) fn object_count(&self) -> usize {
+   |                   ^^^^^^^^^^^^
+...
+54 |     pub(crate) fn metadata_length(&self) -> usize {
+   |                   ^^^^^^^^^^^^^^^
+...
+57 |     pub(crate) fn encode_page(&self, page: usize, out: &mut [u8]) -> Result<PageRef, E> {
+   |                   ^^^^^^^^^^^
+...
+60 |     pub(crate) fn encode_context(&self, fields: ContextFields, out: &mut [u8]) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^
+...
+68 |     pub(super) fn check_context(&self, c: Context<'_>) -> Result<(), E> {
+   |                   ^^^^^^^^^^^^^
+
+warning: function `page_bytes` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\geometry.rs:83:4
+   |
+83 | fn page_bytes(
+   |    ^^^^^^^^^^
+
+warning: struct `Mapping` is never constructed
+ --> crates\qualia-core-db\src\bundle\stream\protection\ids.rs:6:19
+  |
+6 | pub(crate) struct Mapping {
+  |                   ^^^^^^^
+
+warning: associated constant `EMPTY` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\ids.rs:12:22
+   |
+11 | impl Mapping {
+   | ------------ associated constant in this implementation
+12 |     pub(crate) const EMPTY: Self = Self {
+   |                      ^^^^^
+
+warning: function `assign` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\ids.rs:18:15
+   |
+18 | pub(super) fn assign(source: &PreparedSource<'_, '_>, out: &mut [Mapping]) -> Result<(), E> {
+   |               ^^^^^^
+
+warning: function `assign_with` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\ids.rs:21:4
+   |
+21 | fn assign_with(
+   |    ^^^^^^^^^^^
+
+warning: struct `PrivateReferences` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\metadata.rs:10:19
+   |
+10 | pub(crate) struct PrivateReferences {
+   |                   ^^^^^^^^^^^^^^^^^
+
+warning: struct `Erase` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\metadata.rs:15:19
+   |
+15 | pub(super) struct Erase<'a> {
+   |                   ^^^^^
+
+warning: struct `Writer` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\metadata.rs:23:8
+   |
+23 | struct Writer<'a> {
+   |        ^^^^^^
+
+warning: methods `put`, `u16`, `u32`, and `u64` are never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\metadata.rs:28:8
+   |
+27 | impl Writer<'_> {
+   | --------------- methods in this implementation
+28 |     fn put(&mut self, b: &[u8]) -> Result<(), E> {
+   |        ^^^
+...
+37 |     fn u16(&mut self, n: u16) -> Result<(), E> {
+   |        ^^^
+...
+40 |     fn u32(&mut self, n: u32) -> Result<(), E> {
+   |        ^^^
+...
+43 |     fn u64(&mut self, n: u64) -> Result<(), E> {
+   |        ^^^
+
+warning: function `write` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\metadata.rs:47:15
+   |
+47 | pub(super) fn write(
+   |               ^^^^^
+
+warning: enum `PublisherError` is never used
+ --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:8:17
+  |
+8 | pub(crate) enum PublisherError {
+  |                 ^^^^^^^^^^^^^^
+
+warning: enum `Artifact` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:19:17
+   |
+19 | pub(crate) enum Artifact {
+   |                 ^^^^^^^^
+
+warning: trait `CandidateSink` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:29:18
+   |
+29 | pub(crate) trait CandidateSink {
+   |                  ^^^^^^^^^^^^^
+
+warning: struct `ProtectedCandidate` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:34:19
+   |
+34 | pub(crate) struct ProtectedCandidate {
+   |                   ^^^^^^^^^^^^^^^^^^
+
+warning: methods `descriptor_id` and `context_id` are never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:39:19
+   |
+38 | impl ProtectedCandidate {
+   | ----------------------- methods in this implementation
+39 |     pub(crate) fn descriptor_id(&self) -> StrongDigest {
+   |                   ^^^^^^^^^^^^^
+...
+42 |     pub(crate) fn context_id(&self) -> StrongDigest {
+   |                   ^^^^^^^^^^
+
+warning: struct `ProtectedPublisher` is never constructed
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:46:19
+   |
+46 | pub(crate) struct ProtectedPublisher<'a, 's, 'm, 'r> {
+   |                   ^^^^^^^^^^^^^^^^^^
+
+warning: associated items `bind`, `is_poisoned`, `attempt`, and `stage_header` are never used
+   --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:62:19
+    |
+ 59 | impl<'a, 's, 'm, 'r> ProtectedPublisher<'a, 's, 'm, 'r> {
+    | ------------------------------------------------------- associated items in this implementation
+...
+ 62 |     pub(crate) fn bind(
+    |                   ^^^^
+...
+ 95 |     pub(crate) fn is_poisoned(&self) -> bool {
+    |                   ^^^^^^^^^^^
+...
+ 98 |     pub(super) fn attempt<T>(
+    |                   ^^^^^^^
+...
+128 |     pub(crate) fn stage_header(
+    |                   ^^^^^^^^^^^^
+
+warning: methods `seal_next_object` and `seal_metadata` are never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\seal.rs:12:19
+   |
+11 | impl ProtectedPublisher<'_, '_, '_, '_> {
+   | --------------------------------------- methods in this implementation
+12 |     pub(crate) fn seal_next_object(
+   |                   ^^^^^^^^^^^^^^^^
+...
+49 |     pub(crate) fn seal_metadata(
+   |                   ^^^^^^^^^^^^^
+
+warning: function `seal_bytes` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\seal.rs:83:4
+   |
+83 | fn seal_bytes(
+   |    ^^^^^^^^^^
+
+warning: function `open_leaf_raw` is never used
+   --> crates\qualia-core-db\src\crypto\network\object_stream\segment.rs:147:15
+    |
+147 | pub(crate) fn open_leaf_raw(
+    |               ^^^^^^^^^^^^^
+
+warning: function `key` is never used
+   --> crates\qualia-core-db\src\crypto\network\object_stream\wrap.rs:130:4
+    |
+130 | fn key(kem: &[u8; 32], dh: &[u8; 32], aad: &[u8], out: &mut [u8; 32]) -> Result<(), Error> {
+    |    ^^^
+
+warning: function `seal_master_raw` is never used
+   --> crates\qualia-core-db\src\crypto\network\object_stream\wrap.rs:142:15
+    |
+142 | pub(crate) fn seal_master_raw(
+    |               ^^^^^^^^^^^^^^^
+
+warning: function `open_master_raw` is never used
+   --> crates\qualia-core-db\src\crypto\network\object_stream\wrap.rs:162:15
+    |
+162 | pub(crate) fn open_master_raw(
+    |               ^^^^^^^^^^^^^^^
+
+warning: struct `UnwrappedMetadata` is never constructed
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\open.rs:10:19
+   |
+10 | pub(crate) struct UnwrappedMetadata<'a> {
+   |                   ^^^^^^^^^^^^^^^^^
+
+warning: method `decrypt_next` is never used
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\open.rs:20:19
+   |
+17 | impl UnwrappedMetadata<'_> {
+   | -------------------------- method in this implementation
+...
+20 |     pub(crate) fn decrypt_next(&mut self, buffer: &mut [u8], tag: &[u8; 16]) -> Result<(), E> {
+   |                   ^^^^^^^^^^^^
+
+warning: field `wraps` is never read
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication.rs:42:5
+   |
+33 | pub struct ManagedObjectPublication<'a> {
+   |            ------------------------ field in this struct
+...
+42 |     wraps: u8,
+   |     ^^^^^
+
+warning: methods `metadata_master_row` and `wrap_for` are never used
+   --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication.rs:243:19
+    |
+ 88 | impl<'a> ManagedObjectPublication<'a> {
+    | ------------------------------------- methods in this implementation
+...
+243 |     pub(crate) fn metadata_master_row(&self, ordinal: usize, out: &mut [u8; 32]) -> Result<(), E> {
+    |                   ^^^^^^^^^^^^^^^^^^^
+...
+255 |     pub(crate) fn wrap_for(
+    |                   ^^^^^^^^
+
+warning: field `clock` is never read
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\recipient.rs:35:16
+   |
+31 | pub struct ManagedRecipientUnwrap<'a> {
+   |            ---------------------- field in this struct
+...
+35 |     pub(super) clock: &'a dyn Fn() -> u64,
+   |                ^^^^^
+
+warning: method `unwrap` is never used
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\recipient.rs:95:19
+   |
+54 | impl<'a> ManagedRecipientUnwrap<'a> {
+   | ----------------------------------- method in this implementation
+...
+95 |     pub(crate) fn unwrap(self, wrap: Wrap<'_>) -> Result<super::open::UnwrappedMetadata<'a>, E> {
+   |                   ^^^^^^
+
+warning: method `with_current_effect` is never used
+ --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\effect.rs:8:19
+  |
+4 | impl ManagedObjectPublication<'_> {
+  | --------------------------------- method in this implementation
+...
+8 |     pub(crate) fn with_current_effect<T>(
+  |                   ^^^^^^^^^^^^^^^^^^^
+
+warning: method `with_current_effect` is never used
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\effect.rs:22:19
+   |
+21 | impl ManagedObjectSealer<'_, '_> {
+   | -------------------------------- method in this implementation
+22 |     pub(crate) fn with_current_effect<T>(
+   |                   ^^^^^^^^^^^^^^^^^^^
+
+warning: method `sign_descriptor` is never used
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication_signing.rs:13:19
+   |
+10 | impl ManagedObjectPublication<'_> {
+   | --------------------------------- method in this implementation
+...
+13 |     pub(crate) fn sign_descriptor(
+   |                   ^^^^^^^^^^^^^^^
+
+warning: `qualia-core-db` (lib) generated 120 warnings (run `cargo fix --lib -p qualia-core-db` to apply 18 suggestions)
+    Checking qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::AccessPolicy
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:13:5
+   |
+13 |     AccessPolicy, AuthenticationMethod, KeyAlgorithm, KeyManager, KeyOperation, KeyType,
+   |     ^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this enum through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::AuthenticationMethod
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:13:19
+   |
+13 |     AccessPolicy, AuthenticationMethod, KeyAlgorithm, KeyManager, KeyOperation, KeyType,
+   |                   ^^^^^^^^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this enum through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::KeyAlgorithm
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:13:41
+   |
+13 |     AccessPolicy, AuthenticationMethod, KeyAlgorithm, KeyManager, KeyOperation, KeyType,
+   |                                         ^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::KeyManager
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:13:55
+   |
+13 |     AccessPolicy, AuthenticationMethod, KeyAlgorithm, KeyManager, KeyOperation, KeyType,
+   |                                                       ^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this enum through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::KeyOperation
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:13:67
+   |
+13 |     AccessPolicy, AuthenticationMethod, KeyAlgorithm, KeyManager, KeyOperation, KeyType,
+   |                                                                   ^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this enum through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::KeyType
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:13:81
+   |
+13 |     AccessPolicy, AuthenticationMethod, KeyAlgorithm, KeyManager, KeyOperation, KeyType,
+   |                                                                                 ^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::ManagedOperationControl
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:14:5
+   |
+14 |     ManagedOperationControl, PairedSigningRequest, PublicationRequest, PublicationWorkspace,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::PairedSigningRequest
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:14:30
+   |
+14 |     ManagedOperationControl, PairedSigningRequest, PublicationRequest, PublicationWorkspace,
+   |                              ^^^^^^^^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::PublicationRequest
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:14:52
+   |
+14 |     ManagedOperationControl, PairedSigningRequest, PublicationRequest, PublicationWorkspace,
+   |                                                    ^^^^^^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::PublicationWorkspace
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:14:72
+   |
+14 |     ManagedOperationControl, PairedSigningRequest, PublicationRequest, PublicationWorkspace,
+   |                                                                        ^^^^^^^^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this enum through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::SecurityLevel
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:15:5
+   |
+15 |     SecurityLevel, SigningAccess, TimeRestrictions,
+   |     ^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::SigningAccess
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:15:20
+   |
+15 |     SecurityLevel, SigningAccess, TimeRestrictions,
+   |                    ^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: module `key_management` is private
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:12:53
+   |
+12 | use crate::specialized_libs::cryptographic_library::key_management::{
+   |                                                     ^^^^^^^^^^^^^^ private module
+   |
+help: consider importing this struct through its public re-export instead:
+      crate::specialized_libs::cryptographic_library::TimeRestrictions
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher_tests.rs:15:35
+   |
+15 |     SecurityLevel, SigningAccess, TimeRestrictions,
+   |                                   ^^^^^^^^^^^^^^^^
+note: the module `key_management` is defined here
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\mod.rs:22:1
+   |
+22 | mod key_management;
+   | ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PendingMessage`
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:9:40
+  |
+9 | pub(crate) use send::{MessageSequence, PendingMessage};
+  |                                        ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary parentheses around function argument
+   --> crates\qualia-core-db\src\bundle\stream\proof\path_tests.rs:148:24
+    |
+148 |         sibling_ranges((1u64 << 33), 0, &mut ranges),
+    |                        ^          ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+148 -         sibling_ranges((1u64 << 33), 0, &mut ranges),
+148 +         sibling_ranges(1u64 << 33, 0, &mut ranges),
+    |
+
+warning: unused imports: `RetainedRuntime` and `RuntimeCloseError`
+ --> crates\qualia-core-db\src\bundle\stream\runtime\mod.rs:7:24
+  |
+7 | pub(crate) use state::{RetainedRuntime, RuntimeAccess, RuntimeCloseError, RuntimeParents};
+  |                        ^^^^^^^^^^^^^^^                 ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `runtime::*`
+ --> crates\qualia-core-db\src\bundle\stream\storage\native\tests.rs:4:62
+  |
+4 |     policy::adopt_local_whole_source, proof::Representation, runtime::*, storage::*,
+  |                                                              ^^^^^^^^^^
+
+warning: unused imports: `Artifact`, `ProtectedCandidate`, and `PublisherError`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:21:5
+   |
+21 |     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError,
+   |     ^^^^^^^^                 ^^^^^^^^^^^^^^^^^^                      ^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\tests\process_crash.rs:47:17
+   |
+47 |             let mut op = ticket(rt, payload.len(), 1);
+   |                 ----^^
+   |                 |
+   |                 help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\recovery.rs:77:29
+   |
+77 |                         let mut material = UnacceptedMaterial { proof, payload };
+   |                             ----^^^^^^^^
+   |                             |
+   |                             help: remove this `mut`
+
+For more information about this error, try `rustc --explain E0603`.
+warning: `qualia-core-db` (lib test) generated 19 warnings (12 duplicates)
+error: could not compile `qualia-core-db` (lib test) due to 13 previous errors; 19 warnings emitted

@@ -47,9 +47,15 @@
         <label>Experience<select id="demo-type"><option value="all">All experiences</option><option value="browser">Browser demo</option><option value="native">Native workflow</option><option value="guide">Architecture guide</option></select></label>
         <button type="reset" class="reset-button">Reset</button>
       </form>
-      <div class="results-line"><p id="demo-count" role="status" aria-live="polite" aria-atomic="true">12 destinations · 9 capability tracks</p><span>Local-first · Zero cloud accounts required</span></div>
+      <div class="results-line"><p id="demo-count" role="status" aria-live="polite" aria-atomic="true">13 destinations · 9 capability tracks</p><span>Local-first · Zero cloud accounts required</span></div>
       <noscript><p class="notice">All destinations are shown below. Enable JavaScript to search and filter this navigator; demo pages have their own runtime requirements.</p></noscript>
       <div class="demo-grid">
+        <article class="demo-card" data-capability="data" data-type="browser">
+          <div class="card-top"><span class="track">01 / Semantic data &amp; .q42 v4</span><span class="type browser">Interactive showcase</span></div>
+          <h3>EMF v4, QAC v1 &amp; DICOM Preservation Observatory</h3><p>Inspect the 128-byte envelope &amp; directory wire framing, step 3D Yee FDTD &amp; Cloude polarimetry, visualize ACN/SN3D Ambisonics &amp; BS.1770-5 loudness, and reconstruct DICOM sinograms.</p>
+          <dl><dt>Try this</dt><dd>Click header/directory byte fields to verify BLAKE3-256 domains, adjust polarizer angles to inspect Cloude Hermitian eigenvalues, or step tomographic projections.</dd><dt>What it demonstrates</dt><dd>All 8 EMF modes (<code>0x0100..=0x0107</code>), 8 QAC modes, 29 TLV schemas, and the 15-standard QualiaDB + Etalon architecture.</dd><dt>Requirements</dt><dd>Pure offline client-side Canvas &amp; JS; see also the <a href="emf-qac-architecture.html">Technical Architecture &amp; Standards Guide</a>.</dd></dl>
+          <a class="card-link" href="emf-qac-showcase.html">Open EMF &amp; QAC Showcase <span aria-hidden="true">↗</span></a>
+        </article>
         <article class="demo-card" data-capability="data" data-type="browser">
           <div class="card-top"><span class="track">01 / Semantic data &amp; .q42 v4</span><span class="type browser">Browser demo</span></div>
           <h3>SPARQL, N3 &amp; 48-byte NQuin compilation</h3><p>Compile SPARQL, N3, Turtle, and N-Triples into 48-byte <code>NQuin</code> records with 5-field XOR parity and inspect <code>Q42LEX</code> v4 namespaced lexicons.</p>

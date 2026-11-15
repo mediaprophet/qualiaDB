@@ -430,6 +430,19 @@
       "group": "Data"
     },
     {
+      "label": "EMF & QAC Showcase",
+      "href": "emf-qac-showcase.html",
+      "icon": "fa-wave-square",
+      "highlight": true,
+      "group": "Data"
+    },
+    {
+      "label": "EMF & QAC Architecture",
+      "href": "emf-qac-architecture.html",
+      "icon": "fa-compass-drafting",
+      "group": "Data"
+    },
+    {
       "label": "Zero-Heap",
       "href": "zero-heap-compliance.html",
       "icon": "fa-memory",

@@ -856,7 +856,6 @@ export async function mountAcousticPlane(portalInstance = portal, options = {}) 
         }
     }
 
-    let sidecarTick = 0;
     const sync = () => {
         try {
             if (acousticSab && typeof portalInstance.publish_acoustic_sab === 'function') {
@@ -865,26 +864,7 @@ export async function mountAcousticPlane(portalInstance = portal, options = {}) 
                 const floats = portalInstance.acoustic_uniform_floats();
                 acousticNode.port.postMessage({ type: 'uniform', floats });
             }
-            // Refresh STFT preview bins every ~2s (sidecar bake is cold-path)
-            if (typeof portalInstance.bake_stft_sidecar_demo === 'function' && (sidecarTick++ % 40) === 0) {
-                const sidecar = portalInstance.bake_stft_sidecar_demo(32);
-                if (sidecar?.length > 32) {
-                    const view = new DataView(sidecar.buffer, sidecar.byteOffset, sidecar.byteLength);
-                    const bins = new Float32Array(64);
-                    const off = 32;
-                    for (let i = 0; i < 64; i++) {
-                        bins[i] = view.getFloat32(off + i * 4, true);
-                    }
-                    acousticNode.port.postMessage({ type: 'sidecar', bins });
-                }
-            }
-            const pending = portalInstance.sonic_token_pending?.() ?? 0;
-            if (pending > 0 && typeof portalInstance.drain_sonic_tokens === 'function') {
-                const raw = portalInstance.drain_sonic_tokens(Math.min(pending, 16));
-                const arr = [];
-                for (let i = 0; i < (raw?.length ?? 0); i++) arr.push(Number(raw[i]));
-                if (arr.length) acousticNode.port.postMessage({ type: 'tokens', raw: arr });
-            }
+
         } catch (e) {
             console.warn('AcousticPlane sync', e);
         }

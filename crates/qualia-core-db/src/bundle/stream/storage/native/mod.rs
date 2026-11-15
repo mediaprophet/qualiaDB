@@ -9,6 +9,8 @@ mod owner;
 mod read;
 mod resume;
 mod write;
+mod job;
+pub use job::{arm_write_from_stage, ArmedNativeWrite};
 pub use binding::{SelectedStoreBinding, StorePartition};
 pub use error::StoreError;
 pub use geometry::{

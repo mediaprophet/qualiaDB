@@ -2,7 +2,7 @@
 use super::ProtectionError as Error;
 use crate::bundle::stream::descriptor::MAX_ENTRIES;
 use crate::bundle::stream::index::AdmittedIndex;
-use crate::crypto::network::object_stream::{MAX_METADATA, MAX_OBJECT_BYTES, MAX_OBJECTS};
+use crate::crypto::network::object_stream::{MAX_METADATA, MAX_OBJECTS, MAX_OBJECT_BYTES};
 const _: () = assert!(MAX_ENTRIES == 4096 && MAX_OBJECTS == 2 * MAX_ENTRIES + 1);
 
 /// Private original index geometry; not a public descriptor row.

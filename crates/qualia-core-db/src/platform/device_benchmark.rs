@@ -22,7 +22,7 @@ use std::process::Command;
 
 #[cfg(feature = "gpu-runtime")]
 use etalon_diagnostics::device::backend_name;
-#[cfg(feature = "gpu-runtime")]
+#[cfg(any(feature = "gpu-runtime", test))]
 use etalon_diagnostics::ipc::encode_response;
 #[cfg(test)]
 use etalon_diagnostics::ipc::decode_response;

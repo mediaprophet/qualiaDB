@@ -94,12 +94,10 @@ fn noncanonical_empty_root_refuses_descriptor_after_payload_completion() {
             Err(PublisherError::Proof)
         ));
         assert!(p.is_poisoned());
-        assert!(
-            !sink
-                .artifacts
-                .iter()
-                .any(|(k, _)| *k == Artifact::Descriptor)
-        );
+        assert!(!sink
+            .artifacts
+            .iter()
+            .any(|(k, _)| *k == Artifact::Descriptor));
     });
 }
 #[test]
@@ -149,18 +147,15 @@ fn exact_candidate_digest_audience_policy_and_generation_are_required_to_sign() 
             if mode == 5 {
                 request.binding.key_ids.ml_dsa_65[0] ^= 1;
             }
-            assert!(
-                p.sign_candidate(&bytes, request, &mut cose::Workspace::new(), &mut sink)
-                    .is_err()
-            );
+            assert!(p
+                .sign_candidate(&bytes, request, &mut cose::Workspace::new(), &mut sink)
+                .is_err());
             assert!(p.is_poisoned());
             assert!(p.publication.metadata_master_row(0, &mut [0; 32]).is_err());
-            assert!(
-                !sink
-                    .artifacts
-                    .iter()
-                    .any(|(k, _)| *k == Artifact::PublisherProof)
-            );
+            assert!(!sink
+                .artifacts
+                .iter()
+                .any(|(k, _)| *k == Artifact::PublisherProof));
         });
     }
 }
@@ -181,10 +176,9 @@ fn expiry_before_sealer_and_metadata_preflight_clear_all_private_scratch() {
     fixture(false, |p, _, _, _| {
         let mut private = [99; 32];
         let mut leaf = [99; 16400];
-        assert!(
-            p.seal_metadata(refs(), &mut private, &mut leaf, &mut Sink::default())
-                .is_err()
-        );
+        assert!(p
+            .seal_metadata(refs(), &mut private, &mut leaf, &mut Sink::default())
+            .is_err());
         assert!(private.iter().all(|v| *v == 0));
         assert!(leaf.iter().all(|v| *v == 0));
     });

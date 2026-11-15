@@ -1,0 +1,22 @@
+
+running 17 tests
+test inference::inference_agent::governed_cpu::runtime_edges::denied_eos_and_empty_eos_restore_every_numerical_buffer ... ok
+test inference::inference_agent::governed_cpu::runtime_edges::empty_eos_requires_real_acceptance_and_exact_zero_byte_acknowledgment ... ok
+test inference::inference_agent::governed_cpu::runtime_edges::failed_second_prefill_restores_that_step_but_discards_the_unpublished_job ... ok
+test inference::inference_agent::governed_cpu::runtime_invalidations::actual_policy_or_actor_changes_after_allow_roll_back_all_thirteen_buffers ... ok
+test inference::inference_agent::governed_cpu::runtime_invalidations::real_policy_expiry_after_allow_restores_pending_numerics_and_publishes_nothing ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::accepted_prefix_survives_controller_loss_but_no_later_token_commits ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::actual_policy_host_loss_during_prefill_refuses_before_any_proposal ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::aggregate_minus_one_and_any_request_policy_do_not_start_execution ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::eos_and_last_context_position_are_accepted_before_stop_and_overflow_refuses ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::genuine_signed_allow_and_explicit_developer_match_all_numerical_buffers ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::partial_drain_and_unwind_terminally_discard_the_committed_job ... ok
+test inference::inference_agent::governed_cpu::runtime_tests::real_denial_restores_all_buffers_and_never_writes_output_or_lineage ... ok
+test inference::inference_agent::governed_cpu::tests::actual_event_encodes_integer_token_and_preserves_raw_logit_bits ... ok
+test inference::inference_agent::governed_cpu::tests::explicit_raw_request_binds_stop_order_bos_and_prompt ... ok
+test inference::inference_agent::governed_cpu::tests::host_preflight_refusal_and_drop_preserve_state_and_slots ... ok
+test inference::inference_agent::governed_cpu::tests::request_refuses_capacity_and_unsupported_controls_before_binding ... ok
+test inference::inference_agent::governed_cpu::tests::token_event_projection_refuses_metadata_and_float_placeholders ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 10367 filtered out; finished in 202.07s
+

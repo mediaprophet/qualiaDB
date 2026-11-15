@@ -1,0 +1,198 @@
+   Compiling cmov v0.5.4
+   Compiling ctutils v0.4.8
+   Compiling digest v0.11.3
+   Compiling curve25519-dalek v5.0.0
+   Compiling zeroize v1.9.1
+   Compiling sha2 v0.11.1
+   Compiling hmac v0.13.0
+   Compiling hkdf v0.13.0
+   Compiling ed25519-dalek v3.0.0
+   Compiling fips204 v0.4.6
+   Compiling qualia-qbdl-stream-conformance v0.1.0 (C:\github\qualiaDB\tools\qbdl-stream-conformance)
+warning: unused import: `owned::decode_owned_index`
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\index\mod.rs:15:16
+   |
+15 | pub(crate) use owned::decode_owned_index;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:55:14
+   |
+55 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+55 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+55 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: constant `OFF_MAGIC` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:62:18
+   |
+62 | pub(crate) const OFF_MAGIC: usize = 0;
+   |                  ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `OFF_VERSION` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:63:18
+   |
+63 | pub(crate) const OFF_VERSION: usize = 4;
+   |                  ^^^^^^^^^^^
+
+warning: constant `OFF_FLAGS` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:64:18
+   |
+64 | pub(crate) const OFF_FLAGS: usize = 6;
+   |                  ^^^^^^^^^
+
+warning: constant `OFF_ENTRY_COUNT` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:65:18
+   |
+65 | pub(crate) const OFF_ENTRY_COUNT: usize = 8;
+   |                  ^^^^^^^^^^^^^^^
+
+warning: constant `OFF_INDEX_OFFSET` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:66:18
+   |
+66 | pub(crate) const OFF_INDEX_OFFSET: usize = 12;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_INDEX_LENGTH` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:67:18
+   |
+67 | pub(crate) const OFF_INDEX_LENGTH: usize = 20;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_TOTAL_LENGTH` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:68:18
+   |
+68 | pub(crate) const OFF_TOTAL_LENGTH: usize = 28;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_CRC32C` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:69:18
+   |
+69 | pub(crate) const OFF_CRC32C: usize = 36;
+   |                  ^^^^^^^^^^
+
+warning: function `align_up` is never used
+   --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:102:15
+    |
+102 | pub(crate) fn align_up(n: usize, align: usize) -> usize {
+    |               ^^^^^^^^
+
+warning: function `decode_owned_index` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\index\owned.rs:55:15
+   |
+55 | pub(crate) fn decode_owned_index(
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: fields `binding` and `signatures` are never read
+  --> src\cose_codec\..\..\..\..\crates\qualia-core-db\src\crypto\network\cose\types.rs:56:16
+   |
+55 | pub struct Workspace {
+   |            --------- fields in this struct
+56 |     pub(crate) binding: [u8; MAX_BINDING_BYTES],
+   |                ^^^^^^^
+57 |     pub(crate) sig_structure: [u8; MAX_SIG_STRUCTURE_BYTES],
+58 |     pub(crate) signatures: PairSignatures,
+   |                ^^^^^^^^^^
+
+warning: method `key_ids` is never used
+  --> src\cose_codec\..\..\..\..\crates\qualia-core-db\src\crypto\network\cose\raw_signing.rs:16:19
+   |
+15 | impl RawSigningKeys<'_> {
+   | ----------------------- method in this implementation
+16 |     pub(crate) fn key_ids(&self) -> KeyIds {
+   |                   ^^^^^^^
+
+warning: function `sign_payload` is never used
+  --> src\cose_codec\..\..\..\..\crates\qualia-core-db\src\crypto\network\cose\raw_signing.rs:39:15
+   |
+39 | pub(super) fn sign_payload(
+   |               ^^^^^^^^^^^^
+
+warning: struct `ChargeRef` is never constructed
+  --> src\..\..\..\crates\qualia-core-db\src\net\peer\runtime\ledger.rs:76:19
+   |
+76 | pub(crate) struct ChargeRef {
+   |                   ^^^^^^^^^
+
+warning: associated constant `EMPTY` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\net\peer\runtime\ledger.rs:82:15
+   |
+81 | impl ChargeRef {
+   | -------------- associated constant in this implementation
+82 |     pub const EMPTY: Self = Self {
+   |               ^^^^^
+
+warning: associated items `as_ref` and `from_ref` are never used
+   --> src\..\..\..\crates\qualia-core-db\src\net\peer\runtime\ledger.rs:96:19
+    |
+ 88 | impl ReservationHandle {
+    | ---------------------- associated items in this implementation
+...
+ 96 |     pub(crate) fn as_ref(&self) -> ChargeRef {
+    |                   ^^^^^^
+...
+104 |     pub(crate) fn from_ref(r: ChargeRef) -> Self {
+    |                   ^^^^^^^^
+
+warning: struct `RawSigningKeys` is never constructed
+  --> src\..\..\..\crates\qualia-core-db\src\specialized_libs\cryptographic_library\signing_profile.rs:11:19
+   |
+11 | pub(crate) struct RawSigningKeys<'a> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: function `sign_mldsa65_empty_context_into` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\specialized_libs\cryptographic_library\signing_profile.rs:17:15
+   |
+17 | pub(crate) fn sign_mldsa65_empty_context_into(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `sign_ed25519_raw_into` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\specialized_libs\cryptographic_library\signing_profile.rs:41:15
+   |
+41 | pub(crate) fn sign_ed25519_raw_into(
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `matches` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\descriptor\refs.rs:30:19
+   |
+ 9 | impl<'a> PageRefsView<'a> {
+   | ------------------------- method in this implementation
+...
+30 |     pub(crate) fn matches(self, refs: &[PageRef]) -> Result<(), E> {
+   |                   ^^^^^^^
+
+warning: `qualia-qbdl-stream-conformance` (lib) generated 22 warnings (run `cargo fix --lib -p qualia-qbdl-stream-conformance` to apply 2 suggestions)
+error[E0382]: use of moved value: `base_outputs`
+   --> src\endpoint_fixtures.rs:274:29
+    |
+239 |     let base_outputs = [
+    |         ------------ move occurs because `base_outputs` has type `[(&str, std::string::String); 11]`, which does not implement the `Copy` trait
+...
+249 |     for vector in mutations {
+    |     ----------------------- inside of this loop
+...
+274 |         for (name, base) in base_outputs {
+    |                             ^^^^^^^^^^^^ `base_outputs` moved due to this implicit call to `.into_iter()`, in previous iteration of loop
+    |
+note: the `for` loop is desugared into a call to `std::iter::IntoIterator::into_iter`, which takes ownership of the receiver `self`, which moves `base_outputs`
+   --> C:\Users\Hp\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib/rustlib/src/rust\library\core\src\iter\traits\collect.rs:312:18
+    |
+312 |     fn into_iter(self) -> Self::IntoIter;
+    |                  ^^^^
+help: consider iterating over a slice of the `[(&str, std::string::String); 11]`'s content to avoid moving into the `for` loop
+    |
+274 |         for (name, base) in &base_outputs {
+    |                             +
+
+For more information about this error, try `rustc --explain E0382`.
+warning: `qualia-qbdl-stream-conformance` (lib test) generated 2 warnings (2 duplicates)
+error: could not compile `qualia-qbdl-stream-conformance` (lib test) due to 1 previous error; 2 warnings emitted

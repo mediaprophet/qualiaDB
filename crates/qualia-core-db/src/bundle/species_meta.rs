@@ -133,8 +133,17 @@ pub struct FaunaSpeciesMeta {
     /// Sexual dimorphism volumetric scale multipliers [x, y, z].
     #[serde(default = "default_dimorphism")]
     pub sexual_dimorphism_scale: [f32; 3],
-    /// Bundle entry key for the species vocalization audio asset (.q4au), if any.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Exact bundle entry key for the species vocalization audio asset, if any.
+    ///
+    /// The Rust field retains its legacy spelling for source compatibility. CBOR
+    /// writes the canonical QAC name and accepts either spelling on input; entry
+    /// key values (including legacy `.q4au` filenames) are preserved verbatim.
+    #[serde(
+        default,
+        rename = "vocalization_qac_key",
+        alias = "vocalization_q4au_key",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub vocalization_q4au_key: Option<String>,
 }
 
@@ -155,6 +164,16 @@ impl Default for FaunaSpeciesMeta {
 }
 
 impl FaunaSpeciesMeta {
+    /// Return the exact vocalization bundle entry key, without renaming it.
+    pub fn vocalization_qac_key(&self) -> Option<&str> {
+        self.vocalization_q4au_key.as_deref()
+    }
+
+    /// Set or clear the vocalization bundle entry key, preserving its exact value.
+    pub fn set_vocalization_qac_key(&mut self, key: Option<String>) {
+        self.vocalization_q4au_key = key;
+    }
+
     pub fn new(taxon_id: impl Into<String>) -> Self {
         Self {
             taxon_id: taxon_id.into(),
@@ -296,7 +315,10 @@ mod tests {
                 assert_eq!(f.skeleton_joint_count, 64);
                 assert_eq!(f.hill_muscle_count, 120);
                 assert!(f.pga_motor_skinning);
-                assert_eq!(f.vocalization_q4au_key.as_deref(), Some("audio/lion_roar.q4au"));
+                assert_eq!(
+                    f.vocalization_q4au_key.as_deref(),
+                    Some("audio/lion_roar.q4au")
+                );
             }
             _ => panic!("expected Fauna variant"),
         }
@@ -322,3 +344,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "species_meta_qac_tests.rs"]
+mod qac_tests;

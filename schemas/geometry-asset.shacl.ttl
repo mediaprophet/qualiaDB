@@ -1,15 +1,31 @@
-@prefix geo:  <urn:qualia:geometry:> .
-@prefix pga:  <urn:qualia:pga:> .
-@prefix m64:  <urn:qualia:m64:> .
-@prefix u3:   <urn:qualia:u3:> .
-@prefix emf:  <urn:qualia:emf:> .
-@prefix rcc8: <urn:qualia:rcc8:> .
-@prefix epi:  <urn:qualia:epistemic:> .
-@prefix q42:  <urn:qualia:q42:> .
-@prefix sh:   <http://www.w3.org/ns/shacl#> .
-@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
-@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix geo:     <urn:qualia:geometry:> .
+@prefix pga:     <urn:qualia:pga:> .
+@prefix m64:     <urn:qualia:m64:> .
+@prefix qac:     <urn:qualia:qac:> .
+@prefix u3:      <urn:qualia:u3:> .
+@prefix emf:     <urn:qualia:emf:> .
+@prefix sensing: <urn:qualia:sensing:> .
+@prefix dicom:   <urn:qualia:dicom:> .
+@prefix rcc8:    <urn:qualia:rcc8:> .
+@prefix epi:     <urn:qualia:epistemic:> .
+@prefix q42:     <urn:qualia:q42:> .
+@prefix sh:      <http://www.w3.org/ns/shacl#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ═════════════════════════════════════════════════════════════════════════════
+# QualiaDB Multi-Modal Scientific & Geometric Manifest SHACL Ontology
+#
+# Normative Declarative Shapes for:
+#   1. Geometry Asset (.10d) & Cluster-DAG LOD Invariants
+#   2. Matter-64 (.m64) 3D Bricks & Cross-Container Matter Lineage
+#   3. Full-Spectrum Radiative Field (Q42EMF64 / EMF v4, modes 0x0100..0x0107)
+#   4. Canonical Acoustic Container (Q42AC064 / QAC v1, continuum 0x0000/0x0001/0x0003 & 0x0100..0x0107)
+#   5. Raw Instrument Sensor Acquisition Views & Derivations (Schemas 6 & 7)
+#   6. DICOM Patient-Space Geometry & Clinical vs Visual Authority Separation
+#   7. Holistic Multi-Modal Bundle Packages (QBDL / .hmc)
+# ═════════════════════════════════════════════════════════════════════════════
 
 # ── 1. Geometry Asset (.10d) Manifest Node Shape ─────────────────────────
 
@@ -99,7 +115,7 @@ q42:ClusterDagInvariantShape a sh:NodeShape ;
         sh:severity sh:Violation ;
     ] .
 
-# ── 3. Matter-64 3D Brick Shape (.m64) ───────────────────────────────────
+# ── 3. Matter-64 3D Brick Shape & Cross-Container Reference (.m64) ────────
 
 q42:MatterBrickM64Shape a sh:NodeShape ;
     rdfs:label "Matter-64 Volumetric Brick Shape" ;
@@ -111,6 +127,7 @@ q42:MatterBrickM64Shape a sh:NodeShape ;
         sh:datatype xsd:integer ;
         sh:minInclusive 0 ;
         sh:maxInclusive 3 ;
+        sh:in ( 0 1 2 3 ) ;
         sh:minCount 1 ;
         sh:message "recordMode must be 0 (POINT), 1 (HOLO), 2 (STRATA), or 3 (PHASE_JUNCTURE)" ;
         sh:severity sh:Violation ;
@@ -132,19 +149,76 @@ q42:MatterBrickM64Shape a sh:NodeShape ;
         sh:severity sh:Violation ;
     ] .
 
-# ── 4. Full-Spectrum EMF Field Shape (.emf / EMF-64) ─────────────────────
+q42:MatterCrossContainerRefShape a sh:NodeShape ;
+    rdfs:label "Matter-64 Cross-Container Reference Shape" ;
+    rdfs:comment "Enforces strict content-addressed cross-container matter lineage and material bindings." ;
+    sh:targetClass m64:CrossContainerMatterReference ;
+
+    sh:property [
+        sh:path m64:containerDigest ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "containerDigest (BLAKE3 32-byte content hash) is required" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path m64:spatialHilbertIndex ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "spatialHilbertIndex of target chunk is required" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path m64:recordMode ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 3 ) ;
+        sh:minCount 1 ;
+        sh:message "recordMode must match target chunk mode (0=POINT, 1=HOLO, 2=STRATA, 3=PHASE_JUNCTURE)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path m64:materialTableDigest ;
+        sh:datatype xsd:integer ;
+        sh:message "materialTableDigest links exact constitutive properties table" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path m64:materialEntryId ;
+        sh:datatype xsd:integer ;
+        sh:message "materialEntryId must identify a valid row in the material table" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 4. Full-Spectrum EMF Field Shape (Q42EMF64 / EMF v4, modes 0x0100..0x0107)
 
 q42:EmfField64Shape a sh:NodeShape ;
-    rdfs:label "Full-Spectrum EMF Field Shape" ;
-    rdfs:comment "Validates 64-byte aligned radiative EMF field cells and polarimetric tensors." ;
-    sh:targetClass emf:EmfField64, emf:RadiativeGrid ;
+    rdfs:label "Full-Spectrum EMF Field Shape (Q42EMF64 v4)" ;
+    rdfs:comment "Validates radiative EMF field cells, polarimetric tensors, Yee grids, spectra, Mueller matrices, calibrated I/Q, ionizing radiation, and bioelectric dipoles (modes 0x0100..0x0107)." ;
+    sh:targetClass emf:EmfField64, emf:RadiativeGrid, emf:EmfContainerV4 ;
 
+    sh:property [
+        sh:path emf:payloadMode ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 256 ; # 0x0100
+        sh:maxInclusive 263 ; # 0x0107
+        sh:in ( 256 257 258 259 260 261 262 263 ) ;
+        sh:minCount 1 ;
+        sh:message "payloadMode must be one of frozen EMF v4 / auxiliary modes 0x0100..0x0107 (0x0100 instantaneous E/B, 0x0101 polarimetric ray, 0x0102 Yee Cartesian, 0x0103 sampled spectrum, 0x0104 Mueller scattering or opaque original, 0x0105 calibrated I/Q baseband, 0x0106 ionizing dose or validity companion mask, 0x0107 bioelectric dipole or typed auxiliary array)" ;
+        sh:severity sh:Violation ;
+    ] ;
     sh:property [
         sh:path emf:spectralBand ;
         sh:datatype xsd:string ;
         sh:in ( "elf-bio" "rf-mmwave" "thermal-ir" "visible-spd" "uv" "xray" ) ;
-        sh:minCount 1 ;
         sh:message "spectralBand must be a recognized physical radiation band" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:unit ;
+        sh:datatype xsd:string ;
+        sh:in ( "V/m" "T" "W/m2" "J/m3" "Hz" "m" "Gy" "Sv" "A*m" "V" "S/m" "dimensionless" "1" ) ;
+        sh:minCount 1 ;
+        sh:message "emf:unit must be an approved SI physical unit or valid ratio" ;
         sh:severity sh:Violation ;
     ] ;
     sh:property [
@@ -153,33 +227,294 @@ q42:EmfField64Shape a sh:NodeShape ;
         sh:minInclusive 1.0 ;
         sh:message "refractiveIndex cannot be less than 1.0 in passive physical media" ;
         sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:frequencyHz ;
+        sh:datatype xsd:float ;
+        sh:minExclusive 0.0 ;
+        sh:message "frequencyHz must be finite and strictly positive when specified" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:vacuumWavelengthM ;
+        sh:datatype xsd:float ;
+        sh:minExclusive 0.0 ;
+        sh:message "vacuumWavelengthM must be finite and strictly positive when specified" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:photonEnergyJ ;
+        sh:datatype xsd:float ;
+        sh:minExclusive 0.0 ;
+        sh:message "photonEnergyJ must be finite and strictly positive in ionizing mode" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:hasLocalFrame ;
+        sh:datatype xsd:integer ;
+        sh:message "hasLocalFrame must identify a stationary right-handed Cartesian frame with normalized quaternion" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:hasCalibration ;
+        sh:datatype xsd:integer ;
+        sh:message "hasCalibration links instrument identity and half-open [from, until) validity window" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path emf:hasMaterialBinding ;
+        sh:datatype xsd:integer ;
+        sh:message "hasMaterialBinding links constitutive parameters (vacuum, isotropic_nondispersive, debye, lorentz)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path epi:epistemicKind ;
+        sh:datatype xsd:string ;
+        sh:in ( "EmpiricalFact" "TheoreticalHypothesis" "Counterfactual" "FictionalConstruct" ) ;
+        sh:message "epistemicKind must preserve explicit separation between measured observations and simulations/hypotheses" ;
+        sh:severity sh:Violation ;
     ] .
 
-# ── 5. Spatial Audio Q4AU v3 Shape (.q4au) ───────────────────────────────
+# ── 5. Canonical Spatial Audio QAC v1 Shape (Q42AC064 / .qac) ─────────────
 
-q42:SpatialAudioQ4auV3Shape a sh:NodeShape ;
-    rdfs:label "Spatial Audio Q4AU v3 Shape" ;
-    rdfs:comment "Validates 64-byte aligned spatial acoustic sidecars and Ambisonics configurations." ;
-    sh:targetClass u3:SpatialAudioQ4auV3, u3:AcousticSidecar ;
+q42:SpatialAudioQacShape a sh:NodeShape ;
+    rdfs:label "Spatial Audio QAC v1 Shape (Q42AC064)" ;
+    rdfs:comment "Validates Q42AC064 container invariants, frozen modes 0x0000/0x0001/0x0003 & 0x0100..0x0107, exact OriginBasis, and BLAKE3 source lineage." ;
+    sh:targetClass qac:SpatialAudioQac, qac:AcousticContainerQac, qac:AcousticSidecar, u3:SpatialAudioQac ;
 
     sh:property [
-        sh:path u3:sampleRateHz ;
+        sh:path qac:payloadMode ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 3 256 257 258 259 260 261 262 263 ) ;
+        sh:minCount 1 ;
+        sh:message "payloadMode must be one of frozen QAC v1 modes (0x0000 pressure-velocity, 0x0001 elastic stress-velocity, 0x0003 ray contribution, 0x0100 PCM, 0x0101 STFT, 0x0102 HOA, 0x0103 HRIR/RIR, 0x0104 modal resonance or opaque original, 0x0105 perceptual features or raw RF, 0x0106 haptic sample or validity mask, 0x0107 ultrasound beam summary or typed auxiliary array)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path qac:originBasis ;
+        sh:datatype xsd:string ;
+        sh:in ( "source-entry-first-sample" "epoch-sample-grid" ) ;
+        sh:minCount 1 ;
+        sh:message "originBasis must be exactly 'source-entry-first-sample' or 'epoch-sample-grid'" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path qac:sampleRateHz ;
         sh:datatype xsd:integer ;
         sh:in ( 44100 48000 96000 192000 ) ;
-        sh:minCount 1 ;
         sh:message "sampleRateHz must be a standard acoustic sampling frequency" ;
         sh:severity sh:Violation ;
     ] ;
     sh:property [
-        sh:path u3:hoaOrder ;
+        sh:path qac:hoaOrder ;
         sh:datatype xsd:integer ;
         sh:in ( 0 1 2 3 ) ;
+        sh:message "hoaOrder must be in 0..3 (ACN ordering, SN3D/N3D normalization)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path qac:blake3SourceDigest ;
+        sh:datatype xsd:integer ;
+        sh:message "blake3SourceDigest (schema 4 provenance) is required for derived and preserved audio" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path qac:provenanceRole ;
+        sh:datatype xsd:string ;
+        sh:in ( "measured" "model" "derived" "command" "opaque-preserved" ) ;
         sh:minCount 1 ;
-        sh:message "hoaOrder must be in 0..3 (3rd order Ambisonics requires 16 channels = 64B/frame)" ;
+        sh:message "provenanceRole must declare whether data is measured, model, derived, command, or opaque-preserved" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path qac:unit ;
+        sh:datatype xsd:string ;
+        sh:in ( "Pa" "m/s" "Pa*m/s" "W/m2" "W/m^2" "J/m3" "J/m^3" "N" "N*m" "m" "m2" "m^2" "Hz" "s" "1" "dB-SPL" "sone" "LUFS" "mel" "Pa/Pa" ) ;
+        sh:message "qac:unit must declare physical base units, acoustic perceptual/beamforming units, or digital ratio" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path qac:hasCommandReceipt ;
+        sh:datatype xsd:integer ;
+        sh:message "hasCommandReceipt is required if provenanceRole is 'command'; stored observations never authorize actuation" ;
         sh:severity sh:Violation ;
     ] .
 
-# ── 6. Holistic Bundle Package Shape (.hmc / QBDL) ───────────────────────
+# ── 6. Raw Instrument Sensor Acquisition Views & Derivations (Schemas 6 & 7)
+
+sensing:AcquisitionViewShape a sh:NodeShape ;
+    rdfs:label "Raw Acquisition View & Derivation Shape (Schemas 6 & 7)" ;
+    rdfs:comment "Enforces tensor/event/correlation acquisition views, byte orders, component orders, and derivation loss tracking." ;
+    sh:targetClass sensing:AcquisitionView, sensing:RawAcquisition ;
+
+    sh:property [
+        sh:path sensing:kind ;
+        sh:datatype xsd:integer ;
+        sh:in ( 1 2 3 ) ;
+        sh:minCount 1 ;
+        sh:message "kind must be 1 (tensor), 2 (events), or 3 (correlation)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:stage ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 ) ;
+        sh:minCount 1 ;
+        sh:message "stage must be 0 (raw codes), 1 (reported physical), or 2 (derived physical)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:byteOrder ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 ) ;
+        sh:minCount 1 ;
+        sh:message "byteOrder must be 0 (little-endian) or 1 (big-endian)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:rank ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4 ;
+        sh:message "rank must be in [1, 4]; correlation views require rank exactly 3" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:encoding ;
+        sh:datatype xsd:integer ;
+        sh:in ( 1 2 3 4 5 6 7 8 9 10 11 12 255 ) ;
+        sh:message "encoding must be a valid Scalar/Complex type tag or 255 (Opaque)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:componentOrder ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 ) ;
+        sh:message "componentOrder must be 0 (scalar), 1 (real,imag), or 2 (imag,real)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:carrierKind ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 ) ;
+        sh:minCount 1 ;
+        sh:message "carrierKind must be 0 (unknown), 1 (static/aperiodic), or 2 (positiveHz)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:carrierHz ;
+        sh:datatype xsd:float ;
+        sh:minExclusive 0.0 ;
+        sh:message "carrierHz must be finite and strictly positive when carrierKind is 2" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:custodyAuthority ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "custodyAuthority (DID/signing key identity) must be explicitly separated from content integrity" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:contentDigest ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "contentDigest (BLAKE3 full chunk digest) enforces immutable source content integrity" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:eventOrdering ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 ) ;
+        sh:message "eventOrdering must be 0 (acquisition order) or 1 (nondecreasing signed tick)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:correlationProduct ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 ) ;
+        sh:message "correlationProduct must be 0 (left*conj(right)), 1 (conj(left)*right), or 2 (left*right)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:correlationNormalization ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 ) ;
+        sh:message "correlationNormalization must be 0 (sum), 1 (mean), or 2 (reported)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path sensing:derivationLoss ;
+        sh:datatype xsd:integer ;
+        sh:in ( 0 1 2 3 4 5 6 7 8 255 ) ;
+        sh:message "derivationLoss (Schema 7) must record declared losses (0=NoneDeclared, 1=Quantization, 2=Resampling, 3=PhaseDiscarded, 4=ChannelReduction, 5=EventAggregation, 6=Clipping, 7=Windowing, 8=BandSelection, 255=Registered)" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── 7. DICOM Patient-Space Geometry & Clinical Authority Separation ───────
+
+dicom:DicomGeometryProvenanceShape a sh:NodeShape ;
+    rdfs:label "DICOM Patient-Space Geometry & Provenance Shape" ;
+    rdfs:comment "Binds DICOM patient-space coordinate systems while strictly separating visual previews from clinical authority." ;
+    sh:targetClass dicom:DicomGeometryProvenance, dicom:PatientSpaceRegistration ;
+
+    sh:property [
+        sh:path dicom:patientID ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "dicom:patientID is required for patient-space identity binding" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dicom:studyInstanceUID ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "dicom:studyInstanceUID is required" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dicom:seriesInstanceUID ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "dicom:seriesInstanceUID is required" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dicom:sopInstanceUID ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "dicom:sopInstanceUID is required" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dicom:frameOfReferenceUID ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "dicom:frameOfReferenceUID establishes the rigid patient coordinate space" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dicom:isClinicalAuthority ;
+        sh:datatype xsd:boolean ;
+        sh:minCount 1 ;
+        sh:message "isClinicalAuthority must be true for diagnostic raw datasets and false for derived visual previews" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path dicom:clinicalAuthorityRecord ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "clinicalAuthorityRecord references the authoritative immutable acquisition entry" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:visualPreviewMesh ;
+        sh:node q42:GeometryAsset10dShape ;
+        sh:message "visualPreviewMesh describes non-authoritative visualization geometry only" ;
+        sh:severity sh:Info ;
+    ] .
+
+# ── 8. Holistic Bundle Package Shape (.hmc / QBDL) ───────────────────────
 
 q42:HolisticBundleHmcShape a sh:NodeShape ;
     rdfs:label "Holistic Bundle HMC Package Shape" ;

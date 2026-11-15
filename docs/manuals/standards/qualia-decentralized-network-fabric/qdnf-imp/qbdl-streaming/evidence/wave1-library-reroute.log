@@ -1,0 +1,251 @@
+   Compiling qualia-qbdl-stream-conformance v0.1.0 (C:\github\qualiaDB\tools\qbdl-stream-conformance)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\tools\qbdl-stream-conformance\target\debug\incremental\qualia_qbdl_stream_conformance-25uoqqqkceibf\s-ho36vfes7s-1klfpy2-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\tools\qbdl-stream-conformance\target\debug\incremental\qualia_qbdl_stream_conformance-2ge4ahsyxnlc5\s-ho36vfahfs-1p9i4fs-working`
+
+warning: unused import: `owned::decode_owned_index`
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\index\mod.rs:15:16
+   |
+15 | pub(crate) use owned::decode_owned_index;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:55:14
+   |
+55 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+55 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+55 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: constant `OFF_MAGIC` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:62:18
+   |
+62 | pub(crate) const OFF_MAGIC: usize = 0;
+   |                  ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `OFF_VERSION` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:63:18
+   |
+63 | pub(crate) const OFF_VERSION: usize = 4;
+   |                  ^^^^^^^^^^^
+
+warning: constant `OFF_FLAGS` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:64:18
+   |
+64 | pub(crate) const OFF_FLAGS: usize = 6;
+   |                  ^^^^^^^^^
+
+warning: constant `OFF_ENTRY_COUNT` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:65:18
+   |
+65 | pub(crate) const OFF_ENTRY_COUNT: usize = 8;
+   |                  ^^^^^^^^^^^^^^^
+
+warning: constant `OFF_INDEX_OFFSET` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:66:18
+   |
+66 | pub(crate) const OFF_INDEX_OFFSET: usize = 12;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_INDEX_LENGTH` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:67:18
+   |
+67 | pub(crate) const OFF_INDEX_LENGTH: usize = 20;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_TOTAL_LENGTH` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:68:18
+   |
+68 | pub(crate) const OFF_TOTAL_LENGTH: usize = 28;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_CRC32C` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:69:18
+   |
+69 | pub(crate) const OFF_CRC32C: usize = 36;
+   |                  ^^^^^^^^^^
+
+warning: function `align_up` is never used
+   --> src\..\..\..\crates\qualia-core-db\src\bundle\format.rs:102:15
+    |
+102 | pub(crate) fn align_up(n: usize, align: usize) -> usize {
+    |               ^^^^^^^^
+
+warning: function `decode_owned_index` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\bundle\stream\index\owned.rs:55:15
+   |
+55 | pub(crate) fn decode_owned_index(
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: fields `binding` and `signatures` are never read
+  --> src\cose_codec\..\..\..\..\crates\qualia-core-db\src\crypto\network\cose\types.rs:56:16
+   |
+55 | pub struct Workspace {
+   |            --------- fields in this struct
+56 |     pub(crate) binding: [u8; MAX_BINDING_BYTES],
+   |                ^^^^^^^
+57 |     pub(crate) sig_structure: [u8; MAX_SIG_STRUCTURE_BYTES],
+58 |     pub(crate) signatures: PairSignatures,
+   |                ^^^^^^^^^^
+
+warning: method `key_ids` is never used
+  --> src\cose_codec\..\..\..\..\crates\qualia-core-db\src\crypto\network\cose\raw_signing.rs:16:19
+   |
+15 | impl RawSigningKeys<'_> {
+   | ----------------------- method in this implementation
+16 |     pub(crate) fn key_ids(&self) -> KeyIds {
+   |                   ^^^^^^^
+
+warning: function `sign_payload` is never used
+  --> src\cose_codec\..\..\..\..\crates\qualia-core-db\src\crypto\network\cose\raw_signing.rs:39:15
+   |
+39 | pub(super) fn sign_payload(
+   |               ^^^^^^^^^^^^
+
+warning: struct `ChargeRef` is never constructed
+  --> src\..\..\..\crates\qualia-core-db\src\net\peer\runtime\ledger.rs:76:19
+   |
+76 | pub(crate) struct ChargeRef {
+   |                   ^^^^^^^^^
+
+warning: associated constant `EMPTY` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\net\peer\runtime\ledger.rs:82:15
+   |
+81 | impl ChargeRef {
+   | -------------- associated constant in this implementation
+82 |     pub const EMPTY: Self = Self {
+   |               ^^^^^
+
+warning: associated items `as_ref` and `from_ref` are never used
+   --> src\..\..\..\crates\qualia-core-db\src\net\peer\runtime\ledger.rs:96:19
+    |
+ 88 | impl ReservationHandle {
+    | ---------------------- associated items in this implementation
+...
+ 96 |     pub(crate) fn as_ref(&self) -> ChargeRef {
+    |                   ^^^^^^
+...
+104 |     pub(crate) fn from_ref(r: ChargeRef) -> Self {
+    |                   ^^^^^^^^
+
+warning: struct `RawSigningKeys` is never constructed
+  --> src\..\..\..\crates\qualia-core-db\src\specialized_libs\cryptographic_library\signing_profile.rs:11:19
+   |
+11 | pub(crate) struct RawSigningKeys<'a> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: function `sign_mldsa65_empty_context_into` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\specialized_libs\cryptographic_library\signing_profile.rs:17:15
+   |
+17 | pub(crate) fn sign_mldsa65_empty_context_into(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `sign_ed25519_raw_into` is never used
+  --> src\..\..\..\crates\qualia-core-db\src\specialized_libs\cryptographic_library\signing_profile.rs:41:15
+   |
+41 | pub(crate) fn sign_ed25519_raw_into(
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `qualia-qbdl-stream-conformance` (lib) generated 22 warnings (run `cargo fix --lib -p qualia-qbdl-stream-conformance` to apply 2 suggestions)
+warning: `qualia-qbdl-stream-conformance` (lib test) generated 14 warnings (13 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 29.42s
+     Running unittests src\lib.rs (tools\qbdl-stream-conformance\target\debug\deps\qualia_qbdl_stream_conformance-25e095061ae8096e.exe)
+
+running 79 tests
+test allocation::counter_positive_control ... ok
+test bundle_index::tests::bounds_alignment_and_range_overflow_are_rejected ... ok
+test bundle_index::tests::both_byte_forms_and_arbitrary_field_order_materialize_without_reencoding ... ok
+test bundle_index::tests::exact_header_and_footer_geometry_fail_closed ... ok
+test bundle_index::tests::empty_ranges_never_reset_occupied_frontier ... ok
+test bundle_index::tests::duplicate_keys_and_nonempty_overlaps_are_rejected ... ok
+test bundle_index::tests::invalid_utf8_and_missing_required_fields_refuse ... ok
+test crypto_cose::tests::canonical_binding_and_maximum_fields ... ok
+test crypto_cose::tests::mismatched_pair_payload_and_protected_kid_fail ... ok
+test bundle_index::tests::invalid_required_fields_and_digests_refuse ... ok
+test bundle_index::tests::flags_and_independent_extent_are_checked_before_index ... ok
+test crypto_cose::tests::exact_signing_structure_and_capacity ... ok
+test bundle_index::tests::scratch_and_resident_limits_are_independent ... ok
+test bundle_index::tests::malformed_counts_indefinite_trailing_and_size_bombs_refuse ... ok
+test crypto_dual_sign::tests::cose_sign1_is_not_frozen ... ok
+test crypto_dual_sign::tests::single_algorithm_is_not_enough ... ok
+test parent_runtime::cancel::tests::cancel_then_late_complete_releases_storage ... ok
+test bundle_index::tests::remote_u64_extent_does_not_size_resident_scratch ... ok
+test crypto_cose::tests::nonminimal_duplicate_indefinite_and_trailing_binding_refused ... ok
+test parent_runtime::cancel::tests::cancel_epoch_does_not_wrap ... ok
+test crypto_cose::tests::strict_envelope_refuses_every_truncated_prefix_and_extra_bytes ... ok
+test index_fixtures::independent_literal_fixtures_and_zero_allocation ... ok
+test crypto_cose::tests::stripping_algorithm_header_and_critical_header_attacks_fail ... ok
+test parent_runtime::cancel::tests::stale_generation_is_rejected ... ok
+test parent_runtime::events::tests::cancel_in_flight_rejects_late_complete ... ok
+test parent_runtime::scheduler::tests::background_not_starved_when_control_is_capped ... ok
+test parent_runtime::scheduler::tests::control_queue_is_capped ... ok
+test parent_runtime::events::tests::complete_consumes_slot ... ok
+test cose_fixtures::independent_cbor_encoding_bytes_match ... ok
+test parent_runtime::generations::tests::acquire_skips_retired_slot_and_never_wraps ... ok
+test parent_runtime::generations::tests::all_slots_exhausted_is_stale_generation ... ok
+test parent_runtime::generations::tests::released_handle_is_not_live_at_old_generation ... ok
+test parent_runtime::generations::tests::slot_at_max_next_fails_stale_generation ... ok
+test parent_runtime::leases::tests::double_release_fails ... ok
+test parent_runtime::leases::tests::thirty_third_acquire_is_capacity ... ok
+test parent_runtime::ledger::tests::double_release_is_rejected ... ok
+test parent_runtime::ledger::tests::failed_reserve_leaves_counters_unchanged ... ok
+test parent_runtime::ledger::tests::foreign_generation_is_stale ... ok
+test parent_runtime::ledger::tests::r10_r11_release_checked_bytes_rejects_mismatched_caller_amount_and_stale_generation ... ok
+test parent_runtime::ledger::tests::release_requires_owner_handle ... ok
+test parent_runtime::ledger::tests::sybil_does_not_multiply_host_admission ... ok
+test parent_runtime::resources::tests::data_cannot_consume_essential_floor ... ok
+test parent_runtime::resources::tests::unknown_sender_charges_transient_pool ... ok
+test parent_runtime::scheduler::tests::expired_deadline_does_not_run ... ok
+test stream_runtime::tests::capacity::essential_control_floor_cannot_be_borrowed_by_bulk ... ok
+test stream_runtime::tests::capacity::exhausted_canonical_lease_table_rolls_back_constructor_charges ... ok
+test parent_runtime::scheduler::tests::ninth_scope_is_capacity ... ok
+test proof_tests::builder_state_and_limits_do_not_allocate ... ok
+test crypto_ed25519::tests::context_mismatch_fails ... ok
+test runtime_allocations::admission_cancel_expiry_completion_are_allocation_free_and_conserve_budget ... ok
+test stream_runtime::tests::capacity::canonical_external_scheduler_record_is_returned_not_discarded ... ok
+test stream_runtime::tests::capacity::deliberately_colliding_and_owner_prefix_foreign_records_remain_external ... ok
+test stream_runtime::tests::capacity::desktop_admits_thirty_with_distinct_scopes_then_preserves_control_slots ... ok
+test parent_runtime::scheduler::tests::identity_lookup_covers_classes_and_scopes_without_removing_work ... ok
+test proof_tests::proof_codec_exact_framing_and_capacity ... ok
+test qdnf_types::tests::generation_does_not_wrap ... ok
+test qdnf_types::tests::locator_rejects_oversized ... ok
+test proof_tests::outboard_failure_poisoning_and_repeat_finish ... ok
+test qdnf_types::tests::strong_digest_is_48_bytes ... ok
+test stream_runtime::tests::capacity::exhausted_canonical_ledger_rolls_back_static_constructor_handle ... ok
+test stream_runtime::tests::capacity::hot_metadata_overflow_and_window_rejection_are_charge_free ... ok
+test stream_runtime::tests::lifecycle::cancel_and_timeout_retain_io_until_late_completion ... ok
+test stream_runtime::tests::lifecycle::canceled_queued_record_must_be_polled_before_slot_reuse ... ok
+test stream_runtime::tests::lifecycle::expired_and_revoked_admission_and_duplicate_operation_leave_no_charge ... ok
+test stream_runtime::tests::lifecycle::malformed_overflow_and_control_class_plans_refuse ... ok
+test stream_runtime::tests::lifecycle::policy_change_after_ready_cancels_without_issuing_credit ... ok
+test stream_runtime::tests::lifecycle::scheduler_capacity_rejects_atomically_and_profiles_do_not_claim_sixty_four_io ... ok
+test stream_runtime::tests::lifecycle::stale_completion_cannot_release_reused_slot_or_other_runtime ... ok
+test stream_runtime::tests::lifecycle::success_reserves_every_component_before_one_shot_credit ... ok
+test crypto_mldsa::tests::network_context_is_length_delimited ... ok
+test crypto_dual_sign::tests::wrong_context_is_unauthorized ... ok
+test crypto_dual_sign::tests::generate_sign_verify_ok ... ok
+test crypto_cose::tests::caller_expected_scope_epoch_digest_and_pair_are_enforced ... ok
+test crypto_dual_sign::tests::wrong_ed25519_sig_is_unauthorized ... ok
+test crypto_dual_sign::tests::stripped_ed25519_is_unauthorized ... ok
+test cose_fixtures::independent_openssl_signatures_verify_and_wrong_contexts_fail ... ok
+test crypto_cose::tests::legacy_contextual_signatures_cannot_be_relabelled_cose ... ok
+test crypto_cose::tests::actual_pair_verifies_and_each_signature_is_required ... ok
+test proof_tests::independent_recursive_reference_vectors_and_mutations ... ok
+
+test result: ok. 79 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.50s
+
+   Doc-tests qualia_qbdl_stream_conformance
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

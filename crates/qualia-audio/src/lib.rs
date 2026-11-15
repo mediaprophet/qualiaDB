@@ -30,6 +30,7 @@ pub mod models;
 pub mod music;
 pub mod pipeline;
 pub mod production;
+pub mod qac_spatial;
 pub mod resample;
 pub mod semantic;
 pub mod session_history;

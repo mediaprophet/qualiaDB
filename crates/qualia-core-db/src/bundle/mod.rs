@@ -27,7 +27,8 @@
 pub mod cbor_ld_manifest;
 pub mod entity_compiler;
 pub mod entity_verifier;
-mod format;
+pub mod field_range_planner;
+pub(crate) mod format;
 mod reader;
 pub use entity_compiler as twin_compiler;
 pub use entity_verifier as twin_verifier;
@@ -59,6 +60,7 @@ pub use cbor_ld_manifest::{
     GeometryLayout, SectionLayoutEntry, SubjectAffordances, CBOR_LD_CONTEXT_CREDENTIALS_V1,
     CBOR_LD_CONTEXT_WEBCIVICS_V1, CBOR_LD_MANIFEST_ENTRY_KEY, CBOR_LD_MANIFEST_KIND,
 };
+pub use field_range_planner::*;
 pub use format::{
     BundleEntry, BundleError, BUNDLE_ENTRY_ALIGN, BUNDLE_FLAG_PAGE_ALIGN_4096, BUNDLE_HEADER_SIZE,
     BUNDLE_MAGIC, BUNDLE_PAGE_ALIGN_4096, BUNDLE_VERSION, SHA256_LEN,

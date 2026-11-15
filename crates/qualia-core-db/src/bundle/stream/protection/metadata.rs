@@ -1,5 +1,5 @@
 //! Private fixed-width M serializer, never an exported key-bearing byte object.
-use super::{ObjectKind, geometry::PreparedGeometry, publisher::PublisherError as E};
+use super::{geometry::PreparedGeometry, publisher::PublisherError as E, ObjectKind};
 use crate::crypto::network::object_stream::Context;
 use crate::net::qdnf::types::StrongDigest;
 use crate::specialized_libs::cryptographic_library::ManagedObjectPublication;

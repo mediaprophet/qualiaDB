@@ -2,7 +2,7 @@
 use super::publisher::{
     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError as E,
 };
-use crate::bundle::stream::proof::{Representation, TreeSpec, empty_root};
+use crate::bundle::stream::proof::{empty_root, Representation, TreeSpec};
 use crate::crypto::network::{cose, digest::sha384, errors::CryptoError, object_stream::*};
 use crate::specialized_libs::cryptographic_library::PairedSigningRequest;
 use zeroize::Zeroizing;

@@ -1,5 +1,57 @@
 use super::super::write::WriteStep;
 use super::*;
+use crate::bundle::stream::policy::LocalWholeSourceGrant;
+use crate::bundle::stream::runtime::{SparsePageWorkspace, TransferRuntime, TransferTicket};
+use crate::crypto::network::authority::PinAuthority;
+
+fn split_hook_write(
+    store: &mut NativeSparseStore<'_, '_>,
+    workspace: &mut SparsePageWorkspace,
+    rt: &mut TransferRuntime<'_>,
+    op: &TransferTicket,
+    grant: &mut LocalWholeSourceGrant<'_, '_>,
+    pins: &PinAuthority,
+    payload: &[u8],
+    scratch: &mut [u8],
+    nodes: &mut [StrongDigest],
+    clock: &impl Fn() -> u64,
+    policy: &impl Fn() -> Generation,
+    hook: &mut impl FnMut(WriteStep) -> Result<(), StoreError>,
+) -> Result<LeafBarrierObservation, StoreError> {
+    let next = store.next_sequence()?;
+    let mut attempt = workspace.begin_attempt();
+    let armed = {
+        let mut stage = rt
+            .storage_stage(op, payload, &[0], scratch, 20, Generation(1))
+            .unwrap();
+        store.prepare_leaf_write(
+            &mut stage,
+            attempt.workspace(),
+            0,
+            nodes,
+            next,
+            clock,
+            policy,
+        )?
+    };
+    store.wait_leaf_write(armed, hook)?;
+    let mut stage = rt
+        .storage_stage(op, payload, &[0], scratch, 20, Generation(1))
+        .unwrap();
+    store.commit_leaf_write(
+        &mut stage,
+        grant,
+        pins,
+        attempt.workspace(),
+        0,
+        nodes,
+        clock,
+        policy,
+    )?;
+    stage.recheck(clock(), policy())?;
+    store.finish_leaf_write(next, 0, attempt)
+}
+
 #[test]
 fn actual_writes_and_barriers_precede_checkpoint_and_duplicate_uses_same_charge() {
     fixture(
@@ -13,25 +65,24 @@ fn actual_writes_and_barriers_precede_checkpoint_and_duplicate_uses_same_charge(
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                    .unwrap();
-                store
-                    .write_leaf_with_hook(
-                        &mut stage,
-                        &mut grant,
-                        pins,
-                        workspace,
-                        0,
-                        &mut nodes,
-                        &|| 20,
-                        &|| Generation(1),
-                        &mut |step| {
-                            events.push(step);
-                            Ok(())
-                        },
-                    )
-                    .unwrap();
+                split_hook_write(
+                    &mut store,
+                    workspace,
+                    rt,
+                    &op,
+                    &mut grant,
+                    pins,
+                    payload,
+                    &mut scratch,
+                    &mut nodes,
+                    &|| 20,
+                    &|| Generation(1),
+                    &mut |step| {
+                        events.push(step);
+                        Ok(())
+                    },
+                )
+                .unwrap();
             }
             finish(rt, &mut op);
             assert_eq!(
@@ -92,15 +143,15 @@ fn every_stopped_real_protocol_boundary_poison_clears_and_new_facade_cannot_reus
                 {
                     let mut grant =
                         adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                    let mut stage = rt
-                        .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                        .unwrap();
-                    let error = store.write_leaf_with_hook(
-                        &mut stage,
+                    let error = split_hook_write(
+                        &mut store,
+                        workspace,
+                        rt,
+                        &op,
                         &mut grant,
                         pins,
-                        workspace,
-                        0,
+                        payload,
+                        &mut scratch,
                         &mut nodes,
                         &|| 20,
                         &|| Generation(1),
@@ -156,15 +207,15 @@ fn outer_authority_final_check_failure_cannot_commit_page_attempt() {
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                    .unwrap();
-                let result = store.write_leaf_with_hook(
-                    &mut stage,
+                let result = split_hook_write(
+                    &mut store,
+                    workspace,
+                    rt,
+                    &op,
                     &mut grant,
                     pins,
-                    workspace,
-                    0,
+                    payload,
+                    &mut scratch,
                     &mut nodes,
                     &clock,
                     &|| Generation(1),

@@ -328,10 +328,9 @@ fn protected_sink_error_and_unwind_after_finished_sealers_abort_entire_attempt()
             }
             assert!(p.is_poisoned());
             assert!(p.publication.metadata_master_row(0, &mut [0; 32]).is_err());
-            assert!(
-                p.finish(&mut [0; MAX_DESCRIPTOR], &mut Sink::default())
-                    .is_err()
-            );
+            assert!(p
+                .finish(&mut [0; MAX_DESCRIPTOR], &mut Sink::default())
+                .is_err());
         });
     }
 }
@@ -370,10 +369,9 @@ fn protected_metadata_capacity_failure_after_payloads_is_terminal_and_erases_buf
         let mut sink = Sink::default();
         payloads(p, &mut sink);
         let mut short = vec![99; p.geometry.metadata_length() - 1];
-        assert!(
-            p.seal_metadata(refs(), &mut short, &mut [0; 16400], &mut sink)
-                .is_err()
-        );
+        assert!(p
+            .seal_metadata(refs(), &mut short, &mut [0; 16400], &mut sink)
+            .is_err());
         assert!(short.iter().all(|v| *v == 0));
         assert!(p.is_poisoned());
     });
@@ -437,17 +435,14 @@ fn protected_wrong_publisher_purpose_cannot_stage_signature() {
             grant: grant(KeyPurpose::ControllerSign),
             access: access(),
         };
-        assert!(
-            p.sign_candidate(&bytes, request, &mut cose::Workspace::new(), &mut sink)
-                .is_err()
-        );
+        assert!(p
+            .sign_candidate(&bytes, request, &mut cose::Workspace::new(), &mut sink)
+            .is_err());
         assert!(p.is_poisoned());
-        assert!(
-            !sink
-                .artifacts
-                .iter()
-                .any(|(k, _)| *k == Artifact::PublisherProof)
-        );
+        assert!(!sink
+            .artifacts
+            .iter()
+            .any(|(k, _)| *k == Artifact::PublisherProof));
     });
 }
 

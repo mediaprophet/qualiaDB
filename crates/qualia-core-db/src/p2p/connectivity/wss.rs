@@ -3,7 +3,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::time::Duration;
 
 use base64::engine::general_purpose::STANDARD;
@@ -11,6 +11,16 @@ use base64::Engine;
 use hmac::{Hmac, KeyInit, Mac};
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
+
+use crate::net::qdnf::errors::QdnfError;
+
+#[path = "wss_frame.rs"]
+mod wss_frame;
+
+pub use wss_frame::{
+    fresh_client_mask, io_from_qdnf, map_io, ReadCursor, WriteCursor, OP_BINARY, OP_CLOSE,
+    WIRE_CAP, WS_HDR_MAX,
+};
 
 const GUID: &[u8] = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 pub const MAX_FRAME: usize = 2048;
@@ -102,80 +112,118 @@ pub fn decode_envelope(buf: &[u8]) -> Result<(FrameType, u32, u32, &[u8]), &'sta
     Ok((typ, circuit, gen, &buf[ENVELOPE_HDR..ENVELOPE_HDR + len]))
 }
 
-fn write_ws_binary<W: Write>(
-    w: &mut W,
-    payload: &[u8],
-    mask: Option<[u8; 4]>,
-) -> std::io::Result<()> {
-    if payload.len() > 0xffff {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "oversize",
-        ));
+/// Bound circuit/generation. Wrong circuit is unauthorized; older/other gen is stale.
+pub fn check_circuit_gen(
+    circuit: u32,
+    gen: u32,
+    expect_c: u32,
+    expect_g: u32,
+) -> Result<(), QdnfError> {
+    if circuit != expect_c {
+        return Err(QdnfError::Unauthorized);
     }
-    let mut hdr = [0u8; 8];
-    hdr[0] = 0x82;
-    let mut n = 2;
-    let mut masked = payload.to_vec();
-    if let Some(m) = mask {
-        hdr[1] = 0x80;
-        if payload.len() < 126 {
-            hdr[1] |= payload.len() as u8;
-        } else {
-            hdr[1] |= 126;
-            hdr[2..4].copy_from_slice(&(payload.len() as u16).to_be_bytes());
-            n = 4;
-        }
-        hdr[n..n + 4].copy_from_slice(&m);
-        n += 4;
-        for (i, b) in masked.iter_mut().enumerate() {
-            *b ^= m[i % 4];
-        }
-    } else if payload.len() < 126 {
-        hdr[1] = payload.len() as u8;
-    } else {
-        hdr[1] = 126;
-        hdr[2..4].copy_from_slice(&(payload.len() as u16).to_be_bytes());
-        n = 4;
+    if gen != expect_g {
+        return Err(QdnfError::StaleGeneration);
     }
-    w.write_all(&hdr[..n])?;
-    w.write_all(&masked)?;
-    w.flush()
+    Ok(())
 }
 
-fn read_ws_binary<R: Read>(r: &mut R) -> std::io::Result<Vec<u8>> {
-    let mut h2 = [0u8; 2];
-    r.read_exact(&mut h2)?;
-    let mut len = (h2[1] & 0x7f) as usize;
-    let masked = h2[1] & 0x80 != 0;
-    if len == 126 {
-        let mut ext = [0u8; 2];
-        r.read_exact(&mut ext)?;
-        len = u16::from_be_bytes(ext) as usize;
-    } else if len == 127 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "8-byte len",
-        ));
-    }
-    if len > MAX_FRAME {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            "oversize",
-        ));
-    }
-    let mut mask = [0u8; 4];
-    if masked {
-        r.read_exact(&mut mask)?;
-    }
-    let mut body = vec![0u8; len];
-    r.read_exact(&mut body)?;
-    if masked {
-        for (i, b) in body.iter_mut().enumerate() {
-            *b ^= mask[i % 4];
+fn encode_env(
+    typ: FrameType,
+    circuit: u32,
+    gen: u32,
+    payload: &[u8],
+    out: &mut [u8],
+) -> Result<usize, QdnfError> {
+    encode_envelope(typ, circuit, gen, payload, out).map_err(|_| QdnfError::Capacity)
+}
+
+/// Seal an application envelope as a WS binary frame. Fresh mask only when idle.
+pub fn seal_datagram(
+    write: &mut WriteCursor,
+    circuit: u32,
+    gen: u32,
+    payload: &[u8],
+    client: bool,
+) -> Result<(), QdnfError> {
+    let mut env = [0u8; MAX_FRAME];
+    let n = encode_env(FrameType::Datagram, circuit, gen, payload, &mut env)?;
+    let mask = if write.pending() {
+        None
+    } else if client {
+        Some(fresh_client_mask()?)
+    } else {
+        None
+    };
+    write.seal(OP_BINARY, &env[..n], mask)
+}
+
+/// Seal an application Close envelope as RFC 6455 opcode 8. Same pending close
+/// resumes. A pending datagram is Conflict and is not aborted or resealed.
+pub fn seal_close(
+    write: &mut WriteCursor,
+    circuit: u32,
+    gen: u32,
+    client: bool,
+) -> Result<(), QdnfError> {
+    if write.pending() {
+        if write.sealed_opcode() == Some(OP_CLOSE) {
+            return Ok(());
         }
+        return Err(QdnfError::Conflict);
     }
-    Ok(body)
+    let mut env = [0u8; ENVELOPE_HDR];
+    let n = encode_env(FrameType::Close, circuit, gen, &[], &mut env)?;
+    let mask = if client {
+        Some(fresh_client_mask()?)
+    } else {
+        None
+    };
+    write.seal(OP_CLOSE, &env[..n], mask)
+}
+
+fn decode_env(buf: &[u8]) -> Result<(FrameType, u32, u32, &[u8]), QdnfError> {
+    decode_envelope(buf).map_err(|e| match e {
+        "obsolete-u8-length" => QdnfError::Downgrade,
+        "capacity" => QdnfError::Capacity,
+        "truncated" => QdnfError::Truncated,
+        "type" => QdnfError::Unsupported,
+        _ => QdnfError::Malformed,
+    })
+}
+
+/// Receive one WS frame, decode the envelope, and refuse wrong circuit / stale gen.
+pub fn recv_checked<R: Read>(
+    stream: &mut R,
+    read: &mut ReadCursor,
+    circuit: u32,
+    gen: u32,
+    expect_masked: Option<bool>,
+    out: &mut [u8],
+) -> Result<(FrameType, usize), QdnfError> {
+    let mut env = [0u8; MAX_FRAME];
+    let (opcode, n) = read.recv(stream, &mut env, expect_masked)?;
+    let (typ, c, g, payload) = decode_env(&env[..n])?;
+    check_circuit_gen(c, g, circuit, gen)?;
+    if opcode == OP_CLOSE {
+        if typ != FrameType::Close {
+            return Err(QdnfError::Malformed);
+        }
+        return Ok((FrameType::Close, 0));
+    }
+    if opcode != OP_BINARY {
+        return Err(QdnfError::Unsupported);
+    }
+    if typ == FrameType::Close {
+        return Ok((FrameType::Close, 0));
+    }
+    if payload.len() > out.len() {
+        return Err(QdnfError::Capacity);
+    }
+    if !payload.is_empty() {
+        out[..payload.len()].copy_from_slice(payload);
+    }
+    Ok((typ, payload.len()))
 }
 
 /// Drives the client-side WSS handshake on `stream` with `key_b64`.
@@ -247,17 +295,21 @@ pub fn send_datagram<W: Write>(
     payload: &[u8],
     client: bool,
 ) -> std::io::Result<()> {
-    let mut env = [0u8; MAX_FRAME];
-    let n = encode_envelope(FrameType::Datagram, circuit, gen, payload, &mut env)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
-    let mask = if client { Some([1, 2, 3, 4]) } else { None };
-    write_ws_binary(stream, &env[..n], mask)
+    let mut write = WriteCursor::new();
+    seal_datagram(&mut write, circuit, gen, payload, client).map_err(io_from_qdnf)?;
+    write.flush(stream).map_err(io_from_qdnf)?;
+    stream.flush()
 }
 
 /// Receives a datagram frame; returns `(circuit, gen, payload)`.
 pub fn recv_datagram<R: Read>(stream: &mut R) -> std::io::Result<(u32, u32, Vec<u8>)> {
-    let body = read_ws_binary(stream)?;
-    let (typ, c, g, p) = decode_envelope(&body)
+    let mut read = ReadCursor::new();
+    let mut env = [0u8; MAX_FRAME];
+    let (opcode, n) = read.recv(stream, &mut env, None).map_err(io_from_qdnf)?;
+    if opcode != OP_BINARY {
+        return Err(io_from_qdnf(QdnfError::Malformed));
+    }
+    let (typ, c, g, p) = decode_envelope(&env[..n])
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     if typ != FrameType::Datagram {
         return Err(std::io::Error::new(
@@ -265,7 +317,9 @@ pub fn recv_datagram<R: Read>(stream: &mut R) -> std::io::Result<(u32, u32, Vec<
             "not datagram",
         ));
     }
-    Ok((c, g, p.to_vec()))
+    let mut payload = vec![0u8; p.len()];
+    payload.copy_from_slice(p);
+    Ok((c, g, payload))
 }
 
 /// Sends the HMAC auth frame for `(circuit, gen)`.
@@ -279,7 +333,13 @@ pub fn send_auth<W: Write>(
     let mut env = [0u8; MAX_FRAME];
     let n = encode_envelope(FrameType::Auth, circuit, gen, &tag, &mut env)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
-    write_ws_binary(stream, &env[..n], Some([9, 8, 7, 6]))
+    let mut write = WriteCursor::new();
+    let mask = fresh_client_mask().map_err(io_from_qdnf)?;
+    write
+        .seal(OP_BINARY, &env[..n], Some(mask))
+        .map_err(io_from_qdnf)?;
+    write.flush(stream).map_err(io_from_qdnf)?;
+    stream.flush()
 }
 
 /// Reads and verifies the peer's auth frame; fails closed on mismatch.
@@ -289,8 +349,15 @@ pub fn expect_auth<R: Read>(
     circuit: u32,
     gen: u32,
 ) -> std::io::Result<()> {
-    let body = read_ws_binary(stream)?;
-    let (typ, c, g, p) = decode_envelope(&body)
+    let mut read = ReadCursor::new();
+    let mut body = [0u8; MAX_FRAME];
+    let (opcode, n) = read
+        .recv(stream, &mut body, Some(true))
+        .map_err(io_from_qdnf)?;
+    if opcode != OP_BINARY {
+        return Err(io_from_qdnf(QdnfError::Malformed));
+    }
+    let (typ, c, g, p) = decode_envelope(&body[..n])
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     if typ != FrameType::Auth || c != circuit || g != gen {
         return Err(std::io::Error::new(
@@ -306,6 +373,20 @@ pub fn expect_auth<R: Read>(
         ));
     }
     Ok(())
+}
+
+/// Send opcode-8 Close with envelope `(circuit, gen)` then TCP half-close.
+pub fn close_and_shutdown(
+    stream: &mut TcpStream,
+    circuit: u32,
+    gen: u32,
+    client: bool,
+) -> std::io::Result<()> {
+    let mut write = WriteCursor::new();
+    seal_close(&mut write, circuit, gen, client).map_err(io_from_qdnf)?;
+    write.flush(stream).map_err(io_from_qdnf)?;
+    stream.flush()?;
+    stream.shutdown(Shutdown::Write)
 }
 
 /// Local two-client hub: first two accepted sockets exchange datagrams after HMAC.
@@ -325,13 +406,15 @@ pub fn serve_pair(listener: TcpListener, secret: &[u8]) -> std::io::Result<()> {
     let mut ba = false;
     for _ in 0..8 {
         if !ab {
-            if let Ok((_, _, p)) = recv_datagram(&mut a) {
+            if let Ok((c, g, p)) = recv_datagram(&mut a) {
+                check_circuit_gen(c, g, 1, 1).map_err(io_from_qdnf)?;
                 send_datagram(&mut b, 1, 1, &p, false)?;
                 ab = true;
             }
         }
         if !ba {
-            if let Ok((_, _, p)) = recv_datagram(&mut b) {
+            if let Ok((c, g, p)) = recv_datagram(&mut b) {
+                check_circuit_gen(c, g, 1, 1).map_err(io_from_qdnf)?;
                 send_datagram(&mut a, 1, 1, &p, false)?;
                 ba = true;
             }
@@ -361,6 +444,49 @@ pub fn local_authenticated_wss_executed() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{self, Read, Write};
+
+    struct PartialWrite {
+        sink: Vec<u8>,
+        allow: usize,
+    }
+
+    impl Write for PartialWrite {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            if self.allow == 0 {
+                return Err(io::Error::new(io::ErrorKind::WouldBlock, "block"));
+            }
+            let n = buf.len().min(self.allow);
+            self.sink.extend_from_slice(&buf[..n]);
+            self.allow -= n;
+            Ok(n)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    struct PartialRead {
+        src: Vec<u8>,
+        off: usize,
+        allow: usize,
+    }
+
+    impl Read for PartialRead {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            if self.allow == 0 {
+                return Err(io::Error::new(io::ErrorKind::WouldBlock, "block"));
+            }
+            if self.off >= self.src.len() {
+                return Ok(0);
+            }
+            let n = buf.len().min(self.src.len() - self.off).min(self.allow);
+            buf[..n].copy_from_slice(&self.src[self.off..self.off + n]);
+            self.off += n;
+            self.allow -= n;
+            Ok(n)
+        }
+    }
 
     #[test]
     fn accept_key_rfc6455_sample() {
@@ -393,5 +519,233 @@ mod tests {
         let mut legacy = [0u8; 20];
         legacy[0] = 1;
         assert_eq!(decode_envelope(&legacy), Err("obsolete-u8-length"));
+        let mut oversize = [0u8; 4];
+        oversize[0] = 0x82;
+        oversize[1] = 127;
+        let mut read = ReadCursor::new();
+        let err = read
+            .recv(&mut &oversize[..], &mut [0u8; 8], None)
+            .unwrap_err();
+        assert_eq!(err, QdnfError::Unsupported);
+        let mut frag = [0u8; 4];
+        frag[0] = 0x02;
+        frag[1] = 1;
+        let mut read = ReadCursor::new();
+        let err = read.recv(&mut &frag[..], &mut [0u8; 8], None).unwrap_err();
+        assert_eq!(err, QdnfError::Unsupported);
+    }
+
+    #[test]
+    fn fresh_mask_differs_across_client_frames() {
+        let mut env = [0u8; MAX_FRAME];
+        let n = encode_envelope(FrameType::Datagram, 1, 1, b"abc", &mut env).unwrap();
+        let mut a = WriteCursor::new();
+        let mut b = WriteCursor::new();
+        let ma = fresh_client_mask().unwrap();
+        let mb = fresh_client_mask().unwrap();
+        a.seal(OP_BINARY, &env[..n], Some(ma)).unwrap();
+        b.seal(OP_BINARY, &env[..n], Some(mb)).unwrap();
+        let ga = a.client_mask().unwrap();
+        let gb = b.client_mask().unwrap();
+        assert_ne!(ga, gb);
+        assert_ne!(ga, [1, 2, 3, 4]);
+        assert_ne!(gb, [1, 2, 3, 4]);
+        assert_eq!(ga, ma);
+        assert_eq!(gb, mb);
+        let mut first = Vec::new();
+        let mut second = Vec::new();
+        let mut m1 = [1u8, 2, 3, 4];
+        let mut m2 = [1u8, 2, 3, 4];
+        for _ in 0..8 {
+            first.clear();
+            second.clear();
+            send_datagram(&mut first, 1, 1, b"one", true).unwrap();
+            send_datagram(&mut second, 1, 1, b"two", true).unwrap();
+            assert_eq!(first[1] & 0x80, 0x80);
+            assert_eq!(second[1] & 0x80, 0x80);
+            m1 = [first[2], first[3], first[4], first[5]];
+            m2 = [second[2], second[3], second[4], second[5]];
+            if m1 != m2 && m1 != [1, 2, 3, 4] && m2 != [1, 2, 3, 4] {
+                break;
+            }
+        }
+        assert_ne!(m1, m2);
+        assert_ne!(m1, [1, 2, 3, 4]);
+        assert_ne!(m2, [1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn would_block_write_resumes_same_masked_payload() {
+        let mut env = [0u8; MAX_FRAME];
+        let n = encode_envelope(FrameType::Datagram, 7, 3, b"retain", &mut env).unwrap();
+        let mask = fresh_client_mask().unwrap();
+        let mut write = WriteCursor::new();
+        write.seal(OP_BINARY, &env[..n], Some(mask)).unwrap();
+        let sealed: Vec<u8> = write.sealed_bytes().to_vec();
+        assert_eq!(write.client_mask(), Some(mask));
+        let mut partial = PartialWrite {
+            sink: Vec::new(),
+            allow: 3,
+        };
+        assert_eq!(write.flush(&mut partial), Err(QdnfError::WouldBlock));
+        assert!(write.pending());
+        assert_eq!(write.sealed_bytes(), sealed.as_slice());
+        assert_eq!(write.accepted(), 3);
+        write
+            .seal(OP_BINARY, &env[..n], Some([1, 2, 3, 4]))
+            .unwrap();
+        assert_eq!(write.sealed_bytes(), sealed.as_slice());
+        assert_eq!(write.client_mask(), Some(mask));
+        partial.allow = sealed.len();
+        write.flush(&mut partial).unwrap();
+        assert!(!write.pending());
+        assert_eq!(partial.sink, sealed);
+    }
+
+    #[test]
+    fn would_block_read_resumes_same_frame() {
+        let mut env = [0u8; MAX_FRAME];
+        let n = encode_envelope(FrameType::Datagram, 1, 1, b"split-read", &mut env).unwrap();
+        let mut write = WriteCursor::new();
+        let mask = fresh_client_mask().unwrap();
+        write.seal(OP_BINARY, &env[..n], Some(mask)).unwrap();
+        let sealed: Vec<u8> = write.sealed_bytes().to_vec();
+        let mut src = PartialRead {
+            src: sealed,
+            off: 0,
+            allow: 2,
+        };
+        let mut read = ReadCursor::new();
+        let mut out = [0u8; MAX_FRAME];
+        assert_eq!(
+            read.recv(&mut src, &mut out, Some(true)),
+            Err(QdnfError::WouldBlock)
+        );
+        assert!(read.pending());
+        src.allow = 3;
+        assert_eq!(
+            read.recv(&mut src, &mut out, Some(true)),
+            Err(QdnfError::WouldBlock)
+        );
+        src.allow = usize::MAX;
+        let (opcode, got) = read.recv(&mut src, &mut out, Some(true)).unwrap();
+        assert_eq!(opcode, OP_BINARY);
+        let (typ, c, g, p) = decode_envelope(&out[..got]).unwrap();
+        assert_eq!(typ, FrameType::Datagram);
+        assert_eq!((c, g), (1, 1));
+        assert_eq!(p, b"split-read");
+        assert!(!read.pending());
+    }
+
+    #[test]
+    fn pending_datagram_then_seal_close_is_conflict() {
+        let mut env = [0u8; MAX_FRAME];
+        let n = encode_envelope(FrameType::Datagram, 1, 1, b"live", &mut env).unwrap();
+        let mut write = WriteCursor::new();
+        write
+            .seal(OP_BINARY, &env[..n], Some(fresh_client_mask().unwrap()))
+            .unwrap();
+        let sealed: Vec<u8> = write.sealed_bytes().to_vec();
+        let mut partial = PartialWrite {
+            sink: Vec::new(),
+            allow: 2,
+        };
+        assert_eq!(write.flush(&mut partial), Err(QdnfError::WouldBlock));
+        let off = write.accepted();
+        assert_eq!(seal_close(&mut write, 1, 1, true), Err(QdnfError::Conflict));
+        assert_eq!(write.sealed_bytes(), sealed.as_slice());
+        assert_eq!(write.accepted(), off);
+        assert_eq!(write.sealed_opcode(), Some(OP_BINARY));
+    }
+
+    #[test]
+    fn close_frame_then_shutdown() {
+        let mut write = WriteCursor::new();
+        seal_close(&mut write, 1, 1, true).unwrap();
+        assert_eq!(write.sealed_opcode(), Some(OP_CLOSE));
+        let sealed: Vec<u8> = write.sealed_bytes().to_vec();
+        assert_eq!(sealed[0], 0x88);
+        assert_eq!(sealed[1] & 0x80, 0x80);
+        let mut partial = PartialWrite {
+            sink: Vec::new(),
+            allow: 1,
+        };
+        assert_eq!(write.flush(&mut partial), Err(QdnfError::WouldBlock));
+        seal_close(&mut write, 1, 1, true).unwrap();
+        assert_eq!(write.sealed_bytes(), sealed.as_slice());
+        partial.allow = sealed.len();
+        write.flush(&mut partial).unwrap();
+        assert_eq!(partial.sink, sealed);
+
+        let (mut c, mut s) = loopback_pair().unwrap();
+        close_and_shutdown(&mut c, 1, 1, true).unwrap();
+        let mut read = ReadCursor::new();
+        let mut out = [0u8; MAX_FRAME];
+        let (opcode, got) = read.recv(&mut s, &mut out, Some(true)).unwrap();
+        assert_eq!(opcode, OP_CLOSE);
+        let (typ, circ, gen, p) = decode_envelope(&out[..got]).unwrap();
+        assert_eq!(typ, FrameType::Close);
+        assert_eq!((circ, gen), (1, 1));
+        assert!(p.is_empty());
+        let mut tail = [0u8; 1];
+        assert_eq!(s.read(&mut tail).unwrap(), 0);
+        assert!(c.write(&[1]).is_err());
+    }
+
+    #[test]
+    fn stale_generation_or_wrong_circuit_refused() {
+        let (mut c, mut s) = loopback_pair().unwrap();
+        send_datagram(&mut c, 1, 2, b"stale", true).unwrap();
+        let mut read = ReadCursor::new();
+        let mut out = [0u8; MAX_FRAME];
+        let err = recv_checked(&mut s, &mut read, 1, 1, Some(true), &mut out).unwrap_err();
+        assert_eq!(err, QdnfError::StaleGeneration);
+        send_datagram(&mut c, 9, 1, b"wrong", true).unwrap();
+        let mut read = ReadCursor::new();
+        let err = recv_checked(&mut s, &mut read, 1, 1, Some(true), &mut out).unwrap_err();
+        assert_eq!(err, QdnfError::Unauthorized);
+        send_datagram(&mut c, 1, 1, b"ok", true).unwrap();
+        let mut read = ReadCursor::new();
+        let (typ, n) = recv_checked(&mut s, &mut read, 1, 1, Some(true), &mut out).unwrap();
+        assert_eq!(typ, FrameType::Datagram);
+        assert_eq!(&out[..n], b"ok");
+        assert_eq!(
+            check_circuit_gen(1, 0, 1, 1),
+            Err(QdnfError::StaleGeneration)
+        );
+        assert_eq!(check_circuit_gen(2, 1, 1, 1), Err(QdnfError::Unauthorized));
+    }
+
+    #[test]
+    fn server_frames_unmasked() {
+        let mut wire = Vec::new();
+        send_datagram(&mut wire, 1, 1, b"srv", false).unwrap();
+        assert_eq!(wire[0], 0x82);
+        assert_eq!(wire[1] & 0x80, 0);
+        let mut env = [0u8; MAX_FRAME];
+        let n = encode_envelope(FrameType::Datagram, 1, 1, b"srv", &mut env).unwrap();
+        let mut write = WriteCursor::new();
+        write.seal(OP_BINARY, &env[..n], None).unwrap();
+        assert!(write.client_mask().is_none());
+        let mut sealed = write.sealed_bytes();
+        assert_eq!(sealed[1] & 0x80, 0);
+        let hdr = if n < 126 { 2 } else { 4 };
+        assert_eq!(&sealed[hdr..], &env[..n]);
+        let mut read = ReadCursor::new();
+        let mut out = [0u8; MAX_FRAME];
+        let (opcode, got) = read.recv(&mut sealed, &mut out, Some(false)).unwrap();
+        assert_eq!(opcode, OP_BINARY);
+        let (_, _, _, p) = decode_envelope(&out[..got]).unwrap();
+        assert_eq!(p, b"srv");
+        let mut masked = WriteCursor::new();
+        masked
+            .seal(OP_BINARY, &env[..n], Some([9, 8, 7, 6]))
+            .unwrap();
+        let mut masked_bytes = masked.sealed_bytes();
+        let mut read = ReadCursor::new();
+        let err = read
+            .recv(&mut masked_bytes, &mut out, Some(false))
+            .unwrap_err();
+        assert_eq!(err, QdnfError::Malformed);
     }
 }

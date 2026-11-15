@@ -1559,3 +1559,41 @@ workflows: Etalon/VibeScript, QDNF, WASM Release, Pages deployment and Comparati
 Benchmarks. Exact run links are in the qualification record. Remote benchmark
 results and independently published qapp changes were preserved by fast-forward;
 these results identify the repair commit rather than qualifying later qapp edits.
+
+
+### 2026-11-12 — Aether native project graph and qualification checkpoint
+
+The Aether continuation adds canonical native-authority signed graph grants,
+session/revocation checks, bounded project-owned graph snapshots and subscriptions,
+and one journal-acknowledged replacement path retaining all six quin lanes. The
+canonical Vibe Host bridge reserves bounded cold scratch through Vibe Budget;
+shared native-query dispatch admits retained result cells before invoking the host.
+Aether keeps UI delivery/cancellation separate from worker execution and joins
+workers after event-loop return. This project-owned graph is separate from the
+daemon-global graph; arbitrary daemon query subscriptions are not qualified.
+
+An actual live-source host run passed 30/30 tests. A later 31-test invocation had
+30 passes and one new bytecode-test parse failure; its parameter annotation was
+corrected, but the corrected invocation has not run. AST transactions are the
+supported application path; current bytecode staging fails closed without an
+admitted transaction and bytecode parity remains a separate engine work item.
+
+Concurrent unrelated canonical work was preserved. A point-in-time source capture
+and explicit derived test-workspace locks now have strict file/inventory/package
+proofs in Aether target/qualification-sources/native-host-20261112-v4. Receipt
+SHA-256: 3bcee7dc35c4882ac02053f7efdf5f45de8024d5aea08a3d4cbf581d175c66b7.
+Both real test-workspace metadata/source gates pass with core default features
+disabled and exact reviewed Etalon sources. This is not a live-tree freshness or
+clean-commit claim. The separately captured existing imap-proto workspace patch
+has its own pre/post hashes and provenance; other implementation bytes remain
+from the original capture.
+
+The fresh locked host build stopped before core compilation/tests when Windows
+Application Control refused the generated getrandom 0.3.4 build helper (OS error
+4551). The approved escalation attempt and its single permitted retry both timed
+out in automatic approval review before execution. No security controls or
+alternative-launch paths were changed. Explicit canonical graph/journal,
+scoped-scan and Vibe-budget unit tests, the corrected host test, and actual native
+fixture execution remain pending. The full core suite was not run in this session.
+See ../Aether/notes/implementation/resume-host.md for exact evidence and boundaries.
+HANDOVER.md remains absent; no unrelated canonical work was reverted or edited.

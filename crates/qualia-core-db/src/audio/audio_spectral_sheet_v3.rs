@@ -299,46 +299,54 @@ pub fn v3_sofa_table<'a>(bytes: &'a [u8]) -> Option<&'a [SofaHrirEntry]> {
 }
 
 /// Migrate existing Q4AU-v1 or Q4AU-v2 audio sidecar into Q4AU-v3 format.
+///
+/// Legacy sheets are mono: nonzero HOA orders require an explicit spatial encoder
+/// and are rejected here. Invalid or incomplete v2 feature planes are rejected.
 pub fn upgrade_q4au_v1_or_v2_to_v3(
     legacy_bytes: &[u8],
     ambisonic_order: u8,
     rt60_bands_sec: [f32; 3],
 ) -> Option<(Q4AuHeaderV3, Vec<u8>)> {
-    let legacy_header = parse_sidecar_header(legacy_bytes)?;
-    let plane0_bytes = legacy_header.payload_bytes();
-    let header_size = std::mem::size_of::<AudioSpectralSidecarHeader>();
-    if legacy_bytes.len() < header_size.checked_add(plane0_bytes)? {
+    if ambisonic_order != 0 {
         return None;
     }
-    let plane0 = &legacy_bytes[header_size..header_size + plane0_bytes];
+    let legacy_header = parse_sidecar_header(legacy_bytes)?;
+    let frame_count = usize::try_from(legacy_header.frame_count).ok()?;
+    let plane0_bytes = usize::try_from(legacy_header.bin_count)
+        .ok()?
+        .checked_mul(frame_count)?
+        .checked_mul(std::mem::size_of::<f32>())?;
+    let header_size = std::mem::size_of::<AudioSpectralSidecarHeader>();
+    let plane0_end = header_size.checked_add(plane0_bytes)?;
+    let plane0 = legacy_bytes.get(header_size..plane0_end)?;
 
     let mut mel_count = 0u16;
     let mut mfcc_count = 0u16;
-    let mut payload = Vec::with_capacity(plane0_bytes);
-    payload.extend_from_slice(plane0);
-
+    let mut features = &[][..];
     if legacy_header.version == AudioSpectralSidecarHeader::VERSION_V2 {
-        if let Some(v2_sub) = parse_v2_subheader(legacy_bytes) {
-            mel_count = v2_sub.n_mel as u16;
-            mfcc_count = v2_sub.n_mfcc as u16;
-            let sub_size = std::mem::size_of::<super::audio_spectral_sheet::SpectralV2SubHeader>();
-            let sub_off = header_size + plane0_bytes;
-            let mel_bytes = (legacy_header.frame_count as usize)
-                .saturating_mul(v2_sub.n_mel as usize)
-                .saturating_mul(4);
-            let mfcc_bytes = (legacy_header.frame_count as usize)
-                .saturating_mul(v2_sub.n_mfcc as usize)
-                .saturating_mul(4);
-            let mel_start = sub_off + sub_size;
-            let mfcc_start = mel_start + mel_bytes;
-            let total_v2_len = mfcc_start + mfcc_bytes;
-            if legacy_bytes.len() >= total_v2_len {
-                payload.reserve(mel_bytes + mfcc_bytes);
-                payload.extend_from_slice(&legacy_bytes[mel_start..mel_start + mel_bytes]);
-                payload.extend_from_slice(&legacy_bytes[mfcc_start..mfcc_start + mfcc_bytes]);
-            }
-        }
+        let v2_sub = parse_v2_subheader(legacy_bytes)?;
+        mel_count = u16::try_from(v2_sub.n_mel).ok()?;
+        mfcc_count = u16::try_from(v2_sub.n_mfcc).ok()?;
+        let sub_size = std::mem::size_of::<super::audio_spectral_sheet::SpectralV2SubHeader>();
+        let feature_start = plane0_end.checked_add(sub_size)?;
+        let mel_bytes = frame_count
+            .checked_mul(usize::from(mel_count))?
+            .checked_mul(std::mem::size_of::<f32>())?;
+        let mfcc_bytes = frame_count
+            .checked_mul(usize::from(mfcc_count))?
+            .checked_mul(std::mem::size_of::<f32>())?;
+        let feature_end = feature_start
+            .checked_add(mel_bytes)?
+            .checked_add(mfcc_bytes)?;
+        features = legacy_bytes.get(feature_start..feature_end)?;
     }
+
+    // Validate every extent before constructing any output; omit the v2 subheader.
+    let payload_bytes = plane0_bytes.checked_add(features.len())?;
+    let mut payload = Vec::new();
+    payload.try_reserve_exact(payload_bytes).ok()?;
+    payload.extend_from_slice(plane0);
+    payload.extend_from_slice(features);
 
     let mut v3_header = Q4AuHeaderV3 {
         magic: SPECTRAL_SIDECAR_MAGIC,
@@ -347,7 +355,7 @@ pub fn upgrade_q4au_v1_or_v2_to_v3(
         bin_count: legacy_header.bin_count,
         frame_count: legacy_header.frame_count,
         sample_rate: legacy_header.sample_rate,
-        ambisonic_order: ambisonic_order.min(Q4AU_HOA_MAX_ORDER),
+        ambisonic_order,
         channel_normalization: NORMALIZATION_SN3D_ACN,
         sofa_fir_taps: 0,
         sofa_direction_count: 0,
@@ -450,12 +458,126 @@ mod tests {
         legacy.resize(legacy.len() + 8 * 4 * 4, 0x11);
 
         let (v3_hdr, payload) =
-            upgrade_q4au_v1_or_v2_to_v3(&legacy, 1, [0.5, 0.4, 0.3]).expect("valid upgrade");
+            upgrade_q4au_v1_or_v2_to_v3(&legacy, 0, [0.5, 0.4, 0.3]).expect("valid upgrade");
         assert!(v3_hdr.validate());
         assert_eq!(v3_hdr.version, Q4AU_VERSION_V3);
-        assert_eq!(v3_hdr.ambisonic_order, 1);
-        assert_eq!(v3_hdr.hoa_channel_count(), 4);
+        assert_eq!(v3_hdr.ambisonic_order, 0);
+        assert_eq!(v3_hdr.hoa_channel_count(), 1);
         assert_eq!(v3_hdr.sample_rate, 44_100);
-        assert_eq!(payload.len(), 8 * 4 * 4);
+        assert_eq!(
+            payload,
+            legacy[std::mem::size_of::<AudioSpectralSidecarHeader>()..]
+        );
+        assert_eq!(v3_hdr.rt60_bands_sec, [0.5, 0.4, 0.3]);
+    }
+
+    fn legacy_v2_fixture(n_mel: u32, n_mfcc: u32) -> Vec<u8> {
+        use super::super::audio_spectral_sheet::{
+            SpectralV2SubHeader, SPECTRAL_V2_SUBHEADER_MAGIC,
+        };
+        let header = AudioSpectralSidecarHeader {
+            magic: SPECTRAL_SIDECAR_MAGIC,
+            version: AudioSpectralSidecarHeader::VERSION_V2,
+            _pad: TRANSFORM_KIND_CQT,
+            bin_count: 2,
+            frame_count: 2,
+            sample_rate: 48_000,
+        };
+        let sub = SpectralV2SubHeader {
+            magic: SPECTRAL_V2_SUBHEADER_MAGIC,
+            n_mel,
+            n_mfcc,
+        };
+        let mut bytes = bytemuck::bytes_of(&header).to_vec();
+        bytes.extend_from_slice(&[0x11; 16]);
+        bytes.extend_from_slice(bytemuck::bytes_of(&sub));
+        bytes
+    }
+
+    #[test]
+    fn upgrade_v2_preserves_mono_and_feature_bytes() {
+        let mut bytes = legacy_v2_fixture(3, 2);
+        let feature_start = bytes.len();
+        bytes.extend_from_slice(&[0x22; 24]);
+        bytes.extend_from_slice(&[0x33; 16]);
+        let source = bytes.clone();
+        let (header, payload) = upgrade_q4au_v1_or_v2_to_v3(&bytes, 0, [0.0; 3]).unwrap();
+        assert!(header.validate());
+        assert_eq!((header.mel_count, header.mfcc_count), (3, 2));
+        assert_eq!(header.transform_kind, TRANSFORM_KIND_CQT);
+        assert_eq!(header.payload_bytes(), 16);
+        assert_eq!(payload, [&bytes[20..36], &bytes[feature_start..]].concat());
+        assert_eq!(bytes, source);
+    }
+
+    #[test]
+    fn upgrade_rejects_nonzero_hoa_orders() {
+        let mut bytes = legacy_v2_fixture(1, 1);
+        bytes.extend_from_slice(&[0; 16]);
+        for version in [
+            AudioSpectralSidecarHeader::VERSION,
+            AudioSpectralSidecarHeader::VERSION_V2,
+        ] {
+            bytes[4..6].copy_from_slice(&version.to_le_bytes());
+            for order in 1..=u8::MAX {
+                assert!(upgrade_q4au_v1_or_v2_to_v3(&bytes, order, [0.0; 3]).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn upgrade_rejects_every_truncated_v2_extent() {
+        let mut bytes = legacy_v2_fixture(3, 2);
+        bytes.extend_from_slice(&[0x22; 40]);
+        for len in 0..bytes.len() {
+            assert!(
+                upgrade_q4au_v1_or_v2_to_v3(&bytes[..len], 0, [0.0; 3]).is_none(),
+                "length {len}"
+            );
+        }
+        assert!(upgrade_q4au_v1_or_v2_to_v3(&bytes, 0, [0.0; 3]).is_some());
+    }
+
+    #[test]
+    fn upgrade_rejects_invalid_v2_magic_or_counts() {
+        let mut bad_magic = legacy_v2_fixture(1, 1);
+        bad_magic[36..40].fill(0);
+        bad_magic.extend_from_slice(&[0; 16]);
+        assert!(upgrade_q4au_v1_or_v2_to_v3(&bad_magic, 0, [0.0; 3]).is_none());
+        for (mel, mfcc) in [
+            (0, 1),
+            (1, 0),
+            (65_536, 1),
+            (1, 65_536),
+            (u32::MAX, 1),
+            (1, u32::MAX),
+        ] {
+            let mut bytes = legacy_v2_fixture(mel, mfcc);
+            // Supply complete planes for the first overflowing widths, proving rejection
+            // is due to the v3 count representation rather than truncated input.
+            if mel <= 65_536 && mfcc <= 65_536 {
+                bytes.resize(bytes.len() + (mel as usize + mfcc as usize) * 8, 0);
+            }
+            assert!(upgrade_q4au_v1_or_v2_to_v3(&bytes, 0, [0.0; 3]).is_none());
+        }
+    }
+
+    #[test]
+    fn upgrade_accepts_maximum_v3_feature_count() {
+        let mut bytes = legacy_v2_fixture(u16::MAX as u32, 1);
+        bytes.resize(bytes.len() + (u16::MAX as usize + 1) * 8, 0x44);
+        let (header, payload) = upgrade_q4au_v1_or_v2_to_v3(&bytes, 0, [0.0; 3]).unwrap();
+        assert_eq!(header.mel_count, u16::MAX);
+        assert_eq!(payload.len(), 16 + (u16::MAX as usize + 1) * 8);
+    }
+
+    #[test]
+    fn upgrade_rejects_unrepresentable_plane_extent() {
+        let header = AudioSpectralSidecarHeader {
+            bin_count: u32::MAX,
+            frame_count: u32::MAX,
+            ..AudioSpectralSidecarHeader::empty()
+        };
+        assert!(upgrade_q4au_v1_or_v2_to_v3(bytemuck::bytes_of(&header), 0, [0.0; 3]).is_none());
     }
 }

@@ -425,15 +425,47 @@ qualia-cli ingest-job continue ./jobs/catalog</code></pre>
                 <article class="glass-subtle rounded-2xl p-6">
                     <div class="flex items-center justify-between gap-2 mb-3">
                         <h3 class="text-lg font-semibold text-violet-300">
-                            <code class="text-white">EMF64</code> (64-Byte Electromagnetic Field Records)
+                            <code class="text-white">Q42EMF64</code> (v4 8-Mode EMF &amp; v3 Display)
                         </h3>
                         <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-violet-500/15 text-violet-200">emf_container.rs</span>
                     </div>
                     <p class="text-sm text-white/70 mb-3">
-                        Stores 64-byte electromagnetic and wave-optical field records (<code class="text-violet-200">.emf</code>) capturing electric/magnetic field vectors, polarization state, spectral phase, and permittivity/permeability bounds.
+                        Unified 128-byte envelope &amp; directory framing for electromagnetic/wave-optical fields (<code class="text-violet-200">.emf</code>) across 8 typed modes (<code class="text-violet-200">0x0100..=0x0107</code>: field, ray, Yee FDTD, spectrum, Mueller, I/Q, dose, biofield) plus explicit v3 64-byte display bricks.
                     </p>
                     <p class="text-xs text-white/60">
-                        Designed for deterministic fixed-tick Maxwell/FDTD solvers and acoustic/RF sensing pipelines that cross-reference spatial <code class="text-white">.q42</code> context frames.
+                        Paired with Etalon Yee FDTD solvers, Hermitian Cloude coherency validation, Kramers–Kronig causal dispersion, and BLAKE3-256 / Bao integrity gates.
+                    </p>
+                </article>
+
+                <!-- QAC Acoustic Container -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-sky-300">
+                            <code class="text-white">Q42QAC64</code> (QAC v1 Acoustic &amp; Spatial Audio)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-sky-500/15 text-sky-200">audio/qac/</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        Self-describing v1 containers (<code class="text-sky-200">.qac</code>) spanning 8 modes (<code class="text-sky-200">0x0100..=0x0107</code>): PCM, STFT, SOFA HRIR, ACN/SN3D Ambisonics, ADM objects, modal bodies, pressure-velocity probes, and BS.1770-5 perceptual loudness/MFCCs, rejecting legacy <code class="text-slate-400">UA4Q</code> v1–v3 fail-closed.
+                    </p>
+                    <p class="text-xs text-white/60">
+                        Unified with schemas <code class="text-white">200..=210</code>, rational clock discipline, and <code class="text-white">etalon-signal</code> SIMD/DSP bridges.
+                    </p>
+                </article>
+
+                <!-- DICOM Part 10 & Sensing Preservation -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-rose-300">
+                            <code class="text-white">DICOM &amp; Acq</code> (PS3.10 Preservation &amp; Tomography)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-rose-500/15 text-rose-200">medical/ &amp; sensing/</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        Exact Part 10 preservation with RLE, JPEG-LS, JPEG 2000, JPEG XL, and Deflate codecs alongside NIfTI-1/2 bridges, iterative tomographic reconstruction (<code class="text-rose-200">FBP</code>/<code class="text-rose-200">ART</code>/<code class="text-rose-200">SART</code>/<code class="text-rose-200">OSEM</code>/<code class="text-rose-200">MLEM</code>), and Ed25519 calibration chains.
+                    </p>
+                    <p class="text-xs text-white/60">
+                        Includes <code class="text-white">D01..D06</code> acquisition custody, range admission, and original-byte round-trip verification.
                     </p>
                 </article>
 
@@ -452,6 +484,14 @@ qualia-cli ingest-job continue ./jobs/catalog</code></pre>
                         Enforces both metadata and <strong>per-tensor CRC-32C</strong> checksums with byte-exact disk round-trip verification and direct <code class="text-white">mmap</code> residency.
                     </p>
                 </article>
+            </div>
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="emf-qac-showcase.html" class="px-5 py-3 rounded-xl bg-violet-500/15 border border-violet-400/40 text-violet-200 hover:bg-violet-500/25 font-semibold transition-colors">
+                    Open Interactive EMF / QAC Showcase <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+                <a href="emf-qac-architecture.html" class="px-5 py-3 rounded-xl bg-sky-500/15 border border-sky-400/40 text-sky-200 hover:bg-sky-500/25 font-semibold transition-colors">
+                    EMF / QAC Technical Architecture &amp; Standards <i class="fas fa-compass-drafting ml-2"></i>
+                </a>
             </div>
         </section>
 

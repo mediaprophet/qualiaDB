@@ -57,6 +57,8 @@ jobs:
         run: |
           cargo check -q --target wasm32-unknown-unknown -p webizen-lite-wasm
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features wasm-webcivics
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features wasm-logic
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features wasm-scientific
@@ -111,7 +113,7 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           cp crates/qualia-core-db/LICENSE docs/pkg/qualia/LICENSE
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.40","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.41","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
 
       - name: Portal WASM size budget
         # Sanity cap for the full WASM-safe engine (not a slim product budget).

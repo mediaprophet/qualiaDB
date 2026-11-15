@@ -1,35 +1,23 @@
-//! Bounded browser access to field interpretation and original timed PCM tracks.
-//! Metadata inspection is independent of display or listening conversion support.
-use crate::q42::emf_container::EmfContainerReader;
+//! Exact current-envelope metadata; structural inspection is independent of projection.
+use crate::q42::field_envelope::{Family, Limits, StructuralView};
 use js_sys::{Object, Reflect, Uint8Array};
 use wasm_bindgen::JsValue;
 
 pub(super) fn inspect(bytes: &[u8]) -> Result<Object, JsValue> {
-    let reader = EmfContainerReader::parse(bytes)
-        .map_err(|error| JsValue::from_str(&format!("emf: {error}")))?;
-    let result = Object::new();
-    Reflect::set(&result, &"container_version".into(), &(reader.header().version as f64).into())?;
-    Reflect::set(&result, &"integrity".into(), &"full-blake3-chunks-and-crc32c".into())?;
-    let tracks = js_sys::Array::new();
-    if let Some(extension) = reader.extension() {
-        // Keep the exact JSON text: JavaScript Number cannot represent every i64
-        // epoch/tick. Consumers needing exact clocks parse those integers losslessly.
-        let metadata = serde_json::to_string(extension.metadata())
-            .map_err(|error| JsValue::from_str(&error.to_string()))?;
-        Reflect::set(&result, &"metadata_json".into(), &metadata.into())?;
-        Reflect::set(&result, &"extension_integrity".into(), &"full-blake3".into())?;
-        for (index, descriptor) in extension.metadata().audio_tracks.iter().enumerate() {
-            let pcm = extension.audio_payload(index)
-                .ok_or_else(|| JsValue::from_str("emf: verified audio payload missing"))?;
-            let track = Object::new();
-            Reflect::set(&track, &"id".into(), &descriptor.spec.id.as_str().into())?;
-            Reflect::set(&track, &"pcm_f32_le".into(), &Uint8Array::from(pcm))?;
-            tracks.push(&track);
-        }
-    } else {
-        Reflect::set(&result, &"metadata_json".into(), &JsValue::NULL)?;
-        Reflect::set(&result, &"extension_integrity".into(), &JsValue::NULL)?;
+    let view = StructuralView::open(bytes, Family::EmfV4Candidate, Limits::default())
+        .map_err(|error| JsValue::from_str(&format!("emf envelope: {error:?}")))?;
+    // The envelope bounds total bytes and entry count before any payload scan.
+    for index in 1..=view.entry_count() {
+        view.verify_chunk(index)
+            .map_err(|error| JsValue::from_str(&format!("emf payload: {error:?}")))?;
     }
-    Reflect::set(&result, &"audio_tracks".into(), &tracks)?;
+    let result = Object::new();
+    Reflect::set(&result, &"container_version".into(), &4.0.into())?;
+    Reflect::set(&result, &"integrity".into(), &"full-blake3-index-and-payloads-crc32c-header".into())?;
+    Reflect::set(&result, &"admission".into(), &"structural; physical profile admission occurs before scientific use".into())?;
+    // Preserve exact integer/rational/unknown fields without JavaScript Number conversion.
+    Reflect::set(&result, &"metadata_tlv_le".into(), &Uint8Array::from(view.metadata_bytes()))?;
+    Reflect::set(&result, &"source_blake3".into(), &blake3::hash(bytes).to_hex().as_str().into())?;
+    Reflect::set(&result, &"entry_count".into(), &(view.entry_count() as f64).into())?;
     Ok(result)
 }

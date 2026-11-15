@@ -1,5 +1,6 @@
 //! Local execution permit. Capability for this runtime, not an identity claim.
 
+use crate::net::peer::runtime::incarnation::CanonicalIncarnation;
 use crate::net::qdnf::errors::QdnfError;
 use crate::net::qdnf::types::{Generation, OperationId, StrongDigest};
 
@@ -19,6 +20,7 @@ pub struct ExecutionPermit {
     identity_generation: Generation,
     expires_unix: u64,
     resource_ceiling: u64,
+    incarnation: CanonicalIncarnation,
 }
 
 impl ExecutionPermit {
@@ -33,6 +35,7 @@ impl ExecutionPermit {
         identity_generation: Generation,
         expires_unix: u64,
         resource_ceiling: u64,
+        incarnation: CanonicalIncarnation,
     ) -> Result<Self, QdnfError> {
         if operation.is_zero()
             || principal.is_zero()
@@ -48,6 +51,9 @@ impl ExecutionPermit {
         if policy_generation == Generation::ZERO || identity_generation == Generation::ZERO {
             return Err(QdnfError::Unauthorized);
         }
+        if !incarnation.assigned() {
+            return Err(QdnfError::StaleGeneration);
+        }
         if resource_ceiling == 0 {
             return Err(QdnfError::Capacity);
         }
@@ -61,7 +67,12 @@ impl ExecutionPermit {
             identity_generation,
             expires_unix,
             resource_ceiling,
+            incarnation,
         })
+    }
+
+    pub(crate) const fn incarnation(self) -> CanonicalIncarnation {
+        self.incarnation
     }
 
     #[inline]
@@ -186,6 +197,7 @@ mod tests {
             Generation(1),
             10,
             256,
+            CanonicalIncarnation::fresh().unwrap(),
         )
         .unwrap();
         assert_eq!(p.current_at(10), Err(QdnfError::Expired));

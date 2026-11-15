@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMF v4 &amp; QAC v1 Scientific Field Observatory — QualiaDB 0.0.41</title>
+    <meta name="description" content="Authoritative scientific field observatory for EMF v4 (Q42EMF64) and QAC v1 (qac\0\0\0\0\0): interactive 128B binary wire map, Yee FDTD Poynting balance, Mueller polarimetry, HOA ambisonics, and DICOM Part 10 tomographic reconstruction.">
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <script src="js/emf-qac-showcase.js" defer></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .glass-subtle { background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(148, 163, 184, 0.16); }
+        .layer-pill { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.25rem 0.7rem; border-radius: 9999px; }
+        .wire-cell { transition: all 0.18s ease; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+        .wire-cell:hover, .wire-cell.active { border-color: #38bdf8; transform: translateY(-1px); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+        .wire-cell.active { background: rgba(56,189,248,0.2) !important; color: #38bdf8 !important; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        canvas { background: #030712; border: 1px solid rgba(255,255,255,0.1); border-radius: 0.5rem; width: 100%; height: auto; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="hidden sm:inline-flex text-xs font-mono px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">v0.0.41 · EMF v4 &amp; QAC v1</span>
+                    <a href="https://github.com/mediaprophet/qualiaDB/releases" target="_blank" class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors"><i class="fab fa-github"></i><span>GitHub</span></a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-screen-2xl mx-auto px-6 py-10">
+        <!-- Hero Section -->
+        <header class="mb-12">
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+                <span class="layer-pill bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"><i class="fas fa-satellite-dish"></i> Wave-5 Scientific Observatory</span>
+                <span class="layer-pill bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"><i class="fas fa-shield-halved"></i> 128B Strict Wire Freeze</span>
+                <span class="layer-pill bg-purple-500/15 text-purple-300 border border-purple-500/30"><i class="fas fa-microscope"></i> DICOM Part 10 LPS Preserved</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-white mb-4">EMF v4 &amp; QAC v1 Scientific Field Observatory</h1>
+            <p class="text-lg text-slate-300 max-w-5xl leading-relaxed mb-6">
+                Explore the dual-envelope physical storage architecture powering electromagnetic, acoustic, and medical tomography in QualiaDB 0.0.41. Built on a unified 128-byte header and 128-byte directory format, it guarantees tamper-evident mathematical provenance, zero-heap admission, and bit-exact preservation from raw RF/acoustic sensors to calibrated patient volumes.
+            </p>
+            <div class="flex flex-wrap items-center gap-4 mb-8">
+                <a href="emf-qac-architecture.html" class="px-4 py-2 rounded-xl bg-cyan-500 text-zinc-950 font-medium hover:bg-cyan-400 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-book-open"></i><span>Architecture Guide</span></a>
+                <a href="data-formats.html" class="px-4 py-2 rounded-xl glass-strong hover:bg-white/10 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-cubes"></i><span>Data Formats (.q42 v4)</span></a>
+                <a href="release-showcase-0.0.41.html" class="px-4 py-2 rounded-xl glass-strong hover:bg-white/10 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-compass"></i><span>0.0.41 Release Showcase</span></a>
+            </div>
+
+            <!-- Summary Badges Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div class="glass-subtle p-3 rounded-xl border border-white/10 text-center">
+                    <div class="text-xl font-bold text-cyan-300 mono">128B + 128B</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Header + Directory</div>
+                </div>
+                <div class="glass-subtle p-3 rounded-xl border border-white/10 text-center">
+                    <div class="text-xl font-bold text-emerald-400 mono">8 EMF Modes</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">0x0100..=0x0107</div>
+                </div>
+                <div class="glass-subtle p-3 rounded-xl border border-white/10 text-center">
+                    <div class="text-xl font-bold text-blue-400 mono">8 QAC Modes</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">0x0100..=0x0107 + Continua</div>
+                </div>
+                <div class="glass-subtle p-3 rounded-xl border border-white/10 text-center">
+                    <div class="text-xl font-bold text-amber-300 mono">29 Schemas</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">Metadata TLV Rev 1</div>
+                </div>
+                <div class="glass-subtle p-3 rounded-xl border border-white/10 text-center">
+                    <div class="text-xl font-bold text-purple-300 mono">6 DICOM Tracks</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">D01..D06 LPS Archival</div>
+                </div>
+                <div class="glass-subtle p-3 rounded-xl border border-white/10 text-center">
+                    <div class="text-xl font-bold text-rose-300 mono">236 Vectors</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-wider mt-1">30 Accept / 206 Reject</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Section 1: Interactive Binary Wire Map -->
+        <section id="wire-map" class="mb-16">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <i class="fas fa-binary text-cyan-400"></i><span>128-Byte Binary Wire Layout &amp; Integrity Inspector</span>
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">Examine the 128B Header and 128B Directory Entry layouts. Click any field to inspect byte offsets, wire invariants, integrity domains, and fail-closed error enums.</p>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-1 rounded-xl border border-white/10">
+                    <button id="btn-view-header" class="px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all bg-cyan-500 text-zinc-950">128B Header (Q42EMF64 / qac)</button>
+                    <button id="btn-view-dir" class="px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all text-slate-300 hover:text-white">128B Directory Entry</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 glass-strong p-6 rounded-2xl border border-white/10">
+                    <div class="flex items-center justify-between mb-4">
+                        <div id="wire-view-title" class="text-sm font-semibold text-cyan-300 flex items-center gap-2"><i class="fas fa-table-cells"></i> <span>128-Byte Primary Header (Bytes 0..128)</span></div>
+                        <div class="text-xs text-slate-400 mono">64B / 4096B Aligned · Little-Endian</div>
+                    </div>
+                    <div id="wire-cells-container" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 mb-6"></div>
+                    <div class="p-4 rounded-xl bg-slate-900/90 border border-cyan-500/20 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div>
+                            <span class="text-cyan-400 font-semibold uppercase block mb-1">1. HEADER_DOMAIN</span>
+                            <span class="text-slate-300">CRC-32C (Castagnoli <code>0x1EDC6F41</code>) over bytes 0..124 with 124..128 zeroed.</span>
+                        </div>
+                        <div>
+                            <span class="text-emerald-400 font-semibold uppercase block mb-1">2. DIR_DOMAIN</span>
+                            <span class="text-slate-300">Per-entry CRC-32C over bytes 0..124. Entries ordered strictly by <code>(stream, tick, spatial, mode, desc)</code>.</span>
+                        </div>
+                        <div>
+                            <span class="text-purple-400 font-semibold uppercase block mb-1">3. INDEX_DOMAIN</span>
+                            <span class="text-slate-300">BLAKE3-256 with domain prefix <code>"QUALIA-FIELD-INDEX-v1\0"</code> over zeroed header + directory + metadata.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inspector Detail Card -->
+                <div class="glass-strong p-6 rounded-2xl border border-cyan-500/30 flex flex-col justify-between">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Field Wire Specification</div>
+                        <h3 id="inspect-name" class="text-xl font-bold text-white mono mb-2">magic</h3>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span id="inspect-range" class="px-2.5 py-1 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs mono">Bytes 0..8</span>
+                            <span id="inspect-type" class="px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 text-xs mono">bytes[8]</span>
+                        </div>
+                        <div class="space-y-3 text-sm text-slate-300">
+                            <div>
+                                <span class="text-xs uppercase text-slate-400 block font-semibold">Wire Invariant &amp; Encoding</span>
+                                <p id="inspect-invariant" class="mt-0.5 leading-relaxed">Must exactly equal <code class="text-cyan-300">Q42EMF64</code> (EMF v4) or <code class="text-cyan-300">qac\0\0\0\0\0</code> (QAC v1). Alphanumeric alias Q42AC064 rejects at structural admission.</p>
+                            </div>
+                            <div>
+                                <span class="text-xs uppercase text-slate-400 block font-semibold">Fail-Closed Error Trigger</span>
+                                <div id="inspect-error" class="mt-1 px-3 py-1.5 rounded bg-rose-950/40 border border-rose-500/30 text-rose-300 font-mono text-xs">field_envelope::Error::Family</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-white/10 text-xs text-slate-400 flex items-center justify-between">
+                        <span>Zero-Heap Structural Check</span><span class="text-emerald-400"><i class="fas fa-check-circle"></i> Enforced</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Four Live Interactive Canvas Visualizers -->
+        <section id="visualizers" class="mb-16">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-wave-square text-cyan-400"></i><span>Live Scientific Solvers &amp; DSP Field Visualizers</span>
+                </h2>
+                <p class="text-sm text-slate-400 mt-1">Direct mathematical execution of electromagnetic, polarimetric, acoustic, and tomographic pipelines directly on HTML5 Canvas.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Visualizer 1: Yee FDTD & Poynting Balance -->
+                <div class="glass-strong p-6 rounded-2xl border border-white/10 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="layer-pill bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">Mode 0x0102 · C02-EXT</span>
+                            <span class="text-xs mono text-slate-400">Courant-Friedrichs-Lewy Limit</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">3D Yee Staggered FDTD &amp; Discrete Poynting Balance</h3>
+                        <p class="text-xs text-slate-300 mb-4 leading-relaxed">Simulates staggered $E_z$ (blue) and $H_y$ (red) leap-frog updates with discrete Poynting flux $S_x = E_y H_z - E_z H_y$. Energy residual remains machine-zero ($\le 10^{-13}$).</p>
+                        <canvas id="canvas-fdtd" width="460" height="200" class="mb-4"></canvas>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mb-4">
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Courant $S = c\Delta t/\Delta x$:</span><span id="val-courant" class="mono text-cyan-300">0.50</span></label>
+                                <input type="range" id="slider-courant" min="0.10" max="0.99" step="0.01" value="0.50" class="w-full accent-cyan-400">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Dispersion Pole $\omega_0$:</span><span id="val-dispersion" class="mono text-cyan-300">1.20</span></label>
+                                <input type="range" id="slider-dispersion" min="0.20" max="3.00" step="0.10" value="1.20" class="w-full accent-cyan-400">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs">
+                        <button id="btn-toggle-fdtd" class="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition-colors"><i class="fas fa-pause mr-1"></i> Pause Simulation</button>
+                        <div class="mono text-slate-300">Residual: <span id="fdtd-residual" class="text-emerald-400 font-bold">&lt; 1.2e-14</span> J/m³</div>
+                    </div>
+                </div>
+
+                <!-- Visualizer 2: Mueller Polarimetry & Cloude Decomposition -->
+                <div class="glass-strong p-6 rounded-2xl border border-white/10 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="layer-pill bg-purple-500/15 text-purple-300 border border-purple-500/30">Mode 0x0104 · E04</span>
+                            <span class="text-xs mono text-slate-400">Hermitian Pauli Coherency</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">4&times;4 Mueller Polarimetry &amp; Cloude Eigenvalues</h3>
+                        <p class="text-xs text-slate-300 mb-4 leading-relaxed">Calculates Stokes transfer through linear polarizer $\theta$, retardance $\delta$, and depolarizer $p$. Derives Hermitian Cloude matrix $C$, 4 physical eigenvalues $\lambda_i \ge 0$, and polarization entropy $H$.</p>
+                        <canvas id="canvas-mueller" width="460" height="200" class="mb-4"></canvas>
+                        <div class="grid grid-cols-3 gap-3 text-xs mb-4">
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Angle $\theta$:</span><span id="val-theta" class="mono text-purple-300">45°</span></label>
+                                <input type="range" id="slider-theta" min="0" max="180" step="1" value="45" class="w-full accent-purple-400">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Phase $\delta$:</span><span id="val-delta" class="mono text-purple-300">90°</span></label>
+                                <input type="range" id="slider-delta" min="0" max="180" step="1" value="90" class="w-full accent-purple-400">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Depol $p$:</span><span id="val-depol" class="mono text-purple-300">0.15</span></label>
+                                <input type="range" id="slider-depol" min="0" max="1" step="0.01" value="0.15" class="w-full accent-purple-400">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs">
+                        <div class="mono text-slate-300">$\lambda$: <span id="cloude-eigs" class="text-purple-300">[0.85, 0.08, 0.05, 0.02]</span></div>
+                        <div class="mono text-slate-300">Entropy $H$: <span id="cloude-entropy" class="text-emerald-400 font-bold">0.312</span></div>
+                    </div>
+                </div>
+
+                <!-- Visualizer 3: HOA Spatial Audio & BS.1770-5 Loudness -->
+                <div class="glass-strong p-6 rounded-2xl border border-white/10 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="layer-pill bg-blue-500/15 text-blue-300 border border-blue-500/30">Mode 0x0102 · Q04/Q05</span>
+                            <span class="text-xs mono text-slate-400">ACN / SN3D Normalized</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">QAC Higher-Order Ambisonics &amp; ITU-R BS.1770-5</h3>
+                        <p class="text-xs text-slate-300 mb-4 leading-relaxed">Synthesizes spherical harmonic beams $Y_l^m(\theta, \phi)$ across HOA orders $L \in \{1, 2, 3\}$. Computes K-weighted Momentary/Integrated LUFS and true-peak dBTP.</p>
+                        <canvas id="canvas-ambisonics" width="460" height="200" class="mb-4"></canvas>
+                        <div class="grid grid-cols-3 gap-3 text-xs mb-4">
+                            <div>
+                                <label class="text-slate-400 block mb-1">HOA Order $L$:</label>
+                                <select id="select-hoa-order" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-slate-200">
+                                    <option value="1">Order 1 (4 ch)</option><option value="2">Order 2 (9 ch)</option><option value="3" selected>Order 3 (16 ch)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Azimuth $\phi$:</span><span id="val-azimuth" class="mono text-blue-300">30°</span></label>
+                                <input type="range" id="slider-azimuth" min="-180" max="180" step="5" value="30" class="w-full accent-blue-400">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Elevation $\theta$:</span><span id="val-elevation" class="mono text-blue-300">15°</span></label>
+                                <input type="range" id="slider-elevation" min="-90" max="90" step="5" value="15" class="w-full accent-blue-400">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs">
+                        <div class="mono text-slate-300">Integrated: <span id="lufs-integrated" class="text-cyan-300 font-bold">-23.4 LUFS</span></div>
+                        <div class="mono text-slate-300">True Peak: <span id="lufs-tp" class="text-emerald-400 font-bold">-1.2 dBTP</span></div>
+                    </div>
+                </div>
+
+                <!-- Visualizer 4: DICOM Reconstruction & Radon Sinogram -->
+                <div class="glass-strong p-6 rounded-2xl border border-white/10 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="layer-pill bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">D01..D06 · Part 10 LPS</span>
+                            <span class="text-xs mono text-slate-400">Radon &amp; Tomographic Inverse</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">DICOM Part 10 Tomographic Reconstruction</h3>
+                        <p class="text-xs text-slate-300 mb-4 leading-relaxed">Transforms forward Radon sinogram projections (left) into reconstructed cross-sectional phantom slices (right) using FBP with Ram-Lak ramp filtering, ART, SART, and OSEM/MLEM.</p>
+                        <canvas id="canvas-dicom" width="460" height="200" class="mb-4"></canvas>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-3">
+                            <div>
+                                <label class="text-slate-400 block mb-1">Recon Algorithm:</label>
+                                <select id="select-recon-algo" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-slate-200">
+                                    <option value="FBP" selected>FBP (Ram-Lak Filter)</option><option value="ART">ART (Algebraic)</option><option value="SART">SART (Simultaneous)</option><option value="MLEM">MLEM (Expectation Max)</option><option value="OSEM">OSEM (Ordered Subsets)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Angles:</span><span id="val-angles" class="mono text-emerald-300">64</span></label>
+                                <input type="range" id="slider-angles" min="16" max="128" step="16" value="64" class="w-full accent-emerald-400">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-slate-400 mb-1"><span>Iterations:</span><span id="val-iters" class="mono text-emerald-300">4</span></label>
+                                <input type="range" id="slider-iters" min="1" max="12" step="1" value="4" class="w-full accent-emerald-400">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 text-[11px] mb-2">
+                            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Explicit VR LE (1.2.840.10008.1.2.1)</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">RLE Lossless</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">JPEG-LS (14495-1)</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">JPEG 2000 (15444-1)</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400">JPEG XL</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-white/10 text-xs">
+                        <div class="mono text-slate-300">Recon RMSE: <span id="recon-rmse" class="text-emerald-400 font-bold">0.0018</span></div>
+                        <div class="text-emerald-300 font-medium flex items-center gap-1.5"><i class="fas fa-check-double text-xs"></i> 100% Bit-Exact LPS Preserved</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Interactive Filterable Mode & Schema Catalogue -->
+        <section id="catalogue" class="mb-16">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <i class="fas fa-layer-group text-cyan-400"></i><span>Authoritative Mode &amp; TLV Schema Catalogue</span>
+                    </h2>
+                    <p class="text-sm text-slate-400 mt-1">Filter all 8 EMF v4 modes, 8 QAC v1 modes, 29 TLV metadata schemas, and 6 DICOM tracks.</p>
+                </div>
+                <div class="w-full md:w-72">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="catalogue-search" placeholder="Search by ID, name, quantity..." class="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Pills -->
+            <div class="flex flex-wrap gap-2 mb-6" id="catalogue-filters">
+                <button data-filter="all" class="filter-pill active px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-cyan-500 text-zinc-950">All (43 Entries)</button>
+                <button data-filter="emf-modes" class="filter-pill px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 hover:text-white">EMF v4 Modes (8)</button>
+                <button data-filter="qac-modes" class="filter-pill px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 hover:text-white">QAC v1 Modes (8)</button>
+                <button data-filter="shared-schemas" class="filter-pill px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 hover:text-white">Shared Schemas 1..7</button>
+                <button data-filter="emf-schemas" class="filter-pill px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 hover:text-white">EMF Schemas 103..138</button>
+                <button data-filter="qac-schemas" class="filter-pill px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 hover:text-white">QAC Schemas 200..210</button>
+                <button data-filter="dicom" class="filter-pill px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 hover:text-white">DICOM D01..D06</button>
+            </div>
+
+            <!-- Catalogue Grid Container -->
+            <div id="catalogue-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- Section 4: Conformance & Verification Summary -->
+        <section id="conformance" class="glass-strong p-8 rounded-2xl border border-white/10 mb-16">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <span class="layer-pill bg-rose-500/15 text-rose-300 border border-rose-500/30 mb-2"><i class="fas fa-flask-vial"></i> Conformance Testing Harness</span>
+                    <h2 class="text-2xl font-bold text-white">236 Conformance Vectors (30 Accept / 206 Reject)</h2>
+                </div>
+                <div class="text-xs text-slate-400 mono">Zero-Heap Execution · Strict Invariant Validation</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300 leading-relaxed">
+                <div>
+                    <h4 class="text-emerald-400 font-semibold mb-2 flex items-center gap-2"><i class="fas fa-check-circle"></i> 30 Authoritative Accept Vectors</h4>
+                    <ul class="space-y-1.5 text-xs text-slate-400 list-disc list-inside">
+                        <li>All 8 canonical EMF v4 modes round-trip verified (0x0100..0x0107).</li>
+                        <li>All 8 canonical QAC v1 modes verified with raw/continuous payloads.</li>
+                        <li>Multi-entry deterministic directory ordering by (stream, tick, spatial, mode, desc).</li>
+                        <li>Full index commitment verification under QUALIA-FIELD-INDEX-v1\0 domain.</li>
+                        <li>DICOM Part 10 bit-exact roundtrip across 6 primary Transfer Syntaxes.</li>
+                        <li>Shared AcquisitionView (Schema 6) and Derivation (Schema 7) bindings.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-rose-400 font-semibold mb-2 flex items-center gap-2"><i class="fas fa-ban"></i> 206 Fail-Closed Reject Vectors</h4>
+                    <ul class="space-y-1.5 text-xs text-slate-400 list-disc list-inside">
+                        <li>Cross-family magic substitutions (e.g. Q4AU, Q42AC064 alias, BADMAGIC).</li>
+                        <li>Corrupted Castagnoli CRC-32C in header (bytes 124..128) and directory entries.</li>
+                        <li>Single-bit modifications in index BLAKE3 commitment (Error::IndexDigest).</li>
+                        <li>Non-zero padding bytes in reserved regions (88..124, 78..80, 116..124).</li>
+                        <li>Unsorted or duplicate directory entries violating strict monotonic order.</li>
+                        <li>Stokes intensity norm violation ($Q^2 + U^2 + V^2 > I^2$).</li>
+                        <li>Unknown critical fields/schemas (flag bit 0 set) without registered adapter.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-t border-white/10 py-12 text-center text-xs text-slate-500">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <p class="mb-2">QualiaDB 0.0.41 — Sovereign Field &amp; High-Energy Physics Subsystem</p>
+            <p>Copyright &copy; 2026 Timothy Charles Holborn. All Qualia-specific architectures governed by CC BY-NC-ND 4.0 International.</p>
+        </div>
+    </footer>
+</body>
+</html>

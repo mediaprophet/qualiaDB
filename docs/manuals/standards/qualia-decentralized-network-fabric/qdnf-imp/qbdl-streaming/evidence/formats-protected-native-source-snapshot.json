@@ -1,0 +1,785 @@
+{
+  "note": "Pre-build source observation; contains some explicitly unrouted recovery children. Not compiler attestation.",
+  "sources": [
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/cbor.rs",
+      "sha256": "4539a729a071ed440e7e4c1cdcf885a734d5d610888ef118b51fc830ace09757",
+      "bytes": 6413
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/digest.rs",
+      "sha256": "68814735ad373cfb76280cafed33f4c630dfa223300a8dc4096f2eb49d957021",
+      "bytes": 1206
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/inventory.rs",
+      "sha256": "5067c154a6eb72eca3b5c68de2abf526bdcf303281e1d3b19b9b0178e4ddffa5",
+      "bytes": 7980
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/mod.rs",
+      "sha256": "41459de155cd821c6e2d1338d879e48ee1c321ffa14ed17631c94f6eb196a03b",
+      "bytes": 921
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/pages.rs",
+      "sha256": "85695aed15c4581a87e63b69c4284449c21255c253662def81e2b96f9c1fed38",
+      "bytes": 4668
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/refs.rs",
+      "sha256": "2769340f477b5c816e057cd91f231b8192dc213069095cd5f905826c10b86658",
+      "bytes": 2512
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/roots.rs",
+      "sha256": "3e6fb44c4e415191a7525be6bd156a3b91a37cb11e850c0dc1b3eb0f31681b8f",
+      "bytes": 7810
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/tests.rs",
+      "sha256": "0457e91a4e5bb8b8501aa415a061722d00beea56e693e22be8b4a5a9eaada5ee",
+      "bytes": 6116
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/descriptor/types.rs",
+      "sha256": "c355513a9e73040d8f66f253fba263741979da3961afa7de1d41e909a7a4bcea",
+      "bytes": 5776
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/emf.rs",
+      "sha256": "3f709da865d412ee19f17944cec41824cc0aecbcea49b891d08dab7398a54f12",
+      "bytes": 5649
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/m64.rs",
+      "sha256": "49467a32fc97f5fed45ecc5a10ed60e9ddadeedba7af9080c450f1912f237bb8",
+      "bytes": 8256
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/m64_tests.rs",
+      "sha256": "48d13d7ccdcaf1dd5eefcff128f9d793cda61d4fbcb3614c8f8797aec1b7abbb",
+      "bytes": 14799
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/mod.rs",
+      "sha256": "f20d9d56003d92597fd9d74fa9d831221065c86264fcf676a497a5b260b746ad",
+      "bytes": 513
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/range.rs",
+      "sha256": "c0683ba79d5c89a442f8aa6a78f7c493d9f6873c45dcc15ac872128dfc0f2ef4",
+      "bytes": 3525
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/ten_d.rs",
+      "sha256": "0d41e9a126ceaa0b3026edc3c912bfee66416457a4f27ab7e8a178221ef4797e",
+      "bytes": 5375
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/ten_d_tests.rs",
+      "sha256": "e2f0926754b13aac034382500678a19e1bcd309d312146192b5ac4c0537e251d",
+      "bytes": 6761
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/formats/tests.rs",
+      "sha256": "c2b4adf3143f4ba916f1aad376011ec58564b39758e5a2a5a1ee41b84859ced0",
+      "bytes": 6715
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/admit.rs",
+      "sha256": "1a3ee48ed1923c3ba054e4c597ca4ca64fe55458cc3ece00b67c62916d11b499",
+      "bytes": 5175
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/cbor.rs",
+      "sha256": "035618783465e5b2064a1ac9907d412550ab7b7684ad7026af220eddd5168ed8",
+      "bytes": 6382
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/error.rs",
+      "sha256": "8665f872b4f00454f07fdb4becddfc2d4bfeab07a6d3f354fc24e710ff19d703",
+      "bytes": 2846
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/header.rs",
+      "sha256": "cf02c1eba136d674d94a0e7964ee9929d558726cbf9e135888122b8ee7a88214",
+      "bytes": 3992
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/limits.rs",
+      "sha256": "95cfa30ff3744889f8e9af23957545e4194e313d37cee4976ffd683b989396cb",
+      "bytes": 1193
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/mod.rs",
+      "sha256": "2a09533bc70e4b631ba9808a9392dca06181ee038dee00f00c09fd77baf6c3f1",
+      "bytes": 543
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/owned.rs",
+      "sha256": "545aabe71445a0e90b909c9cf781bae5ff77d86690abf4d73737cdc6f886d1f7",
+      "bytes": 2239
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/probe.rs",
+      "sha256": "19c8aecc2a04323cd76ba88abde1beed18f66e1d24ca5195934efb93b176e59e",
+      "bytes": 1444
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/index/tests.rs",
+      "sha256": "3c28c3e812a8cb3f4d1559cd5f56ed9a6553be1d709b4bad1246d560ad3fbfc6",
+      "bytes": 14743
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/mod.rs",
+      "sha256": "899b0cd59cd8bae8df8da61d7e5e641911516a7dbe550744c1c0d0ee3e59fedc",
+      "bytes": 236
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/authenticated.rs",
+      "sha256": "89c00cc0f5866dcc96a1c6e4289d8524fbdae44058be216581fe8c2c2d1124e2",
+      "bytes": 5308
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/grant/scoped.rs",
+      "sha256": "4c053123203acee52bd3bdb7131c65a8c339335cd9c73a3a4bcad7fce343c460",
+      "bytes": 3011
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/grant.rs",
+      "sha256": "80b6203845ebdf19e1e1b0c0933f7e59073d462ed0275eaa9324fe89a5031803",
+      "bytes": 5933
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/manifest.rs",
+      "sha256": "5c0674328c0cb8d7089dbf17145c4a82f036dc3b85fb8762c05fa49d13a38b63",
+      "bytes": 8456
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/mod.rs",
+      "sha256": "4855c6209f1fa40af933b0d664d44b9f1800ccc5af1de8f5bd873ff7121e8451",
+      "bytes": 635
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/rejection_tests.rs",
+      "sha256": "a722fe422f6bed0f28f293f72640a660aa845a4bfd50d888383640fb9aafc336",
+      "bytes": 11418
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/scoped_tests.rs",
+      "sha256": "0d83d62737c68e437a23042025bbb8c26bb74ebad6db879d97ffcd200096fee1",
+      "bytes": 3557
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/tests.rs",
+      "sha256": "eb52f87fc6fa4b6524e49592052718cc000b0e056ca3dfbcbd7cd64cd0894cde",
+      "bytes": 15568
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/policy/types.rs",
+      "sha256": "e16be169b5652c4089e056448eabb946049ce9af2473099a2ccefa7b32b984ab",
+      "bytes": 1432
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/builder.rs",
+      "sha256": "a7708029cc03d765ee15f10f3a30e71e262cdf2102e25e02413aef30486afdb1",
+      "bytes": 3244
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/codec.rs",
+      "sha256": "65ef17e02f895009da2e1f7bd8cceee45337aa3d5fc43512b66a73ee47b19bf9",
+      "bytes": 1046
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/hash.rs",
+      "sha256": "43b7b0415fea89a03224b1e34059237eb32d9c5f197ec1cfe401a88ae9514705",
+      "bytes": 1503
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/mod.rs",
+      "sha256": "65c456f1e65cffcb6c7cd9fe63071b42623ecb18b7f2fbab345b19b85c7f7fb1",
+      "bytes": 511
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/span.rs",
+      "sha256": "f5ae974e4cfcc97cbc3fc701e3110fc06c0c1987a10fedaf393ff863bc3a008a",
+      "bytes": 3860
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/types.rs",
+      "sha256": "3e2f6a7c17b8168b490ff61533e3ab51cc734c77a19c689952b05d893285c86e",
+      "bytes": 2182
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/proof/verify.rs",
+      "sha256": "6dc8fa883096ccd3b9dae150010df01ecbd1d92dc11afe9bfcaa43daf8970b91",
+      "bytes": 1339
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/context.rs",
+      "sha256": "b740a63288f78fd17ece6170b4fb0e8e2c585056157bfe2b9227866e28f40ac9",
+      "bytes": 2799
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/entries.rs",
+      "sha256": "7e2cd23438d52046ee40208afe288ddea96b1657b5ecffdd6f26781ef3f01e83",
+      "bytes": 3984
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/finish.rs",
+      "sha256": "6e479f447766044a1209c346c746fd1d1796b3055e11fdf3e3909bb6147ab1b8",
+      "bytes": 2714
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/mod.rs",
+      "sha256": "10b311a91b041a491e76f2a99165a1c9cd3921e6acf7a119fafc7137e5c6a9c3",
+      "bytes": 249
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/owner.rs",
+      "sha256": "e321b0c2cb16aae074375dcdaebad31aeec3f5acf5b9e5a642f5ccca4bf164e7",
+      "bytes": 6443
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/tests/independent.rs",
+      "sha256": "63660525ef909baf9b83aceadc8ced2140bafa76899f07c5f16e7df4afbe18f1",
+      "bytes": 2964
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/tests/rejection.rs",
+      "sha256": "4783ad6aae68980de42c627580aa6e3a94d4e21ac7be1360944078acd989265b",
+      "bytes": 11238
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/tests/roundtrip.rs",
+      "sha256": "8316b38e447cbe1ef60eb29dffe1273abc33b16be0730fc77a3915d1767bc7e4",
+      "bytes": 5598
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/publish/tests.rs",
+      "sha256": "5df7ef89f1962c08bc332bb721eeb321a9ad0410d7edfaedc257b1c11acc7ca5",
+      "bytes": 3805
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/dispatch.rs",
+      "sha256": "f2d394aabb3e7c2e00ff6cda87eedd32389ebf540fd858a403204fa508327c11",
+      "bytes": 3817
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/mod.rs",
+      "sha256": "b9749d14a279c1cc47837ed6fd3fce7724367560e86c9d02444ca20ebf782316",
+      "bytes": 663
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/owner.rs",
+      "sha256": "2ad54885a5c59eac5b27686024a25eebd0c2211fa24eed12eec3975d93c15ca7",
+      "bytes": 7314
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/plan.rs",
+      "sha256": "b714c87c353de6781639230dc82befe65d4b2509996c58deda87fdc7f3fc1a3e",
+      "bytes": 3049
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/recovery_source/admission.rs",
+      "sha256": "8cf60080a90c4d0536d4a73d8c3315aa465645f48dfa7ed77b41b296d6056e86",
+      "bytes": 5439
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/recovery_source/mod.rs",
+      "sha256": "d7465c75a7cfe441f8d288b4a9223a6d94ed4a0206a253db0fd66d8c2886ff99",
+      "bytes": 386
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/recovery_source/tests.rs",
+      "sha256": "85f4b85aab68bf5115532d2af100634a4edaafdb026374e2d257cb90e8660d66",
+      "bytes": 7056
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/recovery_source/types.rs",
+      "sha256": "7374ca7b9ee557e193ffe699553dd774911e3b1dc6ed59e5010614cf6cbab01d",
+      "bytes": 3029
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/admission.rs",
+      "sha256": "a31d61086e4c8286b95551c1c03f43ee8edb86fb0fcc213f274692dc1332331f",
+      "bytes": 6068
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/mod.rs",
+      "sha256": "c2ca8f871b73a0a53d2f37a8ad2feab44a0e35c73366029a07668a56961a80a3",
+      "bytes": 637
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/tests/bridge.rs",
+      "sha256": "51ccaa3ddf9ac86ee218bb0be6685897252a74b43a14fe4d1539f733976b6452",
+      "bytes": 6460
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/tests.rs",
+      "sha256": "6345b769e432532b265d2304d4ee5a70ab0d459e9ba2bfc17c059899de7a70b1",
+      "bytes": 14469
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/types.rs",
+      "sha256": "abc6efc9a44faf8a1bea1e822f1ef69d5b889e26d631bdd517c50e6ab261f79c",
+      "bytes": 4142
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/storage_stage/controlled.rs",
+      "sha256": "d42df4afb6bc348d4475928dbece99bff9df2cc74e3b6b80e9278d5e803ca0e1",
+      "bytes": 3762
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/storage_stage/recovery.rs",
+      "sha256": "879afaddb04c5169b6ce7009923f327e64535ca429abcc921fd31a4235ab94b1",
+      "bytes": 1427
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/storage_stage/sparse.rs",
+      "sha256": "eb83040dfd91fb5fc6e9c0e98c114c95c9255d568e758de1eb63be89b28212cb",
+      "bytes": 1582
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/storage_stage.rs",
+      "sha256": "eba5333be0ccbe29c6eb0da337f10f62320361e2bae59e75d67981c2f4e0c9f2",
+      "bytes": 3593
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/tests/capacity.rs",
+      "sha256": "be0b81df1bd9621ed10b1dc8ffc9d98da78c42741e2d30d112ad98d8638ba9c3",
+      "bytes": 8022
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/tests/lifecycle.rs",
+      "sha256": "a5cf171da0efa0ed3d7131cb34a9317ca4770b077d84aad3cbdb527dafbbd2e4",
+      "bytes": 9424
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/tests/storage_controlled.rs",
+      "sha256": "1464bc8cfaed4b59cd77c91c95f119cc59ff7ead3df7b996942fa400278d23e4",
+      "bytes": 5094
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/tests/storage_stage.rs",
+      "sha256": "7cd44bb8a0f60e44c983665133e38383cf19084a93e18a6b451b382dfd3c711e",
+      "bytes": 2899
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/tests.rs",
+      "sha256": "7061f02d1021dfd03a77efd5b8dbf1b392e14465bb91efc3f2516f3aa21c664f",
+      "bytes": 2580
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/transfer.rs",
+      "sha256": "00c8d0acdb5dacfd8f6cb3ffae847aa6aeec465ff000ab03446320846870e252",
+      "bytes": 6094
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/runtime/types.rs",
+      "sha256": "8a784a15d0a50076d44dd1746ec063c14a8f26e8d882e2d120e3b6954b698ad7",
+      "bytes": 4211
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/selection/entry.rs",
+      "sha256": "2ea0e60e7a9f9b996b885e87f3e7508f1337fa0df2d34d3b58d1e814ab1d7f04",
+      "bytes": 5525
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/selection/mod.rs",
+      "sha256": "7bf9ac9a6a7abb82d0829745468c72c243cc84928c5a6976c97ed03b45212305",
+      "bytes": 258
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/selection/tests.rs",
+      "sha256": "e0a3d154ba22b44040382cedcd10612fca3d85211f6f84943f4018a94b6bc67c",
+      "bytes": 5166
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/bitmap/owned.rs",
+      "sha256": "e002ed46c6413a35dbf3db303860b31bc96236a8ef35d0aa5a0f8a1f5e07fd97",
+      "bytes": 2159
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/bitmap.rs",
+      "sha256": "c7666db84db86f34d15be69c3df0370d6942fc909a9b4b7b3dd36f2185f33b58",
+      "bytes": 4367
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/checkpoint.rs",
+      "sha256": "2f503592515ed8b15df813f36776bb0933c3843ecd801333c565a0dcf5bab21e",
+      "bytes": 3399
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/error.rs",
+      "sha256": "6a8de37ab8972f6b31fa18c606be5a29850c0ff63951bc62f8269741b864b730",
+      "bytes": 538
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/identity.rs",
+      "sha256": "1fad01328c399bfc101abdb027d1cdfac34e1d3ff9a419cb5c9eb4287258804a",
+      "bytes": 4322
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/leaf.rs",
+      "sha256": "c27386ce8ded7787ba9e250a251c71ce8cc4f8ca1fb0c74f2faf16d52c6d1079",
+      "bytes": 1690
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/mod.rs",
+      "sha256": "1e55d4145831e034da11242a1af0098b12d67460d4485c9181a37b449240d357",
+      "bytes": 679
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/binding.rs",
+      "sha256": "5d9c148fca39d951b3cb30da342db79cd8d6e98a998ad55b065b78f66448984b",
+      "bytes": 2021
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/checkpoint.rs",
+      "sha256": "2d7acc4af3e638e25b9e906bdee158a75316a6aa0d6ad1988c325ecc162002c8",
+      "bytes": 3954
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/error.rs",
+      "sha256": "53a07ae827fc3de725c208a58becf0853018eac8f986ccf9fa859351bc4281ee",
+      "bytes": 986
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/geometry.rs",
+      "sha256": "98bf29aea2a9486a580bea97518a6683e192fb0663aec35a5967e3e0468f6e64",
+      "bytes": 2827
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/mod.rs",
+      "sha256": "d3e24c6f46c6969abda2caa7c2a660d4a5bf7228ec8d91d8409b3957993dce12",
+      "bytes": 701
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/owner.rs",
+      "sha256": "1d45ba45f36e1c74d6a08116a11222aa8797458477e34df5618d1b85a554f698",
+      "bytes": 3701
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/read.rs",
+      "sha256": "552917a290903c2769d9add08ca9471eeccbb0a477f8bf58decd33ed41bbf11d",
+      "bytes": 5123
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/recovery.rs",
+      "sha256": "a153d6039ffbcc8019965098a648008b79774727b9e4d0c21a560c191648c887",
+      "bytes": 6257
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/resume.rs",
+      "sha256": "5e7d4075ebef0b17eed7ab96dd44be4785e355b5fedd45d25d6002dfa06924da",
+      "bytes": 8815
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/allocation.rs",
+      "sha256": "6de0a9814af65b992186a1efb1e9fc63d9d3260a104a6baf5b54fba218b4104d",
+      "bytes": 2812
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/fixtures.rs",
+      "sha256": "ace7b43d3f350585e71c0b1fc82131d213ac6835537e31505ad0f8bf487d11ac",
+      "bytes": 7621
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/geometry.rs",
+      "sha256": "f0911591e342c2543830866934c90d530550024196dc29fbc102f29cdd10af06",
+      "bytes": 3707
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/leaves.rs",
+      "sha256": "7bca8fac41a8b53245c6d317d45a52227a1f2d4303d333b92699edc045760cd6",
+      "bytes": 6150
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/ordering.rs",
+      "sha256": "1258239babe38770ffe0080905654375cfd3ed3d4e2fb50f67039bacd61266ae",
+      "bytes": 7370
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/recovery.rs",
+      "sha256": "7115abf730e748bae31dd26c11f3008cee231cab03fe8e20fd4d85b5c6d16701",
+      "bytes": 8969
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/resume.rs",
+      "sha256": "71dddaef0d899ca213168e00c5af0ee194a310aa3421ba9fe927432530fa0bb7",
+      "bytes": 12494
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests/state.rs",
+      "sha256": "1aa7ec3ae01ab80ff86cfd80a3db1e659f91109a31a169fd7665a217de6c064d",
+      "bytes": 6225
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/tests.rs",
+      "sha256": "e88eefb6d83441c0fbaf2dfc07fe64d8b239a1c5d440ed47223ac914efab9660",
+      "bytes": 430
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/native/write.rs",
+      "sha256": "30153d0d799b62ebaa2a4723000b23672a35e6637ba52d4975488387c02e2748",
+      "bytes": 5824
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/tests/checkpoint.rs",
+      "sha256": "a0442234df2ee5fd9d8722056c7c7b88729ee93c1641758e315e7d5b97d90c93",
+      "bytes": 5632
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/tests/identity.rs",
+      "sha256": "5329f979b5446ee86230576150db8ac9d419b7d3dc38e3cf24133528b175bf2e",
+      "bytes": 3554
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/tests/leaf_bitmap.rs",
+      "sha256": "f1fb7332a86fab98cd336ba2cee16be8e8e7b38ac644e8424e5c25524279ac65",
+      "bytes": 6302
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/tests.rs",
+      "sha256": "9112c838fea59dc2616c7eaf04ceaf81f92e2d3b09dbc76a24e6f49472bddd61",
+      "bytes": 1819
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/bundle/stream/storage/wire.rs",
+      "sha256": "25b534ef5c73b2d11b8632f3bad00bd6e75785d07e167fc6758fa81d64b8f82d",
+      "bytes": 1052
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/codec.rs",
+      "sha256": "089c2bf6baeb2b0d41c3d2634543827b14c1a848bf7fed2bef51796912a463a3",
+      "bytes": 4062
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/context.rs",
+      "sha256": "9918934cb0f0b3fe7d85cc42f3fe2b10516ff78538491f295b8fc74d2031187f",
+      "bytes": 3713
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/delivery.rs",
+      "sha256": "dbb44611d41765681d09db8c8f6cfb8e9dc721df68a3b10a08e5b4e68b750c88",
+      "bytes": 4698
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/descriptor.rs",
+      "sha256": "29e1d7e87dc9f8d80831eb09fe78f34f54455d225652e0a42ed5eeb6ba1275ac",
+      "bytes": 4510
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/mod.rs",
+      "sha256": "560c3a954143146d0f778f8456438685d973d97054b79ac156b2bb1b9218950e",
+      "bytes": 950
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/pages.rs",
+      "sha256": "2bf12d11bf60f8155ebd4c60543aba335c61ccf544682735f81c0a89cd0db1f6",
+      "bytes": 4947
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/recipient.rs",
+      "sha256": "070d47b528bf632edd1ce1d4c142b9d3b863d59f87e896586fe18effb55c6df3",
+      "bytes": 4806
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/segment.rs",
+      "sha256": "5d1ec23a6d242908fcf1ddbebf6bf7210955c3342cc6f18bc20d948136593d44",
+      "bytes": 4897
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/tests.rs",
+      "sha256": "7e0880db727b000d81c8f8b8c65d6511ad5151f954f479acb4d8cd1f92c4de7e",
+      "bytes": 8543
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/types.rs",
+      "sha256": "0e9e2d13fb07382fad0a0b20c0f36d1a796b1317f476956aa0198ea54378fe4b",
+      "bytes": 1851
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/crypto/network/object_stream/wrap.rs",
+      "sha256": "6e01d3d64d443d7cd4a450564927ec184a65eb3e3a7edf2becc8ebc2db1bf385",
+      "bytes": 5451
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/checks.rs",
+      "sha256": "8b4b5c547c1e8557abb1862072b3073ab09f50c6a55017328b787f76af97b057",
+      "bytes": 1629
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/mod.rs",
+      "sha256": "14b434326db2a43a1f94ff45d3cfece5959b9488994637a2ce2a129c4b9cfc81",
+      "bytes": 525
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/open.rs",
+      "sha256": "cea17577cec0b1bea1b1164d77753a7431ff9fa0f3c87269313bd60a91ac8a48",
+      "bytes": 2057
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/publication.rs",
+      "sha256": "0dbf8fd96122e458e80946ef3dc85d3f02051359c819d0f382c7c958491e6fce",
+      "bytes": 10404
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/recipient.rs",
+      "sha256": "b34c9ddcf230ea8f2ff4ba676082fed685d7976f27a4356f8e2eff0471d8077d",
+      "bytes": 5472
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/recipient_tests.rs",
+      "sha256": "52dd9def33c13282fb86254a475eb46117c8eee8a37a8649af722887e7131826",
+      "bytes": 6236
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/seal.rs",
+      "sha256": "8e943e186cc1c6ca344363bad5f24cfcf404db4c4731b034190ad21088da7496",
+      "bytes": 2714
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/tests.rs",
+      "sha256": "b8043bb5fbc5a13e8f13182b22154d60befe5f14e5cbf16de4847b6a8c1f8be7",
+      "bytes": 7137
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/specialized_libs/cryptographic_library/key_management/managed_object/workspace.rs",
+      "sha256": "ddc1614942cfea80b98c86240029b8f3e6734880b8f01c478f46fdc8556ad3af",
+      "bytes": 851
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/container_10d/header/prefix.rs",
+      "sha256": "52e3fdc1a9c82707c68b7124f540bf4a746e863810d564f6b3afb874c4edff20",
+      "bytes": 4064
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/mod.rs",
+      "sha256": "9a748cd9ae6d6f2c3f0470ec333d4bc8a761a6e38fde85a8e4fc5a6d806da326",
+      "bytes": 3868
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/recovery/locator.rs",
+      "sha256": "fb370b33909966f5c7af80c0d33ae19547a0532722f26e912c2d31c5e7bb90ea",
+      "bytes": 4468
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/recovery/mod.rs",
+      "sha256": "e1c72f0d5f5cb5dc41f82ec003152099c1067acde856a839a9360425f9cf0d5d",
+      "bytes": 485
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/recovery/source.rs",
+      "sha256": "401467efb1d57562fac2dee9387d8f15eca607db320f6da3fee0bd5122dfbb2f",
+      "bytes": 6649
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/recovery/tests.rs",
+      "sha256": "5b5dd618ccad7fe1a5ca7b0d9a7708190175c3ef074eae21558a96b4f746ccd7",
+      "bytes": 8019
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/recovery/types.rs",
+      "sha256": "9d820716c64f0189e1e24575509df5f7c9a9b763eb0c0c818b2f94f126069168",
+      "bytes": 1777
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/session.rs",
+      "sha256": "9f76a7fed9483bfb0b2e6b19a1eea2acd36c49459deea114a0776f8e957f8943",
+      "bytes": 15918
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/tests/allocation.rs",
+      "sha256": "acc5eaefc3443a6e5b9ff34409a639d8381e692d9510faca50e5254046da4f25",
+      "bytes": 2259
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/tests/markers.rs",
+      "sha256": "6ae20575cb3551eccdab04e18091bf1f1d88d9a12a8ae9bf53c7437fee0d1abc",
+      "bytes": 7486
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/tests.rs",
+      "sha256": "5b57171030ba0f74b168744f523ffcd45342494a8b550fcf36bd202fc6d32ebe",
+      "bytes": 13302
+    },
+    {
+      "path": "C:/github/qualiaDB/crates/qualia-core-db/src/storage_driver/ranges/types.rs",
+      "sha256": "464475c849bb0897c73e25b0d26a6d26fd0a703cb4b71aa838f2cae5205d7fef",
+      "bytes": 3764
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/allocation_counter.rs",
+      "sha256": "02ff0d30900ce09d295bed50efc8b66c1b21d07a81b90ecccd754a2bc5bd2b80",
+      "bytes": 3084
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/backing.rs",
+      "sha256": "126e3e75e85e7f9b1df9868fdd1aebdb2c4154ca43d32d8408334cc76f9de06a",
+      "bytes": 5940
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/identity.rs",
+      "sha256": "460526193e7e88a45f82728f8f14e73991766b19f164e14aab21eb9e1a0aec07",
+      "bytes": 2688
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/mod.rs",
+      "sha256": "5791c4675aefd06b4298069cf157d39f3c78d04976054b62b988dabcf0804c8b",
+      "bytes": 1401
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/platform.rs",
+      "sha256": "b088b1149dec0564f786da5cf55f5d245e1c7dc989b0694c73be3028fb20cf64",
+      "bytes": 9579
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/tests.rs",
+      "sha256": "bb12774e477d0e1a6de2856bfae6accf7493155689d7e55aaaaa235a3f68c721",
+      "bytes": 12949
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lease/unsupported_tests.rs",
+      "sha256": "d15936a2def397e2d377eb52c70f4744bf9ecf224192cd442c48d5ef0b2b67c3",
+      "bytes": 696
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/lib.rs",
+      "sha256": "30d9034fd1a96b5c87ffc730867efa1d763cd204fca83bbb99a794e712ade1b6",
+      "bytes": 143
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/snapshot/copy.rs",
+      "sha256": "230db24192ea35e06fe1622014858eb135d3dcada0ae2c4d3afe1d298974874e",
+      "bytes": 6865
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/snapshot/error.rs",
+      "sha256": "fbe1b2f7c06dbba01df1fa4e89393fa984ccce2a60e5670e9eb1534205c0515d",
+      "bytes": 1347
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/snapshot/limits.rs",
+      "sha256": "e3af6365980a5f9dfe05af1af4f6ce2442d42e05adc6ad2a76f99230940989cd",
+      "bytes": 2129
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/snapshot/mod.rs",
+      "sha256": "aed8b0d58c40ff3db7acc198f9ac6731015dfb419fb68898192e559a688e26ea",
+      "bytes": 1039
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/snapshot/owner.rs",
+      "sha256": "65cdb2d029fac5a4f4da27647ce2682adcc021a651d21bd0d24807f47cb81b19",
+      "bytes": 4101
+    },
+    {
+      "path": "C:/github/etalon/crates/etalon-model-io/src/snapshot/tests.rs",
+      "sha256": "b2e15150f9358507a4da17b0d27071333d0b57972949a947070c8acda64c3c36",
+      "bytes": 14896
+    }
+  ]
+}

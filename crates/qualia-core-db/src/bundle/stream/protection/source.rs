@@ -1,9 +1,9 @@
 //! Cold original-source admission; original bytes remain borrowed and unchanged.
-use super::{EntryRange, ProtectionError as Error, SourceObject, coverage};
+use super::{coverage, EntryRange, ProtectionError as Error, SourceObject};
 use crate::bundle::format::BUNDLE_HEADER_SIZE;
 use crate::bundle::stream::descriptor::MAX_ENTRIES;
 use crate::bundle::stream::index::{
-    AdmittedIndex, EntryScratch, ExtentLimit, admit_header, admit_index,
+    admit_header, admit_index, AdmittedIndex, EntryScratch, ExtentLimit,
 };
 use crate::bundle::{BundleReadLimits, BundleReader};
 use crate::crypto::network::object_stream::{MAX_METADATA, MAX_OBJECT_BYTES};

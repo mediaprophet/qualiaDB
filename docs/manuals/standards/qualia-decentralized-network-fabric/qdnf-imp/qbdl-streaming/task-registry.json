@@ -1,0 +1,947 @@
+{
+  "schema_version": 1,
+  "programme": "qbdl-streaming-qdnf",
+  "revision": 1,
+  "date": "2026-11-12",
+  "status": "in_progress",
+  "scope_note": "Paused at user-requested build handoff on 2026-11-13: core check and linked build pass; 345 focused tests pass. Full programme unfinished; physical-model and service qualification pending. No commits/pushes. See remaining-work-and-build-handoff.md.",
+  "tasks": [
+    {
+      "id": "QBS-00",
+      "title": "Baseline and prerequisite evidence",
+      "release": "R1",
+      "status": "complete",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [],
+      "proposed_write_scope": [
+        "docs: baseline evidence only"
+      ],
+      "deliverables": [
+        "Inventory actual source/API/features across QualiaDB, Etalon, Synth and Hypermedia; capture commits and dirty fingerprints.",
+        "Map parent FND/CRY/NET/RT/SEM/ECO gates to executable evidence; inspect existing function indexes before proposing replacements."
+      ],
+      "acceptance": [
+        "List real reusable exports, missing integration evidence and pre-existing failures with commands.",
+        "Preserve all unrelated changes; no module or dependency edits in this task."
+      ],
+      "reviewer_role": "integrator + domain reviewer",
+      "claim": {
+        "owner": "root",
+        "children": [
+          "qbs00_network",
+          "qbs00_crypto",
+          "qbs00_inventory"
+        ],
+        "write_scope": [
+          "evidence/baseline-revisions.json",
+          "evidence/baseline-network.md",
+          "evidence/baseline-security.md",
+          "evidence/baseline-consumers.md",
+          "evidence/baseline-acceptance.md"
+        ],
+        "reviewer": "root plus cross-domain agents",
+        "base_head": "afbe431195167fde0fadc233ed79fd2fe85f73f0",
+        "started_date": "2026-11-12"
+      },
+      "evidence": [
+        "evidence/baseline-revisions.json",
+        "evidence/baseline-network.md",
+        "evidence/baseline-security.md",
+        "evidence/baseline-consumers.md",
+        "evidence/baseline-acceptance.md"
+      ]
+    },
+    {
+      "id": "QBS-01",
+      "title": "Freeze interfaces, schemas and ownership",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-00"
+      ],
+      "proposed_write_scope": [
+        "docs: ADRs and schema drafts",
+        "shared Rust exports/registries through integrator only"
+      ],
+      "deliverables": [
+        "Freeze handle/error/limit interfaces, carrier variants, descriptor page schema and version negotiation.",
+        "Assign exact file claims; create CDDL/wire fixtures, registry proposals and security-class labels."
+      ],
+      "acceptance": [
+        "Independent owners agree byte domains, version boundaries and cancellation/lease semantics.",
+        "No unallocated opcode, MIME type or cryptographic profile is claimed registered."
+      ],
+      "reviewer_role": "protocol architect + crypto/policy owners",
+      "claim": {
+        "owner": "root",
+        "write_scope": [
+          "interfaces.md",
+          "evidence/qbs01-index-contract.md"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Provisional until all dependency acceptance gates pass; scoped contracts may be implemented independently."
+      },
+      "evidence": []
+    },
+    {
+      "id": "QBS-02",
+      "title": "Unify bounded QBDL preflight",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-01"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/reader_limits.rs",
+        "QualiaDB: bundle/streaming_loader.rs",
+        "QualiaDB: bundle/stream/index/ (proposed)"
+      ],
+      "deliverables": [
+        "Share index validation between full and progressive paths; support existing flags 0 and 1 only.",
+        "Reject malformed/missing required digests; separate remote u64 extent from resident limits; preserve accepted legacy CBOR bytes."
+      ],
+      "acceptance": [
+        "Duplicate keys, overlap, bad alignment, overflow, count mismatch, trailing input and allocation bombs fail.",
+        "Existing writer fixtures pass both paths; no digest-less arrival is marked verified; no unrelated table ceilings raised."
+      ],
+      "reviewer_role": "parser/security reviewer",
+      "claim": {
+        "owner": "qbs00_network",
+        "write_scope": [
+          "bundle/stream/index/",
+          "bundle/reader_limits.rs",
+          "bundle/reader.rs",
+          "bundle/reader_limits_tests.rs",
+          "bundle/streaming_loader.rs",
+          "bundle/streaming_loader/tests.rs"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Provisional until all dependency acceptance gates pass; scoped contracts may be implemented independently."
+      },
+      "evidence": [
+        "evidence/wave1-focused.log",
+        "evidence/qbs01-index-contract.md",
+        "evidence/core-wave1-bundle-tests.log"
+      ],
+      "implementation_state": "validated_subcontract",
+      "acceptance_note": "Shared index and independent25-vector corpus pass; full/progressive wrapper integration awaits whole-core execution."
+    },
+    {
+      "id": "QBS-03",
+      "title": "Freeze paired PQ envelope and primitive contracts",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-01"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: crypto/network/dual_sign.rs",
+        "QualiaDB: crypto/network/cose/ (proposed)"
+      ],
+      "deliverables": [
+        "Complete parent CRY-02.05 proof policy: required ML-DSA-65 and Ed25519 over one binding object.",
+        "Pin -49/-19 COSE profiles, signing context/AAD, exact key encodings, feature closure, dependency errata and primitive workspace limits."
+      ],
+      "acceptance": [
+        "Independent positive/negative vectors reject stripping, substitution, duplicate algorithm, context/epoch and encoding attacks.",
+        "No frozen-success flag until exact vectors and security review pass; primitives are reused, not rewritten."
+      ],
+      "reviewer_role": "independent crypto reviewer; external review at release",
+      "claim": {
+        "owner": "qbs00_crypto",
+        "write_scope": [
+          "crypto/network/cose/",
+          "evidence/qbs03-cose-contract.md",
+          "specialized_libs/cryptographic_library/signing_profile.rs",
+          "specialized_libs/cryptographic_library/key_management/managed_signing.rs",
+          "specialized_libs/cryptographic_library/key_management/access/managed_policy.rs",
+          "specialized_libs/cryptographic_library/library/paired_signing.rs",
+          "specialized_libs/cryptographic_library/key_management/manager.rs:borrowed key lookup"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Provisional until all dependency acceptance gates pass; scoped contracts may be implemented independently."
+      },
+      "evidence": [
+        "evidence/cose-independent.log",
+        "evidence/qbs03-cose-contract.md",
+        "evidence/wave1-library-reroute.log",
+        "evidence/crypto-library-reuse.md"
+      ],
+      "implementation_state": "validated_subcontract",
+      "acceptance_note": "Independent OpenSSL signatures and independently encoded CBOR pass. Wider crypto-library reuse audit requested by user is underway; no freeze/release flag changed."
+    },
+    {
+      "id": "QBS-04",
+      "title": "PQ controller authority and scoped key access",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-03"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: crypto/network/key_provider/",
+        "QualiaDB: net/peer/ identity adapters (exact files claimed after 00)",
+        "docs: did:qi PQ binding ADR"
+      ],
+      "deliverables": [
+        "Implement trusted paired-key pins and accepted PQ authority chains, rotation/revocation and scoped key handles.",
+        "Integrate fresh reviewed QSession hybrid key confirmation; link incomplete CRY/NET prerequisites rather than bypass them."
+      ],
+      "acceptance": [
+        "Classical-only root, untrusted self-signed key, wrong audience, expired grant and revoked epoch fail.",
+        "No private data before confirmation; canceled/late key completions cannot reuse handles; secrets not logged/copied casually."
+      ],
+      "reviewer_role": "independent authority + crypto reviewer",
+      "claim": {
+        "owner": "qbs00_crypto",
+        "write_scope": [
+          "crypto/network/authority/",
+          "evidence/qbs04-authority-contract.md",
+          "net/qdnf/session/handshake/endpoint/",
+          "net/qdnf/crypto/handshake/shares/leased.rs",
+          "net/qdnf/crypto/schedule/endpoint.rs",
+          "net/qdnf/authority/verified/received_finished.rs",
+          "evidence/qbs04-endpoint-contract.md"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Paired pin/receipt owner tests pass in real core; independent peer endpoint-v1 extension approved for implementation using existing central crypto custody and QSession owners. Authority chains and full protocol qualification remain open."
+      },
+      "evidence": [
+        "evidence/core-authority-cose-tests.log"
+      ]
+    },
+    {
+      "id": "QBS-05",
+      "title": "SHA-384 entry trees and proof codec",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-01"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/proof/ (proposed)",
+        "vectors: qbdl-stream-pq-1/trees"
+      ],
+      "deliverables": [
+        "Freeze domain-separated entry-relative leaves, empty/final rules and non-power-of-two split behavior.",
+        "Implement iterative caller-buffered verifier and bounded incremental outboard builder; no permission-crossing leaves."
+      ],
+      "acceptance": [
+        "Independent implementation agrees for empty, 1, 2, 3 and large leaf counts.",
+        "Every proof/context/index/length mutation, extra sibling and cross-entry/generation splice fails; measured hot allocations zero."
+      ],
+      "reviewer_role": "independent proof implementer/reviewer",
+      "claim": {
+        "owner": "root",
+        "write_scope": [
+          "bundle/stream/proof/",
+          "evidence/qbs05-proof-contract.md",
+          "tools/qbdl-stream-conformance/"
+        ],
+        "reviewer": "qbs00_crypto (pending)",
+        "started_date": "2026-11-12"
+      },
+      "evidence": [
+        "evidence/wave1-focused.log",
+        "evidence/qbs05-proof-contract.md"
+      ],
+      "implementation_state": "validated_subcontract",
+      "acceptance_note": "Independent Node trees, mutations and zero-allocation checks pass, including reviewed sink poisoning. Broader QBS01 contract closure/integration pending."
+    },
+    {
+      "id": "QBS-06",
+      "title": "Publisher and detached paged QASD",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-02",
+        "QBS-03",
+        "QBS-05"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/descriptor/ (proposed)",
+        "QualiaDB: bundle/stream/publish/ (proposed)"
+      ],
+      "deliverables": [
+        "Build immutable body/pages, exact header/index/entry commitments and separate renewable publication proofs.",
+        "Compile public projections; validate all metadata disclosure and preserve source bundle bytes."
+      ],
+      "acceptance": [
+        "Repeat publication is deterministic for pinned inputs/context; signature randomness is reported separately.",
+        "Large inventories stay under cumulative budgets; changed inner bytes invalidate commitments; no circular hash dependency."
+      ],
+      "reviewer_role": "format + crypto reviewer",
+      "claim": {
+        "owner": "qbs00_network",
+        "write_scope": [
+          "bundle/stream/descriptor/",
+          "bundle/stream/publish/",
+          "evidence/qbs06-descriptor-contract.md"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Approved plaintext candidate schema; crypto signing awaits central library integration; no disclosure authority."
+      },
+      "evidence": [
+        "evidence/qbs06-descriptor-contract.md"
+      ]
+    },
+    {
+      "id": "QBS-07",
+      "title": "Policy and semantic dependency admission",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-04",
+        "QBS-06"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/policy/ (proposed)",
+        "QualiaDB: bundle/stream/selection/ (proposed)"
+      ],
+      "deliverables": [
+        "Compile pinned semantic closure, Share grants and compatible dependency DAG; bind permission epochs and purposes.",
+        "Separate perceptual/quantized alternatives from physical state variants; classify metadata and payload disclosure."
+      ],
+      "acceptance": [
+        "Cycles, incomplete closures, stale policy, unsigned proof_value and forged parity tokens cannot authorize use.",
+        "Mixed raw bundles never reach public endpoints; no live ontology dereference; finite-cost fulfilment cannot override rights."
+      ],
+      "reviewer_role": "semantic governance + privacy reviewer",
+      "claim": {
+        "owner": "qbs00_crypto",
+        "write_scope": [
+          "evidence/qbs07-policy-contract.md",
+          "semantic_instruments/resolve/bounded_closure/",
+          "bundle/stream/policy/",
+          "net/qdnf/authority/owner/retirement.rs"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Structural closure passes focused tests; paired issuer and separate publisher signatures plus revocable local whole-source adoption are implemented and await latest core build. Full remote Share/Sentinel/consent composition remains required."
+      },
+      "evidence": []
+    },
+    {
+      "id": "QBS-08",
+      "title": "Bounded runtime slots and coupled reservations",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-01"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: net/peer/runtime/ streaming adapter (new focused files)",
+        "QualiaDB: bundle/stream/runtime/ (proposed)"
+      ],
+      "deliverables": [
+        "Implement cold plan and leased hot transfer table; aggregate network/proof/storage/consumer charges.",
+        "Add credits, fair scheduling, deadlines, generation-fenced cancellation and idempotent completion."
+      ],
+      "acceptance": [
+        "Success/rejection/cancel/timeout hot paths allocate zero with positive-control tests.",
+        "Capacity failure precedes request; late completion cannot revive a canceled slot; control reserve cannot be consumed by bulk data."
+      ],
+      "reviewer_role": "runtime concurrency reviewer",
+      "claim": {
+        "owner": "qbs00_network",
+        "write_scope": [
+          "bundle/stream/runtime/",
+          "evidence/qbs08-runtime-contract.md"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Sub-contract implementation only; dependency acceptance remains pending.",
+        "integrator_write_scope": [
+          "net/peer/runtime/scheduler.rs:contains_operation and its focused regression",
+          "bundle/stream/mod.rs",
+          "bundle/stream/runtime/storage_stage.rs",
+          "bundle/stream/runtime/types.rs:stage bounds",
+          "bundle/stream/runtime/transfer.rs:stage bounds",
+          "bundle/stream/runtime/tests/storage_stage.rs"
+        ]
+      },
+      "evidence": [
+        "evidence/runtime-focused.log",
+        "evidence/qbs08-runtime-contract.md"
+      ],
+      "implementation_state": "validated_subcontract",
+      "acceptance_note": "40 focused runtime/parent/allocation checks pass. Canonical-host concurrent integration and QBS01 closure remain pending; scoped adapter is not a full host runtime."
+    },
+    {
+      "id": "QBS-09",
+      "title": "Native content-swarm provider and client",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-04",
+        "QBS-06",
+        "QBS-07",
+        "QBS-08",
+        "QBS-11"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: net/peer/replication/qbdl/ (proposed)",
+        "QualiaDB: net/qdnf/session integration via owner"
+      ],
+      "deliverables": [
+        "Bind Describe/Open/RequestLeaves/LeafData/Credit/Cancel/Resume to existing service/session ownership.",
+        "Build native provider/client vertical slice and negotiated reliable-carrier behavior."
+      ],
+      "acceptance": [
+        "Transfer useful partial object over real native bearer with HTTP/DNS/IP sockets and libp2p disabled.",
+        "Loss/reorder/path change/revocation cannot corrupt state or duplicate commit; no application retransmission over reliable carrier."
+      ],
+      "reviewer_role": "independent networking reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-10",
+      "title": "Indexed object encryption and recipient wraps",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-03",
+        "QBS-04",
+        "QBS-05",
+        "QBS-06"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: crypto/network/object_stream/ (proposed)",
+        "QualiaDB: bundle/stream/protection/ (proposed)"
+      ],
+      "deliverables": [
+        "Specify acyclic context/key/nonce/AAD/cipher-root construction and exact usage limits; encrypt entries independently.",
+        "Add confidential metadata, scoped recipient wrapping, zeroizing private output and prospective key rotation."
+      ],
+      "acceptance": [
+        "Wrong tag/proof/context/epoch, counter reuse, crash/retry and key-rotation vectors fail safely.",
+        "No nonce width ambiguity, plaintext-before-authentication, leaked private digests or claim that removing a wrap revokes a learned key."
+      ],
+      "reviewer_role": "independent crypto composition reviewer",
+      "claim": null,
+      "evidence": [],
+      "implementation_note": "Phase A approved strict protected-object codecs and managed central-library integration underway. No protected publisher/carrier completion claim. Contract: evidence/qbs10-protection-contract.md."
+    },
+    {
+      "id": "QBS-11",
+      "title": "Verified sparse storage and restart",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-05",
+        "QBS-08"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/storage/ (proposed)",
+        "QualiaDB: existing storage owner adapters via claimed files"
+      ],
+      "deliverables": [
+        "Maintain separate verified bitmap/checkpoint and sparse data; enforce flush/order/generation protocol.",
+        "Revalidate authority and stored bytes after lost exclusion; promote only admitted closures; preserve holds/pins."
+      ],
+      "acceptance": [
+        "Crash injection between every data/bitmap/commit step cannot turn holes or torn writes into verified bytes.",
+        "External mutation, disk full, cancellation and eviction release leases exactly once; no unsupported atomicity claim."
+      ],
+      "reviewer_role": "independent durability reviewer",
+      "claim": {
+        "owner": "qbs00_network",
+        "write_scope": [
+          "evidence/qbs11-storage-contract.md",
+          "bundle/stream/storage/",
+          "storage_driver/ranges/",
+          "sensing/local_custody/quota/staging.rs"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Pure bounded identity/bitmap/checkpoint/proof view passes focused tests. Canonical quota-backed native range staging is implemented; marker-guarded automatic cleanup and actual allocation measurements are being finished before core build. Verified persistence ordering/restart/promotion remain open."
+      },
+      "evidence": []
+    },
+    {
+      "id": "QBS-12",
+      "title": "Format-specific partial admission",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-02",
+        "QBS-05",
+        "QBS-07"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/formats/ (proposed)",
+        "existing codecs: narrow adapters only through owner"
+      ],
+      "deliverables": [
+        "Add Q42/10D/EMF/M64 partial admission adapters without duplicating codecs; expose precise verification state.",
+        "Include BLAKE3 trailers and actual 10D 24-byte descriptors; enforce semantic chunk/section dependencies."
+      ],
+      "acceptance": [
+        "Authenticated leaf is never mislabeled whole-container verification; corrupted last digest byte/trailer fails.",
+        "At least one complete scientific brick and one geometry-section closure can be used without downloading the whole entry."
+      ],
+      "reviewer_role": "codec owner + independent validation reviewer",
+      "claim": null,
+      "evidence": [],
+      "implementation_note": "Selective authenticated range and full-seal EMF v2/M64-E64 v1-v2 plus optional LRM3/10D descriptor-section integrity authored and routed. Full typed closure, extended v3, P64/HMC partial paths and integrated validation remain open."
+    },
+    {
+      "id": "QBS-13",
+      "title": "Etalon complete-model and resource bridge",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-08",
+        "QBS-11",
+        "QBS-12"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/consumer/ (proposed)",
+        "Etalon: resources/model-io/inference-contract adapters under exact claims"
+      ],
+      "deliverables": [
+        "Reserve staging, storage and VRAM; use existing excluded-writer Snapshot/ModelLease and governed commit.",
+        "R1 P64 path obtains a complete verified entry; check actual alignment and ETL metadata through canonical preparation."
+      ],
+      "acceptance": [
+        "No unverified sparse tensor/alternate view reaches GPU; device loss and canceled commit preserve ownership.",
+        "Misaligned outer entries use bounded staging/file extraction, not mandatory whole-model RAM copies; CPU and claimed GPU targets tested."
+      ],
+      "reviewer_role": "Etalon owner + lifetime reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-14",
+      "title": "HTTP/LIG byte-exact provider and client",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-09",
+        "QBS-10",
+        "QBS-12"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/http/ (proposed)",
+        "LIG/fetch owner integration by exact claim"
+      ],
+      "deliverables": [
+        "Expose descriptor/pages/proofs/immutable representations; strict single-range HTTP client and bounded full-entry fallback.",
+        "Integrate CSCP redirects, validators, privacy-partitioned caching and identical proof/policy handling."
+      ],
+      "acceptance": [
+        "206 bounds/encoding/length exact; huge 200 aborted; 416, multipart, changed validators and redirects handled without authority bypass.",
+        "Native/HTTP fixtures agree on security outcomes; HTTP/1.1 required, HTTP/2/3 separately reported."
+      ],
+      "reviewer_role": "HTTP + privacy reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-15",
+      "title": "Browser worker OPFS and WASM admission",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-13",
+        "QBS-14",
+        "QBS-26"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/browser/ (proposed)",
+        "QualiaPortal worker entry points via owner"
+      ],
+      "deliverables": [
+        "Implement dedicated-worker hydration/storage, CORS-aware exact-byte fetch, transferable fallback and WebGPU limit checks.",
+        "Document forbidden headers and opaque redirects; bound application queues and probe capabilities before bulk work."
+      ],
+      "acceptance": [
+        "Named browser tests cover OPFS denial/quota, missing SAB/COI, CORS denial, tab closure and device loss.",
+        "Rust hot allocation claims measured separately from browser internals; no hidden full-file WASM allocation."
+      ],
+      "reviewer_role": "browser + resource reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-16",
+      "title": "Commons exemptions and finite single-owner accounting",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-07",
+        "QBS-08",
+        "QBS-09"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: net/qdnf/economics/ streaming adapter (new focused files)",
+        "QualiaDB: bundle/stream/receipts/ (proposed)"
+      ],
+      "deliverables": [
+        "Compile existing exemption/sponsor/corporate rules and billing basis into admitted handles.",
+        "Add durable idempotent accounting across more than the existing 16 live operation slots without erasing replay protection; separate receipt types."
+      ],
+      "acceptance": [
+        "Personal/protected/humanitarian paths do not wait on recovery-fee availability.",
+        "Split/coalesced/retried transfers charge equally, cap invariant holds, revoked consent refuses even after payment; no packet ACK settlement."
+      ],
+      "reviewer_role": "economics invariant + governance reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-17",
+      "title": "Independent fixtures and peer harness",
+      "release": "R1",
+      "status": "in_progress",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-01"
+      ],
+      "proposed_write_scope": [
+        "tests: qbdl-stream independent peer and fixtures",
+        "vectors: qbdl-stream-pq-1 independent reference encoder"
+      ],
+      "deliverables": [
+        "Build independent descriptor/proof encoder/verifier and hostile provider, fault injection and carrier parity harness.",
+        "Use separate parsing/proof implementation, not the same production library wrapped in another binary."
+      ],
+      "acceptance": [
+        "Fixtures include positive controls and every boundary in qualification.md; provenance and source digests recorded.",
+        "Harness distinguishes unsupported target from pass and can run without changing the users live network."
+      ],
+      "reviewer_role": "independent verification owner",
+      "claim": {
+        "owner": "qbs00_inventory",
+        "write_scope": [
+          "tools/qbdl-stream-conformance/fixtures/",
+          "tools/qbdl-stream-conformance/src/descriptor_fixtures.rs"
+        ],
+        "started_date": "2026-11-12",
+        "integration": "Provisional until all dependency acceptance gates pass; scoped contracts may be implemented independently."
+      },
+      "evidence": []
+    },
+    {
+      "id": "QBS-18",
+      "title": "Immutable generations, subscriptions and sensing",
+      "release": "R2",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-25"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/generations/ (proposed)",
+        "QualiaDB: qualia-etalon-sensing-bridge adapter via owner"
+      ],
+      "deliverables": [
+        "Bind pubsub/QSync announcements to immutable generation/predecessor/policy/calibration state.",
+        "Implement explicit retention gaps, discontinuities and clock/consent invalidation; no unfinished v1 append stream."
+      ],
+      "acceptance": [
+        "Out-of-order/duplicate/forked announcements and revoked sensing consent cannot create false continuity.",
+        "No append-consistency claim for arbitrary rewritten bundle trees; independent sensing fixtures retain units/calibration."
+      ],
+      "reviewer_role": "distributed-state + sensing reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-19",
+      "title": "Distributed finite-recovery escrow",
+      "release": "R2",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-16",
+        "QBS-25"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: net/qdnf/economics/escrow/ (proposed)",
+        "durable obligation owner through claimed interface"
+      ],
+      "deliverables": [
+        "Specify grant conservation, persistent deduplication, fencing/return and tail coordination before implementation.",
+        "Model partitions/crashes/clocks; distinguish allocated rights from subholds to avoid double counting."
+      ],
+      "acceptance": [
+        "Machine-checked or exhaustive bounded model maintains cap under duplicate/reordered/crashed operations.",
+        "Expiry alone never reissues spendable partitioned rights; free/exempt paths remain available; financial release needs independent domain review."
+      ],
+      "reviewer_role": "independent distributed-economics reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-20",
+      "title": "Solver-result Commons and QPU escalation adapter",
+      "release": "R2",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-16",
+        "QBS-25"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: existing qubo/qpu pipeline adapters via owner",
+        "QualiaDB: bundle/stream/solver_commons/ (proposed)"
+      ],
+      "deliverables": [
+        "Local solve, exact canonical problem key, scoped history lookup and local witness verification precede QPU dispatch.",
+        "Classify exact hit/family candidate/in-flight/insufficient quality/scoped miss/unavailable; retain private mappings."
+      ],
+      "acceptance": [
+        "Poisoned witnesses, approximate-normalization aliases, topology leakage and unapproved provider spend are rejected.",
+        "Separate feasible/heuristic/bounded/certified/sample results; QPU provenance alone never certifies optimum."
+      ],
+      "reviewer_role": "optimization/math + privacy reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-21",
+      "title": "Selective P64 and operator-package execution",
+      "release": "R2",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-13",
+        "QBS-25"
+      ],
+      "proposed_write_scope": [
+        "Etalon: model/operator_package, model-io and inference adapters by exact claim",
+        "QualiaDB: bundle/stream/consumer/model_ranges/ (proposed)"
+      ],
+      "deliverables": [
+        "Use existing validated operator/tensor range owners, metadata dependencies, reservations and governed commit.",
+        "Qualify MoE/PLE selection, alternate precision, key epochs and KV checkpoint behavior under streamed storage."
+      ],
+      "acceptance": [
+        "Only required verified ranges enter execution; missing dependencies/stale leases/alternate-length uncertainty fail.",
+        "Measured cold start and residency improve over complete-entry R1 without changing admitted mathematical fidelity."
+      ],
+      "reviewer_role": "Etalon inference + numerical reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-22",
+      "title": "Optional QBDL alignment extension",
+      "release": "R3",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-13",
+        "QBS-25"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle format/writer/readers via one owner",
+        "standards: versioned alignment ADR and fixtures"
+      ],
+      "deliverables": [
+        "Benchmark bounded staging versus new 16 KiB or extended alignment; select compatible version/critical-feature mechanism.",
+        "If justified, update every reader/writer/probe and inner alignment admission together; otherwise record a no-extension decision."
+      ],
+      "acceptance": [
+        "Existing v1 bytes retain interpretation; old readers reject unsupported new profile predictably.",
+        "No unreviewed use of reserved byte 40 or auto-promotion based solely on filename/kind."
+      ],
+      "reviewer_role": "format compatibility reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-23",
+      "title": "Adversarial and platform qualification",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-02",
+        "QBS-03",
+        "QBS-04",
+        "QBS-05",
+        "QBS-06",
+        "QBS-07",
+        "QBS-08",
+        "QBS-09",
+        "QBS-10",
+        "QBS-11",
+        "QBS-12",
+        "QBS-13",
+        "QBS-14",
+        "QBS-15",
+        "QBS-16",
+        "QBS-17",
+        "QBS-26"
+      ],
+      "proposed_write_scope": [
+        "tests/evidence only plus narrowly assigned fix followups"
+      ],
+      "deliverables": [
+        "Run all R1 gates, independent peer/carrier parity and resource/performance campaigns on pinned source states.",
+        "Commission independent cryptographic composition review; route defects back to owner and reopen dependencies."
+      ],
+      "acceptance": [
+        "All mandatory qualification gates have evidence; no fixture-only native path, false PQ claim or unexecuted test marked passed.",
+        "Security, privacy, memory and accounting failures block release; platform exclusions are explicit."
+      ],
+      "reviewer_role": "independent qualification owner + external crypto reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-24",
+      "title": "Optional HLS/DASH presentation adapters",
+      "release": "R3",
+      "status": "pending",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-18",
+        "QBS-25"
+      ],
+      "proposed_write_scope": [
+        "LIG/loopback audiovisual presentation adapter via owner",
+        "standards: media projection profile"
+      ],
+      "deliverables": [
+        "Project authorized audiovisual entries into established media representations/playlists with pinned provenance.",
+        "Keep native QDNF object identity/policy distinct from media player presentation and codec support."
+      ],
+      "acceptance": [
+        "Stock player interoperability tested only for supported media; no claim players decode Q42/P64/EMF.",
+        "Transcoding/projection permissions, live gaps and cache boundaries remain enforced."
+      ],
+      "reviewer_role": "media interoperability + policy reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-25",
+      "title": "R1 integration and release record",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-23"
+      ],
+      "proposed_write_scope": [
+        "docs: release record, supported feature matrix, migration and examples",
+        "shared integration only by integrator"
+      ],
+      "deliverables": [
+        "Publish reproducible build/feature/test instructions and actual support matrix; reconcile parent programme evidence.",
+        "Update format/protocol docs from actual behavior and prepare reviewable release artifacts."
+      ],
+      "acceptance": [
+        "All R1 packages accepted with independent review; examples use real native, HTTP and WSS paths.",
+        "No automatic deployment/publication/charges; no pending required security gate hidden as future enhancement."
+      ],
+      "reviewer_role": "programme integrator + release reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-26",
+      "title": "WebSocket reliable delivery binding",
+      "release": "R1",
+      "status": "pending",
+      "capability_tier": "senior",
+      "planning_token_cap": 40000,
+      "depends_on": [
+        "QBS-04",
+        "QBS-08",
+        "QBS-09",
+        "QBS-10"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/websocket/ (proposed)",
+        "browser WSS adapter via exact owner claim"
+      ],
+      "deliverables": [
+        "Implement binary negotiated records over WSS, bounded authentication/control, credits, priority and object-bound reconnect.",
+        "Use reviewed reliable-carrier behavior and PQ application protection; avoid duplicate transport recovery."
+      ],
+      "acceptance": [
+        "Origin/credential abuse, compression, fragmentation, huge messages, queue floods, replay and reconnect tests pass.",
+        "No URL tokens; browser API limitations explicit; WSS/TLS alone never labeled PQ; parity with native and HTTP."
+      ],
+      "reviewer_role": "WebSocket security + runtime reviewer",
+      "claim": null,
+      "evidence": []
+    },
+    {
+      "id": "QBS-27",
+      "title": "WebRTC data-channel binding",
+      "release": "R2",
+      "status": "pending",
+      "capability_tier": "expert",
+      "planning_token_cap": 60000,
+      "depends_on": [
+        "QBS-04",
+        "QBS-09",
+        "QBS-10",
+        "QBS-15",
+        "QBS-25",
+        "QBS-26"
+      ],
+      "proposed_write_scope": [
+        "QualiaDB: bundle/stream/webrtc/ (proposed)",
+        "QDNF signaling/CSCP carrier adapters via exact claim"
+      ],
+      "deliverables": [
+        "Implement reliable ordered binary mode with authenticated signaling and reviewed PQ session/object boundary.",
+        "Admit ICE candidate disclosure and STUN/TURN selection before gathering; support bounded fragmentation and credit."
+      ],
+      "acceptance": [
+        "Direct/relay, maxMessageSize, buffering, glare, restart, replay, channel reset and consent-loss tests pass.",
+        "No privacy-downgrade fallback; DTLS is not claimed PQ; no double recovery over reliable SCTP; independent browser peers interoperate."
+      ],
+      "reviewer_role": "WebRTC networking + privacy + crypto reviewer",
+      "claim": null,
+      "evidence": []
+    }
+  ],
+  "handoff": "remaining-work-and-build-handoff.md"
+}

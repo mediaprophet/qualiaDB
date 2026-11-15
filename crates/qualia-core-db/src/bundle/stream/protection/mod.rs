@@ -14,11 +14,19 @@ mod ids;
 mod metadata;
 mod publisher;
 mod seal;
+mod wrap;
 pub(crate) use geometry::PreparedGeometry;
 pub(crate) use ids::Mapping;
 pub(crate) use metadata::PrivateReferences;
 pub(crate) use publisher::{
     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError,
 };
+pub(crate) use wrap::{
+    authorize_and_wrap, authorize_and_wrap_remote, RecipientAuthorityProof, WrapError,
+};
 #[cfg(test)]
 mod publisher_tests;
+#[cfg(test)]
+mod wrap_tests;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod wrap_remote_tests;

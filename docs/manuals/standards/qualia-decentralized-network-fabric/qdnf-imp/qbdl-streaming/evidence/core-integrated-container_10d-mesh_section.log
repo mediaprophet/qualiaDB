@@ -1,0 +1,21 @@
+
+running 16 tests
+test container_10d::mesh_section::tests::determinism_two_encodes_byte_identical ... ok
+test container_10d::mesh_section::tests::empty_mesh_round_trips ... ok
+test container_10d::mesh_section::tests::encoded_is_smaller_than_raw_f32_geometry ... ok
+test container_10d::mesh_section::tests::flipped_payload_bit_in_mesh_section_is_caught_by_per_section_crc ... ok
+test container_10d::mesh_section::tests::mesh_section_round_trips_through_10d_container_with_crc ... ok
+test container_10d::mesh_section::tests::mini_header_is_pod_with_exact_size ... ok
+test container_10d::mesh_section::tests::rejects_bad_payload_and_truncation ... ok
+test container_10d::mesh_section::tests::rejects_non_zero_reserved ... ok
+test container_10d::mesh_section::tests::rejects_unknown_flags ... ok
+test container_10d::mesh_section::tests::rejects_vertex_count_too_large ... ok
+test container_10d::mesh_section::tests::round_trips_within_quantization_tolerance_and_indices_exact ... ok
+test container_10d::mesh_section::view::tests::bad_index_refuses_before_decoding_or_encoding_output ... ok
+test container_10d::mesh_section::view::tests::borrowed_geometry_is_exact_bounded_and_zero_heap ... ok
+test container_10d::mesh_section::view::tests::encoder_rejects_nonfinite_and_preserves_extreme_finite_endpoints ... ok
+test container_10d::mesh_section::view::tests::u32_indices_and_exact_extent_are_checked ... ok
+test container_10d::mesh_section::tests::u32_indices_when_over_65k_vertices ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 10423 filtered out; finished in 0.13s
+

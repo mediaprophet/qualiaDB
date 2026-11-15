@@ -186,3 +186,128 @@ fn legacy_ceiling_compatibility_does_not_drop_scope_or_revocation() {
         Err(QdnfError::Revoked)
     );
 }
+
+#[test]
+fn replaced_same_mutex_equal_records_refuse_then_restored_original_works() {
+    use std::sync::Mutex;
+    let binding =
+        binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a").unwrap();
+    let mut original = AuthorityOwner::new();
+    let (_c, _k, handle) = original
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    let permit = original.issue_permit(handle, binding, 20, 256).unwrap();
+    let owner = Mutex::new(original);
+    let mut fake = AuthorityOwner::new();
+    let (_c, _k, fake_handle) = fake
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    assert_eq!(fake_handle.slot, handle.slot);
+    assert_eq!(fake_handle.generation, handle.generation);
+    assert_eq!(fake_handle.principal, handle.principal);
+    assert_ne!(fake_handle.incarnation, handle.incarnation);
+    let old = std::mem::replace(&mut *owner.lock().unwrap(), fake);
+    {
+        let g = owner.lock().unwrap();
+        assert_eq!(
+            g.issue_permit(handle, binding, 20, 256),
+            Err(QdnfError::StaleGeneration)
+        );
+        assert_eq!(g.validate_handle(handle), Err(QdnfError::StaleGeneration));
+        assert_eq!(g.current_grant(handle), Err(QdnfError::StaleGeneration));
+    }
+    assert_eq!(
+        owner.lock().unwrap().revoke(handle),
+        Err(QdnfError::StaleGeneration)
+    );
+    let _replaced = std::mem::replace(&mut *owner.lock().unwrap(), old);
+    owner.lock().unwrap().validate_handle(handle).unwrap();
+    owner
+        .lock()
+        .unwrap()
+        .issue_permit(handle, binding, 20, 256)
+        .unwrap();
+    owner.lock().unwrap().current_grant(handle).unwrap();
+    assert!(handle.matches_permit(&permit).is_ok());
+}
+
+#[test]
+fn foreign_equal_generation_permit_is_rejected() {
+    let binding =
+        binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a").unwrap();
+    let mut a = AuthorityOwner::new();
+    let mut b = AuthorityOwner::new();
+    let (_, _, ha) = a
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    let (_, _, hb) = b
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    let pa = a.issue_permit(ha, binding, 20, 256).unwrap();
+    let pb = b.issue_permit(hb, binding, 20, 256).unwrap();
+    assert_eq!(ha.slot, hb.slot);
+    assert_eq!(ha.generation, hb.generation);
+    assert_eq!(ha.principal, hb.principal);
+    assert_eq!(ha.matches_permit(&pb), Err(QdnfError::StaleGeneration));
+    assert_eq!(pb.matches_handle(&ha), Err(QdnfError::StaleGeneration));
+    assert_eq!(hb.matches_permit(&pa), Err(QdnfError::StaleGeneration));
+    assert_eq!(pa.matches_handle(&hb), Err(QdnfError::StaleGeneration));
+    assert!(ha.matches_permit(&pa).is_ok());
+    assert!(hb.matches_permit(&pb).is_ok());
+}
+
+#[test]
+fn moved_original_owner_preserves_handle_and_permit() {
+    let binding =
+        binding_for_controllers(b"did:q42:a", b"did:q42:b", b"q42:QSync/1", b"op-a").unwrap();
+    let mut owner = AuthorityOwner::new();
+    let (_, _, handle) = owner
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    let permit = owner.issue_permit(handle, binding, 20, 256).unwrap();
+    let moved = owner;
+    moved.validate_handle(handle).unwrap();
+    assert!(moved.issue_permit(handle, binding, 20, 256).is_ok());
+    assert!(handle.matches_permit(&permit).is_ok());
+    assert!(permit.matches_handle(&handle).is_ok());
+    assert!(moved.current_grant(handle).is_ok());
+}
+
+#[test]
+fn failed_admission_does_not_assign_identity() {
+    let binding = binding_for_controllers(b"principal", b"recipient", b"purpose", b"edit").unwrap();
+    let mut owner = AuthorityOwner::new();
+    assert!(!owner.existing_incarnation().assigned());
+    let mut zero_scope = binding;
+    zero_scope.scope = StrongDigest::ZERO;
+    assert_eq!(
+        owner.install_grant(zero_scope, 10, 100, ContactState::Active),
+        Err(QdnfError::Unauthorized)
+    );
+    assert_eq!(
+        owner.install_grant_with_ceiling(binding, 10, 100, ContactState::Active, 0),
+        Err(QdnfError::Capacity)
+    );
+    assert_eq!(
+        owner.install_grant(binding, 10, 10, ContactState::Active),
+        Err(QdnfError::Expired)
+    );
+    let mut self_contact = binding;
+    self_contact.recipient = self_contact.principal;
+    assert_eq!(
+        owner.install_grant(self_contact, 10, 100, ContactState::Active),
+        Err(QdnfError::Conflict)
+    );
+    assert!(!owner.existing_incarnation().assigned());
+    let (_, _, handle) = owner
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    let first = owner.existing_incarnation();
+    assert!(first.assigned());
+    assert_eq!(handle.incarnation, first);
+    let (_, _, later) = owner
+        .install_grant(binding, 10, 100, ContactState::Active)
+        .unwrap();
+    assert_eq!(owner.existing_incarnation(), first);
+    assert_eq!(later.incarnation, first);
+}

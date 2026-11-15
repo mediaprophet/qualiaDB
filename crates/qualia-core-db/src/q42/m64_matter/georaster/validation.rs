@@ -1,20 +1,19 @@
 use super::super::{M64ChunkDirectoryEntry, M64Header, M64_MAGIC, M64_MODE_STRATA};
 use super::*;
 
-/// Runs only after generic metadata/extent/record CRC admission. Exact profile
-/// lengths bound these additional policy checks to the admitted record count.
-pub(crate) fn validate_container(
-    bytes: &[u8],
+pub(super) fn shape_and_header_summary(
     header: &M64Header,
     meta: &M64GeoRasterMetadata,
-) -> Result<(), M64GeoRasterError> {
+    logical_length: u64,
+) -> Result<M64GeoRasterShape, M64GeoRasterError> {
     use M64GeoRasterError as E;
     let shape = meta.shape()?;
+    let file_bytes = u64::try_from(shape.file_bytes).map_err(|_| E::Overflow)?;
     if header.magic != M64_MAGIC
-        || header.header_size != 192
-        || header.chunk_table_offset != 192
+        || header.header_size != M64_GEORASTER_HEADER_BYTES as u64
+        || header.chunk_table_offset != M64_GEORASTER_HEADER_BYTES as u64
         || header.chunk_count != shape.chunks as u64
-        || bytes.len() != shape.file_bytes
+        || logical_length != file_bytes
         || header.spatial_origin[0].to_bits() != (meta.origin_lat_deg as f32).to_bits()
         || header.spatial_origin[1].to_bits() != (meta.origin_lon_deg as f32).to_bits()
         || header.elevation_datum[0].to_bits()
@@ -23,31 +22,61 @@ pub(crate) fn validate_container(
     {
         return Err(E::HeaderSummary);
     }
-    let payload_start = 192 + shape.chunks * 64;
+    Ok(shape)
+}
+
+pub(super) fn directory_row_profile(
+    meta: &M64GeoRasterMetadata,
+    shape: &M64GeoRasterShape,
+    chunk: usize,
+    payload_start: usize,
+    row: &M64ChunkDirectoryEntry,
+) -> Result<(), M64GeoRasterError> {
+    if row.srid_geodetic_code != meta.srid
+        || row.chunk_record_mode != M64_MODE_STRATA
+        || row.compression_flags != 0
+        || row.record_count != 4096
+        || row.byte_length != 4096 * 64
+        || row.bao_root_hash_prefix != [0; 12]
+        || row.byte_offset != (payload_start + chunk * 4096 * 64) as u64
+        || row.spatial_hilbert_index
+            != georaster_chunk_hilbert(
+                (chunk % shape.chunks_x) as u32,
+                (chunk / shape.chunks_x) as u32,
+            )
+    {
+        return Err(M64GeoRasterError::Directory);
+    }
+    Ok(())
+}
+
+pub(super) fn non_raster_fields_present(record: &[u8]) -> bool {
+    record
+        .get(4..60)
+        .map_or(true, |fields| fields.iter().any(|&v| v != 0))
+}
+
+/// Runs only after generic metadata/extent/record CRC admission. Exact profile
+/// lengths bound these additional policy checks to the admitted record count.
+pub(crate) fn validate_container(
+    bytes: &[u8],
+    header: &M64Header,
+    meta: &M64GeoRasterMetadata,
+) -> Result<(), M64GeoRasterError> {
+    use M64GeoRasterError as E;
+    let logical_length = u64::try_from(bytes.len()).map_err(|_| E::Overflow)?;
+    let shape = shape_and_header_summary(header, meta, logical_length)?;
+    let payload_start = M64_GEORASTER_HEADER_BYTES + shape.chunks * 64;
     for chunk in 0..shape.chunks {
-        let directory_offset = 192 + chunk * 64;
+        let directory_offset = M64_GEORASTER_HEADER_BYTES + chunk * 64;
         let entry: M64ChunkDirectoryEntry =
             bytemuck::pod_read_unaligned(&bytes[directory_offset..directory_offset + 64]);
-        if entry.srid_geodetic_code != meta.srid
-            || entry.chunk_record_mode != M64_MODE_STRATA
-            || entry.compression_flags != 0
-            || entry.record_count != 4096
-            || entry.byte_length != 4096 * 64
-            || entry.bao_root_hash_prefix != [0; 12]
-            || entry.byte_offset != (payload_start + chunk * 4096 * 64) as u64
-            || entry.spatial_hilbert_index
-                != georaster_chunk_hilbert(
-                    (chunk % shape.chunks_x) as u32,
-                    (chunk / shape.chunks_x) as u32,
-                )
-        {
-            return Err(E::Directory);
-        }
+        directory_row_profile(meta, &shape, chunk, payload_start, &entry)?;
         let start = entry.byte_offset as usize;
         for record in 0..4096 {
             let offset = start + record * 64;
             // Raster profile contains only elevations, not invented soil/physics.
-            if bytes[offset + 4..offset + 60].iter().any(|&v| v != 0) {
+            if non_raster_fields_present(&bytes[offset..offset + 64]) {
                 return Err(E::NonRasterFields);
             }
             let x = (chunk % shape.chunks_x) * 64 + record % 64;

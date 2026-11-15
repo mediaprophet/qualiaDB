@@ -18,12 +18,6 @@ use crate::audio::acoustic_plane::{
 use crate::audio::acoustic_sab::{
     init_acoustic_sab, push_token_to_sab, write_uniform_to_sab_with_mirror, ACOUSTIC_SAB_BYTES,
 };
-use crate::audio::audio_sidecar_link::enrich_preview_from_sidecar;
-use crate::audio::audio_spectral_sheet::parse_sidecar_header;
-use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
-use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
-use crate::audio::cqt_bake::bake_cqt_sidecar_from_preview;
-use crate::audio::stft_bake::bake_tensor_stft_sidecar;
 use crate::render::acoustic::ACOUSTIC_UNIFORM_FLOAT_COUNT;
 use crate::render::control::{
     control_pending, pop_control_command, push_control_raw, PortalControlCommand, MENU_ACTION_HOME,
@@ -40,6 +34,8 @@ mod camera_lens;
 mod emf_preview;
 #[path = "../portal_emf_metadata.rs"]
 mod emf_metadata;
+#[path = "../portal_qac_js.rs"]
+mod qac_js;
 use crate::render::portal_emf_state::{self, EmfBackend, RetainedEmf};
 use crate::render::hmc_playback::{resolve_hmc_mesh, HmcMeshResidency};
 use crate::render::navigation::{
@@ -153,6 +149,7 @@ pub struct QualiaPortal {
     time: f64,
     last_tensor: Option<Vec<u8>>,
     last_emf: RetainedEmf,
+    last_qac: Option<crate::render::portal_qac::RetainedQac>,
     /// Tensor node data remains pickable when its visual projection is hidden.
     tensor_projection_enabled: bool,
     telemetry: SystemTelemetry,
@@ -185,9 +182,6 @@ pub struct QualiaPortal {
     hmc_mesh_residency: HmcMeshResidency,
     acoustic_enabled: bool,
     acoustic_pulse_accum: f32,
-    /// Pinned mmap-ready STFT/CQT sidecar for selected node (cold bake → hot frame read).
-    acoustic_sidecar: Option<Vec<u8>>,
-    acoustic_sidecar_frame: u32,
     /// Person-authored body fit (JSON-compatible with wellfare `BodyFit`).
     body_fit: crate::render::body_fit::AnatomyBodyFit,
     /// When true, uploaded meshes keep authored coordinates (town / world)
@@ -221,9 +215,7 @@ impl QualiaPortal {
     /// Construct the portal on `canvas`: detect the device tier, mint a
     /// session nonce + spectator standpoint, sample ambient telemetry,
     /// and paint the first frame.
-    #[wasm_bindgen(constructor)]
-    pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
-        let tier = detect_tier();
+    fn build_base_portal(tier: u8) -> QualiaPortal {
         let session_nonce = crate::render::standpoint::generate_session_nonce();
         let standpoint = spectator_default(session_nonce);
         let cross_origin_isolated_detected = web_sys::window()
@@ -231,13 +223,14 @@ impl QualiaPortal {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let etalon_steward = WorkerSteward::new(cross_origin_isolated_detected);
-        let mut portal = QualiaPortal {
+        QualiaPortal {
             description: "Qualia portal initialized".to_string(),
             last_parsed: None,
             tier,
             time: 0.0,
             last_tensor: None,
             last_emf: RetainedEmf::default(),
+            last_qac: None,
             tensor_projection_enabled: true,
             telemetry: SystemTelemetry::from_samples(
                 &crate::gpu_context::sample_ambient_telemetry(),
@@ -270,8 +263,6 @@ impl QualiaPortal {
             hmc_mesh_residency: HmcMeshResidency::default(),
             acoustic_enabled: true,
             acoustic_pulse_accum: 0.0,
-            acoustic_sidecar: None,
-            acoustic_sidecar_frame: 0,
             body_fit: crate::render::body_fit::AnatomyBodyFit::default(),
             preserve_authored_frame: false,
             cpu_body: None,
@@ -286,9 +277,19 @@ impl QualiaPortal {
             etalon_steward,
             rdf_holograph_w_angle: 0.0,
             rdf_scene: crate::render::rdf_holograph::RdfHolographScene::empty_box(),
-        };
+        }
+    }
+
+    #[wasm_bindgen(constructor)]
+    pub fn new(canvas: HtmlCanvasElement) -> Result<QualiaPortal, JsValue> {
+        let mut portal = Self::build_base_portal(detect_tier());
         portal.paint_frame(&canvas)?;
         Ok(portal)
+    }
+
+    /// Lightweight paint-free QAC container reader: no DOM canvas, WebGPU, or paint loop.
+    pub fn new_qac_reader() -> QualiaPortal {
+        Self::build_base_portal(0)
     }
 
     /// Device tier — 0 = Canvas2D, 1 = WebGPU-capable, 2 = phenomenal
@@ -475,54 +476,6 @@ impl QualiaPortal {
         }
         view.copy_from(&buf);
         Ok(())
-    }
-
-    /// Cold-bake STFT sidecar for selected tensor node; pins bytes for hot frame reads.
-    pub fn bake_stft_sidecar_demo(&mut self, frames: u32) -> Result<js_sys::Uint8Array, JsValue> {
-        self.bake_acoustic_sidecar_demo(frames, false)
-    }
-
-    /// Cold-bake CQT sidecar (log-spaced bins) for selected tensor node.
-    pub fn bake_cqt_sidecar_demo(&mut self, frames: u32) -> Result<js_sys::Uint8Array, JsValue> {
-        self.bake_acoustic_sidecar_demo(frames, true)
-    }
-
-    /// Cold-bake a spectral sidecar (STFT or CQT, `frames` clamped to
-    /// 1–128) from the selected tensor node's preview bins; pins it on
-    /// the portal and returns it as a `Uint8Array`. Fails when no
-    /// tensor buffer is resident.
-    fn bake_acoustic_sidecar_demo(
-        &mut self,
-        frames: u32,
-        use_cqt: bool,
-    ) -> Result<js_sys::Uint8Array, JsValue> {
-        let node = self.selected_node.unwrap_or(0);
-        let tensor = self
-            .last_tensor
-            .as_ref()
-            .ok_or_else(|| JsValue::from_str("no tensor buffer"))?;
-        let t = read_tensor_at(tensor, node as usize).map_err(|e| JsValue::from_str(e))?;
-        let preview = preview_bins_from_tensor(&t);
-        let frame_count = frames.clamp(1, 128);
-        let need = std::mem::size_of::<
-            crate::audio::audio_spectral_sheet::AudioSpectralSidecarHeader,
-        >() + SPECTRAL_PREVIEW_BINS * frame_count as usize * 4;
-        let mut buf = vec![0u8; need];
-        if use_cqt {
-            bake_cqt_sidecar_from_preview(&preview, frame_count, 48_000, &mut buf)
-                .map_err(|_| JsValue::from_str("cqt bake failed"))?;
-        } else {
-            bake_tensor_stft_sidecar(&preview, frame_count, &mut buf)
-                .map_err(|_| JsValue::from_str("stft bake failed"))?;
-        }
-        self.acoustic_sidecar = Some(buf.clone());
-        self.acoustic_sidecar_frame = 0;
-        Ok(js_sys::Uint8Array::from(&buf[..]))
-    }
-
-    /// Whether a baked STFT/CQT sidecar is pinned on the portal.
-    pub fn acoustic_sidecar_pinned(&self) -> bool {
-        self.acoustic_sidecar.is_some()
     }
 
     /// Resize the canvas backing store (and the GPU surface when
@@ -1411,7 +1364,7 @@ impl QualiaPortal {
     }
 
     /// Inspect physical interpretation and original PCM without applying a
-    /// display or listening conversion. Exact clock integers remain in metadata_json.
+    /// display or listening conversion. Exact clock integers remain in metadata_tlv_le.
     pub fn inspect_emf(&self, bytes: &[u8]) -> Result<JsValue, JsValue> {
         Ok(emf_metadata::inspect(bytes)?.into())
     }
@@ -1422,20 +1375,73 @@ impl QualiaPortal {
         self.last_emf.status() as u8
     }
 
-    /// Load a sibling `Q42EMF64` field and return its dimensions, integrity,
-    /// exact interpretation JSON and original PCM tracks. The visible projection
-    /// is a declared derivative. V3 does not update implicit sigma sonification.
-    /// `frequency_hz` is null for v3; `kind` is volume when cell_count exceeds one.
+    /// Admit and retain an explicitly selected actual PCM/STFT entry; no autoplay.
+    pub fn load_qac(&mut self, bytes: &[u8], selected_entry: u32) -> Result<JsValue, JsValue> {
+        let mut limits = crate::render::portal_qac::Limits::default();
+        limits.envelope.file_bytes = 128 << 20;
+        limits.memory_bytes = 192 << 20;
+        if bytes.len() as u64 > limits.envelope.file_bytes {
+            return Err(JsValue::from_str("qac browser source exceeds 128 MiB"));
+        }
+        let mut owned = Vec::new();
+        owned.try_reserve_exact(bytes.len()).map_err(|_|JsValue::from_str("qac source allocation refused"))?;
+        owned.extend_from_slice(bytes);
+        let qac = crate::render::portal_qac::RetainedQac::open(owned.into_boxed_slice(), selected_entry, limits)
+            .map_err(|e|JsValue::from_str(&format!("qac admission: {e:?}")))?;
+        let result = qac_js::metadata(&qac)?;
+        self.last_qac = Some(qac);
+        Ok(result.into())
+    }
+
+    /// Exact little-endian bytes plus layout; decimal index avoids JS Number rounding.
+    pub fn qac_window(&self, start_record_decimal: &str, records: u32, channel: u32) -> Result<JsValue, JsValue> {
+        let start = start_record_decimal.parse::<u64>().map_err(|_|JsValue::from_str("invalid qac record index"))?;
+        let qac = self.last_qac.as_ref().ok_or_else(||JsValue::from_str("no admitted qac source"))?;
+        Ok(qac_js::window(qac, start, records, channel)?.into())
+    }
+
+    pub fn inspect_qac(&self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        Ok(qac_js::inspect_container(bytes)?.into())
+    }
+
+    pub fn clear_qac(&mut self) { self.last_qac = None; }
+
+    /// Load a current typed field, retaining original bytes independently of display.
+    /// Rendering is a declared electric-field-magnitude derivative in local grid coordinates.
     pub fn load_emf(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
-        let loaded = crate::render::portal_load_emf::decode_emf_scientific(bytes)
-            .map_err(|e| JsValue::from_str(&e))?;
+        self.load_emf_selection_impl(bytes, None)
+    }
+
+    /// Select a field explicitly when a recording contains several grids or streams.
+    pub fn load_emf_selected(&mut self, bytes: &[u8], descriptor_id: u32,
+        frame_id: u32, clock_id: u32, stream_id: u32) -> Result<JsValue, JsValue> {
+        self.load_emf_selection_impl(bytes, Some(crate::render::portal_emf_state::DisplaySelection {
+            descriptor_id, frame_id, clock_id, stream_id,
+        }))
+    }
+
+    fn load_emf_selection_impl(&mut self, bytes: &[u8],
+        selection: Option<crate::render::portal_emf_state::DisplaySelection>) -> Result<JsValue, JsValue> {
+        let loaded = crate::render::portal_load_emf::decode_emf_with_selection(bytes, selection,
+            crate::render::portal_load_emf::PortalEmfLimits::default())
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
         // Prepare all metadata before changing either accepted data or residency.
         let result = emf_metadata::inspect(bytes)?;
+        let selection = loaded.selection();
+        for (name, id) in [("descriptor_id", selection.descriptor_id), ("frame_id", selection.frame_id),
+            ("clock_id", selection.clock_id), ("stream_id", selection.stream_id)] {
+            Reflect::set(&result, &name.into(), &(id as f64).into())?;
+        }
+        let ticks = js_sys::Array::new();
+        for tick in loaded.time_ticks() { ticks.push(&tick.to_string().into()); }
+        Reflect::set(&result, &"time_ticks_decimal".into(), &ticks)?;
+        Reflect::set(&result, &"temporal".into(), &loaded.is_temporal().into())?;
+        Reflect::set(&result, &"coordinate_scope".into(), &"selected local frame; no implicit world/anatomy registration".into())?;
+        Reflect::set(&result, &"admission".into(), &"current typed profiles and selected grid projection".into())?;
         Reflect::set(&result, &"display_conversion".into(),
-            &"legacy phase/sigma diagnostic; physical field retained; not calibrated RGB or a complete spectrum".into())?;
+            &"grayscale = 1-exp(-|E|/(1 V/m)); nearest cell; missing transparent; valid zero opaque; exact source retained".into())?;
         Reflect::set(&result, &"sonification".into(),
-            &if loaded.interpretation.is_some() { "no automatic EMF sonification; stored tracks are independent" }
-             else { "legacy-sigma-derived" }.into())?;
+            &"no automatic EMF sonification".into())?;
         Reflect::set(
             &result,
             &JsValue::from_str("nx"),
@@ -1461,17 +1467,6 @@ impl QualiaPortal {
             &JsValue::from_str("cell_count"),
             &JsValue::from_f64(loaded.cell_count as f64),
         )?;
-        Reflect::set(
-            &result,
-            &JsValue::from_str("mean_sigma"),
-            &JsValue::from_f64(loaded.mean_sigma as f64),
-        )?;
-        Reflect::set(
-            &result,
-            &JsValue::from_str("frequency_hz"),
-            &if loaded.interpretation.is_some() { JsValue::NULL }
-             else { JsValue::from_f64(loaded.frequency_hz as f64) },
-        )?;
         let kind = if loaded.cell_count > 1 { "volume" } else { "cell" };
         Reflect::set(&result, &JsValue::from_str("kind"), &JsValue::from_str(kind))?;
         let backend = if self.gpu.is_some() {
@@ -1483,15 +1478,10 @@ impl QualiaPortal {
         };
         Reflect::set(&result, &"display_status".into(),
             &backend.accepted_status().as_str().into())?;
-        let legacy_sigma = loaded.interpretation.is_none().then_some(loaded.mean_sigma);
         let gpu = &mut self.gpu;
         self.last_emf.accept(loaded, backend, |field| {
             portal_emf_state::upload(gpu.as_mut().ok_or("emf: WebGPU unavailable")?, field)
         }).map_err(|e| JsValue::from_str(&e))?;
-        // v3 recordings and physical wavelengths are not implicit sigma sonification.
-        if let Some(sigma) = legacy_sigma {
-            self.telemetry.spectral_shift = sigma;
-        }
         Ok(result.into())
     }
 
@@ -2561,14 +2551,6 @@ impl QualiaPortal {
         Ok(())
     }
 
-    /// Frame count from a sidecar header, `1` when unparseable.
-    #[inline]
-    fn sidecar_frame_count(bytes: &[u8]) -> u32 {
-        parse_sidecar_header(bytes)
-            .map(|h| h.frame_count)
-            .unwrap_or(1)
-    }
-
     /// Pop and apply up to `max` pending ICP control commands;
     /// returns the count applied (failures are dropped, not fatal).
     fn drain_and_apply_control(&mut self, max: u32) -> u32 {
@@ -2670,26 +2652,17 @@ impl QualiaPortal {
     }
 
     /// Assemble the `AcousticUniform` for the AudioWorklet: tensor-node
-    /// params + sidecar-enriched preview when a tensor is resident
-    /// (advancing the sidecar frame), else a telemetry-derived default.
+    /// params when a tensor is resident, else a telemetry-derived default.
     fn build_acoustic_uniform(&mut self) -> AcousticUniform {
         let enabled = self.acoustic_enabled();
         let node = self.selected_node.unwrap_or(0);
         if let Some(ref tensor) = self.last_tensor {
             if let Ok(t) = read_tensor_at(tensor, node as usize) {
-                let mut u = acoustic_params_from_tensor(&t).to_phenomenal_uniform(
+                let u = acoustic_params_from_tensor(&t).to_phenomenal_uniform(
                     enabled,
                     &t,
                     self.camera.yaw,
                 );
-                if let Some(ref sidecar) = self.acoustic_sidecar {
-                    let frame = self.acoustic_sidecar_frame;
-                    if enrich_preview_from_sidecar(sidecar, frame, &mut u.preview_bins) {
-                        u.stft_frame = frame as f32;
-                    }
-                    self.acoustic_sidecar_frame =
-                        (frame + 1) % Self::sidecar_frame_count(sidecar).max(1);
-                }
                 return u;
             }
         }

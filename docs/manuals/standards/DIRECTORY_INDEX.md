@@ -1,6 +1,6 @@
 ﻿---
 created: 2026-06-30
-updated: 2026-11-12
+updated: 2026-11-13
 update_scope: Comprehensive
 ---
 
@@ -15,8 +15,11 @@ Comprehensive index of functionality for standards. This document serves as the 
 - 📁 [vectors](vectors/DIRECTORY_INDEX.md)
 
 ### Files & Exported Functionality
+- [EMF and QAC implementation preparation](../../plans/emf-qac-evolution-2026-11-13/README.md) — Corrected candidate specifications, canonical `.qac` naming, 40 dependency-tracked work packets, multi-session swarm handoffs and qualification gates; implementation active; consult packet evidence for completed scope.
 - [QBDL streaming implementation programme](qualia-decentralized-network-fabric/qdnf-imp/qbdl-streaming/README.md) — Native QDNF/PQ, HTTP/WebSockets, WebRTC, 28 bounded swarm packages, capability/cost routing and release gates.
 - [File-format standards overview](file-formats-overview.md) — Completed implementation-aligned EMF, e64, m64, 10d, p64 and HMC standards; full BLAKE3 repair and proposal boundaries.
+- [QAC acoustic container](qac-acoustic-container.md) — Canonical .qac naming, complete legacy admission, metadata compatibility and candidate shared-envelope boundaries.
+- [Full-spectrum field contract](full-spectrum-field-contract.md) — Spectrum-independent scope, physical coordinates, radiometric units and implementation limits.
 - [EMF container](emf-container-format.md) — Version 2, 64-byte cells and full BLAKE3 trailers.
 - [E64 compatibility format](e64-compatibility-format.md) — Historical M64 v1/v2 alias; no additional functionality.
 - [M64 matter container](m64-matter-container.md) — Record modes, codec 3, local frames and GRM3 boundary.

@@ -1,0 +1,23 @@
+# Gemma canonical codec integration
+
+Current local Etalon already supplies Q5_1(type7) and MXFP4(type39); pinned6ace6cc does not. Qualia ggml_quants is a reexport of etalon_model::ggml, so the installed26B model needs canonical supplier integration. E4B BF16(type30) is already supported by the pin. Do not create a Qualia decoder.
+
+The exact codec-only production delta is attached as gemma-codec-supplier-delta.patch: ggml/blocks.rs adds the two existing decoders; ggml/layout.rs adds type IDs and32-element/24-byte Q5_1 and32-element/17-byte MXFP4 layouts; ggml/mod.rs routes both variants. The Q5_0 high-bit expression changes only to an equivalent explicit bitj+16 form relative to the correct pin. Tests route ggml/tests/q5_1.rs separately.
+
+Source review found current local Q5_0 and Q5_1 both read the wrong upper-half high bits because an extra left-shift selected bitj+12. Both are now corrected to bitj+16 in the canonical local owner, with independent all32-single-bit tests plus asymmetric scales/nibbles/two blocks and bounds failures. Root reports all3 selected tests passed in etalon-q5-1-repair.log. This author ran no builds. Primary reference: [GGML row decoders](https://github.com/ggml-org/ggml/blob/master/src/ggml-quants.c). MXFP4 exponent/nibble semantics were source-checked; a dedicated independent MXFP4 edge-vector test remains appropriate before model qualification.
+
+## Why the whole current model package is not a narrow patch
+
+Current-vs-pin source comparison:13 changed model files,387 insertions/16 deletions before the final Q5_0 correction. Beyond the codec delta, current ModelHyperparams adds5 fields (RoPE/SWA/epsilon/PLE), its generic admission newly exempts Gemma4, and parse_architecture_id reclassifies qwen35. LayerTensors adds10 Gemma-specific fields; lookup, metadata and parse behavior also change. ggml/kquants.rs contains unrelated changes. None is needed to deliver the two codecs and none should enter implicitly.
+
+Current-vs-pin inference-kernel comparison has one changed file, moe/routing.rs: local computes a full softmax then renormalizes selected probabilities, whereas the pin directly normalizes selected logits. They are algebraically equivalent but differ in floating-point accumulation. Kernel public identity must stay singular, and this change is not needed for the codec patch.
+
+The model Cargo manifest itself is unchanged: inference-model enables a direct path dependency on ../etalon-inference-kernel. Simply patching etalon-model to the local worktree therefore brings a second kernel source identity alongside the consumer's pinned git kernel, plus all model API/admission changes above.
+
+## Integration choices
+
+1. **Recommended for this repair: canonical codec-only source backport.** Create an isolated copy/worktree of the pinned etalon-model package, apply only the three-file canonical codec delta and its tests, and retain the package name/API. Root patches the pinned git package to that copy. Its dependency on etalon-inference-kernel must point to the SAME pinned git source/revision used by all existing consumers, with explicit copied workspace metadata/dependencies where needed. The decoder source remains the canonical Etalon implementation; this is a controlled supplier backport, not a new Qualia algorithm. Record source hashes and test both the supplier and actual consumer resolution. No new commit is required for a local reviewable patch. An isolated source snapshot under the workspace is preferable to editing Cargo's shared checkout.
+2. **Reusable Etalon GGML leaf crate: sound longer-term extraction, wider scope.** Mechanically move the complete GGML codec owner (scalar/blocks/kquants/iq/fp8/soa/layout/quantize) into a numerical leaf and make etalon-model reexport it. Descriptor helpers currently depend on inference::TensorInfo; retain those at the model layer to avoid a cycle, or introduce a shared descriptor type only with explicit compatibility planning. Both current and pinned-backport model packages need manifest/router changes to share one leaf source. This reduces future backport duplication but expands the current task across all codec features, no_std/std boundaries, exports and consumer type identity, requiring more regression coverage than the three-file backport.
+3. **Whole local model/kernel patch: not recommended here.** It changes generic architecture admission, public structs and numerical routing. It requires deliberate migration and independent tests; using it solely to acquire two codecs would hide unrelated behavior changes.
+
+Root owns all Cargo/dependency decisions. This task has changed no manifest or dependency revision.

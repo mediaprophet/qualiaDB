@@ -2,7 +2,11 @@
 //! Metadata retains declarations, not CRS authority or scientific validity.
 mod validation;
 mod wire;
+mod range;
 pub(crate) use validation::validate_container;
+pub(crate) use range::{
+    sample_location, validate_header_directory, validate_sample_record, SampleError,
+};
 pub const M64_GEORASTER_VERSION: u32 = 3;
 pub const M64_GEORASTER_HEADER_BYTES: usize = 192;
 

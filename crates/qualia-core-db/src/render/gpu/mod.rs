@@ -687,7 +687,7 @@ pub const MAX_GPU_MATERIAL_DRAWS: usize = 65_536;
 
 use bloom::*;
 pub use compute::{ComputeBinding, ComputeBufferKind};
-pub use emf_pipeline::{emf_field_cell_from_scientific, EmfFieldCell, EmfSliceUniform};
+pub use emf_pipeline::{emf_field_cell_from_display, EmfFieldCell, EmfSliceUniform};
 pub use particles::particle_cap_for_mode;
 use particles::*;
 use resources::*;

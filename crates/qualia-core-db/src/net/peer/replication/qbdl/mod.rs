@@ -4,3 +4,5 @@ pub mod wire;
 pub(crate) mod carrier;
 
 pub mod provider;
+
+pub mod service;

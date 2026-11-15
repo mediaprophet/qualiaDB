@@ -16,4 +16,7 @@ pub mod q42 {
     pub use crate::production_chunk_integrity as chunk_integrity;
     pub use crate::production_m64 as m64_matter;
     pub use crate::production_emf as emf_container;
+    pub mod field_spectrum {
+        pub const VACUUM_SPEED_OF_LIGHT_M_PER_S: f64 = 299_792_458.0;
+    }
 }

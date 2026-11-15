@@ -8,6 +8,7 @@ Implement a QBDL specialization of QDNF's content-swarm service: selective authe
 
 | Document | Purpose |
 |---|---|
+| [HMC multiplexing implementation review](implementation-review-hmc-multiplexing-2026-11-13.md) | 13 November review: current progress, source findings, EMF/QAC coordination and mixed HMC acceptance including 10D/Q42 |
 | [Build handoff and remaining work](remaining-work-and-build-handoff.md) | Current build scope, unfinished tasks, known blockers and resume instructions |
 | [Architecture](architecture.md) | Concrete object, security, transfer, storage, HTTP and consumer contracts |
 | [Work packages](work-packages.md) | Claimable tasks, dependencies, write scopes, acceptance and reviewers |

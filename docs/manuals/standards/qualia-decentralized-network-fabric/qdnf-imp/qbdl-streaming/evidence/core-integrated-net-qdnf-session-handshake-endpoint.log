@@ -1,0 +1,9 @@
+
+running 28 tests
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::dropping_or_unwinding_lost_owner_keeps_canonical_charge ... ok
+test net::qdnf::session::handshake::endpoint::established::protected_channel::tests::common_geometry_reuses_actual_frozen_private_header_without_loosening_its_limit ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::empty_handoff_refusal_preserves_original_owner_and_exact_retained_charge ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::exact_handoff_has_no_release_readmit_gap_and_scope_is_actual_ledger ... ok
+test net::qdnf::session::handshake::endpoint::resource::retained::tests::failed_release_and_contended_scope_retain_exact_charge_for_retry ... ok
+
+thread 'net::qdnf::session::handshake::endpoint::tests::channel_tests::allocation_tests::actual_channel_hot_success_and_wouldblock_use_zero_raw_allocations' (36948) has overflowed its stack

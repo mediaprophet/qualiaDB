@@ -238,17 +238,15 @@ fn preparation_refuses_short_scratch_and_caller_limits_without_minting_a_result(
         let mut entries = vec![EntryRange::EMPTY; if which == 1 { 1 } else { 2 }];
         let mut objects = vec![SourceObject::EMPTY; if which == 2 { 3 } else { 5 }];
         let mut order = vec![0; if which == 3 { 3 } else { 5 }];
-        assert!(
-            PreparedSource::prepare(
-                &bytes,
-                BundleReadLimits::default(),
-                &mut index,
-                &mut entries,
-                &mut objects,
-                &mut order
-            )
-            .is_err()
-        );
+        assert!(PreparedSource::prepare(
+            &bytes,
+            BundleReadLimits::default(),
+            &mut index,
+            &mut entries,
+            &mut objects,
+            &mut order
+        )
+        .is_err());
     }
     for limits in [
         BundleReadLimits {
@@ -268,17 +266,15 @@ fn preparation_refuses_short_scratch_and_caller_limits_without_minting_a_result(
         let mut entries = [EntryRange::EMPTY; 2];
         let mut objects = [SourceObject::EMPTY; 5];
         let mut order = [0; 5];
-        assert!(
-            PreparedSource::prepare(
-                &bytes,
-                limits,
-                &mut index,
-                &mut entries,
-                &mut objects,
-                &mut order
-            )
-            .is_err()
-        );
+        assert!(PreparedSource::prepare(
+            &bytes,
+            limits,
+            &mut index,
+            &mut entries,
+            &mut objects,
+            &mut order
+        )
+        .is_err());
     }
 }
 
@@ -301,10 +297,9 @@ fn empty_original_inside_an_occupied_entry_does_not_reset_preparation_frontier()
     inspect(&changed, 3, |s| {
         assert_eq!(s.objects().len(), 3);
         assert_eq!((s.objects()[1].offset(), s.objects()[1].length()), (128, 0));
-        assert!(
-            s.objects()
-                .iter()
-                .all(|r| matches!(r.kind(), ObjectKind::Entry(_)))
-        );
+        assert!(s
+            .objects()
+            .iter()
+            .all(|r| matches!(r.kind(), ObjectKind::Entry(_))));
     });
 }

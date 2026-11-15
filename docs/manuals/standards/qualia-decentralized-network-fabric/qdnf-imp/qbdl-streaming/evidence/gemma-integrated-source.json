@@ -1,0 +1,140 @@
+{
+  "state": "Parent integration applied and formatted; awaiting root core compile/tests",
+  "supplier_tests": "GGML17/17 and public contract6/6 passed isolated",
+  "parents": [
+    {
+      "file": "gguf_bridge/mod.rs",
+      "before_sha256": "2d412b2f3b1abee41a6d196921c6005f244c7e8af16e7457435b52dc8c0b198a",
+      "after_sha256": "7db7e766fd955ccc3cf751d6694a7d049d2187dabe4fdd864d2199bd0c92ebce"
+    },
+    {
+      "file": "gguf_bridge/state.rs",
+      "before_sha256": "93014f9b83ab097ca563cb5b7a1bf477db032227ee83fe64b645eb2e17cbea15",
+      "after_sha256": "d5b099360b57d0efda178d6059cf268c816e64c0a4167257fa739b8fd542b964"
+    },
+    {
+      "file": "gguf_bridge/init.rs",
+      "before_sha256": "1f04d3fda7af04ec87a963a3ef837ad83d7dd2415a0bcead73e31b8f8a8b4b16",
+      "after_sha256": "c9126536525d4902b579aff68890674f66c48405e191e136907a45d9c29413f2"
+    },
+    {
+      "file": "gguf_bridge/load.rs",
+      "before_sha256": "c4deebc2e8706a682a61771fa81b7a824420993888e9a9e34349296cebd775dc",
+      "after_sha256": "497b9025bb8cbfa31a8ff11288c769e3a95e42fe73f5fa060dfd3916aea9ff34"
+    },
+    {
+      "file": "gguf_bridge/moe_ffn.rs",
+      "before_sha256": "b17251c20b1565a52d338c188d948d2c8869d5961fcd1bfba796858765b516d2",
+      "after_sha256": "45be0cfbc40c30cca8971a7095c3390ab3f17b3398d314922b2c692b48fb72f9"
+    },
+    {
+      "file": "gguf_bridge/qwen35/gguf/bridge.rs",
+      "before_sha256": "490b539d99987de76e6db9b3302f2ebce01dca9f64c0e5b19b35845b20081de1",
+      "after_sha256": "ae4d915ec96f96066aef9b44b03d4671f18a4a24ae310b0800c11402e1007aaa"
+    },
+    {
+      "file": "gguf_bridge/ssm_forward.rs",
+      "before_sha256": "32dc4b491bec6d1527e206d61a665e1667a5bdd12e2adf9aba8853b093c55761",
+      "after_sha256": "a6034cb6bb3f91c78d5fcf97f288adda273b0fc057cc0276149cc1e6527e5191"
+    },
+    {
+      "file": "gguf_bridge/forward.rs",
+      "before_sha256": "b8b63f02d392208a85a74f8e82c4dfa0cf34697daae27603828a2a13d4d648d8",
+      "after_sha256": "f28019159b042ad3704ac41287acc53539fcec39ca19124ecbeef29346eef325"
+    },
+    {
+      "file": "gguf_bridge/output.rs",
+      "before_sha256": "25ffaa5dcec9568daa897e8bddb2787ddf7b0c796ab42ac0415392e60b681da9",
+      "after_sha256": "3a15f4f0233cd27611a1cfe70f62763f1d2de9ac128ff290ed736b0a78fb13c7"
+    },
+    {
+      "file": "gguf_bridge/gemma4_qwen35.rs",
+      "before_sha256": "ee62cd6c5d84a5c4d77deac130f5917ffe7bdbc07aed7cd087facd7b5ef30709",
+      "after_sha256": "f8a4cee4a7126cbe0f8b16855c0a325af2a1874211092423cf02dd9c31143947"
+    },
+    {
+      "file": "gguf_bridge/gemma4_qwen35/tests.rs",
+      "before_sha256": "54869d3e2588a59da0d122346664cc5c904241102d3bb0994ba8ec85b1aab48d",
+      "after_sha256": "3975dd2de2569460d6a7effd2a9305c2a3f48656f7d971929ac87ba540eaa159"
+    },
+    {
+      "file": "inference/gguf_sharder/tests.rs",
+      "before_sha256": "f9dcfee8fc19af13e30482cf8f1b8a816ebbacc80480bee9c871a7e397777231",
+      "after_sha256": "e087edc5ee77b8e18704b7cb1d70d9efd723ca94f9dd058135c455a10185bcd9"
+    }
+  ],
+  "children": [
+    {
+      "file": "gguf_bridge/gemma4/attention.rs",
+      "sha256": "805b11c458366ae945f7f85a33083b98bcf0ec0bfaebdf7cac3acb7ec3fbddf5",
+      "lines": 255,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/bridge.rs",
+      "sha256": "2d1c043d345ec1d595d88ec1bc4f16c331d94e6372002523b6beec0b076b1df3",
+      "lines": 145,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/ffn.rs",
+      "sha256": "11e9ff25a5118f39f7e3c59f5b741e92a8d37e78e6ad42c6a67755254be388dc",
+      "lines": 301,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/fixtures.rs",
+      "sha256": "f6d31219d24521f3631111474adf6a9c3d1e826ee25f9942955508bab1267a13",
+      "lines": 128,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/metadata.rs",
+      "sha256": "572d96ce14deef5266102b538aaf6b064c9b502ca64dcd2c270665254877b74f",
+      "lines": 235,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/metadata_tests.rs",
+      "sha256": "0384b832d3b80151d00c73dcccdaee9ace9166f38658dc5fe0190ad145ec8d0f",
+      "lines": 136,
+      "tests": 3
+    },
+    {
+      "file": "gguf_bridge/gemma4/mod.rs",
+      "sha256": "11128141a34d85c43215e5358cc1f6d44febcae168165ba8ad8d340876a83447",
+      "lines": 17,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/plan.rs",
+      "sha256": "5d234f01b9ac1dfd6b691c855982a15a06e263b6f1a646df891683c3ef4ae38a",
+      "lines": 281,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/ple.rs",
+      "sha256": "e62bf1b536aab3a6e77c0f158a9461b58f55256bc026c0928bb425694ed7ab46",
+      "lines": 137,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/primitives.rs",
+      "sha256": "abc26c84046d76ce8d88bb757f25d3a53f96f6bacdf7b157e14f0580a76e7168",
+      "lines": 40,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/session.rs",
+      "sha256": "6b60d30a2f5b10d61c22ecd648576fa40345eed2e80560a1d34aff4d94b89868",
+      "lines": 169,
+      "tests": 0
+    },
+    {
+      "file": "gguf_bridge/gemma4/tests.rs",
+      "sha256": "128473b97fb87f296d885a3b679319daf0be8829b53a07cdeaecdebeb39df2aa",
+      "lines": 270,
+      "tests": 9
+    }
+  ]
+}

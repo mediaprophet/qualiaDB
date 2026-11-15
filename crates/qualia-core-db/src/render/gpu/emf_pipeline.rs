@@ -14,39 +14,28 @@
 //! - manifold.scale → display saturation
 //! - manifold.manifold_curvature + Stokes polarization → display rim glow & highlight
 
+#[path = "emf_spectrum.rs"]
+mod emf_spectrum;
+
 use etalon::util::DeviceExt;
+#[allow(unused_imports)]
+pub use emf_spectrum::{
+    emf_cells_from_loaded, emf_field_cell_from_optical, emf_field_cell_from_record64,
+    evaluate_display_slice_rgba8, full_spectrum_sigma_to_linear_rgb,
+};
 #[allow(unused_imports)]
 pub use etalon_render::emf::{
     checked_field_bytes, checked_grid_cell_count, EmfFieldCell, EmfPipeline, EmfPipelineDesc,
     EmfSliceUniform, EMF_VOLUMETRIC_WGSL,
 };
-use crate::q42::emf_container::EmfCellRecord64;
-
-/// GPU display cell from a scientific `Q42EMF64` brick cell.
-///
-/// Amplitude is |E|, phase is coherence, frequency is c/λ, Stokes copy through.
-/// 10D display slots carry n, κ, α, σ, Poynting — the shader already maps those
-/// as saturation / glow. This is a conversion; the `.emf` cell stays the source.
-pub fn emf_field_cell_from_scientific(cell: &EmfCellRecord64) -> EmfFieldCell {
-    let sigma = cell.effective_sigma();
-    EmfFieldCell {
-        amplitude: cell.e_magnitude(),
-        phase: cell.coherence_phase,
-        frequency: cell.optical_frequency_hz(),
-        scale: cell.refractive_n,
-        attention_depth: cell.extinction_k,
-        epistemic_weight: cell.confidence_alpha,
-        topological_spin: 0.0,
-        temporal_decay: 0.0,
-        entropy_bias: 0.0,
-        spatial_phase: cell.coherence_phase,
-        recurrence_frequency: sigma,
-        density_threshold: cell.poynting_flux,
-        manifold_curvature: 0.0,
-        stokes_q: cell.stokes_q,
-        stokes_u: cell.stokes_u,
-        stokes_v: cell.stokes_v,
-    }
+/// Fixed grayscale display derivative; exact f64 observations stay in the retained source.
+pub fn emf_field_cell_from_display(cell: &crate::render::portal_emf_state::DisplayEmfCell) -> EmfFieldCell {
+    let brightness = if cell.valid { -(-cell.magnitude_v_per_m).exp_m1() as f32 } else { 0.0 };
+    EmfFieldCell { amplitude: brightness, epistemic_weight: if cell.valid { 1.0 } else { 0.0 },
+        phase: 0.0, frequency: 0.0, scale: 0.0, attention_depth: 0.0,
+        topological_spin: 0.0, temporal_decay: 0.0, entropy_bias: 0.0,
+        spatial_phase: 0.0, recurrence_frequency: 0.0, density_threshold: 0.0,
+        manifold_curvature: 0.0, stokes_q: 0.0, stokes_u: 0.0, stokes_v: 0.0 }
 }
 
 /// Per-portal EMF visualizer state.
@@ -212,7 +201,33 @@ impl super::PortalGpu {
         Ok(())
     }
 
+    /// Upload an admitted `LoadedEmf` derivative, enabling full-spectrum projection mode `0`
+    /// when spectral/Stokes cells are present (falling back to grayscale mode `1` for static grids).
+    pub fn emf_upload_loaded(
+        &mut self,
+        loaded: &crate::render::portal_emf_state::LoadedEmf,
+    ) -> Result<(), String> {
+        let cells = emf_cells_from_loaded(loaded)?;
+        let [nx, ny, nz, nt] = loaded.dimensions();
+        let bounds = loaded.local_bounds();
+        self.emf_upload_field(&cells, nx, ny, nz, nt, bounds)?;
+        let spectral = loaded.optical_cells().iter().any(|o| {
+            o.valid && (o.spectral_sigma > 0.0 || o.carrier_hz > 0.0 || o.phase_rad != 0.0 || o.stokes_q != 0.0 || o.stokes_u != 0.0 || o.stokes_v != 0.0)
+        });
+        let mode = if spectral { 0 } else { 1 };
+        self.emf_update_slice_params_with_mode(0, 0, bounds, 1.0, 0.0, 1.0, mode);
+        Ok(())
+    }
+
+    /// Parse and upload a verified `Q42EMF64` container directly for volumetric display.
+    pub fn emf_upload_emf64(&mut self, bytes: &[u8]) -> Result<(), String> {
+        let loaded = crate::render::portal_emf_state::decode_emf64_display(bytes)?;
+        self.emf_upload_loaded(&loaded)
+    }
+
     /// Update the slice parameters (which z/t slice to render, display controls).
+    /// Preserves `projection_mode: 1` grayscale compatibility; use `emf_update_slice_params_with_mode`
+    /// for full volumetric spectral + Stokes mode `0`.
     pub fn emf_update_slice_params(
         &mut self,
         slice_z: u32,
@@ -221,6 +236,29 @@ impl super::PortalGpu {
         amplitude_scale: f32,
         phase_offset: f32,
         manifold_gain: f32,
+    ) {
+        self.emf_update_slice_params_with_mode(
+            slice_z,
+            slice_t,
+            bounds,
+            amplitude_scale,
+            phase_offset,
+            manifold_gain,
+            1,
+        );
+    }
+
+    /// Update slice parameters with explicit `EmfSliceUniform::projection_mode` (`0` volumetric spectral, `1` grayscale).
+    #[allow(clippy::too_many_arguments)]
+    pub fn emf_update_slice_params_with_mode(
+        &mut self,
+        slice_z: u32,
+        slice_t: u32,
+        bounds: [f32; 6],
+        amplitude_scale: f32,
+        phase_offset: f32,
+        manifold_gain: f32,
+        projection_mode: u32,
     ) {
         let params = EmfSliceUniform {
             nx: self.emf.nx,
@@ -238,7 +276,7 @@ impl super::PortalGpu {
             amplitude_scale,
             phase_offset,
             manifold_gain,
-            _pad: 0.0,
+            projection_mode,
         };
         self.emf.inner.update_params(&self.queue, &params);
     }
@@ -325,7 +363,7 @@ impl super::PortalGpu {
 mod tests {
     use super::super::PortalGpu;
     use super::*;
-    use crate::q42::emf_container::EmfCellRecord64;
+
 
     #[test]
     fn emf_field_cell_size() {
@@ -334,22 +372,16 @@ mod tests {
     }
 
     #[test]
-    fn scientific_cell_maps_e_wavelength_and_stokes_into_display() {
-        let mut cell = EmfCellRecord64::default();
-        cell.e_field = [3.0, 4.0, 0.0];
-        cell.wavelength_nm = 550.0;
-        cell.coherence_phase = 1.25;
-        cell.stokes_q = 0.2;
-        cell.stokes_u = 0.1;
-        cell.stokes_v = 0.05;
-        cell.confidence_alpha = 0.9;
-        let display = emf_field_cell_from_scientific(&cell);
-        assert!((display.amplitude - 5.0).abs() < 1e-5);
-        assert!((display.phase - 1.25).abs() < 1e-6);
-        assert!((display.recurrence_frequency - 0.5).abs() < 1e-5);
-        assert_eq!(display.stokes_q, 0.2);
-        assert_eq!(display.epistemic_weight, 0.9);
-        assert!(display.frequency > 5.0e14 && display.frequency < 5.6e14);
+    fn display_preserves_valid_zero_and_missing_and_saturates_extreme_fields() {
+        use crate::render::portal_emf_state::DisplayEmfCell;
+        for (magnitude, expected) in [(0.0,0.0),(1.0,1.0-(-1.0f32).exp()),(f64::MAX,1.0),(f64::INFINITY,1.0)] {
+            let cell=emf_field_cell_from_display(&DisplayEmfCell { magnitude_v_per_m:magnitude,valid:true });
+            assert!((cell.amplitude-expected).abs()<1e-6);
+            assert_eq!(cell.epistemic_weight,1.0);
+            assert_eq!(cell.frequency,0.0);
+        }
+        let missing=emf_field_cell_from_display(&DisplayEmfCell { magnitude_v_per_m:0.0,valid:false });
+        assert_eq!(missing.epistemic_weight,0.0);
     }
 
     #[test]

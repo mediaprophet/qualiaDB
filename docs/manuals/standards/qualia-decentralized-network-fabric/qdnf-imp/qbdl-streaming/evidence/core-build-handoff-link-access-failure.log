@@ -1,0 +1,296 @@
+   Compiling etalon-model v0.0.2 (C:\github\qualiaDB\vendor\etalon-model-6ace6cc)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\C:\github\qualiaDB\target\debug\incremental\etalon_model_io-37xcfedklx7jv\s-ho3bt8d7x5-0eumv0x-working`
+
+warning: `etalon-model-io` (lib) generated 1 warning
+   Compiling etalon-vibe v0.0.2 (https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6)
+   Compiling etalon-inference v0.0.2 (https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6)
+   Compiling vibe v0.0.41 (C:\github\qualiaDB\crates\vibe)
+warning: unused import: `ParamSpec`
+  --> crates\vibe\src\extension_registry\eval_router.rs:26:86
+   |
+26 |     q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
+   |                                                                                      ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `vibe` (lib) generated 1 warning (run `cargo fix --lib -p vibe` to apply 1 suggestion)
+   Compiling etalon-inference-lab v0.0.2 (https://github.com/mediaprophet/etalon.git?rev=6ace6cc6413a87ca10a1da58397ddc7c0b2fc41e#6ace6cc6)
+   Compiling qualia-core-db v0.0.41 (C:\github\qualiaDB\crates\qualia-core-db)
+warning: unused import: `PendingMessage`
+ --> crates\qualia-core-db\src\net\peer\replication\qbdl\carrier\mod.rs:9:40
+  |
+9 | pub(crate) use send::{MessageSequence, PendingMessage};
+  |                                        ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary parentheses around function argument
+   --> crates\qualia-core-db\src\bundle\stream\proof\path_tests.rs:148:24
+    |
+148 |         sibling_ranges((1u64 << 33), 0, &mut ranges),
+    |                        ^          ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+148 -         sibling_ranges((1u64 << 33), 0, &mut ranges),
+148 +         sibling_ranges(1u64 << 33, 0, &mut ranges),
+    |
+
+warning: unused import: `WorkspacePageAttempt`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\sparse_workspace\mod.rs:13:44
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                                            ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `WorkClass`
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner.rs:12:58
+   |
+12 |     ReservationLedger, ResourceBudget, ResourceGovernor, WorkClass,
+   |                                                          ^^^^^^^^^
+
+warning: unused imports: `RetainedRuntime` and `RuntimeCloseError`
+ --> crates\qualia-core-db\src\bundle\stream\runtime\mod.rs:7:24
+  |
+7 | pub(crate) use state::{RetainedRuntime, RuntimeAccess, RuntimeCloseError, RuntimeParents};
+  |                        ^^^^^^^^^^^^^^^                 ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `runtime::*`
+ --> crates\qualia-core-db\src\bundle\stream\storage\native\tests.rs:4:62
+  |
+4 |     policy::adopt_local_whole_source, proof::Representation, runtime::*, storage::*,
+  |                                                              ^^^^^^^^^^
+
+warning: unused import: `ids::Mapping`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:18:16
+   |
+18 | pub(crate) use ids::Mapping;
+   |                ^^^^^^^^^^^^
+
+warning: unused import: `metadata::PrivateReferences`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:19:16
+   |
+19 | pub(crate) use metadata::PrivateReferences;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Artifact`, `ProtectedCandidate`, and `PublisherError`
+  --> crates\qualia-core-db\src\bundle\stream\protection\mod.rs:21:5
+   |
+21 |     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError,
+   |     ^^^^^^^^                 ^^^^^^^^^^^^^^^^^^                      ^^^^^^^^^^^^^^
+
+warning: unused import: `derive_segment`
+  --> crates\qualia-core-db\src\crypto\network\object_stream\mod.rs:18:26
+   |
+18 | pub(crate) use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
+   |                          ^^^^^^^^^^^^^^
+
+warning: unused import: `open::UnwrappedMetadata`
+ --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\mod.rs:9:16
+  |
+9 | pub(crate) use open::UnwrappedMetadata;
+  |                ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\inference_bench\prepared_domino.rs:51:14
+   |
+51 |             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+51 -             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+51 +             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\compute_universe_epoch.rs:36:10
+   |
+36 |         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+36 -         .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+36 +         .try_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\inference\qwen\retained.rs:74:37
+   |
+74 |         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+   |                                     ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+74 -         let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+74 +         let generation = GENERATION.try_update(Ordering::AcqRel, Ordering::Acquire,
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\sensing\local_custody\quota\recovery.rs:10:10
+   |
+10 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+10 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+10 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\net\peer\runtime\incarnation.rs:24:10
+   |
+24 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+24 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+24 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> crates\qualia-core-db\src\bundle\stream\runtime\owner\counted.rs:33:14
+   |
+33 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+33 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+33 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\tests\process_crash.rs:47:17
+   |
+47 |             let mut op = ticket(rt, payload.len(), 1);
+   |                 ----^^
+   |                 |
+   |                 help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> crates\qualia-core-db\src\bundle\stream\storage\native\recovery.rs:77:29
+   |
+77 |                         let mut material = UnacceptedMaterial { proof, payload };
+   |                             ----^^^^^^^^
+   |                             |
+   |                             help: remove this `mut`
+
+warning: fields `ar` and `or` are never read
+  --> crates\qualia-core-db\src\net\qdnf\session\handshake\endpoint\established\protected_channel\endpoint_fixtures.rs:95:9
+   |
+92 | pub(super) struct Pair<'a> {
+   |                   ---- fields in this struct
+...
+95 |     pub ar: &'a EndpointAuthority<'a>,
+   |         ^^
+96 |     pub oi: &'a Mutex<AuthorityOwner>,
+97 |     pub or: &'a Mutex<AuthorityOwner>,
+   |         ^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: multiple methods are never used
+   --> crates\qualia-core-db\src\bundle\stream\runtime\state\access.rs:69:19
+    |
+ 17 | impl<'b, 'p> RuntimeAccess<'b, 'p> {
+    | ---------------------------------- methods in this implementation
+...
+ 69 |     pub(crate) fn cancel_epoch(&self, ticket: &TransferTicket) -> Result<CancelEpoch, E> {
+    |                   ^^^^^^^^^^^^
+...
+ 75 |     pub(crate) fn expire(&mut self, now: u64) -> Result<usize, E> {
+    |                   ^^^^^^
+...
+ 86 |     pub(crate) fn live_transfers(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^
+...
+ 89 |     pub(crate) fn pending_schedule_records(&self) -> usize {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 92 |     pub(crate) fn charged_window_bytes(&self) -> u64 {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+...
+116 |     pub(crate) fn storage_stage<'s>(
+    |                   ^^^^^^^^^^^^^
+...
+129 |     pub(crate) fn release_recovery_source<'root>(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `state` is never read
+ --> crates\qualia-core-db\src\bundle\stream\runtime\state\close.rs:8:9
+  |
+6 | pub(crate) struct RuntimeCloseError<'parent, 'host> {
+  |                   ----------------- field in this struct
+7 |     pub error: E,
+8 |     pub state: RetainedRuntime<'parent, 'host>,
+  |         ^^^^^
+
+warning: methods `live_transfers` and `pending_schedule_records` are never used
+  --> crates\qualia-core-db\src\bundle\stream\runtime\state\scope.rs:61:19
+   |
+60 | impl RetainedRuntime<'_, '_> {
+   | ---------------------------- methods in this implementation
+61 |     pub(crate) fn live_transfers(&self) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^
+...
+64 |     pub(crate) fn pending_schedule_records(&self) -> Result<usize, E> {
+   |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `directory_offset` is never used
+   --> crates\qualia-core-db\src\bundle\stream\formats\m64_tests.rs:144:4
+    |
+144 | fn directory_offset(with_metric: bool) -> usize {
+    |    ^^^^^^^^^^^^^^^^
+
+warning: field `context` is never read
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:36:16
+   |
+34 | pub(crate) struct ProtectedCandidate {
+   |                   ------------------ field in this struct
+35 |     pub(super) descriptor: StrongDigest,
+36 |     pub(super) context: StrongDigest,
+   |                ^^^^^^^
+
+warning: method `context_id` is never used
+  --> crates\qualia-core-db\src\bundle\stream\protection\publisher.rs:42:19
+   |
+38 | impl ProtectedCandidate {
+   | ----------------------- method in this implementation
+...
+42 |     pub(crate) fn context_id(&self) -> StrongDigest {
+   |                   ^^^^^^^^^^
+
+warning: field `wraps` is never read
+  --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication.rs:42:5
+   |
+33 | pub struct ManagedObjectPublication<'a> {
+   |            ------------------------ field in this struct
+...
+42 |     wraps: u8,
+   |     ^^^^^
+
+warning: method `wrap_for` is never used
+   --> crates\qualia-core-db\src\specialized_libs\cryptographic_library\key_management\managed_object\publication.rs:255:19
+    |
+ 88 | impl<'a> ManagedObjectPublication<'a> {
+    | ------------------------------------- method in this implementation
+...
+255 |     pub(crate) fn wrap_for(
+    |                   ^^^^^^^^
+
+error: linking with `link.exe` failed: exit code: 1104
+  |
+  = note: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\HostX64\\x64\\link.exe" "/NOLOGO" "C:\\github\\qualiaDB\\target\\debug\\deps\\rustcWmGcFy\\symbols.o" "<257 object files omitted>" "kernel32.lib" "psapi.lib" "d3d12.lib" "dxgi.lib" "c:\\github\\qualiaDB\\crates\\qualia-core-db\\..\\..\\vendor\\directml\\bin\\x64-win\\DirectML.lib" "C:\\github\\qualiaDB\\target\\debug\\deps/{libjpeg_decoder-bc02a39b9a45d2f2,libpng-63e08acd378caea3,libbitflags-2a1c42c098e1bbe3,libfdeflate-6395decfe18e15dd,libmikktspace-6abf2aa0172d1720,libglam-67c86e9135c22aa6,libkeyring-b6d8535b6f9fba0b,libwindows_native_keyring_store-a153360ee8744119,libkeyring_core-6f9c0e9ee7e53642,libregex-a5278eeeb914d8e4,libregex_automata-fd685581fcb292b3,libaho_corasick-28d3e20a16907b84,liblz4_flex-7d49a679cf50cdb6,libtwox_hash-a8f24fb31b8a4e17,libfast_qr-e43cfdbc3c67c963,liburlencoding-19232bd2245c2342,libreqwest-6ebb508ff89b8821,librustls_platform_verifier-7ff496587b9b82c1,libhyper_rustls-79b08f5080f0fdd4,libtower_http-974d57b62b06cf05,liburl-3ca7033acf7ef842,libidna-11cc5bf4bfc984eb,libidna_adapter-edde41b796fc132f,libicu_properties-5622e5a13c4b6900,libicu_properties_data-fab2ecdb47dbee0b,libicu_normalizer-f295d5f1e3157830,libicu_normalizer_data-35739b1789def67d,libicu_collections-56db29ecb4aa380f,libutf8_iter-abae5e71daac2860,libpotential_utf-a5980761334a578f,libicu_provider-4fab122ce60259e9,libicu_locale_core-9229c0da5198e48a,libtinystr-5255f574426c2a42,liblitemap-dd3bf9a827c147fb,libwriteable-b743c925bcff7f83,libzerovec-2294ac303f941fd3,libzerotrie-8d22f816162f53c4,libyoke-5a0b85697b84bf13,libstable_deref_trait-26d17a7833b58f27,libzerofrom-c7ee81fa42decab9,libhex-616f54da6a74b27f,libdhat-370b24268f39d86c,libthousands-8a5458c71398c188,libmintex-597a6fcc1c3995af,liblazy_static-8567b1de6055ce52,libbacktrace-47ddf1a30a725e50,librustc_demangle-68c3e4e37c9ef3c0}.rlib" "<sysroot>\\lib\\rustlib\\x86_64-pc-windows-msvc\\lib/{libtest-*,libgetopts-*,librustc_std_workspace_std-*}.rlib" "C:\\github\\qualiaDB\\target\\debug\\deps/{librand_distr-7ab168c4391b5058,librand-53ce1cf0e78acb29,libdashmap-15cd7b293ce28e43,libhashbrown-276504c197b80024,libtokio_rustls-af8bb599de4b8b52,librustls-8f76ae18c2c91273,libwebpki-c272f28cf924bf1a,libh2-aaae5a5a26bb3f4c,libfnv-318479b52ea421ce,libfhe-557ce5e2fb1dcfd2,libfhe_math-3f255ca1cadd44c9,libpulp-42d9872014a24cbe,libprost-e28fd5bd05ceb59a,libfhe_traits-84fe3d49b55f7c64,libethnum-2661aff84524e512,libndarray-3f57cda9165b0a19,libmatrixmultiply-e195ffbafb7ecb7e,libnum_complex-f1d56514322bd3bc,librawpointer-9e0634dd48597bf5,libfhe_util-ed9f03609583682b,libnum_bigint_dig-0966558071e84a9f,libnum_iter-32d8d6023148bddf,libdoc_comment-03022fe46efa60ed,libfips205-1031eabbfc2e873f,libmp4-c8357cd538713e95,libnum_rational-2564eb10bcf912d7,libthiserror-b6f6a4ab97d586bb,libnum_bigint-9f854e6029c9c574,libfips203-f4bcdbe9acdb3a57,libsha3-4bfd055c689276b3,libsponge_cursor-58d9de79cc9d14df,libkeccak-a89755a743576108,libserde_bytes-9847a83527df09c6,libark_groth16-246592691664dfae,libark_crypto_primitives-47c1169be18e1724,libmerlin-f41bf82d0f7adafd,libbyteorder-e3b9698e18b73661,libark_snark-fe63980e2cdac195,libark_relations-29f3a2e9d55a86cb,libfoldhash-fff987a3a5d873e8,libark_bls12_381-8e4cc8a1d59f5a62,libark_ec-6340beece6bfd7af,libark_poly-7d3f5b9122067f43,libahash-5d9fcda2e8cb8be1,libitertools-4eee5ec9c3ec04fb,libark_ff-f865dcb281f52702,libark_serialize-2d6755f5d6e58a0d,libnum_bigint-3a90c464c7204209,libnum_integer-465973ddff531931,libark_std-abe967e8771bcb0d,librand-f785b7b242b4d7a1,librand_chacha-dac35d24797ec5c6,libchacha20poly1305-a0d116c1de769891,libchacha20-75cb319232c5066b,libpoly1305-c7aa9b333bdf668a,libcsv-13d686232e0ff130,libcsv_core-8dd5882455043b78,libchrono-8fb367ba68fea787,libetalon_sim-eafce003ccf91308,libvibe-21346d0ed628f7b3,libunicode_xid-e45c02e04761b5d5,libetalon_vibe-9c190d30b96cfa58,libetalon_sense_core-c63afbb4153410d1,libvibescript_abi-8979b075383fe0c0,libqualia_audio-095a00d913d4b09d,libproptest-dad9107e1376c4b2,libunarray-4a41a164f98d906e,libregex_syntax-ce5ddb50337e5c18,librand_xorshift-71fd2aa5dc85f104,libetalon_render-c170f0dc62c04f1e,libzstd-925661049dcf2533,libzstd_safe-2420e69bb92612f9,libzstd_sys-1ea291209b4a9be4,libflate2-f38ac8fa19630844,libminiz_oxide-466f1d8e5adb6813,libsimd_adler32-79694e61c43d6d82,libcrc32fast-109af0939076d926,libetalon_wasm-d344eb41f67d4d3c,libx25519_dalek-6b685cc775dbeffd,libaes_gcm-f66c19c7014ffa16,libctr-f4077d4b2156a9b0,libghash-421dc27d18226c78,libpolyval-87769667b1dff746,libuniversal_hash-077bd06fdbc5e07c,libaes-0a0c94d716bf776c,libcpubits-a49e36cac4345a52,libcipher-78900ae2340cdf2e,libaead-3dabdae1b1b47474,libinout-e3cb88d506b1b6bd,libhkdf-36b0c31a024d51cb,libhmac-c096482bba075af2,libbase64-b09d12b62ee65713,librcgen-414f67841e26f2c5,libyasna-20d52aeaa733e67d,libtime-f1641f6306ad53fe,libpowerfmt-aaf5bbb21d9b32b1,libnum_conv-98f2d278e3ae8680,libderanged-a8457fa29041c71f,libtime_core-678ffa75ed913ef2,librustls_pki_types-df90ce1dd1aa589c,libpem-08ee3215514f027a,libfips204-241edd3aadfcbcb7,libsha3-c9fa52b43f369ca3,libkeccak-aaeee8bbbe5903fc,libserde_yaml-dff229f714b0e20c,libunsafe_libyaml-305cce63360a60d4,libetalon_tensor-a3f45832f3e9f407,libminicbor-f95f9a1337d12734,libetalon_inference_lab-cf260be9099fa6f4,librtrb-8cb03910f6d0c2e4,libqualia_inference_kernel-9de1ac33571a4b7c,libetalon_inference-6114415cf42703ef,libetalon_model_io-e2bb77e24c58b50a,libsha2-b3ffec85e73aeae2,libetalon_model-a8e91294b6fd7ecd,libetalon_inference_kernel-3edb0f686ddff7c7,libetalon_inference_contract-752153536fd4acbf,libqualia_cooperative_core-ea47681ddc82fb93,libuuid-e5eb8444c46617d2,libgetrandom-9c96bc82fde8de16,librand_core-27e7646bd2ab77f6,libqualia_app_contract-2cd55a63d821defb,libcore_affinity-954d4948f22becce,libnum_cpus-fc63af2f1845d7cb,libquick_xml-9556609ed9047f1e,libetalon_diagnostics-6f6f0f8e8e1b8f6c,libciborium-ecb00a375254eee7,libciborium_ll-9836cba3ea12c0e1,libciborium_io-e20edb0093dc5659,libetalon_wgsl_forge-239887b1c5bf4f81,libpollster-0f6fe06d4a6d109b,libetalon_signal-791dd0789f35003c,libblake3-5008b78078cfff9b,libconstant_time_eq-1188970a00ec7123,libarrayref-286dce66b9fdcfd8,librayon-2953b2ad3daa6b9b,librayon_core-206ab9e78f413866,libcrossbeam_deque-3508e5d5ab17dc0c,libcrossbeam_epoch-0793cc5a0922933a,libeither-d35240ab8736c475,libetalon_agent-178f01d964080341,libetalon_resources-0dc25d97b5a275af,librio_xml-063626929fe57f6d,libquick_xml-b0e378d548f42401,librio_turtle-d0af9f72a3035c4d,liboxiri-3c4e54ac02336e2e,liboxilangtag-19341887d851d6de,librio_api-7da69797c640f602,libsysinfo-499fe63f8a666e1c,libntapi-cff027ece5d46a6c,libwinapi-9dbff1ff263d8444,liblibc-7276586c9ede7a56,libetalon_nquin-972ef2b5b7f2d618,libetalon-0102ce2008c52d9f,libetalon_core-c40f78760f2d4b4f,libetalon_hal-bc6ab2bf67c4c000,librenderdoc_sys-c5637a721dfce07e,libprofiling-d1542653d9d2db61,libetalon_naga_bridge-3a48bff6013803de,libglutin_wgl_sys-0948339a191cca1a,libglow-6cf8144ceebbf6f2,libgpu_allocator-850c2c38591ce993,libpresser-3f7cb3b6f4d6be00,libash-75a6c83407dfedd9,liblibloading-c3cf10be414ebdc2,libhashbrown-bff2a13fc63257c6,libordered_float-bc2dd9c08846f6c2,libnaga-c1105d2499d6af96,liblibm-d7974173d68c143c,libunicode_ident-8dece40f1b2fe183,libcodespan_reporting-27af3649e0f7e889,libunicode_width-1ef7b0e2345d57a0,libtermcolor-29fb620666ca18dd,libwinapi_util-04ca56634ccfdab4,libwindows_sys-416cad549009957f,libwindows_targets-dd1208d5392b2131,libspirv-b559906a7a7843c7,libhalf-0a957b380cdd85a1,libnum_traits-deb7f17680092e93,libarrayvec-722bbbd92aab11ed,librange_alloc-b01b243273701a37,libbit_set-e01501a0facf85d1,libbit_vec-119efa259e6c0e00,libwindows-fab89a8a501f5cde,libwindows_numerics-c2c43d76b9ac739d,libwindows_core-f706e21ad9c269f6,libwindows_strings-16d64bfd04d96b1d,libwindows_result-af77578df41f3354,libetalon_sync-ec280d61fe9e9311,libetalon_types-a3eabcf4bce03801,libraw_window_handle-d80826489a9201bc,libstatic_assertions-f039e5f1b27f39aa,libmacro_rules_attribute-913d8a444d7fcdf8,libnaga_types-422c0d4d2b491fa3,libindexmap-fa2aa3f778558666,libequivalent-20db9bf9b6907a56,librustc_hash-70aa0091c8cbedff,libhashbrown-018c0254282fa25d,libfoldhash-0b66a5402c87575f,liballocator_api2-36a162abd9e687f1,libbytemuck-2a47748e07681d9d,libmemmap2-270fcfda05e2a626,libsha1-fe95c965f516cad9,libtower_http-c7b989e7d4c3af57,libhttp_range_header-274521862a76e6aa,libmime_guess-a3bfe94c1e6904e0,libunicase-1b446f7bcd403ff6,libbitflags-e5d31068da577e50,libtempfile-342229f48ccfdf07,libfastrand-8b7401e13e2efa43,libtokio_stream-4bb9f34e50c77202,libtokio_util-70f1aff6c2e4b1f4,libed25519_dalek-aa5499a58c0e62e0,libsha2-614d442308ebc535,libcurve25519_dalek-8616addc1c54e09c,libcpufeatures-54e5607434c90a59,libdigest-c58effb6185a122b,libctutils-476906de7ff631ee,libcmov-cf6b74a0f515d68b,libconst_oid-873ffc385d5aa869,libcrypto_common-e4552e1e29148f3f,libblock_buffer-8e4f7e66971ca515,libhybrid_array-0cebc35efc40f06a,libed25519-4a4aeac0b1bef47d,libsignature-80ea51c871e3c3ad,libboringtun-7aac775c95b89498,libhmac-8f876bd01dc336ae,libx25519_dalek-8ee2a5b0a7d2ab25,libcurve25519_dalek-a6c014603088d2a3,libportable_atomic-9a92fcd0c93db6c3,libring-ef0b1aaf49385b1f,libuntrusted-eaf7d3efe07d258c,libchacha20poly1305-e6a8d5b118eb8518,libchacha20-aaa061963b2647b3,libpoly1305-bad3b3e24a1db8ea,libopaque_debug-b545e69b965f0c47,libuniversal_hash-af8e3c7a419eda45,libcipher-4a1662e0628ed946,libinout-4b1f42546e6fcf34,libblake2-c7627dfbe76b7fb7,libaead-75564789d6ba251c,libcrossbeam_channel-570e27834e8234f4,libcrossbeam_utils-e0ff3c831aa26ca9,libserial_test-9479f0df7a31fc29,libaxum-dc4194cbe6bcb717,libserde_json-416a57215c5ec4b9,libzmij-648e7fbdc4965218,libserde_path_to_error-423442152a8fbbe7,libserde_urlencoded-0ff3f46fc076e8e6,libryu-b5cd8d342b4614da,libform_urlencoded-f91a21e36863e712,libmatchit-44921cca17ffb867,libtokio_tungstenite-4e72eda8b9af7c54,libtungstenite-c91a97dc73d1f54e,libdata_encoding-a2ad10f2bd3a6246,librand-f951ca7fe3a7a894,librand_chacha-f79d0dced569699b,libppv_lite86-18c1f3fae969baa8,libzerocopy-c72dbf087e045f17,librand_core-8193fea4d9b33d7b,libgetrandom-f4c5997f11c4acf9,libthiserror-9bce75d0a1296455,libsha1-d2c734c56379b761,libcpufeatures-897d899dbaf16027,libdigest-c8fc45c00c2e03d9,libsubtle-42df0f80f46a9245,libblock_buffer-7f542e1e157250e0,libcrypto_common-2eb19c6ce8e8bea0,libgeneric_array-1be4f7b140539207,libtypenum-adb542844dd9a49c,librand_core-a6a20d6f3dfa6014,libgetrandom-3093d39680cae351,libhyper_util-6c718f1b9051548a,libbase64-a11e5807eff9dff4,libpercent_encoding-245ca6d4a117657d,libipnet-33b6645360667943,libsocket2-f9666acc8a711d4d,libwindows_sys-0c4e3fba55857227,libwindows_targets-e93aa914178b2660,libhyper-74edeef9151a3b46,libwant-8e4a3f6f80b6051e,libtry_lock-9cdcb455fa861890,libhttparse-0627afa65286813f,libatomic_waker-28a27890052bbc03,libhttpdate-97c58c4ed4b6e326,libfutures_channel-4466b75d0f8b3668,libaxum_core-b6d7f23c0d81c7b0,libmime-f2488a6959ed2c45,libhttp_body_util-cf084b1cf92287ee,libhttp_body-91875f9f0974bc47,libhttp-4a0f5c3fd5af4769,libitoa-747ac612e1918351,libtracing-ff7805d4cd0737c3,liblog-5bb770a7e0e39bef,libtracing_core-1321c515ad2fc842,libonce_cell-d5944132e23e98c0,libtower-b4d5cc73ce0d6dc1,libsync_wrapper-77b3384e7f15391d,libfutures_util-08e56ec890cc35f6,libmemchr-f1cd1fdd09252e84,libfutures_io-59fae895229e2da2,libslab-74241bcaa254461c,libfutures_sink-d7109217d4882380,libfutures_task-7db22c5a47b3aca2,libtower_layer-fe678460c0c55287,libtower_service-9add44969647a0de,libtokio-e6ec791d9ea2f898,libsocket2-53bfd1be157e722e,libbytes-04fe34f294302e37,libmio-efae8e4cf2524a0a,libwindows_sys-c1a0b8658ac117a2,libparking_lot-757243e2f1782a98,libparking_lot_core-799b11c27bf050b5,libwindows_link-94ea650fb11d277a,libcfg_if-56b4a27f57e934d6,libsmallvec-166e5855c2008eac,libserde-88bb25fbd7abe800,libserde_core-6b3c4f514919fd15,liblock_api-58be9273d3755b42,libscopeguard-0357c8041c989334,libpin_project_lite-366d641ce3c9fc7a,libzeroize-07878f11a8b337f7,libfutures_core-f40ab4ae7c4640aa}.rlib" "<sysroot>\\lib\\rustlib\\x86_64-pc-windows-msvc\\lib/{libstd-*,libpanic_unwind-*,libcfg_if-*,libwindows_link-*,librustc_demangle-*,libstd_detect-*,libhashbrown-*,librustc_std_workspace_alloc-*,libunwind-*,librustc_std_workspace_core-*,liballoc-*,libcore-*,libcompiler_builtins-*}.rlib" "kernel32.lib" "ntdll.lib" "kernel32.lib" "kernel32.lib" "ntdll.lib" "advapi32.lib" "cfgmgr32.lib" "credui.lib" "kernel32.lib" "secur32.lib" "user32.lib" "legacy_stdio_definitions.lib" "opengl32.lib" "C:\\Users\\Hp\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\windows_x86_64_msvc-0.48.5\\lib\\windows.0.48.5.lib" "bcrypt.lib" "advapi32.lib" "C:\\Users\\Hp\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\windows_x86_64_msvc-0.52.6\\lib\\windows.0.52.0.lib" "kernel32.lib" "kernel32.lib" "kernel32.lib" "ntdll.lib" "userenv.lib" "ws2_32.lib" "dbghelp.lib" "/defaultlib:msvcrt" "/NXCOMPAT" "/LIBPATH:C:\\github\\qualiaDB\\target\\debug\\build\\blake3-3c682f41524747db\\out" "/LIBPATH:C:\\github\\qualiaDB\\target\\debug\\build\\ring-46dc439341cff81f\\out" "/LIBPATH:C:\\github\\qualiaDB\\target\\debug\\build\\alloca-fb0eb802e10d977f\\out" "/LIBPATH:C:\\github\\qualiaDB\\target\\debug\\build\\zstd-sys-deb73c77d0a403e5\\out" "/LIBPATH:c:\\github\\qualiaDB\\crates\\qualia-core-db\\..\\..\\vendor\\directml\\bin\\x64-win" "/LIBPATH:C:\\Users\\Hp\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\windows_x86_64_msvc-0.52.6\\lib" "/LIBPATH:C:\\Users\\Hp\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\windows_x86_64_msvc-0.48.5\\lib" "/OUT:C:\\github\\qualiaDB\\target\\debug\\deps\\qualia_core_db-c4560c081fa48873.exe" "/OPT:REF,NOICF" "/DEBUG" "/PDBALTPATH:%_PDB%" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\intrinsic.natvis" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\liballoc.natvis" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\libcore.natvis" "/NATVIS:<sysroot>\\lib\\rustlib\\etc\\libstd.natvis" "/NATVIS:C:\\github\\qualiaDB\\target\\debug\\deps\\rustcWmGcFy\\qualia_core_db-0.natvis" "/NATVIS:C:\\github\\qualiaDB\\target\\debug\\deps\\rustcWmGcFy\\qualia_core_db-1.natvis" "/NATVIS:C:\\github\\qualiaDB\\target\\debug\\deps\\rustcWmGcFy\\qualia_core_db-2.natvis"
+  = note: some arguments are omitted. use `--verbose` to show all linker arguments
+  = note: LINK : fatal error LNK1104: cannot open file 'C:\github\qualiaDB\target\debug\deps\qualia_core_db-c4560c081fa48873.exe'
+          
+
+warning: `qualia-core-db` (lib test) generated 28 warnings
+error: could not compile `qualia-core-db` (lib test) due to 1 previous error; 28 warnings emitted

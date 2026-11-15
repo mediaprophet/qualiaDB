@@ -1,0 +1,23 @@
+
+running 18 tests
+test net::peer::replication::qbdl::carrier::send::exhaustion::last_id_refuses_without_wrap_or_reuse ... ok
+test net::peer::replication::qbdl::carrier::tests::actual_raw_allocator_observes_no_hot_assembly_or_cursor_allocations ... ok
+test net::peer::replication::qbdl::carrier::tests::capacity_and_credit_refuse_before_copy_and_drop_erases ... ok
+test net::peer::replication::qbdl::carrier::tests::check_panic_and_outer_final_authority_refusal_erase_and_poison ... ok
+test net::peer::replication::qbdl::carrier::tests::data_continues_after_newer_control_and_no_slice_escapes ... ok
+test net::peer::replication::qbdl::carrier::tests::gaps_conflicting_totals_wrong_transcript_and_second_data_poison ... ok
+test net::peer::replication::qbdl::carrier::tests::maximum_page_has_65_chunks_and_final_240_bytes ... ok
+test net::peer::replication::qbdl::carrier::tests::refusal_and_unwind_erase_partial_and_completed_records ... ok
+test net::peer::replication::qbdl::carrier::tests::send_cursor_retries_exact_bytes_and_ids_do_not_reuse ... ok
+test net::peer::replication::qbdl::provider::outboard_tests::actual_non_power_of_two_outboard_proofs_verify_for_each_leaf ... ok
+test net::peer::replication::qbdl::provider::outboard_tests::bounds_identity_duplicates_missing_nodes_and_capacity_refuse ... ok
+test net::peer::replication::qbdl::provider::outboard_tests::empty_tree_binds_canonical_root_and_has_no_proof_request ... ok
+test net::peer::replication::qbdl::wire::tests::every_variant_exact_prefix_and_roundtrip ... ok
+test net::peer::replication::qbdl::wire::tests::header_reserved_versions_and_unused_associations_refuse_without_output ... ok
+test net::peer::replication::qbdl::wire::tests::leaf_and_descriptor_maxima_match_exact_allocations ... ok
+test net::peer::replication::qbdl::wire::tests::selector_final_chunks_limits_and_resume_order_are_canonical ... ok
+test net::peer::replication::qbdl::wire::tests::service_codec_hot_success_and_failure_allocate_zero ... ok
+test net::peer::replication::qbdl::wire::tests::service_record_domain_geometry_and_final_chunk_are_exact ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 10469 filtered out; finished in 0.59s
+

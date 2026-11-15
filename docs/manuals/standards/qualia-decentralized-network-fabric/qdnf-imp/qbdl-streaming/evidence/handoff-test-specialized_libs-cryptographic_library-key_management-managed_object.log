@@ -1,0 +1,9 @@
+
+running 4 tests
+test specialized_libs::cryptographic_library::key_management::managed_object::tests::new_dh_and_kem_algorithms_are_not_signing_aliases ... ok
+test specialized_libs::cryptographic_library::key_management::managed_object::tests::publication_policy_budget_empty_and_drop_cleanup ... ok
+test specialized_libs::cryptographic_library::key_management::managed_object::tests::recipient_tests::actual_recipient_keys_policy_and_fences ... ok
+test specialized_libs::cryptographic_library::key_management::managed_object::tests::seal_cancel_generation_expiry_and_unwind_are_terminal ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 10483 filtered out; finished in 0.29s
+

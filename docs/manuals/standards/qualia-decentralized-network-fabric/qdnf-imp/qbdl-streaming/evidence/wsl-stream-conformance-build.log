@@ -1,0 +1,422 @@
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded aead v0.6.1
+  Downloaded cpufeatures v0.3.1
+  Downloaded curve25519-dalek-derive v0.1.1
+  Downloaded fastrand v2.5.0
+  Downloaded block-buffer v0.12.1
+  Downloaded keccak v0.1.6
+  Downloaded cfg-if v1.0.5
+  Downloaded errno v0.3.14
+  Downloaded block-buffer v0.10.4
+  Downloaded crypto-common v0.2.2
+  Downloaded cpufeatures v0.2.17
+  Downloaded crypto-common v0.1.7
+  Downloaded generic-array v0.14.7
+  Downloaded itoa v1.0.18
+  Downloaded rustc_version v0.4.1
+  Downloaded signature v3.0.0
+  Downloaded digest v0.10.7
+  Downloaded subtle v2.6.1
+  Downloaded universal-hash v0.6.1
+  Downloaded inout v0.2.6
+  Downloaded zeroize_derive v1.5.0
+  Downloaded digest v0.11.3
+  Downloaded version_check v0.9.5
+  Downloaded quote v1.0.47
+  Downloaded cmov v0.5.4
+  Downloaded ed25519 v3.0.0
+  Downloaded sha2 v0.11.1
+  Downloaded sha2 v0.10.9
+  Downloaded zeroize v1.9.1
+  Downloaded hybrid-array v0.4.15
+  Downloaded once_cell v1.21.4
+  Downloaded poly1305 v0.9.1
+  Downloaded tempfile v3.27.0
+  Downloaded zmij v1.0.23
+  Downloaded cipher v0.5.2
+  Downloaded getrandom v0.2.17
+  Downloaded memmap2 v0.9.12
+  Downloaded semver v1.0.28
+  Downloaded proc-macro2 v1.0.107
+  Downloaded unicode-ident v1.0.27
+  Downloaded bitflags v2.13.2
+  Downloaded hmac v0.13.0
+  Downloaded minicbor v2.3.1
+  Downloaded rand_core v0.6.4
+  Downloaded chacha20 v0.10.2
+  Downloaded getrandom v0.4.3
+  Downloaded log v0.4.35
+  Downloaded ctutils v0.4.8
+  Downloaded serde_core v1.0.229
+  Downloaded serde_derive v1.0.229
+  Downloaded chacha20poly1305 v0.11.0
+  Downloaded serde v1.0.229
+  Downloaded memchr v2.8.3
+  Downloaded ed25519-dalek v3.0.0
+  Downloaded typenum v1.20.1
+  Downloaded serde_json v1.0.154
+  Downloaded hkdf v0.13.0
+  Downloaded syn v2.0.119
+  Downloaded syn v3.0.10
+  Downloaded curve25519-dalek v5.0.0
+  Downloaded rustix v1.1.4
+  Downloaded sha3 v0.10.9
+  Downloaded libc v0.2.191
+  Downloaded fips204 v0.4.6
+  Downloaded linux-raw-sys v0.12.1
+   Compiling typenum v1.20.1
+   Compiling hybrid-array v0.4.15
+   Compiling proc-macro2 v1.0.107
+   Compiling crypto-common v0.2.2
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling cfg-if v1.0.5
+   Compiling cmov v0.5.4
+   Compiling ctutils v0.4.8
+   Compiling block-buffer v0.12.1
+   Compiling version_check v0.9.5
+   Compiling generic-array v0.14.7
+   Compiling libc v0.2.191
+   Compiling syn v2.0.119
+   Compiling cpufeatures v0.3.1
+   Compiling digest v0.11.3
+   Compiling semver v1.0.28
+   Compiling rustc_version v0.4.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling inout v0.2.6
+   Compiling serde_core v1.0.229
+   Compiling digest v0.10.7
+   Compiling curve25519-dalek v5.0.0
+   Compiling rustix v1.1.4
+   Compiling getrandom v0.4.3
+   Compiling zmij v1.0.23
+   Compiling cipher v0.5.2
+   Compiling zeroize_derive v1.5.0
+   Compiling curve25519-dalek-derive v0.1.1
+   Compiling getrandom v0.2.17
+   Compiling universal-hash v0.6.1
+   Compiling syn v3.0.10
+   Compiling bitflags v2.13.2
+   Compiling serde_json v1.0.154
+   Compiling serde v1.0.229
+   Compiling cpufeatures v0.2.17
+   Compiling keccak v0.1.6
+   Compiling subtle v2.6.1
+   Compiling signature v3.0.0
+   Compiling linux-raw-sys v0.12.1
+   Compiling ed25519 v3.0.0
+   Compiling sha3 v0.10.9
+   Compiling sha2 v0.10.9
+   Compiling serde_derive v1.0.229
+   Compiling poly1305 v0.9.1
+   Compiling rand_core v0.6.4
+   Compiling zeroize v1.9.1
+   Compiling chacha20 v0.10.2
+   Compiling aead v0.6.1
+   Compiling hmac v0.13.0
+   Compiling sha2 v0.11.1
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling tempfile v3.27.0
+   Compiling ed25519-dalek v3.0.0
+   Compiling hkdf v0.13.0
+   Compiling chacha20poly1305 v0.11.0
+   Compiling fips204 v0.4.6
+   Compiling memmap2 v0.9.12
+   Compiling minicbor v2.3.1
+   Compiling log v0.4.35
+   Compiling qualia-qbdl-stream-conformance v0.1.0 (/mnt/c/github/qualiaDB/tools/qbdl-stream-conformance)
+warning: unused import: `owned::decode_owned_index`
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/index/mod.rs:15:16
+   |
+15 | pub(crate) use owned::decode_owned_index;
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `SparseWorkspaceKey` and `WorkspacePageAttempt`
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/mod.rs:13:24
+   |
+13 | pub(crate) use types::{SparseWorkspaceKey, WorkspacePageAttempt};
+   |                        ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `derive_segment`, `open_leaf_raw`, and `seal_leaf_raw`
+  --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/mod.rs:18:26
+   |
+18 | pub(crate) use segment::{derive_segment, open_leaf_raw, seal_leaf_raw};
+   |                          ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused imports: `open_master_raw` and `seal_master_raw`
+  --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/mod.rs:21:23
+   |
+21 | pub(crate) use wrap::{open_master_raw, seal_master_raw};
+   |                       ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/owner.rs:63:14
+   |
+63 |             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |              ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+63 -             .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+63 +             .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<usize>::fetch_update`: renamed to `try_update` for consistency
+  --> src/sensing/../../../../crates/qualia-core-db/src/sensing/local_custody/quota/recovery.rs:10:10
+   |
+10 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+10 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+10 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+   |
+
+warning: constant `OFF_MAGIC` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:62:18
+   |
+62 | pub(crate) const OFF_MAGIC: usize = 0;
+   |                  ^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `OFF_VERSION` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:63:18
+   |
+63 | pub(crate) const OFF_VERSION: usize = 4;
+   |                  ^^^^^^^^^^^
+
+warning: constant `OFF_FLAGS` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:64:18
+   |
+64 | pub(crate) const OFF_FLAGS: usize = 6;
+   |                  ^^^^^^^^^
+
+warning: constant `OFF_ENTRY_COUNT` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:65:18
+   |
+65 | pub(crate) const OFF_ENTRY_COUNT: usize = 8;
+   |                  ^^^^^^^^^^^^^^^
+
+warning: constant `OFF_INDEX_OFFSET` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:66:18
+   |
+66 | pub(crate) const OFF_INDEX_OFFSET: usize = 12;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_INDEX_LENGTH` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:67:18
+   |
+67 | pub(crate) const OFF_INDEX_LENGTH: usize = 20;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_TOTAL_LENGTH` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:68:18
+   |
+68 | pub(crate) const OFF_TOTAL_LENGTH: usize = 28;
+   |                  ^^^^^^^^^^^^^^^^
+
+warning: constant `OFF_CRC32C` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/format.rs:69:18
+   |
+69 | pub(crate) const OFF_CRC32C: usize = 36;
+   |                  ^^^^^^^^^^
+
+warning: function `align_up` is never used
+   --> src/../../../crates/qualia-core-db/src/bundle/format.rs:102:15
+    |
+102 | pub(crate) fn align_up(n: usize, align: usize) -> usize {
+    |               ^^^^^^^^
+
+warning: function `decode_owned_index` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/index/owned.rs:55:15
+   |
+55 | pub(crate) fn decode_owned_index(
+   |               ^^^^^^^^^^^^^^^^^^
+
+warning: fields `binding` and `signatures` are never read
+  --> src/cose_codec/../../../../crates/qualia-core-db/src/crypto/network/cose/types.rs:56:16
+   |
+55 | pub struct Workspace {
+   |            --------- fields in this struct
+56 |     pub(crate) binding: [u8; MAX_BINDING_BYTES],
+   |                ^^^^^^^
+57 |     pub(crate) sig_structure: [u8; MAX_SIG_STRUCTURE_BYTES],
+58 |     pub(crate) signatures: PairSignatures,
+   |                ^^^^^^^^^^
+
+warning: method `key_ids` is never used
+  --> src/cose_codec/../../../../crates/qualia-core-db/src/crypto/network/cose/raw_signing.rs:16:19
+   |
+15 | impl RawSigningKeys<'_> {
+   | ----------------------- method in this implementation
+16 |     pub(crate) fn key_ids(&self) -> KeyIds {
+   |                   ^^^^^^^
+
+warning: function `sign_payload` is never used
+  --> src/cose_codec/../../../../crates/qualia-core-db/src/crypto/network/cose/raw_signing.rs:39:15
+   |
+39 | pub(super) fn sign_payload(
+   |               ^^^^^^^^^^^^
+
+warning: associated constant `EMPTY` is never used
+  --> src/../../../crates/qualia-core-db/src/net/peer/runtime/ledger.rs:83:15
+   |
+82 | impl ChargeRef {
+   | -------------- associated constant in this implementation
+83 |     pub const EMPTY: Self = Self {
+   |               ^^^^^
+
+warning: field `store_incarnation` is never read
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/types.rs:15:16
+   |
+11 | pub struct SparsePageWorkspace {
+   |            ------------------- field in this struct
+...
+15 |     pub(super) store_incarnation: Generation,
+   |                ^^^^^^^^^^^^^^^^^
+   |
+   = note: `SparsePageWorkspace` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: struct `SparseWorkspaceKey` is never constructed
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/types.rs:68:19
+   |
+68 | pub(crate) struct SparseWorkspaceKey {
+   |                   ^^^^^^^^^^^^^^^^^^
+
+warning: methods `binding_key`, `reset_for_store`, `check_binding_key`, and `begin_attempt` are never used
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/types.rs:75:19
+   |
+74 | impl SparsePageWorkspace {
+   | ------------------------ methods in this implementation
+75 |     pub(crate) fn binding_key(&self) -> SparseWorkspaceKey {
+   |                   ^^^^^^^^^^^
+...
+85 |     pub(crate) fn reset_for_store(&mut self) -> Result<SparseWorkspaceKey, QdnfError> {
+   |                   ^^^^^^^^^^^^^^^
+...
+91 |     pub(crate) fn check_binding_key(&self, key: SparseWorkspaceKey) -> Result<(), QdnfError> {
+   |                   ^^^^^^^^^^^^^^^^^
+...
+99 |     pub(crate) fn begin_attempt(&mut self) -> WorkspacePageAttempt<'_> {
+   |                   ^^^^^^^^^^^^^
+
+warning: struct `WorkspacePageAttempt` is never constructed
+   --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/types.rs:107:19
+    |
+107 | pub(crate) struct WorkspacePageAttempt<'a> {
+    |                   ^^^^^^^^^^^^^^^^^^^^
+
+warning: methods `workspace` and `commit` are never used
+   --> src/../../../crates/qualia-core-db/src/bundle/stream/runtime/sparse_workspace/types.rs:112:19
+    |
+111 | impl WorkspacePageAttempt<'_> {
+    | ----------------------------- methods in this implementation
+112 |     pub(crate) fn workspace(&mut self) -> &mut SparsePageWorkspace {
+    |                   ^^^^^^^^^
+...
+115 |     pub(crate) fn commit(mut self) {
+    |                   ^^^^^^
+
+warning: struct `RawSigningKeys` is never constructed
+  --> src/../../../crates/qualia-core-db/src/specialized_libs/cryptographic_library/signing_profile.rs:11:19
+   |
+11 | pub(crate) struct RawSigningKeys<'a> {
+   |                   ^^^^^^^^^^^^^^
+
+warning: function `sign_mldsa65_empty_context_into` is never used
+  --> src/../../../crates/qualia-core-db/src/specialized_libs/cryptographic_library/signing_profile.rs:17:15
+   |
+17 | pub(crate) fn sign_mldsa65_empty_context_into(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `sign_ed25519_raw_into` is never used
+  --> src/../../../crates/qualia-core-db/src/specialized_libs/cryptographic_library/signing_profile.rs:41:15
+   |
+41 | pub(crate) fn sign_ed25519_raw_into(
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `matches` is never used
+  --> src/../../../crates/qualia-core-db/src/bundle/stream/descriptor/refs.rs:30:19
+   |
+ 9 | impl<'a> PageRefsView<'a> {
+   | ------------------------- method in this implementation
+...
+30 |     pub(crate) fn matches(self, refs: &[PageRef]) -> Result<(), E> {
+   |                   ^^^^^^^
+
+warning: struct `EndpointSecrets` is never constructed
+ --> src/../../../crates/qualia-core-db/src/net/qdnf/crypto/schedule/endpoint.rs:9:12
+  |
+9 | pub struct EndpointSecrets {
+  |            ^^^^^^^^^^^^^^^
+
+warning: associated items `derive`, `finished_key`, and `traffic` are never used
+  --> src/../../../crates/qualia-core-db/src/net/qdnf/crypto/schedule/endpoint.rs:14:12
+   |
+13 | impl EndpointSecrets {
+   | -------------------- associated items in this implementation
+14 |     pub fn derive(shared: &SecretLease, t0: &Transcript) -> Result<Self, CryptoError> {
+   |            ^^^^^^
+...
+47 |     pub fn finished_key(&self, initiator: bool) -> Result<&[u8; 32], CryptoError> {
+   |            ^^^^^^^^^^^^
+...
+57 |     pub fn traffic(&self, t2: StrongDigest) -> Result<SecretLease, CryptoError> {
+   |            ^^^^^^^
+
+warning: function `derive_segment` is never used
+   --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/segment.rs:115:15
+    |
+115 | pub(crate) fn derive_segment(
+    |               ^^^^^^^^^^^^^^
+
+warning: function `seal_leaf_raw` is never used
+   --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/segment.rs:126:15
+    |
+126 | pub(crate) fn seal_leaf_raw(
+    |               ^^^^^^^^^^^^^
+
+warning: function `open_leaf_raw` is never used
+   --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/segment.rs:147:15
+    |
+147 | pub(crate) fn open_leaf_raw(
+    |               ^^^^^^^^^^^^^
+
+warning: function `key` is never used
+   --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/wrap.rs:130:4
+    |
+130 | fn key(kem: &[u8; 32], dh: &[u8; 32], aad: &[u8], out: &mut [u8; 32]) -> Result<(), Error> {
+    |    ^^^
+
+warning: function `seal_master_raw` is never used
+   --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/wrap.rs:142:15
+    |
+142 | pub(crate) fn seal_master_raw(
+    |               ^^^^^^^^^^^^^^^
+
+warning: function `open_master_raw` is never used
+   --> src/../../../crates/qualia-core-db/src/crypto/network/object_stream/wrap.rs:162:15
+    |
+162 | pub(crate) fn open_master_raw(
+    |               ^^^^^^^^^^^^^^^
+
+warning: `qualia-qbdl-stream-conformance` (lib) generated 37 warnings (run `cargo fix --lib -p qualia-qbdl-stream-conformance` to apply 6 suggestions)
+warning: function `arr48` is never used
+  --> src/endpoint_fixtures.rs:32:4
+   |
+32 | fn arr48(bytes: &[u8]) -> [u8; 48] {
+   |    ^^^^^
+
+warning: `qualia-qbdl-stream-conformance` (lib test) generated 17 warnings (16 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7m 00s
+  Executable unittests src/lib.rs (tools/qbdl-stream-conformance/target/linux/x86_64-unknown-linux-gnu/debug/deps/qualia_qbdl_stream_conformance-cc980fd0a1ad795c)

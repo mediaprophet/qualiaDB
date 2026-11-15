@@ -1,8 +1,8 @@
 //! Actual existing geometry/context codecs over a private source mapping.
 use super::{
-    PreparedSource,
     ids::{self, Mapping},
     publisher::PublisherError as E,
+    PreparedSource,
 };
 use crate::crypto::network::{digest::sha384, object_stream::*};
 use crate::net::qdnf::types::StrongDigest;
