@@ -814,7 +814,10 @@ fn validate_segment_locator(locator: &str) -> io::Result<()> {
         return Ok(());
     }
     let path = Path::new(locator);
-    if path.is_absolute()
+    if locator.contains(':')
+        || locator.starts_with('\\')
+        || locator.split(['/', '\\']).any(|seg| seg == "..")
+        || path.is_absolute()
         || path.components().any(|component| {
             matches!(
                 component,
