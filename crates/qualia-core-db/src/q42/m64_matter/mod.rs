@@ -7,6 +7,7 @@
 //! Output is strictly cache-aligned (64-byte records) and little-endian.
 
 pub mod banked_lut;
+pub mod bio_tissue_record;
 pub mod brick3d;
 pub mod checked_reader;
 pub mod chunk_directory;
@@ -23,9 +24,11 @@ pub mod strata_record;
 mod tests;
 
 pub use banked_lut::*;
+pub use bio_tissue_record::*;
 pub use brick3d::*;
 pub use checked_reader::{
-    M64Chunk, M64PayloadInterval, M64ReadError, M64ReadLimits, M64Reader, M64Verification,
+    M64Chunk, M64DecodedRecord, M64PayloadInterval, M64ReadError, M64ReadLimits, M64Reader,
+    M64Verification,
 };
 pub use chunk_directory::*;
 pub use georaster::*;

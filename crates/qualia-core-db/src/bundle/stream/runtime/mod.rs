@@ -4,7 +4,7 @@ pub use sparse_workspace::{SparsePageWorkspace, WorkspaceReleaseError, MAX_SPARS
 mod dispatch;
 mod owner;
 mod state;
-pub(crate) use state::{RetainedRuntime, RuntimeAccess, RuntimeCloseError, RuntimeParents};
+pub use state::{RetainedRuntime, RuntimeAccess, RuntimeCloseError, RuntimeParents};
 #[cfg(not(target_arch = "wasm32"))]
 pub mod recovery_source;
 #[cfg(not(target_arch = "wasm32"))]

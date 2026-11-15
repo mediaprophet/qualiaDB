@@ -88,6 +88,65 @@ impl Intent {
         }
         Ok(p)
     }
+    /// Inverse of [`Self::encode`]. Two-process PSK packages carry this layout.
+    pub fn decode(src: &[u8]) -> Result<Self, E> {
+        let src = src.get(..INTENT_BYTES).ok_or(E::Capacity)?;
+        let mut p = 0;
+        let digest = |p: &mut usize| -> StrongDigest {
+            let mut d = StrongDigest::ZERO;
+            d.0.copy_from_slice(&src[*p..*p + 48]);
+            *p += 48;
+            d
+        };
+        let initiator = digest(&mut p);
+        let responder = digest(&mut p);
+        let service = digest(&mut p);
+        let purpose = digest(&mut p);
+        let instrument = digest(&mut p);
+        let scope = digest(&mut p);
+        let mut operation = OperationId([0; 16]);
+        operation.0.copy_from_slice(&src[p..p + 16]);
+        p += 16;
+        let key = |p: &mut usize| -> [u8; 48] {
+            let mut k = [0u8; 48];
+            k.copy_from_slice(&src[*p..*p + 48]);
+            *p += 48;
+            k
+        };
+        let initiator_keys = KeyIds {
+            ml_dsa_65: key(&mut p),
+            ed25519: key(&mut p),
+        };
+        let responder_keys = KeyIds {
+            ml_dsa_65: key(&mut p),
+            ed25519: key(&mut p),
+        };
+        let u64be = |p: &mut usize| -> u64 {
+            let mut raw = [0u8; 8];
+            raw.copy_from_slice(&src[*p..*p + 8]);
+            *p += 8;
+            u64::from_be_bytes(raw)
+        };
+        let intent = Self {
+            initiator,
+            responder,
+            service,
+            purpose,
+            instrument,
+            scope,
+            operation,
+            initiator_keys,
+            responder_keys,
+            initiator_epoch: u64be(&mut p),
+            responder_epoch: u64be(&mut p),
+            expires_unix: u64be(&mut p),
+        };
+        if p != INTENT_BYTES {
+            return Err(E::Capacity);
+        }
+        intent.validate()?;
+        Ok(intent)
+    }
     pub(super) fn authority(&self, role: Role) -> AuthorityBinding {
         AuthorityBinding {
             principal: self.local(role),
@@ -124,6 +183,45 @@ impl Intent {
             self.initiator_epoch
         } else {
             self.responder_epoch
+        }
+    }
+}
+
+#[cfg(test)]
+mod decode_tests {
+    use super::*;
+    fn digest(b: u8) -> StrongDigest {
+        StrongDigest([b; 48])
+    }
+    fn keys(a: u8, b: u8) -> KeyIds {
+        KeyIds {
+            ml_dsa_65: [a; 48],
+            ed25519: [b; 48],
+        }
+    }
+    #[test]
+    fn encode_decode_roundtrip() {
+        let intent = Intent {
+            initiator: digest(1),
+            responder: digest(2),
+            service: digest(3),
+            purpose: digest(4),
+            instrument: digest(5),
+            scope: digest(6),
+            operation: OperationId([7; 16]),
+            initiator_keys: keys(8, 9),
+            responder_keys: keys(10, 11),
+            initiator_epoch: 1,
+            responder_epoch: 2,
+            expires_unix: 90,
+        };
+        let mut out = [0u8; INTENT_BYTES];
+        assert_eq!(intent.encode(&mut out).unwrap(), INTENT_BYTES);
+        let got = Intent::decode(&out).unwrap();
+        assert_eq!(got, intent);
+        match Intent::decode(&out[..INTENT_BYTES - 1]) {
+            Err(_) => {}
+            Ok(_) => panic!("short intent must refuse"),
         }
     }
 }

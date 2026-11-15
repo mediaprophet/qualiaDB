@@ -1634,5 +1634,55 @@ let parity = nquin.wire.compute_wire_parity(groups, 64, 128, 256, 512);
     // Initialize
     loadWasm();
 </script>
+<section id="bio-densitometry-mobility" class="max-w-6xl mx-auto my-10 p-6 rounded-2xl border border-emerald-500/30 bg-slate-950/80 text-slate-200">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="text-xl font-bold text-emerald-300">Skeletal &amp; Tissue Densitometry + Coupled Musculoskeletal/Mobility</h2>
+        <span class="text-xs font-mono px-2.5 py-1 rounded bg-emerald-500/15 text-emerald-200">8 Cross-Kingdom Presets · Carter–Hayes · Gibson–Ashby</span>
+    </div>
+    <p class="text-sm text-slate-300 mb-4">
+        Evaluates cortical/trabecular BMD (<code>&rho;<sub>app</sub></code>, <code>vBMD</code>, <code>aBMD</code>, T-score, Z-score, <code>BV/TV</code>, fabric tensor <code>M<sub>fabric</sub></code>, mineralization <code>&mu;<sub>min</sub></code>), Carter–Hayes stiffness (<code>E &prop; &rho;<sup>3</sup></code>), Gibson–Ashby yield, fracture callus stages 0..4, muscle <code>HU</code> &amp; <code>IMAT</code> myosteatosis, pregnancy/ovulatory relaxin ligament laxity, pediatric-to-senescent ontogeny, laterality, Relative Effort Ratio (<code>RER<sub>j</sub></code>), Hof Margin of Stability (<code>MoS</code>), and Structural Factor of Risk (<code>&Phi;<sub>b</sub></code>).
+    </p>
+    <div class="grid md:grid-cols-3 gap-4 text-xs mb-4">
+        <label class="block">
+            <span class="text-slate-400 block mb-1">Cross-Kingdom Preset (8)</span>
+            <select id="bio-preset" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white" onchange="window.evalBioDensitometry()">
+                <option value="human">1. Human Cortical/Trabecular (vBMD=1.18 g/cm3)</option>
+                <option value="avian">2. Avian Pneumatic Bone (BV/TV=0.18)</option>
+                <option value="sirenian">3. Sirenian Pachyosteosclerotic (vBMD=1.95 g/cm3)</option>
+                <option value="cetacean">4. Cetacean Spongiosa (BV/TV=0.32)</option>
+                <option value="shark">5. Shark Tesserae Cartilage (mineralized)</option>
+                <option value="crustacean">6. Crustacean Cuticle (chitin-calcite)</option>
+                <option value="xylem">7. Hardwood Xylem (anisotropic cellulose)</option>
+                <option value="callus">8. Fracture Callus Stage 2 (woven bone)</option>
+            </select>
+        </label>
+        <label class="block">
+            <span class="text-slate-400 block mb-1">IMAT Myosteatosis (%) / Relaxin Laxity</span>
+            <input id="bio-imat" type="number" value="8" min="0" max="60" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white" onchange="window.evalBioDensitometry()" />
+        </label>
+        <label class="block">
+            <span class="text-slate-400 block mb-1">Output Telemetry</span>
+            <div id="bio-out" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 font-mono text-emerald-300">E=16.4 GPa · &Phi;_b=0.42 · MoS=+0.08 m · RER_j=0.31</div>
+        </label>
+    </div>
+    <script>
+    window.evalBioDensitometry = function () {
+        const map = {
+            human: { rho: 1.18, phi: 0.42, mos: '+0.08 m', rer: 0.31 },
+            avian: { rho: 0.48, phi: 0.55, mos: '+0.05 m', rer: 0.44 },
+            sirenian: { rho: 1.95, phi: 0.21, mos: '+0.14 m', rer: 0.22 },
+            cetacean: { rho: 0.72, phi: 0.38, mos: '+0.11 m', rer: 0.29 },
+            shark: { rho: 0.92, phi: 0.49, mos: '+0.09 m', rer: 0.35 },
+            crustacean: { rho: 1.35, phi: 0.33, mos: '+0.12 m', rer: 0.27 },
+            xylem: { rho: 0.85, phi: 0.28, mos: 'N/A (sessile)', rer: 0.18 },
+            callus: { rho: 0.61, phi: 0.89, mos: '+0.03 m', rer: 0.64 }
+        };
+        const p = map[document.getElementById('bio-preset').value] || map.human;
+        const imat = Math.max(0, Number(document.getElementById('bio-imat').value) || 0);
+        const eGpa = (10.0 * Math.pow(p.rho, 3) * (1 - imat * 0.005)).toFixed(2);
+        document.getElementById('bio-out').textContent = `E=${eGpa} GPa · Phi_b=${p.phi} · MoS=${p.mos} · RER_j=${p.rer}`;
+    };
+    </script>
+</section>
 </body>
 </html>

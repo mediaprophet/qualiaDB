@@ -255,19 +255,40 @@ pub(super) fn write(
     let mut owner = AuthorityOwner::new();
     let result = {
         let mut grant = adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
+        store.check_workspace(workspace)?;
+        store.check_leaf(0)?;
+        let next = store.next_sequence()?;
+        let mut attempt = workspace.begin_attempt();
+        let armed = {
+            let mut stage = rt
+                .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
+                .unwrap();
+            store.prepare_leaf_write(
+                &mut stage,
+                attempt.workspace(),
+                0,
+                &mut nodes,
+                next,
+                &|| 20,
+                &|| Generation(1),
+            )?
+        };
+        store.wait_leaf_write(armed, &mut |_| Ok(()))?;
         let mut stage = rt
             .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
             .unwrap();
-        store.write_leaf(
+        store.commit_leaf_write(
             &mut stage,
             &mut grant,
             pins,
-            workspace,
+            attempt.workspace(),
             0,
             &mut nodes,
             &|| 20,
             &|| Generation(1),
-        )
+        )?;
+        stage.recheck(20, Generation(1))?;
+        store.finish_leaf_write(next, 0, attempt)
     };
     finish(rt, &mut op);
     result

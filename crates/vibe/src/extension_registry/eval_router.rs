@@ -23,9 +23,10 @@ use etalon_vibe::{
     EtalonSenseProvider, EtalonSignalProvider,
 };
 use vibescript_abi::{
-    q_hash_str, BorrowedSliceView, CallerOutputSlice, ExecutionMode, FuncDescriptor, ParamSpec,
-    PreparedCallHandle, PrimitiveKind, RegistryGeneration, SemVerReq, SentinelPolicyGate,
-    TargetProfileMask, VibeTrap,
+    q_hash_str, AdmissionRequest, BorrowedSliceView, CallerOutputSlice, CompletionStatus,
+    EffectSet, ExecutionMode, ExecutionReceiptHeader, FuncDescriptor, PreparedCallHandle,
+    PrimitiveKind, RegistryGeneration, ResourceEnvelope, SemVerReq, SentinelPolicyGate,
+    StableFuncId, TargetProfileMask, VibeOpCode, VibeTrap,
 };
 
 static MECH_PROVIDER: DeterministicMechanicsProvider = DeterministicMechanicsProvider;
@@ -76,17 +77,28 @@ impl ExtensionRegistry<'static> {
     /// - `modality` (`DeonticTemporalProvider`)
     pub fn with_builtin_providers() -> Self {
         let mut reg = Self::new();
-        let _ = reg.register(&MECH_PROVIDER);
-        let _ = reg.register(&GPU_PROVIDER);
-        let _ = reg.register(&FORGE_PROVIDER);
-        let _ = reg.register(&RENDER_PROVIDER);
-        let _ = reg.register(&SIGNAL_PROVIDER);
-        let _ = reg.register(&SENSE_PROVIDER);
-        let _ = reg.register(&MODEL_PROVIDER);
-        let _ = reg.register(&NQUIN_PROVIDER);
-        let _ = reg.register(&INFER_PROVIDER);
-        let _ = reg.register(&GRAPH_PROVIDER);
-        let _ = reg.register(&MODALITY_PROVIDER);
+        reg.register(&MECH_PROVIDER)
+            .expect("built-in mech provider registration failed");
+        reg.register(&GPU_PROVIDER)
+            .expect("built-in gpu provider registration failed");
+        reg.register(&FORGE_PROVIDER)
+            .expect("built-in forge provider registration failed");
+        reg.register(&RENDER_PROVIDER)
+            .expect("built-in render provider registration failed");
+        reg.register(&SIGNAL_PROVIDER)
+            .expect("built-in signal provider registration failed");
+        reg.register(&SENSE_PROVIDER)
+            .expect("built-in sense provider registration failed");
+        reg.register(&MODEL_PROVIDER)
+            .expect("built-in model provider registration failed");
+        reg.register(&NQUIN_PROVIDER)
+            .expect("built-in nquin provider registration failed");
+        reg.register(&INFER_PROVIDER)
+            .expect("built-in infer provider registration failed");
+        reg.register(&GRAPH_PROVIDER)
+            .expect("built-in qgraph provider registration failed");
+        reg.register(&MODALITY_PROVIDER)
+            .expect("built-in modality provider registration failed");
         reg
     }
 }
@@ -324,9 +336,39 @@ fn split_iri_and_member_suffix<'a>(
     None
 }
 
+#[repr(C, align(16))]
+struct AlignedScratch<const N: usize>([u8; N]);
+
+const STACK_INPUT_SCRATCH_BYTES: usize = 1024;
+const STACK_OUTPUT_SCRATCH_BYTES: usize = 512;
+const STACK_PARAM_SLOTS: usize = 16;
+
+fn estimate_input_scratch_bytes(func: &FuncDescriptor, args: &[&Value]) -> usize {
+    let mut total = 0usize;
+    for (idx, p) in func.params.iter().enumerate() {
+        let align = p.kind.elem_align();
+        total = (total + align - 1) & !(align - 1);
+        let arg_bytes = match args.get(idx) {
+            Some(Value::String(s) | Value::Iri(s) | Value::Blank(s))
+                if p.kind == PrimitiveKind::Utf8Bytes =>
+            {
+                s.len()
+            }
+            Some(Value::List(xs)) => xs.len().saturating_mul(p.kind.elem_size()),
+            _ => (p.max_elems as usize).saturating_mul(p.kind.elem_size()),
+        };
+        total = total.saturating_add(arg_bytes.max(p.kind.elem_size()));
+    }
+    if func.params.len() == 1 && args.len() > 1 {
+        let elem = func.params[0].kind.elem_size();
+        total = total.max(args.len().saturating_mul(elem));
+    }
+    total
+}
+
 /// Executes a resolved `PreparedCallHandle` by marshaling `pos_args` into stack-allocated
-/// `BorrowedSliceView`s, invoking `dispatch_prepared_call`, charging `budget`, and decoding
-/// `CallerOutputSlice` back to a `Value`.
+/// `BorrowedSliceView`s (with descriptor-driven overflow sizing when needed), invoking
+/// `dispatch_prepared_call`, charging `budget`, and decoding `CallerOutputSlice` back to a `Value`.
 pub fn execute_prepared_value_call<'g>(
     registry: &ExtensionRegistry<'_>,
     handle: &PreparedCallHandle,
@@ -342,86 +384,116 @@ pub fn execute_prepared_value_call<'g>(
         .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
     // Unpack record-style payload if called via `capability.invoke(id, { ... })`
-    let extracted_storage: Vec<Value>;
-    let effective_args: &[Value] = if pos_args.len() == 1 && func.params.len() > 1 {
+    // without shifting positional indices when keys are missing.
+    let mut stack_refs: [&Value; STACK_PARAM_SLOTS] = [const { &Value::Null }; STACK_PARAM_SLOTS];
+    let mut overflow_refs: Vec<&Value> = Vec::new();
+    let effective_args: &[&Value] = if pos_args.len() == 1 {
         if let Value::Record(rec) = &pos_args[0] {
-            let mut list = Vec::with_capacity(func.params.len());
-            for p in func.params {
-                if let Some(v) = rec.get(p.name) {
-                    list.push(v.clone());
+            if func.params.len() == 1
+                && !rec.contains_key(func.params[0].name)
+                && func.params[0].kind == PrimitiveKind::ResourceHandle
+            {
+                stack_refs[0] = &pos_args[0];
+                &stack_refs[..1]
+            } else if func.params.len() <= STACK_PARAM_SLOTS {
+                for (idx, p) in func.params.iter().enumerate() {
+                    let v = rec.get(p.name).ok_or_else(|| {
+                        trap_to_diagnostic(VibeTrap::ArityMismatch, path_label, span)
+                    })?;
+                    stack_refs[idx] = v;
                 }
-            }
-            extracted_storage = list;
-            &extracted_storage
-        } else {
-            pos_args
-        }
-    } else if pos_args.len() == 1 && func.params.len() == 1 {
-        if let Value::Record(rec) = &pos_args[0] {
-            if let Some(v) = rec.get(func.params[0].name) {
-                extracted_storage = vec![v.clone()];
-                &extracted_storage
+                &stack_refs[..func.params.len()]
             } else {
-                pos_args
+                overflow_refs.reserve_exact(func.params.len());
+                for p in func.params {
+                    let v = rec.get(p.name).ok_or_else(|| {
+                        trap_to_diagnostic(VibeTrap::ArityMismatch, path_label, span)
+                    })?;
+                    overflow_refs.push(v);
+                }
+                &overflow_refs
             }
         } else {
-            pos_args
+            stack_refs[0] = &pos_args[0];
+            &stack_refs[..1]
         }
+    } else if pos_args.len() <= STACK_PARAM_SLOTS {
+        for (idx, v) in pos_args.iter().enumerate() {
+            stack_refs[idx] = v;
+        }
+        &stack_refs[..pos_args.len()]
     } else {
-        pos_args
+        overflow_refs = pos_args.iter().collect();
+        &overflow_refs
     };
 
-    // Stack-allocated input scratch (zero heap on hot prepared path)
-    let mut input_scratch = [0u8; 512];
-    let mut param_offsets = [(0usize, 0usize, PrimitiveKind::U8, 0usize); 8];
+    // Descriptor-driven input scratch sizing (zero-heap stack path for bounded calls)
+    let needed_in = estimate_input_scratch_bytes(func, effective_args);
+    let mut stack_in = AlignedScratch([0u8; STACK_INPUT_SCRATCH_BYTES]);
+    let mut heap_in: Vec<u8> = Vec::new();
+    let input_scratch: &mut [u8] = if needed_in <= STACK_INPUT_SCRATCH_BYTES {
+        &mut stack_in.0
+    } else {
+        heap_in.resize(needed_in, 0);
+        &mut heap_in
+    };
+
+    let mut stack_offsets = [(0usize, 0usize, PrimitiveKind::U8, 0usize); STACK_PARAM_SLOTS];
+    let mut heap_offsets = Vec::new();
+    let param_offsets: &mut [(usize, usize, PrimitiveKind, usize)] =
+        if func.params.len() <= STACK_PARAM_SLOTS {
+            &mut stack_offsets[..func.params.len()]
+        } else {
+            heap_offsets.resize(func.params.len(), (0, 0, PrimitiveKind::U8, 0));
+            &mut heap_offsets
+        };
+
     super::scalar_compat::marshal_args_into_scratch(
         func,
         effective_args,
-        &mut input_scratch,
-        &mut param_offsets,
+        input_scratch,
+        param_offsets,
     )
     .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
-    let mut view_storage =
-        [BorrowedSliceView::from_raw_bytes(&[], PrimitiveKind::U8, 0).expect("empty view"); 8];
+    let empty_view = BorrowedSliceView::from_raw_bytes(&[], PrimitiveKind::U8, 0)
+        .expect("empty view");
+    let mut stack_views = [empty_view; STACK_PARAM_SLOTS];
+    let mut heap_views = Vec::new();
+    let view_slice: &mut [BorrowedSliceView<'_>] = if func.params.len() <= STACK_PARAM_SLOTS {
+        &mut stack_views[..func.params.len()]
+    } else {
+        heap_views.resize(func.params.len(), empty_view);
+        &mut heap_views
+    };
     for idx in 0..func.params.len() {
         let (start, end, kind, elems) = param_offsets[idx];
-        view_storage[idx] =
+        view_slice[idx] =
             BorrowedSliceView::from_raw_bytes(&input_scratch[start..end], kind, elems)
                 .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
     }
 
-    let mut out_scratch = [0u8; 256];
     let out_elem_size = func.output_kind.elem_size();
     let out_byte_cap = (func.required_output_elems as usize)
         .saturating_mul(out_elem_size)
-        .min(out_scratch.len());
-    let mut out_slice = CallerOutputSlice::new(&mut out_scratch[..out_byte_cap], func.output_kind)
-        .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
-
-    let mut fallback_sim_gate = super::dispatch_adapter::SimulatedPolicyGate::new_for_actor(0);
-    fallback_sim_gate.budget.max_scratch_bytes = 1_048_576;
-    fallback_sim_gate.budget.max_vram_bytes = 1_048_576;
-    let mut sim_ctx = *ctx;
-    let (eff_ctx, eff_gate): (
-        &CallExecutionContext,
-        Option<&mut (dyn SentinelPolicyGate + '_)>,
-    ) = if ctx.mode == ExecutionMode::StandaloneDeveloper
-        && gate.is_none()
-        && !func.effects.is_pure()
-    {
-        sim_ctx.mode = ExecutionMode::SimulatedGovernanceTest;
-        (&sim_ctx, Some(&mut fallback_sim_gate))
+        .max(out_elem_size);
+    let mut stack_out = AlignedScratch([0u8; STACK_OUTPUT_SCRATCH_BYTES]);
+    let mut heap_out: Vec<u8> = Vec::new();
+    let out_buf: &mut [u8] = if out_byte_cap <= STACK_OUTPUT_SCRATCH_BYTES {
+        &mut stack_out.0[..out_byte_cap]
     } else {
-        (ctx, gate)
+        heap_out.resize(out_byte_cap, 0);
+        &mut heap_out
     };
+    let mut out_slice = CallerOutputSlice::new(out_buf, func.output_kind)
+        .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
 
     let outcome = dispatch_prepared_call(
         registry,
         handle,
-        eff_ctx,
-        eff_gate,
-        &view_storage[..func.params.len()],
+        ctx,
+        gate,
+        view_slice,
         &mut out_slice,
     )
     .map_err(|t| trap_to_diagnostic(t, path_label, span))?;
@@ -440,6 +512,10 @@ fn decode_output_slice(
     let count = out.written_elems();
     let view =
         BorrowedSliceView::from_raw_bytes(out.written_byte_slice(), func.output_kind, count)?;
+    if func.output_kind == PrimitiveKind::Utf8Bytes {
+        let s = view.read_utf8_str()?;
+        return Ok(Value::String(s.to_owned()));
+    }
     if count == 1 {
         return decode_single_elem(&view, 0);
     }
@@ -455,16 +531,39 @@ fn decode_single_elem(view: &BorrowedSliceView<'_>, idx: usize) -> Result<Value,
         PrimitiveKind::F64 => Ok(Value::F64(view.read_f64_le(idx)?)),
         PrimitiveKind::F32 => Ok(Value::F64(view.read_f32_le(idx)? as f64)),
         PrimitiveKind::I64 => Ok(Value::I64(view.read_i64_le(idx)?)),
+        PrimitiveKind::I32 => Ok(Value::I64(i64::from(view.read_i32_le(idx)?))),
         PrimitiveKind::U64 => Ok(Value::U64(view.read_u64_le(idx)?)),
         PrimitiveKind::U32 => Ok(Value::U64(view.read_u32_le(idx)? as u64)),
-        PrimitiveKind::Bool => Ok(Value::Bool(view.as_bytes()[idx] != 0)),
-        PrimitiveKind::U8 => Ok(Value::U64(view.as_bytes()[idx] as u64)),
-        _ => Err(VibeTrap::TypeMismatch),
+        PrimitiveKind::Bool => Ok(Value::Bool(view.read_bool(idx)?)),
+        PrimitiveKind::U8 => Ok(Value::U64(u64::from(view.read_u8(idx)?))),
+        PrimitiveKind::NQuin48 => {
+            let q = view.read_nquin(idx)?;
+            Ok(Value::QuinRef(crate::value::QuinRef::from_raw(
+                q.0[0], q.0[1], q.0[2], q.0[3], q.0[4], q.0[5],
+            )))
+        }
+        PrimitiveKind::ResourceHandle => {
+            let h = view.read_resource_handle(idx)?;
+            let mut rec = std::collections::BTreeMap::new();
+            rec.insert(
+                "owner_provider_hash".to_string(),
+                Value::U64(h.owner_provider_hash),
+            );
+            rec.insert("kind".to_string(), Value::U64(u64::from(h.kind)));
+            rec.insert("flags".to_string(), Value::U64(u64::from(h.flags)));
+            rec.insert("generation".to_string(), Value::U64(u64::from(h.generation)));
+            rec.insert("slot".to_string(), Value::U64(u64::from(h.slot)));
+            rec.insert("reserved".to_string(), Value::U64(u64::from(h.reserved)));
+            Ok(Value::Record(rec))
+        }
+        PrimitiveKind::Utf8Bytes => {
+            let s = view.read_utf8_str()?;
+            Ok(Value::String(s.to_owned()))
+        }
     }
 }
 
 /// Unified host and extension call router used by `eval`, `bytecode`, and `task_scheduler`.
-#[allow(clippy::too_many_arguments)]
 pub fn route_call<'g, H: Host>(
     host: &mut H,
     registry: &ExtensionRegistry<'_>,
@@ -520,31 +619,365 @@ pub fn route_call<'g, H: Host>(
             return Ok(val);
         }
         Ok(None) => {}
-        Err(VibeTrap::FunctionNotFound) => {
-            if let Some(val) =
-                super::scalar_compat::try_eval_convenience_kernel(path, pos_args, budget, span)?
-            {
-                return Ok(val);
-            }
-            return Err(trap_to_diagnostic(VibeTrap::FunctionNotFound, path, span));
-        }
         Err(t) => return Err(trap_to_diagnostic(t, path, span)),
     }
 
     // 3. Otherwise route to built-in host capabilities (`math.*`, `graph.*`, `time.*`, etc.).
-    // In `GovernedApplication` mode, verify that an attached Sentinel policy gate is alive.
-    if ctx.mode == ExecutionMode::GovernedApplication {
-        match gate {
-            Some(ref g) if g.is_controller_alive() => {}
-            _ => {
+    match ctx.mode {
+        ExecutionMode::StandaloneDeveloper => {
+            native_budget::dispatch(host, path, pos_args, named_args, span, budget)
+        }
+        ExecutionMode::GovernedApplication
+        | ExecutionMode::SimulatedGovernanceTest
+        | ExecutionMode::IntegratedGovernanceTest => {
+            let policy_gate = gate.ok_or_else(|| {
+                trap_to_diagnostic(VibeTrap::SentinelUnavailable, path, span)
+            })?;
+            if !policy_gate.is_controller_alive() {
                 return Err(trap_to_diagnostic(
                     VibeTrap::SentinelUnavailable,
                     path,
                     span,
-                ))
+                ));
+            }
+            let func_hash = q_hash_str(path);
+            let native_provider_hash = q_hash_str("vibe:native");
+            let native_handle = PreparedCallHandle {
+                opcode: VibeOpCode(0),
+                registry_generation: registry.generation(),
+                reserved: 0,
+                provider_iri_hash: native_provider_hash,
+                func_iri_hash: func_hash,
+                contract_digest: [0u8; 32],
+            };
+            let req_effects = if path.starts_with("math.") {
+                EffectSet::PURE_COMPUTE
+            } else if path == "graph.stage" || path == "graph.commit" {
+                EffectSet::GRAPH_MUTATE
+            } else {
+                EffectSet::GRAPH_READ
+            };
+            let req = AdmissionRequest {
+                handle: native_handle,
+                actor_did_hash: ctx.actor_did_hash,
+                context_world_hash: ctx.context_world_hash,
+                lamport_timestamp: ctx.lamport_timestamp,
+                mode: ctx.mode,
+                requested_effects: req_effects,
+                declared_envelope: ResourceEnvelope::hot_zero_heap(1000, 4096),
+                input_fingerprint: func_hash ^ (pos_args.len() as u64),
+            };
+            let ticket = policy_gate
+                .admit_call(&req)
+                .map_err(|t| trap_to_diagnostic(t, path, span))?;
+            if ctx.lamport_timestamp > ticket.expiry_lamport {
+                return Err(trap_to_diagnostic(VibeTrap::AuthorityExpired, path, span));
+            }
+            match native_budget::dispatch(host, path, pos_args, named_args, span, budget) {
+                Ok(val) => {
+                    policy_gate
+                        .validate_post_execution(&ticket, native_handle.opcode, 1, 0, func_hash)
+                        .map_err(|t| trap_to_diagnostic(t, path, span))?;
+                    let (status, simulated) = match ctx.mode {
+                        ExecutionMode::SimulatedGovernanceTest => {
+                            (CompletionStatus::SimulatedCommitted, true)
+                        }
+                        _ => (CompletionStatus::Committed, ticket.simulated),
+                    };
+                    let receipt = ExecutionReceiptHeader {
+                        ticket_id: ticket.ticket_id,
+                        actor_did_hash: ctx.actor_did_hash,
+                        provider_iri_hash: native_provider_hash,
+                        func_iri_hash: func_hash,
+                        stable_id: StableFuncId {
+                            sub_namespace_id: 0,
+                            func_id: 0,
+                        },
+                        mode: ctx.mode,
+                        status,
+                        simulated,
+                        reserved: [0; 5],
+                        policy_generation: ticket.policy_generation,
+                        registry_generation: registry.generation(),
+                        ticks_consumed: 1,
+                        output_bytes_written: 0,
+                        trap_code: 0,
+                        failure_stage: 0,
+                        input_output_fold_hash: func_hash,
+                        lamport_timestamp: ctx.lamport_timestamp,
+                    };
+                    let audit_nquins = policy_gate
+                        .commit_receipt(&receipt)
+                        .map_err(|t| trap_to_diagnostic(t, path, span))?;
+                    *last_outcome = Some(DispatchOutcome {
+                        ticks_consumed: 1,
+                        output_elems_written: 0,
+                        output_bytes_written: 0,
+                        receipt,
+                        audit_nquins,
+                    });
+                    Ok(val)
+                }
+                Err(diag) => {
+                    let abort_receipt = ExecutionReceiptHeader {
+                        ticket_id: ticket.ticket_id,
+                        actor_did_hash: ctx.actor_did_hash,
+                        provider_iri_hash: native_provider_hash,
+                        func_iri_hash: func_hash,
+                        stable_id: StableFuncId {
+                            sub_namespace_id: 0,
+                            func_id: 0,
+                        },
+                        mode: ctx.mode,
+                        status: CompletionStatus::TrappedExecution,
+                        simulated: ticket.simulated
+                            || ctx.mode == ExecutionMode::SimulatedGovernanceTest,
+                        reserved: [0; 5],
+                        policy_generation: ticket.policy_generation,
+                        registry_generation: registry.generation(),
+                        ticks_consumed: 0,
+                        output_bytes_written: 0,
+                        trap_code: 0,
+                        failure_stage: 4,
+                        input_output_fold_hash: func_hash,
+                        lamport_timestamp: ctx.lamport_timestamp,
+                    };
+                    policy_gate
+                        .commit_receipt(&abort_receipt)
+                        .map_err(|t| trap_to_diagnostic(t, path, span))?;
+                    Err(diag)
+                }
             }
         }
     }
+}
 
-    native_budget::dispatch(host, path, pos_args, named_args, span, budget)
+#[cfg(test)]
+mod up02_eval_router_tests {
+    use super::*;
+    use crate::bind::LocalHost;
+    use crate::budget::Budget;
+    use etalon_vibe::{
+        oracle_bioelectric_dipole_preview, oracle_decode_container_summary,
+        oracle_dicom_modality_check, oracle_evaluate_directivity_sh,
+        oracle_radiative_transfer_slice, oracle_render_binaural_frame,
+        oracle_sh_irradiance_probe, oracle_sonify_emf_envelope, oracle_verify_evidence_gate,
+    };
+
+    fn eval_route(path: &str, pos_args: &[Value]) -> Result<Value, Diagnostic> {
+        let mut host = LocalHost::default();
+        let registry = ExtensionRegistry::with_builtin_providers();
+        let mut cache = PreparedCallCache::new();
+        let actor = q_hash_str("did:q42:local_engine");
+        let ctx = CallExecutionContext {
+            actor_did_hash: actor,
+            context_world_hash: 1,
+            lamport_timestamp: 1,
+            mode: ExecutionMode::SimulatedGovernanceTest,
+        };
+        let mut sim_gate = super::super::dispatch_adapter::SimulatedPolicyGate::new_for_actor(actor);
+        sim_gate.budget.max_scratch_bytes = 1_048_576;
+        sim_gate.budget.max_vram_bytes = 1_048_576;
+        let mut last_outcome = None;
+        let mut budget = Budget::default();
+        route_call(
+            &mut host,
+            &registry,
+            &mut cache,
+            &ctx,
+            Some(&mut sim_gate),
+            &mut last_outcome,
+            &mut budget,
+            path,
+            pos_args,
+            &[],
+            Span::new(0, 0),
+        )
+    }
+
+    fn f32_list(vals: &[f32]) -> Value {
+        Value::List(vals.iter().map(|&v| Value::F64(f64::from(v))).collect())
+    }
+
+    fn f64_list(vals: &[f64]) -> Value {
+        Value::List(vals.iter().map(|&v| Value::F64(v)).collect())
+    }
+
+    fn u32_list(vals: &[u32]) -> Value {
+        Value::List(vals.iter().map(|&v| Value::U64(u64::from(v))).collect())
+    }
+
+    fn u64_list(vals: &[u64]) -> Value {
+        Value::List(vals.iter().map(|&v| Value::U64(v)).collect())
+    }
+
+    fn assert_f32_slice_eq(actual: Value, expected: &[f32]) {
+        match actual {
+            Value::List(xs) => {
+                assert_eq!(xs.len(), expected.len());
+                for (a, &e) in xs.iter().zip(expected.iter()) {
+                    let av = a.as_f64().expect("expected numeric Value") as f32;
+                    assert!(
+                        (av - e).abs() <= 1e-6,
+                        "mismatch: actual={av}, expected={e}"
+                    );
+                }
+            }
+            other => panic!("expected Value::List, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn up01_render_emf_routes_and_traps_on_invalid_args() {
+        let dipole = [1.0f32, 2.0, -0.5];
+        let probe = [0.1f32, 0.2, 0.3];
+        let gain = 2.0f32;
+        let res = eval_route(
+            "render.emf.bioelectric_dipole_preview",
+            &[f32_list(&dipole), f32_list(&probe), Value::F64(f64::from(gain))],
+        )
+        .expect("bioelectric_dipole_preview evaluates");
+        let exp = oracle_bioelectric_dipole_preview(dipole, probe, gain).unwrap();
+        assert_f32_slice_eq(res, &exp);
+        assert!(eval_route(
+            "render.emf.bioelectric_dipole_preview",
+            &[f32_list(&dipole), f32_list(&[0.0, 0.0, 0.0]), Value::F64(1.0)],
+        )
+        .is_err());
+        assert!(eval_route(
+            "render.emf.bioelectric_dipole_preview",
+            &[f32_list(&[1.0, 2.0]), f32_list(&probe), Value::F64(1.0)],
+        )
+        .is_err());
+
+        let opt = [0.5f32, 0.8, 0.4];
+        let inc = 12.0f32;
+        let res = eval_route(
+            "render.emf.radiative_transfer_slice",
+            &[f32_list(&opt), Value::F64(f64::from(inc))],
+        )
+        .expect("radiative_transfer_slice evaluates");
+        let exp = oracle_radiative_transfer_slice(opt, inc).unwrap();
+        assert_f32_slice_eq(res, &exp);
+        assert!(eval_route(
+            "render.emf.radiative_transfer_slice",
+            &[f32_list(&[-0.1, 0.5, 0.0]), Value::F64(1.0)],
+        )
+        .is_err());
+
+        let sh = [1.0f32, 0.2, -0.1, 0.3];
+        let norm = [0.0f32, 1.0, 0.0];
+        let res = eval_route(
+            "render.emf.sh_irradiance_probe",
+            &[f32_list(&sh), f32_list(&norm)],
+        )
+        .expect("sh_irradiance_probe evaluates");
+        let exp = oracle_sh_irradiance_probe(sh, norm).unwrap();
+        assert_f32_slice_eq(res, &exp);
+        assert!(eval_route(
+            "render.emf.sh_irradiance_probe",
+            &[f32_list(&sh), f32_list(&[0.0, 0.0, 0.0])],
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn up01_signal_qac_routes_and_traps_on_invalid_args() {
+        let meta = [4u32, 48_000, 1024, 0x05];
+        let res = eval_route("signal.qac.decode_container_summary", &[u32_list(&meta)])
+            .expect("decode_container_summary evaluates");
+        let exp = oracle_decode_container_summary(meta).unwrap();
+        assert_eq!(res, Value::List(vec![Value::U64(exp[0]), Value::U64(exp[1])]));
+        assert!(eval_route(
+            "signal.qac.decode_container_summary",
+            &[u32_list(&[0, 48_000, 1024, 0x05])],
+        )
+        .is_err());
+        assert!(eval_route(
+            "signal.qac.decode_container_summary",
+            &[u32_list(&[4, 48_000, 1024, 0x10])],
+        )
+        .is_err());
+
+        let pose = [30.0f32, 10.0, 2.0];
+        let gain_lin = 0.75f32;
+        let res = eval_route(
+            "signal.qac.render_binaural_frame",
+            &[f32_list(&pose), Value::F64(f64::from(gain_lin))],
+        )
+        .expect("render_binaural_frame evaluates");
+        let exp = oracle_render_binaural_frame(pose, gain_lin).unwrap();
+        assert_f32_slice_eq(res, &exp);
+        assert!(eval_route(
+            "signal.qac.render_binaural_frame",
+            &[f32_list(&[30.0, 10.0, 0.01]), Value::F64(1.0)],
+        )
+        .is_err());
+
+        let angles = [0.4f32, 0.2];
+        let weights = [1.0f32, 0.25, -0.1, 0.15];
+        let res = eval_route(
+            "signal.qac.evaluate_directivity_sh",
+            &[f32_list(&angles), f32_list(&weights)],
+        )
+        .expect("evaluate_directivity_sh evaluates");
+        let exp = oracle_evaluate_directivity_sh(angles, weights).unwrap();
+        assert_f32_slice_eq(res, &exp);
+        assert!(eval_route(
+            "signal.qac.evaluate_directivity_sh",
+            &[f32_list(&[0.0, 2.5]), f32_list(&weights)],
+        )
+        .is_err());
+
+        let emf = [550.0f64, 1.5, 0.8];
+        let res = eval_route("signal.qac.sonify_emf_envelope", &[f64_list(&emf)])
+            .expect("sonify_emf_envelope evaluates");
+        let exp = oracle_sonify_emf_envelope(emf).unwrap();
+        match res {
+            Value::List(xs) => {
+                assert_eq!(xs.len(), 2);
+                assert!((xs[0].as_f64().unwrap() - exp[0]).abs() <= 1e-9);
+                assert!((xs[1].as_f64().unwrap() - exp[1]).abs() <= 1e-9);
+            }
+            other => panic!("expected Value::List, got {other:?}"),
+        }
+        assert!(eval_route(
+            "signal.qac.sonify_emf_envelope",
+            &[f64_list(&[300.0, 1.5, 0.8])],
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn up01_sense_authority_routes_and_traps_on_invalid_args() {
+        let gate = [0b11u64, 500, 1000, 0x03];
+        let res = eval_route("sense.authority.verify_evidence_gate", &[u64_list(&gate)])
+            .expect("verify_evidence_gate evaluates");
+        let exp = oracle_verify_evidence_gate(gate).unwrap();
+        assert_eq!(res, Value::List(vec![Value::U64(exp[0]), Value::U64(exp[1])]));
+        assert!(eval_route(
+            "sense.authority.verify_evidence_gate",
+            &[u64_list(&[0, 500, 1000, 0x03])],
+        )
+        .is_err());
+        assert!(eval_route(
+            "sense.authority.verify_evidence_gate",
+            &[u64_list(&[1, 500, 1000, 0x04])],
+        )
+        .is_err());
+
+        let dicom = [2u32, 12, 1];
+        let res = eval_route("sense.authority.dicom_modality_check", &[u32_list(&dicom)])
+            .expect("dicom_modality_check evaluates");
+        let exp = oracle_dicom_modality_check(dicom).unwrap();
+        assert_eq!(
+            res,
+            Value::List(vec![Value::U64(u64::from(exp[0])), Value::U64(u64::from(exp[1]))])
+        );
+        assert!(eval_route(
+            "sense.authority.dicom_modality_check",
+            &[u32_list(&[9, 12, 1])],
+        )
+        .is_err());
+    }
 }

@@ -10,7 +10,7 @@ use crate::crypto::network::object_stream::{MAX_METADATA, MAX_OBJECT_BYTES};
 
 /// A private structural preparation, not an authenticated/encrypted publication.
 /// Deliberately no Debug: retained index bytes contain private names and metadata.
-pub(crate) struct PreparedSource<'a, 's> {
+pub struct PreparedSource<'a, 's> {
     source: &'a [u8],
     index: AdmittedIndex<'a>,
     objects: &'s [SourceObject],
@@ -24,7 +24,7 @@ impl<'a, 's> PreparedSource<'a, 's> {
     /// All interval/order scratch is supplied by the caller and remains private.
     /// Full BundleReader validation uses its existing bounded cold materialization,
     /// then drops it before returning; this is not a zero-allocation hot API.
-    pub(crate) fn prepare(
+    pub fn prepare(
         source: &'a [u8],
         limits: BundleReadLimits,
         index_scratch: &mut [EntryScratch<'a>],
@@ -82,25 +82,25 @@ impl<'a, 's> PreparedSource<'a, 's> {
     pub(super) fn checked_header(&self) -> crate::bundle::stream::index::CheckedHeader {
         self.index.header()
     }
-    pub(crate) fn objects(&self) -> &[SourceObject] {
+    pub fn objects(&self) -> &[SourceObject] {
         self.objects
     }
-    pub(crate) fn entry_count(&self) -> usize {
+    pub fn entry_count(&self) -> usize {
         self.index.sizing().entry_count()
     }
-    pub(crate) const fn metadata_length(&self) -> usize {
+    pub const fn metadata_length(&self) -> usize {
         self.metadata_length
     }
-    pub(crate) fn header_bytes(&self) -> &'a [u8] {
+    pub fn header_bytes(&self) -> &'a [u8] {
         &self.source[..BUNDLE_HEADER_SIZE]
     }
-    pub(crate) fn index_bytes(&self) -> &'a [u8] {
+    pub fn index_bytes(&self) -> &'a [u8] {
         self.index.encoded_bytes()
     }
-    pub(crate) fn source_bytes(&self) -> &'a [u8] {
+    pub fn source_bytes(&self) -> &'a [u8] {
         self.source
     }
-    pub(crate) fn object_bytes(&self, ordinal: usize) -> Result<&'a [u8], Error> {
+    pub fn object_bytes(&self, ordinal: usize) -> Result<&'a [u8], Error> {
         let row = self.objects.get(ordinal).ok_or(Error::Coverage)?;
         let start = usize::try_from(row.offset()).map_err(|_| Error::Overflow)?;
         let end = row

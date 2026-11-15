@@ -416,6 +416,30 @@ pub struct Crt256Residue {
   }
 }</pre></div>
             </div>
+
+            <div class="bridge-section">
+                <h2>VibeScript ABI (<code>vibescript-abi</code>), Capabilities &amp; Deterministic <code>.hmc</code></h2>
+                <p>
+                    The canonical language engine in <code>crates/vibe</code> pairs with <code>crates/vibescript-abi</code> (<code>src/sdk.rs</code>) and <code>C:\github\vibe-script</code> tooling. Scripts declare explicit host capabilities via <code>requires [capability("...")]</code> and compile deterministically into SHA-256 verified <code>.hmc</code> containers.
+                </p>
+                <div class="bridge-grid">
+                    <div class="bridge-card">
+                        <span class="tag">crates/vibescript-abi/src/sdk.rs</span>
+                        <h3 class="font-semibold text-white mb-1">Provider Descriptors &amp; Lifecycle</h3>
+                        <p class="text-sm text-slate-300">Host providers register typed <code>FuncDescriptor</code>, <code>OntologicalContract</code>, and <code>AdmissionTicket</code> contracts with explicit memory/lamport bounds.</p>
+                    </div>
+                    <div class="bridge-card">
+                        <span class="tag">requires [capability("...")]</span>
+                        <h3 class="font-semibold text-white mb-1">Explicit Capability Gates</h3>
+                        <p class="text-sm text-slate-300"><code>requires [capability("capability.invoke")]</code> gates every privileged host or Hypermedia morphism call at admission time.</p>
+                    </div>
+                    <div class="bridge-card">
+                        <span class="tag">synth produce → .hmc</span>
+                        <h3 class="font-semibold text-white mb-1">Deterministic .hmc Compilation</h3>
+                        <p class="text-sm text-slate-300">Identical VibeScript sources produce bit-identical SHA-256 <code>.hmc</code> containers across native and WASM profiles.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 

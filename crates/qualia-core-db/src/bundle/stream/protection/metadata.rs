@@ -7,10 +7,10 @@ use zeroize::Zeroize;
 /// Exact references awaiting the separate recognized closure/policy composition.
 /// Construction alone neither authenticates these digests nor grants disclosure.
 #[derive(Clone, Copy)]
-pub(crate) struct PrivateReferences {
-    pub(crate) closure: StrongDigest,
-    pub(crate) policy: StrongDigest,
-    pub(crate) consumer: StrongDigest,
+pub struct PrivateReferences {
+    pub closure: StrongDigest,
+    pub policy: StrongDigest,
+    pub consumer: StrongDigest,
 }
 pub(super) struct Erase<'a> {
     pub(super) bytes: &'a mut [u8],

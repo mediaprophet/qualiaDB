@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(binding.joints[RIGHT_WRIST].parent, Some(RIGHT_ELBOW as u16));
         // The old generic skeleton must fail this species-coordinate endpoint check.
         let generic = FaunaSkeletalRig10d::new(FaunaBiomechanicalArchetype::MacropodSaltatorial);
-        let mut globals = vec![Motor::identity(); 18];
+        let mut globals = vec![Motor::identity(); generic.joints.len()];
         let mut palette = globals.clone();
         compose_palette_into(
             &generic.joints,

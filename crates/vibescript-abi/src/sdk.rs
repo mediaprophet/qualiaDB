@@ -5,7 +5,8 @@ use crate::descriptor::{
     FuncDescriptor, OntologicalContract, ParamSpec, ProviderDescriptor, SubNamespaceDescriptor,
 };
 use crate::effects::{
-    DeterminismGuarantee, EffectSet, ResourceEnvelope, ReversibilityKind, TargetProfileMask,
+    AsyncExecutionClass, DeterminismGuarantee, EffectSet, ResourceEnvelope, ReversibilityKind,
+    TargetProfileMask,
 };
 use crate::identity::{q_hash_str, CanonicalIri, StableFuncId};
 use crate::lifecycle::VibeTrap;
@@ -28,7 +29,6 @@ pub const VIBE_PUBLIC_CONTEXT_IRI: &str = "https://qualiadb.org/context/public";
 impl FuncDescriptor {
     /// Compile-time constructor that computes `CanonicalIri`, `schema_hash`, and the
     /// canonical 32-byte `OntologicalContract::canonical_digest` automatically.
-    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub const fn const_new(
         name: &'static str,
@@ -79,6 +79,43 @@ impl FuncDescriptor {
                 invariant_quin_span: inv_span,
             },
         }
+    }
+
+    /// Compile-time constructor that additionally encodes [`AsyncExecutionClass`] into `envelope.flags`.
+    #[inline]
+    pub const fn const_new_with_async(
+        name: &'static str,
+        canonical_iri_str: &'static str,
+        stable_id: StableFuncId,
+        schema_sig_str: &str,
+        params: &'static [ParamSpec],
+        output_kind: PrimitiveKind,
+        required_output_elems: u32,
+        effects: EffectSet,
+        determinism: DeterminismGuarantee,
+        reversibility: ReversibilityKind,
+        async_class: AsyncExecutionClass,
+        envelope: ResourceEnvelope,
+        pre_span: (u32, u32),
+        post_span: (u32, u32),
+        inv_span: (u32, u32),
+    ) -> Self {
+        Self::const_new(
+            name,
+            canonical_iri_str,
+            stable_id,
+            schema_sig_str,
+            params,
+            output_kind,
+            required_output_elems,
+            effects,
+            determinism,
+            reversibility,
+            envelope.with_async_class(async_class),
+            pre_span,
+            post_span,
+            inv_span,
+        )
     }
 }
 
@@ -256,5 +293,137 @@ impl<'a> CallerOutputSlice<'a> {
     #[inline]
     pub fn write_f32_slice(&mut self, values: &[f32]) -> Result<(), VibeTrap> {
         self.push_f32_slice(values)
+    }
+}
+
+#[cfg(test)]
+mod wp_abi_001_tests {
+    use super::*;
+    use crate::memory::ResourceHandle;
+    use crate::version::ABI_CRATE_VERSION;
+
+    #[test]
+    fn canonical_digest_has_no_lossy_field_collisions() {
+        let base_env = ResourceEnvelope::hot_zero_heap(100, 64);
+        let d0 = OntologicalContract::canonical_digest(
+            0x11,
+            StableFuncId::new(1, 2),
+            0x22,
+            EffectSet::PURE_COMPUTE,
+            DeterminismGuarantee::DeterministicExact,
+            ReversibilityKind::PureNoState,
+            base_env,
+            (0, 1),
+            (1, 1),
+            (2, 1),
+        );
+        // Varying flags, max_spawned_tasks, or high span bits must alter the SHA-256 digest.
+        let mut env_async = base_env.with_async_class(AsyncExecutionClass::AsyncBoundedTask);
+        let d1 = OntologicalContract::canonical_digest(
+            0x11,
+            StableFuncId::new(1, 2),
+            0x22,
+            EffectSet::PURE_COMPUTE,
+            DeterminismGuarantee::DeterministicExact,
+            ReversibilityKind::PureNoState,
+            env_async,
+            (0, 1),
+            (1, 1),
+            (2, 1),
+        );
+        assert_ne!(d0, d1);
+
+        env_async.max_spawned_tasks = 4;
+        let d2 = OntologicalContract::canonical_digest(
+            0x11,
+            StableFuncId::new(1, 2),
+            0x22,
+            EffectSet::PURE_COMPUTE,
+            DeterminismGuarantee::DeterministicExact,
+            ReversibilityKind::PureNoState,
+            env_async,
+            (0, 1),
+            (1, 1),
+            (2, 1),
+        );
+        assert_ne!(d1, d2);
+
+        let d3 = OntologicalContract::canonical_digest(
+            0x11,
+            StableFuncId::new(1, 2),
+            0x22,
+            EffectSet::PURE_COMPUTE,
+            DeterminismGuarantee::DeterministicExact,
+            ReversibilityKind::PureNoState,
+            base_env,
+            (0x0100_0000, 1),
+            (1, 1),
+            (2, 1),
+        );
+        assert_ne!(d0, d3);
+        assert_eq!(ABI_CRATE_VERSION, SemVer64::release(0, 0, 41));
+    }
+
+    #[test]
+    fn memory_views_roundtrip_all_added_primitive_kinds_and_check_parity() {
+        // u32 / i32
+        let mut buf32 = [0u8; 8];
+        let mut out_u32 = CallerOutputSlice::new(&mut buf32, PrimitiveKind::U32).unwrap();
+        out_u32.push_u32_le(42).unwrap();
+        out_u32.push_u32_le(u32::MAX).unwrap();
+        let v_u32 =
+            BorrowedSliceView::from_raw_bytes(out_u32.written_byte_slice(), PrimitiveKind::U32, 2)
+                .unwrap();
+        assert_eq!(v_u32.read_u32_le(0).unwrap(), 42);
+        assert_eq!(v_u32.read_u32_le(1).unwrap(), u32::MAX);
+
+        let mut buf_i32 = [0u8; 4];
+        let mut out_i32 = CallerOutputSlice::new(&mut buf_i32, PrimitiveKind::I32).unwrap();
+        out_i32.push_i32_le(-77).unwrap();
+        let v_i32 =
+            BorrowedSliceView::from_raw_bytes(out_i32.written_byte_slice(), PrimitiveKind::I32, 1)
+                .unwrap();
+        assert_eq!(v_i32.read_i32_le(0).unwrap(), -77);
+
+        // NQuin48 with parity validation in from_raw_bytes and read_nquin
+        let q = NQuin48::from_parts(1, 2, 3, 4, 5);
+        let mut qbuf = [0u8; 48];
+        let mut qout = CallerOutputSlice::new(&mut qbuf, PrimitiveKind::NQuin48).unwrap();
+        qout.push_nquin(&q).unwrap();
+        let qview =
+            BorrowedSliceView::from_raw_bytes(qout.written_byte_slice(), PrimitiveKind::NQuin48, 1)
+                .unwrap();
+        assert_eq!(qview.read_nquin(0).unwrap(), q);
+
+        qbuf[0] ^= 0xFF;
+        assert_eq!(
+            BorrowedSliceView::from_raw_bytes(&qbuf, PrimitiveKind::NQuin48, 1).unwrap_err(),
+            VibeTrap::InvalidQuinParity
+        );
+
+        // ResourceHandle
+        let h = ResourceHandle::new(0x1234, 7, 3, 9, 11);
+        let mut hbuf = [0u8; 24];
+        let mut hout = CallerOutputSlice::new(&mut hbuf, PrimitiveKind::ResourceHandle).unwrap();
+        hout.push_resource_handle(&h).unwrap();
+        let hview = BorrowedSliceView::from_raw_bytes(
+            hout.written_byte_slice(),
+            PrimitiveKind::ResourceHandle,
+            1,
+        )
+        .unwrap();
+        assert_eq!(hview.read_resource_handle(0).unwrap(), h);
+
+        // Utf8Bytes
+        let mut sbuf = [0u8; 16];
+        let mut sout = CallerOutputSlice::new(&mut sbuf, PrimitiveKind::Utf8Bytes).unwrap();
+        sout.push_utf8_str("vibescript").unwrap();
+        let sview = BorrowedSliceView::from_raw_bytes(
+            sout.written_byte_slice(),
+            PrimitiveKind::Utf8Bytes,
+            10,
+        )
+        .unwrap();
+        assert_eq!(sview.read_utf8_str().unwrap(), "vibescript");
     }
 }

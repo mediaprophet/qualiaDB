@@ -28,12 +28,11 @@ fn untrusted_retained_files_reverify_rewrite_into_distinct_actual_charged_destin
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 let observed = store
                     .recover_leaf_from(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,
@@ -94,12 +93,11 @@ fn corrupted_old_material_never_marks_or_grows_destination_and_clears_transient_
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 assert!(store
                     .recover_leaf_from(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,
@@ -164,13 +162,12 @@ fn actual_recovery_hot_path_has_zero_raw_allocation_calls() {
                 {
                     let mut grant =
                         adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                    let mut stage = rt
-                        .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                        .unwrap();
                     if n == 1 {
                         store
                             .recover_leaf_from(
-                                &mut stage,
+                                rt,
+                                &op,
+                                &mut scratch,
                                 &mut grant,
                                 pins,
                                 workspace,
@@ -185,7 +182,9 @@ fn actual_recovery_hot_path_has_zero_raw_allocation_calls() {
                         let guard = AllocGuard::begin("actual-source-recovery", true);
                         store
                             .recover_leaf_from(
-                                &mut stage,
+                                rt,
+                                &op,
+                                &mut scratch,
                                 &mut grant,
                                 pins,
                                 workspace,

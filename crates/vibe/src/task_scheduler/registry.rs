@@ -10,7 +10,6 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc, Mutex, OnceLock,
     },
-    time::{Duration, Instant},
 };
 
 const MAX_SCOPE_TASKS: usize = 256;
@@ -19,8 +18,61 @@ const MAX_SCOPE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_PROCESS_BYTES: usize = 64 * 1024 * 1024;
 static NEXT_SCOPE: AtomicU64 = AtomicU64::new(1);
 static NEXT_TASK: AtomicU64 = AtomicU64::new(1);
-static REGISTRY: OnceLock<Mutex<BTreeMap<u64, Entry>>> = OnceLock::new();
-pub(super) fn registry() -> &'static Mutex<BTreeMap<u64, Entry>> {
+static LOGICAL_CLOCK_MS: AtomicU64 = AtomicU64::new(0);
+
+/// Current deterministic logical/Lamport clock value in milliseconds.
+pub fn logical_clock_ms() -> u64 {
+    LOGICAL_CLOCK_MS.load(Ordering::Acquire)
+}
+
+/// Advance the deterministic logical/Lamport clock by `delta_ms` milliseconds.
+pub fn advance_logical_clock_ms(delta_ms: u64) -> u64 {
+    LOGICAL_CLOCK_MS
+        .fetch_add(delta_ms, Ordering::AcqRel)
+        .saturating_add(delta_ms)
+}
+#[derive(Default)]
+pub(super) struct TaskRegistry {
+    entries: Vec<Entry>,
+}
+
+impl TaskRegistry {
+    pub(super) fn get_mut(&mut self, id: &u64) -> Option<&mut Entry> {
+        let idx = self.entries.binary_search_by_key(id, |entry| entry.id).ok()?;
+        Some(&mut self.entries[idx])
+    }
+
+    #[cfg(test)]
+    pub(super) fn contains_key(&self, id: &u64) -> bool {
+        self.entries.binary_search_by_key(id, |entry| entry.id).is_ok()
+    }
+
+    pub(super) fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub(super) fn values(&self) -> std::slice::Iter<'_, Entry> {
+        self.entries.iter()
+    }
+
+    pub(super) fn insert(&mut self, id: u64, entry: Entry) {
+        if self.entries.last().map_or(true, |last| last.id < id) {
+            self.entries.push(entry);
+            return;
+        }
+        match self.entries.binary_search_by_key(&id, |e| e.id) {
+            Ok(idx) => self.entries[idx] = entry,
+            Err(idx) => self.entries.insert(idx, entry),
+        }
+    }
+
+    pub(super) fn retain(&mut self, mut keep: impl FnMut(&u64, &Entry) -> bool) {
+        self.entries.retain(|entry| keep(&entry.id, entry));
+    }
+}
+
+static REGISTRY: OnceLock<Mutex<TaskRegistry>> = OnceLock::new();
+pub(super) fn registry() -> &'static Mutex<TaskRegistry> {
     REGISTRY.get_or_init(Default::default)
 }
 pub(super) fn error(span: Span, message: &str) -> Diagnostic {
@@ -78,8 +130,8 @@ pub(super) struct Entry {
     owner: u64,
     pub(super) code: String,
     pub(super) state: State,
-    created: Instant,
-    deadline: Option<Instant>,
+    created_tick: u64,
+    deadline_tick: Option<u64>,
     pub(super) cancel_requested: bool,
     timeout_requested: bool,
     pub(super) result: Option<Value>,
@@ -143,7 +195,7 @@ pub(super) fn record(entry: &Entry) -> Value {
 }
 pub(super) fn owned<'a>(
     scope: &TaskScope,
-    tasks: &'a mut BTreeMap<u64, Entry>,
+    tasks: &'a mut TaskRegistry,
     value: &Value,
     span: Span,
 ) -> Result<&'a mut Entry, Diagnostic> {
@@ -167,8 +219,8 @@ pub(super) fn refresh_observer(entry: &mut Entry) {
         return;
     }
     if entry
-        .deadline
-        .is_some_and(|deadline| Instant::now() >= deadline)
+        .deadline_tick
+        .is_some_and(|deadline| logical_clock_ms() >= deadline)
     {
         entry.timeout_requested = true;
         entry.cancel_requested = true;
@@ -220,8 +272,8 @@ pub(super) fn spawn(scope: &TaskScope, code: &str, span: Span) -> Result<Value, 
         owner: scope.0.id,
         code: code.into(),
         state: State::Pending,
-        created: Instant::now(),
-        deadline: None,
+        created_tick: logical_clock_ms(),
+        deadline_tick: None,
         cancel_requested: false,
         timeout_requested: false,
         result: None,
@@ -234,7 +286,7 @@ pub(super) fn spawn(scope: &TaskScope, code: &str, span: Span) -> Result<Value, 
 }
 pub(super) fn admit_bytes(
     scope: &TaskScope,
-    tasks: &BTreeMap<u64, Entry>,
+    tasks: &TaskRegistry,
     bytes: usize,
     span: Span,
 ) -> Result<(), Diagnostic> {
@@ -305,10 +357,10 @@ pub(super) fn timeout(
     let entry = owned(scope, &mut tasks, value, span)?;
     if !entry.state.terminal() {
         let deadline = entry
-            .created
-            .checked_add(Duration::from_millis(ms.max(0) as u64))
-            .ok_or_else(|| error(span, "task timeout exceeds the monotonic clock range"))?;
-        entry.deadline = Some(entry.deadline.map_or(deadline, |old| old.min(deadline)));
+            .created_tick
+            .checked_add(ms.max(0) as u64)
+            .ok_or_else(|| error(span, "task timeout exceeds the logical clock range"))?;
+        entry.deadline_tick = Some(entry.deadline_tick.map_or(deadline, |old| old.min(deadline)));
         refresh_observer(entry);
     }
     Ok(record(entry))

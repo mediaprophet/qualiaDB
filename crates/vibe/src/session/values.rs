@@ -73,11 +73,40 @@ fn matches_type(value: &Value, ty: &Type) -> bool {
         Type::F64 => matches!(value, Value::F64(_)),
         Type::Bool => matches!(value, Value::Bool(_)),
         Type::String => matches!(value, Value::String(_)),
+        Type::Iri => matches!(value, Value::Iri(_) | Value::Prefixed(_, _) | Value::String(_)),
+        Type::BlankNode => matches!(value, Value::Blank(_)),
+        Type::Var => matches!(value, Value::Var(_)),
+        Type::TripleTerm => matches!(value, Value::Triple(..)),
+        Type::Reifier => matches!(value, Value::Reified { .. }),
+        Type::QuinRef => matches!(value, Value::QuinRef(_)),
+        Type::AssetRef => matches!(value, Value::AssetRef(_)),
+        Type::TensorRef => matches!(value, Value::TensorRef(_)),
+        Type::GeometryRef => matches!(value, Value::GeometryRef(_)),
+        Type::Instant => matches!(value, Value::Instant(_)),
+        Type::Duration => matches!(value, Value::Duration(_)),
+        Type::Quantity => matches!(value, Value::Quantity(_)),
+        Type::Frame => matches!(value, Value::Frame(_)),
+        Type::Pose => matches!(value, Value::Pose(_)),
+        Type::Transform => matches!(value, Value::Transform(_)),
+        Type::FieldRef => matches!(value, Value::FieldRef(_)),
+        Type::MaterialRef => matches!(value, Value::MaterialRef(_)),
+        Type::WorldLine => matches!(value, Value::WorldLine(_)),
+        Type::Enum(name) => matches!(value, Value::Enum(ev) if ev.enum_name == *name),
+        Type::SpeciesRef => matches!(value, Value::SpeciesRef(_)),
+        Type::Mixture => matches!(value, Value::Mixture(_)),
+        Type::Receipt => matches!(value, Value::Receipt),
+        Type::Option(inner) => matches!(value, Value::Null) || matches_type(value, inner),
+        Type::Result(ok, err) => match value {
+            Value::Ok(v) => matches_type(v, ok),
+            Value::Err(e) => matches_type(e, err),
+            _ => false,
+        },
         Type::List(inner) => {
             matches!(value, Value::List(xs) if xs.iter().all(|v| matches_type(v, inner)))
         }
         Type::Record => matches!(value, Value::Record(_)),
-        // Other 0.1 domain values keep their existing evaluator semantics.
+        // Other 0.1 domain values (Bytes/Did/Continuant/Hash/Literal/Quin/Stream/Future/Named/Unknown)
+        // keep their existing evaluator representation.
         _ => true,
     }
 }

@@ -31,13 +31,93 @@ pub(super) fn walk_expr(
                     }
                 }
             }
+            let lt = infer_expr_type(left, env, aliases);
+            let rt = infer_expr_type(right, env, aliases);
+            match op {
+                BinOp::And | BinOp::Or => {
+                    if (lt != Type::Unknown && lt != Type::Bool)
+                        || (rt != Type::Unknown && rt != Type::Bool)
+                    {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("logical `{op:?}` requires Bool operands, got {lt:?} and {rt:?}"),
+                        ));
+                    }
+                }
+                BinOp::Sub | BinOp::Mul | BinOp::Div | BinOp::Rem => {
+                    if matches!(lt, Type::Bool | Type::String)
+                        || matches!(rt, Type::Bool | Type::String)
+                    {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("arithmetic `{op:?}` is invalid for {lt:?} and {rt:?}"),
+                        ));
+                    }
+                    if lt != Type::Unknown
+                        && rt != Type::Unknown
+                        && !lt.is_compatible(&rt)
+                        && !rt.is_compatible(&lt)
+                    {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("type mismatch in `{op:?}`: {lt:?} vs {rt:?}"),
+                        ));
+                    }
+                }
+                BinOp::Add => {
+                    if lt == Type::Bool || rt == Type::Bool {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("cannot add Bool operand ({lt:?} + {rt:?})"),
+                        ));
+                    }
+                    if lt != Type::Unknown
+                        && rt != Type::Unknown
+                        && !lt.is_compatible(&rt)
+                        && !rt.is_compatible(&lt)
+                    {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("type mismatch in `+`: {lt:?} vs {rt:?}"),
+                        ));
+                    }
+                }
+                _ => {}
+            }
             let a = walk_expr(left, env, aliases, granted, ambient, tick, budgeted)?;
             let b = walk_expr(right, env, aliases, granted, ambient, tick, budgeted)?;
             Ok(a.join(b))
         }
-        ExprKind::Unary { expr, .. } | ExprKind::Try(expr) => {
-            walk_expr(expr, env, aliases, granted, ambient, tick, budgeted)
+        ExprKind::Unary { op, expr: inner } => {
+            let t = infer_expr_type(inner, env, aliases);
+            match op {
+                UnOp::Not => {
+                    if t != Type::Unknown && t != Type::Bool {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("`!` requires Bool operand, got {t:?}"),
+                        ));
+                    }
+                }
+                UnOp::Neg | UnOp::Plus => {
+                    if t != Type::Unknown && !t.is_numeric() && t != Type::Quantity {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            expr.span,
+                            format!("unary `{op:?}` requires numeric operand, got {t:?}"),
+                        ));
+                    }
+                }
+            }
+            walk_expr(inner, env, aliases, granted, ambient, tick, budgeted)
         }
+        ExprKind::Try(expr) => walk_expr(expr, env, aliases, granted, ambient, tick, budgeted),
         ExprKind::Await(inner) => {
             let operand = walk_expr(inner, env, aliases, granted, ambient, tick, budgeted)?;
             // Literal values cannot contain task references. Dynamic tasks can
@@ -133,14 +213,21 @@ pub(super) fn walk_expr(
                         _ => None,
                     });
                     if let Some(target) = target_id {
-                        if crate::catalog::looks_like_catalog_path(target)
-                            && !crate::catalog::granted_covers(granted, target)
-                        {
-                            return Err(Diagnostic::new(
-                                DiagCode::E300,
-                                expr.span,
-                                format!("missing capability(\"{target}\") for capability.invoke(\"{target}\")"),
-                            ));
+                        if crate::catalog::looks_like_catalog_path(target) {
+                            if !crate::catalog::granted_covers(granted, target) {
+                                return Err(Diagnostic::new(
+                                    DiagCode::E300,
+                                    expr.span,
+                                    format!("missing capability(\"{target}\") for capability.invoke(\"{target}\")"),
+                                ));
+                            }
+                            if !crate::catalog::is_known(target) {
+                                let mut msg = format!("unknown capability `{target}`");
+                                if let Some(s) = crate::catalog::did_you_mean(target) {
+                                    msg.push_str(&format!("; did you mean `{s}`?"));
+                                }
+                                return Err(Diagnostic::new(DiagCode::E100, expr.span, msg));
+                            }
                         }
                     }
                 }
@@ -179,6 +266,40 @@ pub(super) fn walk_expr(
                         expr.span,
                         "graph.query requires take: N",
                     ));
+                }
+            }
+            if let Some(p) = &path {
+                if let Some((param_tys, _)) = env.fn_sigs.get(p) {
+                    if args.iter().all(|a| matches!(a, Arg::Pos(_))) {
+                        if args.len() != param_tys.len() {
+                            return Err(Diagnostic::new(
+                                DiagCode::E100,
+                                expr.span,
+                                format!(
+                                    "function `{p}` expects {} argument(s), got {}",
+                                    param_tys.len(),
+                                    args.len()
+                                ),
+                            ));
+                        }
+                        for (idx, (a, expected_ty)) in
+                            args.iter().zip(param_tys.iter()).enumerate()
+                        {
+                            if let Arg::Pos(ex) = a {
+                                let actual_ty = infer_expr_type(ex, env, aliases);
+                                if !expected_ty.is_compatible(&actual_ty) {
+                                    return Err(Diagnostic::new(
+                                        DiagCode::E100,
+                                        ex.span,
+                                        format!(
+                                            "argument {} of `{p}` expects {expected_ty:?}, got {actual_ty:?}",
+                                            idx + 1
+                                        ),
+                                    ));
+                                }
+                            }
+                        }
+                    }
                 }
             }
             let mut e = call_effect;
@@ -323,5 +444,78 @@ pub(super) fn walk_expr(
             let c = walk_expr(else_value, env, aliases, granted, ambient, tick, budgeted)?;
             Ok(a.join(b).join(c))
         }
+    }
+}
+
+pub(super) fn infer_expr_type(
+    expr: &Expr,
+    env: &CheckEnv,
+    aliases: &HashMap<String, String>,
+) -> Type {
+    match &expr.kind {
+        ExprKind::Literal(lit) => match lit {
+            Literal::Null | Literal::Color(_) => Type::Unknown,
+            Literal::Bool(_) => Type::Bool,
+            Literal::Int(_) => Type::I64,
+            Literal::UInt(_) => Type::U64,
+            Literal::Float(_) => Type::F64,
+            Literal::Quantity { .. } => Type::Quantity,
+            Literal::String(_) => Type::String,
+        },
+        ExprKind::Ident(name) => env.get(name).cloned().unwrap_or(Type::Unknown),
+        ExprKind::Iri(_) | ExprKind::Prefixed(_, _) => Type::Iri,
+        ExprKind::Blank(_) => Type::BlankNode,
+        ExprKind::List(xs) => {
+            let elem = xs
+                .first()
+                .map(|x| infer_expr_type(x, env, aliases))
+                .unwrap_or(Type::Unknown);
+            Type::List(Box::new(elem))
+        }
+        ExprKind::Record(_) => Type::Record,
+        ExprKind::Interpolate(_) => Type::String,
+        ExprKind::Unary { op, expr: inner } => match op {
+            UnOp::Not => Type::Bool,
+            UnOp::Neg | UnOp::Plus => infer_expr_type(inner, env, aliases),
+        },
+        ExprKind::Binary { op, left, right } => match op {
+            BinOp::Or
+            | BinOp::And
+            | BinOp::Eq
+            | BinOp::Ne
+            | BinOp::Lt
+            | BinOp::Le
+            | BinOp::Gt
+            | BinOp::Ge => Type::Bool,
+            BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div | BinOp::Rem => {
+                let lt = infer_expr_type(left, env, aliases);
+                if lt != Type::Unknown {
+                    lt
+                } else {
+                    infer_expr_type(right, env, aliases)
+                }
+            }
+        },
+        ExprKind::Call { callee, .. } => {
+            if let Some(p) = call_path(callee, aliases) {
+                if let Some((_, Some(ret))) = env.fn_sigs.get(&p) {
+                    return ret.clone();
+                }
+            }
+            Type::Unknown
+        }
+        ExprKind::IfElse {
+            then_value,
+            else_value,
+            ..
+        } => {
+            let t = infer_expr_type(then_value, env, aliases);
+            if t != Type::Unknown {
+                t
+            } else {
+                infer_expr_type(else_value, env, aliases)
+            }
+        }
+        _ => Type::Unknown,
     }
 }

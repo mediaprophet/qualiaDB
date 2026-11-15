@@ -364,9 +364,19 @@ impl<'a> Parser<'a> {
                 let name = self.text().to_string();
                 self.bump()?;
                 if self.cur.kind == TokenKind::Colon {
+                    let colon_span = self.cur.span;
                     let start = save_span.start;
                     self.bump()?;
-                    if is_named_arg_key(&name) {
+                    let adjacent_curie = save_span.end == colon_span.start
+                        && colon_span.end == self.cur.span.start
+                        && matches!(
+                            self.cur.kind,
+                            TokenKind::Int | TokenKind::Ident | TokenKind::Keyword
+                        )
+                        && !(self.cur.kind == TokenKind::Keyword && is_stmt_kw(self.text()))
+                        && self.text() != "true"
+                        && self.text() != "false";
+                    if is_named_arg_key(&name) || !adjacent_curie {
                         let value = self.parse_expr()?;
                         args.push(Arg::Named(NamedArg {
                             span: Span::new(start, value.span.end),
@@ -375,10 +385,13 @@ impl<'a> Parser<'a> {
                         }));
                     } else {
                         let local = self.expect_prefixed_local()?;
-                        args.push(Arg::Pos(Expr {
+                        let mut expr = Expr {
                             span: Span::new(start, self.prev_end(save_span.end)),
                             kind: ExprKind::Prefixed(name, local),
-                        }));
+                        };
+                        expr = self.continue_postfix(expr)?;
+                        expr = self.continue_binary(expr)?;
+                        args.push(Arg::Pos(expr));
                     }
                 } else {
                     let mut expr = Expr {
@@ -480,15 +493,42 @@ impl<'a> Parser<'a> {
                     let mut depth = 1;
                     let expr_start = i + 1;
                     i += 1;
+                    let mut in_str = false;
+                    let mut esc = false;
                     while i < bytes.len() && depth > 0 {
-                        if bytes[i] == b'{' {
+                        let b = bytes[i];
+                        if in_str {
+                            if esc {
+                                esc = false;
+                            } else if b == b'\\' {
+                                esc = true;
+                            } else if b == b'"' {
+                                in_str = false;
+                            }
+                        } else if b == b'"' {
+                            in_str = true;
+                        } else if b == b'{' {
                             depth += 1;
-                        } else if bytes[i] == b'}' {
+                        } else if b == b'}' {
                             depth -= 1;
                         }
                         i += 1;
                     }
+                    if depth != 0 {
+                        return Err(Diagnostic::new(
+                            DiagCode::E001,
+                            Span::new(start, end),
+                            "unclosed '{' in interpolated string",
+                        ));
+                    }
                     let expr_src = &content[expr_start..i - 1];
+                    if expr_src.trim().is_empty() {
+                        return Err(Diagnostic::new(
+                            DiagCode::E001,
+                            Span::new(start, end),
+                            "empty interpolation expression '{}'",
+                        ));
+                    }
                     let mut p = Parser::new(expr_src)?;
                     let sub_expr = p.parse_expr()?;
                     parts.push(sub_expr);
@@ -632,6 +672,8 @@ impl<'a> Parser<'a> {
                 "always" => Some(ModalKind::LtlGlobally),
                 "eventually" => Some(ModalKind::LtlFinally),
                 "until" => Some(ModalKind::LtlUntil),
+                "subsumes" => Some(ModalKind::DlSubsumes),
+                "defeasible_rule" => Some(ModalKind::N3Defeasible),
                 _ => None,
             };
 
@@ -912,5 +954,36 @@ impl<'a> Parser<'a> {
         } else {
             t
         }
+    }
+}
+
+#[cfg(test)]
+mod wp_abi_004_tests {
+    #[test]
+    fn parses_arbitrary_named_args_while_preserving_curies() {
+        let prog = crate::parse_program(
+            "let a = draw(radius: 1.5, color: \"red\", list: [1, 2], flag:true);\n\
+             let b = graph.assert(foaf:Alice, rdf:type, snomed:386661006);\n",
+        )
+        .expect("parse");
+        assert_eq!(prog.items.len(), 2);
+    }
+
+    #[test]
+    fn parses_cold_cell_modal_subsumes_and_field_unknown_prop() {
+        let prog = crate::parse_program(
+            "cold cell c := 1;\n\
+             field f: Scalar custom_prop: [1, 2] support: point;\n\
+             let m = subsumes(Agent, Entity);\n\
+             let n = defeasible_rule { true };\n",
+        )
+        .expect("parse");
+        assert_eq!(prog.items.len(), 4);
+    }
+
+    #[test]
+    fn rejects_unclosed_interpolation_brace() {
+        assert!(crate::parse_program("let s = f\"hello {x\";").is_err());
+        assert!(crate::parse_program("let s = f\"hello {}\";").is_err());
     }
 }

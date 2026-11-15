@@ -18,7 +18,7 @@ use std::sync::Mutex;
 use zeroize::Zeroize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum WrapError {
+pub enum WrapError {
     Unauthorized,
     Closed,
     Spent,
@@ -26,7 +26,7 @@ pub(crate) enum WrapError {
 }
 
 /// Recognized issuer pin for recipient-authority. Audience is taken from A.
-pub(crate) struct RecipientAuthorityProof<'a> {
+pub struct RecipientAuthorityProof<'a> {
     pub pin: PinHandle,
     pub key_ids: cose::KeyIds,
     pub epoch: u64,
@@ -35,7 +35,7 @@ pub(crate) struct RecipientAuthorityProof<'a> {
 
 /// Rechecks the current whole-source grant and recognized recipient proof, then
 /// wraps. Success is a candidate envelope, not durable publication or plaintext.
-pub(crate) fn authorize_and_wrap(
+pub fn authorize_and_wrap(
     publication: &mut ManagedObjectPublication<'_>,
     grant: &mut LocalWholeSourceGrant<'_, '_>,
     pins: &PinAuthority,
@@ -100,7 +100,7 @@ pub(crate) fn authorize_and_wrap(
 /// recipient proof, then wraps. A locally trusted pin with the right
 /// purpose/audience but no rights over this source refuses Unauthorized.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn authorize_and_wrap_remote(
+pub fn authorize_and_wrap_remote(
     publication: &mut ManagedObjectPublication<'_>,
     grant: &RemoteDisclosureGrant<'_>,
     guard: &CurrentAuthorityGuard<'_>,

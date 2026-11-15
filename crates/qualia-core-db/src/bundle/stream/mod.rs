@@ -13,8 +13,10 @@ pub mod plan;
 
 pub mod formats;
 
-mod http;
+pub mod mixed;
+
+pub mod http;
 
 // Protected publication requires native managed-object key custody.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod protection;
+pub mod protection;

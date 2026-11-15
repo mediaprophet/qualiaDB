@@ -5,7 +5,7 @@ use crate::net::qdnf::errors::QdnfError as E;
 impl<'host> RuntimeParents<'host> {
     /// One bounded nonblocking poll; all parent locks are released on return.
     /// No guard/borrow may escape. Never wait for peer or synchronous disk flush.
-    pub(crate) fn try_with_runtime<T>(
+    pub fn try_with_runtime<T>(
         &self,
         state: &mut RetainedRuntime<'_, '_>,
         effect: impl for<'b, 'p> FnOnce(RuntimeAccess<'b, 'p>) -> Result<T, E>,
@@ -58,17 +58,17 @@ impl<'host> RuntimeParents<'host> {
     }
 }
 impl RetainedRuntime<'_, '_> {
-    pub(crate) fn live_transfers(&self) -> Result<usize, E> {
+    pub fn live_transfers(&self) -> Result<usize, E> {
         Ok(self.data.as_ref().ok_or(E::Incomplete)?.live)
     }
-    pub(crate) fn pending_schedule_records(&self) -> Result<usize, E> {
+    pub fn pending_schedule_records(&self) -> Result<usize, E> {
         Ok(self.data.as_ref().ok_or(E::Incomplete)?.pending_records)
     }
-    pub(crate) fn charged_window_bytes(&self) -> Result<u64, E> {
+    pub fn charged_window_bytes(&self) -> Result<u64, E> {
         Ok(self.data.as_ref().ok_or(E::Incomplete)?.used_bytes)
     }
     /// Logical moved state footprint, not an assertion of generated memcpy count.
-    pub(crate) fn move_bytes_per_poll() -> usize {
+    pub fn move_bytes_per_poll() -> usize {
         2 * core::mem::size_of::<super::RuntimeData>()
     }
 }

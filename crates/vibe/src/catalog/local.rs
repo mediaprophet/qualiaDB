@@ -88,14 +88,18 @@ pub fn invoke_local(id: &str, args: &Value, span: Span) -> Result<Value, Diagnos
         return eval_local_sparql(args, span);
     }
     if id.starts_with("HID.") {
-        return Ok(hid_record(id, args));
+        return Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            format!("capability `{id}` requires a bound HID hardware host"),
+        ));
     }
     if is_known(id) {
-        let mut rec = BTreeMap::new();
-        rec.insert("id".into(), Value::String(id.into()));
-        rec.insert("honesty".into(), Value::String("local".into()));
-        rec.insert("args".into(), args.clone());
-        return Ok(Value::Record(rec));
+        return Err(Diagnostic::new(
+            DiagCode::E702,
+            span,
+            format!("capability `{id}` has no in-process local kernel; bind a host provider"),
+        ));
     }
     Err(Diagnostic::new(DiagCode::E100, span, unknown_message(id)))
 }
@@ -142,20 +146,6 @@ pub fn payload_from_args(pos: &[Value], named: &[(String, Value)]) -> Value {
     for (k, v) in named {
         rec.insert(k.clone(), v.clone());
     }
-    Value::Record(rec)
-}
-
-fn hid_record(id: &str, args: &Value) -> Value {
-    let mut rec = BTreeMap::new();
-    rec.insert("id".into(), Value::String(id.into()));
-    rec.insert("honesty".into(), Value::String("local".into()));
-    rec.insert("connected".into(), Value::Bool(true));
-    rec.insert("captured".into(), Value::Bool(true));
-    rec.insert("sent".into(), Value::Bool(true));
-    rec.insert("actuated".into(), Value::Bool(true));
-    rec.insert("joint_count".into(), Value::I64(26));
-    rec.insert("sample_rate_hz".into(), Value::F64(256.0));
-    rec.insert("args".into(), args.clone());
     Value::Record(rec)
 }
 

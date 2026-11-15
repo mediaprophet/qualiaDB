@@ -1,13 +1,8 @@
-use super::write::{gates, WriteStep};
-use super::{LeafBarrierObservation, StoreError as E, StoreLayout};
-use crate::bundle::stream::{
-    policy::LocalEffectControl,
-    runtime::StorageStageControl,
-    storage::{
-        encode_checkpoint, CandidateBitmapPage, StorageIdentity, VerifiedLeafView, CHECKPOINT_BYTES,
-    },
+use super::write::WriteStep;
+use super::StoreError as E;
+use crate::bundle::stream::storage::{
+    encode_checkpoint, CandidateBitmapPage, VerifiedLeafView, CHECKPOINT_BYTES,
 };
-use crate::net::qdnf::types::Generation;
 use crate::storage_driver::ranges::{RangeFile, RangeSession};
 
 /// One OS-adjacent step. The wait site passes this to a session closure; it
@@ -75,46 +70,16 @@ pub(super) fn session_io(
     }
 }
 
-/// Recovery/resume path. Still called under a live stage callback; I/O itself
-/// does not take StorageStageControl / LocalEffectControl.
-#[allow(clippy::too_many_arguments)]
+/// Recovery/resume arming. `CandidateBitmapPage` is a stage loan, so this runs
+/// inside a short callback. Destination I/O is `wait_leaf_write` after that
+/// callback drops. Does not take StorageStageControl / LocalEffectControl.
 pub(super) fn store_verified(
-    session: &mut RangeSession<'_, '_>,
-    identity: &StorageIdentity,
     view: &VerifiedLeafView<'_>,
-    proof_slot: &[u8],
     header: &mut [u8],
     page: &mut CandidateBitmapPage<'_>,
-    control: &mut StorageStageControl<'_, '_>,
-    authority: &mut LocalEffectControl<'_, '_>,
-    layout: StoreLayout,
     next: u64,
-    backend_attempt: [u8; 32],
-    clock: &impl Fn() -> u64,
-    policy: &impl Fn() -> Generation,
-    hook: &mut impl FnMut(WriteStep) -> Result<(), E>,
-) -> Result<LeafBarrierObservation, E> {
-    let leaf = view.leaf_index();
-    let page_number = page.page_number();
+) -> Result<(), E> {
     page.record_integrity(view)?;
     encode_checkpoint(page, next, header)?;
-    let base = layout.checkpoint_offset(page_number, (next & 1) as u8)?;
-    write_verified_bytes(
-        layout.leaf_offset(leaf)?,
-        layout.proof_offset(leaf)?,
-        base,
-        view.bytes(),
-        proof_slot,
-        header,
-        page.payload(),
-        hook,
-        &mut |op, bytes| session_io(session, op, bytes),
-    )?;
-    gates(control, authority, identity, clock, policy)?;
-    Ok(LeafBarrierObservation {
-        identity: *identity,
-        leaf_index: leaf,
-        sequence: next,
-        backend_attempt,
-    })
+    Ok(())
 }

@@ -7,7 +7,7 @@ use std::path::Path;
 static NEXT_OWNER: AtomicUsize = AtomicUsize::new(1);
 pub(super) fn next_recovery_owner() -> Result<usize, QuotaError> {
     NEXT_OWNER
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
         .map_err(|_| QuotaError::Overflow)
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

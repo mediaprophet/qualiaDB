@@ -126,7 +126,7 @@ An empty default QBDL can occupy 65 bytes: header [0,64), then the one-byte CBOR
 
 QBDL-to-ZIP conversion is a semantic repackaging operation, not an extension rename. It requires choosing a document identity/source, manifest schema and asset kinds; the reverse requires explicit logical keys/kinds and regenerates SHA-256. Preserve original files if no lossless mapping for metadata/provenance exists.
 
-Future QDNF streaming must define immutable object identity, bounded index admission, authenticated range/dependency proofs, cancellation/resume, scheduling, content/permission separation and PQ trust/key lifecycle in its own versioned service profiles. The [initial brief](qbdl-streaming-expert-advisor-brief.md) and [supplied proposal](references/qbdl-streaming-advisor-proposal-2026-11-12.md) are design inputs. They do not amend the bytes above or bypass existing Commons governance.
+QBDL-profile HMC streaming is a service over these bytes, not a container rewrite: planner plus `ProtectedSession`, many entries per family, authenticated Q42 HTTP Range, native IPC plus labelled HTTP/WSS bearers. Operator showcase: [qbdl-streaming.html](../qbdl-streaming.html). The ZIP document-archive profile is legacy and is not a streaming target. The [initial brief](qbdl-streaming-expert-advisor-brief.md) and [supplied proposal](references/qbdl-streaming-advisor-proposal-2026-11-12.md) remain design inputs. They do not amend the bytes above or bypass existing Commons governance.
 
 ## 8. Source and verification
 

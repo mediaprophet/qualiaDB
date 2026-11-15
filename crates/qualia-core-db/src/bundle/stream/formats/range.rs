@@ -54,6 +54,18 @@ impl<'a> AuthenticatedRange<'a> {
     pub const fn selected(&self) -> SelectedPlainEntry<'a> {
         self.selected
     }
+    /// Parent range is already authenticated. A subslice stays authenticated.
+    pub fn subrange(&self, rel_offset: u64, length: usize) -> Result<Self, FormatError> {
+        let abs = self.offset.checked_add(rel_offset).ok_or(FormatError::Bounds)?;
+        let start = usize::try_from(rel_offset).map_err(|_| FormatError::Bounds)?;
+        let end = start.checked_add(length).ok_or(FormatError::Bounds)?;
+        let bytes = self.bytes.get(start..end).ok_or(FormatError::Bounds)?;
+        Ok(Self {
+            selected: self.selected,
+            offset: abs,
+            bytes,
+        })
+    }
     pub(super) fn same_entry(&self, other: &Self) -> bool {
         self.selected.candidate_identity() == other.selected.candidate_identity()
             && self.selected.entry_id() == other.selected.entry_id()

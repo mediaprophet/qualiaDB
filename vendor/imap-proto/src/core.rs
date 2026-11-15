@@ -35,7 +35,7 @@ pub fn atom_char(c: u8) -> bool {
 }
 
 // nil = "NIL"
-named!(pub nil, tag_no_case!("NIL"));
+named_a!(pub nil<'a, &'a [u8]>, tag_no_case!("NIL"));
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
 pub fn astring_char(c: u8) -> bool {
@@ -43,7 +43,7 @@ pub fn astring_char(c: u8) -> bool {
 }
 
 // QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
-pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
+pub fn quoted_data<'a>(i: &'a [u8]) -> IResult<&'a [u8], &'a [u8]> {
     // Ideally this should use nom's `escaped` macro, but it suffers from broken
     // type inference unless compiled with the verbose-errors feature enabled.
     let mut escape = false;
@@ -63,18 +63,18 @@ pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
-named!(pub quoted<&[u8]>, delimited!(
+named_a!(pub quoted<'a, &'a [u8]>, delimited!(
     char!('"'),
     quoted_data,
     char!('"')
 ));
 
 // quoted bytes as as utf8
-named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
+named_a!(pub quoted_utf8<'a, &'a str>, map_res!(quoted, str::from_utf8));
 
 // literal = "{" number "}" CRLF *CHAR8
 //            ; Number represents the number of CHAR8s
-named!(pub literal<&[u8]>, do_parse!(
+named_a!(pub literal<'a, &'a [u8]>, do_parse!(
     tag!("{") >>
     len: number >>
     tag!("}") >>
@@ -84,19 +84,19 @@ named!(pub literal<&[u8]>, do_parse!(
 ));
 
 // string = quoted / literal
-named!(pub string<&[u8]>, alt!(quoted | literal));
+named_a!(pub string<'a, &'a [u8]>, alt!(quoted | literal));
 
 // string bytes as as utf8
-named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
+named_a!(pub string_utf8<'a, &'a str>, map_res!(string, str::from_utf8));
 
 // nstring = string / nil
-named!(pub nstring<Option<&[u8]>>, alt!(
+named_a!(pub nstring<'a, Option<&'a [u8]>>, alt!(
     map!(nil, |_| None) |
     map!(string, |s| Some(s))
 ));
 
 // nstring bytes as utf8
-named!(pub nstring_utf8<Option<&str>>, alt!(
+named_a!(pub nstring_utf8<'a, Option<&'a str>>, alt!(
     map!(nil, |_| None) |
     map!(string_utf8, |s| Some(s))
 ));
@@ -110,21 +110,21 @@ named!(pub number<u32>, flat_map!(nom::character::streaming::digit1, parse_to!(u
 named!(pub number_64<u64>, flat_map!(nom::character::streaming::digit1, parse_to!(u64)));
 
 // atom = 1*ATOM-CHAR
-named!(pub atom<&str>, map_res!(take_while1!(atom_char),
+named_a!(pub atom<'a, &'a str>, map_res!(take_while1!(atom_char),
     str::from_utf8
 ));
 
 // astring = 1*ASTRING-CHAR / string
-named!(pub astring<&[u8]>, alt!(
+named_a!(pub astring<'a, &'a [u8]>, alt!(
     take_while1!(astring_char) |
     string
 ));
 
 // astring bytes as as utf8
-named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
+named_a!(pub astring_utf8<'a, &'a str>, map_res!(astring, str::from_utf8));
 
 // text = 1*TEXT-CHAR
-named!(pub text<&str>, map_res!(take_while!(text_char),
+named_a!(pub text<'a, &'a str>, map_res!(take_while!(text_char),
     str::from_utf8
 ));
 

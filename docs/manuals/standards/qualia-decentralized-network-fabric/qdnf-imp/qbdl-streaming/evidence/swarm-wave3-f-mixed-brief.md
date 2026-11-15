@@ -1,6 +1,6 @@
 # Wave 3-F — mixed QBDL-profile HMC constructor (senior)
 
-File-disjoint. **Do not cargo. Do not commit.** Integrator routes `pub mod mixed;` in `bundle/stream/mod.rs` after you stop.
+File-disjoint. **Queued Wave 3A2** — start after E/Q/M have stopped and integrator has routed `emf_stream` / `qac_stream` / `mux`. **Do not cargo. Do not commit.** Integrator routes `pub mod mixed;` in `bundle/stream/mod.rs` after you stop.
 
 ## Gap
 
@@ -99,6 +99,15 @@ pub fn default_mixed_entries() -> Result<MixedHmc, MixedError>;
 Assignment ids are stable integers you choose (do not use 0). Duplicate `id` → `MixedError::DuplicateId`. Empty `bytes` → `Limit`. `PlainPublisher` + `BundleWriter::add_file` per entry, same finish path as `publish/tests.rs`.
 
 Also export a helper that builds `PlanEntry` / `DependencyEdge` / `Inventory` from the published HMC (geometry edges from EMF/QAC → a TenD, optional calibration Q42). Missing mandatory calibration test uses this graph with that id absent from `present`.
+
+After publish, **E/Q admit is mandatory**:
+
+- each QAC id → `QacStreamView::admit` (and `with_signal` where the fixture supports it); `qac_present_id` feeds `present[]`
+- each EMF id → `EmfStreamView::admit` + `select_region` on at least one chunk; `emf_present_id` feeds `present[]`
+- `Readiness::Ready` only when those present ids and mandatory edges close
+- archival/unsupported signal or unknown-critical EMF is `Opaque` / not present, never a valid empty field
+
+If E/Q names differ after routing, call the exported helpers. Do not reimplement envelope parsers.
 
 Authenticated relationships: bind `CandidateIdentity` + entry id. Filename and `BundleWriter` path are not identity.
 

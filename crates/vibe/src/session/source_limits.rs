@@ -59,14 +59,97 @@ fn locale(code: &str) -> Option<Locale> {
 }
 
 pub(super) fn check(source: &str) -> Result<(), Diagnostic> {
+    check_with_depth(source, 0, None)
+}
+
+fn check_interpolated_segments(
+    word: &str,
+    span: Span,
+    base_depth: usize,
+    active_locale: Option<Locale>,
+) -> Result<(), Diagnostic> {
+    let inner = word
+        .strip_prefix("f\"")
+        .and_then(|s| s.strip_suffix('"'))
+        .unwrap_or(word);
+    let bytes = inner.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'\\' {
+            i = i.saturating_add(2);
+            continue;
+        }
+        if bytes[i] == b'{' {
+            if i + 1 < bytes.len() && bytes[i + 1] == b'{' {
+                i += 2;
+                continue;
+            }
+            if base_depth >= MAX_GROUPS {
+                return Err(limit(
+                    span,
+                    "source-session delimiter nesting exceeds qualified syntax limit",
+                ));
+            }
+            let expr_start = i + 1;
+            let mut brace_depth = 1usize;
+            let mut j = expr_start;
+            let mut in_str = false;
+            while j < bytes.len() && brace_depth > 0 {
+                let c = bytes[j];
+                if in_str {
+                    if c == b'\\' {
+                        j = j.saturating_add(2);
+                        continue;
+                    }
+                    if c == b'"' {
+                        in_str = false;
+                    }
+                } else if c == b'"' {
+                    in_str = true;
+                } else if c == b'{' {
+                    brace_depth += 1;
+                } else if c == b'}' {
+                    brace_depth -= 1;
+                    if brace_depth == 0 {
+                        break;
+                    }
+                }
+                j += 1;
+            }
+            if brace_depth == 0 {
+                check_with_depth(&inner[expr_start..j], base_depth + 1, active_locale)?;
+                i = j + 1;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    Ok(())
+}
+
+fn check_with_depth(
+    source: &str,
+    base_depth: usize,
+    active_locale: Option<Locale>,
+) -> Result<(), Diagnostic> {
+    if base_depth > MAX_GROUPS {
+        return Err(limit(
+            Span::point(0),
+            "source-session delimiter nesting exceeds qualified syntax limit",
+        ));
+    }
     let mut lexer = Lexer::new(source);
+    if let Some(loc) = active_locale {
+        lexer.enable_locale(loc);
+    }
     let keywords = LocaleRegistry::with_all_locales();
     let mut frames = [Frame::new(TokenKind::Eof, false); MAX_GROUPS + 1];
-    let mut depth = 0;
+    let mut depth = base_depth;
     let mut previous = TokenKind::Eof;
     let mut function_header = false;
     let mut awaiting_locale = false;
     let mut pending_locale = None;
+    let mut current_locale = active_locale;
     loop {
         let token = lexer.next_token()?;
         let word = &lexer.source()[token.span.start as usize..token.span.end as usize];
@@ -79,12 +162,10 @@ pub(super) fn check(source: &str) -> Result<(), Diagnostic> {
             return Ok(());
         }
         if token.kind == TokenKind::InterpolatedString {
-            // Embedded parser calls need their own shared nesting contract;
-            // ordinary strings remain available in this bounded profile.
-            return Err(limit(
-                token.span,
-                "interpolated source is not admitted by this bounded source-session profile",
-            ));
+            check_interpolated_segments(word, token.span, depth, current_locale)?;
+            frames[depth].charge(1, token.span)?;
+            previous = token.kind;
+            continue;
         }
         if awaiting_locale {
             pending_locale = locale(word);
@@ -147,6 +228,7 @@ pub(super) fn check(source: &str) -> Result<(), Diagnostic> {
                 if depth == 0 && token.kind == TokenKind::Semicolon {
                     if let Some(loc) = pending_locale.take() {
                         lexer.enable_locale(loc);
+                        current_locale = Some(loc);
                     }
                     function_header = false;
                 }
@@ -199,7 +281,9 @@ mod tests {
     fn literals_comments_and_lexer_errors_keep_canonical_meaning() {
         check("= \"[[[[ !!! fn {\"; /* [[[ */").unwrap();
         assert_eq!(check("= 1; @").unwrap_err().code, DiagCode::E001);
-        assert_eq!(check("= f\"hello {1}\"").unwrap_err().code, DiagCode::E400);
+        check("= f\"hello {1}\"").unwrap();
+        let deep_interp = format!("= f\"{{{}}}\"", "[".repeat(100) + "0" + &"]".repeat(100));
+        assert_eq!(check(&deep_interp).unwrap_err().code, DiagCode::E400);
     }
     #[test]
     fn keyword_locale_applies_only_when_declared() {

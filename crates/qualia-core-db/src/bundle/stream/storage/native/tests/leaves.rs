@@ -26,12 +26,11 @@ fn signed_legitimate_zero_leaf_is_explicitly_written_and_reverified_rewritten() 
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 let observed = store
                     .reverify_and_rewrite_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,
@@ -94,12 +93,13 @@ fn two_real_signed_leaves_use_canonical_outboard_proofs_and_exact_short_final_by
                 {
                     let mut grant =
                         adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                    let mut stage = rt
-                        .storage_stage(&op, bytes, &proof, &mut scratch, 20, Generation(1))
-                        .unwrap();
                     store
                         .write_leaf(
-                            &mut stage,
+                            rt,
+                            &op,
+                            bytes,
+                            &proof,
+                            &mut scratch,
                             &mut grant,
                             pins,
                             workspace,

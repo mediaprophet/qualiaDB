@@ -230,6 +230,19 @@
         </div>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3"><code>specialized_libs</code> · Quantum Chemistry HF/DFT &amp; Q-Forge Architecture</h3>
+            <p class="text-xs text-white/65 mb-3">
+                Implemented in <code>crates/qualia-core-db/src/specialized_libs/chemistry_modeling/</code> alongside computational geometry, medical computing, statistical analysis, financial modeling, engineering analysis, and bioinformatics:
+            </p>
+            <ul class="text-xs text-white/75 space-y-1.5 list-disc list-inside">
+                <li><strong>Basis Sets &amp; ECPs:</strong> Cartesian &amp; real-spherical GTOs (<code>STO-3G</code>, <code>def2-SVP</code>) with scalar-relativistic Effective Core Potentials.</li>
+                <li><strong>Analytical Integrals:</strong> Adaptive <strong>Obara-Saika (OS) / Head-Gordon-Pople (HGP)</strong> for s/p/d and <strong>Rys Quadrature</strong> for f/g ERIs on <code>ZeroHeapMatrix</code>.</li>
+                <li><strong>SCF &amp; Native Autodiff DFT:</strong> RHF/UHF generalized Roothaan-Hall solver with <strong>DIIS</strong> &amp; <strong>Broyden mixing</strong> (10<sup>-8</sup> Ha); pure-Rust autodiff <strong>LDA/GGA</strong> (no <code>libxc</code> C-bindings).</li>
+                <li><strong>Q-Forge VQE Bridge:</strong> <strong>QGroup</strong> heuristic clusters VQE jobs by circuit depth &amp; shot count into deterministic <code>NQuin</code> pointers.</li>
+            </ul>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
             <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
             <div class="code-block text-blue-200 text-xs">
 # Sample from a Boltzmann distribution using WASM thermodynamics
@@ -297,6 +310,19 @@ SELECT ?energy ?probability WHERE {
         <div class="glass-strong rounded-2xl p-4 mt-6">
             <div class="text-xs font-semibold text-emerald-400 mb-2">RK4 Phase-Space &amp; Invariant Summary</div>
             <pre id="ode-out" class="code-block text-emerald-300 text-xs min-h-[72px]">Ready — click Solve (WASM)...</pre>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3"><code>specialized_libs</code> · Quantum Chemistry HF/DFT &amp; Q-Forge Architecture</h3>
+            <p class="text-xs text-white/65 mb-3">
+                Implemented in <code>crates/qualia-core-db/src/specialized_libs/chemistry_modeling/</code> alongside computational geometry, medical computing, statistical analysis, financial modeling, engineering analysis, and bioinformatics:
+            </p>
+            <ul class="text-xs text-white/75 space-y-1.5 list-disc list-inside">
+                <li><strong>Basis Sets &amp; ECPs:</strong> Cartesian &amp; real-spherical GTOs (<code>STO-3G</code>, <code>def2-SVP</code>) with scalar-relativistic Effective Core Potentials.</li>
+                <li><strong>Analytical Integrals:</strong> Adaptive <strong>Obara-Saika (OS) / Head-Gordon-Pople (HGP)</strong> for s/p/d and <strong>Rys Quadrature</strong> for f/g ERIs on <code>ZeroHeapMatrix</code>.</li>
+                <li><strong>SCF &amp; Native Autodiff DFT:</strong> RHF/UHF generalized Roothaan-Hall solver with <strong>DIIS</strong> &amp; <strong>Broyden mixing</strong> (10<sup>-8</sup> Ha); pure-Rust autodiff <strong>LDA/GGA</strong> (no <code>libxc</code> C-bindings).</li>
+                <li><strong>Q-Forge VQE Bridge:</strong> <strong>QGroup</strong> heuristic clusters VQE jobs by circuit depth &amp; shot count into deterministic <code>NQuin</code> pointers.</li>
+            </ul>
         </div>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
@@ -407,6 +433,19 @@ SELECT ?time ?value WHERE {
         </div>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3"><code>specialized_libs</code> · Quantum Chemistry HF/DFT &amp; Q-Forge Architecture</h3>
+            <p class="text-xs text-white/65 mb-3">
+                Implemented in <code>crates/qualia-core-db/src/specialized_libs/chemistry_modeling/</code> alongside computational geometry, medical computing, statistical analysis, financial modeling, engineering analysis, and bioinformatics:
+            </p>
+            <ul class="text-xs text-white/75 space-y-1.5 list-disc list-inside">
+                <li><strong>Basis Sets &amp; ECPs:</strong> Cartesian &amp; real-spherical GTOs (<code>STO-3G</code>, <code>def2-SVP</code>) with scalar-relativistic Effective Core Potentials.</li>
+                <li><strong>Analytical Integrals:</strong> Adaptive <strong>Obara-Saika (OS) / Head-Gordon-Pople (HGP)</strong> for s/p/d and <strong>Rys Quadrature</strong> for f/g ERIs on <code>ZeroHeapMatrix</code>.</li>
+                <li><strong>SCF &amp; Native Autodiff DFT:</strong> RHF/UHF generalized Roothaan-Hall solver with <strong>DIIS</strong> &amp; <strong>Broyden mixing</strong> (10<sup>-8</sup> Ha); pure-Rust autodiff <strong>LDA/GGA</strong> (no <code>libxc</code> C-bindings).</li>
+                <li><strong>Q-Forge VQE Bridge:</strong> <strong>QGroup</strong> heuristic clusters VQE jobs by circuit depth &amp; shot count into deterministic <code>NQuin</code> pointers.</li>
+            </ul>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
             <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
             <div class="code-block text-blue-200 text-xs">
 # Sequence alignment using WASM bioinformatics
@@ -475,6 +514,19 @@ SELECT ?alignment ?score WHERE {
                     <pre id="score2-out" class="code-block text-amber-300 text-xs min-h-[85px]">Ready...</pre>
                 </div>
             </div>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3"><code>specialized_libs</code> · Quantum Chemistry HF/DFT &amp; Q-Forge Architecture</h3>
+            <p class="text-xs text-white/65 mb-3">
+                Implemented in <code>crates/qualia-core-db/src/specialized_libs/chemistry_modeling/</code> alongside computational geometry, medical computing, statistical analysis, financial modeling, engineering analysis, and bioinformatics:
+            </p>
+            <ul class="text-xs text-white/75 space-y-1.5 list-disc list-inside">
+                <li><strong>Basis Sets &amp; ECPs:</strong> Cartesian &amp; real-spherical GTOs (<code>STO-3G</code>, <code>def2-SVP</code>) with scalar-relativistic Effective Core Potentials.</li>
+                <li><strong>Analytical Integrals:</strong> Adaptive <strong>Obara-Saika (OS) / Head-Gordon-Pople (HGP)</strong> for s/p/d and <strong>Rys Quadrature</strong> for f/g ERIs on <code>ZeroHeapMatrix</code>.</li>
+                <li><strong>SCF &amp; Native Autodiff DFT:</strong> RHF/UHF generalized Roothaan-Hall solver with <strong>DIIS</strong> &amp; <strong>Broyden mixing</strong> (10<sup>-8</sup> Ha); pure-Rust autodiff <strong>LDA/GGA</strong> (no <code>libxc</code> C-bindings).</li>
+                <li><strong>Q-Forge VQE Bridge:</strong> <strong>QGroup</strong> heuristic clusters VQE jobs by circuit depth &amp; shot count into deterministic <code>NQuin</code> pointers.</li>
+            </ul>
         </div>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
@@ -590,6 +642,19 @@ SELECT ?patient ?risk_score ?risk_category WHERE {
         </div>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3"><code>specialized_libs</code> · Quantum Chemistry HF/DFT &amp; Q-Forge Architecture</h3>
+            <p class="text-xs text-white/65 mb-3">
+                Implemented in <code>crates/qualia-core-db/src/specialized_libs/chemistry_modeling/</code> alongside computational geometry, medical computing, statistical analysis, financial modeling, engineering analysis, and bioinformatics:
+            </p>
+            <ul class="text-xs text-white/75 space-y-1.5 list-disc list-inside">
+                <li><strong>Basis Sets &amp; ECPs:</strong> Cartesian &amp; real-spherical GTOs (<code>STO-3G</code>, <code>def2-SVP</code>) with scalar-relativistic Effective Core Potentials.</li>
+                <li><strong>Analytical Integrals:</strong> Adaptive <strong>Obara-Saika (OS) / Head-Gordon-Pople (HGP)</strong> for s/p/d and <strong>Rys Quadrature</strong> for f/g ERIs on <code>ZeroHeapMatrix</code>.</li>
+                <li><strong>SCF &amp; Native Autodiff DFT:</strong> RHF/UHF generalized Roothaan-Hall solver with <strong>DIIS</strong> &amp; <strong>Broyden mixing</strong> (10<sup>-8</sup> Ha); pure-Rust autodiff <strong>LDA/GGA</strong> (no <code>libxc</code> C-bindings).</li>
+                <li><strong>Q-Forge VQE Bridge:</strong> <strong>QGroup</strong> heuristic clusters VQE jobs by circuit depth &amp; shot count into deterministic <code>NQuin</code> pointers.</li>
+            </ul>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
             <h3 class="font-semibold text-white/80 mb-3">SPARQL Integration Example</h3>
             <div class="code-block text-blue-200 text-xs">
 # Organic chemistry analysis using WASM engine
@@ -628,6 +693,7 @@ SELECT ?molecule ?mw ?logp ?druglikeness WHERE {
                     <label class="text-sm text-white/60 block mb-1">Basis Set</label>
                     <select id="dft-basis" class="input-field">
                         <option value="sto-3g">STO-3G (Minimal)</option>
+                        <option value="def2-svp">def2-SVP (Split-valence + ECP)</option>
                         <option value="3-21g">3-21G (Split-valence)</option>
                         <option value="6-31g">6-31G (Polarized)</option>
                     </select>
@@ -652,6 +718,19 @@ SELECT ?molecule ?mw ?logp ?druglikeness WHERE {
             <canvas id="dft-canvas" width="760" height="300" class="sci-canvas mb-4"></canvas>
             <div id="dft-result" class="code-block text-emerald-300 min-h-[120px]">Enter molecule and click Calculate…</div>
             <pre id="dft-out" class="code-block text-cyan-300 text-xs mt-3 min-h-[75px]">Ready — click Calculate Ground State (WASM)...</pre>
+        </div>
+
+        <div class="glass-strong rounded-3xl p-6 mt-6">
+            <h3 class="font-semibold text-white/80 mb-3"><code>specialized_libs</code> · Quantum Chemistry HF/DFT &amp; Q-Forge Architecture</h3>
+            <p class="text-xs text-white/65 mb-3">
+                Implemented in <code>crates/qualia-core-db/src/specialized_libs/chemistry_modeling/</code> alongside computational geometry, medical computing, statistical analysis, financial modeling, engineering analysis, and bioinformatics:
+            </p>
+            <ul class="text-xs text-white/75 space-y-1.5 list-disc list-inside">
+                <li><strong>Basis Sets &amp; ECPs:</strong> Cartesian &amp; real-spherical GTOs (<code>STO-3G</code>, <code>def2-SVP</code>) with scalar-relativistic Effective Core Potentials.</li>
+                <li><strong>Analytical Integrals:</strong> Adaptive <strong>Obara-Saika (OS) / Head-Gordon-Pople (HGP)</strong> for s/p/d and <strong>Rys Quadrature</strong> for f/g ERIs on <code>ZeroHeapMatrix</code>.</li>
+                <li><strong>SCF &amp; Native Autodiff DFT:</strong> RHF/UHF generalized Roothaan-Hall solver with <strong>DIIS</strong> &amp; <strong>Broyden mixing</strong> (10<sup>-8</sup> Ha); pure-Rust autodiff <strong>LDA/GGA</strong> (no <code>libxc</code> C-bindings).</li>
+                <li><strong>Q-Forge VQE Bridge:</strong> <strong>QGroup</strong> heuristic clusters VQE jobs by circuit depth &amp; shot count into deterministic <code>NQuin</code> pointers.</li>
+            </ul>
         </div>
 
         <div class="glass-strong rounded-3xl p-6 mt-6">
@@ -2838,5 +2917,28 @@ fn main() {
     // Initialize
     loadWasm();
 </script>
+<section id="anatomical-calibration-kinematics" class="max-w-6xl mx-auto my-10 p-6 rounded-2xl border border-indigo-500/30 bg-slate-950/80 text-slate-200">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h2 class="text-xl font-bold text-indigo-300">3-Stage Anatomical Calibration &amp; Multi-Regime Kinematics</h2>
+        <span class="text-xs font-mono px-2.5 py-1 rounded bg-indigo-500/15 text-indigo-200">SKL2 v2 · FaunaRig (24-joint) · Etalon Regimes I–V</span>
+    </div>
+    <p class="text-sm text-slate-300 mb-4">
+        Co-calibrates subject anatomy via <strong>3-Stage SSDM + Stiffness-Penalized NRICP + Harmonic/TPS</strong> volume-preserving (<code>det(J) &gt; 0</code>) organ registration, serialized into <code>.10d</code> <code>SKL2</code> v2 64-byte joint descriptors and 24-joint bilateral <code>FaunaRig</code> hierarchies with Quaternion Swing-Twist reach cones, 2:1 scapulo-humeral rhythm, and biarticular tendons.
+    </p>
+    <div class="grid md:grid-cols-3 gap-4 text-xs">
+        <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-700">
+            <div class="font-semibold text-indigo-300 mb-1">Stage 1–3 Co-Calibration</div>
+            <p class="text-slate-400">SSDM template fit &rarr; Stiffness-Penalized NRICP &rarr; Harmonic/TPS diffeomorphism (<code>det(J) &gt; 0</code>).</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-700">
+            <div class="font-semibold text-indigo-300 mb-1">SKL2 v2 &amp; FaunaRig</div>
+            <p class="text-slate-400">64B <code>SKL2</code> v2 joint descriptors, 24-joint bilateral <code>FaunaRig</code>, Swing-Twist cones, 2:1 scapulo-humeral rhythm.</p>
+        </div>
+        <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-700">
+            <div class="font-semibold text-indigo-300 mb-1">Etalon Regimes I–V Solvers</div>
+            <p class="text-slate-400">Featherstone DCA, Cosserat rod continuum/hydrostatic/plant tropism, arthropod bicondylar cuticle + hydraulic extension, VBD soft-tissue.</p>
+        </div>
+    </div>
+</section>
 </body>
 </html>

@@ -5,19 +5,23 @@
 //! allowing interactive scripts to pass either slice lists (`[a, b, c]`) or flat scalar
 //! arguments (`a, b, c`) to extension functions.
 
-use crate::budget::Budget;
-use crate::error::Diagnostic;
-use crate::span::Span;
 use crate::value::Value;
 use vibescript_abi::{FuncDescriptor, ParamSpec, PrimitiveKind, VibeTrap};
+
+/// Aligns `cursor` up to `align` (power of two).
+#[inline]
+const fn align_up(cursor: usize, align: usize) -> usize {
+    let mask = align - 1;
+    (cursor + mask) & !mask
+}
 
 /// Marshals `effective_args` into `input_scratch` and records `(start, end, kind, elems)`
 /// in `param_offsets` for each parameter in `func.params`.
 pub fn marshal_args_into_scratch(
     func: &FuncDescriptor,
-    effective_args: &[Value],
-    input_scratch: &mut [u8; 512],
-    param_offsets: &mut [(usize, usize, PrimitiveKind, usize); 8],
+    effective_args: &[&Value],
+    input_scratch: &mut [u8],
+    param_offsets: &mut [(usize, usize, PrimitiveKind, usize)],
 ) -> Result<(), VibeTrap> {
     if func.params.len() > param_offsets.len() {
         return Err(VibeTrap::ArityMismatch);
@@ -28,6 +32,7 @@ pub fn marshal_args_into_scratch(
     // Case 1: Exact 1-to-1 parameter count match
     if effective_args.len() == func.params.len() {
         for (idx, (spec, val)) in func.params.iter().zip(effective_args.iter()).enumerate() {
+            cursor = align_up(cursor, spec.kind.elem_align());
             let start = cursor;
             let elems = write_value_into_scratch(spec, val, input_scratch, &mut cursor)?;
             param_offsets[idx] = (start, cursor, spec.kind, elems);
@@ -37,12 +42,14 @@ pub fn marshal_args_into_scratch(
 
     // Case 2: `project_10d_to_3d` called with 10 flat scalar coordinates (default 7D weights)
     if func.name == "project_10d_to_3d" && effective_args.len() == 10 && func.params.len() == 2 {
+        cursor = align_up(cursor, func.params[0].kind.elem_align());
         let start0 = cursor;
         for val in effective_args {
             write_scalar_into_scratch(func.params[0].kind, val, input_scratch, &mut cursor)?;
         }
         param_offsets[0] = (start0, cursor, func.params[0].kind, 10);
 
+        cursor = align_up(cursor, func.params[1].kind.elem_align());
         let start1 = cursor;
         const DEFAULT_WEIGHTS_7D: [f32; 7] = [1.0, 0.5, 0.35, 0.25, 0.2, 0.15, 0.1];
         for w in DEFAULT_WEIGHTS_7D {
@@ -59,6 +66,7 @@ pub fn marshal_args_into_scratch(
     // Case 3: Single-slice parameter called with flat scalar arguments
     if func.params.len() == 1 {
         let spec = &func.params[0];
+        cursor = align_up(cursor, spec.kind.elem_align());
         let start = cursor;
         let mut elems = 0usize;
         for val in effective_args {
@@ -76,6 +84,7 @@ pub fn marshal_args_into_scratch(
     if total_min == effective_args.len() {
         let mut arg_idx = 0usize;
         for (param_idx, spec) in func.params.iter().enumerate() {
+            cursor = align_up(cursor, spec.kind.elem_align());
             let start = cursor;
             let count = spec.min_elems as usize;
             for val in &effective_args[arg_idx..arg_idx + count] {
@@ -93,9 +102,49 @@ pub fn marshal_args_into_scratch(
 pub fn write_value_into_scratch(
     spec: &ParamSpec,
     val: &Value,
-    scratch: &mut [u8; 512],
+    scratch: &mut [u8],
     cursor: &mut usize,
 ) -> Result<usize, VibeTrap> {
+    if spec.kind == PrimitiveKind::Utf8Bytes {
+        let bytes = match val {
+            Value::String(s) | Value::Iri(s) | Value::Blank(s) => s.as_bytes(),
+            _ => return Err(VibeTrap::TypeMismatch),
+        };
+        if *cursor + bytes.len() > scratch.len() {
+            return Err(VibeTrap::SliceBoundsOverflow);
+        }
+        scratch[*cursor..*cursor + bytes.len()].copy_from_slice(bytes);
+        *cursor += bytes.len();
+        return Ok(bytes.len());
+    }
+    if spec.kind == PrimitiveKind::NQuin48 {
+        if let Value::List(items) = val {
+            if items.len() == 6 && items.iter().all(|x| !matches!(x, Value::QuinRef(_))) {
+                write_scalar_into_scratch(spec.kind, val, scratch, cursor)?;
+                return Ok(1);
+            }
+            for item in items {
+                write_scalar_into_scratch(spec.kind, item, scratch, cursor)?;
+            }
+            return Ok(items.len());
+        }
+        write_scalar_into_scratch(spec.kind, val, scratch, cursor)?;
+        return Ok(1);
+    }
+    if spec.kind == PrimitiveKind::ResourceHandle {
+        if let Value::List(items) = val {
+            if items.len() == 5 && items.iter().all(|x| !matches!(x, Value::Record(_) | Value::List(_))) {
+                write_scalar_into_scratch(spec.kind, val, scratch, cursor)?;
+                return Ok(1);
+            }
+            for item in items {
+                write_scalar_into_scratch(spec.kind, item, scratch, cursor)?;
+            }
+            return Ok(items.len());
+        }
+        write_scalar_into_scratch(spec.kind, val, scratch, cursor)?;
+        return Ok(1);
+    }
     match val {
         Value::List(items) => {
             for item in items {
@@ -113,7 +162,7 @@ pub fn write_value_into_scratch(
 pub fn write_scalar_into_scratch(
     kind: PrimitiveKind,
     val: &Value,
-    scratch: &mut [u8; 512],
+    scratch: &mut [u8],
     cursor: &mut usize,
 ) -> Result<(), VibeTrap> {
     let need = kind.elem_size();
@@ -154,9 +203,58 @@ pub fn write_scalar_into_scratch(
             };
             scratch[*cursor] = b;
         }
-        PrimitiveKind::NQuin48
-        | PrimitiveKind::ResourceHandle
-        | PrimitiveKind::Utf8Bytes => return Err(VibeTrap::TypeMismatch),
+        PrimitiveKind::NQuin48 => match val {
+            Value::QuinRef(q) => {
+                let words = q.raw_fields();
+                for (w_idx, word) in words.iter().enumerate() {
+                    let off = *cursor + w_idx * 8;
+                    scratch[off..off + 8].copy_from_slice(&word.to_le_bytes());
+                }
+            }
+            Value::List(xs) if xs.len() == 6 => {
+                for (w_idx, item) in xs.iter().enumerate() {
+                    let word = value_to_u64(item).ok_or(VibeTrap::TypeMismatch)?;
+                    let off = *cursor + w_idx * 8;
+                    scratch[off..off + 8].copy_from_slice(&word.to_le_bytes());
+                }
+            }
+            _ => return Err(VibeTrap::TypeMismatch),
+        },
+        PrimitiveKind::ResourceHandle => match val {
+            Value::Record(rec) => {
+                let owner = rec
+                    .get("owner_provider_hash")
+                    .and_then(value_to_u64)
+                    .ok_or(VibeTrap::TypeMismatch)?;
+                let rk = rec.get("kind").and_then(value_to_u64).unwrap_or(0) as u16;
+                let flags = rec.get("flags").and_then(value_to_u64).unwrap_or(0) as u16;
+                let gen = rec.get("generation").and_then(value_to_u64).unwrap_or(0) as u32;
+                let slot = rec.get("slot").and_then(value_to_u64).unwrap_or(0) as u32;
+                let reserved = rec.get("reserved").and_then(value_to_u64).unwrap_or(0) as u32;
+                scratch[*cursor..*cursor + 8].copy_from_slice(&owner.to_le_bytes());
+                scratch[*cursor + 8..*cursor + 10].copy_from_slice(&rk.to_le_bytes());
+                scratch[*cursor + 10..*cursor + 12].copy_from_slice(&flags.to_le_bytes());
+                scratch[*cursor + 12..*cursor + 16].copy_from_slice(&gen.to_le_bytes());
+                scratch[*cursor + 16..*cursor + 20].copy_from_slice(&slot.to_le_bytes());
+                scratch[*cursor + 20..*cursor + 24].copy_from_slice(&reserved.to_le_bytes());
+            }
+            Value::List(xs) if xs.len() >= 5 => {
+                let owner = value_to_u64(&xs[0]).ok_or(VibeTrap::TypeMismatch)?;
+                let rk = value_to_u64(&xs[1]).ok_or(VibeTrap::TypeMismatch)? as u16;
+                let flags = value_to_u64(&xs[2]).ok_or(VibeTrap::TypeMismatch)? as u16;
+                let gen = value_to_u64(&xs[3]).ok_or(VibeTrap::TypeMismatch)? as u32;
+                let slot = value_to_u64(&xs[4]).ok_or(VibeTrap::TypeMismatch)? as u32;
+                let reserved = xs.get(5).and_then(value_to_u64).unwrap_or(0) as u32;
+                scratch[*cursor..*cursor + 8].copy_from_slice(&owner.to_le_bytes());
+                scratch[*cursor + 8..*cursor + 10].copy_from_slice(&rk.to_le_bytes());
+                scratch[*cursor + 10..*cursor + 12].copy_from_slice(&flags.to_le_bytes());
+                scratch[*cursor + 12..*cursor + 16].copy_from_slice(&gen.to_le_bytes());
+                scratch[*cursor + 16..*cursor + 20].copy_from_slice(&slot.to_le_bytes());
+                scratch[*cursor + 20..*cursor + 24].copy_from_slice(&reserved.to_le_bytes());
+            }
+            _ => return Err(VibeTrap::TypeMismatch),
+        },
+        PrimitiveKind::Utf8Bytes => return Err(VibeTrap::TypeMismatch),
     }
     *cursor += need;
     Ok(())
@@ -171,160 +269,4 @@ fn value_to_u64(val: &Value) -> Option<u64> {
         Value::List(xs) => xs.first().and_then(value_to_u64),
         _ => None,
     }
-}
-
-/// Evaluates convenience extension helper functions used by interactive browser workbenches
-/// (`wgsl_workgroup_threads`, `workgroup_occupancy`, `rms_energy`, `quant_row_bytes`,
-/// `kv_cache_bytes`, `norm_opcode`, `verify_sealed_quin`, `verify_wire_parity`, etc.).
-pub fn try_eval_convenience_kernel(
-    path: &str,
-    pos_args: &[Value],
-    budget: &mut Budget,
-    span: Span,
-) -> Result<Option<Value>, Diagnostic> {
-    let func_name = path.rsplit('.').next().unwrap_or(path);
-    let val = match func_name {
-        "wgsl_workgroup_threads" => {
-            let wx = pos_args.first().and_then(value_to_u64).unwrap_or(1);
-            let wy = pos_args.get(1).and_then(value_to_u64).unwrap_or(1);
-            let wz = pos_args.get(2).and_then(value_to_u64).unwrap_or(1);
-            Value::U64(wx.saturating_mul(wy).saturating_mul(wz))
-        }
-        "tile_schedule_valid" => {
-            let tm = pos_args.first().and_then(value_to_u64).unwrap_or(16);
-            let tn = pos_args.get(1).and_then(value_to_u64).unwrap_or(16);
-            let tk = pos_args.get(2).and_then(value_to_u64).unwrap_or(16);
-            let max_shmem = pos_args.get(3).and_then(value_to_u64).unwrap_or(32768);
-            let bytes = (tm.saturating_mul(tk).saturating_add(tk.saturating_mul(tn))).saturating_mul(4);
-            Value::Bool(bytes <= max_shmem)
-        }
-        "estimate_arithmetic_intensity" => {
-            let flops = pos_args.first().and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let bytes = pos_args.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0).max(1e-9);
-            Value::F64(flops / bytes)
-        }
-        "workgroup_occupancy" => {
-            let threads = pos_args.first().and_then(|v| v.as_f64()).unwrap_or(256.0);
-            let max_threads = pos_args.get(1).and_then(|v| v.as_f64()).unwrap_or(1024.0).max(1.0);
-            Value::F64((threads / max_threads).clamp(0.0, 1.0))
-        }
-        "dispatch_grid_1d" => {
-            let total = pos_args.first().and_then(value_to_u64).unwrap_or(0);
-            let wg = pos_args.get(1).and_then(value_to_u64).unwrap_or(64).max(1);
-            Value::U64((total + wg - 1) / wg)
-        }
-        "rms_energy" => {
-            let mut sum_sq = 0.0f64;
-            let mut count = 0usize;
-            for a in pos_args {
-                match a {
-                    Value::List(xs) => {
-                        for x in xs {
-                            if let Some(f) = x.as_f64() {
-                                sum_sq += f * f;
-                                count += 1;
-                            }
-                        }
-                    }
-                    other => {
-                        if let Some(f) = other.as_f64() {
-                            sum_sq += f * f;
-                            count += 1;
-                        }
-                    }
-                }
-            }
-            let rms = if count > 0 {
-                (sum_sq / (count as f64)).sqrt()
-            } else {
-                0.0
-            };
-            Value::F64(rms)
-        }
-        "zero_crossing_rate" => {
-            let mut samples = [0.0f64; 64];
-            let mut n = 0usize;
-            for a in pos_args {
-                match a {
-                    Value::List(xs) => {
-                        for x in xs {
-                            if n < samples.len() {
-                                samples[n] = x.as_f64().unwrap_or(0.0);
-                                n += 1;
-                            }
-                        }
-                    }
-                    other => {
-                        if n < samples.len() {
-                            samples[n] = other.as_f64().unwrap_or(0.0);
-                            n += 1;
-                        }
-                    }
-                }
-            }
-            if n <= 1 {
-                Value::F64(0.0)
-            } else {
-                let mut crossings = 0usize;
-                for i in 1..n {
-                    if (samples[i] >= 0.0) != (samples[i - 1] >= 0.0) {
-                        crossings += 1;
-                    }
-                }
-                Value::F64(crossings as f64 / ((n - 1) as f64))
-            }
-        }
-        "fft_bin_freq" => {
-            let bin = pos_args.first().and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let sr = pos_args.get(1).and_then(|v| v.as_f64()).unwrap_or(48000.0);
-            let n_fft = pos_args.get(2).and_then(|v| v.as_f64()).unwrap_or(1024.0).max(1.0);
-            Value::F64(bin * sr / n_fft)
-        }
-        "db_to_linear" => {
-            let db = pos_args.first().and_then(|v| v.as_f64()).unwrap_or(0.0);
-            Value::F64(10.0_f64.powf(db / 20.0))
-        }
-        "quant_row_bytes" => {
-            let cols = pos_args.first().and_then(value_to_u64).unwrap_or(0);
-            let bits = pos_args.get(1).and_then(value_to_u64).unwrap_or(4);
-            Value::U64((cols.saturating_mul(bits) + 7) / 8)
-        }
-        "kv_cache_bytes" => {
-            let mut prod = 2u64;
-            for a in pos_args {
-                prod = prod.saturating_mul(value_to_u64(a).unwrap_or(1));
-            }
-            Value::U64(prod)
-        }
-        "norm_opcode" => {
-            let pred = pos_args.first().and_then(value_to_u64).unwrap_or(0);
-            Value::U64(pred & 0xFF)
-        }
-        "verify_sealed_quin" | "verify_wire_parity" => {
-            let mut words = [0u64; 6];
-            if pos_args.len() == 1 {
-                if let Value::List(xs) = &pos_args[0] {
-                    for (i, slot) in words.iter_mut().enumerate() {
-                        *slot = xs.get(i).and_then(value_to_u64).unwrap_or(0);
-                    }
-                }
-            } else {
-                for i in 0..5 {
-                    words[i] = pos_args.get(i).and_then(value_to_u64).unwrap_or(0);
-                }
-                if let Some(last) = pos_args.get(5) {
-                    words[5] = match last {
-                        Value::List(xs) if xs.len() >= 6 => value_to_u64(&xs[5]).unwrap_or(0),
-                        other => value_to_u64(other).unwrap_or(0),
-                    };
-                }
-            }
-            let expected = words[0] ^ words[1] ^ words[2] ^ words[3] ^ words[4];
-            Value::U64(u64::from(words[5] == expected))
-        }
-        _ => return Ok(None),
-    };
-
-    budget.charge(8, span)?;
-    Ok(Some(val))
 }

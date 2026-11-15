@@ -3,13 +3,13 @@ use super::{publisher::PublisherError as E, PreparedSource};
 use crate::crypto::network::{digest::sha384, entropy::fill_os};
 use crate::net::qdnf::types::StrongDigest;
 #[derive(Clone, Copy)]
-pub(crate) struct Mapping {
+pub struct Mapping {
     pub(super) id: u32,
     pub(super) source_slot: usize,
     pub(super) digest: StrongDigest,
 }
 impl Mapping {
-    pub(crate) const EMPTY: Self = Self {
+    pub const EMPTY: Self = Self {
         id: 0,
         source_slot: 0,
         digest: StrongDigest::ZERO,

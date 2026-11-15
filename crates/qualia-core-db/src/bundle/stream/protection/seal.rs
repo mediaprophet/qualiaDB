@@ -9,7 +9,7 @@ use crate::net::qdnf::types::StrongDigest;
 use crate::specialized_libs::cryptographic_library::ManagedObjectSealer;
 use sha2::{Digest, Sha384};
 impl ProtectedPublisher<'_, '_, '_, '_> {
-    pub(crate) fn seal_next_object(
+    pub fn seal_next_object(
         &mut self,
         scratch: &mut [u8],
         sink: &mut impl CandidateSink,
@@ -46,7 +46,7 @@ impl ProtectedPublisher<'_, '_, '_, '_> {
             Ok(())
         })
     }
-    pub(crate) fn seal_metadata(
+    pub fn seal_metadata(
         &mut self,
         refs: PrivateReferences,
         private_scratch: &mut [u8],

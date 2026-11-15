@@ -61,7 +61,7 @@ fn map_effect_class(effects: EffectSet) -> EffectClass {
 
 /// Generates `SchemaEntry` records for all functions across `ETALON_VIBE_PROVIDERS`.
 pub fn entries() -> Vec<SchemaEntry> {
-    let mut out = Vec::with_capacity(30);
+    let mut out = Vec::with_capacity(39);
     for provider in ETALON_VIBE_PROVIDERS {
         let d = provider.descriptor();
         for sub in d.sub_namespaces {
@@ -91,11 +91,60 @@ mod tests {
     use crate::capability_schema::{ all_schemas, schema_for };
 
     #[test]
-    fn t51_etalon_vibe_entries_all_30_functions_present() {
+    fn t51_etalon_vibe_entries_all_39_functions_present() {
         let etalon_entries = entries();
-        assert_eq!(etalon_entries.len(), 30);
+        assert_eq!(etalon_entries.len(), 39);
         let all = all_schemas();
-        assert!(all.len() >= 30);
+        assert!(all.len() >= 39);
+        let ids: Vec<&str> = etalon_entries.iter().map(|e| e.id.as_str()).collect();
+        let expected_specs: [(&str, usize, &str); 9] = [
+            ("render.emf.bioelectric_dipole_preview", 3, "List<"),
+            ("render.emf.radiative_transfer_slice", 2, "List<"),
+            ("render.emf.sh_irradiance_probe", 2, "List<"),
+            ("signal.qac.decode_container_summary", 1, "List<"),
+            ("signal.qac.render_binaural_frame", 2, "List<"),
+            ("signal.qac.evaluate_directivity_sh", 2, "List<"),
+            ("signal.qac.sonify_emf_envelope", 1, "List<"),
+            ("sense.authority.verify_evidence_gate", 1, "List<"),
+            ("sense.authority.dicom_modality_check", 1, "List<"),
+        ];
+        for (expected_id, expected_argc, ret_prefix) in expected_specs {
+            let entry = etalon_entries
+                .iter()
+                .find(|e| e.id == expected_id)
+                .unwrap_or_else(|| {
+                    panic!("missing UP-01 etalon-vibe entry `{expected_id}` in {ids:?}")
+                });
+            assert_eq!(
+                entry.args.len(),
+                expected_argc,
+                "unexpected arg count for `{expected_id}`"
+            );
+            assert!(
+                entry.returns.starts_with(ret_prefix),
+                "unexpected return schema `{}` for `{expected_id}`",
+                entry.returns
+            );
+            assert!(
+                schema_for(expected_id).is_some(),
+                "all_schemas() missing `{expected_id}`"
+            );
+        }
+        assert_eq!(
+            ids.iter().filter(|id| id.starts_with("render.")).count(),
+            7,
+            "expected 7 render entries in {ids:?}"
+        );
+        assert_eq!(
+            ids.iter().filter(|id| id.starts_with("signal.")).count(),
+            8,
+            "expected 8 signal entries in {ids:?}"
+        );
+        assert_eq!(
+            ids.iter().filter(|id| id.starts_with("sense.")).count(),
+            5,
+            "expected 5 sense entries in {ids:?}"
+        );
         for id in [
             "gpu.compute.affine_f32",
             "gpu.compute.gemv4_f32",

@@ -39,7 +39,6 @@ pub enum Type {
     MaterialRef,
     WorldLine,
     // ── T9: User-defined enum type ─────────────────────────────────────
-    #[allow(dead_code)]
     Enum(String),
     // ── T33: Species and Mixture types ─────────────────────────────────
     SpeciesRef,
@@ -59,15 +58,12 @@ impl Type {
     /// Constructs from ast.
     pub fn from_ast(t: &TypeExpr) -> Type {
         match t.name.as_str() {
-            "i32" => Type::I64,
-            "u32" => Type::U64,
-            "i64" => Type::I64,
-            "f32" => Type::F64,
-            "f64" => Type::F64,
-            "u64" => Type::U64,
-            "bool" => Type::Bool,
-            "string" => Type::String,
-            "bytes" => Type::Bytes,
+            "i32" | "i64" | "int" => Type::I64,
+            "u32" | "u64" | "uint" => Type::U64,
+            "f32" | "f64" | "float" | "number" | "num" => Type::F64,
+            "bool" | "boolean" => Type::Bool,
+            "string" | "str" | "String" => Type::String,
+            "bytes" | "Bytes" => Type::Bytes,
             "Iri" => Type::Iri,
             "BlankNode" => Type::BlankNode,
             "Did" => Type::Did,
@@ -115,10 +111,33 @@ impl Type {
         }
     }
 
-    #[allow(dead_code)]
     /// `true` when numeric.
     pub fn is_numeric(&self) -> bool {
         matches!(self, Type::I64 | Type::U64 | Type::F64)
+    }
+
+    /// Returns `true` when `other` can be assigned/passed where `self` is expected.
+    pub fn is_compatible(&self, other: &Type) -> bool {
+        if matches!(self, Type::Unknown) || matches!(other, Type::Unknown) {
+            return true;
+        }
+        match (self, other) {
+            (a, b)
+                if (a.is_numeric() || matches!(a, Type::Quantity))
+                    && (b.is_numeric() || matches!(b, Type::Quantity)) =>
+            {
+                true
+            }
+            (Type::Option(a), Type::Option(b))
+            | (Type::List(a), Type::List(b))
+            | (Type::Stream(a), Type::Stream(b))
+            | (Type::Future(a), Type::Future(b)) => a.is_compatible(b),
+            (Type::Result(a1, e1), Type::Result(a2, e2)) => {
+                a1.is_compatible(a2) && e1.is_compatible(e2)
+            }
+            (Type::Enum(a), Type::Enum(b)) | (Type::Named(a), Type::Named(b)) => a == b,
+            _ => self == other,
+        }
     }
 }
 

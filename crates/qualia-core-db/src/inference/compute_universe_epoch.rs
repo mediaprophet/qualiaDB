@@ -33,7 +33,7 @@ pub(super) fn current() -> u64 {
 }
 fn advance() -> u64 {
     EPOCH
-        .fetch_update(Ordering::AcqRel, Ordering::Acquire, |value| {
+        .try_update(Ordering::AcqRel, Ordering::Acquire, |value| {
             value.checked_add(1)
         })
         .expect("compute request epoch exhausted")

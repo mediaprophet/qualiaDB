@@ -50,6 +50,7 @@
             <div class="flex items-center gap-3 text-sm">
                 <a href="emf-qac-showcase.html" class="px-3 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 transition-colors flex items-center gap-2"><i class="fas fa-satellite-dish"></i> Interactive Observatory</a>
                 <a href="data-formats.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors flex items-center gap-2"><i class="fas fa-database"></i> Data Formats (.q42 v4)</a>
+                <a href="qbdl-streaming.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors flex items-center gap-2"><i class="fas fa-layer-group"></i> QBDL Streaming</a>
                 <a href="release-showcase-0.0.41.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors flex items-center gap-2"><i class="fas fa-rocket"></i> Release 0.0.41</a>
             </div>
         </div>
@@ -59,7 +60,7 @@
             <div class="layer-pill bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 mb-4"><i class="fas fa-microchip"></i> System Architecture &amp; Standards Conformance</div>
             <h1 class="text-4xl lg:text-5xl font-semibold tracking-tight mb-4">EMF v4 &amp; QAC v1 Cross-Workspace Architecture</h1>
             <p class="text-lg text-slate-300 max-w-5xl leading-relaxed mb-3">
-                Electromagnetic Field v4 (<code class="text-cyan-300">Q42EMF64</code>) and Qualia Acoustic Container v1 (<code class="text-cyan-300">qac\0\0\0\0\0</code>) establish a unified binary envelope across QualiaDB and Etalon. This architecture enforces strict custody/compute separation: QualiaDB owns immutable storage, TLV metadata graphs, SI dimensional algebra, byte-exact DICOM/sensor preservation, and HTTP range streaming; Etalon provides GPU/CPU Maxwell-Yee FDTD, elastodynamic wave solvers, spherical harmonic HOA DSP, and WGSL compute kernels.
+                Electromagnetic Field v4 (<code class="text-cyan-300">Q42EMF64</code>) and Qualia Acoustic Container v1 (<code class="text-cyan-300">qac\0\0\0\0\0</code>) establish a unified binary envelope across QualiaDB and Etalon. This architecture enforces strict custody/compute separation: QualiaDB owns immutable storage, TLV metadata graphs, SI dimensional algebra, byte-exact DICOM/sensor preservation, and <a href="qbdl-streaming.html" class="text-cyan-300 underline">QBDL mixed-HMC HTTP range streaming</a>; Etalon provides GPU/CPU Maxwell-Yee FDTD, elastodynamic wave solvers, spherical harmonic HOA DSP, and WGSL compute kernels. An HMC may hold many EMF and QAC entries; family tags follow format admit.
             </p>
             <div class="flex flex-wrap gap-3 text-xs font-mono text-slate-400">
                 <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10"><i class="fas fa-cube text-cyan-400 mr-1"></i> Envelope: 128B Header + 128B Directory</span>

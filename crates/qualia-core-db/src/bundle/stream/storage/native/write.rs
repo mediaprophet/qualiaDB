@@ -9,7 +9,7 @@ use crate::bundle::stream::{
     proof::{decode_proof, LEAF_BYTES},
     runtime::{
         sparse_workspace::WorkspacePageAttempt, SparsePageWorkspace, StorageStage,
-        StorageStageControl,
+        StorageStageControl, TransferRuntime, TransferTicket,
     },
     storage::{encode_checkpoint, verify_leaf_view, StorageIdentity, CHECKPOINT_BYTES},
 };
@@ -39,10 +39,17 @@ impl NativeSparseStore<'_, '_> {
         self.sequence.checked_add(1).ok_or(E::Overflow)
     }
 
+    /// Production convenience. Short StorageStage for prepare, drop, wait with
+    /// no stage, then a new short stage for commit. Crash tests use the split
+    /// `prepare_leaf_write` / `wait_leaf_write` / `commit_leaf_write` path.
     #[allow(clippy::too_many_arguments)]
     pub fn write_leaf(
         &mut self,
-        stage: &mut StorageStage<'_, '_>,
+        runtime: &mut TransferRuntime<'_>,
+        ticket: &TransferTicket,
+        payload: &[u8],
+        proof: &[u8],
+        scratch: &mut [u8],
         grant: &mut LocalWholeSourceGrant<'_, '_>,
         pins: &PinAuthority,
         workspace: &mut SparsePageWorkspace,
@@ -52,7 +59,11 @@ impl NativeSparseStore<'_, '_> {
         policy: &impl Fn() -> Generation,
     ) -> Result<LeafBarrierObservation, E> {
         self.write_leaf_with_hook(
-            stage,
+            runtime,
+            ticket,
+            payload,
+            proof,
+            scratch,
             grant,
             pins,
             workspace,
@@ -63,12 +74,14 @@ impl NativeSparseStore<'_, '_> {
             &mut |_| Ok(()),
         )
     }
-    /// Same-stage convenience for `fixtures::write`. Crash tests must not use
-    /// this: they drop StorageStage across [`Self::wait_leaf_write`].
     #[allow(clippy::too_many_arguments)]
     pub(super) fn write_leaf_with_hook(
         &mut self,
-        stage: &mut StorageStage<'_, '_>,
+        runtime: &mut TransferRuntime<'_>,
+        ticket: &TransferTicket,
+        payload: &[u8],
+        proof: &[u8],
+        scratch: &mut [u8],
         grant: &mut LocalWholeSourceGrant<'_, '_>,
         pins: &PinAuthority,
         workspace: &mut SparsePageWorkspace,
@@ -82,11 +95,30 @@ impl NativeSparseStore<'_, '_> {
         self.check_leaf(leaf)?;
         let next = self.next_sequence()?;
         let mut attempt = workspace.begin_attempt();
-        let armed =
-            self.prepare_leaf_write(stage, attempt.workspace(), leaf, nodes, next, clock, policy)?;
+        let armed = {
+            let mut stage = runtime.storage_stage(
+                ticket,
+                payload,
+                proof,
+                scratch,
+                clock(),
+                policy(),
+            )?;
+            self.prepare_leaf_write(
+                &mut stage,
+                attempt.workspace(),
+                leaf,
+                nodes,
+                next,
+                clock,
+                policy,
+            )?
+        };
         self.wait_leaf_write(armed, hook)?;
+        let mut stage =
+            runtime.storage_stage(ticket, payload, proof, scratch, clock(), policy())?;
         self.commit_leaf_write(
-            stage,
+            &mut stage,
             grant,
             pins,
             attempt.workspace(),
@@ -105,6 +137,7 @@ impl NativeSparseStore<'_, '_> {
         armed: ArmedNativeLeafWrite,
         hook: &mut impl FnMut(WriteStep) -> Result<(), E>,
     ) -> Result<(), E> {
+        debug_assert!(armed.reserved_bytes() > 0);
         let session = &mut self.session;
         armed.wait_blocking(hook, &mut |op, bytes| session_io(session, op, bytes))
     }

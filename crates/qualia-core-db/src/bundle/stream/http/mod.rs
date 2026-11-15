@@ -10,10 +10,16 @@ mod range;
 mod status;
 mod client;
 mod provider;
+mod mixed;
+mod wss_mixed;
 
 pub use client::{
     get_range, tls_is_pq_publisher_authority, url_has_userinfo, ClientError, FetchBudget, Fetched,
     LigGate, RangeRequest, HEADER_CAP,
+};
+pub use mixed::{
+    bind_http_entry, entry_admits_family, entry_slice, serve_scheduled, BoundHttpEntry, HttpMux,
+    HttpMuxReport, ServedObject,
 };
 pub use provider::{
     serve_proof_into, write_http_head, write_object_path, HttpObject, HttpProvider, ProviderError,

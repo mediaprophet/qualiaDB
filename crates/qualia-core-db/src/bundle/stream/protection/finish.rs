@@ -7,7 +7,7 @@ use crate::crypto::network::{cose, digest::sha384, errors::CryptoError, object_s
 use crate::specialized_libs::cryptographic_library::PairedSigningRequest;
 use zeroize::Zeroizing;
 impl ProtectedPublisher<'_, '_, '_, '_> {
-    pub(crate) fn finish(
+    pub fn finish(
         &mut self,
         out: &mut [u8],
         sink: &mut impl CandidateSink,
@@ -106,7 +106,7 @@ impl ProtectedPublisher<'_, '_, '_, '_> {
     }
     /// A signed candidate remains unrecognized until actual publisher pin and
     /// application-policy verification; this is not durable/public promotion.
-    pub(crate) fn sign_candidate(
+    pub fn sign_candidate(
         &mut self,
         descriptor: &[u8],
         request: PairedSigningRequest<'_>,

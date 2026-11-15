@@ -6,6 +6,8 @@ use std::ops::{Deref, DerefMut};
 pub(crate) struct CheckEnv {
     types: HashMap<String, Type>,
     pub(super) functions: HashMap<String, Effect>,
+    pub(super) fn_sigs: HashMap<String, (Vec<Type>, Option<Type>)>,
+    pub(super) expected_return: Option<Type>,
     pub(super) enum_calls: HashSet<String>,
     pub(super) strict_grants: bool,
     pub(super) budget_expression: bool,
@@ -27,6 +29,8 @@ impl CheckEnv {
     pub(super) fn function_scope(&self) -> Self {
         Self {
             functions: self.functions.clone(),
+            fn_sigs: self.fn_sigs.clone(),
+            expected_return: None,
             enum_calls: self.enum_calls.clone(),
             strict_grants: self.strict_grants,
             budget_expression: self.budget_expression,
@@ -124,9 +128,17 @@ pub(super) fn collection_call(
 pub(super) fn collect_enum_calls(program: &Program, env: &mut CheckEnv) {
     for item in &program.items {
         if let Item::Enum(e) = item {
+            env.insert(e.name.clone(), Type::Enum(e.name.clone()));
             for v in &e.variants {
                 env.enum_calls.insert(format!("{}.{}", e.name, v.name));
             }
+        } else if let Item::Function(f) = item {
+            env.fn_sigs.entry(f.name.clone()).or_insert_with(|| {
+                (
+                    f.params.iter().map(|p| Type::from_ast(&p.ty)).collect(),
+                    f.ret.as_ref().map(Type::from_ast),
+                )
+            });
         }
     }
 }

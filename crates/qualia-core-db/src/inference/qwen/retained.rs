@@ -71,7 +71,7 @@ impl QwenRetainedRuntime {
         let trunk = TrunkNvmeReader::from_lease(sources.trunk.clone(), index.tensor_data_start,
             residency == Qwen4ExpTrunkResidency::Mapped, scratch_bytes).map_err(|e| e.to_string())?;
         let tokenizer = Arc::new(GgufTokenizer::from_gguf(&header[..index.tensor_data_start as usize]));
-        let generation = GENERATION.fetch_update(Ordering::AcqRel, Ordering::Acquire,
+        let generation = GENERATION.try_update(Ordering::AcqRel, Ordering::Acquire,
             |v| v.checked_add(1)).map_err(|_| "Qwen generation exhausted")?;
         Ok(Self { runtime: Qwen4ExpNativeRuntime { descriptor, index, ple, trunk },
             tokenizer, _sources: sources, digest, generation })

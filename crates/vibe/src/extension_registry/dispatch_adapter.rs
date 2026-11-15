@@ -55,6 +55,10 @@ pub fn dispatch_prepared_call<'g>(
     if func.contract.contract_digest != handle.contract_digest {
         return Err(VibeTrap::ContractDigestMismatch);
     }
+    let ontology = provider.static_ontology_nquins();
+    if !func.contract.validate_spans(ontology.len()) {
+        return Err(VibeTrap::InvalidOntologySpan);
+    }
 
     // 3. Validate input parameter arity, types, and element count bounds
     if inputs.len() != func.params.len() {
@@ -117,18 +121,91 @@ pub fn dispatch_prepared_call<'g>(
                 declared_envelope: func.envelope,
                 input_fingerprint: input_fold,
             };
-            policy_gate.admit_call(&req)?
+            let ticket = policy_gate.admit_call(&req)?;
+            if ctx.lamport_timestamp > ticket.expiry_lamport {
+                return Err(VibeTrap::AuthorityExpired);
+            }
+            if !func.effects.is_subset_of(ticket.granted_effects) {
+                return Err(VibeTrap::PolicyDenied);
+            }
+            if func.envelope.max_ticks > ticket.approved_envelope.max_ticks
+                || func.envelope.max_output_bytes > ticket.approved_envelope.max_output_bytes
+                || func.envelope.max_scratch_bytes > ticket.approved_envelope.max_scratch_bytes
+                || func.envelope.max_vram_bytes > ticket.approved_envelope.max_vram_bytes
+                || func.envelope.max_spawned_tasks > ticket.approved_envelope.max_spawned_tasks
+            {
+                return Err(VibeTrap::ResourceEnvelopeExceeded);
+            }
+            ticket
         }
     };
 
     // 6. Stage 4: Execute
-    let ticks_consumed = provider.call(func.stable_id, inputs, output)?;
-    if ticks_consumed > ticket.approved_envelope.max_ticks {
-        return Err(VibeTrap::TickBudgetExhausted);
-    }
+    let ticks_consumed = match provider.call(func.stable_id, inputs, output) {
+        Ok(t) => t,
+        Err(trap) => {
+            if let Some(policy_gate) = gate {
+                let abort_receipt = ExecutionReceiptHeader {
+                    ticket_id: ticket.ticket_id,
+                    actor_did_hash: ctx.actor_did_hash,
+                    provider_iri_hash: handle.provider_iri_hash,
+                    func_iri_hash: handle.func_iri_hash,
+                    stable_id: func.stable_id,
+                    mode: ctx.mode,
+                    status: CompletionStatus::TrappedExecution,
+                    simulated: ticket.simulated || ctx.mode == ExecutionMode::SimulatedGovernanceTest,
+                    reserved: [0; 5],
+                    policy_generation: ticket.policy_generation,
+                    registry_generation: handle.registry_generation,
+                    ticks_consumed: 0,
+                    output_bytes_written: 0,
+                    trap_code: trap as u16,
+                    failure_stage: trap.stage() as u16,
+                    input_output_fold_hash: input_fold,
+                    lamport_timestamp: ctx.lamport_timestamp,
+                };
+                if let Err(commit_trap) = policy_gate.commit_receipt(&abort_receipt) {
+                    return Err(commit_trap);
+                }
+            }
+            return Err(trap);
+        }
+    };
+
     let output_bytes_written = output.written_bytes();
-    if output_bytes_written > ticket.approved_envelope.max_output_bytes as usize {
-        return Err(VibeTrap::ResourceEnvelopeExceeded);
+    let limit_trap = if ticks_consumed > ticket.approved_envelope.max_ticks {
+        Some(VibeTrap::TickBudgetExhausted)
+    } else if output_bytes_written > ticket.approved_envelope.max_output_bytes as usize {
+        Some(VibeTrap::ResourceEnvelopeExceeded)
+    } else {
+        None
+    };
+    if let Some(trap) = limit_trap {
+        if let Some(policy_gate) = gate {
+            let abort_receipt = ExecutionReceiptHeader {
+                ticket_id: ticket.ticket_id,
+                actor_did_hash: ctx.actor_did_hash,
+                provider_iri_hash: handle.provider_iri_hash,
+                func_iri_hash: handle.func_iri_hash,
+                stable_id: func.stable_id,
+                mode: ctx.mode,
+                status: CompletionStatus::AbortedValidationFailed,
+                simulated: ticket.simulated || ctx.mode == ExecutionMode::SimulatedGovernanceTest,
+                reserved: [0; 5],
+                policy_generation: ticket.policy_generation,
+                registry_generation: handle.registry_generation,
+                ticks_consumed: ticks_consumed as u32,
+                output_bytes_written: output_bytes_written as u32,
+                trap_code: trap as u16,
+                failure_stage: trap.stage() as u16,
+                input_output_fold_hash: input_fold,
+                lamport_timestamp: ctx.lamport_timestamp,
+            };
+            if let Err(commit_trap) = policy_gate.commit_receipt(&abort_receipt) {
+                    return Err(commit_trap);
+                }
+        }
+        return Err(trap);
     }
 
     // 7. Stage 5 & 6: Validate and Commit Receipt
@@ -164,13 +241,22 @@ pub fn dispatch_prepared_call<'g>(
     };
 
     let audit_nquins = if let Some(policy_gate) = gate {
-        policy_gate.validate_post_execution(
+        if let Err(trap) = policy_gate.validate_post_execution(
             &ticket,
             handle.opcode,
             ticks_consumed,
             output_bytes_written,
             output_hash,
-        )?;
+        ) {
+            let mut abort_receipt = receipt;
+            abort_receipt.status = CompletionStatus::AbortedValidationFailed;
+            abort_receipt.trap_code = trap as u16;
+            abort_receipt.failure_stage = trap.stage() as u16;
+            if let Err(commit_trap) = policy_gate.commit_receipt(&abort_receipt) {
+                    return Err(commit_trap);
+                }
+            return Err(trap);
+        }
         policy_gate.commit_receipt(&receipt)?
     } else {
         receipt.to_audit_nquins()

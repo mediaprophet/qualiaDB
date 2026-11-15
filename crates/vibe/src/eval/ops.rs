@@ -350,7 +350,7 @@ pub(super) fn match_pat(p: &Pattern, v: &Value, env: &mut Env) -> bool {
             Value::Err(x) => match_pat(inner, x, env),
             _ => false,
         },
-        Pattern::Some(inner) => match_pat(inner, v, env),
+        Pattern::Some(inner) => !matches!(v, Value::Null) && match_pat(inner, v, env),
         Pattern::Record(fields) => match v {
             Value::Record(rec) => {
                 for (name, pat) in fields {

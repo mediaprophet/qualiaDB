@@ -62,8 +62,6 @@
 //! | `EFFECT`        | 0x45 | —                | value →              |
 //! | `HALT`          | 0xFF | —                | —                    |
 
-#![allow(dead_code)]
-
 /// Magic bytes identifying a `vibe-bc-0.1` chunk.
 pub const MAGIC: [u8; 4] = *b"VBC1";
 
@@ -147,6 +145,9 @@ pub enum Op {
     Return = 0x32,
     /// Return null (void) from the current function.
     ReturnNull = 0x33,
+    /// Call a host capability with explicit positional and named args.
+    /// Operands: u16 path const index, u8 positional count, u8 named pair count.
+    CallHostNamed = 0x34,
 
     // ── Data structures ─────────────────────────────────────────
     /// Create a list from N stack elements. Operand: u16 count.
@@ -158,10 +159,38 @@ pub enum Op {
     GetMember = 0x42,
     /// Get an indexed element from a list. Pops index then list.
     GetIndex = 0x43,
-    /// Unwrap a Try (Ok → value, Err → error). Operand: u16 catch offset.
+    /// Unwrap a Try (Ok → value, Err → catch or diagnostic). Operand: u16 catch offset.
     TryUnwrap = 0x44,
     /// Execute an effect expression (pop and discard, for side effects).
     Effect = 0x45,
+    /// Pop top of stack, push Bool indicating whether it is `Value::Ok(_)`.
+    IsOk = 0x46,
+    /// Pop `Value::Ok(inner)` and push `*inner`.
+    UnwrapOk = 0x47,
+    /// Pop top of stack, push Bool indicating whether it is `Value::Err(_)`.
+    IsErr = 0x48,
+    /// Pop `Value::Err(inner)` and push `*inner`.
+    UnwrapErr = 0x49,
+    /// Pop top of stack, push Bool matching enum/variant/arity.
+    /// Operands: u16 enum name const, u16 variant name const, u8 field count.
+    IsVariant = 0x4A,
+    /// Pop `Value::Enum(e)` and push `e.payload[idx]`. Operand: u8 field index.
+    GetVariantField = 0x4B,
+    /// Pop top of stack, push Bool indicating `Value::Record(_)`.
+    IsRecord = 0x4C,
+    /// Pop `Value::Record(r)` and push Bool indicating `r.contains_key(name)`. Operand: u16 key const.
+    HasMember = 0x4D,
+    /// Pop top of stack, push Bool indicating `Value::List(xs)` of length `len`. Operand: u16 len.
+    IsListLen = 0x4E,
+    /// Fail execution with a destructuring pattern mismatch diagnostic.
+    TrapMatch = 0x4F,
+    /// Construct a `Value::Enum` from N stack payload args.
+    /// Operands: u16 enum name const, u16 variant name const, u8 arg count.
+    MakeVariant = 0x50,
+    /// Pop value, push `Value::Ok(Box::new(v))`.
+    MakeOk = 0x51,
+    /// Pop value, push `Value::Err(Box::new(v))`.
+    MakeErr = 0x52,
 
     // ── Special ─────────────────────────────────────────────────
     /// Halt execution (end of code segment).
@@ -206,12 +235,26 @@ impl Op {
             0x31 => Self::CallUser,
             0x32 => Self::Return,
             0x33 => Self::ReturnNull,
+            0x34 => Self::CallHostNamed,
             0x40 => Self::MakeList,
             0x41 => Self::MakeRecord,
             0x42 => Self::GetMember,
             0x43 => Self::GetIndex,
             0x44 => Self::TryUnwrap,
             0x45 => Self::Effect,
+            0x46 => Self::IsOk,
+            0x47 => Self::UnwrapOk,
+            0x48 => Self::IsErr,
+            0x49 => Self::UnwrapErr,
+            0x4A => Self::IsVariant,
+            0x4B => Self::GetVariantField,
+            0x4C => Self::IsRecord,
+            0x4D => Self::HasMember,
+            0x4E => Self::IsListLen,
+            0x4F => Self::TrapMatch,
+            0x50 => Self::MakeVariant,
+            0x51 => Self::MakeOk,
+            0x52 => Self::MakeErr,
             0xFF => Self::Halt,
             _ => return None,
         })
@@ -242,8 +285,16 @@ impl Op {
             | Self::ReturnNull
             | Self::GetIndex
             | Self::Effect
+            | Self::IsOk
+            | Self::UnwrapOk
+            | Self::IsErr
+            | Self::UnwrapErr
+            | Self::IsRecord
+            | Self::TrapMatch
+            | Self::MakeOk
+            | Self::MakeErr
             | Self::Halt => 0,
-            Self::PushBool => 1,
+            Self::PushBool | Self::GetVariantField => 1,
             Self::PushInt | Self::PushUInt | Self::PushFloat => 8,
             Self::PushQuantity => 10,
             Self::PushString
@@ -256,8 +307,12 @@ impl Op {
             | Self::MakeList
             | Self::MakeRecord
             | Self::GetMember
-            | Self::TryUnwrap => 2,
+            | Self::TryUnwrap
+            | Self::HasMember
+            | Self::IsListLen => 2,
             Self::CallHost | Self::CallUser => 3, // u16 path/function + u8 argc
+            Self::CallHostNamed => 4,             // u16 path + u8 pos_argc + u8 named_pairs
+            Self::IsVariant | Self::MakeVariant => 5, // u16 enum + u16 variant + u8 argc
         }
     }
 }

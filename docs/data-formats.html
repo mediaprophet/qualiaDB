@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Formats &amp; .q42 v4 Volume Architecture — QualiaDB 0.0.41</title>
-    <meta name="description" content="Stream RDF, N3, CBOR-LD, JSON-LD, and tabular sources into verified .q42 v4 unified volumes alongside 10D, M64, EMF64, and P64 binary containers.">
+    <meta name="description" content="Stream RDF, N3, CBOR-LD, JSON-LD, and tabular sources into verified .q42 v4 unified volumes alongside 10D, M64, EMF64, P64, and QBDL-profile Hyper Media Containers.">
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -57,7 +57,7 @@
                 QualiaDB turns human-readable knowledge graphs, rules, spreadsheets, and structured streams into self-contained, verifiable binary volumes. Whether you start from Turtle, N-Triples, N-Quads, Streaming N3, JSON-LD, CBOR-LD, or CSV, the ingestion pipeline compiles your data into a single portable <code class="text-cyan-300">.q42</code> v4 file that works identically on desktop, server, edge devices, and browser HTTP Range views.
             </p>
             <p class="text-base text-slate-400 max-w-4xl leading-relaxed">
-                Every statement is stored as a fixed 48-byte record (<code class="text-slate-200">NQuin</code>) protected by a canonical 5-field parity check, paired with an embedded namespaced dictionary (<code class="text-slate-200">Q42LEX</code> v4) and optional prose catalogue (<code class="text-slate-200">PCAT</code> v1). Physical simulations, fields, and neural weights use purpose-built 64-byte aligned companions (<code class="text-slate-200">.10d</code>, <code class="text-slate-200">M64</code>, <code class="text-slate-200">EMF64</code>, and <code class="text-slate-200">P64</code>) so graph indices remain compact and deterministic.
+                Every statement is stored as a fixed 48-byte record (<code class="text-slate-200">NQuin</code>) protected by a canonical 5-field parity check, paired with an embedded namespaced dictionary (<code class="text-slate-200">Q42LEX</code> v4) and optional prose catalogue (<code class="text-slate-200">PCAT</code> v1). Physical simulations, fields, and neural weights use purpose-built 64-byte aligned companions (<code class="text-slate-200">.10d</code>, <code class="text-slate-200">M64</code>, <code class="text-slate-200">EMF64</code>, and <code class="text-slate-200">P64</code>) so graph indices remain compact and deterministic. Those companions travel together in a <a href="qbdl-streaming.html" class="text-cyan-300 underline">QBDL-profile Hyper Media Container</a> under governed QDNF streaming.
             </p>
         </header>
 
@@ -194,7 +194,7 @@ qualia-cli verify-graph --encoder=import --input ./data/example.ttl --dataset ./
                     <ul class="text-sm text-white/65 space-y-2">
                         <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Unpolluted <code class="text-xs">BIDX</code> &amp; SuperBlocks:</strong> Keeps the hot 48-byte <code class="text-xs">NQuin</code> stream and block index dense for sub-millisecond graph traversals.</li>
                         <li><i class="fas fa-check text-emerald-400 mr-2"></i><strong>Dual integrity verification:</strong> Every <code class="text-xs">PCAT</code> entry is verified by whole-section <strong>CRC-32C</strong> and per-record <strong>SHA-256</strong> content digests.</li>
-                        <li><i class="fas fa-ban text-amber-400 mr-2"></i><strong>Strict text-only gate:</strong> Binary media MIME types (<code class="text-xs">image/*</code>, <code class="text-xs">audio/*</code>, <code class="text-xs">video/*</code>, <code class="text-xs">model/*</code>) are rejected at ingest in favor of transparent <code class="text-xs">.hmc</code> bundles and <code class="text-xs">.10d</code> containers.</li>
+                        <li><i class="fas fa-ban text-amber-400 mr-2"></i><strong>Strict text-only gate:</strong> Binary media MIME types (<code class="text-xs">image/*</code>, <code class="text-xs">audio/*</code>, <code class="text-xs">video/*</code>, <code class="text-xs">model/*</code>) are rejected at ingest in favor of QBDL-profile Hyper Media Containers and <code class="text-xs">.10d</code> companions. The ZIP document-archive <code class="text-xs">.hmc</code> profile is legacy and is not a streaming target.</li>
                     </ul>
                 </article>
 
@@ -382,7 +382,7 @@ qualia-cli ingest-job continue ./jobs/catalog</code></pre>
             </div>
             <h2 class="text-3xl font-semibold mb-3">10D, Physical Matter, Field &amp; Weight Containers</h2>
             <p class="text-white/70 max-w-4xl mb-8">
-                Volumetric geometry, physical strata, electromagnetic fields, and neural network weights are stored in dedicated 64-byte-aligned binary containers (<code class="text-amber-300">.10d</code>, <code class="text-amber-300">M64</code>, <code class="text-amber-300">EMF64</code>, and <code class="text-amber-300">P64</code>) that can be bundled alongside <code class="text-cyan-300">.q42</code> volumes inside a transparent <code class="text-cyan-300">.hmc</code> (Hyper Media Container).
+                Volumetric geometry, physical strata, electromagnetic fields, acoustic takes, and neural network weights are stored in dedicated 64-byte-aligned binary containers (<code class="text-amber-300">.10d</code>, <code class="text-amber-300">M64</code>, <code class="text-amber-300">EMF64</code>, <code class="text-amber-300">QAC</code>, and <code class="text-amber-300">P64</code>) that travel alongside <code class="text-cyan-300">.q42</code> volumes inside a <strong class="text-cyan-200">QBDL-profile Hyper Media Container</strong>. An HMC may hold many entries of the same family. Selection is over entry identities, optional time and region, and authenticated Q42 HTTP Range windows. The ZIP document-archive <code class="text-slate-400">.hmc</code> profile is a distinct legacy document and is not a streaming target; filename extension is never the discriminator. See <a href="qbdl-streaming.html" class="text-cyan-300 underline">QBDL mixed HMC streaming</a>.
             </p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -437,6 +437,32 @@ qualia-cli ingest-job continue ./jobs/catalog</code></pre>
                     </p>
                 </article>
 
+                <!-- .10d SKL2 v2 -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-emerald-300">
+                            <code class="text-white">.10d SKL2 v2</code> (64B Joint Descriptor)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-200">FaunaRig · 24-Joint</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        64-byte cache-line-aligned skeletal joint descriptor for 24-joint bilateral <code>FaunaRig</code> hierarchies, encoding Quaternion Swing-Twist reach cones, 2:1 scapulo-humeral rhythm coupling, and biarticular tendon attachments.
+                    </p>
+                </article>
+
+                <!-- .m64 Mode 0x05 M64BioTissueRecord -->
+                <article class="glass-subtle rounded-2xl p-6">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <h3 class="text-lg font-semibold text-amber-300">
+                            <code class="text-white">.m64 Mode 0x05</code> (<code class="text-amber-200">M64BioTissueRecord</code>)
+                        </h3>
+                        <span class="text-xs font-mono px-2.5 py-0.5 rounded bg-amber-500/15 text-amber-200">64B Voxel Record</span>
+                    </div>
+                    <p class="text-sm text-white/70 mb-3">
+                        64-byte biological tissue voxel record (Modes <code>0x00..0x05</code>) storing cortical/trabecular <code>vBMD</code>, <code>BV/TV</code>, fabric tensor <code>M_fabric</code>, muscle <code>HU</code>/<code>IMAT</code> myosteatosis, and fracture callus stage 0..4.
+                    </p>
+                </article>
+
                 <!-- QAC Acoustic Container -->
                 <article class="glass-subtle rounded-2xl p-6">
                     <div class="flex items-center justify-between gap-2 mb-3">
@@ -486,6 +512,9 @@ qualia-cli ingest-job continue ./jobs/catalog</code></pre>
                 </article>
             </div>
             <div class="mt-8 flex flex-wrap gap-3">
+                <a href="qbdl-streaming.html" class="px-5 py-3 rounded-xl bg-amber-500/15 border border-amber-400/40 text-amber-200 hover:bg-amber-500/25 font-semibold transition-colors">
+                    QBDL Mixed HMC Streaming <i class="fas fa-layer-group ml-2"></i>
+                </a>
                 <a href="emf-qac-showcase.html" class="px-5 py-3 rounded-xl bg-violet-500/15 border border-violet-400/40 text-violet-200 hover:bg-violet-500/25 font-semibold transition-colors">
                     Open Interactive EMF / QAC Showcase <i class="fas fa-arrow-right ml-2"></i>
                 </a>

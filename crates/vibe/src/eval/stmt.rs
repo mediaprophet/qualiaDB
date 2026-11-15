@@ -153,12 +153,18 @@ impl<'a, H: Host> Engine<'a, H> {
             Stmt::Transaction { body, span, .. } => {
                 self.host.graph_begin(*span)?;
                 match self.eval_block(body, env) {
-                    Ok(flow) => {
-                        let _ = self.host.graph_abort(*span);
-                        Ok(flow)
+                    Ok(Flow::Next(v)) => {
+                        self.host.graph_end(*span)?;
+                        Ok(Flow::Next(v))
+                    }
+                    Ok(Flow::Return(v)) => {
+                        self.host.graph_abort(*span)?;
+                        Ok(Flow::Return(v))
                     }
                     Err(err) => {
-                        let _ = self.host.graph_abort(*span);
+                        if self.host.graph_abort(*span).is_err() {
+                            return Err(err);
+                        }
                         Err(err)
                     }
                 }

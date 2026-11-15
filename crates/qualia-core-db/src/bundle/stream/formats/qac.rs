@@ -1,6 +1,6 @@
 use super::{AuthenticatedRange, FormatError};
-use crate::audio::qac::{QacStorageError, QacStorageOptions, QacStorageView};
-use crate::q42::field_envelope;
+use crate::audio::qac::{signal, QacStorageError, QacStorageOptions, QacStorageView};
+use crate::q42::{field_envelope, field_semantics};
 /// Authenticated complete current .qac entry. Partial ranges and legacy UA4Q refuse.
 pub struct QacCompleteView<'a> {
     range: AuthenticatedRange<'a>,
@@ -17,6 +17,14 @@ pub enum QacAdmitError {
     PayloadDigest,
     Limit,
     Unsupported,
+    Index,
+    Shape,
+    Scalar,
+    Unit,
+    Clock,
+    Overflow,
+    Nonfinite,
+    Shared(field_semantics::Error),
     Envelope(field_envelope::Error),
 }
 impl From<FormatError> for QacAdmitError {
@@ -45,6 +53,31 @@ impl From<QacStorageError> for QacAdmitError {
         }
     }
 }
+fn map_signal_error(e: signal::Error) -> QacAdmitError {
+    match e {
+        signal::Error::Envelope(err) => err.into(),
+        signal::Error::Shared(err) => match err {
+            field_semantics::Error::UnknownCriticalSchema
+            | field_semantics::Error::UnknownCriticalField
+            | field_semantics::Error::UnknownCriticalType
+            | field_semantics::Error::UnsupportedDomain
+            | field_semantics::Error::RequiredCritical
+            | field_semantics::Error::MissingField => QacAdmitError::Unsupported,
+            field_semantics::Error::Limit => QacAdmitError::Limit,
+            field_semantics::Error::Overflow => QacAdmitError::Overflow,
+            other => QacAdmitError::Shared(other),
+        },
+        signal::Error::Unsupported | signal::Error::Profile => QacAdmitError::Unsupported,
+        signal::Error::Shape => QacAdmitError::Shape,
+        signal::Error::Scalar => QacAdmitError::Scalar,
+        signal::Error::Unit => QacAdmitError::Unit,
+        signal::Error::Clock => QacAdmitError::Clock,
+        signal::Error::Overflow => QacAdmitError::Overflow,
+        signal::Error::Nonfinite => QacAdmitError::Nonfinite,
+        signal::Error::Index => QacAdmitError::Index,
+        signal::Error::Limit => QacAdmitError::Limit,
+    }
+}
 impl<'a> QacCompleteView<'a> {
     /// Whole selected entry only. `QacStorageView::open` dispatches on magic/version bytes.
     pub fn admit(
@@ -64,5 +97,24 @@ impl<'a> QacCompleteView<'a> {
     }
     pub fn storage(&self) -> &QacStorageView<'a> {
         &self.storage
+    }
+    /// Scientific interpretation. Storage admit already succeeded.
+    /// Unsupported / Profile / unknown critical → `QacAdmitError::Unsupported`
+    /// (caller may still keep the complete entry as OpaqueArchival).
+    pub fn admit_signal<'s>(
+        &'s self,
+        selected: u32,
+        scratch: &mut field_semantics::Scratch<'_>,
+        shared: field_semantics::Limits,
+        limits: signal::Limits,
+    ) -> Result<signal::SignalView<'s>, QacAdmitError> {
+        signal::admit(
+            self.storage().structure(),
+            selected,
+            scratch,
+            shared,
+            limits,
+        )
+        .map_err(map_signal_error)
     }
 }

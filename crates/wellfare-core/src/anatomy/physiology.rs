@@ -26,10 +26,14 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::constitution::DominantSide;
+use super::densitometry::{MuscleQualityProfile, PhysealFusionStatus, SkeletalDensityProfile};
 use super::factor::Effect;
+use super::model::Karyotype;
 use super::system_key;
 use super::systems::BODY_SYSTEMS;
 use super::temporal::EnvironmentModulator;
+use crate::record::EpistemicStatus;
 
 // ===========================================================================
 // The continuum states
@@ -431,6 +435,511 @@ pub fn whole_body_profile(state: PhysiologicalState) -> Vec<SystemEngagement> {
     out
 }
 
+// ===========================================================================
+// BIO-WP-05: Endocrine, Ontogenetic & Laterality Modifiers for Densitometry
+// ===========================================================================
+
+/// Endocrine & reproductive-continuum phase for musculoskeletal turnover and
+/// ligamentous laxity calibration (Spec §5.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReproductiveEndocrinePhase {
+    PreMenarche,
+    Cycling(CyclePhase),
+    Pregnant(Trimester),
+    Postpartum,
+    Lactating,
+    Perimenopause,
+    PostMenopause,
+    /// Eu-gonadal baseline when no cyclic/gestational/menopausal phase applies.
+    AdultBaseline,
+    /// Age-related androgen decline (andropause).
+    Andropause,
+    /// Declared exogenous endocrine modulation (HRT / gender-affirming / medical suppression).
+    ExogenousHormoneTherapy,
+}
+
+impl From<ReproductiveState> for ReproductiveEndocrinePhase {
+    fn from(s: ReproductiveState) -> Self {
+        match s {
+            ReproductiveState::PreMenarche => Self::PreMenarche,
+            ReproductiveState::Cycling(p) => Self::Cycling(p),
+            ReproductiveState::Pregnant(t) => Self::Pregnant(t),
+            ReproductiveState::Postpartum => Self::Postpartum,
+            ReproductiveState::Lactating => Self::Lactating,
+            ReproductiveState::Perimenopause => Self::Perimenopause,
+            ReproductiveState::PostMenopause => Self::PostMenopause,
+        }
+    }
+}
+
+impl From<PhysiologicalState> for ReproductiveEndocrinePhase {
+    fn from(s: PhysiologicalState) -> Self {
+        match s {
+            PhysiologicalState::Baseline => Self::AdultBaseline,
+            PhysiologicalState::Reproductive(r) => Self::from(r),
+        }
+    }
+}
+
+/// Systemic endocrine, renal, and vitamin-D bone/ligament turnover state (Spec §5.3 & §5.5).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EndocrineOsteoState {
+    pub phase: ReproductiveEndocrinePhase,
+    /// Relative estrogenic activity (`1.0` = young-adult baseline, `< 0.3` = hypoestrogenic).
+    pub estrogen_status_ratio: f64,
+    /// Relative androgenic activity (`1.0` = young-adult baseline).
+    pub androgen_status_ratio: f64,
+    /// Circulating relaxin concentration in ng/mL (`0.0` non-pregnant; `0.5..=3.0` pregnant).
+    pub relaxin_ng_ml: f64,
+    /// Serum 25(OH)D in ng/mL (`< 20.0` indicates deficiency / osteomalacic risk).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vitamin_d_25oh_ng_ml: Option<f64>,
+    /// Serum parathyroid hormone in pg/mL (`> 65.0` increases cortical porosity).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pth_pg_ml: Option<f64>,
+    /// Estimated GFR in mL/min/1.73 m^2 (`< 45.0` flags CKD-MBD mineral-bone shift).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub egfr_ml_min_1_73m2: Option<f64>,
+    /// Chronic systemic glucocorticoid exposure (suppresses osteoblast formation & muscle quality).
+    pub glucocorticoid_exposure: bool,
+}
+
+impl Default for EndocrineOsteoState {
+    fn default() -> Self {
+        Self::for_phase(ReproductiveEndocrinePhase::AdultBaseline)
+    }
+}
+
+impl EndocrineOsteoState {
+    /// Illustrative baseline endocrine parameters for a given [`ReproductiveEndocrinePhase`].
+    pub fn for_phase(phase: ReproductiveEndocrinePhase) -> Self {
+        let (estrogen, androgen, relaxin) = match phase {
+            ReproductiveEndocrinePhase::PreMenarche => (0.25, 0.25, 0.0),
+            ReproductiveEndocrinePhase::Cycling(CyclePhase::Menstrual) => (0.65, 1.0, 0.0),
+            ReproductiveEndocrinePhase::Cycling(CyclePhase::Follicular) => (0.95, 1.0, 0.0),
+            ReproductiveEndocrinePhase::Cycling(CyclePhase::Ovulatory) => (1.25, 1.0, 0.15),
+            ReproductiveEndocrinePhase::Cycling(CyclePhase::Luteal) => (1.05, 1.0, 0.25),
+            ReproductiveEndocrinePhase::Pregnant(Trimester::First) => (1.60, 1.0, 1.20),
+            ReproductiveEndocrinePhase::Pregnant(Trimester::Second) => (2.00, 1.0, 1.50),
+            ReproductiveEndocrinePhase::Pregnant(Trimester::Third) => (2.40, 1.0, 2.20),
+            ReproductiveEndocrinePhase::Postpartum => (0.45, 0.90, 0.35),
+            ReproductiveEndocrinePhase::Lactating => (0.35, 0.90, 0.0),
+            ReproductiveEndocrinePhase::Perimenopause => (0.55, 0.90, 0.0),
+            ReproductiveEndocrinePhase::PostMenopause => (0.15, 0.80, 0.0),
+            ReproductiveEndocrinePhase::AdultBaseline => (1.00, 1.00, 0.0),
+            ReproductiveEndocrinePhase::Andropause => (0.80, 0.55, 0.0),
+            ReproductiveEndocrinePhase::ExogenousHormoneTherapy => (1.00, 1.00, 0.0),
+        };
+        Self {
+            phase,
+            estrogen_status_ratio: estrogen,
+            androgen_status_ratio: androgen,
+            relaxin_ng_ml: relaxin,
+            vitamin_d_25oh_ng_ml: None,
+            pth_pg_ml: None,
+            egfr_ml_min_1_73m2: None,
+            glucocorticoid_exposure: false,
+        }
+    }
+
+    /// Validate all endocrine measurements are finite and within physical bounds.
+    pub fn validate(&self) -> Result<(), String> {
+        if !self.estrogen_status_ratio.is_finite() || self.estrogen_status_ratio < 0.0 {
+            return Err("estrogen_status_ratio must be finite and non-negative".into());
+        }
+        if !self.androgen_status_ratio.is_finite() || self.androgen_status_ratio < 0.0 {
+            return Err("androgen_status_ratio must be finite and non-negative".into());
+        }
+        if !self.relaxin_ng_ml.is_finite() || self.relaxin_ng_ml < 0.0 {
+            return Err("relaxin_ng_ml must be finite and non-negative".into());
+        }
+        if let Some(vd) = self.vitamin_d_25oh_ng_ml {
+            if !vd.is_finite() || vd < 0.0 {
+                return Err("vitamin_d_25oh_ng_ml must be finite and non-negative".into());
+            }
+        }
+        if let Some(pth) = self.pth_pg_ml {
+            if !pth.is_finite() || pth < 0.0 {
+                return Err("pth_pg_ml must be finite and non-negative".into());
+            }
+        }
+        if let Some(egfr) = self.egfr_ml_min_1_73m2 {
+            if !egfr.is_finite() || egfr < 0.0 {
+                return Err("egfr_ml_min_1_73m2 must be finite and non-negative".into());
+            }
+        }
+        Ok(())
+    }
+
+    /// Smooth relaxin-mediated ligamentous stiffness multiplier in `[0.65, 1.0]`
+    /// (matches `clinical_formulas::relaxin_ligament_stiffness_modifier`).
+    pub fn ligament_stiffness_modifier(&self) -> Result<f64, String> {
+        self.validate()?;
+        Ok(1.0 - 0.35 * (self.relaxin_ng_ml / (self.relaxin_ng_ml + 0.5)))
+    }
+
+    /// Joint ROM Swing-Twist cone laxity scale (`>= 1.0`; inverse of stiffness modifier).
+    pub fn ligament_laxity_scale(&self) -> Result<f64, String> {
+        let stiffness = self.ligament_stiffness_modifier()?;
+        Ok((1.0 / stiffness).clamp(1.0, 1.6))
+    }
+
+    /// Trabecular bone-turnover multiplier reflecting physiological lactation mobilization
+    /// (`~0.94`, a 6% transient calcium drawdown), menopausal estrogen loss, and glucocorticoids.
+    pub fn trabecular_turnover_multiplier(&self) -> f64 {
+        let phase_factor = match self.phase {
+            ReproductiveEndocrinePhase::Lactating => 0.94,
+            ReproductiveEndocrinePhase::Pregnant(Trimester::Third) => 0.97,
+            ReproductiveEndocrinePhase::Postpartum => 0.96,
+            ReproductiveEndocrinePhase::Perimenopause => 0.92,
+            ReproductiveEndocrinePhase::PostMenopause => 0.80,
+            ReproductiveEndocrinePhase::Andropause => 0.90,
+            _ => 1.0,
+        };
+        let hormone_support = (0.75 + 0.25 * (0.6 * self.estrogen_status_ratio + 0.4 * self.androgen_status_ratio))
+            .clamp(0.70, 1.10);
+        let gc_penalty = if self.glucocorticoid_exposure { 0.85 } else { 1.0 };
+        (phase_factor * hormone_support * gc_penalty).clamp(0.45, 1.15)
+    }
+
+    /// Additive intracortical porosity shift from hyperparathyroidism, CKD-MBD, or menopause.
+    pub fn cortical_porosity_delta(&self) -> f64 {
+        let mut delta = 0.0;
+        if matches!(
+            self.phase,
+            ReproductiveEndocrinePhase::Perimenopause | ReproductiveEndocrinePhase::PostMenopause
+        ) {
+            delta += 0.03;
+        }
+        if let Some(pth) = self.pth_pg_ml {
+            if pth > 65.0 {
+                delta += ((pth - 65.0) / 500.0).min(0.08);
+            }
+        }
+        if let Some(egfr) = self.egfr_ml_min_1_73m2 {
+            if egfr < 45.0 {
+                delta += ((45.0 - egfr) / 300.0).min(0.08);
+            }
+        }
+        if self.glucocorticoid_exposure {
+            delta += 0.02;
+        }
+        delta
+    }
+
+    /// Mineralization degree (`mu_min`) multiplier capturing vitamin-D deficiency / CKD-MBD
+    /// osteomalacic hypomineralization (`< 1.0` when 25(OH)D < 20 ng/mL or eGFR < 30).
+    pub fn mineralization_mu_modifier(&self) -> f64 {
+        let mut mu = 1.0;
+        if let Some(vd) = self.vitamin_d_25oh_ng_ml {
+            if vd < 20.0 {
+                mu *= (0.65 + 0.35 * (vd / 20.0)).clamp(0.65, 1.0);
+            }
+        }
+        if let Some(egfr) = self.egfr_ml_min_1_73m2 {
+            if egfr < 30.0 {
+                mu *= (0.75 + 0.25 * (egfr / 30.0)).clamp(0.75, 1.0);
+            }
+        }
+        mu
+    }
+}
+
+/// Coarse ontogenetic life stage derived from chronological or skeletal bone age (Spec §5.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OntogeneticStage {
+    FetalNeonatal,
+    Pediatric,
+    Adolescent,
+    YoungAdultPeak,
+    MiddleAdult,
+    Senescent,
+}
+
+/// Multi-axis ontogenetic age profile separating chronological, skeletal bone, and tissue ages.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgeOntogenyProfile {
+    pub chronological_age_months: u16,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skeletal_bone_age_months: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tissue_biological_age_months: Option<u16>,
+    pub physeal_status: PhysealFusionStatus,
+    pub life_stage: OntogeneticStage,
+}
+
+impl AgeOntogenyProfile {
+    /// Construct from chronological age in months (`0..=1560`).
+    pub fn from_age_months(chronological_age_months: u16) -> Result<Self, String> {
+        if chronological_age_months > 1560 {
+            return Err(format!(
+                "chronological_age_months {chronological_age_months} exceeds 1560"
+            ));
+        }
+        let life_stage = match chronological_age_months {
+            0..=11 => OntogeneticStage::FetalNeonatal,
+            12..=143 => OntogeneticStage::Pediatric,
+            144..=239 => OntogeneticStage::Adolescent,
+            240..=420 => OntogeneticStage::YoungAdultPeak,
+            421..=779 => OntogeneticStage::MiddleAdult,
+            _ => OntogeneticStage::Senescent,
+        };
+        let physeal_status = match chronological_age_months {
+            0..=167 => PhysealFusionStatus::OpenCartilaginousPhysis,
+            168..=240 => PhysealFusionStatus::PartiallyFused,
+            _ => PhysealFusionStatus::ClosedMatureDiaphysis,
+        };
+        Ok(Self {
+            chronological_age_months,
+            skeletal_bone_age_months: None,
+            tissue_biological_age_months: None,
+            physeal_status,
+            life_stage,
+        })
+    }
+
+    /// Override skeletal bone age (Greulich-Pyle / Tanner-Whitehouse) and update physeal status.
+    pub fn with_skeletal_bone_age_months(mut self, bone_age_months: u16) -> Result<Self, String> {
+        if bone_age_months > 1560 {
+            return Err(format!(
+                "skeletal_bone_age_months {bone_age_months} exceeds 1560"
+            ));
+        }
+        self.skeletal_bone_age_months = Some(bone_age_months);
+        self.physeal_status = match bone_age_months {
+            0..=167 => PhysealFusionStatus::OpenCartilaginousPhysis,
+            168..=240 => PhysealFusionStatus::PartiallyFused,
+            _ => PhysealFusionStatus::ClosedMatureDiaphysis,
+        };
+        Ok(self)
+    }
+
+    /// Age-related trabecular BMD multiplier relative to young-adult Peak Bone Mass (25–35y = 1.0).
+    /// Matches `clinical_formulas::age_trabecular_bmd_multiplier` while remaining well-defined when
+    /// chromosomal basis is `None` (no invented sex assumption).
+    pub fn age_trabecular_bmd_multiplier(
+        &self,
+        karyotype: Option<Karyotype>,
+        postmenopausal: bool,
+    ) -> f64 {
+        let age_years = (self.skeletal_bone_age_months.unwrap_or(self.chronological_age_months) as f64) / 12.0;
+        if age_years < 25.0 {
+            0.45 + 0.55 * (age_years / 25.0)
+        } else if age_years <= 35.0 {
+            1.0
+        } else {
+            let years_past_peak = age_years - 35.0;
+            let base_decline = 0.006 * years_past_peak;
+            if matches!(karyotype, Some(Karyotype::Xx)) && postmenopausal {
+                let estrogen_withdrawal = 0.18 * (1.0 - (-0.10 * years_past_peak).exp());
+                (1.0 - base_decline - estrogen_withdrawal).max(0.35)
+            } else {
+                (1.0 - base_decline).max(0.40)
+            }
+        }
+    }
+
+    /// Pediatric secondary mineralization factor (`< 1.0` in childhood, `1.0` once mature).
+    pub fn pediatric_mineralization_mu(&self) -> f64 {
+        let age_m = self.skeletal_bone_age_months.unwrap_or(self.chronological_age_months) as f64;
+        if age_m >= 216.0 {
+            1.0
+        } else {
+            (0.72 + 0.28 * (age_m / 216.0)).clamp(0.72, 1.0)
+        }
+    }
+
+    /// Intervertebral disc / cartilage hydration permill (`0..=1000`), declining in senescence.
+    pub fn disc_hydration_permill(&self) -> u16 {
+        let bio_years = self
+            .tissue_biological_age_months
+            .unwrap_or(self.chronological_age_months) as f64
+            / 12.0;
+        if bio_years <= 25.0 {
+            880
+        } else {
+            (880.0 - 3.2 * (bio_years - 25.0)).clamp(580.0, 880.0).round() as u16
+        }
+    }
+
+    /// Type-II motor-unit neuromuscular drive / RFD preservation factor in `[0.65, 1.0]`.
+    pub fn neural_drive_factor(&self) -> f64 {
+        let bio_years = self
+            .tissue_biological_age_months
+            .unwrap_or(self.chronological_age_months) as f64
+            / 12.0;
+        if bio_years <= 40.0 {
+            1.0
+        } else {
+            (1.0 - 0.0065 * (bio_years - 40.0)).clamp(0.65, 1.0)
+        }
+    }
+}
+
+/// Handedness classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Handedness {
+    Left,
+    Right,
+    Ambidextrous,
+    Unspecified,
+}
+
+/// Regional limb dominance classification (bridges [`DominantSide`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LimbDominance {
+    Left,
+    Right,
+    Symmetric,
+    Unspecified,
+}
+
+impl From<DominantSide> for LimbDominance {
+    fn from(d: DominantSide) -> Self {
+        match d {
+            DominantSide::Left => Self::Left,
+            DominantSide::Right => Self::Right,
+            DominantSide::Ambidextrous => Self::Symmetric,
+        }
+    }
+}
+
+/// Visceral / thoracic organ situs classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SitusClassification {
+    SitusSolitus,
+    SitusInversusTotalis,
+    SitusAmbiguusHeterotaxy,
+}
+
+/// Bilateral dominance and visceral situs profile (Spec §5.5).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LateralityProfile {
+    pub handedness: Handedness,
+    pub upper_limb_dominance: LimbDominance,
+    pub lower_limb_dominance: LimbDominance,
+    pub situs: SitusClassification,
+    /// Physiological cortical/PCSA hypertrophy on the dominant side (`5.0..=15.0` percent typical).
+    pub dominant_asymmetry_pct: f64,
+}
+
+impl Default for LateralityProfile {
+    fn default() -> Self {
+        Self {
+            handedness: Handedness::Unspecified,
+            upper_limb_dominance: LimbDominance::Unspecified,
+            lower_limb_dominance: LimbDominance::Unspecified,
+            situs: SitusClassification::SitusSolitus,
+            dominant_asymmetry_pct: 8.0,
+        }
+    }
+}
+
+impl LateralityProfile {
+    /// Multiplicative cortical thickness / PCSA scaling factor (`>= 1.0` when `is_dominant_side`).
+    pub fn side_hypertrophy_multiplier(&self, is_dominant_side: bool) -> Result<f64, String> {
+        if !self.dominant_asymmetry_pct.is_finite()
+            || !(0.0..=30.0).contains(&self.dominant_asymmetry_pct)
+        {
+            return Err("dominant_asymmetry_pct must be finite and in [0.0, 30.0]".into());
+        }
+        if !is_dominant_side
+            || matches!(
+                self.upper_limb_dominance,
+                LimbDominance::Symmetric | LimbDominance::Unspecified
+            )
+        {
+            Ok(1.0)
+        } else {
+            Ok(1.0 + self.dominant_asymmetry_pct / 100.0)
+        }
+    }
+}
+
+/// Summary of physiological modifiers applied to bone and muscle profiles.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PhysiologicalModifierSummary {
+    pub trabecular_bmd_multiplier: f64,
+    pub mineralization_multiplier: f64,
+    pub cortical_porosity_delta: f64,
+    pub ligament_laxity_scale: f64,
+    pub side_hypertrophy_multiplier: f64,
+    pub disc_hydration_permill: u16,
+    pub neural_drive_factor: f64,
+    pub epistemic_status: EpistemicStatus,
+}
+
+/// Apply age, endocrine/reproductive continuum, and bilateral laterality modifiers to
+/// baseline [`SkeletalDensityProfile`] and [`MuscleQualityProfile`] records (Spec §5.5).
+pub fn apply_physiological_modifiers_to_density(
+    bone: &SkeletalDensityProfile,
+    muscle: &MuscleQualityProfile,
+    endocrine: &EndocrineOsteoState,
+    age: &AgeOntogenyProfile,
+    laterality: &LateralityProfile,
+    karyotype: Option<Karyotype>,
+    is_dominant_side: bool,
+) -> Result<(SkeletalDensityProfile, MuscleQualityProfile, PhysiologicalModifierSummary), String> {
+    bone.validate()?;
+    endocrine.validate()?;
+    let ligament_laxity_scale = endocrine.ligament_laxity_scale()?;
+    let side_hypertrophy_multiplier = laterality.side_hypertrophy_multiplier(is_dominant_side)?;
+
+    let postmenopausal = matches!(
+        endocrine.phase,
+        ReproductiveEndocrinePhase::PostMenopause
+    );
+    let age_trab_mult = age.age_trabecular_bmd_multiplier(karyotype, postmenopausal);
+    let endo_trab_mult = endocrine.trabecular_turnover_multiplier();
+    let trabecular_bmd_multiplier = (age_trab_mult * endo_trab_mult).clamp(0.25, 1.25);
+
+    let mineralization_multiplier =
+        (age.pediatric_mineralization_mu() * endocrine.mineralization_mu_modifier()).clamp(0.45, 1.15);
+    let cortical_porosity_delta = endocrine.cortical_porosity_delta();
+    let disc_hydration_permill = age.disc_hydration_permill();
+    let neural_drive_factor = age.neural_drive_factor();
+
+    let mut out_bone = bone.clone();
+    out_bone.trabecular_apparent_density_g_cm3 =
+        (bone.trabecular_apparent_density_g_cm3 * trabecular_bmd_multiplier).max(0.01);
+    out_bone.trabecular_bv_tv = (bone.trabecular_bv_tv * trabecular_bmd_multiplier).clamp(0.01, 1.0);
+    out_bone.cortical_thickness_mm =
+        (bone.cortical_thickness_mm * side_hypertrophy_multiplier * age_trab_mult.sqrt()).max(0.2);
+    out_bone.cortical_porosity_ratio =
+        (bone.cortical_porosity_ratio + cortical_porosity_delta).clamp(0.0, 0.95);
+    out_bone.mineralization_degree_mu =
+        (bone.mineralization_degree_mu * mineralization_multiplier).clamp(0.2, 1.5);
+    out_bone.physeal_fusion = age.physeal_status;
+    out_bone.epistemic_status = EpistemicStatus::Hypothesis;
+
+    let mut out_muscle = muscle.clone();
+    out_muscle.pcsa_cm2 = muscle.pcsa_cm2 * side_hypertrophy_multiplier;
+    let gc_imat_shift = if endocrine.glucocorticoid_exposure { 0.06 } else { 0.0 };
+    out_muscle.imat_fraction = (muscle.imat_fraction + gc_imat_shift).clamp(0.0, 1.0);
+    out_muscle.neural_activation_factor =
+        (muscle.neural_activation_factor * neural_drive_factor).clamp(0.0, 1.0);
+    out_muscle.recompute_quality_eta();
+    out_muscle.epistemic_status = EpistemicStatus::Hypothesis;
+
+    let summary = PhysiologicalModifierSummary {
+        trabecular_bmd_multiplier,
+        mineralization_multiplier,
+        cortical_porosity_delta,
+        ligament_laxity_scale,
+        side_hypertrophy_multiplier,
+        disc_hydration_permill,
+        neural_drive_factor,
+        epistemic_status: EpistemicStatus::Hypothesis,
+    };
+
+    Ok((out_bone, out_muscle, summary))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -635,5 +1144,77 @@ mod tests {
         let json = serde_json::to_string(&state_modulator(state)).unwrap();
         let back: StateModulator = serde_json::from_str(&json).unwrap();
         assert_eq!(state_modulator(state), back);
+    }
+
+    #[test]
+    fn endocrine_and_ontogeny_modifiers_adjust_density_and_laxity_honestly() {
+        use super::super::densitometry::SpeciesDensitometryPreset;
+
+        let baseline_bone =
+            SkeletalDensityProfile::from_preset(SpeciesDensitometryPreset::HumanYoungAdultFemale);
+        let baseline_muscle =
+            MuscleQualityProfile::new("quadriceps", 420.0, 10.0, 0.20, 40.0, 50.0, 0.04, 1.0)
+                .unwrap();
+
+        // Third-trimester pregnancy increases relaxin ligament laxity scale > 1.0.
+        let preg = EndocrineOsteoState::for_phase(ReproductiveEndocrinePhase::Pregnant(
+            Trimester::Third,
+        ));
+        assert!(preg.ligament_laxity_scale().unwrap() > 1.25);
+
+        // Postmenopausal + 72y vs young adult dominant side.
+        let postmeno =
+            EndocrineOsteoState::for_phase(ReproductiveEndocrinePhase::PostMenopause);
+        let elderly_age = AgeOntogenyProfile::from_age_months(72 * 12).unwrap();
+        assert_eq!(elderly_age.life_stage, OntogeneticStage::Senescent);
+        assert_eq!(
+            elderly_age.physeal_status,
+            PhysealFusionStatus::ClosedMatureDiaphysis
+        );
+
+        let young_age = AgeOntogenyProfile::from_age_months(28 * 12).unwrap();
+        let lat = LateralityProfile {
+            handedness: Handedness::Right,
+            upper_limb_dominance: LimbDominance::Right,
+            lower_limb_dominance: LimbDominance::Right,
+            situs: SitusClassification::SitusSolitus,
+            dominant_asymmetry_pct: 10.0,
+        };
+
+        let (bone_young_dom, muscle_young_dom, _) = apply_physiological_modifiers_to_density(
+            &baseline_bone,
+            &baseline_muscle,
+            &EndocrineOsteoState::default(),
+            &young_age,
+            &lat,
+            Some(Karyotype::Xx),
+            true,
+        )
+        .unwrap();
+        let (bone_postmeno, muscle_postmeno, summary_pm) =
+            apply_physiological_modifiers_to_density(
+                &baseline_bone,
+                &baseline_muscle,
+                &postmeno,
+                &elderly_age,
+                &lat,
+                Some(Karyotype::Xx),
+                false,
+            )
+            .unwrap();
+
+        assert!(bone_young_dom.cortical_thickness_mm > baseline_bone.cortical_thickness_mm);
+        assert!(muscle_young_dom.pcsa_cm2 > baseline_muscle.pcsa_cm2);
+        assert!(
+            bone_postmeno.trabecular_apparent_density_g_cm3
+                < bone_young_dom.trabecular_apparent_density_g_cm3
+        );
+        assert!(muscle_postmeno.effective_quality_eta < muscle_young_dom.effective_quality_eta);
+        assert_eq!(summary_pm.epistemic_status, EpistemicStatus::Hypothesis);
+
+        // Pediatric bone age preserves open physis and lower secondary mineralization.
+        let child = AgeOntogenyProfile::from_age_months(10 * 12).unwrap();
+        assert_eq!(child.physeal_status, PhysealFusionStatus::OpenCartilaginousPhysis);
+        assert!(child.pediatric_mineralization_mu() < 1.0);
     }
 }

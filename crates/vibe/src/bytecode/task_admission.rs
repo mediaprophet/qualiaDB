@@ -70,7 +70,7 @@ pub(super) fn validate(chunk: &Chunk) -> Result<(), VmError> {
             return Err(VmError::CodeOutOfBounds);
         }
         boundaries[pc / 64] |= 1u64 << (pc % 64);
-        if op == Op::CallHost {
+        if matches!(op, Op::CallHost | Op::CallHostNamed) {
             let index = operand_u16(&chunk.code, pc);
             if index == u16::MAX {
                 return Err(unsupported());

@@ -2993,7 +2993,7 @@ pub fn finalize_and_seal_vertebrate_anatomy_10d(
     if let Some(binding) = &acc.authored_skin {
         // Keep the legacy control-rig view consistent for its original eighteen joints.
         // The complete exported binding also carries the appended right forelimb.
-        for i in 0..rig.joints.len() {
+        for i in 0..rig.joints.len().min(binding.joints.len()) {
             let old_rest_inverse = rig.rest_pose[i].conjugate();
             let rest = binding.joints[i].rest_local;
             for pose in &mut rig.clip_poses {

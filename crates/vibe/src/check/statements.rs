@@ -1,3 +1,4 @@
+use super::expressions::infer_expr_type;
 use super::*;
 
 pub(super) fn walk_stmt(
@@ -28,6 +29,18 @@ pub(super) fn walk_stmt(
             } else {
                 ty.as_ref().map(Type::from_ast).unwrap_or(Type::Unknown)
             };
+            if ty.is_some() {
+                if let Some(v) = value {
+                    let inferred = infer_expr_type(v, env, aliases);
+                    if !t.is_compatible(&inferred) {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            v.span,
+                            format!("type mismatch in `let {name}`: expected {t:?}, got {inferred:?}"),
+                        ));
+                    }
+                }
+            }
             env.insert(name.clone(), t);
             if let Some(v) = value {
                 if let Some(value) = snapshot_value(v, env) {
@@ -81,6 +94,18 @@ pub(super) fn walk_stmt(
             }
             let a = walk_expr(target, env, aliases, granted, ambient, tick, budgeted)?;
             let b = walk_expr(value, env, aliases, granted, ambient, tick, budgeted)?;
+            if let ExprKind::Ident(name) = &target.kind {
+                if let Some(target_ty) = env.get(name) {
+                    let rhs_ty = infer_expr_type(value, env, aliases);
+                    if !target_ty.is_compatible(&rhs_ty) {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            value.span,
+                            format!("cannot assign {rhs_ty:?} to `{name}` of type {target_ty:?}"),
+                        ));
+                    }
+                }
+            }
             Ok(a.join(b))
         }
         Stmt::If {
@@ -89,6 +114,14 @@ pub(super) fn walk_stmt(
             else_block,
             ..
         } => {
+            let cond_ty = infer_expr_type(cond, env, aliases);
+            if !cond_ty.is_compatible(&Type::Bool) {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    cond.span,
+                    format!("`if` condition must be Bool, got {cond_ty:?}"),
+                ));
+            }
             let mut e = walk_expr(cond, env, aliases, granted, ambient, tick, budgeted)?;
             e = e.join(walk_block(
                 then_block, env, mutables, aliases, granted, ambient, tick, budgeted,
@@ -138,6 +171,14 @@ pub(super) fn walk_stmt(
                     "while-loop requires a budget unless the condition is statically finite",
                 ));
             }
+            let cond_ty = infer_expr_type(cond, env, aliases);
+            if !cond_ty.is_compatible(&Type::Bool) {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    cond.span,
+                    format!("`while` condition must be Bool, got {cond_ty:?}"),
+                ));
+            }
             let e = walk_expr(cond, env, aliases, granted, ambient, tick, budgeted)?;
             Ok(e.join(walk_block(
                 body, env, mutables, aliases, granted, ambient, tick, budgeted,
@@ -148,23 +189,63 @@ pub(super) fn walk_stmt(
         } => {
             let mut e = walk_expr(scrutinee, env, aliases, granted, ambient, tick, budgeted)?;
             for arm in arms {
-                invalidate_pattern(&arm.pattern, env);
+                let mut arm_env = env.clone();
+                let mut arm_mutables = mutables.clone();
+                bind_pattern_in_env(&arm.pattern, &mut arm_env, &mut arm_mutables, false);
                 match &arm.body {
                     ArmBody::Block(b) => {
                         e = e.join(walk_block(
-                            b, env, mutables, aliases, granted, ambient, tick, budgeted,
+                            b,
+                            &mut arm_env,
+                            &mut arm_mutables,
+                            aliases,
+                            granted,
+                            ambient,
+                            tick,
+                            budgeted,
                         )?);
                     }
                     ArmBody::Expr(x) => {
                         e = e.join(walk_expr(
-                            x, env, aliases, granted, ambient, tick, budgeted,
+                            x,
+                            &mut arm_env,
+                            aliases,
+                            granted,
+                            ambient,
+                            tick,
+                            budgeted,
                         )?);
                     }
                 }
             }
             Ok(e)
         }
-        Stmt::Return { value, .. } | Stmt::Yield { value, .. } => {
+        Stmt::Return { value, span } => {
+            if let Some(expected) = env.expected_return.as_ref() {
+                if let Some(v) = value {
+                    let actual = infer_expr_type(v, env, aliases);
+                    if !expected.is_compatible(&actual) {
+                        return Err(Diagnostic::new(
+                            DiagCode::E100,
+                            v.span,
+                            format!("return type mismatch: expected {expected:?}, got {actual:?}"),
+                        ));
+                    }
+                } else if *expected != Type::Unknown {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        *span,
+                        format!("missing return value of type {expected:?}"),
+                    ));
+                }
+            }
+            if let Some(v) = value {
+                walk_expr(v, env, aliases, granted, ambient, tick, budgeted)
+            } else {
+                Ok(Effect::Pure)
+            }
+        }
+        Stmt::Yield { value, .. } => {
             if let Some(v) = value {
                 walk_expr(v, env, aliases, granted, ambient, tick, budgeted)
             } else {

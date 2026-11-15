@@ -92,7 +92,7 @@ impl<'a> ManagedRecipientUnwrap<'a> {
     }
     /// Called only by the private authority/current-use compositor. This method
     /// performs provider checks, not recognized recipient proof or disclosure admission.
-    pub(crate) fn unwrap(self, wrap: Wrap<'_>) -> Result<super::open::UnwrappedMetadata<'a>, E> {
+    pub fn unwrap(self, wrap: Wrap<'_>) -> Result<super::open::UnwrappedMetadata<'a>, E> {
         let now = (self.clock)();
         self.check(now)?;
         let r = &self.request;

@@ -102,6 +102,9 @@ pub struct ResourceEnvelope {
 }
 
 impl ResourceEnvelope {
+    /// `ResourceEnvelope::flags` bit indicating `AsyncExecutionClass::AsyncBoundedTask`.
+    pub const FLAG_ASYNC_BOUNDED_TASK: u16 = 1 << 0;
+
     /// Default Tier-1 zero-heap compute envelope (`max_scratch_bytes = 0`, `max_vram_bytes = 0`).
     #[inline]
     pub const fn hot_zero_heap(max_ticks: u64, max_output_bytes: u32) -> Self {
@@ -113,6 +116,30 @@ impl ResourceEnvelope {
             max_spawned_tasks: 0,
             flags: 0,
         }
+    }
+
+    /// Returns the synchronous vs bounded-async execution class encoded in `flags`.
+    #[inline]
+    pub const fn async_class(&self) -> AsyncExecutionClass {
+        if (self.flags & Self::FLAG_ASYNC_BOUNDED_TASK) != 0 {
+            AsyncExecutionClass::AsyncBoundedTask
+        } else {
+            AsyncExecutionClass::SynchronousBounded
+        }
+    }
+
+    /// Returns a copy of this envelope with `AsyncExecutionClass` encoded in `flags`.
+    #[inline]
+    pub const fn with_async_class(mut self, class: AsyncExecutionClass) -> Self {
+        match class {
+            AsyncExecutionClass::SynchronousBounded => {
+                self.flags &= !Self::FLAG_ASYNC_BOUNDED_TASK;
+            }
+            AsyncExecutionClass::AsyncBoundedTask => {
+                self.flags |= Self::FLAG_ASYNC_BOUNDED_TASK;
+            }
+        }
+        self
     }
 
     /// Checks whether this envelope fits within `budget`.

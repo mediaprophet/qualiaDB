@@ -6,24 +6,24 @@ use super::{
 };
 use crate::crypto::network::{digest::sha384, object_stream::*};
 use crate::net::qdnf::types::StrongDigest;
-pub(crate) const EMPTY_REF: PageRef = PageRef {
+pub const EMPTY_REF: PageRef = PageRef {
     page: 0,
     rows: 0,
     length: 0,
     digest: StrongDigest::ZERO,
 };
-pub(crate) const EMPTY_ROOT: RootRow = RootRow {
+pub const EMPTY_ROOT: RootRow = RootRow {
     id: 0,
     root: StrongDigest::ZERO,
 };
-pub(crate) struct PreparedGeometry<'a, 's> {
+pub struct PreparedGeometry<'a, 's> {
     pub(super) source: PreparedSource<'a, 's>,
     pub(super) mappings: &'s [Mapping],
     pub(super) refs: &'s [PageRef],
     pub(super) source_digest: StrongDigest,
 }
 impl<'a, 's> PreparedGeometry<'a, 's> {
-    pub(crate) fn prepare(
+    pub fn prepare(
         source: PreparedSource<'a, 's>,
         mappings: &'s mut [Mapping],
         refs: &'s mut [PageRef],
@@ -48,16 +48,16 @@ impl<'a, 's> PreparedGeometry<'a, 's> {
             source_digest,
         })
     }
-    pub(crate) fn object_count(&self) -> usize {
+    pub fn object_count(&self) -> usize {
         self.mappings.len()
     }
-    pub(crate) fn metadata_length(&self) -> usize {
+    pub fn metadata_length(&self) -> usize {
         self.source.metadata_length()
     }
-    pub(crate) fn encode_page(&self, page: usize, out: &mut [u8]) -> Result<PageRef, E> {
+    pub fn encode_page(&self, page: usize, out: &mut [u8]) -> Result<PageRef, E> {
         page_bytes(&self.source, self.mappings, page, out)
     }
-    pub(crate) fn encode_context(&self, fields: ContextFields, out: &mut [u8]) -> Result<usize, E> {
+    pub fn encode_context(&self, fields: ContextFields, out: &mut [u8]) -> Result<usize, E> {
         if fields.objects as usize != self.object_count()
             || fields.metadata_length != self.metadata_length() as u64
         {

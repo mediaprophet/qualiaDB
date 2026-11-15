@@ -1,10 +1,5 @@
 use super::*;
 
-pub(super) fn invalidate_pattern(pattern: &Pattern, env: &mut CheckEnv) {
-    let mut unused = HashSet::new();
-    bind_pattern_in_env(pattern, env, &mut unused, false);
-}
-
 pub(super) fn root_name(expr: &Expr) -> Option<&str> {
     match &expr.kind {
         ExprKind::Ident(n) => Some(n),

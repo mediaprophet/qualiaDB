@@ -2,9 +2,9 @@
 mod coverage;
 mod error;
 mod source;
-pub(crate) use coverage::{EntryRange, ObjectKind, SourceObject};
-pub(crate) use error::ProtectionError;
-pub(crate) use source::PreparedSource;
+pub use coverage::{EntryRange, ObjectKind, SourceObject};
+pub use error::ProtectionError;
+pub use source::PreparedSource;
 #[cfg(test)]
 mod source_tests;
 
@@ -15,13 +15,13 @@ mod metadata;
 mod publisher;
 mod seal;
 mod wrap;
-pub(crate) use geometry::PreparedGeometry;
-pub(crate) use ids::Mapping;
-pub(crate) use metadata::PrivateReferences;
-pub(crate) use publisher::{
+pub use geometry::{PreparedGeometry, EMPTY_REF, EMPTY_ROOT};
+pub use ids::Mapping;
+pub use metadata::PrivateReferences;
+pub use publisher::{
     Artifact, CandidateSink, ProtectedCandidate, ProtectedPublisher, PublisherError,
 };
-pub(crate) use wrap::{
+pub use wrap::{
     authorize_and_wrap, authorize_and_wrap_remote, RecipientAuthorityProof, WrapError,
 };
 #[cfg(test)]

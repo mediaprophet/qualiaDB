@@ -79,6 +79,7 @@ pub struct CheckedSubmission {
     checked: CheckEnv,
     mutables: HashSet<String>,
     body: Body,
+    replace_env: bool,
 }
 
 /// Read-only view of evaluated bindings before source-session promotion.
@@ -206,6 +207,30 @@ impl SourceSession {
     ) -> Result<SubmissionResult, SubmissionError> {
         self.execute_validated(candidate, host, budget, |_| Ok(()))
     }
+
+    /// Apply a structural `projectional::Edit` and re-evaluate the session.
+    /// Any parse, check, or evaluation failure rolls back all session state.
+    pub fn apply_edit<H: Host>(
+        &mut self,
+        edit: &crate::projectional::Edit,
+        host: &mut H,
+        budget: Budget,
+    ) -> Result<SubmissionResult, SubmissionError> {
+        let candidate = self.prepare_edit(edit).map_err(|e| self.error(e, false))?;
+        self.execute(candidate, host, budget)
+    }
+
+    /// Submit source with explicit replacement of matching top-level declarations.
+    /// Any check or evaluation failure rolls back all session state.
+    pub fn replace<H: Host>(
+        &mut self,
+        source: &str,
+        host: &mut H,
+        budget: Budget,
+    ) -> Result<SubmissionResult, SubmissionError> {
+        let candidate = self.prepare_replace(source).map_err(|e| self.error(e, false))?;
+        self.execute(candidate, host, budget)
+    }
     /// The validator receives actual evaluated output once, after interpreter
     /// checks and before promotion. It may recheck native authority while its
     /// owner transaction is held; no JSON receipt is treated as authority.
@@ -242,7 +267,11 @@ impl SourceSession {
                 false,
             ));
         }
-        let mut tentative = self.env.clone();
+        let mut tentative = if candidate.replace_env {
+            Env::default()
+        } else {
+            self.env.clone()
+        };
         crate::populate_import_aliases(&mut tentative, &candidate.definitions.imports)
             .map_err(|e| self.error(e, false))?;
         let mut budget = budget;
@@ -277,8 +306,13 @@ impl SourceSession {
         self.checked = candidate.checked;
         self.mutables = candidate.mutables;
         self.definitions = candidate.definitions;
-        self.source_bytes += candidate.source.len();
-        self.sources.push(candidate.source);
+        if candidate.replace_env {
+            self.source_bytes = candidate.source.len();
+            self.sources = vec![candidate.source];
+        } else {
+            self.source_bytes += candidate.source.len();
+            self.sources.push(candidate.source);
+        }
         self.revision += 1;
         Ok(SubmissionResult {
             value,

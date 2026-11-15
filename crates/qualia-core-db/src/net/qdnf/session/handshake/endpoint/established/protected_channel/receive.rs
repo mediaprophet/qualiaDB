@@ -96,7 +96,7 @@ impl<B: Bearer> FrameIo<'_, '_, B> {
 impl<B: Bearer> ChannelIo<'_, '_, B> {
     /// Owns the output guard THROUGH the enclosing final current-authority
     /// check. Even expiry after inner AEAD/check cannot leave accepted bytes.
-    pub(crate) fn receive_record(
+    pub fn receive_record(
         &mut self,
         pins: &PinAuthority,
         clock: &dyn Fn() -> u64,

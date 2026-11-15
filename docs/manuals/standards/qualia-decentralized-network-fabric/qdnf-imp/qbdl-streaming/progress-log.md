@@ -212,15 +212,70 @@ Cargo hold until user notify **and** remaining implementation is complete. No co
 
 ## 2026-11-15 — Wave 3 work packets prepared (not launched)
 
-User rejected a “few days” remainder. Remaining product is one mux join: drive `Schedule::next` from service, publish a real N-per-family QBDL-profile HMC, HTTP Component tests of the same plan. Packets:
+User rejected a “few days” remainder. Remaining product is one mux join: drive `Schedule::next` from service, publish a real N-per-family QBDL-profile HMC, HTTP Component tests of the same plan. Packets first written as M/F/H.
 
-- [evidence/swarm-wave3-pipeline.md](evidence/swarm-wave3-pipeline.md)
-- [evidence/swarm-wave3-claim-board.md](evidence/swarm-wave3-claim-board.md)
-- M [swarm-wave3-m-mux-brief.md](evidence/swarm-wave3-m-mux-brief.md) — NEW `qbdl/service/mux.rs`
-- F [swarm-wave3-f-mixed-brief.md](evidence/swarm-wave3-f-mixed-brief.md) — NEW `bundle/stream/mixed/`
-- H [swarm-wave3-h-http-brief.md](evidence/swarm-wave3-h-http-brief.md) — NEW `http/mixed.rs`
-- Queued 3B: [swarm-wave3-c6-brief.md](evidence/swarm-wave3-c6-brief.md), [swarm-wave3-review-brief.md](evidence/swarm-wave3-review-brief.md)
-- Integrator routing/cargo: [swarm-wave3-integrator.md](evidence/swarm-wave3-integrator.md)
+## 2026-11-15 — Wave 3 packets revised: EMF and QAC supports required
 
-F uses on-disk canonical `qac_candidate-*.qac` / `emf_candidate-*.emf` plus `compile_mesh_to_10d`. Children still do not edit codec owner files and do not cargo. No commit/push. Synth MCP left running.
+User: the plan must incorporate EMF and QAC supports, not Opaque stand-ins. R07 streaming remaining is now first-class 3A work:
+
+- **E** [swarm-wave3-e-emf-brief.md](evidence/swarm-wave3-e-emf-brief.md) — NEW `formats/emf_stream.rs` (v2/v3 dispatch, region, present, truncated/digest)
+- **Q** [swarm-wave3-q-qac-brief.md](evidence/swarm-wave3-q-qac-brief.md) — `admit_signal` on `QacCompleteView` + NEW `qac_stream.rs` (complete-entry fallback stays the transfer unit)
+- **M** mux must transfer **two real QAC + two real EMF** in one schedule; delay M64; admit before `present`
+- F/H moved to **3A2** and must use E/Q admit
+
+Codec owner files still off-limits. Call `QacStorageView::open`, `signal::admit`, `EmfDirectoryView`. Pipeline: [evidence/swarm-wave3-pipeline.md](evidence/swarm-wave3-pipeline.md). No commit/push. Synth MCP left running.
+
+## 2026-11-15 — Wave 3A accepted, Wave 3A2 launching
+
+User: QualiaDB pushed (`91a4c3746`); launch swarm, check deliverables before accept.
+
+- **E** accepted and routed (`mod emf_stream` / `emf_present_id`, `EmfStreamView`).
+- **Q** accepted and routed (`mod qac_stream` / `qac_present_id`, `QacStreamView`; `admit_signal` on `QacCompleteView`).
+- **M** accepted after file review: `mux.rs` + `mux_tests.rs` transfer two real QAC + two real EMF, PlanError map, grant one-shot + `run_one_leaf`. Integrator routed `mod mux` and `pub use mux::{transfer_scheduled, BoundEntry, MuxReport, MuxTransfer}`.
+- Wave 3A2 **F** mixed HMC + **H** HTTP mixed launching (isolation none, exclusive claims, no cargo).
+
+## 2026-11-15 — Wave 3A2 F accepted; H Q42 HTTP Range addendum
+
+- **F** accepted `01a1dcc0-6cbd-7813-85ec-16855662946e`. Routed `pub mod mixed`. Default corpus: TenD×2, Emf×2, Qac×2, Q42, M64, Opaque.
+- **H** first drop five QAC/EMF HTTP tests; user requires Q42 queryable via HTTP Range. Addendum `01a1dcce-20ae-71b3-8596-5fd7c8105501` (`Q42AuthenticatedRangeSource` + C5 `InclusiveRange`). `http/mod.rs` unrouted until that lands.
+- EMF/QAC codecs done — no codec deferral. Cargo after H accept + `mod mixed;` in `http/mod.rs`.
+
+## 2026-11-15 — Wave 3A2 H accepted; locked cargo started
+
+- **H** accepted after Q42 HTTP Range addendum (`http_q42_range_matches_authenticated_source`, `Q42AuthenticatedRangeSource`, not `HttpRangeSource`). Routed `mod mixed;` in `http/mod.rs`.
+- Locked cargo started: `cargo test -p qualia-core-db --lib --locked --offline -j 1` log `evidence/swarm-wave3-cargo-2026-11-15.log`. LNK1104 retry once. No commit/push. Synth MCP left running.
+
+## 2026-11-15 — cargo stopped; finish source first
+
+User: fully implement, then cargo sessions. Killed the in-flight lib cargo. DescriptorPage session/protected/describe buffers lifted from `MAX_LEAF_RECORD_BYTES` (18137) to wire `MAX_RECORD_BYTES` (65776). Leaf I/O stays 18137. Cargo remains off until this source pass is accepted as complete.
+
+## 2026-11-15 — remaining source landed (cargo next)
+
+User: continue the full implementation of the leftover areas. File-disjoint children then integrator join. **Did not cargo this land.** Foreign rustc is compiling `qualia_core_db` into `hypermedia-production/target` and `synth/target-prod` (not QualiaDB default `target/`).
+
+Accepted after review:
+
+- **C2** `01a1dce0-0932-7331-b9de-9a8e71cd9dbc` — `fixtures::write` prepare/drop/wait/commit/finish. Recovery destination `wait_leaf_write` outside `with_recovery_buffers`. Source `read_exact_at` still a loan (honest leftover).
+- **E2** `01a1dce0-0933-7143-9c87-d7d4e7786d6d` — `AuthenticatedRange::subrange`; `EmfStreamView` inner enum v4/v2/v3; QAC `declared_interval` from envelope `flags()&2`.
+- **W** `01a1dce0-0933-7143-9c87-d7e5c05b18f7` — `http/wss_mixed.rs`. Integrator routed `mod wss_mixed;`.
+
+Integrator source:
+
+- `Intent::decode` already landed; `two_process` PSK parse now calls it.
+- NEW `formats/p64_stream.rs` (`P64StreamView` whole-entry, `has_p64_magic` + `from_p64_with_integrity(Metadata)`, `p64_present_id`). Routed `mod p64_stream`.
+- NEW `mixed/transfer.rs` joins `MixedHmc` → `MuxTransfer` / `BoundEntry` / `transfer_scheduled`. Default corpus now includes P64 (`MIXED_ID_P64=41`, ten entries). HTTP `entry_admits_family` admits P64.
+
+Next: one locked `cargo test -p qualia-core-db --lib --locked --offline -j 1` into default `target/` once that slot is free. LNK1104 retry once. Then independent reviews + C6. No commit/push. Synth MCP left running.
+
+## 2026-11-15 — remaining listed source (write_leaf + recovery copy-out)
+
+User: continue remaining source tracks; ZIP `.hmc` is legacy and does not need streaming support (platform unreleased). HMC wire format stays two existing profiles; current product is QBDL (`QBDL` magic). No ZIP adapter. No PhysicalNetwork fake. No browser/WASM claim.
+
+Landed (no cargo this land):
+
+- Production `write_leaf` / `write_leaf_with_hook` take `TransferRuntime` + ticket + buffers. Short stage prepare, drop, `wait_leaf_write`, new short stage commit. `WriteStep` names unchanged. Callers: `tests/{state,leaves,allocation}.rs`.
+- `recover_leaf_from` copies source payload/proof into `CopiedLeafMaterial` under the `RangeRecoveryRead` loan, drops the loan, then verifies/arms on a new short stage. Destination wait still has no stage.
+- `reverify_and_rewrite_leaf` reads store session payload/proof into `CopiedLeafMaterial` with no stage (session is store-owned), then short-stage verify/arm. `resume_hint_for_leaf` unchanged.
+
+Cargo next into default `target/`. Reviews + C6 after cargo. No commit/push.
 

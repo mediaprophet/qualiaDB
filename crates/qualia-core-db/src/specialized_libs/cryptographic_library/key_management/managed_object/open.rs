@@ -7,7 +7,7 @@ use crate::crypto::network::{
     types::KeyPurpose,
 };
 use zeroize::Zeroize;
-pub(crate) struct UnwrappedMetadata<'a> {
+pub struct UnwrappedMetadata<'a> {
     pub(super) master: SecretLease,
     pub(super) scope: ObjectScope,
     pub(super) operation: ManagedRecipientUnwrap<'a>,
@@ -17,7 +17,7 @@ pub(crate) struct UnwrappedMetadata<'a> {
 impl UnwrappedMetadata<'_> {
     /// Private caller scratch only; the policy compositor must separately verify
     /// inclusion and current application authority before a consumer sees bytes.
-    pub(crate) fn decrypt_next(&mut self, buffer: &mut [u8], tag: &[u8; 16]) -> Result<(), E> {
+    pub fn decrypt_next(&mut self, buffer: &mut [u8], tag: &[u8; 16]) -> Result<(), E> {
         if self.poisoned {
             return Err(E::Closed);
         }

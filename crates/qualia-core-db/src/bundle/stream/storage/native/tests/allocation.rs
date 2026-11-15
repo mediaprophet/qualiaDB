@@ -12,9 +12,6 @@ fn actual_gated_native_write_success_and_preflight_reject_have_zero_raw_allocati
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, payload, &[0], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 let positive = AllocGuard::begin("native-positive", true);
                 let mut memory = Vec::<u8>::with_capacity(64);
                 std::hint::black_box(&mut memory);
@@ -23,7 +20,11 @@ fn actual_gated_native_write_success_and_preflight_reject_have_zero_raw_allocati
                 let guard = AllocGuard::begin("native-gated-write", true);
                 store
                     .write_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        payload,
+                        &[0],
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,
@@ -42,13 +43,14 @@ fn actual_gated_native_write_success_and_preflight_reject_have_zero_raw_allocati
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, payload, &[1], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 let guard = AllocGuard::begin("native-malformed-proof", true);
                 assert!(store
                     .write_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        payload,
+                        &[1],
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,

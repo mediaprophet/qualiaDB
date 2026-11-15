@@ -400,6 +400,7 @@ fn check_function_in(
 ) -> Result<Effect, Diagnostic> {
     let declared = f.effect.map(Effect::from_class).unwrap_or(Effect::Pure);
     let mut env = outer.function_scope();
+    env.expected_return = f.ret.as_ref().map(Type::from_ast);
     let mut mutables = HashSet::new();
     for p in &f.params {
         env.insert(p.name.clone(), Type::from_ast(&p.ty));

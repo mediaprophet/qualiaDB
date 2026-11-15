@@ -9,7 +9,7 @@ use crate::net::{
     peer::runtime::{AdmissionScopes, CancelEpoch},
     qdnf::{errors::QdnfError as E, types::Generation},
 };
-pub(crate) struct RuntimeAccess<'borrow, 'parents> {
+pub struct RuntimeAccess<'borrow, 'parents> {
     runtime: &'borrow mut TransferRuntime<'parents>,
     ledger_owner: &'borrow std::sync::Mutex<crate::net::peer::runtime::ReservationLedger>,
     ledger_incarnation: crate::net::peer::runtime::incarnation::CanonicalIncarnation,
@@ -27,7 +27,7 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
         }
     }
     /// Same actual held ledger: validation only, never permission/new charge.
-    pub(crate) fn verify_external_reservation(
+    pub fn verify_external_reservation(
         &self,
         owner: &std::sync::Mutex<crate::net::peer::runtime::ReservationLedger>,
         incarnation: crate::net::peer::runtime::incarnation::CanonicalIncarnation,
@@ -43,7 +43,7 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
         }
         self.runtime.ledger.check_reservation(handle, expected)
     }
-    pub(crate) fn admit(
+    pub fn admit(
         &mut self,
         plan: &ColdPlan<'_>,
         index: usize,
@@ -52,10 +52,10 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
     ) -> Result<TransferTicket, E> {
         self.runtime.admit(plan, index, now, policy)
     }
-    pub(crate) fn poll(&mut self, now: u64) -> Result<RuntimePoll, E> {
+    pub fn poll(&mut self, now: u64) -> Result<RuntimePoll, E> {
         self.runtime.poll(now)
     }
-    pub(crate) fn issue_credit(
+    pub fn issue_credit(
         &mut self,
         ticket: &TransferTicket,
         now: u64,
@@ -63,19 +63,19 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
     ) -> Result<RequestCredit, E> {
         self.runtime.issue_credit(ticket, now, policy)
     }
-    pub(crate) fn state(&self, ticket: &TransferTicket) -> Result<TransferState, E> {
+    pub fn state(&self, ticket: &TransferTicket) -> Result<TransferState, E> {
         self.runtime.state(ticket)
     }
-    pub(crate) fn cancel_epoch(&self, ticket: &TransferTicket) -> Result<CancelEpoch, E> {
+    pub fn cancel_epoch(&self, ticket: &TransferTicket) -> Result<CancelEpoch, E> {
         self.runtime.cancel_epoch(ticket)
     }
-    pub(crate) fn cancel(&mut self, ticket: &TransferTicket) -> Result<(), E> {
+    pub fn cancel(&mut self, ticket: &TransferTicket) -> Result<(), E> {
         self.runtime.cancel(ticket)
     }
-    pub(crate) fn expire(&mut self, now: u64) -> Result<usize, E> {
+    pub fn expire(&mut self, now: u64) -> Result<usize, E> {
         self.runtime.expire(now)
     }
-    pub(crate) fn complete_io(
+    pub fn complete_io(
         &mut self,
         ticket: &mut TransferTicket,
         key: CompletionKey,
@@ -83,29 +83,29 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
     ) -> Result<FinishOutcome, E> {
         self.runtime.complete_io(ticket, key, now)
     }
-    pub(crate) fn live_transfers(&self) -> usize {
+    pub fn live_transfers(&self) -> usize {
         self.runtime.live_transfers()
     }
-    pub(crate) fn pending_schedule_records(&self) -> usize {
+    pub fn pending_schedule_records(&self) -> usize {
         self.runtime.pending_schedule_records()
     }
-    pub(crate) fn charged_window_bytes(&self) -> u64 {
+    pub fn charged_window_bytes(&self) -> u64 {
         self.runtime.charged_window_bytes()
     }
-    pub(crate) fn supported_inflight(&self) -> usize {
+    pub fn supported_inflight(&self) -> usize {
         self.runtime.supported_inflight()
     }
-    pub(crate) fn parent_used(&self) -> AdmissionScopes {
+    pub fn parent_used(&self) -> AdmissionScopes {
         self.runtime.parent_used()
     }
-    pub(crate) fn acquire_sparse_page(
+    pub fn acquire_sparse_page(
         &mut self,
         identity: StorageIdentity,
         page: u64,
     ) -> Result<SparsePageWorkspace, E> {
         self.runtime.acquire_sparse_page(identity, page)
     }
-    pub(crate) fn release_sparse_page(
+    pub fn release_sparse_page(
         &mut self,
         page: SparsePageWorkspace,
     ) -> Result<(), WorkspaceReleaseError> {
@@ -113,7 +113,7 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
     }
     /// Bounded memory/proof checks ONLY in this short scope. Do not call actual
     /// synchronous native read/write/flush here. Storage job handoff is separate.
-    pub(crate) fn storage_stage<'s>(
+    pub fn storage_stage<'s>(
         &'s mut self,
         ticket: &'s TransferTicket,
         payload: &'s [u8],
@@ -126,7 +126,7 @@ impl<'b, 'p> RuntimeAccess<'b, 'p> {
             .storage_stage(ticket, payload, proof, scratch, now, policy)
     }
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn release_recovery_source<'root>(
+    pub fn release_recovery_source<'root>(
         &mut self,
         source: super::super::RetainedRecoverySource<'root>,
     ) -> Result<(), super::super::SourceReleaseError<'root>> {

@@ -10,14 +10,14 @@ use crate::bundle::stream::descriptor::CandidateIdentity;
 use crate::bundle::stream::index::{admit_header, ExtentLimit, IndexReadLimits};
 use crate::bundle::stream::policy::LocalEffectControl;
 use crate::net::peer::replication::qbdl::wire::{
-    Header, Kind, Limits, ObjectSelector, MAX_LEAF_RECORD_BYTES, PREFIX_BYTES,
+    Header, Kind, Limits, ObjectSelector, MAX_RECORD_BYTES, PREFIX_BYTES,
 };
 use crate::net::qdnf::types::StrongDigest;
 
 const DESCRIBE_BODY: usize = 96;
 const HEADER_PAGE_BODY: usize = 32 + BUNDLE_HEADER_SIZE;
 const HEADER_PAGE_CREDIT: u64 = (PREFIX_BYTES + HEADER_PAGE_BODY) as u64;
-const MAX_INDEX_CHUNK: u32 = (MAX_LEAF_RECORD_BYTES - PREFIX_BYTES - 32) as u32;
+const MAX_INDEX_CHUNK: u32 = (MAX_RECORD_BYTES - PREFIX_BYTES - 32) as u32;
 const MAX_PAGE_CHUNK: u32 = 65536;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -210,7 +210,7 @@ impl DescribeClient {
         ticket: &DescribeTicket,
         out: &mut [u8],
     ) -> Result<usize, Error> {
-        let mut page = [0u8; MAX_LEAF_RECORD_BYTES];
+        let mut page = [0u8; MAX_RECORD_BYTES];
         let (header, n) = session.recv_descriptor(&mut page)?;
         if let Err(e) = self.check_page(&header, ticket, n) {
             return Err(session.fail_close(e));
@@ -258,7 +258,7 @@ impl DescribeClient {
         class: u8,
         out: &mut [u8],
     ) -> Result<usize, Error> {
-        let mut page = [0u8; MAX_LEAF_RECORD_BYTES];
+        let mut page = [0u8; MAX_RECORD_BYTES];
         let (header, n) = session.recv_descriptor(&mut page)?;
         if let Err(e) = self.check_page(&header, ticket, n) {
             return Err(session.fail_close(e));
@@ -440,7 +440,7 @@ fn serve_describe<S: ServiceIo>(
         },
         _ => return Err(session.fail_close(Error::Unsupported)),
     };
-    let mut page = [0u8; MAX_LEAF_RECORD_BYTES];
+    let mut page = [0u8; MAX_RECORD_BYTES];
     let pn = match encode_descriptor_page(page_sel, chunk, &mut page) {
         Ok(v) => v,
         Err(e) => return Err(session.fail_close(e)),

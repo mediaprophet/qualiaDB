@@ -6,15 +6,17 @@ File-disjoint. **Do not cargo. Do not commit.** Integrator routes `mod mux;` in 
 
 `Schedule::compile` / `Schedule::next` exist and are tested only inside `bundle/stream/plan/tests.rs`. Production service still transfers **one** `SelectedPlainEntry` via `transfer_one_leaf`. The product needs one session to walk a compiled plan: at most one `RecordUnit` per `next`, Control never starved, M64/P64 delayed while Ready live families continue, shared dependencies charged once by identity, cancel marks work cancelled and occupancy stays until `acknowledge_complete`.
 
-This slice is the **service loop**. It does not construct the mixed binary HMC (F) and does not speak HTTP (H).
+This slice is the **service loop over real EMF and QAC entries**. It does not construct the full mixed binary HMC (F, 3A2) and does not speak HTTP (H). E/Q own profile/region/signal helpers; M must still transfer authentic `.emf` / `.qac` bytes in this wave.
 
 ## Read first (read-only)
 
-- `docs/.../qbdl-streaming/implementation-review-hmc-multiplexing-2026-11-13.md` §§5–6
+- `docs/.../qbdl-streaming/implementation-review-hmc-multiplexing-2026-11-13.md` §§5–6 and R07
 - `bundle/stream/plan/{mod,inventory,readiness,schedule}.rs`
 - `qbdl/service/mod.rs` `transfer_one_leaf` / `run_one_leaf`
 - `qbdl/service/{provider,client,describe,session}.rs`
 - `qbdl/service/tests.rs` (ipc_pair + Fixture pattern)
+- `bundle/stream/formats/{qac,emf,emf_v3}.rs` admit APIs
+- Candidate files: `q42/field_envelope/fixtures/candidate/qac_candidate-{opaque,pcm-signed-zero}.qac`, `emf_candidate-{opaque,aligned4096}.emf`
 
 Do **not** edit those files.
 
@@ -103,11 +105,24 @@ Shared dependency: if `Schedule` already charged an `EntryRef`, transferring it 
 
 Cancel: after `mux.cancel(id, region)`, later `next` must not yield that unit; `occupancy_retained` stays true until `acknowledge`.
 
+## EMF and QAC (required in this slice)
+
+Publish **one** multi-entry QBDL with `PlainPublisher` / `BundleWriter` whose inner files are `include_bytes!` of canonical candidates — at least **two distinct `.qac` and two distinct `.emf`**. Tag those inventory rows `EntryFamily::Qac` and `EntryFamily::Emf` only after:
+
+- `select_entry` for that id
+- `QacCompleteView::admit` or `EmfDirectoryView::admit` (or `EmfStreamView` / `QacStreamView` if E/Q are already routed)
+
+If admit fails, that id is not `present` and must not transfer. Do **not** tag a random blob as Qac/Emf. An extra Opaque or M64 payload is allowed for delay/cancel tests.
+
+QAC transfer unit is the **whole entry** (complete-entry fallback). EMF may transfer the entry leaf that contains the selected region; if `EmfStreamView::select_region` is routed, prefer that chunk’s authenticated bytes as the useful payload check.
+
+Concurrent: one `Schedule` scene that includes both QAC ids and both EMF ids. `next` must deliver Ready QAC and EMF (and Control) **before** M64/P64. Shared 10D/calibration, if you add a fifth entry as a mandatory geometry dep, is charged once.
+
+If E/Q modules are not on disk yet, call the existing complete-entry / directory admit APIs. Do not wait and do not edit `formats/**`.
+
 ## Describe bootstrap (R01 §6.1)
 
 At least one test: the **client** starts from `DescribeClient::bind(identity, policy)` only. Provider may `select_entry` to build catalogs. Client walks class 1 → 6 header, 7 index, 8 body, 9 entry_page via `answer_describe_pages`, then `admit_header` / `admit_index` / `select_entry` on **received** slices, then `PlainClient::bind`. Client must not be constructed from `fixture.entry_page()` / local `SelectedPlainEntry` for the scheduled entries.
-
-Use existing `Fixture` (`policy/tests.rs`) and/or `PlainPublisher` multi-entry (`publish/tests.rs` pattern: `BundleWriter` + `EntryAssignment` per payload). For **this** slice, payloads may be distinct plain bytes. Tag inventory families as `Opaque` (and one `M64` only if you also delay it — do **not** tag a blob as `Qac`/`Emf`/`TenD`). Real family bytes are F’s job.
 
 `ipc_pair` + `Session` / `SessionOwner` as in `service/tests.rs`. In-process is enough. Do not claim `EvidenceClass::Process` or PhysicalNetwork. Do not edit `two_process.rs`.
 
@@ -115,15 +130,15 @@ Use existing `Fixture` (`policy/tests.rs`) and/or `PlainPublisher` multi-entry (
 
 Name them. Do not derive Debug for `unwrap_err`.
 
-1. **`describe_then_schedule_transfers_two_opaque_entries`** — two published payloads, inventory two Opaque Base Mandatory, `Schedule` scene both, client Describe 8/9 then `transfer_scheduled`. Both leaves arrive. Control (if enqueued) runs before payload.
-2. **`next_delays_m64_while_ready_opaque_continues`** — Opaque + optional M64 in inventory; present both; scene both. First transferred family is Opaque. M64 unit is still queued (`delayed_deferred >= 1`) after the Opaque unit. After Opaque `acknowledge_complete`, a later `next` may yield M64.
-3. **`cancel_obsolete_entry_skips_and_retains_occupancy`** — two Opaque; cancel one after compile; sibling transfers; cancelled id is not in the report’s transferred set; `occupancy_retained` true until explicit acknowledge of the cancelled unit (or document that cancel-without-issue has no occupancy — match `Schedule::cancel` behavior).
-4. **`missing_mandatory_dependency_refuses_before_leaf`** — mandatory calibration entry absent from `present`; `evaluate` Incomplete; `transfer_scheduled` returns `Admission` / `Unsupported` with payload buffer untouched.
-5. **`shared_dependency_charged_once`** — two principals select overlapping Opaque dep; that entry’s leaf is sent once; second principal records reuse (`shared_reused >= 1`).
-6. **`wrong_family_on_bound_entry_is_identity`** — `BoundEntry.entry_id` matches but inventory family disagrees with the test’s declared intent → refuse before send. (If you cannot observe family on `PlainProvider`, skip this and cover it in F.)
+1. **`describe_then_schedule_transfers_two_qac_and_two_emf`** — four real candidate payloads in one HMC; client Describe 8/9; `transfer_scheduled` delivers all four; each received leaf admits again as QAC or EMF. Control (if enqueued) runs before payload.
+2. **`next_delays_m64_while_ready_qac_and_emf_continue`** — QAC + EMF + optional M64; first transferred families are Qac/Emf/Control; `delayed_deferred >= 1` while a live unit remains.
+3. **`cancel_obsolete_qac_skips_and_sibling_emf_continues`** — cancel one QAC id; EMF sibling transfers; occupancy matches `Schedule::cancel`.
+4. **`missing_mandatory_calibration_refuses_before_leaf`** — mandatory calib absent from `present`; `evaluate` Incomplete; no QAC/EMF payload written to `payload_out`.
+5. **`shared_geometry_dep_charged_once`** — two principals select overlapping TenD or Opaque geometry dep plus distinct QAC/EMF; that dep’s leaf is sent once (`shared_reused >= 1`).
+6. **`blob_tagged_as_qac_is_not_present`** — a non-QAC payload assigned `EntryFamily::Qac` fails admit and is omitted from `present`; `transfer_scheduled` does not send it as acoustic content.
 
-Reuse `LEAF_BYTES` sized payloads from `service/tests.rs` `payload()` if easier than tiny blobs. Fixture pages fit `MAX_LEAF_RECORD_BYTES`.
+Candidate files may exceed `LEAF_BYTES`; use the publication’s real leaf geometry (`TreeBuilder` / fixture helper as in `service/tests.rs`). Pages must still fit session buffers (`MAX_LEAF_RECORD_BYTES` for DescriptorPage). If a candidate is too large for the fixture leaf cap, use the smaller candidates (`qac_candidate-opaque`, `emf_candidate-opaque`) and note the size in the summary.
 
 ## Stop
 
-Summary: exports, `PlanError` mapping, tests written **not run**, whether Describe bootstrap is in the loop or only in tests, what F/H still own. Do not cargo. Do not commit. Do not edit parent `mod.rs`.
+Summary: exports, `PlanError` mapping, which QAC/EMF candidates transferred, tests written **not run**, whether Describe bootstrap is in the loop or only in tests, what E/Q/F/H still own. Do not cargo. Do not commit. Do not edit parent `mod.rs` or `formats/**`.

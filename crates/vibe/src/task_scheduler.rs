@@ -20,7 +20,8 @@ pub use execution::await_scheduled_value;
 pub(crate) use execution::dispatch_on_engine;
 pub(crate) use registry::checkpoint;
 pub use registry::{
-    extract_task_id, is_task_record, registry_summary, TaskRegistrySummary, TaskScope,
+    advance_logical_clock_ms, extract_task_id, is_task_record, logical_clock_ms,
+    registry_summary, TaskRegistrySummary, TaskScope,
 };
 
 use crate::{

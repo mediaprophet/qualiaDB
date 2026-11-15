@@ -3,7 +3,7 @@
 mod authenticated;
 mod grant;
 mod manifest;
-pub(crate) mod remote;
+pub mod remote;
 mod types;
 pub use authenticated::{AuthenticatedClosure, BoundClosure, authenticate_closure};
 pub use grant::{LocalEffectControl, LocalGrantRequest, LocalWholeSourceGrant, adopt_local_whole_source};

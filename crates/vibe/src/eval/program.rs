@@ -204,6 +204,11 @@ impl<'a, H: Host> Engine<'a, H> {
         // declarations from the calling env.
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
+        for item in &program.items {
+            if let Item::Enum(e) = item {
+                local.enums.entry(e.name.clone()).or_insert_with(|| e.clone());
+            }
+        }
         local.fields = env.fields.clone();
         local.materials = env.materials.clone();
         local.laws = env.laws.clone();
@@ -245,6 +250,14 @@ impl<'a, H: Host> Engine<'a, H> {
         let mut local = Env::with_task_scope(env.task_scope.clone());
         local.aliases = env.aliases.clone();
         local.enums = env.enums.clone();
+        for item in &program.items {
+            if let Item::Enum(e) = item {
+                local.enums.entry(e.name.clone()).or_insert_with(|| e.clone());
+            }
+        }
+        local.fields = env.fields.clone();
+        local.materials = env.materials.clone();
+        local.laws = env.laws.clone();
         for (p, a) in h.params.iter().zip(args.into_iter()) {
             local.vars.insert(p.name.clone(), a);
         }

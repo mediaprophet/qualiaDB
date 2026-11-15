@@ -1,6 +1,6 @@
 # Wave 3-H — HTTP mixed-plan parity (senior)
 
-File-disjoint. **Do not cargo. Do not commit.** Integrator adds `mod mixed;` under `bundle/stream/http/mod.rs` after you stop.
+File-disjoint. **Queued Wave 3A2** — start after E/Q/M stop. **Do not cargo. Do not commit.** Integrator adds `mod mixed;` under `bundle/stream/http/mod.rs` after you stop.
 
 ## Gap
 
@@ -22,9 +22,11 @@ Do **not** edit those files. Do **not** edit `wss*`, `cscp_h2.rs`, `q42/volume/r
 - NEW `crates/qualia-core-db/src/bundle/stream/http/mixed.rs`
 - `docs/.../qbdl-streaming/evidence/swarm-wave3-h-summary.md`
 
-You may `include_bytes!` the same canonical QAC/EMF candidate files F uses. You may also publish two+ entries with `PlainPublisher` like `publish/tests.rs`. If `crate::bundle::stream::mixed` is not routed yet, **do not wait and do not edit F’s tree** — construct a small multi-entry HMC locally in this test module (two QAC `include_bytes!`, two EMF `include_bytes!`, one M64 synthetic or a third distinct payload tagged M64 **only if those bytes admit as M64**; otherwise tag the delayed entry `Opaque` and still delay it via `EntryFamily::M64` **only when the bytes are real M64**).
+HTTP bodies are **real QAC, EMF, and Q42** bytes. Family on the inventory must match format admit (`QacCompleteView` / `QacStreamView`, `EmfStreamView`, `Q42AuthenticatedRangeSource`). A blob is `Opaque`.
 
-Honest tagging: family on the inventory must match format admit. A blob is `Opaque`.
+Q42 is queryable via HTTP range: a mixed-HMC Q42 entry is served with HTTP `Range` (206). The body is exact authenticated entry bytes for that inclusive range. Bind `Q42AuthenticatedRangeSource` (and `Q42RangeVolume` when the span covers what the query needs) over those bytes. A partial range is **not** a complete query answer (`validate_exact_range_response` / UnexpectedEof on a gap — never a silent full result). Do **not** wrap `q42/volume` `HttpRangeSource` (that is a raw-file HTTP client). C5 `HttpProvider` + `InclusiveRange` is the adapter.
+
+Prefer `crate::bundle::stream::mixed` if F is already routed. If not, publish locally with `PlainPublisher`: two QAC `include_bytes!`, two EMF `include_bytes!`, one Q42 from `write_unified_volume` (same as `formats/q42_range_tests.rs`), plus M64 only when those bytes admit as M64. Do not edit F’s tree. Do not wait on cargo. EMF/QAC codec work is **done** — no deferral.
 
 ## Behavior
 
@@ -45,11 +47,12 @@ Do not wrap `HttpRangeSource`. Do not mint `BearerProfile` 8+. TLS/Web PKI stays
 
 Hostile loopback as in `http/tests.rs`. Comment at top: `EvidenceClass::Component`.
 
-1. **`schedule_order_matches_native_bytes_over_http`** — two live-family entries (two QAC or QAC+EMF). `Schedule::next` order; each 206 body equals `select_entry` slice for that id. Ledger charged per first serve.
-2. **`http_delays_m64_while_ready_qac_continues`** — QAC + M64 in inventory; first served family is Qac; M64 not served in that step.
-3. **`http_cancel_obsolete_range_skips_body`** — cancel one id; no 206 body for it; sibling 206 still matches native.
+1. **`schedule_order_matches_native_bytes_over_http`** — **two QAC + two EMF**. `Schedule::next` order; each 206 body equals `select_entry` slice for that id. Ledger charged per first serve. Each body admits as QAC or EMF.
+2. **`http_delays_m64_while_ready_qac_and_emf_continue`** — QAC + EMF + M64; first served families are Qac/Emf; M64 not served in that step.
+3. **`http_cancel_obsolete_qac_skips_body`** — cancel one QAC id; no 206 body for it; EMF sibling 206 still matches native.
 4. **`http_incomplete_mandatory_is_not_200_or_206`** — missing mandatory dep; provider does not disclose that principal’s representation (`Admission` / `Unsatisfiable` / policy refuse — pick the existing `ProviderError` that C5 already uses for policy, do not invent a status code).
-5. **`http_two_qac_entries_are_distinct_objects`** — two QAC ids, two different ETags / roots, two bodies. Proves many-per-family over HTTP.
+5. **`http_two_qac_and_two_emf_are_distinct_objects`** — four ids, four ETags/roots, four bodies. Many-per-family over HTTP.
+6. **`http_q42_range_matches_authenticated_source`** — one real `.q42` entry in the same HMC. `HttpProvider::serve(Representation, Some(InclusiveRange), …)` 206 body equals `Q42AuthenticatedRangeSource::read_exact_at` / `read_range_into` for that span. A range that does not cover a needed query window is not a complete answer (no 200-as-full, no silent lexicon/index claim). Hostile loopback `get_range` of that Q42 object is Component evidence.
 
 Reuse C5 range/If-Range/identity rules. Do not repeat the whole C5 hostile matrix.
 

@@ -92,6 +92,11 @@
           <button type="button" class="hex" data-hex="qpolicy" data-name="QPolicy" data-plain="40-scenario egress lattice and deontic authorization." data-tech="Mandatory C0–C3 confidentiality lattice, purpose/compartment join, and 40-scenario parity-verified NQuin egress audit receipts." aria-expanded="false" aria-controls="hex-detail">QPolicy</button>
           <button type="button" class="hex" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="SHA-384 transcript sessions and parity-checked .q42 replication." data-tech="SHA-384 handshake transcript, HKDF-SHA384 directional keys, monotonic rekeying, and ChunkToSuperBlockManifest .q42 replication." aria-expanded="false" aria-controls="hex-detail">QSession<br>QSync</button>
         </div>
+        <div class="hex-row">
+          <button type="button" class="hex" data-hex="qbdl" data-name="QBDL" data-plain="Governed mixed-HMC streaming on the session, one admitted leaf at a time." data-tech="QBDL-profile Hyper Media Container over QSession: Describe, DescriptorPage, planner, and mux. Kind 1–12 frozen. Native interchange is CBOR or exact-length binary. See qbdl-streaming.html." aria-expanded="false" aria-controls="hex-detail">QBDL</button>
+          <button type="button" class="hex" data-hex="hmc-mux" data-name="HMC mux" data-plain="Many entries of the same family travel together in one HMC." data-tech="Inventory up to 64 PlanEntry rows. Families TenD, Q42, Emf, Qac, M64, P64, Opaque. Shared deps charged once. Delay M64/P64 while Ready EMF, QAC, and 10D continue." aria-expanded="false" aria-controls="hex-detail">HMC mux</button>
+          <button type="button" class="hex" data-hex="q42-range" data-name="Q42 Range" data-plain="Query a knowledge volume by authenticated HTTP Range." data-tech="Q42AuthenticatedRangeSource plus HTTP 206 InclusiveRange. A gap in authenticated spans fails UnexpectedEof. Partial windows never claim a complete query answer. ZIP .hmc is not this path." aria-expanded="false" aria-controls="hex-detail">Q42 Range</button>
+        </div>
       </div>
       <div class="hex-stack" role="group" aria-label="QDNF layers">
         <button type="button" class="hex-tile" data-hex="qlink" data-name="QLink" data-plain="Proven neighbours, not ARP guesses." data-tech="Cryptographic adjacency discovery and frame admission — neighbours are proven via signed link challenges, never guessed from broadcast ARP or ND." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QLink</span><span class="hex-tile-hint">Proven neighbours, not ARP guesses.</span></button>
@@ -100,6 +105,9 @@
         <button type="button" class="hex-tile" data-hex="qresolve" data-name="QResolve" data-plain="DID and content resolution without DNS-as-who." data-tech="Resolves did:qi, did:webizen, and did:q42 coordinates with RarPermit authorization; optional DNS domains remain attach-later handles only." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QResolve</span><span class="hex-tile-hint">DID and content resolution without DNS-as-who.</span></button>
         <button type="button" class="hex-tile" data-hex="qpolicy" data-name="QPolicy" data-plain="40-scenario egress lattice and deontic authorization." data-tech="Mandatory C0–C3 confidentiality lattice, purpose/compartment join, and 40-scenario parity-verified NQuin egress audit receipts." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QPolicy</span><span class="hex-tile-hint">40-scenario egress lattice and deontic authorization.</span></button>
         <button type="button" class="hex-tile" data-hex="qsession-qsync" data-name="QSession / QSync" data-plain="SHA-384 transcript sessions and parity-checked .q42 replication." data-tech="SHA-384 handshake transcript, HKDF-SHA384 directional keys, monotonic rekeying, and ChunkToSuperBlockManifest .q42 replication." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QSession / QSync</span><span class="hex-tile-hint">SHA-384 transcript sessions and parity-checked .q42 replication.</span></button>
+        <button type="button" class="hex-tile" data-hex="qbdl" data-name="QBDL" data-plain="Governed mixed-HMC streaming on the session, one admitted leaf at a time." data-tech="QBDL-profile Hyper Media Container over QSession: Describe, DescriptorPage, planner, and mux. Kind 1–12 frozen. Native interchange is CBOR or exact-length binary. See qbdl-streaming.html." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">QBDL</span><span class="hex-tile-hint">Governed mixed-HMC streaming on the session, one admitted leaf at a time.</span></button>
+        <button type="button" class="hex-tile" data-hex="hmc-mux" data-name="HMC mux" data-plain="Many entries of the same family travel together in one HMC." data-tech="Inventory up to 64 PlanEntry rows. Families TenD, Q42, Emf, Qac, M64, P64, Opaque. Shared deps charged once. Delay M64/P64 while Ready EMF, QAC, and 10D continue." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">HMC mux</span><span class="hex-tile-hint">Many entries of the same family travel together in one HMC.</span></button>
+        <button type="button" class="hex-tile" data-hex="q42-range" data-name="Q42 Range" data-plain="Query a knowledge volume by authenticated HTTP Range." data-tech="Q42AuthenticatedRangeSource plus HTTP 206 InclusiveRange. A gap in authenticated spans fails UnexpectedEof. Partial windows never claim a complete query answer. ZIP .hmc is not this path." aria-expanded="false" aria-controls="hex-detail"><span class="hex-tile-name">Q42 Range</span><span class="hex-tile-hint">Query a knowledge volume by authenticated HTTP Range.</span></button>
       </div>
       <div id="hex-detail" class="hex-detail" hidden>
         <p class="hex-detail-name q-mono" data-hex-name></p>
@@ -119,6 +127,7 @@
           <div><dt class="text-cyan-300 q-mono">QResolve</dt><dd>Deterministic resolution for <code class="q-mono">did:qi</code>, <code class="q-mono">did:webizen</code>, and <code class="q-mono">did:q42</code> resource coordinates without ICANN DNS-as-identity.</dd></div>
           <div><dt class="text-cyan-300 q-mono">QPolicy</dt><dd>Deontic capability gates and a 40-scenario confidentiality lattice emitting parity-checked <code class="q-mono">NQuin</code> egress audit receipts.</dd></div>
           <div><dt class="text-cyan-300 q-mono">QSession / QSync</dt><dd>Authenticated <code class="q-mono">CSCP</code> and <code class="q-mono">QSession</code> streams with <code class="q-mono">SHA-384</code> transcripts, <code class="q-mono">HKDF-SHA384</code> directional keys, and <code class="q-mono">.q42</code> SuperBlock synchronization.</dd></div>
+          <div><dt class="text-cyan-300 q-mono">QBDL / HMC mux</dt><dd>Selective streaming of a mixed QBDL-profile Hyper Media Container on that session — many entries per family, Q42 HTTP Range, native IPC plus labelled HTTP/WSS bearers. Source in tree; Wave 3 cargo next. See <a class="q-link" href="qbdl-streaming.html">QBDL streaming</a>.</dd></div>
         </dl>
       </article>
       <article class="q-card p-7">
@@ -227,6 +236,7 @@
             <li><strong>CSCP-09.01 / 09.02:</strong> local DATAGRAM capsules and loopback <code class="q-mono">HTTP/2</code> Extended CONNECT proof paths.</li>
             <li><code class="q-mono">did:qi</code>: signed QCDE-1 document lifecycle, <code class="q-mono">CscpMailbox</code> binding, relay-only refusal of direct locators, and Direct-permitted path selection.</li>
             <li><strong>Transition bearers:</strong> <code class="q-mono">WireGuard</code> overlay, TLS <code class="q-mono">WebSocket</code>, <code class="q-mono">HTTP/2</code> capsules, and bounded <code class="q-mono">Nym</code> mixnet framing.</li>
+            <li><strong>QBDL ProtectedSession:</strong> in-process service I/O cargo-proven 17/17. Mixed-HMC mux, EMF/QAC/P64 stream views, and Q42 HTTP Range are in source; the next locked cargo pass is the remaining in-tree gate. See <a class="q-link" href="qbdl-streaming.html">QBDL streaming</a>.</li>
           </ul>
         </article>
         <article class="q-soft-rise q-care rounded-2xl p-7">
@@ -278,6 +288,7 @@
       </p>
       <div class="flex flex-wrap gap-3">
         <a class="q-pill q-pill-primary" href="qdnf-status.html">QDNF implementation status</a>
+        <a class="q-pill" href="qbdl-streaming.html">QBDL mixed HMC streaming</a>
         <a class="q-pill" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
         <a class="q-pill" href="qdnf-peer-runtime.html">Qualia Peer Runtime (QPR)</a>
         <a class="q-pill" href="qdnf-network-cells.html">QDNF protocol &amp; network cells</a>

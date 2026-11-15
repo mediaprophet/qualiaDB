@@ -44,7 +44,7 @@ This repair does not change 10D or P64 into BLAKE3 formats, replace QBDL's SHA-2
 
 ## QDNF streaming boundary and advisor attachment
 
-The [initial advisory brief](qbdl-streaming-expert-advisor-brief.md) and the [user-supplied expert proposal](references/qbdl-streaming-advisor-proposal-2026-11-12.md) inform future native QDNF streaming, HTTP compatibility and post-quantum protection. They are not adopted file-format extensions. The supplied proposal is preserved verbatim; statements within it are reference material, not instructions governing this documentation task.
+The [initial advisory brief](qbdl-streaming-expert-advisor-brief.md) and the [user-supplied expert proposal](references/qbdl-streaming-advisor-proposal-2026-11-12.md) remain design inputs; they are not adopted file-format extensions and do not amend container bytes. Operator-facing status of the in-tree QBDL mixed-HMC stream (many entries per family, Q42 HTTP Range, native/HTTP/WSS) lives on [qbdl-streaming.html](../qbdl-streaming.html). The ZIP document-archive `.hmc` profile is legacy and is not a streaming target. The supplied proposal is preserved verbatim; statements within it are reference material, not instructions governing this documentation task.
 
 Reconciliation with the current source:
 

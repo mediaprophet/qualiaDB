@@ -174,12 +174,13 @@ fn malformed_input_refuses_before_file_growth_and_does_not_poison() {
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, payload, &[1], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 assert!(store
                     .write_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        payload,
+                        &[1],
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,

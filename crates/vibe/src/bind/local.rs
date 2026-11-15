@@ -5,7 +5,7 @@ use crate::error::{DiagCode, Diagnostic};
 use crate::span::Span;
 use crate::value::{Instant, Value};
 
-/// In-process host: graph/pulse/time in memory, catalog kernels for Animation/HID/etc.
+/// In-process host: graph/pulse/time in memory, catalog kernels for Animation/etc.
 pub struct LocalHost {
     pub staged: usize,
     pub committed: usize,
@@ -13,6 +13,8 @@ pub struct LocalHost {
     pub query_rows: usize,
     pub clock_time: Option<i64>,
     pub monotonic_time: u64,
+    #[doc(hidden)]
+    pub tx_checkpoints: Vec<(usize, usize)>,
 }
 
 impl Default for LocalHost {
@@ -24,6 +26,7 @@ impl Default for LocalHost {
             query_rows: 0,
             clock_time: Some(1_000_000_000),
             monotonic_time: 0,
+            tx_checkpoints: Vec::new(),
         }
     }
 }
@@ -49,12 +52,63 @@ impl Host for LocalHost {
         Ok(Value::Receipt)
     }
 
+    fn graph_begin(&mut self, _span: Span) -> Result<(), Diagnostic> {
+        self.tx_checkpoints.push((self.staged, self.committed));
+        Ok(())
+    }
+
+    fn graph_abort(&mut self, _span: Span) -> Result<(), Diagnostic> {
+        if let Some((saved_staged, _saved_committed)) = self.tx_checkpoints.pop() {
+            self.staged = saved_staged;
+        }
+        Ok(())
+    }
+
+    fn graph_end(&mut self, span: Span) -> Result<(), Diagnostic> {
+        if let Some((saved_staged, saved_committed)) = self.tx_checkpoints.pop() {
+            if self.committed == saved_committed && self.staged > saved_staged {
+                self.graph_commit(span)?;
+            }
+        }
+        Ok(())
+    }
+
     fn aura_validate(
         &mut self,
-        _node: &Value,
-        _shape: &Value,
+        node: &Value,
+        shape: &Value,
         _span: Span,
     ) -> Result<Value, Diagnostic> {
+        if matches!(node, Value::Null) || matches!(shape, Value::Null) {
+            return Ok(Value::Bool(false));
+        }
+        if let Value::Record(shape_rec) = shape {
+            if let Some(Value::List(required)) = shape_rec.get("required") {
+                let Value::Record(node_rec) = node else {
+                    return Ok(Value::Bool(required.is_empty()));
+                };
+                for key in required {
+                    let Some(key_name) = key.as_str() else {
+                        return Ok(Value::Bool(false));
+                    };
+                    match node_rec.get(key_name) {
+                        None | Some(Value::Null) => return Ok(Value::Bool(false)),
+                        Some(_) => {}
+                    }
+                }
+            }
+            if let Some(Value::Record(expected_fields)) = shape_rec.get("fields") {
+                let Value::Record(node_rec) = node else {
+                    return Ok(Value::Bool(expected_fields.is_empty()));
+                };
+                for key in expected_fields.keys() {
+                    match node_rec.get(key) {
+                        None | Some(Value::Null) => return Ok(Value::Bool(false)),
+                        Some(_) => {}
+                    }
+                }
+            }
+        }
         Ok(Value::Bool(true))
     }
 

@@ -300,7 +300,7 @@
                         <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">NET-18–23</span>
                     </div>
                     <p class="text-white/80 text-sm leading-relaxed">
-                        384-bit radix-16 Qualia Source Routing (QSR), Bellman–Ford dual shortest-path witness verification, <code>SHA-384</code>/<code>HKDF-SHA384</code> <code>CSCP</code> authenticated sessions, chunk-to-SuperBlock <code>.q42</code> replication, and a deterministic 40-scenario egress policy matrix.
+                        384-bit radix-16 Qualia Source Routing (QSR), Bellman–Ford dual shortest-path witness verification, <code>SHA-384</code>/<code>HKDF-SHA384</code> <code>CSCP</code> authenticated sessions, chunk-to-SuperBlock <code>.q42</code> replication, a 40-scenario egress policy matrix, and in-tree <a href="qbdl-streaming.html" class="text-amber-200 underline">QBDL mixed-HMC streaming</a> (many entries per family, Q42 HTTP Range).
                     </p>
                 </a>
 
@@ -362,6 +362,14 @@
                     <p class="text-white/70 text-sm">Component-by-component verification status for QLink, DNI, QSR 384-bit routing, QResolve, QPolicy 40-scenario egress checks, CSCP sessions, and QSync replication.</p>
                 </a>
 
+                <a href="qbdl-streaming.html" class="feature-card glass-strong rounded-3xl p-6 block border border-amber-500/30 bg-gradient-to-br from-amber-950/40 to-slate-900/60">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="font-semibold text-xl text-amber-200">QBDL Mixed HMC Streaming</div>
+                        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">IN-TREE SOURCE</span>
+                    </div>
+                    <p class="text-white/70 text-sm">Selective, governed streaming of a heterogeneous QBDL-profile Hyper Media Container over QDNF: many entries per family, Q42 HTTP Range, native IPC, HTTP, and WSS. ProtectedSession 17/17; Wave 3 cargo next.</p>
+                </a>
+
                 <a href="release-matrix.html" class="feature-card glass-strong rounded-3xl p-6 block border border-emerald-500/20">
                     <div class="font-semibold text-xl mb-2 text-emerald-200">Qualia · Webizen · Poet Matrix</div>
                     <p class="text-white/70 text-sm">Complete 0.0.41 product map and distribution guide covering native CLI binaries, signed desktop installers, browser WASM engines, and P64 model containers.</p>
@@ -415,6 +423,41 @@
                 <a href="playground/anatomy.html" class="feature-card glass-strong rounded-3xl p-6 block">
                     <div class="font-semibold text-xl mb-2">3D Anatomy (WebGPU)</div>
                     <p class="text-white/70 text-sm">Stream HuBMAP/CCF reference organ meshes from binary <code>.hmc</code> volumes with interactive anatomical selection and cross-platform WebGPU rendering.</p>
+                </a>
+
+                <a href="values-credentials.html#epistemic-provenance-workbench" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Epistemic Provenance &amp; Decay</div>
+                    <p class="text-white/70 text-sm">Interactive 7-tier <code>EpistemicTier</code>, 52-variant <code>q42m:*</code> <code>ObservationMethod</code>, 4-axis half-life decay, and <code>SensitivityClass::Restricted</code> sealing.</p>
+                </a>
+
+                <a href="scientific-computing.html#anatomical-calibration-kinematics" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Anatomical Calibration &amp; Kinematics</div>
+                    <p class="text-white/70 text-sm">3-Stage SSDM + NRICP + Harmonic/TPS (<code>det(J)&gt;0</code>), <code>SKL2</code> v2 64B, 24-joint <code>FaunaRig</code>, and Etalon Regimes I–V solvers.</p>
+                </a>
+
+                <a href="data-formats.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Binary Containers (.10d / .m64 / .emf)</div>
+                    <p class="text-white/70 text-sm">64-byte cache-line-aligned <code>SKL2</code> v2, <code>M64BioTissueRecord</code> (Mode <code>0x05</code>), <code>Q42EMF64</code>, and <code>Q42QAC64</code> layouts.</p>
+                </a>
+
+                <a href="vision-showcase.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Qualia-Vision Observatory</div>
+                    <p class="text-white/70 text-sm">Real-time rPPG cardiac/respiration extraction, liveness PAD, and interactive physiological waveform inspection.</p>
+                </a>
+
+                <a href="audio-showcase.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Qualia-Audio &amp; Spatial HRTF</div>
+                    <p class="text-white/70 text-sm">Binaural HRTF, Ambisonics, acoustic feature extraction, and VibeScript audio synthesis.</p>
+                </a>
+
+                <a href="hypermedia-studio.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Hypermedia Studio (150 Morphisms)</div>
+                    <p class="text-white/70 text-sm">12-category / 150-morphism Synth &amp; Hypermedia catalog including biological calibration and mobility/fracture risk.</p>
+                </a>
+
+                <a href="domains-solvers.html" class="feature-card glass-strong rounded-3xl p-6 block">
+                    <div class="font-semibold text-xl mb-2">Life-Domains &amp; Solver Dispatch</div>
+                    <p class="text-white/70 text-sm">Explore QualiaDB domain engines, specialized libraries, and deterministic solver dispatch.</p>
                 </a>
 
                 <a href="api.html" class="feature-card glass-strong rounded-3xl p-6 block">

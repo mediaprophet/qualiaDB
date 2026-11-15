@@ -41,6 +41,30 @@
       "group": "Core"
     },
     {
+      "label": "Hypermedia Studio (150)",
+      "href": "hypermedia-studio.html",
+      "icon": "fa-cubes",
+      "group": "Studio"
+    },
+    {
+      "label": "Qualia-Vision (rPPG)",
+      "href": "vision-showcase.html",
+      "icon": "fa-eye",
+      "group": "Sensing"
+    },
+    {
+      "label": "Qualia-Audio (HRTF)",
+      "href": "audio-showcase.html",
+      "icon": "fa-headphones",
+      "group": "Sensing"
+    },
+    {
+      "label": "Domains & Solvers",
+      "href": "domains-solvers.html",
+      "icon": "fa-layer-group",
+      "group": "Core"
+    },
+    {
       "label": "Geospatial & GIS",
       "href": "spatial.html",
       "icon": "fa-mountain",
@@ -113,6 +137,13 @@
       "label": "QDNF Status",
       "href": "qdnf-status.html",
       "icon": "fa-tower-broadcast",
+      "highlight": true,
+      "group": "Core"
+    },
+    {
+      "label": "QBDL Streaming",
+      "href": "qbdl-streaming.html",
+      "icon": "fa-layer-group",
       "highlight": true,
       "group": "Core"
     },

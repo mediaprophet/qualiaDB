@@ -10,12 +10,12 @@ use crate::net::{
 };
 
 /// Resource scope excludes the charge owner: close/drop cannot relock this ledger.
-pub(crate) struct ChannelIo<'s, 'a, B: Bearer> {
+pub struct ChannelIo<'s, 'a, B: Bearer> {
     pub(super) core: &'s mut ChannelCore<'a>,
     pub(super) bearer: &'s mut B,
 }
 /// One bounded effect. No authority lock lives in this transport view.
-pub(crate) struct FrameIo<'s, 'a, B: Bearer> {
+pub struct FrameIo<'s, 'a, B: Bearer> {
     pub(super) core: &'s mut ChannelCore<'a>,
     pub(super) bearer: &'s mut B,
 }
@@ -25,7 +25,7 @@ impl<'a, B: Bearer> ProtectedChannel<'a, B> {
     /// Existing TransferRuntime cannot survive releasing this borrowed ledger: a
     /// canonical persistent-state split is required before asynchronous service
     /// integration. No reference can escape this callback.
-    pub(crate) fn with_resources<T>(
+    pub fn with_resources<T>(
         &mut self,
         effect: impl for<'s> FnOnce(ChannelIo<'s, 'a, B>, &'s mut ReservationLedger) -> Result<T, E>,
     ) -> Result<T, E> {
@@ -56,7 +56,7 @@ impl<'a, B: Bearer> ChannelIo<'_, 'a, B> {
     /// Both endpoint and application checks use this guard. Never wait/await or
     /// call a blocking filesystem operation inside effect. A WouldBlock return
     /// drops the guard; the next effect observes real inter-frame revocation.
-    pub(crate) fn with_current<T>(
+    pub fn with_current<T>(
         &mut self,
         pins: &PinAuthority,
         clock: &dyn Fn() -> u64,

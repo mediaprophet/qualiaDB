@@ -223,6 +223,7 @@ mod tests {
                 scope: BiologicalScope::default(),
                 source_record_id: None,
                 media_region: None,
+                ..Default::default()
             },
         }
     }

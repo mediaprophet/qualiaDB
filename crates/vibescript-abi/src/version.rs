@@ -151,8 +151,14 @@ pub struct ContractVersionAxes {
     pub ontology_version: SemVer64,
 }
 
+/// Packaged `vibescript-abi` crate release version matching `Cargo.toml` (`0.0.41`).
+///
+/// Distinct from the protocol/contract axis baseline (`language = 0.1.0`, `abi = 0.3.0`,
+/// `host = 0.1.0`) returned by [`ContractVersionAxes::v0_3_default`].
+pub const ABI_CRATE_VERSION: SemVer64 = SemVer64::release(0, 0, 41);
+
 impl ContractVersionAxes {
-    /// Current canonical VibeScript 0.1 + ABI 0.3 baseline for a provider at `provider_version`.
+    /// Current canonical VibeScript 0.1 + ABI 0.3 contract baseline for a provider at `provider_version`.
     #[inline]
     pub const fn v0_3_default(provider_version: SemVer64, ontology_version: SemVer64) -> Self {
         Self {

@@ -48,7 +48,7 @@ pub struct PreparedDominoScope {
 impl PreparedDominoScope {
     pub(crate) fn enter(grammar: Option<PreparedDomino>) -> Result<Self, &'static str> {
         let identity = NEXT
-            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
             .map_err(|_| "DOMINO owner identity exhausted")?;
         let valid = Arc::new(AtomicBool::new(true));
         let digest = grammar

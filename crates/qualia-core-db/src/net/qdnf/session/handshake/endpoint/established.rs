@@ -9,7 +9,7 @@ use crate::net::qdnf::{
     session::handshake::SessionBinding, types::StrongDigest,
 };
 mod protected_channel;
-pub use protected_channel::{ChannelBuildError, ProtectedChannel};
+pub use protected_channel::{ChannelBuildError, ChannelIo, FrameIo, ProtectedChannel};
 pub struct EstablishedSession<'a> {
     authority: &'a EndpointAuthority<'a>,
     reservation: Option<EndpointReservation<'a>>,

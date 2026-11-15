@@ -9,7 +9,7 @@ mod close;
 mod counted;
 use crate::net::peer::runtime::{
     FairScheduler, LeaseTable, OperationHandle, OperationTable, ReservationHandle,
-    ReservationLedger, ResourceBudget, ResourceGovernor, WorkClass,
+    ReservationLedger, ResourceBudget, ResourceGovernor,
 };
 use crate::net::qdnf::errors::QdnfError;
 use core::sync::atomic::AtomicUsize;

@@ -11,13 +11,13 @@ mod restore;
 mod scope;
 use crate::net::peer::runtime::incarnation::CanonicalIncarnation;
 use crate::net::qdnf::errors::QdnfError as E;
-pub(crate) use access::RuntimeAccess;
-pub(crate) use close::RuntimeCloseError;
+pub use access::RuntimeAccess;
+pub use close::RuntimeCloseError;
 pub(super) use data::RuntimeClosePhase;
 use data::RuntimeData;
-pub(crate) use parents::RuntimeParents;
+pub use parents::RuntimeParents;
 #[must_use = "drain real I/O and consume try_close; lost state retains canonical charges"]
-pub(crate) struct RetainedRuntime<'parent, 'host> {
+pub struct RetainedRuntime<'parent, 'host> {
     parents: &'parent RuntimeParents<'host>,
     registration: CanonicalIncarnation,
     data: Option<RuntimeData>,

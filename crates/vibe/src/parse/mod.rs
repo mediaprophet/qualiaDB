@@ -30,12 +30,6 @@ impl<'a> Parser<'a> {
         })
     }
 
-    #[allow(dead_code)]
-    /// Source text.
-    pub fn source(&self) -> &'a str {
-        self.lex.source()
-    }
-
     /// Parses program.
     pub fn parse_program(&mut self) -> Result<Program, Diagnostic> {
         let start = self.cur.span.start;

@@ -5,6 +5,7 @@ mod describe;
 mod provider;
 mod session;
 mod protected;
+mod mux;
 
 pub use client::{LeafTicket, OpenTicket, PlainClient};
 pub use describe::{
@@ -12,8 +13,9 @@ pub use describe::{
 };
 pub use provider::{refuse_non_plain, OpenedTransfer, PlainProvider, ServedLeaf};
 pub use session::{ServiceIo, Session, SessionOwner, ROLE_CLIENT, ROLE_PROVIDER};
-pub(crate) use protected::ProtectedSession;
-pub(crate) use session::encode_open_body;
+pub use mux::{transfer_scheduled, BoundEntry, MuxReport, MuxTransfer};
+pub use protected::ProtectedSession;
+pub use session::encode_open_body;
 
 use super::carrier::CarrierError;
 use super::provider::OutboardError;

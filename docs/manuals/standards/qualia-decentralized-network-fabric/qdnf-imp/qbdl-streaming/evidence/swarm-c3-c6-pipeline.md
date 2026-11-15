@@ -47,7 +47,7 @@ C1-D / C1-P / C1-W are **serial among themselves** if they would share `service/
 
 See [swarm-wave3-pipeline.md](swarm-wave3-pipeline.md) and [swarm-wave3-claim-board.md](swarm-wave3-claim-board.md).
 
-Wave 3A (NEW files, no cargo, ≤3 children): **M** `qbdl/service/mux.rs` drives `Schedule::next`; **F** `bundle/stream/mixed/` real N-per-family HMC; **H** `http/mixed.rs` Component parity. C6 and independent reviews are Wave 3B after cargo. Browser/WebRTC remain later extensions.
+Wave 3A (≤3 children): **E** EMF stream, **Q** QAC `admit_signal` + stream profile, **M** mux of two QAC + two EMF. Wave 3A2: **F** mixed HMC, **H** HTTP mixed. C6 and reviews are Wave 3B after cargo. Browser/WebRTC remain later extensions. See [swarm-wave3-pipeline.md](swarm-wave3-pipeline.md).
 
 ## Shared rules
 

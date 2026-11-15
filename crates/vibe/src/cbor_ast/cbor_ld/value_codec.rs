@@ -3,9 +3,16 @@
 use std::collections::BTreeMap;
 
 use super::super::codec::{CborDecoder, CborEncoder};
+use super::super::decode::decode_expr;
+use super::super::encode::encode_expr;
 use super::super::DecodeError;
 use super::terms::*;
-use crate::value::{Duration, Instant, Quantity, QuinRef, TimeScale, Value};
+use crate::value::{
+    AssetRef, CausalRelation, ConservationQuantity, ConservationResult, DisclosureBoundary,
+    Duration, EnumValue, FieldRef, Frame, GeometryRef, Instant, MaterialRef, Miscibility,
+    Mixture, MixturePhase, Pose, Quantity, QuinRef, SpeciesRef, TensorRef, TimeScale, Transform,
+    Value, WorldLine,
+};
 
 /// Encodes a runtime [`Value`] into deterministic compressed W3C CBOR-LD (`0xD9 0x0501`).
 pub fn encode_value_cbor_ld(value: &Value, context_iri: &str) -> Vec<u8> {
@@ -51,6 +58,38 @@ fn write_f64(enc: &mut CborEncoder, v: f64) {
     enc.write_u8(0xFB); // major 7, ai 27 (IEEE 754 binary64)
     for b in v.to_bits().to_be_bytes() {
         enc.write_u8(b);
+    }
+}
+
+fn write_f64_slice(enc: &mut CborEncoder, values: &[f64]) {
+    enc.array(values.len() as u64);
+    for &v in values {
+        write_f64(enc, v);
+    }
+}
+
+fn read_f64_vec(dec: &mut CborDecoder<'_>) -> Result<Vec<f64>, DecodeError> {
+    let n = dec.array()?;
+    let mut out = Vec::with_capacity(n as usize);
+    for _ in 0..n {
+        out.push(read_f64(dec)?);
+    }
+    Ok(out)
+}
+
+fn write_opt_str(enc: &mut CborEncoder, s: Option<&str>) {
+    match s {
+        Some(v) => enc.str(v),
+        None => enc.null(),
+    }
+}
+
+fn read_opt_str(dec: &mut CborDecoder<'_>) -> Result<Option<String>, DecodeError> {
+    if dec.is_null()? {
+        dec.null()?;
+        Ok(None)
+    } else {
+        Ok(Some(dec.str()?))
     }
 }
 
@@ -216,7 +255,164 @@ fn encode_val(enc: &mut CborEncoder, val: &Value) {
             enc.tag(TAG_VIBE_ERR);
             encode_val(enc, inner);
         }
-        other => enc.str(&other.to_string()),
+        Value::Triple(s, p, o) => {
+            enc.tag(TAG_VIBE_TRIPLE);
+            enc.array(3);
+            encode_val(enc, s);
+            encode_val(enc, p);
+            encode_val(enc, o);
+        }
+        Value::Reified { s, p, o, r } => {
+            enc.tag(TAG_VIBE_REIFIED);
+            enc.array(4);
+            encode_val(enc, s);
+            encode_val(enc, p);
+            encode_val(enc, o);
+            encode_val(enc, r);
+        }
+        Value::Frame(f) => {
+            enc.tag(TAG_VIBE_FRAME);
+            enc.array(3);
+            write_f64_slice(enc, &f.origin);
+            enc.array(f.basis.len() as u64);
+            for row in &f.basis {
+                write_f64_slice(enc, row);
+            }
+            write_opt_str(enc, f.parent.as_deref());
+        }
+        Value::Pose(p) => {
+            enc.tag(TAG_VIBE_POSE);
+            enc.array(3);
+            write_f64_slice(enc, &p.position);
+            write_f64_slice(enc, &p.orientation);
+            write_opt_str(enc, p.frame.as_deref());
+        }
+        Value::Transform(t) => {
+            enc.tag(TAG_VIBE_TRANSFORM);
+            enc.array(4);
+            write_f64_slice(enc, &t.translate);
+            write_f64_slice(enc, &t.rotate);
+            write_f64_slice(enc, &t.scale);
+            write_f64_slice(enc, &t.skew);
+        }
+        Value::FieldRef(r) => {
+            enc.tag(TAG_VIBE_FIELD_REF);
+            enc.array(2);
+            write_term_or_str(enc, &r.iri);
+            enc.uint(r.hash);
+        }
+        Value::MaterialRef(r) => {
+            enc.tag(TAG_VIBE_MATERIAL_REF);
+            enc.array(2);
+            write_term_or_str(enc, &r.iri);
+            enc.uint(r.hash);
+        }
+        Value::TensorRef(r) => {
+            enc.tag(TAG_VIBE_TENSOR_REF);
+            enc.array(2);
+            enc.uint(r.handle);
+            enc.uint(r.hash);
+        }
+        Value::GeometryRef(r) => {
+            enc.tag(TAG_VIBE_GEOMETRY_REF);
+            enc.array(2);
+            enc.uint(r.handle);
+            enc.uint(r.hash);
+        }
+        Value::AssetRef(r) => {
+            enc.tag(TAG_VIBE_ASSET_REF);
+            enc.array(2);
+            write_term_or_str(enc, &r.iri);
+            enc.uint(r.hash);
+        }
+        Value::WorldLine(w) => {
+            enc.tag(TAG_VIBE_WORLDLINE);
+            enc.array(3);
+            write_term_or_str(enc, &w.iri);
+            enc.str(&w.asserted_by);
+            enc.int(w.created_at);
+        }
+        Value::Enum(e) => {
+            enc.tag(TAG_VIBE_ENUM);
+            enc.array(3);
+            enc.str(&e.enum_name);
+            enc.str(&e.variant_name);
+            enc.array(e.payload.len() as u64);
+            for item in &e.payload {
+                encode_val(enc, item);
+            }
+        }
+        Value::Lambda { params, body } => {
+            enc.tag(TAG_VIBE_LAMBDA);
+            enc.array(2);
+            enc.array(params.len() as u64);
+            for p in params {
+                enc.str(p);
+            }
+            encode_expr(enc, body);
+        }
+        Value::SpeciesRef(s) => {
+            enc.tag(TAG_VIBE_SPECIES_REF);
+            enc.array(2);
+            write_term_or_str(enc, &s.iri);
+            enc.uint(s.hash);
+        }
+        Value::Mixture(m) => {
+            enc.tag(TAG_VIBE_MIXTURE);
+            enc.array(4);
+            write_opt_str(enc, m.iri.as_deref());
+            enc.array(m.components.len() as u64);
+            for (sp, frac) in &m.components {
+                enc.array(3);
+                write_term_or_str(enc, &sp.iri);
+                enc.uint(sp.hash);
+                write_f64(enc, *frac);
+            }
+            enc.uint(match m.phase {
+                MixturePhase::Solid => 0,
+                MixturePhase::Liquid => 1,
+                MixturePhase::Gas => 2,
+                MixturePhase::Plasma => 3,
+                MixturePhase::Supercritical => 4,
+            });
+            enc.uint(match m.miscibility {
+                Miscibility::Miscible => 0,
+                Miscibility::Immiscible => 1,
+                Miscibility::Partial => 2,
+            });
+        }
+        Value::Conservation(c) => {
+            enc.tag(TAG_VIBE_CONSERVATION);
+            enc.array(5);
+            enc.uint(match c.quantity {
+                ConservationQuantity::Mass => 0,
+                ConservationQuantity::Mole => 1,
+                ConservationQuantity::Energy => 2,
+                ConservationQuantity::Charge => 3,
+                ConservationQuantity::Momentum => 4,
+                ConservationQuantity::AngularMomentum => 5,
+            });
+            write_f64(enc, c.before);
+            write_f64(enc, c.after);
+            enc.bool(c.conserved);
+            write_f64(enc, c.tolerance);
+        }
+        Value::Causal(c) => {
+            enc.tag(TAG_VIBE_CAUSAL);
+            enc.uint(match c {
+                CausalRelation::Timelike => 0,
+                CausalRelation::Lightlike => 1,
+                CausalRelation::Spacelike => 2,
+            });
+        }
+        Value::DisclosureBoundary(b) => {
+            enc.tag(TAG_VIBE_DISCLOSURE_BOUNDARY);
+            enc.array(4);
+            enc.bool(b.publication);
+            enc.bool(b.replication);
+            enc.bool(b.agency);
+            enc.bool(b.exfiltration);
+        }
     }
 }
 
@@ -358,6 +554,256 @@ fn decode_tagged_val(dec: &mut CborDecoder<'_>, context_iri: &str) -> Result<Val
         }
         TAG_VIBE_OK => Ok(Value::Ok(Box::new(decode_val(dec, context_iri)?))),
         TAG_VIBE_ERR => Ok(Value::Err(Box::new(decode_val(dec, context_iri)?))),
+        TAG_VIBE_TRIPLE => {
+            if dec.array()? != 3 {
+                return Err(DecodeError::InvalidCbor("Triple requires len 3".into()));
+            }
+            Ok(Value::Triple(
+                Box::new(decode_val(dec, context_iri)?),
+                Box::new(decode_val(dec, context_iri)?),
+                Box::new(decode_val(dec, context_iri)?),
+            ))
+        }
+        TAG_VIBE_REIFIED => {
+            if dec.array()? != 4 {
+                return Err(DecodeError::InvalidCbor("Reified requires len 4".into()));
+            }
+            Ok(Value::Reified {
+                s: Box::new(decode_val(dec, context_iri)?),
+                p: Box::new(decode_val(dec, context_iri)?),
+                o: Box::new(decode_val(dec, context_iri)?),
+                r: Box::new(decode_val(dec, context_iri)?),
+            })
+        }
+        TAG_VIBE_FRAME => {
+            if dec.array()? != 3 {
+                return Err(DecodeError::InvalidCbor("Frame requires len 3".into()));
+            }
+            let origin = read_f64_vec(dec)?;
+            let rows = dec.array()?;
+            let mut basis = Vec::with_capacity(rows as usize);
+            for _ in 0..rows {
+                basis.push(read_f64_vec(dec)?);
+            }
+            let parent = read_opt_str(dec)?;
+            Ok(Value::Frame(Frame {
+                origin,
+                basis,
+                parent,
+            }))
+        }
+        TAG_VIBE_POSE => {
+            if dec.array()? != 3 {
+                return Err(DecodeError::InvalidCbor("Pose requires len 3".into()));
+            }
+            Ok(Value::Pose(Pose {
+                position: read_f64_vec(dec)?,
+                orientation: read_f64_vec(dec)?,
+                frame: read_opt_str(dec)?,
+            }))
+        }
+        TAG_VIBE_TRANSFORM => {
+            if dec.array()? != 4 {
+                return Err(DecodeError::InvalidCbor("Transform requires len 4".into()));
+            }
+            Ok(Value::Transform(Transform {
+                translate: read_f64_vec(dec)?,
+                rotate: read_f64_vec(dec)?,
+                scale: read_f64_vec(dec)?,
+                skew: read_f64_vec(dec)?,
+            }))
+        }
+        TAG_VIBE_FIELD_REF => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor("FieldRef requires len 2".into()));
+            }
+            Ok(Value::FieldRef(FieldRef {
+                iri: read_term_or_str(dec, context_iri)?,
+                hash: dec.uint()?,
+            }))
+        }
+        TAG_VIBE_MATERIAL_REF => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor(
+                    "MaterialRef requires len 2".into(),
+                ));
+            }
+            Ok(Value::MaterialRef(MaterialRef {
+                iri: read_term_or_str(dec, context_iri)?,
+                hash: dec.uint()?,
+            }))
+        }
+        TAG_VIBE_TENSOR_REF => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor("TensorRef requires len 2".into()));
+            }
+            Ok(Value::TensorRef(TensorRef {
+                handle: dec.uint()?,
+                hash: dec.uint()?,
+            }))
+        }
+        TAG_VIBE_GEOMETRY_REF => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor(
+                    "GeometryRef requires len 2".into(),
+                ));
+            }
+            Ok(Value::GeometryRef(GeometryRef {
+                handle: dec.uint()?,
+                hash: dec.uint()?,
+            }))
+        }
+        TAG_VIBE_ASSET_REF => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor("AssetRef requires len 2".into()));
+            }
+            Ok(Value::AssetRef(AssetRef {
+                iri: read_term_or_str(dec, context_iri)?,
+                hash: dec.uint()?,
+            }))
+        }
+        TAG_VIBE_WORLDLINE => {
+            if dec.array()? != 3 {
+                return Err(DecodeError::InvalidCbor("WorldLine requires len 3".into()));
+            }
+            Ok(Value::WorldLine(WorldLine {
+                iri: read_term_or_str(dec, context_iri)?,
+                asserted_by: dec.str()?,
+                created_at: dec.int()?,
+            }))
+        }
+        TAG_VIBE_ENUM => {
+            if dec.array()? != 3 {
+                return Err(DecodeError::InvalidCbor("Enum requires len 3".into()));
+            }
+            let enum_name = dec.str()?;
+            let variant_name = dec.str()?;
+            let n = dec.array()?;
+            let mut payload = Vec::with_capacity(n as usize);
+            for _ in 0..n {
+                payload.push(decode_val(dec, context_iri)?);
+            }
+            Ok(Value::Enum(EnumValue {
+                enum_name,
+                variant_name,
+                payload,
+            }))
+        }
+        TAG_VIBE_LAMBDA => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor("Lambda requires len 2".into()));
+            }
+            let n = dec.array()?;
+            let mut params = Vec::with_capacity(n as usize);
+            for _ in 0..n {
+                params.push(dec.str()?);
+            }
+            let body = Box::new(decode_expr(dec)?);
+            Ok(Value::Lambda { params, body })
+        }
+        TAG_VIBE_SPECIES_REF => {
+            if dec.array()? != 2 {
+                return Err(DecodeError::InvalidCbor("SpeciesRef requires len 2".into()));
+            }
+            Ok(Value::SpeciesRef(SpeciesRef {
+                iri: read_term_or_str(dec, context_iri)?,
+                hash: dec.uint()?,
+            }))
+        }
+        TAG_VIBE_MIXTURE => {
+            if dec.array()? != 4 {
+                return Err(DecodeError::InvalidCbor("Mixture requires len 4".into()));
+            }
+            let iri = read_opt_str(dec)?;
+            let n = dec.array()?;
+            let mut components = Vec::with_capacity(n as usize);
+            for _ in 0..n {
+                if dec.array()? != 3 {
+                    return Err(DecodeError::InvalidCbor(
+                        "Mixture component requires len 3".into(),
+                    ));
+                }
+                let sp = SpeciesRef {
+                    iri: read_term_or_str(dec, context_iri)?,
+                    hash: dec.uint()?,
+                };
+                let frac = read_f64(dec)?;
+                components.push((sp, frac));
+            }
+            let phase = match dec.uint()? {
+                0 => MixturePhase::Solid,
+                1 => MixturePhase::Liquid,
+                2 => MixturePhase::Gas,
+                3 => MixturePhase::Plasma,
+                4 => MixturePhase::Supercritical,
+                p => return Err(DecodeError::InvalidCbor(format!("invalid MixturePhase {p}"))),
+            };
+            let miscibility = match dec.uint()? {
+                0 => Miscibility::Miscible,
+                1 => Miscibility::Immiscible,
+                2 => Miscibility::Partial,
+                m => return Err(DecodeError::InvalidCbor(format!("invalid Miscibility {m}"))),
+            };
+            Ok(Value::Mixture(Mixture {
+                iri,
+                components,
+                phase,
+                miscibility,
+            }))
+        }
+        TAG_VIBE_CONSERVATION => {
+            if dec.array()? != 5 {
+                return Err(DecodeError::InvalidCbor(
+                    "Conservation requires len 5".into(),
+                ));
+            }
+            let quantity = match dec.uint()? {
+                0 => ConservationQuantity::Mass,
+                1 => ConservationQuantity::Mole,
+                2 => ConservationQuantity::Energy,
+                3 => ConservationQuantity::Charge,
+                4 => ConservationQuantity::Momentum,
+                5 => ConservationQuantity::AngularMomentum,
+                q => {
+                    return Err(DecodeError::InvalidCbor(format!(
+                        "invalid ConservationQuantity {q}"
+                    )))
+                }
+            };
+            let before = read_f64(dec)?;
+            let after = read_f64(dec)?;
+            let conserved = dec.bool()?;
+            let tolerance = read_f64(dec)?;
+            Ok(Value::Conservation(ConservationResult {
+                quantity,
+                before,
+                after,
+                conserved,
+                tolerance,
+            }))
+        }
+        TAG_VIBE_CAUSAL => {
+            let c = match dec.uint()? {
+                0 => CausalRelation::Timelike,
+                1 => CausalRelation::Lightlike,
+                2 => CausalRelation::Spacelike,
+                v => return Err(DecodeError::InvalidCbor(format!("invalid CausalRelation {v}"))),
+            };
+            Ok(Value::Causal(c))
+        }
+        TAG_VIBE_DISCLOSURE_BOUNDARY => {
+            if dec.array()? != 4 {
+                return Err(DecodeError::InvalidCbor(
+                    "DisclosureBoundary requires len 4".into(),
+                ));
+            }
+            Ok(Value::DisclosureBoundary(DisclosureBoundary {
+                publication: dec.bool()?,
+                replication: dec.bool()?,
+                agency: dec.bool()?,
+                exfiltration: dec.bool()?,
+            }))
+        }
         other => Err(DecodeError::UnexpectedTag(other)),
     }
 }

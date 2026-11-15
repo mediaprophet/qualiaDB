@@ -11,7 +11,7 @@ use crate::net::peer::replication::qbdl::carrier::{
     Assembly, CarrierError, MessageSequence, Progress,
 };
 use crate::net::peer::replication::qbdl::wire::{
-    encode, Header, Kind, Message, ServiceRecordHeader, MAX_LEAF_RECORD_BYTES,
+    encode, Header, Kind, Message, ServiceRecordHeader, MAX_LEAF_RECORD_BYTES, MAX_RECORD_BYTES,
 };
 use crate::net::qdnf::bearer::contract::Bearer;
 use crate::net::qdnf::errors::QdnfError;
@@ -324,7 +324,7 @@ impl<'a, 's, B: Bearer> ProtectedSession<'a, 's, B> {
             |h, total, _| {
                 if h.kind != Kind::DescriptorPage {
                     Err(Error::State)
-                } else if total > MAX_LEAF_RECORD_BYTES {
+                } else if total > MAX_RECORD_BYTES {
                     Err(Error::Capacity)
                 } else {
                     Ok(())

@@ -7,12 +7,12 @@ const _: () = assert!(MAX_ENTRIES == 4096 && MAX_OBJECTS == 2 * MAX_ENTRIES + 1)
 
 /// Private original index geometry; not a public descriptor row.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct EntryRange {
+pub struct EntryRange {
     offset: u64,
     length: u64,
 }
 impl EntryRange {
-    pub(crate) const EMPTY: Self = Self {
+    pub const EMPTY: Self = Self {
         offset: 0,
         length: 0,
     };
@@ -21,18 +21,18 @@ impl EntryRange {
     }
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ObjectKind {
+pub enum ObjectKind {
     Entry(u32),
     Gap,
 }
 /// This contains private offsets/ordinals. It intentionally has no Debug implementation.
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) struct SourceObject {
+pub struct SourceObject {
     kind: ObjectKind,
     range: EntryRange,
 }
 impl SourceObject {
-    pub(crate) const EMPTY: Self = Self {
+    pub const EMPTY: Self = Self {
         kind: ObjectKind::Gap,
         range: EntryRange::EMPTY,
     };
@@ -48,13 +48,13 @@ impl SourceObject {
             range: EntryRange::new(offset, length),
         }
     }
-    pub(crate) const fn kind(&self) -> ObjectKind {
+    pub const fn kind(&self) -> ObjectKind {
         self.kind
     }
-    pub(crate) const fn offset(&self) -> u64 {
+    pub const fn offset(&self) -> u64 {
         self.range.offset
     }
-    pub(crate) const fn length(&self) -> u64 {
+    pub const fn length(&self) -> u64 {
         self.range.length
     }
 }

@@ -61,7 +61,6 @@ impl DisclosureDecision {
     }
 
     /// R2 mints this after paired verification. R1 only binds schema/recognition.
-    #[allow(dead_code)]
     pub(super) fn bind(
         recognized: &RecognizedController,
         ticket: &DecisionTicketFields,

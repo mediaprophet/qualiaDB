@@ -16,7 +16,7 @@ Do not edit `qualification.md` unless the integrator grants it after this file e
 
 | Class | What may be cited | What may not |
 |---|---|---|
-| Component | C5 HTTP loopback; Wave 3-H mixed HTTP; in-process `ProtectedSession` 17/17; planner unit tests | Named as Process |
+| Component | C5 HTTP loopback; Wave 3-E/Q format stream tests; Wave 3-H mixed HTTP of two QAC + two EMF; in-process `ProtectedSession` 17/17; planner unit tests | Named as Process |
 | Process | `two_process.rs` ProtectedSession useful-leaf (after its cargo); Windows named-pipe / Unix UDS already-green local_stream process tests | PhysicalNetwork; browser |
 | PhysicalNetwork | nothing in this wave | Inferring from Process or loopback HTTP |
 | Application | nothing in this wave | Browser/WASM, Etalon consumer, Commons |

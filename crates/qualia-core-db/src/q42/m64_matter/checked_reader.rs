@@ -7,15 +7,16 @@ use crate::q42::chunk_integrity::{verify_blake3_trailer, BLAKE3_TRAILER_BYTES};
 use super::M64_CODEC_BLAKE3_FULL;
 
 use super::{
-    M64ChunkDirectoryEntry, M64Error, M64GeoRasterError, M64GeoRasterMetadata, M64Header,
-    M64LocalMetricHeader, M64PhaseJunctureRecord, M64RasterSample, M64ShellRecord,
+    M64BioTissueRecord, M64CellMode, M64ChunkDirectoryEntry, M64Error, M64GeoRasterError,
+    M64GeoRasterMetadata, M64Header, M64HoloRecord, M64LocalMetricHeader,
+    M64PhaseJunctureRecord, M64PointRecord, M64RasterSample, M64ShellRecord,
     M64StrataColumnRecord, LRM3_BLOCK_BYTES, M64_FLAG_3D_BRICK_16X16X16,
-    M64_FLAG_LOCAL_METRIC_LRM3, M64_MAGIC, M64_MODE_HOLO, M64_MODE_PHASE_JUNCTURE, M64_MODE_POINT,
-    M64_MODE_SHELL, M64_MODE_STRATA,
+    M64_FLAG_LOCAL_METRIC_LRM3, M64_MAGIC, M64_MODE_BIO_TISSUE, M64_MODE_HOLO,
+    M64_MODE_PHASE_JUNCTURE, M64_MODE_POINT, M64_MODE_SHELL, M64_MODE_STRATA,
 };
 
 #[cfg(test)]
-use super::{E64_MAGIC, M64HoloRecord, M64PointRecord};
+use super::E64_MAGIC;
 
 /// Explicit admission budgets; there is no implicit unlimited/default policy.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -239,6 +240,7 @@ impl<'a> M64Reader<'a> {
                     | M64_MODE_STRATA
                     | M64_MODE_PHASE_JUNCTURE
                     | M64_MODE_SHELL
+                    | M64_MODE_BIO_TISSUE
             ) {
                 return Err(M64ReadError::UnsupportedMode {
                     chunk,
@@ -340,6 +342,9 @@ impl<'a> M64Reader<'a> {
                     M64_MODE_PHASE_JUNCTURE => {
                         bytemuck::pod_read_unaligned::<M64PhaseJunctureRecord>(raw).validate()
                     }
+                    M64_MODE_BIO_TISSUE => {
+                        bytemuck::pod_read_unaligned::<M64BioTissueRecord>(raw).validate()
+                    }
                     M64_MODE_POINT | M64_MODE_HOLO => continue,
                     mode => {
                         return Err(M64ReadError::UnsupportedMode { chunk, mode });
@@ -413,6 +418,17 @@ impl<'a> M64Reader<'a> {
     }
 }
 
+/// Typed 64-byte M64 record decoded from a validated chunk.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum M64DecodedRecord {
+    Point(M64PointRecord),
+    Holo(M64HoloRecord),
+    Strata(M64StrataColumnRecord),
+    PhaseJuncture(M64PhaseJunctureRecord),
+    Shell(M64ShellRecord),
+    BioTissue(M64BioTissueRecord),
+}
+
 #[derive(Debug)]
 pub struct M64Chunk<'a> {
     entry: M64ChunkDirectoryEntry,
@@ -432,8 +448,131 @@ impl<'a> M64Chunk<'a> {
         let start = index.checked_mul(64)?;
         self.payload.get(start..start.checked_add(64)?)
     }
+
+    /// Dispatch a chunk record by `M64CellMode` into `M64DecodedRecord`, verifying per-record CRC-32C.
+    pub fn decode_record(&self, index: usize) -> Result<Option<M64DecodedRecord>, M64ReadError> {
+        let Some(raw) = self.record_bytes(index) else {
+            return Ok(None);
+        };
+        let mode = M64CellMode::try_from(self.entry.chunk_record_mode).map_err(|_| {
+            M64ReadError::UnsupportedMode {
+                chunk: 0,
+                mode: self.entry.chunk_record_mode,
+            }
+        })?;
+        let record = match mode {
+            M64CellMode::Point => M64DecodedRecord::Point(bytemuck::pod_read_unaligned(raw)),
+            M64CellMode::Holo => M64DecodedRecord::Holo(bytemuck::pod_read_unaligned(raw)),
+            M64CellMode::Strata => {
+                let rec: M64StrataColumnRecord = bytemuck::pod_read_unaligned(raw);
+                rec.validate().map_err(|error| M64ReadError::Record {
+                    chunk: 0,
+                    record: index,
+                    error,
+                })?;
+                M64DecodedRecord::Strata(rec)
+            }
+            M64CellMode::PhaseJuncture => {
+                let rec: M64PhaseJunctureRecord = bytemuck::pod_read_unaligned(raw);
+                rec.validate().map_err(|error| M64ReadError::Record {
+                    chunk: 0,
+                    record: index,
+                    error,
+                })?;
+                M64DecodedRecord::PhaseJuncture(rec)
+            }
+            M64CellMode::Shell => {
+                let rec: M64ShellRecord = bytemuck::pod_read_unaligned(raw);
+                rec.validate().map_err(|error| M64ReadError::Record {
+                    chunk: 0,
+                    record: index,
+                    error,
+                })?;
+                M64DecodedRecord::Shell(rec)
+            }
+            M64CellMode::BioTissue => {
+                let rec: M64BioTissueRecord = bytemuck::pod_read_unaligned(raw);
+                rec.validate().map_err(|error| M64ReadError::Record {
+                    chunk: 0,
+                    record: index,
+                    error,
+                })?;
+                M64DecodedRecord::BioTissue(rec)
+            }
+        };
+        Ok(Some(record))
+    }
 }
 
 #[cfg(test)]
 #[path = "checked_reader_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod bio_tissue_reader_tests {
+    use super::*;
+    use crate::q42::m64_matter::bio_tissue_record::TISSUE_CLASS_MYOCARDIUM;
+
+    fn bio_container(payload: &[u8; 64]) -> Vec<u8> {
+        let mut header = M64Header::default();
+        header.total_file_size = 192;
+        header.chunk_count = 1;
+        header.chunk_table_offset = 64;
+        header.update_crc();
+        let mut entry = M64ChunkDirectoryEntry {
+            chunk_uuid: [0; 16],
+            spatial_hilbert_index: 0,
+            byte_offset: 128,
+            byte_length: 64,
+            record_count: 1,
+            srid_geodetic_code: 0,
+            lut_bank_epoch_id: 0,
+            chunk_record_mode: M64CellMode::BioTissue.as_u8(),
+            compression_flags: 0,
+            bao_root_hash_prefix: [0u8; 12],
+            entry_crc32c: 0,
+        };
+        entry.update_crc();
+        let mut buf = vec![0u8; 192];
+        buf[..64].copy_from_slice(bytemuck::bytes_of(&header));
+        buf[64..128].copy_from_slice(bytemuck::bytes_of(&entry));
+        buf[128..192].copy_from_slice(payload);
+        buf
+    }
+
+    #[test]
+    fn dispatches_mode_0x05_bio_tissue_and_rejects_corruption() {
+        let mut rec = M64BioTissueRecord::default();
+        rec.tissue_class_id = TISSUE_CLASS_MYOCARDIUM;
+        rec.apparent_density_kg_m3 = 1060;
+        rec.set_elastic_moduli_mpa(0.08, 0.04, 0.04, 0.02);
+        rec.update_crc();
+
+        let mut buf = bio_container(bytemuck::cast_ref(&rec));
+        let limits = M64ReadLimits {
+            max_file_bytes: 1024,
+            max_chunks: 4,
+            max_records: 4,
+        };
+        let mut scratch = [M64PayloadInterval::default(); 4];
+        let reader = M64Reader::parse(&buf, limits, &mut scratch).expect("bio tissue parse");
+        assert_eq!(reader.verification().record_crc_checked, 1);
+
+        let chunk = reader.chunk(0).expect("chunk 0");
+        assert_eq!(
+            chunk.decode_record(0).expect("decode"),
+            Some(M64DecodedRecord::BioTissue(rec))
+        );
+        assert_eq!(chunk.decode_record(1).expect("oob"), None);
+
+        buf[128] ^= 0x01;
+        assert!(matches!(
+            M64Reader::parse(&buf, limits, &mut scratch),
+            Err(M64ReadError::Record {
+                chunk: 0,
+                record: 0,
+                error: M64Error::ChecksumMismatch { .. },
+            })
+        ));
+    }
+}

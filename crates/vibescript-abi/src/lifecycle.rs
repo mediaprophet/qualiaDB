@@ -1,7 +1,7 @@
 //! Six-stage governed execution lifecycle (`Register -> Prepare -> Admit -> Execute -> Validate -> Commit/Abort`),
 //! deterministic trap taxonomy (`VibeTrap`), and `SentinelPolicyGate`.
 
-use crate::effects::{EffectSet, ExecutionMode, ResourceEnvelope};
+use crate::effects::{AsyncExecutionClass, EffectSet, ExecutionMode, ResourceEnvelope};
 use crate::identity::{PreparedCallHandle, RegistryGeneration, StableFuncId, VibeOpCode};
 use crate::memory::NQuin48;
 
@@ -127,6 +127,14 @@ pub struct AdmissionRequest {
     pub input_fingerprint: u64,
 }
 
+impl AdmissionRequest {
+    /// Returns the requested synchronous vs bounded-async execution class.
+    #[inline]
+    pub const fn async_class(&self) -> AsyncExecutionClass {
+        self.declared_envelope.async_class()
+    }
+}
+
 /// Scoped admission ticket returned by `SentinelPolicyGate::admit_call`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,6 +147,14 @@ pub struct AdmissionTicket {
     pub approved_envelope: ResourceEnvelope,
     pub expiry_lamport: u64,
     pub simulated: bool,
+}
+
+impl AdmissionTicket {
+    /// Returns the approved synchronous vs bounded-async execution class.
+    #[inline]
+    pub const fn async_class(&self) -> AsyncExecutionClass {
+        self.approved_envelope.async_class()
+    }
 }
 
 /// Compact, zero-heap cryptographic/audit receipt header for a VibeScript extension call.

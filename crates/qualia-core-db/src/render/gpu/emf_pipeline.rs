@@ -18,12 +18,10 @@
 mod emf_spectrum;
 
 use etalon::util::DeviceExt;
-#[allow(unused_imports)]
 pub use emf_spectrum::{
     emf_cells_from_loaded, emf_field_cell_from_optical, emf_field_cell_from_record64,
     evaluate_display_slice_rgba8, full_spectrum_sigma_to_linear_rgb,
 };
-#[allow(unused_imports)]
 pub use etalon_render::emf::{
     checked_field_bytes, checked_grid_cell_count, EmfFieldCell, EmfPipeline, EmfPipelineDesc,
     EmfSliceUniform, EMF_VOLUMETRIC_WGSL,
@@ -112,13 +110,11 @@ impl EmfState {
     }
 
     /// Access the underlying Etalon EMF pipeline.
-    #[allow(dead_code)]
     pub fn inner(&self) -> &etalon_render::emf::EmfPipeline {
         &self.inner
     }
 
     /// Mutable access to the underlying Etalon EMF pipeline.
-    #[allow(dead_code)]
     pub fn inner_mut(&mut self) -> &mut etalon_render::emf::EmfPipeline {
         &mut self.inner
     }
@@ -180,7 +176,7 @@ impl super::PortalGpu {
         // admission or allocation fails, the currently displayed field remains valid.
         let field_bind_group = self.device.create_bind_group(&etalon::BindGroupDescriptor {
             label: Some("emf-field-bind"),
-            layout: &self.emf.inner.field_layout,
+            layout: &self.emf.inner().field_layout,
             entries: &[etalon::BindGroupEntry {
                 binding: 0,
                 resource: field_buf.as_entire_binding(),
@@ -278,7 +274,7 @@ impl super::PortalGpu {
             manifold_gain,
             projection_mode,
         };
-        self.emf.inner.update_params(&self.queue, &params);
+        self.emf.inner_mut().update_params(&self.queue, &params);
     }
 
     /// Render the current EMF slice to the portal's color target.
@@ -290,8 +286,8 @@ impl super::PortalGpu {
         let Some(field_bind) = &self.emf.field_bind_group else {
             return Err("emf_render_slice: no field uploaded".into());
         };
-        render_pass.set_pipeline(&self.emf.inner.pipeline);
-        render_pass.set_bind_group(0, &self.emf.inner.params_bind_group, &[]);
+        render_pass.set_pipeline(&self.emf.inner().pipeline);
+        render_pass.set_bind_group(0, &self.emf.inner().params_bind_group, &[]);
         render_pass.set_bind_group(1, field_bind, &[]);
         render_pass.draw(0..6, 0..1);
         Ok(())

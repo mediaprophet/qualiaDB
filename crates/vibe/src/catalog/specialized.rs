@@ -38,7 +38,2385 @@ pub fn try_invoke(id: &str, args: &Value, span: Span) -> Option<Result<Value, Di
         "ClinicalRisk.framingham"
         | "OrganicChemistry.compute"
         | "OrganicChemistry.validate_smiles" => Some(engine_required(id, span)),
+        "Emf.openContainer"
+        | "Emf.buildContainer"
+        | "Emf.verifyContainer"
+        | "Emf.sonifyField"
+        | "Emf.evaluateDipole"
+        | "Qac.openContainer"
+        | "Qac.buildContainer"
+        | "Qac.renderBinaural"
+        | "Qac.evaluateDirectivity"
+        | "Qac.sonifyEmf"
+        | "Dicom.parseDataset"
+        | "Dicom.verifyDataset"
+        | "Dicom.toEmfField"
+        | "Dicom.reconstructVolume"
+        | "Sensing.admitEvidence"
+        | "Sensing.verifyCalibration" => Some(up02_containers::invoke(id, args, span)),
         _ => None,
+    }
+}
+
+mod up02_containers {
+    use super::super::envelope_admission::{
+        admit_envelope, build_envelope, bytes_to_vibe_list, decode_byte_list,
+        extract_binary_bytes, reject_forbidden_source_keys, select_admitted_entry, AdmittedEntry,
+        AdmittedEnvelope, BuildEntry, EnvelopeFamily,
+    };
+    use crate::error::{DiagCode, Diagnostic};
+    use crate::span::Span;
+    use crate::value::Value;
+    use etalon_vibe::{
+        oracle_bioelectric_dipole_preview, oracle_clock_stamp_drift_ns,
+        oracle_decode_container_summary, oracle_dicom_modality_check,
+        oracle_evaluate_directivity_sh, oracle_radiative_transfer_slice,
+        oracle_render_binaural_frame, oracle_sh_irradiance_probe, oracle_sonify_emf_envelope,
+        oracle_verify_evidence_gate,
+    };
+    use std::collections::BTreeMap;
+    use vibescript_abi::VibeTrap;
+
+    pub(super) fn invoke(id: &str, args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        reject_forbidden_source_keys(args, span)?;
+        match id {
+            "Emf.buildContainer" => build_container(EnvelopeFamily::EmfV4, args, span),
+            "Emf.openContainer" => open_container(EnvelopeFamily::EmfV4, args, span),
+            "Emf.verifyContainer" => verify_emf_container(args, span),
+            "Emf.evaluateDipole" => evaluate_dipole(args, span),
+            "Emf.sonifyField" => sonify_emf_field(args, span),
+            "Qac.buildContainer" => build_container(EnvelopeFamily::QacV1, args, span),
+            "Qac.openContainer" => open_container(EnvelopeFamily::QacV1, args, span),
+            "Qac.renderBinaural" => render_binaural(args, span),
+            "Qac.evaluateDirectivity" => evaluate_directivity(args, span),
+            "Qac.sonifyEmf" => qac_sonify_emf(args, span),
+            "Dicom.parseDataset" => dicom_parse_or_verify(args, false, span),
+            "Dicom.verifyDataset" => dicom_parse_or_verify(args, true, span),
+            "Dicom.toEmfField" => dicom_to_emf_field(args, span),
+            "Dicom.reconstructVolume" => dicom_reconstruct_volume(args, span),
+            "Sensing.admitEvidence" => sensing_admit_evidence(args, span),
+            "Sensing.verifyCalibration" => sensing_verify_calibration(args, span),
+            _ => Err(Diagnostic::new(
+                DiagCode::E300,
+                span,
+                format!("unsupported UP-02 catalog invoke `{id}`"),
+            )),
+        }
+    }
+
+    fn trap_err(op: &str, trap: VibeTrap, span: Span) -> Diagnostic {
+        Diagnostic::new(
+            DiagCode::E600,
+            span,
+            format!("{op}: etalon-vibe rejected inputs with {trap:?}"),
+        )
+    }
+
+    fn rec_map<'a>(val: &'a Value, ctx: &str, span: Span) -> Result<&'a BTreeMap<String, Value>, Diagnostic> {
+        match val {
+            Value::Record(rec) => Ok(rec),
+            _ => Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("{ctx} expects a Record value"),
+            )),
+        }
+    }
+
+    fn opt_u64(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<Option<u64>, Diagnostic> {
+        match rec.get(key) {
+            None => Ok(None),
+            Some(Value::U64(u)) => Ok(Some(*u)),
+            Some(Value::I64(i)) if *i >= 0 => Ok(Some(*i as u64)),
+            Some(_) => Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` must be a non-negative integer"),
+            )),
+        }
+    }
+
+    fn req_u64(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<u64, Diagnostic> {
+        opt_u64(rec, key, span)?.ok_or_else(|| {
+            Diagnostic::new(DiagCode::E100, span, format!("missing required integer field `{key}`"))
+        })
+    }
+
+    fn opt_i64(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<Option<i64>, Diagnostic> {
+        match rec.get(key) {
+            None => Ok(None),
+            Some(Value::I64(i)) => Ok(Some(*i)),
+            Some(Value::U64(u)) if *u <= i64::MAX as u64 => Ok(Some(*u as i64)),
+            Some(_) => Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` must be an i64 integer"),
+            )),
+        }
+    }
+
+    fn opt_u32(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<Option<u32>, Diagnostic> {
+        match opt_u64(rec, key, span)? {
+            None => Ok(None),
+            Some(v) => u32::try_from(v).map(Some).map_err(|_| {
+                Diagnostic::new(DiagCode::E100, span, format!("field `{key}` overflows u32"))
+            }),
+        }
+    }
+
+    fn opt_u16(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<Option<u16>, Diagnostic> {
+        match opt_u64(rec, key, span)? {
+            None => Ok(None),
+            Some(v) => u16::try_from(v).map(Some).map_err(|_| {
+                Diagnostic::new(DiagCode::E100, span, format!("field `{key}` overflows u16"))
+            }),
+        }
+    }
+
+    fn opt_f64(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<Option<f64>, Diagnostic> {
+        match rec.get(key) {
+            None => Ok(None),
+            Some(v) => match v.as_f64() {
+                Some(n) if n.is_finite() => Ok(Some(n)),
+                _ => Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("field `{key}` must be a finite number"),
+                )),
+            },
+        }
+    }
+
+    fn req_f64(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<f64, Diagnostic> {
+        opt_f64(rec, key, span)?.ok_or_else(|| {
+            Diagnostic::new(DiagCode::E100, span, format!("missing required numeric field `{key}`"))
+        })
+    }
+
+    fn opt_bool(rec: &BTreeMap<String, Value>, key: &str, span: Span) -> Result<Option<bool>, Diagnostic> {
+        match rec.get(key) {
+            None => Ok(None),
+            Some(Value::Bool(b)) => Ok(Some(*b)),
+            Some(_) => Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` must be a Bool"),
+            )),
+        }
+    }
+
+    fn opt_f32_arr<const N: usize>(
+        rec: &BTreeMap<String, Value>,
+        key: &str,
+        span: Span,
+    ) -> Result<Option<[f32; N]>, Diagnostic> {
+        let Some(val) = rec.get(key) else {
+            return Ok(None);
+        };
+        let Value::List(xs) = val else {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` must be a List<{N}> of finite floats"),
+            ));
+        };
+        if xs.len() != N {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` requires length {N}, got {}", xs.len()),
+            ));
+        }
+        let mut out = [0.0f32; N];
+        for (i, item) in xs.iter().enumerate() {
+            let v = item.as_f64().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, format!("non-numeric element in `{key}`"))
+            })?;
+            let f = v as f32;
+            if !f.is_finite() {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("non-finite float in `{key}`"),
+                ));
+            }
+            out[i] = f;
+        }
+        Ok(Some(out))
+    }
+
+    fn opt_f64_arr<const N: usize>(
+        rec: &BTreeMap<String, Value>,
+        key: &str,
+        span: Span,
+    ) -> Result<Option<[f64; N]>, Diagnostic> {
+        let Some(val) = rec.get(key) else {
+            return Ok(None);
+        };
+        let Value::List(xs) = val else {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` must be a List<{N}> of finite floats"),
+            ));
+        };
+        if xs.len() != N {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("field `{key}` requires length {N}, got {}", xs.len()),
+            ));
+        }
+        let mut out = [0.0f64; N];
+        for (i, item) in xs.iter().enumerate() {
+            let v = item.as_f64().ok_or_else(|| {
+                Diagnostic::new(DiagCode::E100, span, format!("non-numeric element in `{key}`"))
+            })?;
+            if !v.is_finite() {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("non-finite float in `{key}`"),
+                ));
+            }
+            out[i] = v;
+        }
+        Ok(Some(out))
+    }
+
+    fn read_f32_le(bytes: &[u8], off: usize) -> Result<f32, Diagnostic> {
+        let arr: [u8; 4] = bytes
+            .get(off..off + 4)
+            .and_then(|s| s.try_into().ok())
+            .ok_or_else(|| Diagnostic::new(DiagCode::E100, Span::new(0, 0), "payload too short for f32"))?;
+        let f = f32::from_le_bytes(arr);
+        if !f.is_finite() {
+            return Err(Diagnostic::new(DiagCode::E100, Span::new(0, 0), "non-finite f32 in binary payload"));
+        }
+        Ok(f)
+    }
+
+    fn read_f64_le(bytes: &[u8], off: usize) -> Result<f64, Diagnostic> {
+        let arr: [u8; 8] = bytes
+            .get(off..off + 8)
+            .and_then(|s| s.try_into().ok())
+            .ok_or_else(|| Diagnostic::new(DiagCode::E100, Span::new(0, 0), "payload too short for f64"))?;
+        let f = f64::from_le_bytes(arr);
+        if !f.is_finite() {
+            return Err(Diagnostic::new(DiagCode::E100, Span::new(0, 0), "non-finite f64 in binary payload"));
+        }
+        Ok(f)
+    }
+
+    struct OwnedBuildEntry {
+        mode: u16,
+        revision: u16,
+        flags: u32,
+        stream_id: u32,
+        frame_id: u32,
+        start_tick: i64,
+        time_count: u64,
+        spatial_key: u64,
+        record_count: u64,
+        stride: u32,
+        descriptor_id: u32,
+        payload: Vec<u8>,
+    }
+
+    fn parse_build_entry(
+        rec: &BTreeMap<String, Value>,
+        idx: usize,
+        span: Span,
+    ) -> Result<OwnedBuildEntry, Diagnostic> {
+        let payload_val = rec.get("payload").ok_or_else(|| {
+            Diagnostic::new(
+                DiagCode::E100,
+                span,
+                format!("entry {idx} requires binary `payload` byte list"),
+            )
+        })?;
+        let payload = decode_byte_list(payload_val, "payload", span)?;
+        let mode = opt_u16(rec, "mode", span)?.unwrap_or(0x0100);
+        let revision = opt_u16(rec, "revision", span)?.unwrap_or(1);
+        let flags = opt_u32(rec, "flags", span)?.unwrap_or(0);
+        let stream_id = opt_u32(rec, "stream_id", span)?.unwrap_or(0);
+        let frame_id = opt_u32(rec, "frame_id", span)?.unwrap_or(0);
+        let start_tick = opt_i64(rec, "start_tick", span)?.unwrap_or(0);
+        let time_count = opt_u64(rec, "time_count", span)?.unwrap_or(0);
+        let spatial_key = opt_u64(rec, "spatial_key", span)?.unwrap_or(0);
+        let descriptor_id = opt_u32(rec, "descriptor_id", span)?
+            .or(opt_u32(rec, "entry_id", span)?)
+            .unwrap_or((idx + 1) as u32);
+        let (record_count, stride) = match (opt_u64(rec, "record_count", span)?, opt_u32(rec, "stride", span)?) {
+            (Some(rc), Some(st)) => (rc, st),
+            (Some(rc), None) => {
+                if rc == 0 || payload.len() as u64 % rc != 0 {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("entry {idx} payload len {} not divisible by record_count {rc}", payload.len()),
+                    ));
+                }
+                let st = u32::try_from(payload.len() as u64 / rc).map_err(|_| {
+                    Diagnostic::new(DiagCode::E100, span, "computed stride overflows u32")
+                })?;
+                (rc, st)
+            }
+            (None, Some(st)) => {
+                if st == 0 || payload.len() % (st as usize) != 0 {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("entry {idx} payload len {} not divisible by stride {st}", payload.len()),
+                    ));
+                }
+                ((payload.len() / (st as usize)) as u64, st)
+            }
+            (None, None) => {
+                let st = u32::try_from(payload.len()).map_err(|_| {
+                    Diagnostic::new(DiagCode::E100, span, "payload len overflows u32 stride")
+                })?;
+                (1u64, st)
+            }
+        };
+        Ok(OwnedBuildEntry {
+            mode,
+            revision,
+            flags,
+            stream_id,
+            frame_id,
+            start_tick,
+            time_count,
+            spatial_key,
+            record_count,
+            stride,
+            descriptor_id,
+            payload,
+        })
+    }
+
+    fn build_container(
+        family: EnvelopeFamily,
+        args: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        let rec = rec_map(args, "buildContainer", span)?;
+        let alignment_4096 = match opt_u64(rec, "alignment", span)? {
+            None | Some(64) => false,
+            Some(4096) => true,
+            Some(other) => {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("alignment must be 64 or 4096, got {other}"),
+                ))
+            }
+        };
+        let metadata = match rec.get("metadata") {
+            None => Vec::new(),
+            Some(Value::List(xs)) if xs.is_empty() => Vec::new(),
+            Some(other) => decode_byte_list(other, "metadata", span)?,
+        };
+        let owned_entries: Vec<OwnedBuildEntry> = match rec.get("entries") {
+            Some(Value::List(list)) => {
+                if list.is_empty() {
+                    return Err(Diagnostic::new(
+                        DiagCode::E500,
+                        span,
+                        "buildContainer requires at least 1 entry (empty containers refused)",
+                    ));
+                }
+                let mut out = Vec::with_capacity(list.len());
+                for (i, item) in list.iter().enumerate() {
+                    let er = rec_map(item, "entries element", span)?;
+                    reject_forbidden_source_keys(item, span)?;
+                    out.push(parse_build_entry(er, i, span)?);
+                }
+                out
+            }
+            Some(_) => {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    "`entries` must be a List of entry Records",
+                ))
+            }
+            None => vec![parse_build_entry(rec, 0, span)?],
+        };
+        let refs: Vec<BuildEntry<'_>> = owned_entries
+            .iter()
+            .map(|e| BuildEntry {
+                mode: e.mode,
+                revision: e.revision,
+                flags: e.flags,
+                stream_id: e.stream_id,
+                frame_id: e.frame_id,
+                start_tick: e.start_tick,
+                time_count: e.time_count,
+                spatial_key: e.spatial_key,
+                record_count: e.record_count,
+                stride: e.stride,
+                descriptor_id: e.descriptor_id,
+                payload: &e.payload,
+            })
+            .collect();
+        let bytes = build_envelope(family, alignment_4096, &metadata, &refs)
+            .map_err(|msg| Diagnostic::new(DiagCode::E500, span, msg))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("family".into(), Value::String(family.label().into()));
+        out.insert("version".into(), Value::U64(u64::from(family.version())));
+        out.insert("entry_count".into(), Value::U64(refs.len() as u64));
+        out.insert("total_bytes".into(), Value::U64(bytes.len() as u64));
+        out.insert("bytes".into(), bytes_to_vibe_list(&bytes));
+        Ok(Value::Record(out))
+    }
+
+    fn entry_summary_record(idx: usize, e: &AdmittedEntry<'_>) -> Value {
+        let mut r = BTreeMap::new();
+        r.insert("entry_index".into(), Value::U64(idx as u64));
+        r.insert("entry_id".into(), Value::U64(u64::from(e.descriptor_id)));
+        r.insert("mode".into(), Value::U64(u64::from(e.mode)));
+        r.insert("revision".into(), Value::U64(u64::from(e.revision)));
+        r.insert("flags".into(), Value::U64(u64::from(e.flags)));
+        r.insert("stream_id".into(), Value::U64(u64::from(e.stream_id)));
+        r.insert("frame_id".into(), Value::U64(u64::from(e.frame_id)));
+        r.insert("start_tick".into(), Value::I64(e.start_tick));
+        r.insert("time_count".into(), Value::U64(e.time_count));
+        r.insert("spatial_key".into(), Value::U64(e.spatial_key));
+        r.insert("record_count".into(), Value::U64(e.record_count));
+        r.insert("stride".into(), Value::U64(u64::from(e.stride)));
+        r.insert("payload_offset".into(), Value::U64(e.payload_offset));
+        r.insert("stored_bytes".into(), Value::U64(e.stored_bytes));
+        r.insert("decoded_bytes".into(), Value::U64(e.decoded_bytes));
+        r.insert("digest".into(), bytes_to_vibe_list(e.digest));
+        Value::Record(r)
+    }
+
+    fn admit_family_and_select<'a>(
+        bytes: &'a [u8],
+        family: EnvelopeFamily,
+        args: &Value,
+        span: Span,
+    ) -> Result<(AdmittedEnvelope<'a>, usize), Diagnostic> {
+        let env = admit_envelope(bytes, family).map_err(|msg| {
+            Diagnostic::new(
+                DiagCode::E500,
+                span,
+                format!("strict admission gate rejected {} container: {msg}", family.label()),
+            )
+        })?;
+        let (idx, _) = select_admitted_entry(&env, args, span)?;
+        Ok((env, idx))
+    }
+
+    fn qac_modes_mask(env: &AdmittedEnvelope<'_>) -> u32 {
+        let mut mask = 0u32;
+        for e in &env.entries {
+            let bit = u32::from(e.mode.saturating_sub(0x0100)) & 0x03;
+            mask |= 1u32 << bit;
+        }
+        mask.max(1)
+    }
+
+    fn open_container(
+        family: EnvelopeFamily,
+        args: &Value,
+        span: Span,
+    ) -> Result<Value, Diagnostic> {
+        let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+        let (env, idx) = admit_family_and_select(&bytes, family, args, span)?;
+        let selected = &env.entries[idx];
+        let rec = rec_map(args, "openContainer", span)?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("family".into(), Value::String(env.family.label().into()));
+        out.insert("version".into(), Value::U64(u64::from(env.version)));
+        out.insert("flags".into(), Value::U64(u64::from(env.flags)));
+        out.insert("index_digest".into(), bytes_to_vibe_list(env.index_digest));
+        out.insert("entry_count".into(), Value::U64(env.entries.len() as u64));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("mode".into(), Value::U64(u64::from(selected.mode)));
+        out.insert("revision".into(), Value::U64(u64::from(selected.revision)));
+        out.insert("stream_id".into(), Value::U64(u64::from(selected.stream_id)));
+        out.insert("frame_id".into(), Value::U64(u64::from(selected.frame_id)));
+        out.insert("record_count".into(), Value::U64(selected.record_count));
+        out.insert("stride".into(), Value::U64(u64::from(selected.stride)));
+        out.insert("stored_bytes".into(), Value::U64(selected.stored_bytes));
+        out.insert("decoded_bytes".into(), Value::U64(selected.decoded_bytes));
+        out.insert("metadata_bytes".into(), Value::U64(env.metadata.len() as u64));
+        out.insert("total_bytes".into(), Value::U64(env.total_bytes));
+        out.insert(
+            "entries".into(),
+            Value::List(
+                env.entries
+                    .iter()
+                    .enumerate()
+                    .map(|(i, e)| entry_summary_record(i, e))
+                    .collect(),
+            ),
+        );
+
+        if family == EnvelopeFamily::QacV1 {
+            let sample_rate_hz = opt_u32(rec, "sample_rate_hz", span)?.unwrap_or(48_000);
+            let frame_samples = opt_u32(rec, "frame_samples", span)?
+                .unwrap_or_else(|| selected.record_count.min(u64::from(u32::MAX)) as u32);
+            let modes_mask = opt_u32(rec, "modes_mask", span)?.unwrap_or_else(|| qac_modes_mask(&env));
+            let header_meta = [
+                env.entries.len() as u32,
+                sample_rate_hz,
+                frame_samples,
+                modes_mask,
+            ];
+            let summary = oracle_decode_container_summary(header_meta)
+                .map_err(|t| trap_err("Qac.openContainer", t, span))?;
+            out.insert("duration_micros".into(), Value::U64(summary[0]));
+            out.insert("active_mode_count".into(), Value::U64(summary[1]));
+        }
+
+        Ok(Value::Record(out))
+    }
+
+    fn verify_emf_container(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+        let (env, idx) = admit_family_and_select(&bytes, EnvelopeFamily::EmfV4, args, span)?;
+        let selected = &env.entries[idx];
+        let rec = rec_map(args, "Emf.verifyContainer", span)?;
+
+        if let Some(expected_count) = opt_u64(rec, "expected_entry_count", span)? {
+            if env.entries.len() as u64 != expected_count {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!(
+                        "Emf.verifyContainer expected {expected_count} entries, found {}",
+                        env.entries.len()
+                    ),
+                ));
+            }
+        }
+        if let Some(expected_mode) = opt_u16(rec, "expected_mode", span)? {
+            if selected.mode != expected_mode {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!(
+                        "Emf.verifyContainer expected mode {expected_mode:#06x}, found {:#06x}",
+                        selected.mode
+                    ),
+                ));
+            }
+        }
+
+        let mut out = BTreeMap::new();
+        out.insert("verified".into(), Value::Bool(true));
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("family".into(), Value::String(EnvelopeFamily::EmfV4.label().into()));
+        out.insert("version".into(), Value::U64(4));
+        out.insert("entry_count".into(), Value::U64(env.entries.len() as u64));
+        out.insert("verified_entries".into(), Value::U64(env.entries.len() as u64));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("mode".into(), Value::U64(u64::from(selected.mode)));
+        out.insert("total_bytes".into(), Value::U64(env.total_bytes));
+        Ok(Value::Record(out))
+    }
+
+    fn evaluate_dipole(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+        let (env, idx) = admit_family_and_select(&bytes, EnvelopeFamily::EmfV4, args, span)?;
+        let selected = &env.entries[idx];
+        let rec = rec_map(args, "Emf.evaluateDipole", span)?;
+
+        let (dipole, probe, gain) = if let (Some(d), Some(p)) = (
+            opt_f32_arr::<3>(rec, "dipole_moment_xyz", span)?,
+            opt_f32_arr::<3>(rec, "probe_offset_m", span)?,
+        ) {
+            let g = opt_f64(rec, "gain", span)?.unwrap_or(1.0) as f32;
+            (d, p, g)
+        } else if selected.payload.len() >= 28 {
+            let p = selected.payload;
+            (
+                [read_f32_le(p, 0)?, read_f32_le(p, 4)?, read_f32_le(p, 8)?],
+                [read_f32_le(p, 12)?, read_f32_le(p, 16)?, read_f32_le(p, 20)?],
+                read_f32_le(p, 24)?,
+            )
+        } else {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "Emf.evaluateDipole requires dipole_moment_xyz + probe_offset_m or >= 28-byte f32 binary entry payload",
+            ));
+        };
+
+        let res = oracle_bioelectric_dipole_preview(dipole, probe, gain)
+            .map_err(|t| trap_err("Emf.evaluateDipole", t, span))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("potential_uv".into(), Value::F64(f64::from(res[0])));
+        out.insert("field_mag_uv_per_m".into(), Value::F64(f64::from(res[1])));
+        out.insert(
+            "values".into(),
+            Value::List(vec![
+                Value::F64(f64::from(res[0])),
+                Value::F64(f64::from(res[1])),
+            ]),
+        );
+
+        if let Some(opt) = opt_f32_arr::<3>(rec, "optical_params", span)? {
+            let inc = opt_f64(rec, "incident_radiance", span)?.unwrap_or(1.0) as f32;
+            let rt = oracle_radiative_transfer_slice(opt, inc)
+                .map_err(|t| trap_err("Emf.evaluateDipole(radiative_transfer)", t, span))?;
+            out.insert("transmitted_radiance".into(), Value::F64(f64::from(rt[0])));
+            out.insert(
+                "single_scatter_radiance".into(),
+                Value::F64(f64::from(rt[1])),
+            );
+        }
+        if let (Some(sh), Some(norm)) = (
+            opt_f32_arr::<4>(rec, "sh_l0_l1", span)?,
+            opt_f32_arr::<3>(rec, "normal_xyz", span)?,
+        ) {
+            let irr = oracle_sh_irradiance_probe(sh, norm)
+                .map_err(|t| trap_err("Emf.evaluateDipole(sh_irradiance)", t, span))?;
+            out.insert("irradiance".into(), Value::F64(f64::from(irr[0])));
+            out.insert(
+                "directional_contrast".into(),
+                Value::F64(f64::from(irr[1])),
+            );
+        }
+
+        Ok(Value::Record(out))
+    }
+
+    fn extract_emf_sample(
+        rec: &BTreeMap<String, Value>,
+        entry: &AdmittedEntry<'_>,
+        span: Span,
+    ) -> Result<[f64; 3], Diagnostic> {
+        if let Some(arr) = opt_f64_arr::<3>(rec, "emf_sample", span)? {
+            return Ok(arr);
+        }
+        if rec.contains_key("wavelength_nm")
+            || rec.contains_key("e_mag_v_per_m")
+            || rec.contains_key("spectral_sigma")
+        {
+            return Ok([
+                req_f64(rec, "wavelength_nm", span)?,
+                req_f64(rec, "e_mag_v_per_m", span)?,
+                req_f64(rec, "spectral_sigma", span)?,
+            ]);
+        }
+        // Decode either 64-byte `EmfCellRecord64` (e_field[0..12], wavelength[28..32], sigma[56..60])
+        // or packed 24-byte [f64; 3] LE sample directly from the admitted binary entry payload.
+        if entry.payload.len() == 64 {
+            let p = entry.payload;
+            let ex = f64::from(read_f32_le(p, 0)?);
+            let ey = f64::from(read_f32_le(p, 4)?);
+            let ez = f64::from(read_f32_le(p, 8)?);
+            let e_mag = (ex * ex + ey * ey + ez * ez).sqrt();
+            let wavelength_nm = f64::from(read_f32_le(p, 28)?);
+            let spectral_sigma = f64::from(read_f32_le(p, 56)?);
+            return Ok([wavelength_nm, e_mag, spectral_sigma]);
+        }
+        if entry.payload.len() >= 24 {
+            let p = entry.payload;
+            return Ok([
+                read_f64_le(p, 0)?,
+                read_f64_le(p, 8)?,
+                read_f64_le(p, 16)?,
+            ]);
+        }
+        Err(Diagnostic::new(
+            DiagCode::E100,
+            span,
+            "missing emf_sample [wavelength_nm, e_mag_v_per_m, spectral_sigma] or 64B/24B EMF binary payload",
+        ))
+    }
+
+    fn sonify_emf_field(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+        let (env, idx) = admit_family_and_select(&bytes, EnvelopeFamily::EmfV4, args, span)?;
+        let selected = &env.entries[idx];
+        let rec = rec_map(args, "Emf.sonifyField", span)?;
+        let sample = extract_emf_sample(rec, selected, span)?;
+        let res = oracle_sonify_emf_envelope(sample)
+            .map_err(|t| trap_err("Emf.sonifyField", t, span))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("carrier_hz".into(), Value::F64(res[0]));
+        out.insert("amplitude_norm".into(), Value::F64(res[1]));
+        out.insert(
+            "values".into(),
+            Value::List(vec![Value::F64(res[0]), Value::F64(res[1])]),
+        );
+        Ok(Value::Record(out))
+    }
+
+    fn render_binaural(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+        let (env, idx) = admit_family_and_select(&bytes, EnvelopeFamily::QacV1, args, span)?;
+        let selected = &env.entries[idx];
+        let rec = rec_map(args, "Qac.renderBinaural", span)?;
+
+        let (pose, gain_lin) = if let Some(pose) = opt_f32_arr::<3>(rec, "pose_deg_dist", span)? {
+            let gain = opt_f64(rec, "gain_linear", span)?.unwrap_or(1.0) as f32;
+            (pose, gain)
+        } else if rec.contains_key("azimuth_deg") || rec.contains_key("distance_m") {
+            let az = req_f64(rec, "azimuth_deg", span)? as f32;
+            let el = opt_f64(rec, "elevation_deg", span)?.unwrap_or(0.0) as f32;
+            let dist = req_f64(rec, "distance_m", span)? as f32;
+            let gain = opt_f64(rec, "gain_linear", span)?.unwrap_or(1.0) as f32;
+            ([az, el, dist], gain)
+        } else if selected.payload.len() >= 16 {
+            let p = selected.payload;
+            (
+                [read_f32_le(p, 0)?, read_f32_le(p, 4)?, read_f32_le(p, 8)?],
+                read_f32_le(p, 12)?,
+            )
+        } else {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "Qac.renderBinaural requires pose_deg_dist or >= 16B binaural payload",
+            ));
+        };
+
+        let res = oracle_render_binaural_frame(pose, gain_lin)
+            .map_err(|t| trap_err("Qac.renderBinaural", t, span))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("left_gain".into(), Value::F64(f64::from(res[0])));
+        out.insert("right_gain".into(), Value::F64(f64::from(res[1])));
+        out.insert("itd_sec".into(), Value::F64(f64::from(res[2])));
+        out.insert(
+            "values".into(),
+            Value::List(vec![
+                Value::F64(f64::from(res[0])),
+                Value::F64(f64::from(res[1])),
+                Value::F64(f64::from(res[2])),
+            ]),
+        );
+        Ok(Value::Record(out))
+    }
+
+    fn evaluate_directivity(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+        let (env, idx) = admit_family_and_select(&bytes, EnvelopeFamily::QacV1, args, span)?;
+        let selected = &env.entries[idx];
+        let rec = rec_map(args, "Qac.evaluateDirectivity", span)?;
+
+        let (angles, weights) = if let (Some(a), Some(w)) = (
+            opt_f32_arr::<2>(rec, "angles_rad", span)?,
+            opt_f32_arr::<4>(rec, "weights_l0_l1", span)?,
+        ) {
+            (a, w)
+        } else if selected.payload.len() >= 24 {
+            let p = selected.payload;
+            (
+                [read_f32_le(p, 0)?, read_f32_le(p, 4)?],
+                [
+                    read_f32_le(p, 8)?,
+                    read_f32_le(p, 12)?,
+                    read_f32_le(p, 16)?,
+                    read_f32_le(p, 20)?,
+                ],
+            )
+        } else {
+            return Err(Diagnostic::new(
+                DiagCode::E100,
+                span,
+                "Qac.evaluateDirectivity requires angles_rad + weights_l0_l1 or >= 24B directivity payload",
+            ));
+        };
+
+        let res = oracle_evaluate_directivity_sh(angles, weights)
+            .map_err(|t| trap_err("Qac.evaluateDirectivity", t, span))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("directivity_gain".into(), Value::F64(f64::from(res[0])));
+        out.insert("l0_energy_ratio".into(), Value::F64(f64::from(res[1])));
+        out.insert(
+            "values".into(),
+            Value::List(vec![
+                Value::F64(f64::from(res[0])),
+                Value::F64(f64::from(res[1])),
+            ]),
+        );
+        Ok(Value::Record(out))
+    }
+
+    fn qac_sonify_emf(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let rec = rec_map(args, "Qac.sonifyEmf", span)?;
+        let (primary_bytes, primary_family, qac_extra) = if rec.contains_key("emf_bytes") {
+            let emf = extract_binary_bytes(args, &["emf_bytes"], span)?;
+            let qac = if let Some(qval) = rec.get("qac_bytes") {
+                Some(decode_byte_list(qval, "qac_bytes", span)?)
+            } else {
+                None
+            };
+            (emf, EnvelopeFamily::EmfV4, qac)
+        } else if rec.contains_key("qac_bytes") {
+            let qac = extract_binary_bytes(args, &["qac_bytes"], span)?;
+            (qac, EnvelopeFamily::QacV1, None)
+        } else {
+            let bytes = extract_binary_bytes(args, &["bytes", "container"], span)?;
+            if bytes.len() < 8 {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    "Qac.sonifyEmf container shorter than 8-byte family magic",
+                ));
+            }
+            let fam = if &bytes[..8] == EnvelopeFamily::EmfV4.magic() {
+                EnvelopeFamily::EmfV4
+            } else if &bytes[..8] == EnvelopeFamily::QacV1.magic() {
+                EnvelopeFamily::QacV1
+            } else {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    "Qac.sonifyEmf requires admitted Q42EMF64 v4 or qac\\0\\0\\0\\0\\0 v1 binary container",
+                ));
+            };
+            (bytes, fam, None)
+        };
+
+        if let Some(ref qb) = qac_extra {
+            admit_envelope(qb, EnvelopeFamily::QacV1).map_err(|msg| {
+                Diagnostic::new(DiagCode::E500, span, format!("admitting qac_bytes failed: {msg}"))
+            })?;
+        }
+        let (env, idx) = admit_family_and_select(&primary_bytes, primary_family, args, span)?;
+        let selected = &env.entries[idx];
+        let sample = extract_emf_sample(rec, selected, span)?;
+        let sonified = oracle_sonify_emf_envelope(sample)
+            .map_err(|t| trap_err("Qac.sonifyEmf", t, span))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("source_family".into(), Value::String(primary_family.label().into()));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert(
+            "entry_id".into(),
+            Value::U64(u64::from(selected.descriptor_id)),
+        );
+        out.insert("carrier_hz".into(), Value::F64(sonified[0]));
+        out.insert("amplitude_norm".into(), Value::F64(sonified[1]));
+        out.insert(
+            "values".into(),
+            Value::List(vec![Value::F64(sonified[0]), Value::F64(sonified[1])]),
+        );
+
+        if let Some(pose) = opt_f32_arr::<3>(rec, "pose_deg_dist", span)? {
+            let gain = opt_f64(rec, "gain_linear", span)?.unwrap_or(1.0) as f32;
+            let bin = oracle_render_binaural_frame(pose, gain)
+                .map_err(|t| trap_err("Qac.sonifyEmf(binaural)", t, span))?;
+            out.insert("left_gain".into(), Value::F64(f64::from(bin[0])));
+            out.insert("right_gain".into(), Value::F64(f64::from(bin[1])));
+            out.insert("itd_sec".into(), Value::F64(f64::from(bin[2])));
+        }
+        Ok(Value::Record(out))
+    }
+
+    // ── DICOM Part-10 binary parser & gate ──────────────────────────────
+
+    const TS_IMPLICIT_LE: &str = "1.2.840.10008.1.2";
+    const TS_EXPLICIT_LE: &str = "1.2.840.10008.1.2.1";
+    const TS_J2K_LOSSLESS: &str = "1.2.840.10008.1.2.4.90";
+    const TS_J2K: &str = "1.2.840.10008.1.2.4.91";
+    const TS_JPEG_BASELINE: &str = "1.2.840.10008.1.2.4.50";
+    const TS_JPEG_EXTENDED: &str = "1.2.840.10008.1.2.4.51";
+    const TS_RLE_LOSSLESS: &str = "1.2.840.10008.1.2.5";
+
+    struct ParsedDicom {
+        modality: String,
+        modality_code: u32,
+        transfer_syntax_uid: String,
+        encapsulated: bool,
+        rows: u16,
+        columns: u16,
+        bits_allocated: u16,
+        bits_stored: u16,
+        samples_per_pixel: u16,
+        pixel_representation: u16,
+        bytes_per_voxel: u32,
+        supported: bool,
+        pixel_offset: Option<usize>,
+        pixel_length: usize,
+        mean_norm_intensity: f64,
+    }
+
+    fn dicom_vr_is_long(vr: [u8; 2]) -> bool {
+        matches!(
+            &vr,
+            b"OB"
+                | b"OD"
+                | b"OF"
+                | b"OL"
+                | b"OV"
+                | b"OW"
+                | b"SQ"
+                | b"SV"
+                | b"UC"
+                | b"UN"
+                | b"UR"
+                | b"UT"
+                | b"UV"
+        )
+    }
+
+    fn dicom_str(bytes: &[u8]) -> String {
+        let slice = match bytes.iter().position(|&b| b == 0) {
+            Some(i) => &bytes[..i],
+            None => bytes,
+        };
+        String::from_utf8_lossy(slice).trim().to_string()
+    }
+
+    fn dicom_u16(bytes: &[u8], vr: Option<[u8; 2]>) -> Result<u16, String> {
+        if vr == Some(*b"US") || vr == Some(*b"SS") || (vr.is_none() && bytes.len() == 2) {
+            if bytes.len() < 2 {
+                return Err("truncated binary US DICOM tag".to_string());
+            }
+            return Ok(u16::from_le_bytes([bytes[0], bytes[1]]));
+        }
+        let s = dicom_str(bytes);
+        if let Ok(v) = s.parse::<u16>() {
+            return Ok(v);
+        }
+        if bytes.len() == 2 {
+            return Ok(u16::from_le_bytes([bytes[0], bytes[1]]));
+        }
+        Err(format!("invalid DICOM u16 value `{s}`"))
+    }
+
+    fn map_dicom_modality(m: &str) -> Option<u32> {
+        match m.trim().to_ascii_uppercase().as_str() {
+            "CT" => Some(1),
+            "MR" => Some(2),
+            "PT" | "PET" => Some(3),
+            "US" => Some(4),
+            "NM" => Some(5),
+            "XA" | "CR" | "DX" => Some(6),
+            _ => None,
+        }
+    }
+
+    struct RawDicomElem {
+        tag: u32,
+        vr: Option<[u8; 2]>,
+        length: u32,
+        header_size: usize,
+    }
+
+    fn read_dicom_elem_header(
+        data: &[u8],
+        offset: usize,
+        explicit_vr: bool,
+    ) -> Result<Option<RawDicomElem>, String> {
+        if offset == data.len() {
+            return Ok(None);
+        }
+        if offset + 8 > data.len() {
+            return Err("truncated DICOM element header".to_string());
+        }
+        let group = u16::from_le_bytes([data[offset], data[offset + 1]]);
+        let elem = u16::from_le_bytes([data[offset + 2], data[offset + 3]]);
+        let tag = (u32::from(group) << 16) | u32::from(elem);
+        if tag == 0xFFFE_E000 || tag == 0xFFFE_E00D || tag == 0xFFFE_E0DD {
+            let length = u32::from_le_bytes([
+                data[offset + 4],
+                data[offset + 5],
+                data[offset + 6],
+                data[offset + 7],
+            ]);
+            return Ok(Some(RawDicomElem {
+                tag,
+                vr: None,
+                length,
+                header_size: 8,
+            }));
+        }
+        if explicit_vr {
+            let vr = [data[offset + 4], data[offset + 5]];
+            if !vr[0].is_ascii_uppercase() || !vr[1].is_ascii_uppercase() {
+                return Err(format!("invalid DICOM explicit VR bytes {vr:?} at tag {tag:#010x}"));
+            }
+            if dicom_vr_is_long(vr) {
+                if offset + 12 > data.len() {
+                    return Err("truncated long-VR DICOM header".to_string());
+                }
+                let length = u32::from_le_bytes([
+                    data[offset + 8],
+                    data[offset + 9],
+                    data[offset + 10],
+                    data[offset + 11],
+                ]);
+                Ok(Some(RawDicomElem {
+                    tag,
+                    vr: Some(vr),
+                    length,
+                    header_size: 12,
+                }))
+            } else {
+                let length = u16::from_le_bytes([data[offset + 6], data[offset + 7]]) as u32;
+                Ok(Some(RawDicomElem {
+                    tag,
+                    vr: Some(vr),
+                    length,
+                    header_size: 8,
+                }))
+            }
+        } else {
+            let length = u32::from_le_bytes([
+                data[offset + 4],
+                data[offset + 5],
+                data[offset + 6],
+                data[offset + 7],
+            ]);
+            Ok(Some(RawDicomElem {
+                tag,
+                vr: None,
+                length,
+                header_size: 8,
+            }))
+        }
+    }
+
+    fn parse_and_admit_dicom(bytes: &[u8], require_pixels: bool, span: Span) -> Result<ParsedDicom, Diagnostic> {
+        if bytes.len() < 132 {
+            return Err(Diagnostic::new(
+                DiagCode::E500,
+                span,
+                "DICOM buffer shorter than 132-byte Part-10 preamble + DICM magic",
+            ));
+        }
+        if &bytes[128..132] != b"DICM" {
+            return Err(Diagnostic::new(
+                DiagCode::E500,
+                span,
+                "missing DICOM `DICM` magic at byte offset 128",
+            ));
+        }
+
+        // Walk Group 0x0002 Meta Information (always Explicit VR LE).
+        let mut cursor = 132usize;
+        let mut ts_uid = TS_EXPLICIT_LE.to_string();
+        while cursor < bytes.len() {
+            if cursor + 4 > bytes.len() {
+                return Err(Diagnostic::new(DiagCode::E500, span, "truncated DICOM tag"));
+            }
+            let group = u16::from_le_bytes([bytes[cursor], bytes[cursor + 1]]);
+            if group != 0x0002 {
+                break;
+            }
+            let hdr = read_dicom_elem_header(bytes, cursor, true)
+                .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?
+                .ok_or_else(|| Diagnostic::new(DiagCode::E500, span, "unexpected EOF in DICOM meta"))?;
+            if hdr.length == 0xFFFF_FFFF {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    "undefined length disallowed in DICOM group 0x0002",
+                ));
+            }
+            let v_start = cursor + hdr.header_size;
+            let v_end = v_start
+                .checked_add(hdr.length as usize)
+                .filter(|&e| e <= bytes.len())
+                .ok_or_else(|| Diagnostic::new(DiagCode::E500, span, "truncated DICOM meta element"))?;
+            if hdr.tag == 0x0002_0010 {
+                ts_uid = dicom_str(&bytes[v_start..v_end]);
+            }
+            cursor = v_end;
+        }
+
+        let (explicit_vr, encapsulated) = match ts_uid.as_str() {
+            TS_IMPLICIT_LE => (false, false),
+            TS_EXPLICIT_LE => (true, false),
+            TS_J2K_LOSSLESS | TS_J2K | TS_JPEG_BASELINE | TS_JPEG_EXTENDED | TS_RLE_LOSSLESS => {
+                (true, true)
+            }
+            other => {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!("unsupported DICOM transfer syntax `{other}`"),
+                ))
+            }
+        };
+
+        let mut modality: Option<String> = None;
+        let mut rows: Option<u16> = None;
+        let mut columns: Option<u16> = None;
+        let mut bits_allocated: Option<u16> = None;
+        let mut bits_stored: Option<u16> = None;
+        let mut samples_per_pixel: u16 = 1;
+        let mut pixel_representation: u16 = 0;
+        let mut pixel_offset: Option<usize> = None;
+        let mut pixel_length: usize = 0;
+
+        while cursor < bytes.len() {
+            let Some(hdr) = read_dicom_elem_header(bytes, cursor, explicit_vr)
+                .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?
+            else {
+                break;
+            };
+            let v_start = cursor + hdr.header_size;
+            if hdr.tag == 0x7FE0_0010 {
+                if hdr.length == 0xFFFF_FFFF {
+                    if !encapsulated {
+                        return Err(Diagnostic::new(
+                            DiagCode::E500,
+                            span,
+                            "undefined PixelData length on uncompressed DICOM",
+                        ));
+                    }
+                    // Scan bounded encapsulated items to Sequence Delimiter (FFFE,E0DD).
+                    let mut pcur = v_start;
+                    let mut found_end = false;
+                    while pcur + 8 <= bytes.len() {
+                        let t = (u32::from(u16::from_le_bytes([bytes[pcur], bytes[pcur + 1]])) << 16)
+                            | u32::from(u16::from_le_bytes([bytes[pcur + 2], bytes[pcur + 3]]));
+                        let ilen = u32::from_le_bytes([
+                            bytes[pcur + 4],
+                            bytes[pcur + 5],
+                            bytes[pcur + 6],
+                            bytes[pcur + 7],
+                        ]);
+                        pcur += 8;
+                        if t == 0xFFFE_E0DD {
+                            found_end = true;
+                            break;
+                        }
+                        if t != 0xFFFE_E000 || ilen == 0xFFFF_FFFF {
+                            return Err(Diagnostic::new(
+                                DiagCode::E500,
+                                span,
+                                "malformed encapsulated DICOM pixel item",
+                            ));
+                        }
+                        pcur = pcur
+                            .checked_add(ilen as usize)
+                            .filter(|&e| e <= bytes.len())
+                            .ok_or_else(|| {
+                                Diagnostic::new(DiagCode::E500, span, "truncated encapsulated DICOM item")
+                            })?;
+                    }
+                    if !found_end {
+                        return Err(Diagnostic::new(
+                            DiagCode::E500,
+                            span,
+                            "encapsulated DICOM PixelData missing sequence delimiter",
+                        ));
+                    }
+                    pixel_offset = Some(v_start);
+                    pixel_length = pcur.saturating_sub(v_start);
+                } else {
+                    let _ = v_start
+                        .checked_add(hdr.length as usize)
+                        .filter(|&e| e <= bytes.len())
+                        .ok_or_else(|| {
+                            Diagnostic::new(DiagCode::E500, span, "truncated DICOM PixelData element")
+                        })?;
+                    pixel_offset = Some(v_start);
+                    pixel_length = hdr.length as usize;
+                }
+                break;
+            }
+
+            if hdr.length == 0xFFFF_FFFF {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!("unsupported undefined length tag {:#010x}", hdr.tag),
+                ));
+            }
+            let v_end = v_start
+                .checked_add(hdr.length as usize)
+                .filter(|&e| e <= bytes.len())
+                .ok_or_else(|| Diagnostic::new(DiagCode::E500, span, "truncated DICOM dataset element"))?;
+            let val = &bytes[v_start..v_end];
+            match hdr.tag {
+                0x0008_0060 => modality = Some(dicom_str(val)),
+                0x0028_0002 => {
+                    samples_per_pixel = dicom_u16(val, hdr.vr)
+                        .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?;
+                }
+                0x0028_0010 => {
+                    rows = Some(
+                        dicom_u16(val, hdr.vr)
+                            .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?,
+                    );
+                }
+                0x0028_0011 => {
+                    columns = Some(
+                        dicom_u16(val, hdr.vr)
+                            .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?,
+                    );
+                }
+                0x0028_0100 => {
+                    bits_allocated = Some(
+                        dicom_u16(val, hdr.vr)
+                            .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?,
+                    );
+                }
+                0x0028_0101 => {
+                    bits_stored = Some(
+                        dicom_u16(val, hdr.vr)
+                            .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?,
+                    );
+                }
+                0x0028_0103 => {
+                    pixel_representation = dicom_u16(val, hdr.vr)
+                        .map_err(|e| Diagnostic::new(DiagCode::E500, span, e))?;
+                }
+                _ => {}
+            }
+            cursor = v_end;
+        }
+
+        let mod_str = modality.ok_or_else(|| {
+            Diagnostic::new(DiagCode::E500, span, "DICOM dataset missing Modality (0008,0060)")
+        })?;
+        let modality_code = map_dicom_modality(&mod_str).ok_or_else(|| {
+            Diagnostic::new(
+                DiagCode::E500,
+                span,
+                format!("unsupported DICOM Modality `{mod_str}`"),
+            )
+        })?;
+        let r = rows.filter(|&v| v > 0).ok_or_else(|| {
+            Diagnostic::new(DiagCode::E500, span, "DICOM dataset missing valid positive Rows (0028,0010)")
+        })?;
+        let c = columns.filter(|&v| v > 0).ok_or_else(|| {
+            Diagnostic::new(DiagCode::E500, span, "DICOM dataset missing valid positive Columns (0028,0011)")
+        })?;
+        let ba = bits_allocated.unwrap_or(bits_stored.unwrap_or(0));
+        let bs = bits_stored.unwrap_or(ba);
+        if ba == 0 || bs == 0 || bs > ba {
+            return Err(Diagnostic::new(
+                DiagCode::E500,
+                span,
+                format!("invalid DICOM BitsAllocated={ba} / BitsStored={bs}"),
+            ));
+        }
+
+        let check = oracle_dicom_modality_check([
+            modality_code,
+            u32::from(bs),
+            u32::from(samples_per_pixel),
+        ])
+        .map_err(|t| trap_err("Dicom.modalityCheck", t, span))?;
+        let supported = check[0] == 1;
+        let bytes_per_voxel = check[1];
+
+        let mut mean_norm = 0.0f64;
+        if require_pixels {
+            let p_off = pixel_offset.ok_or_else(|| {
+                Diagnostic::new(DiagCode::E500, span, "DICOM dataset missing PixelData (7FE0,0010)")
+            })?;
+            if pixel_length == 0 {
+                return Err(Diagnostic::new(DiagCode::E500, span, "DICOM PixelData is empty"));
+            }
+            if !supported {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!("DICOM voxel layout not supported by Etalon gate (bits_stored={bs}, samples_per_pixel={samples_per_pixel})"),
+                ));
+            }
+            let expected_bytes = usize::from(r) * usize::from(c) * (bytes_per_voxel as usize);
+            if !encapsulated && pixel_length < expected_bytes {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!(
+                        "DICOM PixelData truncated: got {pixel_length} bytes, expected >= {expected_bytes} ({r}x{c}x{bytes_per_voxel})"
+                    ),
+                ));
+            }
+            let pslice = &bytes[p_off..p_off + pixel_length.min(expected_bytes.max(1))];
+            let denom = ((1u64 << bs) - 1) as f64;
+            if !encapsulated && bs <= 8 && !pslice.is_empty() {
+                let sum: u64 = pslice.iter().map(|&b| u64::from(b)).sum();
+                mean_norm = (sum as f64) / ((pslice.len() as f64) * denom.max(1.0));
+            } else if !encapsulated && bs > 8 && pslice.len() >= 2 {
+                let count = pslice.len() / 2;
+                let mut sum = 0.0f64;
+                for ch in pslice.chunks_exact(2) {
+                    let raw = u16::from_le_bytes([ch[0], ch[1]]);
+                    let masked = raw & (((1u32 << bs) - 1) as u16);
+                    sum += f64::from(masked);
+                }
+                mean_norm = sum / ((count as f64) * denom.max(1.0));
+            }
+        }
+
+        Ok(ParsedDicom {
+            modality: mod_str,
+            modality_code,
+            transfer_syntax_uid: ts_uid,
+            encapsulated,
+            rows: r,
+            columns: c,
+            bits_allocated: ba,
+            bits_stored: bs,
+            samples_per_pixel,
+            pixel_representation,
+            bytes_per_voxel,
+            supported,
+            pixel_offset,
+            pixel_length,
+            mean_norm_intensity: mean_norm.clamp(0.0, 1.0),
+        })
+    }
+
+    fn select_dicom_bytes(args: &Value, span: Span) -> Result<(usize, Vec<Vec<u8>>), Diagnostic> {
+        let rec = rec_map(args, "Dicom", span)?;
+        if let Some(val) = rec.get("datasets") {
+            let Value::List(list) = val else {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    "`datasets` must be a List of binary DICOM byte buffers",
+                ));
+            };
+            if list.is_empty() {
+                return Err(Diagnostic::new(DiagCode::E500, span, "`datasets` list is empty"));
+            }
+            let mut all = Vec::with_capacity(list.len());
+            for (i, item) in list.iter().enumerate() {
+                all.push(decode_byte_list(item, &format!("datasets[{i}]"), span)?);
+            }
+            let idx = opt_u64(rec, "entry_index", span)?
+                .or(opt_u64(rec, "slice_index", span)?)
+                .unwrap_or(0) as usize;
+            if idx >= all.len() {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("entry_index {idx} out of bounds for datasets len {}", all.len()),
+                ));
+            }
+            Ok((idx, all))
+        } else {
+            let idx = opt_u64(rec, "entry_index", span)?
+                .or(opt_u64(rec, "slice_index", span)?)
+                .unwrap_or(0);
+            if idx != 0 {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    format!("entry_index {idx} out of bounds for single DICOM dataset"),
+                ));
+            }
+            let b = extract_binary_bytes(args, &["bytes", "dataset"], span)?;
+            Ok((0, vec![b]))
+        }
+    }
+
+    fn dicom_parse_or_verify(args: &Value, require_pixels: bool, span: Span) -> Result<Value, Diagnostic> {
+        let (idx, all) = select_dicom_bytes(args, span)?;
+        let parsed = parse_and_admit_dicom(&all[idx], require_pixels, span)?;
+        let expected_frame_bytes =
+            u64::from(parsed.rows) * u64::from(parsed.columns) * u64::from(parsed.bytes_per_voxel);
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        if require_pixels {
+            out.insert("verified".into(), Value::Bool(true));
+        }
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert("modality".into(), Value::String(parsed.modality));
+        out.insert("modality_code".into(), Value::U64(u64::from(parsed.modality_code)));
+        out.insert(
+            "transfer_syntax_uid".into(),
+            Value::String(parsed.transfer_syntax_uid),
+        );
+        out.insert("rows".into(), Value::U64(u64::from(parsed.rows)));
+        out.insert("columns".into(), Value::U64(u64::from(parsed.columns)));
+        out.insert(
+            "bits_allocated".into(),
+            Value::U64(u64::from(parsed.bits_allocated)),
+        );
+        out.insert("bits_stored".into(), Value::U64(u64::from(parsed.bits_stored)));
+        out.insert(
+            "samples_per_pixel".into(),
+            Value::U64(u64::from(parsed.samples_per_pixel)),
+        );
+        out.insert(
+            "pixel_representation".into(),
+            Value::U64(u64::from(parsed.pixel_representation)),
+        );
+        out.insert(
+            "bytes_per_voxel".into(),
+            Value::U64(u64::from(parsed.bytes_per_voxel)),
+        );
+        out.insert("supported".into(), Value::Bool(parsed.supported));
+        out.insert("encapsulated".into(), Value::Bool(parsed.encapsulated));
+        out.insert(
+            "pixel_data_bytes".into(),
+            Value::U64(parsed.pixel_length as u64),
+        );
+        out.insert("expected_frame_bytes".into(), Value::U64(expected_frame_bytes));
+        if let Some(off) = parsed.pixel_offset {
+            out.insert("pixel_data_offset".into(), Value::U64(off as u64));
+        }
+        Ok(Value::Record(out))
+    }
+
+    fn dicom_to_emf_field(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let (idx, all) = select_dicom_bytes(args, span)?;
+        let parsed = parse_and_admit_dicom(&all[idx], true, span)?;
+        let optical_depth = (0.05 + 1.5 * parsed.mean_norm_intensity) as f32;
+        let rt = oracle_radiative_transfer_slice([optical_depth, 0.65, 0.3], 1.0)
+            .map_err(|t| trap_err("Dicom.toEmfField", t, span))?;
+
+        // Build 64-byte EmfCellRecord64 payload inside a genuine Q42EMF64 v4 container.
+        let mut cell = [0u8; 64];
+        cell[0..4].copy_from_slice(&rt[0].to_le_bytes());
+        cell[4..8].copy_from_slice(&rt[1].to_le_bytes());
+        cell[24..28].copy_from_slice(&rt[0].to_le_bytes()); // poynting_flux
+        cell[28..32].copy_from_slice(&550.0f32.to_le_bytes()); // wavelength_nm
+        cell[32..36].copy_from_slice(&1.38f32.to_le_bytes()); // refractive_n
+        cell[56..60].copy_from_slice(&(parsed.mean_norm_intensity as f32).to_le_bytes()); // spectral_sigma
+        cell[60..64].copy_from_slice(&1.0f32.to_le_bytes()); // confidence_alpha
+
+        let emf_bytes = build_envelope(
+            EnvelopeFamily::EmfV4,
+            false,
+            &[],
+            &[BuildEntry {
+                mode: 0x0101,
+                revision: 1,
+                flags: 0,
+                stream_id: 0,
+                frame_id: 0,
+                start_tick: 0,
+                time_count: 0,
+                spatial_key: 0,
+                record_count: 1,
+                stride: 64,
+                descriptor_id: (idx + 1) as u32,
+                payload: &cell,
+            }],
+        )
+        .map_err(|msg| Diagnostic::new(DiagCode::E500, span, msg))?;
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("family".into(), Value::String(EnvelopeFamily::EmfV4.label().into()));
+        out.insert("version".into(), Value::U64(4));
+        out.insert("selected_entry_index".into(), Value::U64(idx as u64));
+        out.insert("modality".into(), Value::String(parsed.modality));
+        out.insert(
+            "bytes_per_voxel".into(),
+            Value::U64(u64::from(parsed.bytes_per_voxel)),
+        );
+        out.insert("transmitted_radiance".into(), Value::F64(f64::from(rt[0])));
+        out.insert(
+            "single_scatter_radiance".into(),
+            Value::F64(f64::from(rt[1])),
+        );
+        out.insert("bytes".into(), bytes_to_vibe_list(&emf_bytes));
+        Ok(Value::Record(out))
+    }
+
+    fn dicom_reconstruct_volume(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let (idx, all) = select_dicom_bytes(args, span)?;
+        let mut first: Option<ParsedDicom> = None;
+        let mut intensity_sum = 0.0f64;
+        for (i, slice_bytes) in all.iter().enumerate() {
+            let p = parse_and_admit_dicom(slice_bytes, true, span)?;
+            if let Some(ref ref_p) = first {
+                if p.modality_code != ref_p.modality_code
+                    || p.rows != ref_p.rows
+                    || p.columns != ref_p.columns
+                    || p.bits_stored != ref_p.bits_stored
+                    || p.samples_per_pixel != ref_p.samples_per_pixel
+                {
+                    return Err(Diagnostic::new(
+                        DiagCode::E500,
+                        span,
+                        format!("DICOM slice {i} geometry/modality mismatch against slice 0"),
+                    ));
+                }
+            } else {
+                first = Some(p);
+                intensity_sum += first.as_ref().map(|x| x.mean_norm_intensity).unwrap_or(0.0);
+                continue;
+            }
+            intensity_sum += p.mean_norm_intensity;
+        }
+        let ref_p = first.ok_or_else(|| {
+            Diagnostic::new(DiagCode::E500, span, "no DICOM slices supplied for volume reconstruction")
+        })?;
+        let slice_count = all.len() as u64;
+        let mean_intensity = intensity_sum / (slice_count as f64);
+        let rt = oracle_radiative_transfer_slice([(0.05 + 1.5 * mean_intensity) as f32, 0.65, 0.3], 1.0)
+            .map_err(|t| trap_err("Dicom.reconstructVolume(rt)", t, span))?;
+        let irr = oracle_sh_irradiance_probe([1.0, 0.1, 0.2, 0.1], [0.0, 0.0, 1.0])
+            .map_err(|t| trap_err("Dicom.reconstructVolume(sh)", t, span))?;
+        let total_voxel_bytes = u64::from(ref_p.rows)
+            * u64::from(ref_p.columns)
+            * slice_count
+            * u64::from(ref_p.bytes_per_voxel);
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("selected_slice_index".into(), Value::U64(idx as u64));
+        out.insert("slice_count".into(), Value::U64(slice_count));
+        out.insert("modality".into(), Value::String(ref_p.modality));
+        out.insert(
+            "dims".into(),
+            Value::List(vec![
+                Value::U64(u64::from(ref_p.columns)),
+                Value::U64(u64::from(ref_p.rows)),
+                Value::U64(slice_count),
+            ]),
+        );
+        out.insert(
+            "bytes_per_voxel".into(),
+            Value::U64(u64::from(ref_p.bytes_per_voxel)),
+        );
+        out.insert("total_voxel_bytes".into(), Value::U64(total_voxel_bytes));
+        out.insert("mean_intensity".into(), Value::F64(mean_intensity));
+        out.insert("transmitted_radiance".into(), Value::F64(f64::from(rt[0])));
+        out.insert("irradiance".into(), Value::F64(f64::from(irr[0])));
+        out.insert("directional_contrast".into(), Value::F64(f64::from(irr[1])));
+        Ok(Value::Record(out))
+    }
+
+    // ── Sensing admission & calibration gates ───────────────────────────
+
+    fn admit_optional_attached_evidence(rec: &BTreeMap<String, Value>, span: Span) -> Result<(), Diagnostic> {
+        let Some(val) = rec.get("evidence_bytes").or_else(|| rec.get("bytes")) else {
+            return Ok(());
+        };
+        let bytes = decode_byte_list(val, "evidence_bytes", span)?;
+        if bytes.len() >= 132 && &bytes[128..132] == b"DICM" {
+            parse_and_admit_dicom(&bytes, true, span)?;
+            return Ok(());
+        }
+        if bytes.len() >= 8 && &bytes[..8] == EnvelopeFamily::EmfV4.magic() {
+            admit_envelope(&bytes, EnvelopeFamily::EmfV4)
+                .map_err(|m| Diagnostic::new(DiagCode::E500, span, m))?;
+            return Ok(());
+        }
+        if bytes.len() >= 8 && &bytes[..8] == EnvelopeFamily::QacV1.magic() {
+            admit_envelope(&bytes, EnvelopeFamily::QacV1)
+                .map_err(|m| Diagnostic::new(DiagCode::E500, span, m))?;
+            return Ok(());
+        }
+        Err(Diagnostic::new(
+            DiagCode::E500,
+            span,
+            "attached evidence_bytes is neither admitted Q42EMF64 v4, QAC v1, nor DICOM Part-10",
+        ))
+    }
+
+    fn sensing_admit_evidence(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let rec = rec_map(args, "Sensing.admitEvidence", span)?;
+        admit_optional_attached_evidence(rec, span)?;
+
+        let modality_mask = req_u64(rec, "modality_mask", span)?;
+        let calibration_age_ms = req_u64(rec, "calibration_age_ms", span)?;
+        let max_calibration_age_ms = req_u64(rec, "max_calibration_age_ms", span)?;
+        let flags = if let Some(explicit) = opt_u64(rec, "consent_and_merkle_flags", span)? {
+            explicit
+        } else {
+            let has_consent = opt_bool(rec, "has_consent", span)?.unwrap_or(false);
+            let has_merkle = opt_bool(rec, "has_merkle", span)?.unwrap_or(false);
+            u64::from(has_consent) | (u64::from(has_merkle) << 1)
+        };
+
+        let res = oracle_verify_evidence_gate([
+            modality_mask,
+            calibration_age_ms,
+            max_calibration_age_ms,
+            flags,
+        ])
+        .map_err(|t| trap_err("Sensing.admitEvidence", t, span))?;
+
+        if res[0] != 1 {
+            return Err(Diagnostic::disclosure_denied(
+                span,
+                "Sensing.admitEvidence",
+                &format!(
+                    "evidence gate refused admission (calibration_age_ms={calibration_age_ms}, max={max_calibration_age_ms}, flags={flags:#x})"
+                ),
+            ));
+        }
+
+        let mut out = BTreeMap::new();
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("authority_tier".into(), Value::U64(res[1]));
+        out.insert("modality_mask".into(), Value::U64(modality_mask));
+        out.insert("calibration_age_ms".into(), Value::U64(calibration_age_ms));
+        out.insert(
+            "max_calibration_age_ms".into(),
+            Value::U64(max_calibration_age_ms),
+        );
+        Ok(Value::Record(out))
+    }
+
+    fn validate_certificate_digest(rec: &BTreeMap<String, Value>, span: Span) -> Result<(), Diagnostic> {
+        let Some(val) = rec.get("certificate_digest") else {
+            return Err(Diagnostic::new(
+                DiagCode::E300,
+                span,
+                "Sensing.verifyCalibration requires non-zero 32-byte `certificate_digest`",
+            ));
+        };
+        let bytes = match val {
+            Value::List(_) => {
+                let b = decode_byte_list(val, "certificate_digest", span)?;
+                if b.len() != 32 {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        format!("certificate_digest must be 32 bytes, got {}", b.len()),
+                    ));
+                }
+                b
+            }
+            Value::String(hex) => {
+                let h = hex.trim();
+                if h.len() != 64 || !h.bytes().all(|c| c.is_ascii_hexdigit()) {
+                    return Err(Diagnostic::new(
+                        DiagCode::E100,
+                        span,
+                        "certificate_digest hex string must be 64 hex chars",
+                    ));
+                }
+                let mut out = Vec::with_capacity(32);
+                for i in (0..64).step_by(2) {
+                    let b = u8::from_str_radix(&h[i..i + 2], 16).map_err(|_| {
+                        Diagnostic::new(DiagCode::E100, span, "invalid hex in certificate_digest")
+                    })?;
+                    out.push(b);
+                }
+                out
+            }
+            _ => {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    "certificate_digest must be 32 bytes or 64-char hex string",
+                ))
+            }
+        };
+        if bytes.iter().all(|&b| b == 0) {
+            return Err(Diagnostic::new(
+                DiagCode::E500,
+                span,
+                "all-zero calibration certificate_digest is prohibited",
+            ));
+        }
+        Ok(())
+    }
+
+    fn sensing_verify_calibration(args: &Value, span: Span) -> Result<Value, Diagnostic> {
+        let rec = rec_map(args, "Sensing.verifyCalibration", span)?;
+        admit_optional_attached_evidence(rec, span)?;
+        validate_certificate_digest(rec, span)?;
+
+        let stage = match rec.get("stage") {
+            Some(Value::String(s)) => s.as_str(),
+            _ => {
+                return Err(Diagnostic::new(
+                    DiagCode::E100,
+                    span,
+                    "Sensing.verifyCalibration requires string `stage` (`raw-counts` or `physical-base-units`)",
+                ))
+            }
+        };
+        let scale = req_f64(rec, "scale", span)?;
+        let offset = opt_f64(rec, "offset", span)?.unwrap_or(0.0);
+        match stage {
+            "physical-base-units" => {
+                if scale != 1.0 || offset != 0.0 {
+                    return Err(Diagnostic::new(
+                        DiagCode::E500,
+                        span,
+                        "physical-base-units requires identity scaling (scale == 1.0, offset == 0.0); re-calibration refused",
+                    ));
+                }
+            }
+            "raw-counts" => {
+                if scale <= 0.0 {
+                    return Err(Diagnostic::new(
+                        DiagCode::E500,
+                        span,
+                        "raw-counts calibration requires positive finite scale",
+                    ));
+                }
+            }
+            "digital-unrelated-to-pressure" => {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    "digital-unrelated-to-pressure stage cannot pass physical calibration verification",
+                ));
+            }
+            other => {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!("unsupported calibration stage `{other}`"),
+                ))
+            }
+        }
+
+        let modality_mask = opt_u64(rec, "modality_mask", span)?.unwrap_or(1);
+        let calibration_age_ms = req_u64(rec, "calibration_age_ms", span)?;
+        let max_calibration_age_ms = req_u64(rec, "max_calibration_age_ms", span)?;
+        let flags = if let Some(explicit) = opt_u64(rec, "consent_and_merkle_flags", span)? {
+            explicit
+        } else {
+            let has_consent = opt_bool(rec, "has_consent", span)?.unwrap_or(false);
+            let has_merkle = opt_bool(rec, "has_merkle", span)?.unwrap_or(false);
+            u64::from(has_consent) | (u64::from(has_merkle) << 1)
+        };
+        let gate = oracle_verify_evidence_gate([
+            modality_mask,
+            calibration_age_ms,
+            max_calibration_age_ms,
+            flags,
+        ])
+        .map_err(|t| trap_err("Sensing.verifyCalibration(gate)", t, span))?;
+        if gate[0] != 1 {
+            return Err(Diagnostic::disclosure_denied(
+                span,
+                "Sensing.verifyCalibration",
+                "calibration freshness/consent/merkle gate refused",
+            ));
+        }
+
+        let mut drift_within_bound = true;
+        let mut clock_delta_ns = None;
+        if let (Some(t0), Some(t1), Some(max_unc)) = (
+            opt_u64(rec, "t0_ns", span)?,
+            opt_u64(rec, "t1_ns", span)?,
+            opt_u64(rec, "max_uncertainty_ns", span)?,
+        ) {
+            let clock = oracle_clock_stamp_drift_ns(t0, t1, max_unc)
+                .map_err(|t| trap_err("Sensing.verifyCalibration(clock)", t, span))?;
+            clock_delta_ns = Some(clock[0]);
+            drift_within_bound = clock[1] == 1;
+            if !drift_within_bound {
+                return Err(Diagnostic::new(
+                    DiagCode::E500,
+                    span,
+                    format!(
+                        "calibration clock drift {} ns exceeds max uncertainty {} ns",
+                        clock[0], max_unc
+                    ),
+                ));
+            }
+        }
+
+        let mut out = BTreeMap::new();
+        out.insert("verified".into(), Value::Bool(true));
+        out.insert("admitted".into(), Value::Bool(true));
+        out.insert("stage".into(), Value::String(stage.into()));
+        out.insert("scale".into(), Value::F64(scale));
+        out.insert("offset".into(), Value::F64(offset));
+        out.insert("authority_tier".into(), Value::U64(gate[1]));
+        out.insert(
+            "clock_within_bound".into(),
+            Value::Bool(drift_within_bound),
+        );
+        if let Some(delta) = clock_delta_ns {
+            out.insert("clock_delta_ns".into(), Value::U64(delta));
+        }
+        Ok(Value::Record(out))
+    }
+}
+
+#[cfg(test)]
+mod up02_tests {
+    use super::super::envelope_admission::{bytes_to_vibe_list, decode_byte_list};
+    use super::try_invoke;
+    use crate::span::Span;
+    use crate::value::Value;
+    use std::collections::BTreeMap;
+
+    fn span() -> Span {
+        Span::new(0, 0)
+    }
+
+    fn rec(pairs: Vec<(&str, Value)>) -> Value {
+        let mut m = BTreeMap::new();
+        for (k, v) in pairs {
+            m.insert(k.to_string(), v);
+        }
+        Value::Record(m)
+    }
+
+    fn as_rec(v: Value) -> BTreeMap<String, Value> {
+        match v {
+            Value::Record(m) => m,
+            other => panic!("expected Value::Record, got {other:?}"),
+        }
+    }
+
+    fn f32_vals(fs: &[f32]) -> Value {
+        Value::List(fs.iter().map(|&f| Value::F64(f64::from(f))).collect())
+    }
+
+    fn f32_bytes(fs: &[f32]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(fs.len() * 4);
+        for f in fs {
+            out.extend_from_slice(&f.to_le_bytes());
+        }
+        out
+    }
+
+    fn emf_cell_64(e: [f32; 3], wavelength_nm: f32, spectral_sigma: f32) -> Vec<u8> {
+        let mut cell = vec![0u8; 64];
+        cell[0..4].copy_from_slice(&e[0].to_le_bytes());
+        cell[4..8].copy_from_slice(&e[1].to_le_bytes());
+        cell[8..12].copy_from_slice(&e[2].to_le_bytes());
+        cell[28..32].copy_from_slice(&wavelength_nm.to_le_bytes());
+        cell[56..60].copy_from_slice(&spectral_sigma.to_le_bytes());
+        cell[60..64].copy_from_slice(&1.0f32.to_le_bytes());
+        cell
+    }
+
+    fn build_synthetic_dicom(
+        modality: &str,
+        rows: u16,
+        cols: u16,
+        bits_alloc: u16,
+        bits_stored: u16,
+        samples_per_pixel: u16,
+        pixel_bytes: &[u8],
+    ) -> Vec<u8> {
+        let mut out = vec![0u8; 128];
+        out.extend_from_slice(b"DICM");
+
+        // Group 0x0002 TransferSyntaxUID Explicit VR LE
+        let ts = b"1.2.840.10008.1.2.1\0";
+        out.extend_from_slice(&0x0002u16.to_le_bytes());
+        out.extend_from_slice(&0x0010u16.to_le_bytes());
+        out.extend_from_slice(b"UI");
+        out.extend_from_slice(&(ts.len() as u16).to_le_bytes());
+        out.extend_from_slice(ts);
+
+        let mut push_short_str = |g: u16, e: u16, vr: &[u8; 2], s: &[u8]| {
+            out.extend_from_slice(&g.to_le_bytes());
+            out.extend_from_slice(&e.to_le_bytes());
+            out.extend_from_slice(vr);
+            let mut padded = s.to_vec();
+            if padded.len() % 2 == 1 {
+                padded.push(b' ');
+            }
+            out.extend_from_slice(&(padded.len() as u16).to_le_bytes());
+            out.extend_from_slice(&padded);
+        };
+        let push_us = |buf: &mut Vec<u8>, g: u16, e: u16, v: u16| {
+            buf.extend_from_slice(&g.to_le_bytes());
+            buf.extend_from_slice(&e.to_le_bytes());
+            buf.extend_from_slice(b"US");
+            buf.extend_from_slice(&2u16.to_le_bytes());
+            buf.extend_from_slice(&v.to_le_bytes());
+        };
+
+        push_short_str(0x0008, 0x0060, b"CS", modality.as_bytes());
+        push_us(&mut out, 0x0028, 0x0002, samples_per_pixel);
+        push_us(&mut out, 0x0028, 0x0010, rows);
+        push_us(&mut out, 0x0028, 0x0011, cols);
+        push_us(&mut out, 0x0028, 0x0100, bits_alloc);
+        push_us(&mut out, 0x0028, 0x0101, bits_stored);
+
+        // (7FE0,0010) PixelData OB long-VR header
+        out.extend_from_slice(&0x7FE0u16.to_le_bytes());
+        out.extend_from_slice(&0x0010u16.to_le_bytes());
+        out.extend_from_slice(b"OB\0\0");
+        out.extend_from_slice(&(pixel_bytes.len() as u32).to_le_bytes());
+        out.extend_from_slice(pixel_bytes);
+        out
+    }
+
+    #[test]
+    fn emf_family_all_5_invoke_ids_roundtrip_and_fail_closed() {
+        let cell0 = emf_cell_64([1.0, 2.0, -0.5], 550.0, 0.8);
+        let cell1 = emf_cell_64([0.2, 0.4, 0.6], 470.0, 0.5);
+        let built = as_rec(
+            try_invoke(
+                "Emf.buildContainer",
+                &rec(vec![(
+                    "entries",
+                    Value::List(vec![
+                        rec(vec![
+                            ("mode", Value::U64(0x0100)),
+                            ("descriptor_id", Value::U64(10)),
+                            ("stride", Value::U64(64)),
+                            ("record_count", Value::U64(1)),
+                            ("payload", bytes_to_vibe_list(&cell0)),
+                        ]),
+                        rec(vec![
+                            ("mode", Value::U64(0x0101)),
+                            ("descriptor_id", Value::U64(20)),
+                            ("stride", Value::U64(64)),
+                            ("record_count", Value::U64(1)),
+                            ("payload", bytes_to_vibe_list(&cell1)),
+                        ]),
+                    ]),
+                )]),
+                span(),
+            )
+            .unwrap()
+            .expect("Emf.buildContainer succeeds"),
+        );
+        assert_eq!(built.get("admitted"), Some(&Value::Bool(true)));
+        assert_eq!(built.get("entry_count"), Some(&Value::U64(2)));
+        let raw_bytes_val = built.get("bytes").unwrap().clone();
+        let raw_bytes = decode_byte_list(&raw_bytes_val, "bytes", span()).unwrap();
+        assert_eq!(&raw_bytes[..8], b"Q42EMF64");
+
+        // Open by explicit second entry_index and by descriptor entry_id=20
+        let opened = as_rec(
+            try_invoke(
+                "Emf.openContainer",
+                &rec(vec![
+                    ("bytes", raw_bytes_val.clone()),
+                    ("entry_index", Value::U64(1)),
+                    ("entry_id", Value::U64(20)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Emf.openContainer multi-entry succeeds"),
+        );
+        assert_eq!(opened.get("selected_entry_index"), Some(&Value::U64(1)));
+        assert_eq!(opened.get("entry_id"), Some(&Value::U64(20)));
+        assert_eq!(opened.get("mode"), Some(&Value::U64(0x0101)));
+
+        // Verify full container
+        let verified = as_rec(
+            try_invoke(
+                "Emf.verifyContainer",
+                &rec(vec![
+                    ("bytes", raw_bytes_val.clone()),
+                    ("expected_entry_count", Value::U64(2)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Emf.verifyContainer succeeds"),
+        );
+        assert_eq!(verified.get("verified"), Some(&Value::Bool(true)));
+        assert_eq!(verified.get("verified_entries"), Some(&Value::U64(2)));
+
+        // Sonify admitted entry 1 directly from binary cell0/cell1
+        let sonified = as_rec(
+            try_invoke(
+                "Emf.sonifyField",
+                &rec(vec![
+                    ("bytes", raw_bytes_val.clone()),
+                    ("entry_id", Value::U64(10)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Emf.sonifyField succeeds"),
+        );
+        assert_eq!(sonified.get("admitted"), Some(&Value::Bool(true)));
+        assert!(sonified.get("carrier_hz").unwrap().as_f64().unwrap() > 100.0);
+
+        // Evaluate dipole on admitted EMF container
+        let dipole = as_rec(
+            try_invoke(
+                "Emf.evaluateDipole",
+                &rec(vec![
+                    ("bytes", raw_bytes_val),
+                    ("dipole_moment_xyz", f32_vals(&[1.0, 2.0, -0.5])),
+                    ("probe_offset_m", f32_vals(&[0.1, 0.2, 0.3])),
+                    ("gain", Value::F64(2.0)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Emf.evaluateDipole succeeds"),
+        );
+        assert_eq!(dipole.get("admitted"), Some(&Value::Bool(true)));
+        assert!(dipole.get("field_mag_uv_per_m").unwrap().as_f64().unwrap() > 0.0);
+
+        // Fail-closed checks: unsupported mode 0x0200, JSON string, filename key, HMC/ZIP magic, corrupt CRC
+        assert!(try_invoke(
+            "Emf.buildContainer",
+            &rec(vec![
+                ("mode", Value::U64(0x0200)),
+                ("payload", bytes_to_vibe_list(&cell0)),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        assert!(try_invoke(
+            "Emf.openContainer",
+            &rec(vec![("bytes", Value::String("{\"magic\":\"Q42EMF64\"}".into()))]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        assert!(try_invoke(
+            "Emf.openContainer",
+            &rec(vec![("filename", Value::String("scene.hmc".into()))]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        let mut bad_zip = b"PK\x03\x04".to_vec();
+        bad_zip.extend_from_slice(&vec![0u8; 140]);
+        assert!(try_invoke(
+            "Emf.verifyContainer",
+            &rec(vec![("bytes", bytes_to_vibe_list(&bad_zip))]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        let mut corrupt = raw_bytes;
+        let tail = corrupt.len() - 1;
+        corrupt[tail] ^= 1;
+        assert!(try_invoke(
+            "Emf.sonifyField",
+            &rec(vec![
+                ("bytes", bytes_to_vibe_list(&corrupt)),
+                ("emf_sample", Value::List(vec![Value::F64(550.0), Value::F64(1.0), Value::F64(0.5)])),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+    }
+
+    #[test]
+    fn qac_family_all_5_invoke_ids_roundtrip_and_fail_closed() {
+        let bin_payload = f32_bytes(&[30.0, 10.0, 2.0, 0.75]);
+        let dir_payload = f32_bytes(&[0.4, 0.2, 1.0, 0.25, -0.1, 0.15]);
+        let built = as_rec(
+            try_invoke(
+                "Qac.buildContainer",
+                &rec(vec![(
+                    "entries",
+                    Value::List(vec![
+                        rec(vec![
+                            ("mode", Value::U64(0x0102)),
+                            ("descriptor_id", Value::U64(11)),
+                            ("payload", bytes_to_vibe_list(&dir_payload)),
+                        ]),
+                        rec(vec![
+                            ("mode", Value::U64(0x0103)),
+                            ("descriptor_id", Value::U64(22)),
+                            ("payload", bytes_to_vibe_list(&bin_payload)),
+                        ]),
+                    ]),
+                )]),
+                span(),
+            )
+            .unwrap()
+            .expect("Qac.buildContainer succeeds"),
+        );
+        let qac_val = built.get("bytes").unwrap().clone();
+        let qac_raw = decode_byte_list(&qac_val, "bytes", span()).unwrap();
+        assert_eq!(&qac_raw[..8], b"qac\0\0\0\0\0");
+
+        let opened = as_rec(
+            try_invoke(
+                "Qac.openContainer",
+                &rec(vec![
+                    ("bytes", qac_val.clone()),
+                    ("entry_id", Value::U64(22)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Qac.openContainer succeeds"),
+        );
+        assert_eq!(opened.get("selected_entry_index"), Some(&Value::U64(1)));
+        assert_eq!(opened.get("active_mode_count"), Some(&Value::U64(2)));
+
+        let binaural = as_rec(
+            try_invoke(
+                "Qac.renderBinaural",
+                &rec(vec![
+                    ("bytes", qac_val.clone()),
+                    ("entry_index", Value::U64(1)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Qac.renderBinaural succeeds"),
+        );
+        assert!(binaural.get("left_gain").unwrap().as_f64().unwrap() > 0.0);
+
+        let directivity = as_rec(
+            try_invoke(
+                "Qac.evaluateDirectivity",
+                &rec(vec![
+                    ("bytes", qac_val.clone()),
+                    ("entry_id", Value::U64(11)),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Qac.evaluateDirectivity succeeds"),
+        );
+        assert!(directivity.get("l0_energy_ratio").unwrap().as_f64().unwrap() > 0.0);
+
+        // Build valid EMF to test Qac.sonifyEmf pairing
+        let emf_built = as_rec(
+            try_invoke(
+                "Emf.buildContainer",
+                &rec(vec![("payload", bytes_to_vibe_list(&emf_cell_64([0.0, 2.0, 0.0], 520.0, 0.9)))]),
+                span(),
+            )
+            .unwrap()
+            .unwrap(),
+        );
+        let sonified = as_rec(
+            try_invoke(
+                "Qac.sonifyEmf",
+                &rec(vec![
+                    ("emf_bytes", emf_built.get("bytes").unwrap().clone()),
+                    ("qac_bytes", qac_val.clone()),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Qac.sonifyEmf succeeds"),
+        );
+        assert!(sonified.get("carrier_hz").unwrap().as_f64().unwrap() > 100.0);
+
+        // Fail closed: QAC rejects EMF mode 0x0107 (>0x0105) and cross-family bytes
+        assert!(try_invoke(
+            "Qac.buildContainer",
+            &rec(vec![
+                ("mode", Value::U64(0x0107)),
+                ("payload", bytes_to_vibe_list(&bin_payload)),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        assert!(try_invoke(
+            "Qac.renderBinaural",
+            &rec(vec![("bytes", emf_built.get("bytes").unwrap().clone())]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        // Corrupt QAC bytes fail BEFORE Etalon binaural call
+        let mut corrupt = qac_raw;
+        corrupt[130] ^= 0xAA;
+        assert!(try_invoke(
+            "Qac.renderBinaural",
+            &rec(vec![
+                ("bytes", bytes_to_vibe_list(&corrupt)),
+                ("pose_deg_dist", f32_vals(&[10.0, 0.0, 1.0])),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+    }
+
+    #[test]
+    fn dicom_and_sensing_6_invoke_ids_roundtrip_and_fail_closed() {
+        let pixels0 = vec![120u8; 4 * 4];
+        let pixels1 = vec![200u8; 4 * 4];
+        let dcm0 = build_synthetic_dicom("CT", 4, 4, 8, 8, 1, &pixels0);
+        let dcm1 = build_synthetic_dicom("CT", 4, 4, 8, 8, 1, &pixels1);
+        let dcm0_val = bytes_to_vibe_list(&dcm0);
+        let dcm1_val = bytes_to_vibe_list(&dcm1);
+
+        let parsed = as_rec(
+            try_invoke("Dicom.parseDataset", &rec(vec![("bytes", dcm0_val.clone())]), span())
+                .unwrap()
+                .expect("Dicom.parseDataset succeeds"),
+        );
+        assert_eq!(parsed.get("modality"), Some(&Value::String("CT".into())));
+        assert_eq!(parsed.get("bytes_per_voxel"), Some(&Value::U64(1)));
+
+        let verified = as_rec(
+            try_invoke("Dicom.verifyDataset", &rec(vec![("bytes", dcm0_val.clone())]), span())
+                .unwrap()
+                .expect("Dicom.verifyDataset succeeds"),
+        );
+        assert_eq!(verified.get("verified"), Some(&Value::Bool(true)));
+
+        let emf_out = as_rec(
+            try_invoke("Dicom.toEmfField", &rec(vec![("bytes", dcm0_val.clone())]), span())
+                .unwrap()
+                .expect("Dicom.toEmfField succeeds"),
+        );
+        assert_eq!(emf_out.get("family"), Some(&Value::String("Q42EMF64".into())));
+        // Returned EMF bytes pass strict Emf.verifyContainer admission!
+        assert!(try_invoke(
+            "Emf.verifyContainer",
+            &rec(vec![("bytes", emf_out.get("bytes").unwrap().clone())]),
+            span(),
+        )
+        .unwrap()
+        .is_ok());
+
+        let vol = as_rec(
+            try_invoke(
+                "Dicom.reconstructVolume",
+                &rec(vec![("datasets", Value::List(vec![dcm0_val.clone(), dcm1_val]))]),
+                span(),
+            )
+            .unwrap()
+            .expect("Dicom.reconstructVolume succeeds"),
+        );
+        assert_eq!(vol.get("slice_count"), Some(&Value::U64(2)));
+        assert_eq!(vol.get("total_voxel_bytes"), Some(&Value::U64(32)));
+
+        // Truncated pixels & missing DICM magic fail closed
+        let trunc_dcm = build_synthetic_dicom("CT", 8, 8, 8, 8, 1, &[1u8; 4]);
+        assert!(try_invoke(
+            "Dicom.verifyDataset",
+            &rec(vec![("bytes", bytes_to_vibe_list(&trunc_dcm))]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        assert!(try_invoke(
+            "Dicom.parseDataset",
+            &rec(vec![("bytes", bytes_to_vibe_list(&[0u8; 140]))]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+
+        // Sensing.admitEvidence + Sensing.verifyCalibration
+        let admitted = as_rec(
+            try_invoke(
+                "Sensing.admitEvidence",
+                &rec(vec![
+                    ("modality_mask", Value::U64(0b11)),
+                    ("calibration_age_ms", Value::U64(500)),
+                    ("max_calibration_age_ms", Value::U64(2000)),
+                    ("has_consent", Value::Bool(true)),
+                    ("has_merkle", Value::Bool(true)),
+                    ("evidence_bytes", emf_out.get("bytes").unwrap().clone()),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Sensing.admitEvidence succeeds"),
+        );
+        assert_eq!(admitted.get("authority_tier"), Some(&Value::U64(2)));
+
+        // Expired calibration or missing consent fails closed (Err)
+        assert!(try_invoke(
+            "Sensing.admitEvidence",
+            &rec(vec![
+                ("modality_mask", Value::U64(1)),
+                ("calibration_age_ms", Value::U64(5000)),
+                ("max_calibration_age_ms", Value::U64(1000)),
+                ("has_consent", Value::Bool(true)),
+                ("has_merkle", Value::Bool(true)),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+
+        let cal = as_rec(
+            try_invoke(
+                "Sensing.verifyCalibration",
+                &rec(vec![
+                    ("stage", Value::String("physical-base-units".into())),
+                    ("scale", Value::F64(1.0)),
+                    ("offset", Value::F64(0.0)),
+                    ("calibration_age_ms", Value::U64(100)),
+                    ("max_calibration_age_ms", Value::U64(1000)),
+                    ("has_consent", Value::Bool(true)),
+                    ("has_merkle", Value::Bool(true)),
+                    ("t0_ns", Value::U64(1_000_000)),
+                    ("t1_ns", Value::U64(1_000_500)),
+                    ("max_uncertainty_ns", Value::U64(2_000)),
+                    ("certificate_digest", bytes_to_vibe_list(&[7u8; 32])),
+                ]),
+                span(),
+            )
+            .unwrap()
+            .expect("Sensing.verifyCalibration succeeds"),
+        );
+        assert_eq!(cal.get("verified"), Some(&Value::Bool(true)));
+        assert_eq!(cal.get("clock_within_bound"), Some(&Value::Bool(true)));
+
+        // Re-scaling physical-base-units or zero certificate digest must fail closed!
+        assert!(try_invoke(
+            "Sensing.verifyCalibration",
+            &rec(vec![
+                ("stage", Value::String("physical-base-units".into())),
+                ("scale", Value::F64(2.5)),
+                ("offset", Value::F64(0.0)),
+                ("calibration_age_ms", Value::U64(100)),
+                ("max_calibration_age_ms", Value::U64(1000)),
+                ("has_consent", Value::Bool(true)),
+                ("has_merkle", Value::Bool(true)),
+                ("certificate_digest", bytes_to_vibe_list(&[7u8; 32])),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
+        assert!(try_invoke(
+            "Sensing.verifyCalibration",
+            &rec(vec![
+                ("stage", Value::String("raw-counts".into())),
+                ("scale", Value::F64(2.5)),
+                ("calibration_age_ms", Value::U64(100)),
+                ("max_calibration_age_ms", Value::U64(1000)),
+                ("has_consent", Value::Bool(true)),
+                ("has_merkle", Value::Bool(true)),
+                ("certificate_digest", bytes_to_vibe_list(&[0u8; 32])),
+            ]),
+            span(),
+        )
+        .unwrap()
+        .is_err());
     }
 }
 

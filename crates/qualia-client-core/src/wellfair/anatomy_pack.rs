@@ -205,6 +205,9 @@ pub fn build_anatomy_pack(
     for (k, e) in &compiled.failed {
         failed.push((k.clone(), format!("compile: {e}")));
     }
+    for organ_key in &compiled.unmapped {
+        failed.push((organ_key.clone(), "unmapped: no body-system mapping".into()));
+    }
 
     // Pack each compiled organ as a `.10d` entry with its render meta.
     let mut writer = BundleWriter::new();
@@ -242,7 +245,7 @@ pub fn build_anatomy_pack(
         .iter()
         .map(|o| (o.filename.clone(), o.glb_url.clone()))
         .collect();
-    let (q42_bytes, q42_quins) = build_pack_q42(model, &compiled.organs, &source_urls);
+    let (q42_bytes, q42_quins) = build_pack_q42(compiled.model, &compiled.organs, &source_urls);
     let q42_graph_bytes = q42_bytes.len();
     // Carried INSIDE the bundle (one attestable unit alongside the `.10d` meshes).
     writer
@@ -263,9 +266,9 @@ pub fn build_anatomy_pack(
         .map_err(|e| format!("write {}: {e}", q42_sidecar.display()))?;
 
     Ok(PackReport {
-        model: model.as_str().to_string(),
+        model: compiled.model.as_str().to_string(),
         out_path: out_path.display().to_string(),
-        organs_packed: compiled.organs.len(),
+        organs_packed: compiled.compiled_count(),
         total_10d_bytes,
         bundle_bytes: bundle.len(),
         curated_not_found,

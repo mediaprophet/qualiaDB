@@ -42,3 +42,11 @@ macro_rules! opt_opt(
         opt_opt!($i, call!($f))
     );
 );
+
+macro_rules! named_a(
+    ($vis:vis $name:ident<$lt:lifetime, $o:ty>, $submac:ident!( $($args:tt)* )) => (
+        $vis fn $name<$lt>(i: &$lt [u8]) -> nom::IResult<&$lt [u8], $o, (&$lt [u8], nom::error::ErrorKind)> {
+            $submac!(i, $($args)*)
+        }
+    );
+);

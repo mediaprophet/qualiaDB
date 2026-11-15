@@ -11,17 +11,19 @@ Integrator inventory, 2026-11-14. Cargo is held until EMF/QAC notify **and** sou
 | Crash tests hold StorageStage across I/O | C2 | prepare / wait_leaf_write / commit / finish |
 | Many entries per family in the planner | Integrator | `plan/tests.rs` |
 
-## Wave 3 packets (2026-11-15, source not started)
+## Wave 3 packets (revised 2026-11-15 — EMF/QAC supports included)
 
 | Packet | Writes | Launch |
 |---|---|---|
-| M mux | NEW `qbdl/service/mux.rs` + `mux_tests.rs` | 3A, file-disjoint |
-| F mixed HMC | NEW `bundle/stream/mixed/` | 3A; `include_bytes!` of on-disk candidate `.qac`/`.emf` + `compile_mesh_to_10d`; do not edit codec owners |
-| H HTTP mixed | NEW `http/mixed.rs` | 3A, Component |
-| Reviews M/F/H | `evidence/swarm-wave3-*-review.md` | 3B after cargo |
+| **E** EMF stream | NEW `formats/emf_stream.rs` | 3A |
+| **Q** QAC stream | EDIT `formats/qac.rs` `admit_signal`; NEW `qac_stream.rs` | 3A |
+| **M** mux | NEW `qbdl/service/mux.rs` — **two QAC + two EMF** real candidates | 3A |
+| **F** mixed HMC | NEW `bundle/stream/mixed/` using E/Q admit | 3A2 |
+| **H** HTTP mixed | NEW `http/mixed.rs` — two QAC + two EMF Component | 3A2 |
+| Reviews E/Q/M/F/H | `evidence/swarm-wave3-*-review.md` | 3B after cargo |
 | C6 records | `evidence/swarm-wave3-c6-records.md` | 3B after cargo |
 
-Pipeline: [swarm-wave3-pipeline.md](swarm-wave3-pipeline.md). Board: [swarm-wave3-claim-board.md](swarm-wave3-claim-board.md).
+Pipeline: [swarm-wave3-pipeline.md](swarm-wave3-pipeline.md). Board: [swarm-wave3-claim-board.md](swarm-wave3-claim-board.md). Codec owners still off-limits; streaming calls public `QacStorageView` / `signal::admit` / `EmfDirectoryView`.
 
 ## Waiting on EMF/QAC notify (do not fake)
 

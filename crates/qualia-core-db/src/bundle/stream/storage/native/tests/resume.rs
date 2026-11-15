@@ -37,12 +37,11 @@ fn checkpoint_is_only_hint_then_actual_read_rewrite_rebuilds_current_marks() {
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 store
                     .reverify_and_rewrite_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,
@@ -104,12 +103,11 @@ fn sparse_holes_changed_bytes_and_nonzero_proof_padding_never_become_marks() {
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 assert!(store
                     .reverify_and_rewrite_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,
@@ -241,12 +239,11 @@ fn intact_unkeyed_hint_over_changed_actual_bytes_stays_unverified() {
             {
                 let mut grant =
                     adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                let mut stage = rt
-                    .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                    .unwrap();
                 assert!(store
                     .reverify_and_rewrite_leaf(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,

@@ -30,7 +30,7 @@ impl<'a> TransferRuntime<'a> {
             return Err(E::BudgetExhausted);
         }
         let owner = NEXT_OWNER
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
             .map_err(|_| E::StaleGeneration)?;
         let control_id = schedule_id(owner, 0)?;
         let static_charge = governor.admit_and_reserve(

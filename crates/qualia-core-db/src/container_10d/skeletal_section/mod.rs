@@ -3,9 +3,19 @@
 //! are little endian; decoding validates the entire payload before writes.
 
 mod binary;
+pub mod skl2;
 mod validation;
 use crate::render::skeletal::{Clip, Joint, Key, SkinWeight, Track};
 pub use binary::{encode_skeletal_section_into, SkeletalSection};
+pub use skl2::{
+    ActuationPathwayRecord, EpistemicProvenanceWord, KinematicSolverRegime,
+    LoopClosureConstraintRecord, SkeletalSectionPayload, Skl2JointDescriptorV1,
+    Skl2JointDescriptorV2, Ssm1BasisHeader, Ssm1ModeWeight, SwingTwistConeLimits,
+    TopologicalLandmarkRecord, SKL2_HEADER_LEN, SKL2_JOINT_FLAG_EXOSKELETAL,
+    SKL2_JOINT_FLAG_HYDROSTATIC, SKL2_JOINT_FLAG_LOOP_ANCHOR, SKL2_JOINT_FLAG_SYMMETRIC,
+    SKL2_JOINT_FLAG_VESTIGIAL, SKL2_MAGIC, SKL2_MAX_CONTAINER_BYTES, SKL2_MAX_JOINTS,
+    SKL2_NONE_INDEX, SKL2_VERSION_1, SKL2_VERSION_2, SSM1_MAGIC,
+};
 
 pub const MAX_CLIPS: usize = 32;
 pub const MAX_TRACKS: usize = 4096;

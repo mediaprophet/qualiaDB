@@ -106,27 +106,7 @@ impl<'a, H: Host> Engine<'a, H> {
                 ExprKind::Ident(ns) => {
                     env.aliases.contains_key(ns)
                         || is_extension_namespace(ns)
-                        || matches!(
-                            ns.as_str(),
-                            "math"
-                                | "rdf"
-                                | "quin"
-                                | "graph"
-                                | "aura"
-                                | "pulse"
-                                | "capability"
-                                | "time"
-                                | "conservation"
-                                | "causal"
-                                | "dag"
-                                | "deontic"
-                                | "hid"
-                                | "cue"
-                                | "crypto"
-                                | "zk"
-                                | "web"
-                                | "ui"
-                        )
+                        || crate::eval::VIBE_0_1_NAMESPACES.contains(&ns.as_str())
                 }
                 ExprKind::Member {
                     recv: inner_recv, ..
@@ -254,6 +234,9 @@ impl<'a, H: Host> Engine<'a, H> {
                 pos.into_iter().next().unwrap_or(Value::Null),
             )));
         }
+        if path == "Some" {
+            return Ok(pos.into_iter().next().unwrap_or(Value::Null));
+        }
         if path == "vec2" || path == "vec3" || path == "vec4" || path == "mat3" || path == "mat4" {
             return Ok(Value::List(pos));
         }
@@ -314,6 +297,9 @@ impl<'a, H: Host> Engine<'a, H> {
                 let mut local = Env::with_task_scope(env.task_scope.clone());
                 local.aliases = env.aliases.clone();
                 local.enums = env.enums.clone();
+                local.fields = env.fields.clone();
+                local.materials = env.materials.clone();
+                local.laws = env.laws.clone();
                 for (p, a) in f.params.iter().zip(pos.into_iter()) {
                     local.vars.insert(p.name.clone(), a);
                 }

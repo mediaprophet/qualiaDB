@@ -450,6 +450,17 @@ mod tests {
         let mut etalon_env = Env::default();
         crate::eval::populate_import_aliases(&mut etalon_env, &etalon_prog.imports).unwrap();
         let mut etalon_engine = Engine::with_program(&mut host, Budget::default(), &etalon_prog);
+        let actor = q_hash_str("did:q42:local_engine");
+        let sim_ctx = CallExecutionContext {
+            actor_did_hash: actor,
+            context_world_hash: 1,
+            lamport_timestamp: 1,
+            mode: ExecutionMode::SimulatedGovernanceTest,
+        };
+        let mut etalon_gate = SimulatedPolicyGate::new_for_actor(actor);
+        etalon_gate.budget.max_scratch_bytes = 1_048_576;
+        etalon_gate.budget.max_vram_bytes = 1_048_576;
+        etalon_engine.set_extension_governance(sim_ctx, Some(&mut etalon_gate));
         let etalon_res = etalon_engine
             .call_function(&etalon_prog, "run_etalon", vec![], &mut etalon_env)
             .expect("evaluates all 8 Etalon providers");

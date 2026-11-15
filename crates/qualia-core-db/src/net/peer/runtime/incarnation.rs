@@ -3,10 +3,10 @@ use crate::net::qdnf::errors::QdnfError;
 use core::sync::atomic::{AtomicUsize, Ordering};
 static NEXT: AtomicUsize = AtomicUsize::new(1);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct CanonicalIncarnation(usize);
+pub struct CanonicalIncarnation(usize);
 impl CanonicalIncarnation {
-    pub(crate) const UNASSIGNED: Self = Self(0);
-    pub(crate) const fn assigned(self) -> bool {
+    pub const UNASSIGNED: Self = Self(0);
+    pub const fn assigned(self) -> bool {
         self.0 != 0
     }
     pub(crate) fn bind(&mut self) -> Result<Self, QdnfError> {
@@ -21,7 +21,7 @@ impl CanonicalIncarnation {
 }
 fn next(source: &AtomicUsize) -> Result<usize, QdnfError> {
     source
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| n.checked_add(1))
         .map_err(|_| QdnfError::StaleGeneration)
 }
 #[cfg(test)]

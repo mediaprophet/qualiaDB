@@ -13,7 +13,9 @@ mod types;
 mod wire;
 use crate::net::qdnf::errors::QdnfError as E;
 pub use authority::EndpointAuthority;
-pub use established::{ChannelBuildError, EstablishedSession, ProtectedChannel};
+pub use established::{
+    ChannelBuildError, ChannelIo, EstablishedSession, FrameIo, ProtectedChannel,
+};
 pub use initiator::Initiator;
 pub use intent::{Intent, INTENT_BYTES};
 pub use resource::{EndpointReservation, COUNTED_ENDPOINT_BYTES, ENDPOINT_RESERVATION_BYTES};

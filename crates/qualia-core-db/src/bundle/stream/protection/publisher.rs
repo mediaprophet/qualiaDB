@@ -5,7 +5,7 @@ use crate::crypto::network::object_stream::{Context, ObjectScope, PageRef, RootR
 use crate::net::qdnf::types::StrongDigest;
 use crate::specialized_libs::cryptographic_library::ManagedObjectPublication;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum PublisherError {
+pub enum PublisherError {
     Capacity,
     State,
     Source,
@@ -16,7 +16,7 @@ pub(crate) enum PublisherError {
     Sink,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum Artifact {
+pub enum Artifact {
     Context,
     Geometry,
     Roots,
@@ -26,24 +26,24 @@ pub(crate) enum Artifact {
 /// Bounded synchronous candidate staging only. Implementations must not reenter
 /// managed control or await. Actual application guards and durable acceptance
 /// must be supplied by the next policy/storage composition; success is not either.
-pub(crate) trait CandidateSink {
+pub trait CandidateSink {
     fn artifact(&mut self, kind: Artifact, page: u16, bytes: &[u8]) -> Result<(), ()>;
     fn ciphertext(&mut self, scope: ObjectScope, leaf: u64, bytes: &[u8]) -> Result<(), ()>;
     fn outboard(&mut self, spec: &TreeSpec, node: OutboardNode) -> Result<(), ()>;
 }
-pub(crate) struct ProtectedCandidate {
+pub struct ProtectedCandidate {
     pub(super) descriptor: StrongDigest,
     pub(super) context: StrongDigest,
 }
 impl ProtectedCandidate {
-    pub(crate) fn descriptor_id(&self) -> StrongDigest {
+    pub fn descriptor_id(&self) -> StrongDigest {
         self.descriptor
     }
-    pub(crate) fn context_id(&self) -> StrongDigest {
+    pub fn context_id(&self) -> StrongDigest {
         self.context
     }
 }
-pub(crate) struct ProtectedPublisher<'a, 's, 'm, 'r> {
+pub struct ProtectedPublisher<'a, 's, 'm, 'r> {
     pub(super) geometry: PreparedGeometry<'a, 's>,
     pub(super) publication: ManagedObjectPublication<'m>,
     pub(super) context: Context<'m>,
@@ -59,7 +59,7 @@ pub(crate) struct ProtectedPublisher<'a, 's, 'm, 'r> {
 impl<'a, 's, 'm, 'r> ProtectedPublisher<'a, 's, 'm, 'r> {
     /// Context is borrowed from separate frozen caller storage, never from a
     /// movable buffer inside this owner. No application authority is admitted.
-    pub(crate) fn bind(
+    pub fn bind(
         geometry: PreparedGeometry<'a, 's>,
         mut publication: ManagedObjectPublication<'m>,
         context: Context<'m>,
@@ -92,7 +92,7 @@ impl<'a, 's, 'm, 'r> ProtectedPublisher<'a, 's, 'm, 'r> {
             poisoned: false,
         })
     }
-    pub(crate) fn is_poisoned(&self) -> bool {
+    pub fn is_poisoned(&self) -> bool {
         self.poisoned || self.publication.is_poisoned()
     }
     pub(super) fn attempt<T>(
@@ -125,7 +125,7 @@ impl<'a, 's, 'm, 'r> ProtectedPublisher<'a, 's, 'm, 'r> {
         }
         result
     }
-    pub(crate) fn stage_header(
+    pub fn stage_header(
         &mut self,
         sink: &mut impl CandidateSink,
     ) -> Result<(), PublisherError> {

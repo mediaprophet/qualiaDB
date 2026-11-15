@@ -1434,6 +1434,56 @@ pub const ALL_INVOKE_IDS: &[&str] = &[
     "WebizenGeo.eval_sky_atmosphere_limb",
     "WebizenGeo.eval_water_wave_foam",
     "WebizenGeo.shade_hypsometric_and_pick",
+    "Emf.openContainer",
+    "Emf.buildContainer",
+    "Emf.verifyContainer",
+    "Emf.sonifyField",
+    "Emf.evaluateDipole",
+    "Qac.openContainer",
+    "Qac.buildContainer",
+    "Qac.renderBinaural",
+    "Qac.evaluateDirectivity",
+    "Qac.sonifyEmf",
+    "Dicom.parseDataset",
+    "Dicom.verifyDataset",
+    "Dicom.toEmfField",
+    "Dicom.reconstructVolume",
+    "Sensing.admitEvidence",
+    "Sensing.verifyCalibration",
 ];
 
 pub const INVOKE_ID_COUNT: usize = ALL_INVOKE_IDS.len();
+
+#[cfg(test)]
+mod tests {
+    use super::{ALL_INVOKE_IDS, INVOKE_ID_COUNT};
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn invoke_ids_include_up02_families_and_exact_count() {
+        assert_eq!(INVOKE_ID_COUNT, 1445);
+        assert_eq!(ALL_INVOKE_IDS.len(), 1445);
+        let unique: BTreeSet<&str> = ALL_INVOKE_IDS.iter().copied().collect();
+        assert_eq!(unique.len(), 1445, "ALL_INVOKE_IDS contains duplicates");
+        for id in [
+            "Emf.openContainer",
+            "Emf.buildContainer",
+            "Emf.verifyContainer",
+            "Emf.sonifyField",
+            "Emf.evaluateDipole",
+            "Qac.openContainer",
+            "Qac.buildContainer",
+            "Qac.renderBinaural",
+            "Qac.evaluateDirectivity",
+            "Qac.sonifyEmf",
+            "Dicom.parseDataset",
+            "Dicom.verifyDataset",
+            "Dicom.toEmfField",
+            "Dicom.reconstructVolume",
+            "Sensing.admitEvidence",
+            "Sensing.verifyCalibration",
+        ] {
+            assert!(unique.contains(id), "missing UP-02 invoke id `{id}`");
+        }
+    }
+}

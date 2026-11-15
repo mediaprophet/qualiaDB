@@ -2,6 +2,89 @@ use super::*;
 
 impl SourceSession {
     pub fn prepare(&self, source: &str) -> Result<CheckedSubmission, Diagnostic> {
+        self.prepare_inner(source, false)
+    }
+
+    /// Prepare a submission that explicitly replaces matching top-level declarations
+    /// using `projectional::Edit::ReplaceItem` with full rollback on failure.
+    pub fn prepare_replace(&self, source: &str) -> Result<CheckedSubmission, Diagnostic> {
+        self.prepare_inner(source, true)
+    }
+
+    /// Prepare an incremental `projectional::Edit` against the retained session program.
+    /// Returns an error without mutating session state if bounds, limits, or checks fail.
+    pub fn prepare_edit(
+        &self,
+        edit: &crate::projectional::Edit,
+    ) -> Result<CheckedSubmission, Diagnostic> {
+        if self.revision >= self.limits.revisions {
+            return Err(Diagnostic::new(
+                DiagCode::E400,
+                Span::point(0),
+                "session source/revision limit exceeded",
+            ));
+        }
+        let edited = crate::projectional::try_apply_edit(&self.definitions, edit)
+            .map_err(|msg| Diagnostic::new(DiagCode::E701, Span::point(0), msg))?;
+        if edited.items.len() > self.limits.declarations {
+            return Err(Diagnostic::new(
+                DiagCode::E400,
+                edited.span,
+                "session declaration limit exceeded",
+            ));
+        }
+        for request in &edited.requires {
+            if !(crate::catalog::is_known(&request.id)
+                && crate::catalog::granted_covers(
+                    &self.grants.iter().map(String::as_str).collect::<Vec<_>>(),
+                    &request.id,
+                ))
+                && !self.grants.iter().any(|g| g == &request.id)
+            {
+                return Err(Diagnostic::new(
+                    DiagCode::E300,
+                    request.span,
+                    format!("session host has not granted capability `{}`", request.id),
+                ));
+            }
+        }
+        let projected = crate::projectional::project_program(
+            &edited,
+            &crate::projectional::ProjectOptions::default(),
+        );
+        if projected.len() > self.limits.submission_bytes
+            || projected.len() > self.limits.retained_source_bytes
+        {
+            return Err(Diagnostic::new(
+                DiagCode::E400,
+                edited.span,
+                "session source/revision limit exceeded",
+            ));
+        }
+        source_limits::check(&projected)?;
+        let (_, checked, mutables) =
+            check_submission(&edited, &edited, &CheckEnv::default(), &HashSet::new())?;
+        values::validate_source(&checked)?;
+        if checked.len() > self.limits.bindings {
+            return Err(Diagnostic::new(
+                DiagCode::E400,
+                edited.span,
+                "session binding limit exceeded",
+            ));
+        }
+        Ok(CheckedSubmission {
+            owner: self.owner,
+            base_revision: self.revision,
+            source: projected,
+            definitions: edited.clone(),
+            checked,
+            mutables,
+            body: Body::Program(edited),
+            replace_env: true,
+        })
+    }
+
+    fn prepare_inner(&self, source: &str, allow_replace: bool) -> Result<CheckedSubmission, Diagnostic> {
         if source.len() > self.limits.submission_bytes
             || self.source_bytes.saturating_add(source.len()) > self.limits.retained_source_bytes
             || self.revision >= self.limits.revisions
@@ -75,6 +158,7 @@ impl SourceSession {
             }
         }
         let mut new_names = HashSet::new();
+        let mut replaced_any = false;
         for item in &submission.items {
             if matches!(item, Item::Statement(s) if contains_return(s)) {
                 return Err(Diagnostic::new(DiagCode::E100, submission.span,
@@ -83,17 +167,20 @@ impl SourceSession {
             let mut item_names = Vec::new();
             collect_item_names(item, &mut item_names);
             for name in item_names {
-                if definitions
+                if !new_names.insert(name) {
+                    return Err(Diagnostic::new(DiagCode::E701, submission.span,
+                        format!("session declaration `{name}` already exists in this submission")));
+                }
+                let exists_in_defs = definitions
                     .items
                     .iter()
                     .filter_map(declaration_name)
-                    .any(|n| n == name)
-                    || self.env.vars.contains_key(name)
+                    .any(|n| n == name);
+                let exists_in_env = self.env.vars.contains_key(name)
                     || self.env.fields.contains_key(name)
                     || self.env.materials.contains_key(name)
-                    || self.env.laws.contains_key(name)
-                    || !new_names.insert(name)
-                {
+                    || self.env.laws.contains_key(name);
+                if (exists_in_defs || exists_in_env) && !allow_replace {
                     return Err(Diagnostic::new(DiagCode::E701, submission.span,
                         format!("session declaration `{name}` already exists; explicit replacement is unsupported")));
                 }
@@ -107,8 +194,35 @@ impl SourceSession {
                         "nested global declarations are unsupported in additive 0.1 source sessions; declare persistent bindings at top level"));
                 }
             }
+            if allow_replace {
+                if let Some(decl_name) = declaration_name(item) {
+                    if let Some(idx) = definitions
+                        .items
+                        .iter()
+                        .position(|existing| declaration_name(existing) == Some(decl_name))
+                    {
+                        definitions = crate::projectional::try_apply_edit(
+                            &definitions,
+                            &crate::projectional::Edit::ReplaceItem {
+                                index: idx,
+                                item: item.clone(),
+                            },
+                        )
+                        .map_err(|msg| Diagnostic::new(DiagCode::E701, submission.span, msg))?;
+                        replaced_any = true;
+                        continue;
+                    }
+                }
+            }
             if matches!(item, Item::Function(_) | Item::Hook(_) | Item::Enum(_)) {
-                definitions.items.push(item.clone());
+                definitions = crate::projectional::try_apply_edit(
+                    &definitions,
+                    &crate::projectional::Edit::AddItem {
+                        item: item.clone(),
+                        index: None,
+                    },
+                )
+                .map_err(|msg| Diagnostic::new(DiagCode::E701, submission.span, msg))?;
             }
         }
         if definitions.items.len() > self.limits.declarations {
@@ -118,8 +232,11 @@ impl SourceSession {
                 "session declaration limit exceeded",
             ));
         }
-        let (_, checked, mutables) =
-            check_submission(&definitions, &submission, &self.checked, &self.mutables)?;
+        let (_, checked, mutables) = if replaced_any {
+            check_submission(&definitions, &definitions, &CheckEnv::default(), &HashSet::new())?
+        } else {
+            check_submission(&definitions, &submission, &self.checked, &self.mutables)?
+        };
         values::validate_source(&checked)?;
         for item in &submission.items {
             if let Item::Bind(bind) = item {
@@ -153,6 +270,7 @@ impl SourceSession {
             body: expression
                 .map(Body::Expression)
                 .unwrap_or(Body::Program(submission)),
+            replace_env: false,
         })
     }
 }

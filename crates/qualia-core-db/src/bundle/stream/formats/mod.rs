@@ -42,3 +42,12 @@ mod qac;
 pub use qac::{QacAdmitError, QacCompleteView};
 #[cfg(test)]
 mod qac_tests;
+
+mod emf_stream;
+pub use emf_stream::{emf_present_id, EmfAdmitError, EmfProfile, EmfStreamView};
+
+mod qac_stream;
+pub use qac_stream::{qac_present_id, QacProfile, QacStreamView};
+
+mod p64_stream;
+pub use p64_stream::{p64_present_id, P64AdmitError, P64Profile, P64StreamView};

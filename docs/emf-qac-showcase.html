@@ -58,6 +58,7 @@
             <div class="flex flex-wrap items-center gap-4 mb-8">
                 <a href="emf-qac-architecture.html" class="px-4 py-2 rounded-xl bg-cyan-500 text-zinc-950 font-medium hover:bg-cyan-400 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-book-open"></i><span>Architecture Guide</span></a>
                 <a href="data-formats.html" class="px-4 py-2 rounded-xl glass-strong hover:bg-white/10 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-cubes"></i><span>Data Formats (.q42 v4)</span></a>
+                <a href="qbdl-streaming.html" class="px-4 py-2 rounded-xl glass-strong hover:bg-white/10 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-layer-group"></i><span>QBDL Mixed HMC Streaming</span></a>
                 <a href="release-showcase-0.0.41.html" class="px-4 py-2 rounded-xl glass-strong hover:bg-white/10 transition-colors inline-flex items-center gap-2 text-sm"><i class="fas fa-compass"></i><span>0.0.41 Release Showcase</span></a>
             </div>
 
@@ -364,6 +365,13 @@
                     </ul>
                 </div>
             </div>
+        </section>
+
+        <section id="emf-spectral-acoustic-portal" class="mt-10 p-6 rounded-2xl border border-violet-500/30 bg-slate-950/70">
+            <h2 class="text-xl font-bold text-violet-300 mb-2">QualiaPortal WASM: CIE 1931 Spectral RGBA &amp; AcousticPlane (&sigma; &rarr; Hz)</h2>
+            <p class="text-sm text-slate-300 mb-3">
+                <code>QualiaPortal.load_emf</code> unpacks sibling <code>Q42EMF64</code> Hilbert bricks onto the GPU field, renders CIE 1931 spectral RGBA slices via <code>render_emf_preview(amplitude_gain)</code>, and drives <code>AcousticPlane</code> (<code>create_acoustic_sab</code> / <code>publish_acoustic_sab</code>) mapping <code>spectral_sigma</code> (&sigma;) to center frequency (400–700 nm &rarr; 1760–110 Hz).
+            </p>
         </section>
     </main>
 

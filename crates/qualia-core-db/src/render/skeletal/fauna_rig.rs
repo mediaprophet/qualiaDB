@@ -11,6 +11,12 @@
 //!
 //! Covers 164 East Coast Australian fauna species organized into 13 biomechanical archetypes.
 
+use crate::container_10d::skeletal_section::{
+    KinematicSolverRegime, SkeletalSectionPayload, Skl2JointDescriptorV2, SwingTwistConeLimits,
+    SKL2_JOINT_FLAG_EXOSKELETAL, SKL2_JOINT_FLAG_HYDROSTATIC, SKL2_JOINT_FLAG_SYMMETRIC,
+    SKL2_NONE_INDEX,
+};
+use crate::q_hash;
 use crate::render::skeletal::{
     compute_ontogenetic_morph_weights_zero_heap, evaluate_morph_deltas_zero_heap,
     evaluate_skinning_motor_palette_zero_heap, gpu_shader_skin_vertex_reference,
@@ -21,12 +27,13 @@ use crate::render::skeletal::{
     JointConstraint, LayerBlendMode, Motor, RootMotionDelta, RootMotionExtractor, SignalQueue,
     SignalTrigger, SkeletalError, TransitionCondition, TwoBoneIkResult,
 };
+use qualia_cooperative_core::contextual_evidence::{EpistemicTier, ObservationMethod};
 use serde::{Deserialize, Serialize};
 
 /// Maximum joints in the Australian fauna skeletal rig (fits in fixed stack buffer).
-pub const FAUNA_MAX_JOINTS: usize = 18;
+pub const FAUNA_MAX_JOINTS: usize = 24;
 
-// ── Cardinal Joint Indices (18 Joints) ───────────────────────────────────────
+// ── Cardinal Joint Indices (24 Joints) ───────────────────────────────────────
 pub const JOINT_PELVIS_ROOT: usize = 0;
 pub const JOINT_SPINE: usize = 1;
 pub const JOINT_CHEST: usize = 2;
@@ -42,7 +49,7 @@ pub const JOINT_RIGHT_HIP: usize = 9;
 pub const JOINT_RIGHT_KNEE: usize = 10;
 pub const JOINT_RIGHT_ANKLE: usize = 11;
 
-// Forelimbs / Wings / Flippers / Claws:
+// Left Forelimb / Wing / Flipper / Claw:
 pub const JOINT_LEFT_SHOULDER: usize = 12;
 pub const JOINT_LEFT_ELBOW: usize = 13;
 pub const JOINT_LEFT_WRIST_WING: usize = 14;
@@ -52,7 +59,43 @@ pub const JOINT_TAIL_BASE: usize = 15;
 pub const JOINT_TAIL_MID: usize = 16;
 pub const JOINT_TAIL_TIP: usize = 17;
 
-/// Canonical topological parent array for the 18-joint fauna rig (`parent < 0` for root).
+// Symmetric Right Forelimb, Mandible, Thoracic & Distal Tail Extension (18..23):
+pub const JOINT_RIGHT_SHOULDER: usize = 18;
+pub const JOINT_RIGHT_ELBOW: usize = 19;
+pub const JOINT_RIGHT_WRIST_WING: usize = 20;
+pub const JOINT_JAW_MANDIBLE: usize = 21;
+pub const JOINT_MID_THORACIC: usize = 22;
+pub const JOINT_TAIL_DISTAL_TIP: usize = 23;
+
+/// Canonical joint names for SKL2 descriptor hashing and diagnostics.
+pub const FAUNA_JOINT_NAMES: [&str; FAUNA_MAX_JOINTS] = [
+    "pelvis_root",
+    "spine",
+    "chest",
+    "neck",
+    "head",
+    "jaw",
+    "left_hip",
+    "left_knee",
+    "left_ankle",
+    "right_hip",
+    "right_knee",
+    "right_ankle",
+    "left_shoulder",
+    "left_elbow",
+    "left_wrist_wing",
+    "tail_base",
+    "tail_mid",
+    "tail_tip",
+    "right_shoulder",
+    "right_elbow",
+    "right_wrist_wing",
+    "jaw_mandible",
+    "mid_thoracic",
+    "tail_distal_tip",
+];
+
+/// Canonical topological parent array for the 24-joint fauna rig (`parent < 0` for root).
 pub const FAUNA_PARENT_INDICES: [i32; FAUNA_MAX_JOINTS] = [
     -1, // 0: PelvisRoot
     0,  // 1: Spine
@@ -72,6 +115,12 @@ pub const FAUNA_PARENT_INDICES: [i32; FAUNA_MAX_JOINTS] = [
     0,  // 15: TailBase (Pelvis)
     15, // 16: TailMid
     16, // 17: TailTip
+    2,  // 18: RightShoulder (Chest)
+    18, // 19: RightElbow
+    19, // 20: RightWristWing
+    4,  // 21: JawMandible (Head)
+    1,  // 22: MidThoracic (Spine)
+    17, // 23: TailDistalTip (TailTip)
 ];
 
 // ── Cardinal Clip Indices (5 Cardinal Clips) ─────────────────────────────────
@@ -226,19 +275,59 @@ impl FaunaBiomechanicalArchetype {
     #[inline]
     pub const fn joint_count(&self) -> usize {
         match self {
-            Self::SerpentineUndulatory => 18,
-            Self::SquamateSprawling => 18,
-            Self::MacropodSaltatorial => 18,
-            Self::DasyuridPredator => 18,
-            Self::VombatidFossorial => 18,
-            Self::PhascolarctidArboreal => 18,
-            Self::PetauridGlider => 18,
-            Self::MarinePinnipedCetacean => 16,
-            Self::MonotremeTeleostAmphibian => 16,
-            Self::RatiteBipedal => 16,
-            Self::RaptorSoaring => 16,
-            Self::PasserinePsittacine => 16,
-            Self::PteropodidChiroptera => 16,
+            Self::SerpentineUndulatory
+            | Self::SquamateSprawling
+            | Self::MacropodSaltatorial
+            | Self::DasyuridPredator
+            | Self::VombatidFossorial
+            | Self::PhascolarctidArboreal
+            | Self::PetauridGlider
+            | Self::MarinePinnipedCetacean => FAUNA_MAX_JOINTS,
+            Self::MonotremeTeleostAmphibian
+            | Self::RatiteBipedal
+            | Self::RaptorSoaring
+            | Self::PasserinePsittacine
+            | Self::PteropodidChiroptera => 22,
+        }
+    }
+
+    /// Canonical anatomical pelvic girdle classification for this biomechanical archetype.
+    #[inline]
+    pub const fn pelvic_girdle_class(&self) -> PelvicGirdleClass {
+        match self {
+            Self::RatiteBipedal | Self::RaptorSoaring | Self::PasserinePsittacine => {
+                PelvicGirdleClass::AvianSynsacrum
+            }
+            Self::MarinePinnipedCetacean => PelvicGirdleClass::CetaceanVestigial,
+            Self::SerpentineUndulatory => PelvicGirdleClass::SerpentineReduced,
+            Self::MacropodSaltatorial
+            | Self::VombatidFossorial
+            | Self::PhascolarctidArboreal
+            | Self::PetauridGlider
+            | Self::DasyuridPredator
+            | Self::PteropodidChiroptera
+            | Self::SquamateSprawling
+            | Self::MonotremeTeleostAmphibian => PelvicGirdleClass::TetrapodEndoskeletal,
+        }
+    }
+
+    /// Default locomotor stance associated with this biomechanical archetype.
+    #[inline]
+    pub const fn default_stance(&self) -> FaunaStance {
+        match self {
+            Self::MacropodSaltatorial => FaunaStance::SaltatorialBiped,
+            Self::VombatidFossorial
+            | Self::PhascolarctidArboreal
+            | Self::PetauridGlider
+            | Self::MonotremeTeleostAmphibian => FaunaStance::PlantigradeQuadruped,
+            Self::DasyuridPredator => FaunaStance::DigitigradeQuadruped,
+            Self::PteropodidChiroptera | Self::RaptorSoaring | Self::PasserinePsittacine => {
+                FaunaStance::VolantWinged
+            }
+            Self::MarinePinnipedCetacean => FaunaStance::PinnipedAquatic,
+            Self::RatiteBipedal => FaunaStance::CursorialBiped,
+            Self::SquamateSprawling => FaunaStance::SprawlingQuadruped,
+            Self::SerpentineUndulatory => FaunaStance::UndulatoryApodal,
         }
     }
 
@@ -271,6 +360,167 @@ impl FaunaBiomechanicalArchetype {
             Self::SerpentineUndulatory => (1.60, 0.08),
             Self::MonotremeTeleostAmphibian => (0.45, 0.18),
         }
+    }
+}
+
+// ── Pelvic Girdle, Stance, Multi-Tier LOD & Biological Metadata ──────────────
+
+/// Anatomical pelvic / structural anchorage classification across vertebrate,
+/// arthropod exoskeletal, and hydrostatic continuum clades.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PelvicGirdleClass {
+    /// Endoskeletal ilium-ischium-pubis tetrapod girdle.
+    TetrapodEndoskeletal,
+    /// Fused synsacrum + pygostyle avian girdle.
+    AvianSynsacrum,
+    /// Vestigial free-floating pelvic rudiments in cetaceans/pinnipeds.
+    CetaceanVestigial,
+    /// Reduced or absent apodal pelvic girdle (serpentine clades).
+    SerpentineReduced,
+    /// Decoupled arthropod / crustacean / arachnid exoskeletal cuticle shell.
+    ExoskeletalCuticle,
+    /// Pressurized muscular / coelomic hydrostatic continuum (annelid, cephalopod, gastropod).
+    HydrostaticContinuum,
+}
+
+/// Primary locomotor stance and body-support modality.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FaunaStance {
+    PlantigradeQuadruped,
+    DigitigradeQuadruped,
+    SaltatorialBiped,
+    CursorialBiped,
+    SprawlingQuadruped,
+    UndulatoryApodal,
+    VolantWinged,
+    PinnipedAquatic,
+    ArthropodHexapod,
+    HydrostaticSoftBody,
+}
+
+impl FaunaStance {
+    /// Maps locomotor stance to canonical pelvic / structural girdle class.
+    #[inline]
+    pub const fn pelvic_girdle_class(self) -> PelvicGirdleClass {
+        match self {
+            Self::ArthropodHexapod => PelvicGirdleClass::ExoskeletalCuticle,
+            Self::HydrostaticSoftBody => PelvicGirdleClass::HydrostaticContinuum,
+            Self::VolantWinged | Self::CursorialBiped => PelvicGirdleClass::AvianSynsacrum,
+            Self::PinnipedAquatic => PelvicGirdleClass::CetaceanVestigial,
+            Self::UndulatoryApodal => PelvicGirdleClass::SerpentineReduced,
+            Self::PlantigradeQuadruped
+            | Self::DigitigradeQuadruped
+            | Self::SaltatorialBiped
+            | Self::SprawlingQuadruped => PelvicGirdleClass::TetrapodEndoskeletal,
+        }
+    }
+
+    /// Maps locomotor stance to canonical `SKL2` kinematic solver regime.
+    #[inline]
+    pub const fn default_solver_regime(self) -> KinematicSolverRegime {
+        match self {
+            Self::ArthropodHexapod => KinematicSolverRegime::ExoskeletalCuticleShell,
+            Self::HydrostaticSoftBody => KinematicSolverRegime::HydrostaticMuscularContinuum,
+            Self::UndulatoryApodal => KinematicSolverRegime::CosseratRodContinuum,
+            Self::PlantigradeQuadruped
+            | Self::DigitigradeQuadruped
+            | Self::SaltatorialBiped
+            | Self::CursorialBiped
+            | Self::SprawlingQuadruped
+            | Self::VolantWinged
+            | Self::PinnipedAquatic => KinematicSolverRegime::ArticulatedRigidBodyDca,
+        }
+    }
+}
+
+/// Hierarchical skeletal rig level-of-detail tier per Section 8.4.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RigLodTier {
+    /// Tier 0: Full biomechanical reference rig (up to 256 articulated elements).
+    Tier0FullBiomechanical,
+    /// Tier 1: Interactive simulation rig (32-64 elements).
+    Tier1Interactive,
+    /// Tier 2: Real-time game / crowd GPU palette rig (18-24 elements).
+    Tier2GameRuntime,
+}
+
+impl RigLodTier {
+    #[inline]
+    pub const fn max_elements(self) -> usize {
+        match self {
+            Self::Tier0FullBiomechanical => 256,
+            Self::Tier1Interactive => 64,
+            Self::Tier2GameRuntime => FAUNA_MAX_JOINTS,
+        }
+    }
+}
+
+/// Decoupled descriptor for exoskeletal arthropod / hexapod / arachnid cuticle rigs,
+/// preserving compatibility with the 13 vertebrate `FaunaBiomechanicalArchetype` variants.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ExoskeletalCuticularArchetype {
+    pub stance: FaunaStance,
+    pub pelvic_girdle: PelvicGirdleClass,
+    pub solver_regime: KinematicSolverRegime,
+    pub podomere_segments_per_limb: u8,
+    pub cuticle_modulus_gpa: f32,
+    pub resilin_joint_compliance: f32,
+    pub active_joint_count: usize,
+}
+
+impl ExoskeletalCuticularArchetype {
+    #[inline]
+    pub const fn hexapod_insect() -> Self {
+        Self {
+            stance: FaunaStance::ArthropodHexapod,
+            pelvic_girdle: FaunaStance::ArthropodHexapod.pelvic_girdle_class(),
+            solver_regime: KinematicSolverRegime::ExoskeletalCuticleShell,
+            podomere_segments_per_limb: 5,
+            cuticle_modulus_gpa: 6.5,
+            resilin_joint_compliance: 0.35,
+            active_joint_count: FAUNA_MAX_JOINTS,
+        }
+    }
+}
+
+/// Per-joint biological structural, mechanical, and epistemic metadata aligned to `SKL2`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct JointBioMetadata {
+    pub joint_index: u16,
+    pub joint_name: &'static str,
+    pub solver_regime: KinematicSolverRegime,
+    pub swing_twist: SwingTwistConeLimits,
+    pub cortical_bmd_mg_cm3: f32,
+    pub trabecular_bv_tv: f32,
+    pub bone_length_m: f32,
+    pub segment_mass_kg: f32,
+    pub epistemic_tier: EpistemicTier,
+    pub observation_method: ObservationMethod,
+    pub confidence_q8: u8,
+    pub flags: u8,
+}
+
+impl JointBioMetadata {
+    pub fn to_skl2_descriptor(&self, parent_index: i32) -> Skl2JointDescriptorV2 {
+        let mut desc = Skl2JointDescriptorV2::new(
+            q_hash(self.joint_name),
+            if parent_index < 0 {
+                SKL2_NONE_INDEX
+            } else {
+                parent_index as u16
+            },
+            self.swing_twist,
+            self.solver_regime,
+            self.cortical_bmd_mg_cm3,
+            self.trabecular_bv_tv,
+            self.bone_length_m,
+            self.segment_mass_kg,
+            self.epistemic_tier.rank(),
+            self.observation_method as u16,
+            self.confidence_q8,
+        );
+        desc.flags = self.flags;
+        desc.with_sealed_crc()
     }
 }
 
@@ -316,7 +566,7 @@ pub struct FaunaSkeletalRig10d {
     pub archetype: FaunaBiomechanicalArchetype,
     /// Active joint count (`<= FAUNA_MAX_JOINTS`).
     pub joint_count: usize,
-    /// Up to 18 skeletal joints with authored rest transforms and inverse-bind motors.
+    /// Up to 24 skeletal joints with authored rest transforms and inverse-bind motors.
     pub joints: [Joint; FAUNA_MAX_JOINTS],
     /// Parent index lookup table (`parent < 0` for root).
     pub parent_indices: [i32; FAUNA_MAX_JOINTS],
@@ -373,19 +623,28 @@ impl FaunaSkeletalRig10d {
         rest_pose[JOINT_RIGHT_KNEE] = Motor::from_translation(0.0, -upper_leg, 0.04);
         rest_pose[JOINT_RIGHT_ANKLE] = Motor::from_translation(0.0, -lower_leg, -0.04);
 
-        // Forelimbs / Wings
+        // Forelimbs / Wings (Left & Symmetric Right)
         let fore_upper = upper_leg * 0.8;
         let fore_lower = lower_leg * 0.8;
         rest_pose[JOINT_LEFT_SHOULDER] = Motor::from_translation(-half_width * 0.9, -0.04, 0.04);
         rest_pose[JOINT_LEFT_ELBOW] = Motor::from_translation(0.0, -fore_upper, -0.02);
         rest_pose[JOINT_LEFT_WRIST_WING] = Motor::from_translation(0.0, -fore_lower, 0.02);
 
+        rest_pose[JOINT_RIGHT_SHOULDER] = Motor::from_translation(half_width * 0.9, -0.04, 0.04);
+        rest_pose[JOINT_RIGHT_ELBOW] = Motor::from_translation(0.0, -fore_upper, -0.02);
+        rest_pose[JOINT_RIGHT_WRIST_WING] = Motor::from_translation(0.0, -fore_lower, 0.02);
+
+        // Secondary Mandible, Mid-Thoracic & Distal Tail Extension
+        rest_pose[JOINT_JAW_MANDIBLE] = Motor::from_translation(0.0, -0.045, neck_len * 0.18);
+        rest_pose[JOINT_MID_THORACIC] = Motor::from_translation(0.0, 0.02, spine_len * 0.25);
+
         // Articulated Tail (backward along -Z)
         rest_pose[JOINT_TAIL_BASE] = Motor::from_translation(0.0, -0.02, -tail_seg * 0.6);
         rest_pose[JOINT_TAIL_MID] = Motor::from_translation(0.0, -0.04, -tail_seg * 0.8);
         rest_pose[JOINT_TAIL_TIP] = Motor::from_translation(0.0, -0.04, -tail_seg * 0.8);
+        rest_pose[JOINT_TAIL_DISTAL_TIP] = Motor::from_translation(0.0, -0.02, -tail_seg * 0.55);
 
-        // 2. Compute World Rest and Inverse Bind Motors
+        // 2. Compute World Rest and Inverse Bind Motors across all 24 canonical joints
         let mut world_rest = [Motor::identity(); FAUNA_MAX_JOINTS];
         forward_kinematics_zero_heap(&parent_indices, &rest_pose, &mut world_rest);
 
@@ -395,7 +654,7 @@ impl FaunaSkeletalRig10d {
             inverse_bind: Motor::identity(),
         }; FAUNA_MAX_JOINTS];
 
-        for j in 0..joint_count {
+        for j in 0..FAUNA_MAX_JOINTS {
             let p = parent_indices[j];
             joints[j] = Joint {
                 parent: if p >= 0 { Some(p as u16) } else { None },
@@ -423,6 +682,12 @@ impl FaunaSkeletalRig10d {
 
         walk_pose[JOINT_LEFT_HIP] = walk_pose[JOINT_LEFT_HIP].mul(&walk_hip_rot).normalize();
         walk_pose[JOINT_RIGHT_HIP] = walk_pose[JOINT_RIGHT_HIP].mul(&walk_hip_rev).normalize();
+        walk_pose[JOINT_LEFT_SHOULDER] = walk_pose[JOINT_LEFT_SHOULDER]
+            .mul(&walk_hip_rev)
+            .normalize();
+        walk_pose[JOINT_RIGHT_SHOULDER] = walk_pose[JOINT_RIGHT_SHOULDER]
+            .mul(&walk_hip_rot)
+            .normalize();
         walk_pose[JOINT_SPINE] = walk_pose[JOINT_SPINE].mul(&walk_spine_yaw).normalize();
         walk_pose[JOINT_TAIL_MID] = walk_pose[JOINT_TAIL_MID].mul(&walk_tail_sway).normalize();
         clip_poses[CLIP_WALK_STALK] = walk_pose;
@@ -439,6 +704,12 @@ impl FaunaSkeletalRig10d {
         cruise_pose[JOINT_LEFT_HIP] = cruise_pose[JOINT_LEFT_HIP].mul(&cruise_hip_rot).normalize();
         cruise_pose[JOINT_RIGHT_HIP] = cruise_pose[JOINT_RIGHT_HIP]
             .mul(&cruise_hip_rev)
+            .normalize();
+        cruise_pose[JOINT_LEFT_SHOULDER] = cruise_pose[JOINT_LEFT_SHOULDER]
+            .mul(&cruise_hip_rev)
+            .normalize();
+        cruise_pose[JOINT_RIGHT_SHOULDER] = cruise_pose[JOINT_RIGHT_SHOULDER]
+            .mul(&cruise_hip_rot)
             .normalize();
         cruise_pose[JOINT_CHEST] = cruise_pose[JOINT_CHEST]
             .mul(&cruise_chest_pitch)
@@ -729,6 +1000,14 @@ impl FaunaSkeletalRig10d {
         if JOINT_CHEST < pose.len() {
             pose[JOINT_CHEST] = pose[JOINT_CHEST].mul(&pitch_rotor).normalize();
         }
+        if JOINT_MID_THORACIC < pose.len() {
+            let half_mid = half * 0.75;
+            let mid_rotor = Motor::from_rotation_translation(
+                [half_mid.cos(), half_mid.sin(), 0.0, 0.0],
+                [0.0, 0.0, 0.0],
+            );
+            pose[JOINT_MID_THORACIC] = pose[JOINT_MID_THORACIC].mul(&mid_rotor).normalize();
+        }
         if JOINT_SPINE < pose.len() {
             let half_spine = half * 0.5;
             let spine_rotor = Motor::from_rotation_translation(
@@ -739,7 +1018,7 @@ impl FaunaSkeletalRig10d {
         }
     }
 
-    /// Applies continuous procedural caudal (tail) undulation along the Tail Base, Mid, and Tip joints.
+    /// Applies continuous procedural caudal (tail) undulation along the Tail Base, Mid, Tip, and Distal Tip joints.
     pub fn apply_proc1_tail_undulation(
         &self,
         pose: &mut [Motor],
@@ -747,7 +1026,12 @@ impl FaunaSkeletalRig10d {
         frequency_hz: f32,
         amplitude_rad: f32,
     ) {
-        let tail_joints = [JOINT_TAIL_BASE, JOINT_TAIL_MID, JOINT_TAIL_TIP];
+        let tail_joints = [
+            JOINT_TAIL_BASE,
+            JOINT_TAIL_MID,
+            JOINT_TAIL_TIP,
+            JOINT_TAIL_DISTAL_TIP,
+        ];
         for (i, &j_idx) in tail_joints.iter().enumerate() {
             if j_idx < pose.len() {
                 let phase = (i as f32) * 0.85;
@@ -986,6 +1270,82 @@ impl FaunaSkeletalRig10d {
             &self.gpu_palette[..self.joint_count],
         )
     }
+
+    /// Returns the pelvic / structural girdle classification for this rig's archetype.
+    #[inline]
+    pub const fn pelvic_girdle_class(&self) -> PelvicGirdleClass {
+        self.archetype.pelvic_girdle_class()
+    }
+
+    /// Derives per-joint biomechanical & epistemic metadata across all 24 canonical joints.
+    pub fn joint_bio_metadata(&self) -> [JointBioMetadata; FAUNA_MAX_JOINTS] {
+        let (body_len, hip_height) = self.archetype.default_dimensions();
+        let default_regime = self.archetype.default_stance().default_solver_regime();
+        let girdle = self.archetype.pelvic_girdle_class();
+        let is_serpentine = self.archetype == FaunaBiomechanicalArchetype::SerpentineUndulatory;
+        let is_avian = matches!(
+            girdle,
+            PelvicGirdleClass::AvianSynsacrum
+        );
+        let default_bmd = if is_avian { 920.0 } else { 1160.0 };
+        let default_bv_tv = if is_avian { 0.22 } else { 0.31 };
+
+        core::array::from_fn(|idx| {
+            let (_, t) = self.rest_pose[idx].to_rotation_translation();
+            let bone_len = ((t[0] * t[0] + t[1] * t[1] + t[2] * t[2]).sqrt() as f32)
+                .max(0.02 * body_len.min(1.0));
+            let regime = if is_serpentine && matches!(idx, JOINT_SPINE | JOINT_TAIL_BASE..=JOINT_TAIL_TIP | JOINT_TAIL_DISTAL_TIP) {
+                KinematicSolverRegime::CosseratRodContinuum
+            } else {
+                default_regime
+            };
+            let flags = match idx {
+                JOINT_LEFT_HIP..=JOINT_LEFT_WRIST_WING
+                | JOINT_RIGHT_SHOULDER..=JOINT_RIGHT_WRIST_WING => SKL2_JOINT_FLAG_SYMMETRIC,
+                _ => 0,
+            } | match girdle {
+                PelvicGirdleClass::ExoskeletalCuticle => SKL2_JOINT_FLAG_EXOSKELETAL,
+                PelvicGirdleClass::HydrostaticContinuum => SKL2_JOINT_FLAG_HYDROSTATIC,
+                _ => 0,
+            };
+            let swing_twist = match idx {
+                JOINT_PELVIS_ROOT => SwingTwistConeLimits::symmetric(0.35, 0.25),
+                JOINT_JAW | JOINT_JAW_MANDIBLE => SwingTwistConeLimits::new(0.65, 0.15, -0.05, 0.05),
+                JOINT_LEFT_KNEE | JOINT_RIGHT_KNEE | JOINT_LEFT_ELBOW | JOINT_RIGHT_ELBOW => {
+                    SwingTwistConeLimits::new(1.35, 0.20, -0.15, 0.15)
+                }
+                JOINT_TAIL_BASE..=JOINT_TAIL_TIP | JOINT_TAIL_DISTAL_TIP => {
+                    SwingTwistConeLimits::symmetric(0.75, 0.45)
+                }
+                _ => SwingTwistConeLimits::default(),
+            };
+            let segment_mass_kg = (body_len * hip_height * 2.5).max(0.05) / (FAUNA_MAX_JOINTS as f32);
+
+            JointBioMetadata {
+                joint_index: idx as u16,
+                joint_name: FAUNA_JOINT_NAMES[idx],
+                solver_regime: regime,
+                swing_twist,
+                cortical_bmd_mg_cm3: default_bmd,
+                trabecular_bv_tv: default_bv_tv,
+                bone_length_m: bone_len,
+                segment_mass_kg,
+                epistemic_tier: EpistemicTier::PhylogeneticallyBracketed,
+                observation_method: ObservationMethod::PublishedScientificLiterature,
+                confidence_q8: 204,
+                flags,
+            }
+        })
+    }
+
+    /// Exports this rig's active joints as a validated `SKL2` v2 `SkeletalSectionPayload`.
+    pub fn to_skl2_payload(&self) -> SkeletalSectionPayload {
+        let meta = self.joint_bio_metadata();
+        let joints = (0..self.joint_count)
+            .map(|idx| meta[idx].to_skl2_descriptor(self.parent_indices[idx]))
+            .collect();
+        SkeletalSectionPayload::new(joints)
+    }
 }
 
 // ── Unit Tests ───────────────────────────────────────────────────────────────
@@ -1199,5 +1559,62 @@ mod tests {
         assert_eq!(n, 1);
         // Displaced by 0.3 * 0.1 = 0.03 in Y
         assert!((out_pos[0][1] - 1.03).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_24_joint_topology_symmetry_and_skl2_export() {
+        assert_eq!(FAUNA_MAX_JOINTS, 24);
+        assert_eq!(JOINT_RIGHT_SHOULDER, 18);
+        assert_eq!(JOINT_RIGHT_ELBOW, 19);
+        assert_eq!(JOINT_RIGHT_WRIST_WING, 20);
+        assert_eq!(JOINT_JAW_MANDIBLE, 21);
+        assert_eq!(JOINT_MID_THORACIC, 22);
+        assert_eq!(JOINT_TAIL_DISTAL_TIP, 23);
+
+        for (j, &p) in FAUNA_PARENT_INDICES.iter().enumerate() {
+            if j == 0 {
+                assert!(p < 0);
+            } else {
+                assert!(p >= 0 && (p as usize) < j, "joint {j} has non-topological parent {p}");
+            }
+        }
+
+        let rig = FaunaSkeletalRig10d::new(FaunaBiomechanicalArchetype::DasyuridPredator);
+        assert_eq!(rig.joint_count, 24);
+
+        let (_, left_shoulder_t) = rig.rest_pose[JOINT_LEFT_SHOULDER].to_rotation_translation();
+        let (_, right_shoulder_t) = rig.rest_pose[JOINT_RIGHT_SHOULDER].to_rotation_translation();
+        assert!((left_shoulder_t[0] + right_shoulder_t[0]).abs() < 1e-6);
+
+        let skl2 = rig.to_skl2_payload();
+        assert_eq!(skl2.joints.len(), 24);
+        let bytes = skl2.to_bytes_v2().expect("encode skl2 v2");
+        let decoded = SkeletalSectionPayload::from_bytes(&bytes).expect("decode skl2 v2");
+        assert_eq!(decoded.joints, skl2.joints);
+    }
+
+    #[test]
+    fn test_pelvic_girdle_class_arthropod_and_hydrostatic_mapping() {
+        assert_eq!(
+            FaunaStance::ArthropodHexapod.pelvic_girdle_class(),
+            PelvicGirdleClass::ExoskeletalCuticle
+        );
+        assert_eq!(
+            FaunaStance::ArthropodHexapod.default_solver_regime(),
+            KinematicSolverRegime::ExoskeletalCuticleShell
+        );
+        assert_eq!(
+            FaunaStance::HydrostaticSoftBody.pelvic_girdle_class(),
+            PelvicGirdleClass::HydrostaticContinuum
+        );
+        assert_eq!(
+            FaunaStance::HydrostaticSoftBody.default_solver_regime(),
+            KinematicSolverRegime::HydrostaticMuscularContinuum
+        );
+
+        let exo = ExoskeletalCuticularArchetype::hexapod_insect();
+        assert_eq!(exo.pelvic_girdle, PelvicGirdleClass::ExoskeletalCuticle);
+        assert_eq!(exo.solver_regime, KinematicSolverRegime::ExoskeletalCuticleShell);
+        assert_eq!(RigLodTier::Tier2GameRuntime.max_elements(), FAUNA_MAX_JOINTS);
     }
 }

@@ -7,7 +7,7 @@ impl<'a, B: Bearer> ProtectedChannel<'a, B> {
     /// Consume the opaque actual runtime view and lend it beside channel I/O.
     /// The canonical parent ledger is ALREADY locked/checked. Never relock it.
     /// No new charge, authority, keys, slot owner or generation is created.
-    pub(crate) fn with_runtime_scope<'b, 'p, T>(
+    pub fn with_runtime_scope<'b, 'p, T>(
         &mut self,
         access: RuntimeAccess<'b, 'p>,
         effect: impl for<'s> FnOnce(ChannelIo<'s, 'a, B>, RuntimeAccess<'b, 'p>) -> Result<T, E>,

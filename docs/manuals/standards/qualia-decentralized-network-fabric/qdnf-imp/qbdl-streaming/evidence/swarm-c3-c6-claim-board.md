@@ -14,7 +14,7 @@ Integrator-owned. Wave 1 claimed 2026-11-14.
 | C6 qual | Support/senior | queued Wave 3B — brief [swarm-wave3-c6-brief.md](swarm-wave3-c6-brief.md) | evidence records only | production crates |
 | Reviews | Expert read-only | after Wave 1 source | evidence `swarm-c3-qac-review.md`, `swarm-c4-plan-review.md`, `swarm-c5-http-review.md` | production writes |
 
-Wave 3A (packets ready, not launched): M `mux.rs`, F `bundle/stream/mixed/`, H `http/mixed.rs` — [swarm-wave3-claim-board.md](swarm-wave3-claim-board.md).
+Wave 3A (packets ready, not launched): **E** `emf_stream.rs`, **Q** `qac.rs` `admit_signal` + `qac_stream.rs`, **M** mux of real QAC+EMF. 3A2: F mixed, H HTTP. [swarm-wave3-claim-board.md](swarm-wave3-claim-board.md).
 
 Integrator retains: `bundle/stream/mod.rs`, `formats/mod.rs`, `qbdl/mod.rs`, `qbdl/service/mod.rs`, `http/mod.rs`, Cargo.toml / Cargo.lock, `net/qdnf/registries.rs`, default `target/` cargo slot, git.
 

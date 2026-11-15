@@ -14,7 +14,9 @@ mod volume_m64;
 
 pub use occupancy::{parse_occ1, OccupancyGrid, MAT_EMPTY, MAT_EPICARDIAL_FAT, MAT_LUMEN, MAT_MYOCARDIUM};
 pub use volume_emf::encode_occupancy_emf;
-pub use volume_m64::encode_occupancy_m64;
+pub use volume_m64::{
+    encode_occupancy_m64, seal_human_heart_m64, seal_vertebrate_bone_m64,
+};
 
 use qualia_core_db::container_10d::skeletal_container::attach_skeletal_section_into;
 use qualia_core_db::render::assets::Mesh;

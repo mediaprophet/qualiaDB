@@ -11,7 +11,8 @@ use crate::net::peer::replication::qbdl::carrier::{
     Assembly, CarrierError, MessageSequence, Progress,
 };
 use crate::net::peer::replication::qbdl::wire::{
-    encode, Header, Kind, Message, ServiceRecordHeader, MAX_LEAF_RECORD_BYTES, PREFIX_BYTES,
+    encode, Header, Kind, Message, ServiceRecordHeader, MAX_LEAF_RECORD_BYTES, MAX_RECORD_BYTES,
+    PREFIX_BYTES,
 };
 use crate::net::qdnf::bearer::contract::{Bearer, RecvMeta};
 use crate::net::qdnf::bearer::IpcEndpoint;
@@ -28,26 +29,26 @@ const IO_RETRY_SECS: u64 = 5;
 const IO_POLL_MS: u64 = 1;
 
 pub struct SessionOwner {
-    data: [u8; MAX_LEAF_RECORD_BYTES],
+    data: [u8; MAX_RECORD_BYTES],
     control: [u8; 1024],
-    record: [u8; MAX_LEAF_RECORD_BYTES],
+    record: [u8; MAX_RECORD_BYTES],
 }
 
 impl SessionOwner {
     pub fn new() -> Self {
         Self {
-            data: [0; MAX_LEAF_RECORD_BYTES],
+            data: [0; MAX_RECORD_BYTES],
             control: [0; 1024],
-            record: [0; MAX_LEAF_RECORD_BYTES],
+            record: [0; MAX_RECORD_BYTES],
         }
     }
 
     pub(crate) fn lanes(
         &mut self,
     ) -> (
-        &mut [u8; MAX_LEAF_RECORD_BYTES],
+        &mut [u8; MAX_RECORD_BYTES],
         &mut [u8; 1024],
-        &mut [u8; MAX_LEAF_RECORD_BYTES],
+        &mut [u8; MAX_RECORD_BYTES],
     ) {
         (&mut self.data, &mut self.control, &mut self.record)
     }
@@ -257,7 +258,7 @@ impl<'a, B: Bearer> Session<'a, B> {
             |h, total, _| {
                 if h.kind != Kind::DescriptorPage {
                     Err(Error::State)
-                } else if total > MAX_LEAF_RECORD_BYTES {
+                } else if total > MAX_RECORD_BYTES {
                     Err(Error::Capacity)
                 } else {
                     Ok(())
@@ -510,7 +511,7 @@ pub(crate) fn reason_body(reason: u16) -> [u8; 8] {
     body
 }
 
-pub(crate) fn encode_open_body(ordinal: u32, page: u32, out: &mut [u8]) -> Result<usize, Error> {
+pub fn encode_open_body(ordinal: u32, page: u32, out: &mut [u8]) -> Result<usize, Error> {
     if out.len() < 72 {
         return Err(Error::Capacity);
     }

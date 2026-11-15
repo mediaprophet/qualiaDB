@@ -5,6 +5,9 @@ on:
     branches:
       - 0.0.40
       - 0.0.41
+      - "0.0.41.1"
+      - "0.0.41.2"
+      - "0.0.41.*"
     paths:
       - .github/workflows/release-p64-models.yml
       - crates/qualia-core-db/examples/build_p64_release.rs

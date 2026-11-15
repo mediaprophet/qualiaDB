@@ -3,7 +3,7 @@ use super::RetainedRuntime;
 use crate::net::qdnf::errors::QdnfError as E;
 use core::sync::atomic::Ordering;
 #[must_use]
-pub(crate) struct RuntimeCloseError<'parent, 'host> {
+pub struct RuntimeCloseError<'parent, 'host> {
     pub error: E,
     pub state: RetainedRuntime<'parent, 'host>,
 }
@@ -15,7 +15,7 @@ impl core::fmt::Debug for RuntimeCloseError<'_, '_> {
     }
 }
 impl<'parent, 'host> RetainedRuntime<'parent, 'host> {
-    pub(crate) fn try_close(mut self) -> Result<(), RuntimeCloseError<'parent, 'host>> {
+    pub fn try_close(mut self) -> Result<(), RuntimeCloseError<'parent, 'host>> {
         let parents = self.parents;
         if let Err(error) = parents.association(&self) {
             return Err(RuntimeCloseError { error, state: self });

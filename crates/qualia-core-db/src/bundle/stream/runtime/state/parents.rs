@@ -17,7 +17,7 @@ pub(super) struct ParentIdentities {
 }
 /// Exclusive registration of real table BINDINGS, with no long-lived locks.
 /// One retained runtime initially. Independent ledger admissions remain possible.
-pub(crate) struct RuntimeParents<'host> {
+pub struct RuntimeParents<'host> {
     pub(super) ledger: &'host Mutex<ReservationLedger>,
     pub(super) leases: &'host Mutex<LeaseTable>,
     pub(super) operations: &'host Mutex<OperationTable>,
@@ -29,7 +29,7 @@ pub(crate) struct RuntimeParents<'host> {
     closed: AtomicBool,
 }
 impl<'host> RuntimeParents<'host> {
-    pub(crate) fn adopt(
+    pub fn adopt(
         ledger: &'host Mutex<ReservationLedger>,
         leases: &'host mut Mutex<LeaseTable>,
         operations: &'host mut Mutex<OperationTable>,
@@ -57,7 +57,7 @@ impl<'host> RuntimeParents<'host> {
             closed: AtomicBool::new(false),
         })
     }
-    pub(crate) fn admit<'p>(
+    pub fn admit<'p>(
         &'p self,
         profile: RuntimeProfile,
         control: ResourceBudget,
@@ -128,7 +128,7 @@ impl<'host> RuntimeParents<'host> {
         Ok(())
     }
     /// Drop/lost state retains active count and canonical charge, so close refuses.
-    pub(crate) fn try_close(&mut self) -> Result<(), E> {
+    pub fn try_close(&mut self) -> Result<(), E> {
         if self.active.load(Ordering::Acquire) != 0 {
             return Err(E::WouldBlock);
         }

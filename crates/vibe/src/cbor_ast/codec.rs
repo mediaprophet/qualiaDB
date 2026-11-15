@@ -16,7 +16,6 @@ impl CborEncoder {
         self.buf
     }
 
-    #[allow(dead_code)]
     /// Writes a u8.
     pub(crate) fn write_u8(&mut self, b: u8) {
         self.buf.push(b);
@@ -91,11 +90,6 @@ impl<'a> CborDecoder<'a> {
     /// Creates a new `CborDecoder`.
     pub(crate) fn new(buf: &'a [u8]) -> Self {
         Self { buf, pos: 0 }
-    }
-    #[allow(dead_code)]
-    /// Reader position.
-    pub(crate) fn pos(&self) -> usize {
-        self.pos
     }
 
     /// Reads a u8.

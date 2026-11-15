@@ -50,7 +50,7 @@ named!(pub section<Option<SectionPath>>, do_parse!(
     (spec)
 ));
 
-named!(pub msg_att_body_section<AttributeValue>, do_parse!(
+named_a!(pub msg_att_body_section<'a, AttributeValue<'a>>, do_parse!(
     tag_no_case!("BODY") >>
     section: section >>
     index: opt!(do_parse!(

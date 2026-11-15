@@ -666,66 +666,11 @@ mod protected_handshake {
         bytes.try_into().map_err(|_| QdnfError::Malformed)
     }
 
-    fn take_digest(bytes: &[u8], p: &mut usize) -> Result<StrongDigest, QdnfError> {
-        let start = *p;
-        let end = start.checked_add(48).ok_or(QdnfError::Malformed)?;
-        let d = StrongDigest::from_bytes(bytes.get(start..end).ok_or(QdnfError::Malformed)?)?;
-        *p = end;
-        Ok(d)
-    }
-
-    fn take_n<const N: usize>(bytes: &[u8], p: &mut usize) -> Result<[u8; N], QdnfError> {
-        let start = *p;
-        let end = start.checked_add(N).ok_or(QdnfError::Malformed)?;
-        let slice = bytes.get(start..end).ok_or(QdnfError::Malformed)?;
-        *p = end;
-        array(slice)
-    }
-
     fn decode_intent(bytes: &[u8]) -> Result<Intent, QdnfError> {
         if bytes.len() != INTENT_BYTES {
             return Err(QdnfError::Malformed);
         }
-        let mut p = 0;
-        let initiator = take_digest(bytes, &mut p)?;
-        let responder = take_digest(bytes, &mut p)?;
-        let service = take_digest(bytes, &mut p)?;
-        let purpose = take_digest(bytes, &mut p)?;
-        let instrument = take_digest(bytes, &mut p)?;
-        let scope = take_digest(bytes, &mut p)?;
-        let operation = take_n::<16>(bytes, &mut p)?;
-        let initiator_ml = take_n::<48>(bytes, &mut p)?;
-        let initiator_ed = take_n::<48>(bytes, &mut p)?;
-        let responder_ml = take_n::<48>(bytes, &mut p)?;
-        let responder_ed = take_n::<48>(bytes, &mut p)?;
-        let initiator_epoch = u64::from_be_bytes(take_n::<8>(bytes, &mut p)?);
-        let responder_epoch = u64::from_be_bytes(take_n::<8>(bytes, &mut p)?);
-        let expires_unix = u64::from_be_bytes(take_n::<8>(bytes, &mut p)?);
-        if p != INTENT_BYTES {
-            return Err(QdnfError::Malformed);
-        }
-        let intent = Intent {
-            initiator,
-            responder,
-            service,
-            purpose,
-            instrument,
-            scope,
-            operation: OperationId(operation),
-            initiator_keys: crate::crypto::network::cose::KeyIds {
-                ml_dsa_65: initiator_ml,
-                ed25519: initiator_ed,
-            },
-            responder_keys: crate::crypto::network::cose::KeyIds {
-                ml_dsa_65: responder_ml,
-                ed25519: responder_ed,
-            },
-            initiator_epoch,
-            responder_epoch,
-            expires_unix,
-        };
-        intent.validate()?;
-        Ok(intent)
+        Intent::decode(bytes)
     }
 
     fn push_blob(out: &mut Vec<u8>, blob: &[u8]) -> Result<(), QdnfError> {

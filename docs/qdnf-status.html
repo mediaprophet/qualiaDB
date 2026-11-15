@@ -49,6 +49,7 @@
             <li><strong>QPR &amp; Connection Manager:</strong> Supervised cell admission (<code class="q-mono">admit.rs</code>), generation-checked resource leases (<code class="q-mono">ledger.rs</code>, <code class="q-mono">release_checked_bytes</code>), non-wrapping cancellation epochs, and durable <code class="q-mono">.q42</code> v4 chunk-to-SuperBlock replication.</li>
             <li><strong>CSCP v1 Control Plane (<code class="q-mono">qualia-cscp</code>):</strong> Bounded fail-closed TLV codec, private mailbox, lease accounting, receipt persistence, local bound-UDP, local <code class="q-mono">rustls</code> WSS ↔ <code class="q-mono">QSession</code>, DATAGRAM capsules, and loopback TLS HTTP/2 Extended CONNECT.</li>
             <li><strong>Implemented identity slice (<code class="q-mono">did:qi</code>):</strong> Bounded QCDE-1 signed documents with <code class="q-mono">create</code>, <code class="q-mono">advance_generation</code>, <code class="q-mono">deactivate</code> (<code class="q-mono">TombstonePermanent</code>), <code class="q-mono">verify_relationship_distinct_from_person</code>, and <code class="q-mono">CscpMailbox</code> binding.</li>
+            <li><strong>QBDL ProtectedSession:</strong> in-process governed leaf I/O cargo-proven 17/17 (2026-11-14). Mixed-HMC mux, EMF/QAC/P64 stream views, Q42 HTTP Range, and <code class="q-mono">write_leaf</code> stage-drop are in source; the next locked <code class="q-mono">qualia-core-db --lib</code> pass is the remaining in-tree gate. See <a class="q-link" href="qbdl-streaming.html">QBDL streaming</a>.</li>
           </ul>
         </article>
 
@@ -57,7 +58,7 @@
           <h3 class="text-2xl font-semibold mb-3">Transition bearers</h3>
           <ul class="q-ledger text-sm" style="color:var(--q-muted)">
             <li><strong><code class="q-mono">WireGuard</code> / SocialWebNet overlay:</strong> Admitted as an explicitly labelled IP transition bearer; never misclassified as a zero-IP native link.</li>
-            <li><strong>TLS WebSocket (WSS) &amp; HTTP/2 Extended CONNECT capsules:</strong> Provide encrypted tunnel transport across legacy networks without claiming public Internet <code class="q-mono">MASQUE</code> qualification.</li>
+            <li><strong>TLS WebSocket (WSS) &amp; HTTP/2 Extended CONNECT capsules:</strong> Provide encrypted tunnel transport across legacy networks without claiming public Internet <code class="q-mono">MASQUE</code> qualification. Mixed-HMC WSS transfer reuses <code class="q-mono">WssBearer</code> under <code class="q-mono">Session</code> as Component evidence; TLS is not post-quantum publisher authority.</li>
             <li><strong>Nym mixnet framing:</strong> Deterministic sphinx-style bounded <code class="q-mono">QFrame</code> encapsulation for metadata-resistant routing integration tests.</li>
             <li><strong>Strict non-laundering rule:</strong> Transition bearers do not become Native Independent merely by carrying a QFrame (<code class="q-mono">no_proxy_launder</code>).</li>
           </ul>
@@ -178,9 +179,14 @@
               <td class="py-4">QCDE-1 lifecycle (<code class="q-mono">create</code>, <code class="q-mono">advance_generation</code>, <code class="q-mono">deactivate</code> / <code class="q-mono">TombstonePermanent</code>), <code class="q-mono">CscpMailbox</code> binding, and plane separation. <strong>Not a W3C DID Spec Registries entry</strong>.</td>
             </tr>
             <tr class="border-b border-white/5">
+              <td class="py-4 pr-5 font-medium text-white">QBDL mixed HMC streaming</td>
+              <td class="py-4 pr-5 text-emerald-300">Local and in-tree evidence · cargo next for mux</td>
+              <td class="py-4">ProtectedSession 17/17 in process. Mixed planner, EMF/QAC/P64 views, Q42 HTTP Range, and WSS mixed transfer are in source. ZIP <code class="q-mono">.hmc</code> is the legacy archive profile and is not a streaming target. See <a class="q-link" href="qbdl-streaming.html">QBDL streaming</a>.</td>
+            </tr>
+            <tr class="border-b border-white/5">
               <td class="py-4 pr-5 font-medium text-white">Nym / WireGuard / WSS / H2</td>
               <td class="py-4 pr-5 text-cyan-300">Transition bearers</td>
-              <td class="py-4">Bounded profiles verified in tree; they do not become Native Independent merely by carrying a QFrame.</td>
+              <td class="py-4">Bounded profiles verified in tree; they do not become Native Independent merely by carrying a QFrame. Mixed-HMC WSS is Component evidence on this labelled bearer.</td>
             </tr>
             <tr class="border-b border-white/5">
               <td class="py-4 pr-5 font-medium text-white">Raw Ethernet, AF_XDP, RAPL joules</td>
@@ -223,6 +229,7 @@
       <div class="flex flex-wrap gap-3">
         <a class="q-pill q-pill-primary" href="manuals/standards/qualia-decentralized-network-fabric/index.html">QDNF standards index</a>
         <a class="q-pill" href="qdnf.html">QDNF architecture map</a>
+        <a class="q-pill" href="qbdl-streaming.html">QBDL mixed HMC streaming</a>
         <a class="q-pill" href="qdnf-did-qi.html"><code>did:qi</code> &amp; side-by-side DIDs</a>
         <a class="q-pill" href="qdnf-network-cells.html">QDNF protocol &amp; network cells</a>
         <a class="q-pill" href="qdnf-peer-runtime.html">Qualia Peer Runtime (QPR)</a>

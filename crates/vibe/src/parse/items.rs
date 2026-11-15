@@ -45,7 +45,7 @@ impl<'a> Parser<'a> {
         if self.kw("cell") {
             return true;
         }
-        if self.kw("pure") || self.kw("hot") || self.kw("effect") {
+        if self.kw("pure") || self.kw("hot") || self.kw("cold") || self.kw("async") || self.kw("effect") {
             let rest = self.lex.source()[self.cur.span.end as usize..].trim_start();
             return rest.starts_with("cell");
         }
@@ -373,8 +373,8 @@ impl<'a> Parser<'a> {
                     };
                 }
                 _ => {
-                    // Skip unknown property â€” consume one token value
-                    self.bump()?;
+                    // Consume the full unknown property value expression so parsing stays aligned.
+                    self.parse_expr()?;
                 }
             }
         }

@@ -1121,6 +1121,95 @@ pub fn apply_edit(prog: &Program, edit: &Edit) -> Program {
     p
 }
 
+/// Apply a structural edit with bounds and target-kind validation.
+/// Returns `Err` if the target index is out of range or has an incompatible item kind.
+pub fn try_apply_edit(prog: &Program, edit: &Edit) -> Result<Program, String> {
+    let mut p = prog.clone();
+    match edit {
+        Edit::AddItem { item, index } => {
+            if let Some(i) = index {
+                if *i > p.items.len() {
+                    return Err(format!("insert index {i} out of bounds (len {})", p.items.len()));
+                }
+                p.items.insert(*i, item.clone());
+            } else {
+                p.items.push(item.clone());
+            }
+        }
+        Edit::RemoveItem { index } => {
+            if *index >= p.items.len() {
+                return Err(format!("remove index {index} out of bounds (len {})", p.items.len()));
+            }
+            p.items.remove(*index);
+        }
+        Edit::ReplaceItem { index, item } => {
+            if *index >= p.items.len() {
+                return Err(format!("replace index {index} out of bounds (len {})", p.items.len()));
+            }
+            p.items[*index] = item.clone();
+        }
+        Edit::RenameItem { index, new_name } => {
+            let len = p.items.len();
+            let slot = p.items.get_mut(*index).ok_or_else(|| {
+                format!("rename index {index} out of bounds (len {len})")
+            })?;
+            rename_item(slot, new_name);
+        }
+        Edit::SetFieldUnit { index, unit } => match p.items.get_mut(*index) {
+            Some(Item::Field(fd)) => fd.unit = unit.clone(),
+            Some(_) => return Err(format!("item at index {index} is not a field")),
+            None => return Err(format!("field index {index} out of bounds")),
+        },
+        Edit::SetFieldSupport { index, support } => match p.items.get_mut(*index) {
+            Some(Item::Field(fd)) => fd.support = *support,
+            Some(_) => return Err(format!("item at index {index} is not a field")),
+            None => return Err(format!("field index {index} out of bounds")),
+        },
+        Edit::SetFieldRepresentation { index, representation } => match p.items.get_mut(*index) {
+            Some(Item::Field(fd)) => fd.representation = *representation,
+            Some(_) => return Err(format!("item at index {index} is not a field")),
+            None => return Err(format!("field index {index} out of bounds")),
+        },
+        Edit::AddMaterialProperty { index, property } => match p.items.get_mut(*index) {
+            Some(Item::Material(md)) => md.properties.push(property.clone()),
+            Some(_) => return Err(format!("item at index {index} is not a material")),
+            None => return Err(format!("material index {index} out of bounds")),
+        },
+        Edit::RemoveMaterialProperty { index, name } => match p.items.get_mut(*index) {
+            Some(Item::Material(md)) => md.properties.retain(|prop| prop.name != *name),
+            Some(_) => return Err(format!("item at index {index} is not a material")),
+            None => return Err(format!("material index {index} out of bounds")),
+        },
+        Edit::SetLawCondition { index, condition } => match p.items.get_mut(*index) {
+            Some(Item::Law(ld)) => ld.condition = condition.clone(),
+            Some(_) => return Err(format!("item at index {index} is not a law")),
+            None => return Err(format!("law index {index} out of bounds")),
+        },
+        Edit::SetLawConsequence { index, consequence } => match p.items.get_mut(*index) {
+            Some(Item::Law(ld)) => ld.consequence = consequence.clone(),
+            Some(_) => return Err(format!("item at index {index} is not a law")),
+            None => return Err(format!("law index {index} out of bounds")),
+        },
+        Edit::AddPrefix { prefix, iri } => {
+            p.prefixes.push(crate::ast::PrefixDecl {
+                span: crate::span::Span::point(0),
+                prefix: prefix.clone(),
+                iri: iri.clone(),
+            });
+        }
+        Edit::RemovePrefix { prefix } => {
+            p.prefixes.retain(|decl| decl.prefix != *prefix);
+        }
+        Edit::AddRequires { cap } => {
+            p.requires.push(cap.clone());
+        }
+        Edit::RemoveRequires { id } => {
+            p.requires.retain(|c| c.id != *id);
+        }
+    }
+    Ok(p)
+}
+
 /// Apply a sequence of edits, producing the final program.
 pub fn apply_edits(prog: &Program, edits: &[Edit]) -> Program {
     let mut p = prog.clone();

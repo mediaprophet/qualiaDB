@@ -109,6 +109,8 @@ impl NativeSparseStore<'_, '_> {
                             policy,
                         )?;
                         gates(control, authority, &identity, clock, policy)?;
+                        debug_assert_eq!(material.proof_slot.len(), PROOF_SLOT_BYTES);
+                        debug_assert_eq!(material.header.len(), CHECKPOINT_BYTES);
                         let output = inspect(&material.view);
                         gates(control, authority, &identity, clock, policy)?;
                         Ok::<_, E>(output)

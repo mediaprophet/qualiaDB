@@ -220,11 +220,10 @@ fn killed_writer_reopens_under_new_admission_and_reverifies_every_leaf() {
                 let result = {
                     let mut grant =
                         adopt_local_whole_source(&mut owner, pins, bound, f.request()).unwrap();
-                    let mut stage = rt
-                        .storage_stage(&op, &[], &[], &mut scratch, 20, Generation(1))
-                        .unwrap();
                     store.recover_leaf_from(
-                        &mut stage,
+                        rt,
+                        &op,
+                        &mut scratch,
                         &mut grant,
                         pins,
                         workspace,

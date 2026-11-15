@@ -16,7 +16,8 @@ pub use codec::{
 pub use decision::{check_recipient_against_independent, DisclosureDecision, IndependentAdmission};
 pub use policy::{
     bind_policy_to_closure, decode_disclosure_policy, encode_disclosure_policy_into, ClosureBudget,
-    DisclosurePolicyFields, DisclosurePolicyView, SourceCoverage, MAX_DISCLOSURE_POLICY_BYTES,
+    DisclosurePolicyFields, DisclosurePolicyView, SourceCoverage, MAX_CLOSURE_LABELS,
+    MAX_DISCLOSURE_POLICY_BYTES,
 };
 pub use recognition::{
     AllowedOps, ControllerRecognition, RecognitionAdmin, RecognitionEnrollment, RecognitionHandle,

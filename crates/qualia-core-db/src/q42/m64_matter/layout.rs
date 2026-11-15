@@ -34,6 +34,44 @@ pub const M64_MODE_STRATA: u8 = 0x02;
 pub const M64_MODE_PHASE_JUNCTURE: u8 = 0x03;
 /// Mode 0x04: Radial-Edge B-Rep shell face records (per-record CRC-32C).
 pub const M64_MODE_SHELL: u8 = 0x04;
+/// Mode 0x05: Biological constitutive, densitometric & fiber records (per-record CRC-32C).
+pub const M64_MODE_BIO_TISSUE: u8 = 0x05;
+
+/// Canonical M64 chunk record mode discriminant.
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum M64CellMode {
+    Point = M64_MODE_POINT,
+    Holo = M64_MODE_HOLO,
+    Strata = M64_MODE_STRATA,
+    PhaseJuncture = M64_MODE_PHASE_JUNCTURE,
+    Shell = M64_MODE_SHELL,
+    BioTissue = M64_MODE_BIO_TISSUE,
+}
+
+impl M64CellMode {
+    #[inline]
+    pub const fn as_u8(self) -> u8 {
+        self as u8
+    }
+}
+
+impl TryFrom<u8> for M64CellMode {
+    type Error = M64Error;
+
+    #[inline]
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            M64_MODE_POINT => Ok(Self::Point),
+            M64_MODE_HOLO => Ok(Self::Holo),
+            M64_MODE_STRATA => Ok(Self::Strata),
+            M64_MODE_PHASE_JUNCTURE => Ok(Self::PhaseJuncture),
+            M64_MODE_SHELL => Ok(Self::Shell),
+            M64_MODE_BIO_TISSUE => Ok(Self::BioTissue),
+            other => Err(M64Error::InvalidRecordMode(other)),
+        }
+    }
+}
 
 /// Flag indicating chunks are organized as 16x16x16 3D volumetric bricks.
 pub const M64_FLAG_3D_BRICK_16X16X16: u16 = 1 << 4;

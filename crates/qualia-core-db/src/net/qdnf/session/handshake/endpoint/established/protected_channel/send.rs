@@ -34,7 +34,7 @@ pub(super) fn check_aad(aad: &[u8; RECORD_AAD_BYTES], len: usize) -> Result<(), 
 impl<B: Bearer> FrameIo<'_, '_, B> {
     /// Seals once into this owner's actual retained buffer. WouldBlock retains
     /// the earlier exact sealed frame and does not consume a new packet number.
-    pub(crate) fn queue_record(
+    pub fn queue_record(
         &mut self,
         current: &CurrentAuthorityGuard<'_>,
         pins: &PinAuthority,
@@ -78,7 +78,7 @@ impl<B: Bearer> FrameIo<'_, '_, B> {
     }
     /// One nonblocking atomic frame send. No wait/retransmission loop here.
     /// Adapter-owned partial stream cursors must hide partial writes from Bearer.
-    pub(crate) fn send_pending(
+    pub fn send_pending(
         &mut self,
         current: &CurrentAuthorityGuard<'_>,
         pins: &PinAuthority,
