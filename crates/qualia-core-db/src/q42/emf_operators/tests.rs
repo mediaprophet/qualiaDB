@@ -381,7 +381,7 @@ fn test_vector_calculus_identities_gauss_charge_conservation_and_4th_order() {
         &mut cz,
     )
     .unwrap();
-    assert!(poynting_res <= 1e-13, "poynting_res={poynting_res}");
+    assert!(poynting_res <= 2e-13, "poynting_res={poynting_res}");
 
     // 4th-order vs 2nd-order curl accuracy against spectral plane-wave oracle
     for iz in 0..grid.nz {

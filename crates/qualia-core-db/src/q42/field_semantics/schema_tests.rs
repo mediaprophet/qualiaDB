@@ -82,8 +82,8 @@ fn exact_rules_required_critical_rational_and_frame_bounds() {
     b[1].fields.retain(|f| f.key != 5);
     assert_eq!(result(&b, &[row()]), Err(Error::Frame));
     let mut b = good();
-    change(&mut b, 3, 12).value = b"urn:bad\n".to_vec();
-    change(&mut b, 3, 12).count = 8;
+    change(&mut b, 3, 12).value = "urn:bad\u{0085}".as_bytes().to_vec();
+    change(&mut b, 3, 12).count = 9;
     assert_eq!(result(&b, &[row()]), Err(Error::Value));
 }
 #[test]

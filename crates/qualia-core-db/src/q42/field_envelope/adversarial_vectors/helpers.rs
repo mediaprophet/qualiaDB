@@ -185,15 +185,15 @@ pub(super) fn entry_timed<'a>(
 
 pub(super) fn base_single(family: Family) -> Vec<u8> {
     let meta = sample_metadata(None, None);
-    let e = [entry_timed(0, -5, 0x0104, 4, b"V01PAYLD")];
+    let e = [entry_timed(1, -5, 0x0104, 4, b"V01PAYLD")];
     encode_envelope(family, 0, &meta, &e)
 }
 
 pub(super) fn base_two(family: Family) -> Vec<u8> {
     let meta = sample_metadata(None, None);
     let e = [
-        entry_timed(0, -5, 0x0104, 4, b"STREAM_0"),
-        entry_timed(1, -5, 0x0104, 4, b"STREAM_1"),
+        entry_timed(1, -5, 0x0104, 4, b"STREAM_0"),
+        entry_timed(2, -5, 0x0104, 4, b"STREAM_1"),
     ];
     encode_envelope(family, 0, &meta, &e)
 }

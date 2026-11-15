@@ -128,8 +128,7 @@ impl PktBitWriter {
     }
     fn align(mut self) -> Vec<u8> {
         if self.bits > 0 {
-            let cap = if self.prev_ff { 7 } else { 8 };
-            while self.bits < cap { self.put_bit(0); }
+            while self.bits > 0 { self.put_bit(0); }
         } else if self.prev_ff {
             self.buf.push(0x00);
         }
@@ -223,6 +222,7 @@ fn j2k_mq_coder_and_full_codestream_part10_roundtrip() {
     pw.put_bit(1); // non-empty packet
     pw.put_bit(1); // incl tree(0,0): val <= 0 (threshold 1) -> bit 1 = finalized at 0
     for _ in 0..7 { pw.put_bit(0); } // zbp tree(0,0) = 7
+    pw.put_bit(1); // finalize zbp tree(0,0) at 7
     pw.put_bit(0); // 1 coding pass -> single 0 bit!
     let mut pkt = if cb_bytes.len() < 8 {
         pw.put_bit(0); // lblock increment = 0 (lblock = 3)
@@ -281,7 +281,7 @@ fn j2k_lossless_violation_htj2k_missing_tables_and_tagtree_refuse_safely() {
     t0[0] = HtVlcEntry { rho: 0b0001, u_off: 0, e_k: 0, e_1: 0, cwd_len: 1 };
     let tables = HtVlcTables { tbl0: &t0, tbl1: &t0 };
     let ht_cb = CblkHeaderState {
-        x0: 0, y0: 0, x1: 2, y1: 2, included: true, zero_bitplanes: 7, lblock: 3, num_passes: 1,
+        x0: 0, y0: 0, x1: 2, y1: 2, included: true, zero_bitplanes: 0, lblock: 3, num_passes: 1,
         // MagSgn=0x01 (sign=1, mag=0 -> val=-(0+1)=-1 << 7 = -128), MEL=0x00 (decode_symbol()=1), Scup=3 bytes
         segments: vec![(1, vec![0x01, 0x00, 0x03, 0x00])],
     };
@@ -327,6 +327,7 @@ fn minimal_4x4_sample0_minus1_packet() -> Vec<u8> {
     pw.put_bit(1);
     pw.put_bit(1);
     for _ in 0..7 { pw.put_bit(0); }
+    pw.put_bit(1);
     pw.put_bit(0);
     let mut pkt = if cb_bytes.len() < 8 {
         pw.put_bit(0);

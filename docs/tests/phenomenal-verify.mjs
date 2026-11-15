@@ -44,6 +44,16 @@ const WASM_ACOUSTIC_EXPORTS = [
     'create_acoustic_sab',
     'publish_acoustic_sab',
     'acoustic_sab_byte_length',
+];
+
+const WASM_ACOUSTIC_QAC_EXPORTS = [
+    'load_qac',
+    'qac_window',
+    'inspect_qac',
+    'clear_qac',
+];
+
+const WASM_ACOUSTIC_LEGACY_SIDECAR_EXPORTS = [
     'bake_stft_sidecar_demo',
     'bake_cqt_sidecar_demo',
     'acoustic_sidecar_pinned',
@@ -131,6 +141,14 @@ runStep('acoustic-contract', 'cargo', [
 
 checkWasmApi(wasmApiPath, WASM_NAV_EXPORTS, 'navigation');
 checkWasmApi(wasmApiPath, WASM_ACOUSTIC_EXPORTS, 'acoustic');
+if (existsSync(wasmApiPath)) {
+    const dtsSrc = readFileSync(wasmApiPath, 'utf8');
+    if (dtsSrc.includes('load_qac')) {
+        checkWasmApi(wasmApiPath, WASM_ACOUSTIC_QAC_EXPORTS, 'acoustic-qac');
+    } else {
+        checkWasmApi(wasmApiPath, WASM_ACOUSTIC_LEGACY_SIDECAR_EXPORTS, 'acoustic-sidecar');
+    }
+}
 // The browser LLM ships in the wasm-full *playground* bundle, NOT the slim portal whose .d.ts this
 // verifies. The playground build is --no-typescript (no .d.ts to assert against); the
 // `wasm32-shader-smoke` step above compiles the full LLM feature set (portal,wasm-llm,wasm-logic,

@@ -192,8 +192,8 @@ fn c02_mode00_fdtd_courant_gate_convergence_and_bitwise_restart() {
             let x_p = (ix as f64) * h;
             let x_v = (ix as f64 + 0.5) * h;
             let p_val = p_amp * (k_wave * x_p).cos();
-            let vx_val = v_amp * (k_wave * x_v - omega * 0.5 * dt).cos();
-            let prev_vx_val = v_amp * (k_wave * x_v + omega * 0.5 * dt).cos();
+            let vx_val = v_amp * (k_wave * x_v + omega * 0.5 * dt).cos();
+            let prev_vx_val = v_amp * (k_wave * x_v - omega * 0.5 * dt).cos();
             for iy in 0..2 {
                 for iz in 0..2 {
                     let c_idx = idx(ix, iy, iz);

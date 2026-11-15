@@ -44,11 +44,8 @@ impl T87BitWriter {
         }
     }
     fn flush(mut self) -> Vec<u8> {
-        if self.bits > 0 {
-            let cap = if self.prev_ff { 7 } else { 8 };
-            while self.bits < cap {
-                self.put_bit(0);
-            }
+        while self.bits > 0 {
+            self.put_bit(0);
         }
         self.out
     }

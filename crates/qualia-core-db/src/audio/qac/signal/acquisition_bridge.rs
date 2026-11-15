@@ -16,7 +16,14 @@ pub enum BridgeError {
 }
 
 impl From<env::Error> for BridgeError { fn from(e: env::Error) -> Self { Self::Envelope(e) } }
-impl From<sem::Error> for BridgeError { fn from(e: sem::Error) -> Self { Self::Semantic(e) } }
+impl From<sem::Error> for BridgeError {
+    fn from(e: sem::Error) -> Self {
+        match e {
+            sem::Error::Provenance => Self::MismatchedSourceDigest,
+            other => Self::Semantic(other),
+        }
+    }
+}
 impl From<Error> for BridgeError { fn from(e: Error) -> Self { Self::Signal(e) } }
 impl From<storage::Error> for BridgeError { fn from(e: storage::Error) -> Self { Self::Acquisition(e) } }
 impl From<a::Error> for BridgeError { fn from(e: a::Error) -> Self { Self::AcquisitionCore(e) } }
@@ -384,7 +391,9 @@ mod tests {
             u32f(11, 7), strf(12, storage::ORIGINAL_MODEL), f(18, 8, desc10_ext.concat()),
         ]));
 
+        bs.sort_by_key(|b| b.id);
         for b in &mut bs {
+            b.fields.sort_by_key(|f| f.key);
             for fld in &mut b.fields {
                 let width = match fld.tag { 1 | 4 | 8 | 9 | 11 => 4, 2 | 3 | 5 => 8, 10 => 2, _ => 1 };
                 fld.count = (fld.bytes.len() / width) as u32;

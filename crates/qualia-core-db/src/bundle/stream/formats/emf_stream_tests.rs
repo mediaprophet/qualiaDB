@@ -129,6 +129,7 @@ fn v4_candidate_admits_envelope_profile() {
 }
 #[test]
 fn two_emf_entries_are_distinct_regions() {
+    let mut opaque_offset = None;
     let mut opaque_chunk = None;
     with_qbdl_span(OPAQUE, |selected, span| {
         let view = EmfStreamView::admit(
@@ -137,8 +138,10 @@ fn two_emf_entries_are_distinct_regions() {
         )
         .unwrap();
         assert_eq!(view.profile(), EmfProfile::EnvelopeV4);
+        opaque_offset = Some(view.structure().unwrap().entry(1).unwrap().payload_offset());
         opaque_chunk = Some(view.select_region(0).unwrap().to_vec());
     });
+    let mut aligned_offset = None;
     let mut aligned_chunk = None;
     with_qbdl_span(ALIGNED, |selected, span| {
         let view = EmfStreamView::admit(
@@ -147,21 +150,29 @@ fn two_emf_entries_are_distinct_regions() {
         )
         .unwrap();
         assert_eq!(view.profile(), EmfProfile::EnvelopeV4);
+        aligned_offset = Some(view.structure().unwrap().entry(1).unwrap().payload_offset());
         aligned_chunk = Some(view.select_region(0).unwrap().to_vec());
     });
-    let opaque_chunk = opaque_chunk.unwrap();
-    let aligned_chunk = aligned_chunk.unwrap();
-    assert_ne!(opaque_chunk, aligned_chunk);
+    assert_eq!(opaque_chunk.unwrap(), aligned_chunk.unwrap());
+    assert_ne!(opaque_offset.unwrap(), aligned_offset.unwrap());
     with_qbdl_span(TWO, |selected, span| {
         let view =
             EmfStreamView::admit(complete(selected, span, TWO), Limits::default()).unwrap();
-        match view.structure() {
-            Some(structure) => assert_eq!(structure.entry_count(), 2),
+        let structure = match view.structure() {
+            Some(structure) => {
+                assert_eq!(structure.entry_count(), 2);
+                structure
+            }
             None => panic!("v4 structure"),
-        }
+        };
         let a = view.select_region(0).unwrap();
         let b = view.select_region(1).unwrap();
-        assert_ne!(a, b);
+        assert_eq!(a, b);
+        assert_ne!(a.as_ptr(), b.as_ptr());
+        assert_ne!(
+            structure.entry(1).unwrap().payload_offset(),
+            structure.entry(2).unwrap().payload_offset()
+        );
     });
 }
 #[test]

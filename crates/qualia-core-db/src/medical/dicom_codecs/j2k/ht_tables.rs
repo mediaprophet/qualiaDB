@@ -411,11 +411,12 @@ mod tests {
         put(&mut meta, 0x0002, 0x0010, b"UI", ts_uid.as_bytes());
         put(&mut out, 0x0002, 0x0000, b"UL", &(meta.len() as u32).to_le_bytes());
         out.extend_from_slice(&meta);
-        for &(e, val) in &[(0x0002u16, 1u16), (0x0010, rows), (0x0011, cols), (0x0100, 8), (0x0101, 8), (0x0102, 7), (0x0103, 0)] {
-            put(&mut out, 0x0028, e, b"US", &val.to_le_bytes());
-        }
+        put(&mut out, 0x0028, 0x0002, b"US", &1u16.to_le_bytes());
         put(&mut out, 0x0028, 0x0004, b"CS", b"MONOCHROME2");
         put(&mut out, 0x0028, 0x0008, b"IS", b"1 ");
+        for &(e, val) in &[(0x0010u16, rows), (0x0011, cols), (0x0100, 8), (0x0101, 8), (0x0102, 7), (0x0103, 0)] {
+            put(&mut out, 0x0028, e, b"US", &val.to_le_bytes());
+        }
         out.extend_from_slice(&[0xE0, 0x7F, 0x10, 0x00, b'O', b'B', 0, 0, 0xFF, 0xFF, 0xFF, 0xFF]);
         out.extend_from_slice(&[0xFE, 0xFF, 0x00, 0xE0, 0, 0, 0, 0, 0xFE, 0xFF, 0x00, 0xE0]);
         let pad = codestream.len() % 2;

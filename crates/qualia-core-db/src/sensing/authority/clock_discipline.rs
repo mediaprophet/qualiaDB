@@ -457,8 +457,8 @@ pub fn convert_iq_sample_between_conventions(
         // equals Re(z_src * exp(s_src * i * (2pi f_c (t - t_src) + phi_src))).
         let total_phase = match target_convention {
             IqCarrierConvention::EmfNegativeCarrier => {
-                // Re((I' + iQ') exp(-i 2pi f_c (t - t_target)))
-                // Since t - t_src = (t - t_target) + delta_t0, exp(-i (2pi f_c (t - t_target) + 2pi f_c delta_t0 + phi_eff))
+                // Re((I' + iQ') exp(-i 2pi f_c (t - t_target))) = I' cos(psi) + Q' sin(psi)
+                // Equals I_out cos(psi + delta) + Q_out sin(psi + delta) when (I' + iQ') = (I_out + iQ_out) exp(-i delta).
                 let phi_eff = if source.convention == target_convention {
                     source.reference_phase_rad
                 } else {
@@ -467,10 +467,12 @@ pub fn convert_iq_sample_between_conventions(
                 -(origin_delta_theta + phi_eff)
             }
             IqCarrierConvention::QacPositiveCarrier => {
+                // Re((I' + iQ') exp(+i 2pi f_c (t - t_target))) = I' cos(psi) - Q' sin(psi)
+                // Equals I_out cos(psi + delta) - Q_out sin(psi + delta) when (I' + iQ') = (I_out + iQ_out) exp(+i delta).
                 let phi_eff = if source.convention == target_convention {
                     source.reference_phase_rad
                 } else {
-                    -source.reference_phase_rad
+                    source.reference_phase_rad
                 };
                 origin_delta_theta + phi_eff
             }

@@ -73,10 +73,11 @@ pub struct StructuralView<'a> {
 }
 impl<'a> StructuralView<'a> {
     pub fn open(bytes: &'a [u8], family: Family, limits: Limits) -> Result<Self, Error> {
-        let h = bytes.get(..128).ok_or(Error::Extent)?;
-        if &h[..8] != family.magic() {
+        let magic = bytes.get(..8).ok_or(Error::Extent)?;
+        if magic != family.magic() {
             return Err(Error::Family);
         }
+        let h = bytes.get(..128).ok_or(Error::Extent)?;
         if u16le(h, 8) != family.version() {
             return Err(Error::Version);
         }
